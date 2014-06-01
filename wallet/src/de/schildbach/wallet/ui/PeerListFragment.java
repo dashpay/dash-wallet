@@ -55,7 +55,7 @@ import com.google.bitcoin.core.VersionMessage;
 
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
-import hashengineering.digitalcoin.wallet.R;
+import hashengineering.darkcoin.wallet.R;
 
 /**
  * @author Andreas Schildbach

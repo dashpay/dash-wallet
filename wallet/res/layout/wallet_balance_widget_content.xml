@@ -36,7 +36,7 @@
 				android:layout_marginLeft="12dp"
 				android:singleLine="true"
 
-				android:text="DGC"
+				android:text="DRK"
 				android:textColor="#bbb"
 				android:textSize="24sp"
 				tools:ignore="HardcodedText" />

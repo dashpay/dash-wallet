@@ -8,7 +8,7 @@
 	<packaging>apk</packaging>
 
 	<version>0.1.5</version>
-	<name>digitalcoin Wallet</name>
+	<name>Darkcoin Wallet</name>
 
 
 	<parent>
@@ -63,7 +63,7 @@
 		<dependency>
 			<groupId>com.google</groupId>
 
-			<artifactId>digitalcoinj</artifactId>
+			<artifactId>darkcoincoinj</artifactId>
 			<version>0.12-SNAPSHOT</version>
 
 		</dependency>

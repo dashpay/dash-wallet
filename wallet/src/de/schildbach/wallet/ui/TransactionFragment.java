@@ -35,7 +35,7 @@ import de.schildbach.wallet.AddressBookProvider;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.util.*;
-import hashengineering.digitalcoin.wallet.R;
+import hashengineering.darkcoin.wallet.R;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

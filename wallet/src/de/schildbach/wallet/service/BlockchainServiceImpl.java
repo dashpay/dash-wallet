@@ -79,9 +79,9 @@ import de.schildbach.wallet.ui.WalletActivity;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.GenericUtils;
 import de.schildbach.wallet.util.WalletUtils;
-import hashengineering.digitalcoin.wallet.R;
+import hashengineering.darkcoin.wallet.R;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
-import org.litecoin.LitecoinPeerDBDiscovery;
+//import org.litecoin.LitecoinPeerDBDiscovery;
 import com.google.bitcoin.net.discovery.IrcDiscovery;
 
 
@@ -418,17 +418,17 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 				peerGroup.addPeerDiscovery(new PeerDiscovery()
 				{
 					private final PeerDiscovery normalPeerDiscovery = new DnsDiscovery(Constants.NETWORK_PARAMETERS);
-                    private PeerDiscovery dbPeerDiscovery = null;
+                    //private PeerDiscovery dbPeerDiscovery = null;
                     //Random rand = new Random();
                     //int i = 0; //rand.nextInt(50);
                     //String channel = "#AuroraCoin" + String.format("%02d", i);
-                    String channel = "#"+CoinDefinition.coinName.toLowerCase() +"00";
-                    private final PeerDiscovery fallbackPeerDiscovery = new IrcDiscovery(channel);
+                    //String channel = "#"+CoinDefinition.coinName.toLowerCase() +"00";
+                    //private final PeerDiscovery fallbackPeerDiscovery = new IrcDiscovery(channel);
 
 					@Override
 					public InetSocketAddress[] getPeers(final long timeoutValue, final TimeUnit timeoutUnit) throws PeerDiscoveryException
 					{
-                        try {
+                        /*try {
                         	if (dbPeerDiscovery == null) 
         					{
 								log.info("Adding PeerDBDiscovery" );
@@ -439,7 +439,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                         	dbPeerDiscovery = null;
                             // This can happen in the guts of bitcoinj
                             log.info("IllegalStateException in bitcoinj: " + e.getMessage());
-                        }
+                        }*/
 						final List<InetSocketAddress> peers = new LinkedList<InetSocketAddress>();
 
 						boolean needsTrimPeersWorkaround = false;
@@ -461,10 +461,10 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 							peers.addAll(Arrays.asList(normalPeerDiscovery.getPeers(timeoutValue, timeoutUnit)));
 							//log.info("Peer count "+ peers.size());
 							//log.info("Adding dbdiscovery peers ");
-                            if(dbPeerDiscovery != null)
-                                peers.addAll(Arrays.asList(dbPeerDiscovery.getPeers(1, TimeUnit.SECONDS)));
+                            //if(dbPeerDiscovery != null)
+                             //   peers.addAll(Arrays.asList(dbPeerDiscovery.getPeers(1, TimeUnit.SECONDS)));
 							//log.info("Peer count "+ peers.size());
-                            if (peers.size() < 6 && CoinDefinition.supportsIrcDiscovery())
+                            /*if (peers.size() < 6 && CoinDefinition.supportsIrcDiscovery())
                             {
     							//log.info("Adding ircdiscovery peers ");
                                 try {
@@ -474,7 +474,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                                     log.info(this.getClass().toString(), "Failed to discover IRC peers: " + e.getMessage());
                                 }
     							//log.info("Peer count "+ peers.size());
-                            }
+                            } */
                         }
 
 						// workaround because PeerGroup will shuffle peers
@@ -489,10 +489,10 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 					public void shutdown()
 					{
 						normalPeerDiscovery.shutdown();
-                        if(dbPeerDiscovery != null)
-                            dbPeerDiscovery.shutdown();
-                        if(fallbackPeerDiscovery != null)
-                            fallbackPeerDiscovery.shutdown();
+                        //if(dbPeerDiscovery != null)
+                         //   dbPeerDiscovery.shutdown();
+                        //if(fallbackPeerDiscovery != null)
+                          //  fallbackPeerDiscovery.shutdown();
 					}
 				});
 

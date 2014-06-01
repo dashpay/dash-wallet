@@ -2,28 +2,28 @@ FILES
 
 Your wallet and your private keys are stored in app internal storage:
 
-/data/data/de.schildbach.wallet/files/wallet-protobuf (MODE_PRIVATE)
+/data/data/hashengineering.darkcoin.wallet/files/wallet-protobuf (MODE_PRIVATE)
 	Wallet for Mainnet
 
-/data/data/de.schildbach.wallet/files/wallet-protobuf-testnet (MODE_WORLD_READABLE | MODE_WORLD_WRITEABLE)
+/data/data/hashengineering.darkcoin.wallet/files/wallet-protobuf-testnet (MODE_WORLD_READABLE | MODE_WORLD_WRITEABLE)
 	Wallet for Testnet
 
 The wallet file format is not compatible to wallet.dat (Satoshi client). Rather, it uses a custom protobuf format
-which should be compatible between clients using bitcoinj.
+which should be compatible between clients using darkcoinj.
 
 Certain actions cause automatic rolling backups of your private keys to app-private storage:
 
-/data/data/de.schildbach.wallet.digitalcoin/files/key-backup-base58 (MODE_PRIVATE)
+/data/data/hashengineering.darkcoin.wallet/files/key-backup-base58 (MODE_PRIVATE)
 	Automatic backups of private keys for Mainnet
 
 
 Private keys can be manually backed up to and restored from external storage:
 
 
-/sdcard/Download/digitalcoin-wallet-keys-<yyyy-MM-dd>
+/sdcard/Download/darkcoin-wallet-keys-<yyyy-MM-dd>
 	Manual backups of private keys for Mainnet
 
-/sdcard/Download/digitalcoin-wallet-keys-testnet-<yyyy-MM-dd>
+/sdcard/Download/darkcoin-wallet-keys-testnet-<yyyy-MM-dd>
 	Manual backups of private keys for Testnet
 
 
@@ -77,7 +77,7 @@ Finally, you can build Bitcoin Wallet and sign it with your development key. Aga
 use
 
 	# first time only
-	git clone -b master https://github.com/HashEngineering/digitalcoin-wallet.git bitcoin-wallet
+	git clone -b master https://github.com/HashEngineering/darkcoin-wallet.git bitcoin-wallet
 
 	# each time
 	cd bitcoin-wallet
@@ -117,7 +117,7 @@ Make sure you've got Eclipse 3.7 (Indigo) with ADT 20 installed.
 Use Git to check out the project and an Android library dependency to your workspace:
 
 	# clone Bitcoin Wallet project
-	git clone -b master https://github.com/HashEngineering/digitalcoin-wallet.git bitcoin-wallet
+	git clone -b master https://github.com/HashEngineering/darkcoin-wallet.git bitcoin-wallet
 
 	# clone ActionBarSherlock library project
 	git clone https://github.com/JakeWharton/ActionBarSherlock.git action-bar-sherlock
@@ -126,7 +126,7 @@ Use Git to check out the project and an Android library dependency to your works
 
 Use the maven-eclipse-plugin to create Eclipse project files:
 
-	cd bitcoin-wallet
+	cd darkcoin-wallet
 	mvn eclipse:eclipse
 
 Optional: In the generated .classpath, remove the org.eclipse.jdt.launching.JRE_CONTAINER
@@ -189,6 +189,6 @@ The feed is described here:
 
 BITCOINJ
 
-Bitcoin Wallet uses bitcoinj for Bitcoin specific logic:
+Bitcoin Wallet uses darkcoinj for Bitcoin specific logic:
 
-http://code.google.com/p/bitcoinj/
+http://github.com/HashEngineering/darkcoinj.git
