@@ -1,20 +1,20 @@
-digitalcoin'leriniz daima cebinizde sizinle olsun! Herhangi bir QR kodunu okuyarak çabuk ödeme yapabilirsiniz. Bir tüccar olarak ödemeleri güvenilir ve anında alabilirsiniz. digitalcoin cüzdanı ilk mobil digitalcoin uygulamasıdır ve muhtemelen en güvenli digitalcoin uygulamasıdır!
+Darkcoin'leriniz daima cebinizde sizinle olsun! Herhangi bir QR kodunu okuyarak çabuk ödeme yapabilirsiniz. Bir tüccar olarak ödemeleri güvenilir ve anında alabilirsiniz. Darkcoin cüzdanı ilk mobil Darkcoin uygulamasıdır ve muhtemelen en güvenli Darkcoin uygulamasıdır!
 
 İŞLEVLERİ:
 • Hiçbir oturuma, web ya da bulut hizmetine gerek yoktur. Bu cüzdan merkezsiz ve eşten eşedir.
-• digitalcoin meblağlarının DGC ve mDGC olarak gösterilmesi.
+• Darkcoin meblağlarının DRK ve mDRK olarak gösterilmesi.
 • Ulusal para birimlerine ve bu para birimlerinden dönüştürme.
-• NFC, QR kodu veya digitalcoin bağlantıları ile digitalcoin gönderir ve alır.
-• Sık kullanılan digitalcoin adresleri için adres defteri içerir.
+• NFC, QR kodu veya Darkcoin bağlantıları ile Darkcoin gönderir ve alır.
+• Sık kullanılan Darkcoin adresleri için adres defteri içerir.
 • Çevrimdışı olduğunuzda Bluetooth vasıtasıyla ödemeler.
-• Alınan digitalcoin'ler için sistem bildirimleri.
-• digitalcoin bakiyesini görüntüleyen widget.
+• Alınan Darkcoin'ler için sistem bildirimleri.
+• Darkcoin bakiyesini görüntüleyen widget.
 
-digitalcoin hakkında daha fazla bilgi için şu siteyi ziyaret edebilirsiniz:
-http://digitalcoin.co
+Darkcoin hakkında daha fazla bilgi için şu siteyi ziyaret edebilirsiniz:
+http://darkcoin.io
 
-digitalcoin Wallet uygulamasına katkıda bulunmak istiyorsanız proje sayfasını ziyaret ediniz:
-https://github.com/HashEngineering/digitalcoin-wallet
+Darkcoin Wallet uygulamasına katkıda bulunmak istiyorsanız proje sayfasını ziyaret ediniz:
+https://github.com/HashEngineering/darkcoin-wallet
 
 Lisans: GPLv3
 Tüm riski siz üstlenmiş olursunuz.

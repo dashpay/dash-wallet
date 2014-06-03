@@ -1,21 +1,21 @@
-digitalcoiny vždy so sebou vo svojom vrecku. Jednoduché a rýchle platby pomocou QR kódov. Pre obchodníkov ponúka spoľahlivé a okamžité prijímanie platieb. digitalcoin Wallet je prvá mobilná digitalcoin aplikácia a preukázateľne aj najbezpečnejšia.
+Darkcoiny vždy so sebou vo svojom vrecku. Jednoduché a rýchle platby pomocou QR kódov. Pre obchodníkov ponúka spoľahlivé a okamžité prijímanie platieb. Darkcoin Wallet je prvá mobilná Darkcoin aplikácia a preukázateľne aj najbezpečnejšia.
 
 FUNKCIE:
 
 • Nie je potrebná žiadna registrácia ani žiadny účet.
-• Zobrazenie zostatku digitalcoinov v DGC alebo mDGC.
-• Prepočet hodnoty digitalcoinov do viacerých cudzích mien.
-• Posielanie a prijímanie digitalcoinov pomocou NFC, QR kódov alebo digitalcoin adries.
-• Adresár pre často používané digitalcoin adresy.
+• Zobrazenie zostatku Darkcoinov v DRK alebo mDRK.
+• Prepočet hodnoty Darkcoinov do viacerých cudzích mien.
+• Posielanie a prijímanie Darkcoinov pomocou NFC, QR kódov alebo Darkcoin adries.
+• Adresár pre často používané Darkcoin adresy.
 • V offline režime je platba možná aj cez Bluetooth.
-• Notifikácie v stavovej lište pri prijatí digitalcoinov.
+• Notifikácie v stavovej lište pri prijatí Darkcoinov.
 • Widget s celkovým zostatkom.
 
-Viac informácií o digitalcoine
-http://digitalcoin.co
+Viac informácií o Darkcoine
+http://darkcoin.io
 
-Ak chcete prispieť do projektu digitalcoin Wallet nájdete ho na adrese
-https://github.com/HashEngineering/digitalcoin-wallet
+Ak chcete prispieť do projektu Darkcoin Wallet nájdete ho na adrese
+https://github.com/HashEngineering/darkcoin-wallet
 
 Licencia: GPLv3
 Použitie len na vlastné riziko!

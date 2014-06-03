@@ -1,22 +1,22 @@
-Ayez vos digitalcoins toujours avec vous dans votre poche ! Payez rapidement en numérisant un code-QR. En tant que marchant vous recevez les paiements de manière fiable et instantanée. digitalcoin Wallet est la première appli digitalcoin mobile et sans doute aussi la plus sécuritaire !
+Ayez vos Darkcoins toujours avec vous dans votre poche ! Payez rapidement en numérisant un code-QR. En tant que marchant vous recevez les paiements de manière fiable et instantanée. Darkcoin Wallet est la première appli Darkcoin mobile et sans doute aussi la plus sécuritaire !
 
 FONCTIONS :
 
 • Pas d'inscription, de service Web ou de nuage de nécessaire ! Ce portefeuille est décentralisé et de pair-à-pair.
-• Affichage du montant de digitalcoin en DGC et mDGC.
+• Affichage du montant de Darkcoin en DRK et mDRK.
 • Conversion vers et depuis des devises nationales.
-• Envoi et réception des digitalcoins via NFC, codes QR ou des URLs digitalcoin.
-• Carnet d'adresses pour les adresses digitalcoin utilisées régulièrement.
+• Envoi et réception des Darkcoins via NFC, codes QR ou des URLs Darkcoin.
+• Carnet d'adresses pour les adresses Darkcoin utilisées régulièrement.
 • Quand vous êtes hors-ligne vous pouvez quand même payez via Bluetooth.
 • Notification du système pour les pièces reçues.
-• Widget affichant le solde digitalcoin.
+• Widget affichant le solde Darkcoin.
 
 
-Vous pouvez en apprendre plus au sujet de digitalcoin sur
-http://digitalcoin.co
+Vous pouvez en apprendre plus au sujet de Darkcoin sur
+http://darkcoin.io
 
-Si vous voulez contribuer á digitalcoin Wallet, le projet se trouve sur
-https://github.com/schildbach/digitalcoin-wallet
+Si vous voulez contribuer á Darkcoin Wallet, le projet se trouve sur
+https://github.com/schildbach/Darkcoin-wallet
 
 Licence : GPLv3
 Utiliser à vos propres risques !

@@ -1,19 +1,19 @@
-Detta är en fristående digitalcoin plånbok för Android. Du kan skicka digitalcoins mellan telefoner genom att scanna den QR kod som visas på skärmen. Eller använda NFC (Near Field Communication).
+Detta är en fristående Darkcoin plånbok för Android. Du kan skicka Darkcoins mellan telefoner genom att scanna den QR kod som visas på skärmen. Eller använda NFC (Near Field Communication).
 
 FUNKTIONER:
 
-• Visa plånbokens värde i digitalcoins och andra valutor.
-• Skicka och ta emot digitalcoins via NFC, QR-koder eller en digitalcoin URL.
-• Adressbok för de digitalcoin adresser man använder ofta.
+• Visa plånbokens värde i Darkcoins och andra valutor.
+• Skicka och ta emot Darkcoins via NFC, QR-koder eller en Darkcoin URL.
+• Adressbok för de Darkcoin adresser man använder ofta.
 • Påbörja transaktioner medan du är offline, de utförs när du kommer online.
-• Systemnotifikationer när digitalcoins skickats till dig, och när plånboken kommunicerar med nätverket.
+• Systemnotifikationer när Darkcoins skickats till dig, och när plånboken kommunicerar med nätverket.
 • App widget som visar plånbokens värde.
 
-Du kan lära dig mer om digitalcoin genom att besöka
-http://digitalcoin.co
+Du kan lära dig mer om Darkcoin genom att besöka
+http://darkcoin.io
 
-Om du vill hjälpa till med utvecklingen av digitalcoin Wallet så kan du hitta projektet här
-https://github.com/HashEngineering/digitalcoin-wallet
+Om du vill hjälpa till med utvecklingen av Darkcoin Wallet så kan du hitta projektet här
+https://github.com/HashEngineering/darkcoin-wallet
 
 Licens: GPLv3
 Använd på egen risk!

@@ -1,21 +1,21 @@
-Nosite svoje novce vedno s seboj v žepu. Plačila so hitra, le prečitate QR-kodo. Tudi prejemanje plačil je zanesljivo in takojšnje. digitalcoin Wallet je prva mobilna aplikacija za digitalcoin in najbrž tudi najbolj varna!
+Nosite svoje novce vedno s seboj v žepu. Plačila so hitra, le prečitate QR-kodo. Tudi prejemanje plačil je zanesljivo in takojšnje. Darkcoin Wallet je prva mobilna aplikacija za Darkcoin in najbrž tudi najbolj varna!
 
 LASTNOSTI:
 
 • Potrebna ni nobena registracija, spletna storitev ali oblak! Ta denarnica deluje povsem decentralizirano in vrstniško.
-• Prikaz zneskov v DGC, mDGC ali µDGC.
+• Prikaz zneskov v DRK, mDRK ali µDRK.
 • Samodejna pretvorba v evre in druge lokalne valute.
-• Pošiljanje in prejemanje digitalcoinov prek NFC, QR-kod ali digitalcoin URL-jev.
-• Zasebni imenik digitalcoin naslovov.
-• Z digitalcoinom lahko plačujete tudi, če nimate povezave.
+• Pošiljanje in prejemanje Darkcoinov prek NFC, QR-kod ali Darkcoin URL-jev.
+• Zasebni imenik Darkcoin naslovov.
+• Z Darkcoinom lahko plačujete tudi, če nimate povezave.
 • Sistemska obvestila ob prejetih novcih.
 • Widget, ki prikazuje stanje v denarnici.
 
-Več o digitalcoinu lahko zveste na
-https://digitalcoin.org/sl/
+Več o Darkcoinu lahko zveste na
+https://Darkcoin.org/sl/
 
-Če želite prispevati k aplikaciji digitalcoin Wallet, se nam pridružite na
-https://github.com/schildbach/digitalcoin-wallet
+Če želite prispevati k aplikaciji Darkcoin Wallet, se nam pridružite na
+https://github.com/schildbach/Darkcoin-wallet
 
 Licenca: GPLv3
 Uporaba na lastno odgovornost!

@@ -1,20 +1,20 @@
-Dengan aplikasi ini Anda selalu mempunyai digitalcoin dengan Anda, dalam saku Anda! Anda dapat mengirim pembayaran hanya dengan memindai kode-QR atau mendekatkan dua ponsel bersama (NFC). digitalcoin Wallet dirancang untuk mudah digunakan dan diandalkan, sementara juga menjadi lebih aman dan cepat.
+Dengan aplikasi ini Anda selalu mempunyai Darkcoin dengan Anda, dalam saku Anda! Anda dapat mengirim pembayaran hanya dengan memindai kode-QR atau mendekatkan dua ponsel bersama (NFC). Darkcoin Wallet dirancang untuk mudah digunakan dan diandalkan, sementara juga menjadi lebih aman dan cepat.
 
 FITUR:
 
 • Tidak diperlukan server awan atau layanan web! Dompet ini benar-benar peer ke peer.
-• Tampilkan saldo dompet dalam digitalcoin dan mata uang lainnya.
-• Mengirim dan menerima digitalcoin via NFC, kode-QR atau Tautan digitalcoin.
-• Buku alamat untuk alamat penggunaan digitalcoin secara reguler.
+• Tampilkan saldo dompet dalam Darkcoin dan mata uang lainnya.
+• Mengirim dan menerima Darkcoin via NFC, kode-QR atau Tautan Darkcoin.
+• Buku alamat untuk alamat penggunaan Darkcoin secara reguler.
 • Masukkan transaksi saat offline, akan dilaksanakan ketika online.
-• Notifikasi sistem untuk konektivitas digitalcoin dan menerima koin.
-• Widget Apl untuk saldo digitalcoin.
+• Notifikasi sistem untuk konektivitas Darkcoin dan menerima koin.
+• Widget Apl untuk saldo Darkcoin.
 
-Anda dapat mengetahui lebih mengenai digitalcoin di
-http://digitalcoin.co
+Anda dapat mengetahui lebih mengenai Darkcoin di
+http://darkcoin.io
 
-Jika Anda ingin berkontribusi kepada digitalcoin Wallet, proyeknya berada di
-https://github.com/HashEngineering/digitalcoin-wallet
+Jika Anda ingin berkontribusi kepada Darkcoin Wallet, proyeknya berada di
+https://github.com/HashEngineering/darkcoin-wallet
 
 Lisensi: GPLv3
 Gunakan dengan resiko Anda!
