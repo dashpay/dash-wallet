@@ -51,6 +51,9 @@
     <orderEntry type="library" scope="TEST" name="Maven: junit:junit:4.11" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.hamcrest:hamcrest-core:1.3" level="project" />
     <orderEntry type="module" module-name="~apklib-com.actionbarsherlock_library_4.1.0" />
+    <orderEntry type="module" module-name="darkcoinj" />
+    <orderEntry type="library" name="com.google.guava:guava:16.0.1" level="project" />
+    <orderEntry type="library" name="Maven: com.madgag:sc-light-jdk15on:1.47.0.2" level="project" />
   </component>
 </module>
 
