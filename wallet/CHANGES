@@ -1,4 +1,8 @@
 Darkcoin Wallet
+v1.0.1
+* Fix bug downloading headers
+* updated checkpoints
+
 v1.0.0
 * Added DNS Seeds
 
