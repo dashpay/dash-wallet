@@ -26,6 +26,7 @@ import android.preference.PreferenceScreen;
 import com.actionbarsherlock.app.ActionBar;
 import com.actionbarsherlock.app.SherlockPreferenceActivity;
 import com.actionbarsherlock.view.MenuItem;
+import com.google.bitcoin.core.CoinDefinition;
 import com.google.bitcoin.core.VersionMessage;
 
 import de.schildbach.wallet.Constants;
@@ -77,6 +78,10 @@ public final class AboutActivity extends SherlockPreferenceActivity
 		//findPreference(KEY_ABOUT_MARKET_PUBLISHER).setSummary(Constants.MARKET_PUBLISHER_URL);
         findPreference(KEY_ABOUT_CREDITS_WEBSITE).setSummary(Constants.CREDITS_WEBSITE_URL);
         findPreference(KEY_ABOUT_CREDITS_FORUM).setSummary(Constants.CREDITS_FORUM_URL);
+
+        String sum = findPreference("about_compatibility").getSummary().toString();
+        sum += " (" + CoinDefinition.MIN_PROTOCOL_VERSION + ")";
+        findPreference("about_compatibility").setSummary(sum);
 
 	}
 
