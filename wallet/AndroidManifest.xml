@@ -5,8 +5,8 @@
 	package="hashengineering.darkcoin.wallet"
 	android:installLocation="internalOnly"
 
-	android:versionCode="11005"
-	android:versionName="1.0.5" >
+	android:versionCode="11006"
+	android:versionName="1.0.6" >
 
 
 	<uses-sdk
