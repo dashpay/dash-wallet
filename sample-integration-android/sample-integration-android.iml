@@ -10,6 +10,9 @@
         <option name="RUN_PROCESS_RESOURCES_MAVEN_TASK" value="false" />
         <option name="COMPILE_CUSTOM_GENERATED_SOURCES" value="false" />
         <includeAssetsFromLibraries>true</includeAssetsFromLibraries>
+        <resOverlayFolders>
+          <path>/res-overlay</path>
+        </resOverlayFolders>
       </configuration>
     </facet>
   </component>
@@ -46,4 +49,3 @@
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.7.5" level="project" />
   </component>
 </module>
-
