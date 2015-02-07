@@ -1,8 +1,5 @@
-<<<<<<< HEAD
-Have your Darkcoins always with you, in your pocket! You pay by quickly scanning a QR-code. As a merchant, you receive payments reliably and instantly. Darkcoin Wallet is the first mobile Darkcoin app, and arguably also the most secure!
-=======
-<b>Have your Bitcoins always with you, in your pocket!</b> You pay by quickly scanning a QR code. As a merchant, you receive payments reliably and instantly. Bitcoin Wallet is the first mobile Bitcoin app, and arguably also the most secure!
->>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e
+<b>Have your Darkcoins always with you, in your pocket!</b> You pay by quickly scanning a QR code. As a merchant, you receive payments reliably and instantly. Darkcoin Wallet is the first mobile Darkcoin app, and arguably also the most secure!
+
 
 
 <b>FEATURES</b>
@@ -10,35 +7,21 @@ Have your Darkcoins always with you, in your pocket! You pay by quickly scanning
 • No registration, web service or cloud needed! This wallet is de-centralized and peer to peer.
 • Display of Darkcoin amount in DRK, mDRK and µDRK.
 • Conversion to and from national currencies.
-<<<<<<< HEAD
-• Sending and receiving of Darkcoin via NFC, QR-codes or Darkcoin URLs.
+• Sending and receiving of Darkcoin via NFC, QR codes or Darkcoin URLs.
 • Address book for regularly used Darkcoin addresses.
 • When you're offline, you can still pay via Bluetooth.
 • System notification for received coins.
-• App widget for Darkcoin balance.
-
-You can find more about Darkcoin at
-http://darkcoin.io
-
-If you want to contribute to Darkcoin Wallet, the project is located at
-https://github.com/HashEngineering/darkcoin-wallet
-=======
-• Sending and receiving of Bitcoin via NFC, QR codes or Bitcoin URLs.
-• Address book for regularly used Bitcoin addresses.
-• When you're offline, you can still pay via Bluetooth.
-• System notification for received coins.
 • Sweeping of paper wallets (e.g. those used for cold storage).
-• App widget for Bitcoin balance.
+• App widget for Darkcoin balance.
 
 
 <b>CONTRIBUTE</b>
 
-Bitcoin Wallet is <b>open source</b> and <b>free software</b>. License: GPLv3
+Darkcoin Wallet is <b>open source</b> and <b>free software</b>. License: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Our source code is available at GitHub:
 https://github.com/schildbach/bitcoin-wallet
->>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e
 
 All translations are managed via Transifex:
 https://www.transifex.com/projects/p/bitcoin-wallet/
@@ -46,7 +29,7 @@ https://www.transifex.com/projects/p/bitcoin-wallet/
 
 <b>TESTIMONIALS</b>
 
-• Many mobile wallets base their code on Bitcoin Wallet. Examples: blockchain.info, Hive and KnC.
+• Many mobile wallets base their code on Darkcoin Wallet. Examples: blockchain.info, Hive and KnC.
 • Recommended mobile wallet by https://bitcoin.org
 • Recommended by BitPay.
 

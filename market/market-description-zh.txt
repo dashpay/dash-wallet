@@ -1,12 +1,8 @@
-<b>将比特币随身携带，在您的口袋中！</b> 扫描二维码快速支付，即时可靠的接收付款。比特币钱包 (Bitcoin Wallet) 是首选的、最安全的比特币应用！
+<b>将比特币随身携带，在您的口袋中！</b> 扫描二维码快速支付，即时可靠的接收付款。比特币钱包 (Darkcoin Wallet) 是首选的、最安全的比特币应用！
 
 
 <b>功能</b>
 
-<<<<<<< HEAD
-更多关于比特币的信息请点击：http://darkcoin.io
-如果你想赞助比特币钱包软件开发项目，该项目位于：https://github.com/HashEngineering/darkcoin-wallet
-=======
 • 不需要注册，不需要网络服务，也不需要云！比特币钱包是“去中心化”的，点对点的 (peer to peer)。
 • 以 DRK, mDRK 以及 µDRK 为单位显示比特币金额。
 • 从比特币转换为国家货币，或者从国家货币转换为比特币。
@@ -16,12 +12,10 @@
 • 收到比特币时显示系统通知。
 • 与纸钱包交换比特币（纸钱包经常用于冷存储）。
 • 应用程序小部件，用于显示比特币余额。
->>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e
-
 
 <b>贡献</b>
 
-Bitcoin Wallet 是 <b>开源项目</b> 和 <b>自由软件</b>，以 GPLv3 授权。
+Darkcoin Wallet 是 <b>开源项目</b> 和 <b>自由软件</b>，以 GPLv3 授权。
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 源代码托管在 GitHub:
@@ -33,7 +27,7 @@ https://www.transifex.com/projects/p/bitcoin-wallet/
 
 <b>评价</b>
 
-• 很多的移动钱包应用程序都基于 Bitcoin Wallet，比如：blockchain.info, Hive 以及 KnC.
+• 很多的移动钱包应用程序都基于 Darkcoin Wallet，比如：blockchain.info, Hive 以及 KnC.
 • 由 https://bitcoin.org 推荐的移动钱包。
 • 由 BitPay 推荐的移动钱包。
 

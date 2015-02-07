@@ -10,7 +10,6 @@ ELŐNYÖK:
 • Offline állapotban is fizethetsz - Bluetooth segítségével.
 • Rendszerüzenet Darkcoin érkezésekor.
 • Widget a Darkcoin egyenlegről.
->>>>>>> upstream/prod
 
 Bővebben a Darkcoin-ról:
 http://darkcoin.io

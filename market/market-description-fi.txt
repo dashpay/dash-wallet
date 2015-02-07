@@ -1,22 +1,22 @@
-<b>Pidä Bitcoinisi aina mukana taskussasi!</b> Voit maksaa nopeasti skannaamalla QR-koodin. Kauppiaana saat maksut turvallisesti ja välittömästi. Bitcoin Wallet on ensimmäinen Bitcoin-mobiilisovellus ja luultavimmin myös kaikista turvallisin!
+<b>Pidä Darkcoinisi aina mukana taskussasi!</b> Voit maksaa nopeasti skannaamalla QR-koodin. Kauppiaana saat maksut turvallisesti ja välittömästi. Darkcoin Wallet on ensimmäinen Darkcoin-mobiilisovellus ja luultavimmin myös kaikista turvallisin!
 
 
 <b>OMINAISUUDET</b>
 
 • Ei vaadi rekisteröintiä, verkkopalveluja tai pilvitallennusta! Tämä lompakko on hajautettu ja suorayhteyksinen.
-• Mahdollisuus näyttää Bitcoin-varat määrissä DRK, mDRK ja µDRK.
+• Mahdollisuus näyttää Darkcoin-varat määrissä DRK, mDRK ja µDRK.
 • Yksikkömuunnos valtioiden valuuttojen välillä.
-• Bitcoinien lähettäminen ja vastaanottaminen NFC, QR-koodien tai Bitcoin-URL-osotteiden avulla.
-• Osoitekirja säännöllisesti käytettyjä Bitcoin-osoitteita varten.
+• Darkcoinien lähettäminen ja vastaanottaminen NFC, QR-koodien tai Darkcoin-URL-osotteiden avulla.
+• Osoitekirja säännöllisesti käytettyjä Darkcoin-osoitteita varten.
 • Kun et ole verkkoyhteyden ulottuvilla, voit silti maksaa Bluetoothin välityksellä.
-• Järjestelmän ilmoitus vastaanotetuille Bitcoineille.
+• Järjestelmän ilmoitus vastaanotetuille Darkcoineille.
 • Paperisen lompakon pyyhkäisymahdollisuus (esim. näitä käytetään "kylmissä varastoissa").
-• Android-sovellus Bitcoin-varojen hallintaan.
+• Android-sovellus Darkcoin-varojen hallintaan.
 
 
 <b>OSALLISTU</b>
 
-Bitcoin Wallet on <b>avointa lähdekoodia</b> ja <b>vapaa ohjelmisto</b>. Lisenssi: GPLv3
+Darkcoin Wallet on <b>avointa lähdekoodia</b> ja <b>vapaa ohjelmisto</b>. Lisenssi: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Lähdekoodi saatavilla GitHub:sta:
@@ -28,7 +28,7 @@ https://www.transifex.com/projects/p/bitcoin-wallet/
 
 <b>SUOSITTELUMME</b>
 
-• Useat mobiililompakot perustuvat Bitcoin Wallet-ohjelman lähdekoodiin, esimerkiksi: blockchain.info, Hive and KnC.
+• Useat mobiililompakot perustuvat Darkcoin Wallet-ohjelman lähdekoodiin, esimerkiksi: blockchain.info, Hive and KnC.
 • https://bitcoin.org: suosittelema mobiililompakko
 • BitPay:n suosittelema.
 

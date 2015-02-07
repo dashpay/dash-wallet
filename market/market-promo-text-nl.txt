@@ -1,5 +1,1 @@
-<<<<<<< HEAD
-Uw eigen Darkcoins, in uw eigen zak!
-=======
-Je eigen Bitcoins, in je eigen portemonnee!
->>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e
+Je eigen Darkcoins, in je eigen portemonnee!

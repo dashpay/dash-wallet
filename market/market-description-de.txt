@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-Hab deine Darkcoins immer dabei, in deiner Hosentasche! Du zahlst, indem du rasch einen QR-Code scannst. Als Händler empfängst du Zahlungen zuverlässig und sofort. Darkcoin Wallet ist die erste mobile Darkcoin app, und wohl auch die sicherste!
-=======
-<b>Hab deine Bitcoins immer dabei, in deiner Hosentasche!</b> Du zahlst, indem du rasch einen QR-Code scannst. Als Händler empfängst du Zahlungen zuverlässig und sofort. Bitcoin Wallet ist die erste mobile Bitcoin app, und wohl auch die sicherste!
->>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e
+<b>Hab deine Darkcoins immer dabei, in deiner Hosentasche!</b> Du zahlst, indem du rasch einen QR-Code scannst. Als Händler empfängst du Zahlungen zuverlässig und sofort. Darkcoin Wallet ist die erste mobile Darkcoin app, und wohl auch die sicherste!
 
 
 <b>FEATURES</b>
@@ -14,27 +10,17 @@ Hab deine Darkcoins immer dabei, in deiner Hosentasche! Du zahlst, indem du rasc
 • Adressbuch für regelmäßig genutzte Empfänger.
 • Wenn du offline bist, kannst du trotzdem über Bluetooth zahlen.
 • System-Benachrichtigung für den Empfang von Zahlungen.
-<<<<<<< HEAD
-• App-Widget zeigt Darkcoin-Guthaben an.
-
-Weitere Informationen zu Darkcoin findest Du unter
-http://darkcoin.io
-
-Wenn Du zu Darkcoin Wallet beitragen willst, das Projekt befindet sich auf
-https://github.com/HashEngineering/darkcoin-wallet
-=======
 • Entleeren von Paper-Wallets (die z.B. für Cold-Storage genutzt wurden).
-• App-Widget zeigt Bitcoin-Guthaben an.
+• App-Widget zeigt Darkcoin-Guthaben an.
 
 
 <b>MITWIRKEN</b>
 
-Bitcoin Wallet ist <b>Open Source</b> und <b>Freie Software</b>. Lizenz: GPLv3
+Darkcoin Wallet ist <b>Open Source</b> und <b>Freie Software</b>. Lizenz: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.de.html
 
 Unser Source Code ist auf GitHub verfügbar:
 https://github.com/schildbach/bitcoin-wallet
->>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e
 
 Alle Übersetzungen werden auf Transifex organisiert:
 https://www.transifex.com/projects/p/bitcoin-wallet/
@@ -42,7 +28,7 @@ https://www.transifex.com/projects/p/bitcoin-wallet/
 
 <b>EMPFEHLUNGEN</b>
 
-• Viele mobile Wallets basieren auf Bitcoin Wallet. Beispiele: blockchain.info, Hive and KnC.
+• Viele mobile Wallets basieren auf Darkcoin Wallet. Beispiele: blockchain.info, Hive and KnC.
 • Von https://bitcoin.org empfohlenes mobiles Wallet.
 • Von BitPay empfohlen.
 

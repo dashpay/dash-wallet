@@ -1,5 +1,2 @@
-<<<<<<< HEAD
 Vaše vlastní Darkcoiny ve Vaší vlastní kapse!
-=======
-Vaše vlastní Bitcoiny ve vaší vlastní kapse!
->>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e
+
