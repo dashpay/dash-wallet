@@ -24,7 +24,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.google.bitcoin.core.CoinDefinition;
+import org.bitcoinj.core.CoinDefinition;
 import org.bitcoin.protocols.payments.Protos;
 
 import com.google.bitcoin.core.Address;

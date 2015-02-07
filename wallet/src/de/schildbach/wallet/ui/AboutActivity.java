@@ -26,7 +26,7 @@ import android.preference.PreferenceScreen;
 import com.actionbarsherlock.app.ActionBar;
 import com.actionbarsherlock.app.SherlockPreferenceActivity;
 import com.actionbarsherlock.view.MenuItem;
-import com.google.bitcoin.core.CoinDefinition;
+import org.bitcoinj.core.CoinDefinition;
 import com.google.bitcoin.core.VersionMessage;
 
 import de.schildbach.wallet.Constants;

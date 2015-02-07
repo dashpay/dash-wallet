@@ -27,8 +27,7 @@ import android.text.format.DateUtils;
 import com.google.bitcoin.core.NetworkParameters;
 import com.google.bitcoin.params.MainNetParams;
 import com.google.bitcoin.params.TestNet3Params;
-import com.google.bitcoin.core.CoinDefinition;
-import hashengineering.darkcoin.wallet.R;
+import org.bitcoinj.core.CoinDefinition;
 
 /**
  * @author Andreas Schildbach

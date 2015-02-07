@@ -38,7 +38,7 @@ import java.util.zip.GZIPInputStream;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
-import com.google.bitcoin.core.CoinDefinition;
+import org.bitcoinj.core.CoinDefinition;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
