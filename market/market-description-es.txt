@@ -25,7 +25,7 @@ https://github.com/HashEngineering/darkcoin-wallet
 <b>CARACTERÍSTICAS</b>
 
 • ¡No requiere registro, servidor en la nube o servicio web! Este monedero es auténticamente descentralizado y entre pares (peer-to-peer).
-• Muestra la cantidad de bitcoins en BTC, mBTC, y µBTC.
+• Muestra la cantidad de bitcoins en DRK, mDRK, y µDRK.
 • Conversión hacia y desde divisas nacionales.
 • Envío y recepción de bitcoins mediante NFC, códigos QR o identificadores URL Bitcoin.
 • Libreta de direcciones para guardar las direcciones Bitcoin más utilizadas.

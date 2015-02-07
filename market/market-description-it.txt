@@ -11,7 +11,7 @@ Porta i tuoi Darkcoin sempre con te, in tasca! Paghi velocemente scansionando un
 <<<<<<< HEAD
 • Mostra l'ammontare di Darkcoin in DRK e mDRK.
 =======
-• Mostra l'ammontare di Bitcoin in BTC, mBTC e µBTC.
+• Mostra l'ammontare di Bitcoin in DRK, mDRK e µDRK.
 >>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e
 • Conversione verso e dalle monete nazionali.
 • Invio e ricevimento di Darkcoin tramite NFC, codici QR o URL Darkcoin.

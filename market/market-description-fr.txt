@@ -24,7 +24,7 @@ http://darkcoin.io
 Si vous voulez contribuer á Darkcoin Wallet, le projet se trouve sur
 https://github.com/schildbach/Darkcoin-wallet
 =======
-• Affichage du montant de bitcoins en BTC, mBTC et µBTC.
+• Affichage du montant de bitcoins en DRK, mDRK et µDRK.
 • Conversion vers et depuis des devises nationales.
 • Envoi et réception de bitcoins par NFC, codes QR ou URL Bitcoin
 • Carnet d'adresses pour les adresses Bitcoin utilisées régulièrement.

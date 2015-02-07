@@ -4,7 +4,7 @@
 <b>CARACTERÍSTIQUES</b>
 
 • Sense enregistrar-se, ni necessitat de servici web o nuvol!. Aquesta cartera és descentralitzada i de parell a parell.
-• Mostra l'import de Bitcoin en BTC, mBTC i µBTC.
+• Mostra l'import de Bitcoin en DRK, mDRK i µDRK.
 • Conversió cap a i des de divises nacionals.
 • Enviar i rebre Bitcoins a través d'NFC, codis QR i adreces Bitcoin.
 • Llibreta d'adreces per a les adreces utilitzades regularment.

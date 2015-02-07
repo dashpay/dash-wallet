@@ -4,7 +4,7 @@
 <b>FUNKSJONER</b>
 
 • Ingen registrering, webtjeneste eller sky trengs! Denne lommeboken er desentralisert og peer-to-peer.
-• Visning av bitcoinbeløpet i BTC, mBTC og μBTC.
+• Visning av bitcoinbeløpet i DRK, mDRK og μDRK.
 • Konvertering til og fra nasjonale valutaer.
 • Sende og motta bitcoin via NFC, QR-koder eller Bitcoin-URLer.
 • Adressebok for regelmessig brukte Bitcoin-adresser.

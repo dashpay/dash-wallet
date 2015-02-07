@@ -2,11 +2,11 @@
 <resources>
 
 	<string-array name="preferences_precision_labels">
-		<item>BTC, 8 desimaler</item>
-		<item>BTC, 6 desimaler</item>
-		<item>BTC, 4 desimaler</item>
-		<item>mBTC, 2 desimaler</item>
-		<item>µBTC, ingen desimaler</item>
+		<item>DRK, 8 desimaler</item>
+		<item>DRK, 6 desimaler</item>
+		<item>DRK, 4 desimaler</item>
+		<item>mDRK, 2 desimaler</item>
+		<item>µDRK, ingen desimaler</item>
 	</string-array>
 
 </resources>

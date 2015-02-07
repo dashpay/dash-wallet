@@ -22,7 +22,7 @@ https://github.com/HashEngineering/darkcoin-wallet
 <b>FUNKCE</b>
 
 • Žádná registrace, žádná webová služba ani cloud není potřeba! Tato peněženka je de-centralizovaná a peer to peer.
-• Zobrazení Bitcoin částek v BTC, mBTC a µBTC.
+• Zobrazení Bitcoin částek v DRK, mDRK a µDRK.
 • Přepočet z a do národních měn.
 • Odesílání a přijímání plateb přes NFC, QR kódy nebo Bitcoin URL.
 • Adresář pro často používané Bitcoin adresy.

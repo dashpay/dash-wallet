@@ -4,7 +4,7 @@
 <b>OMINAISUUDET</b>
 
 • Ei vaadi rekisteröintiä, verkkopalveluja tai pilvitallennusta! Tämä lompakko on hajautettu ja suorayhteyksinen.
-• Mahdollisuus näyttää Bitcoin-varat määrissä BTC, mBTC ja µBTC.
+• Mahdollisuus näyttää Bitcoin-varat määrissä DRK, mDRK ja µDRK.
 • Yksikkömuunnos valtioiden valuuttojen välillä.
 • Bitcoinien lähettäminen ja vastaanottaminen NFC, QR-koodien tai Bitcoin-URL-osotteiden avulla.
 • Osoitekirja säännöllisesti käytettyjä Bitcoin-osoitteita varten.

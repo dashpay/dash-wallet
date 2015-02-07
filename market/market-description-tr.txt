@@ -27,7 +27,7 @@ http://www.gnu.org/licenses/gpl-3.0.en.html
 <b>ÖZELLİKLER</b>
 
 • Hiçbir oturuma, web ya da bulut hizmetine gerek yoktur. Bu cüzdan merkezsiz ve eşten eşedir.
-• Bitcoin meblağlarını BTC, mBTC ve µBTC olarak göster.
+• Bitcoin meblağlarını DRK, mDRK ve µDRK olarak göster.
 • Ulusal para birimlerine ve bu para birimlerinden dönüştürme.
 • QR kodları, Bitcoin bağlantıları ve yakın alan iletişimi ile Bitcoin alımı ve gönderilmesi.
 • Sık kullanılan Bitcoin adresleri için adres defteri içerir.

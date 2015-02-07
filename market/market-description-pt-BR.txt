@@ -11,7 +11,7 @@ Tenha os seus Darkcoins sempre com você, no seu bolso! Efetue pagamentos rapida
 <<<<<<< HEAD
 • Exibe a quantidade de Darkcoins em DRK e mDRK.
 =======
-• Exibe a quantidade de Bitcoins em BTC, mBTC e µBTC.
+• Exibe a quantidade de Bitcoins em DRK, mDRK e µDRK.
 >>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e
 • Conversão para moedas nacionais.
 • Envio e recebimento de Darkcoins via NFC, códigos QR ou endereços Darkcoin.

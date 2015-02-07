@@ -50,7 +50,7 @@
   <string name="wallet_version_dialog_button_binary">Download</string>
   <string name="wallet_old_sdk_dialog_title">Android-versie is verouderd</string>
   <string name="wallet_old_sdk_dialog_message">De kans bestaat dat één van de volgende versies van Bitcoin Wallet uw apparaat niet langer ondersteunen zal. In sommige gevallen kan het lastig worden nog met bitcoins te kunnen betalen vanaf dit apparaat.\n\nTenzij U weet wat u aan het doen bent wordt het u aanbevolen om uw huidige aanwezige bitcoin saldo snel elders onder te brengen.</string>
-  <string name="send_coins_activity_title">Verzend BTC</string>
+  <string name="send_coins_activity_title">Verzend DRK</string>
   <string name="send_coins_fragment_request_payment_request_progress">Handtekening van %s ophalen…</string>
   <string name="send_coins_fragment_request_payment_request_failed_title">Handtekening ophalen mislukt</string>
   <string name="send_coins_fragment_request_payment_request_wrong_signature">Verkeerde handtekening!</string>
@@ -111,7 +111,7 @@
   <string name="maintenance_dialog_state_decrypting">Versleuteling opheffen…</string>
   <string name="maintenance_dialog_state_done">Klaar.</string>
   <string name="maintenance_dialog_button_move">Verplaats</string>
-  <string name="request_coins_activity_title">Verzoek BTC</string>
+  <string name="request_coins_activity_title">Verzoek DRK</string>
   <string name="request_coins_fragment_amount_label">Verzocht bedrag (optioneel)</string>
   <string name="request_coins_fragment_accept_bluetooth_payment">Bluetooth-betalingen accepteren voor betrouwbaardere verwerking</string>
   <string name="request_coins_fragment_initiate_request_qr">Laat de verzender deze code scannen.</string>
