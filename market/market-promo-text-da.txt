@@ -1,1 +1,5 @@
+<<<<<<< HEAD
 Dine egne Darkcoins i din egen lomme!
+=======
+Dine egne Bitcoins i din egen lomme!
+>>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e

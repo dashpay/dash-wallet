@@ -1,7 +1,11 @@
+<<<<<<< HEAD
 Ten tus Darkcoins siempre contigo, en tu bolsillo! Paga rápidamente escaneando un código QR. Como comerciante, recibes los pagos de forma fiable e instantáneamente. Darkcoin Wallet es la primera Darkcoin app para movil, e incluso la mas segura!
+=======
+<b>Ten tus bitcoins siempre contigo, ¡en tu bolsillo!</b> Puedes pagar leyendo rápidamente el código QR. Como comerciante, puedes recibir pagos de forma fiable e instantánea. Bitcoin Wallet es la primera aplicación móvil Bitcoin. ¡Y posiblemente también la más segura!
+>>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e
 
-CARACTERÍSTICAS:
 
+<<<<<<< HEAD
 • ¡No requiere registro, servidor en la nube o servicio web! Este monedero es auténticamente entre pares (peer-to-peer).
 • Muestra la cantidad de Darkcoins en DRK y mDRK
 • Conversión a divisas nacionales.
@@ -17,7 +21,38 @@ http://darkcoin.io
 Si quieres contribuir a Darkcoin Wallet, el proyecto se encuentra en
 https://github.com/HashEngineering/darkcoin-wallet
 
+=======
+<b>CARACTERÍSTICAS</b>
 
-Licencia: GPLv3
-¡Úsalo bajo tu propio riesgo!
-http://www.gnu.org/licenses/gpl-3.0.en.html
+• ¡No requiere registro, servidor en la nube o servicio web! Este monedero es auténticamente descentralizado y entre pares (peer-to-peer).
+• Muestra la cantidad de bitcoins en BTC, mBTC, y µBTC.
+• Conversión hacia y desde divisas nacionales.
+• Envío y recepción de bitcoins mediante NFC, códigos QR o identificadores URL Bitcoin.
+• Libreta de direcciones para guardar las direcciones Bitcoin más utilizadas.
+• Cuando no tengas conexión, puedes seguir pagando via Bluetooth.
+• Notificación de sistema al recibir bitcoins.
+• Barrido de monederos de papel (por ejemplo, los que se utilizan para custodia en frio).
+• Widget para el saldo de bitcoins.
+
+
+<b>CONTRIBUIR</b>
+
+Bitcoin Wallet es <b>código abierto</b> y <b>software libre</b>. Licencia: GPLv3
+https://www.gnu.org/licenses/gpl-3.0.en.html
+
+Nuestro código fuente está disponible en GitHub:
+https://github.com/schildbach/bitcoin-wallet
+>>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e
+
+Todas las traducciones son administradas a través de Transifex:
+https://www.transifex.com/projects/p/bitcoin-wallet/
+
+
+<b>TESTIMONIOS</b>
+
+• Muchos monederos móviles basan su código en Bitcoin Wallet. Ejemplos: blockchain.info, Hive y KnC.
+• Monedero móvil recomendado por https://bitcoin.org
+• Recomendado por BitPay.
+
+
+<i>¡Úsalo bajo tu propio riesgo!</i>

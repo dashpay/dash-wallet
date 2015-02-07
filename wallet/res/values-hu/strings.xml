@@ -12,10 +12,7 @@
 	<string name="blockchain_state_progress_stalled">A szinkronizálás szünetel</string>
 	<string name="blockchain_state_progress_problem_storage">Szinkronizálás: tárolóhely probléma</string>
 	<string name="blockchain_state_progress_problem_network">Szinkronizálás: Hálózati probléma</string>
-	<string name="wallet_address_fragment_your">Darkcoin címed:</string>
-	<string name="wallet_address_fragment_clipboard_msg">Darkcoin cím a vágólapra másolva</string>
-	<string name="wallet_addresses_fragment_add_dialog_title">Új Darkcoin cím</string>
-	<string name="wallet_addresses_fragment_add_dialog_message">A Darkcoin címek nem törölhetők. Új címet akarsz hozzáadni a tárcádhoz?</string>
+	<string name="wallet_address_fragment_clipboard_msg">Bitcoin cím a vágólapra másolva</string>
 	<string name="wallet_balance_fragment_replaying">A frissítés során az egyenleg nem elérhető.</string>
 	<string name="exchange_rates_activity_title">Árfolyamok</string>
 	<string name="exchange_rates_fragment_empty_text">Az árfolyamok betöltése sikertelen</string>
@@ -33,8 +30,6 @@
 	<string name="wallet_transactions_row_warning_backup">Gratulálunk, megérkezett az első kifizetésed! Ugye rendszeresen &lt;u&gt;elmented a tárcád&lt;/u&gt;, tartalmát, hogy biztonságban legyen?</string>
 	<string name="wallet_transactions_fragment_coinbase">bányászott</string>
 	<string name="wallet_transactions_fragment_internal">belső</string>
-	<string name="wallet_transactions_context_show_qr_title">QR-kód megtekintése</string>
-	<string name="wallet_options_backup">Kulcsok mentése</string>
 	<string name="wallet_options_safety">Biztonsági megjegyzések</string>
 	<string name="wallet_options_donate">Támogatás / Donate</string>
 	<string name="wallet_donate_address_label">Támogasd a Darkcoin Wallet létrehozóit</string>
@@ -52,12 +47,8 @@
 	<string name="send_coins_activity_title">Darkcoin küldése</string>
 	<string name="send_coins_fragment_receiving_address_label">Fizetés</string>
 	<string name="send_coins_fragment_receiving_address_hint">írd be a címet vagy nevet</string>
-	<string name="send_coins_fragment_receiving_address_error">Érvénytelen Darkcoin cím!</string>
-	<string name="send_coins_fragment_receiving_address_error_cross_network">a %s cím nem használható ezzel a tárcával!</string>
-	<string name="send_coins_fragment_receiving_address_error_cross_network_unknown">Ismeretlen hálózat címzettje nem használható ezzel a tárcával!</string>
-
-	<string name="send_coins_fragment_pending">(%s DRK várakozik jóváhagyásra)</string>
-
+	<string name="send_coins_fragment_receiving_address_error">Érvénytelen Bitcoin cím!</string>
+	<string name="send_coins_fragment_pending">(%s várakozik jóváhagyásra)</string>
 	<string name="send_coins_fragment_amount_label">Fizetendő összeg</string>
 	<string name="send_coins_fragment_button_send">Küldés</string>
 	<string name="send_coins_fragment_button_back">Vissza</string>
@@ -84,9 +75,7 @@
 	<string name="address_book_context_send_title">Darkcoin küldése megadott címre</string>
 	<string name="address_book_context_edit_title">Cím szerkesztése</string>
 	<string name="address_book_context_remove_title">Cím eltávolítása</string>
-	<string name="address_book_context_show_qr_title">QR-kód megtekintése</string>
 	<string name="address_book_context_copy_to_clipboard_title">Másolás</string>
-	<string name="address_book_context_default_title">Alapértelmezett cím</string>
 	<string name="address_book_options_paste_from_clipboard_title">Beillesztés</string>
 	<string name="address_book_options_paste_from_clipboard_empty">A vágólap üres</string>
 	<string name="address_book_options_scan_title">Cím szkennelése</string>
@@ -99,7 +88,6 @@
 	<string name="transaction_row_message_purpose_key_rotation">A művelet megerősíti a tárcád védelmét a lopások ellen. &lt;u&gt;Bővebb információ&lt;/u&gt;</string>
 	<string name="transaction_row_message_own_unbroadcasted">Ez a kifizetés még nem került elküldésre.</string>
 	<string name="transaction_row_message_received_unconfirmed_unlocked">Ez a kifizetés perceken belül hozzáférhetővé válik.</string>
-	<string name="transaction_row_message_received_unconfirmed_locked">Ez nem egy hagyományos fizetés, nem megbízható.</string>
 	<string name="transaction_row_message_received_dead">A kifizetés visszafordítva a küldő által.</string>
 	<string name="transaction_row_message_received_dust">Ilyen kis összeg felhasználása -valószínűleg- nem történhet meg gazdaságosan.</string>
 	<string name="network_monitor_activity_title">Hálózati állapot</string>
@@ -116,13 +104,9 @@
 	<string name="import_keys_dialog_file_created_automatic">automatikus mentés %s</string>
 	<string name="import_keys_dialog_file_created_manual">kézi visszaállítás %s</string>
 	<string name="import_keys_dialog_button_import">Visszaállítás</string>
-	<string name="import_keys_dialog_success_imported">%d privát kulcs került visszaállításra.</string>
-	<string name="import_keys_dialog_success_existing">%d privát kulcs nem került visszaállításra, mert azokat már használod a tárcádban.</string>
-	<string name="import_keys_dialog_success_reset">Az egyenleged frissítéséhez újra kell tölteni a blokkláncot. Szeretnéd újratölteni?</string>
 	<string name="import_keys_dialog_failure">Az alábbi privát kulcsok visszaállítása nem sikerült:\n\n%s\n\nRossz a jelszó esetleg?</string>
-	<string name="import_keys_dialog_button_reset_blockchain">Visszaállítás/újratöltés</string>
 	<string name="export_keys_dialog_title">Privát kulcsok mentése</string>
-	<string name="export_keys_dialog_message">A privát kulcsaid a választott titkosított jelszóval kerülnek mentésre a külső tárolóra.</string>
+	<string name="backup_wallet_dialog_message">A privát kulcsaid a választott titkosított jelszóval kerülnek mentésre a külső tárolóra.</string>
 	<string name="export_keys_dialog_button_export">Mentés</string>
 	<string name="export_keys_dialog_success">A privát kulcsaid visszaállításra kerültek ide:\n\n%s\n\nTartsd biztonságos helyen, csakúgy mint a jelszavaidat!\n\nSzeretnéd menteni a kulcsokat?</string>
 	<string name="export_keys_dialog_failure">A privát kulcsaid visszaállítása nem sikerült:\n%s</string>
@@ -138,12 +122,11 @@
 	<string name="scan_camera_problem_dialog_message">A kamera nem válaszol. Próbáld meg újraindítani az eszközt.</string>
 
 	<string name="input_parser_cannot_classify">Nem osztályozható bemenet:\n%s</string>
-	<string name="input_parser_invalid_Darkcoin_uri">Érvénytelen Darkcoin URI:\n%s</string>
+	<string name="input_parser_invalid_bitcoin_uri">Érvénytelen Darkcoin URI:\n%s</string>
 	<string name="input_parser_invalid_address">Érvénytelen Darkcoin cím!\n(Keveredés a Mainnet/Testnet-tel?)</string>
 	<string name="input_parser_invalid_transaction">Érvénytelen tranzakció:\n%s</string>
 
 	<string name="preferences_activity_title">Beállítások</string>
-	<string name="preferences_category_main">Beállítások</string>
 	<string name="preferences_category_diagnostics">Diagnosztika</string>
 	<string name="preferences_category_labs">Labs</string>
 	<string name="preferences_precision_title">Pontosítás és egyszerűsítés</string>
@@ -180,11 +163,8 @@
 	<string name="about_credits_icon_title">Az app \'bitboy\' ikonját használja</string>
 	<string name="about_community_googleplus_title">Google+ közösség</string>
 	<string name="about_community_googleplus_summary">Fórumok az applikációról</string>
-	<string name="about_author_twitter_title">A Twitter-en</string>
-	<string name="about_author_googleplus_title">A Google+-on</string>
 	<string name="about_market_app_title">Google Play oldal</string>
 	<string name="about_market_app_summary">Értékelések</string>
-	<string name="about_credits_market_publisher_title">A szerző egyéb applikációi</string>
 	<string name="notification_coins_received_msg">Fogadott mennyiség: %s</string>
 	<string name="notification_peers_connected_msg">%d peer kapcsolódva</string>
 	<!-- generic buttons -->
@@ -204,6 +184,7 @@
 	<string name="button_scan">Szkennelés</string>
 	<string name="button_edit_address">Cím hozzáadása/szerkesztése</string>
 	<string name="button_settings">Beállítások</string>
+	<string name="action_show_qr">QR-kód megtekintése</string>
 	<string name="time_today">ma</string>
 	<string name="address_unlabeled">(címke nélkül)</string>
     <string name="wallet_options_disconnect">Szétkapcsolva</string>

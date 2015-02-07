@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2014 the original author or authors.
+ * Copyright 2013-2015 the original author or authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,15 +17,12 @@
 
 package de.schildbach.wallet.ui;
 
+import android.app.Fragment;
+import android.app.FragmentManager;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentStatePagerAdapter;
+import android.support.v13.app.FragmentStatePagerAdapter;
 import android.support.v4.view.ViewPager;
-
-import com.actionbarsherlock.app.ActionBar;
-import com.actionbarsherlock.view.MenuItem;
-
+import android.view.MenuItem;
 import de.schildbach.wallet.util.ViewPagerTabs;
 import hashengineering.darkcoin.wallet.R;
 
@@ -44,12 +41,9 @@ public final class NetworkMonitorActivity extends AbstractWalletActivity
 
 		setContentView(R.layout.network_monitor_content);
 
-		final ActionBar actionBar = getSupportActionBar();
-		actionBar.setDisplayHomeAsUpEnabled(true);
-
 		final ViewPager pager = (ViewPager) findViewById(R.id.network_monitor_pager);
 
-		final FragmentManager fm = getSupportFragmentManager();
+		final FragmentManager fm = getFragmentManager();
 
 		if (pager != null)
 		{

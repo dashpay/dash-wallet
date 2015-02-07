@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2014 the original author or authors.
+ * Copyright 2013-2015 the original author or authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,15 +17,18 @@
 
 package de.schildbach.wallet.ui;
 
+import java.util.Set;
+
+import javax.annotation.CheckForNull;
+
 import android.app.Activity;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
+import android.app.Fragment;
+import android.app.LoaderManager;
+import android.app.LoaderManager.LoaderCallbacks;
+import android.content.Loader;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
 import android.text.Html;
 import android.text.SpannableStringBuilder;
 import android.view.LayoutInflater;
@@ -37,7 +40,9 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.service.BlockchainService;
+import de.schildbach.wallet.service.BlockchainState;
+import de.schildbach.wallet.service.BlockchainState.Impediment;
+import de.schildbach.wallet.service.BlockchainStateLoader;
 import hashengineering.darkcoin.wallet.R;
 
 /**
@@ -47,10 +52,14 @@ public final class WalletDisclaimerFragment extends Fragment implements OnShared
 {
 	private Activity activity;
 	private Configuration config;
+	private LoaderManager loaderManager;
 
-	private int download;
+	@CheckForNull
+	private BlockchainState blockchainState = null;
 
 	private TextView messageView;
+
+	private static final int ID_BLOCKCHAIN_STATE_LOADER = 0;
 
 	@Override
 	public void onAttach(final Activity activity)
@@ -60,6 +69,7 @@ public final class WalletDisclaimerFragment extends Fragment implements OnShared
 		this.activity = (WalletActivity) activity;
 		final WalletApplication application = (WalletApplication) activity.getApplication();
 		this.config = application.getConfiguration();
+		this.loaderManager = getLoaderManager();
 	}
 
 	@Override
@@ -74,7 +84,7 @@ public final class WalletDisclaimerFragment extends Fragment implements OnShared
 			{
 				final boolean showBackup = config.remindBackup();
 				if (showBackup)
-					((WalletActivity) activity).handleExportKeys();
+					((WalletActivity) activity).handleBackupWallet();
 				else
 					HelpDialogFragment.page(getFragmentManager(), R.string.help_safety);
 			}
@@ -90,7 +100,7 @@ public final class WalletDisclaimerFragment extends Fragment implements OnShared
 
 		config.registerOnSharedPreferenceChangeListener(this);
 
-		activity.registerReceiver(broadcastReceiver, new IntentFilter(BlockchainService.ACTION_BLOCKCHAIN_STATE));
+		loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
 
 		updateView();
 	}
@@ -98,7 +108,7 @@ public final class WalletDisclaimerFragment extends Fragment implements OnShared
 	@Override
 	public void onPause()
 	{
-		activity.unregisterReceiver(broadcastReceiver);
+		loaderManager.destroyLoader(ID_BLOCKCHAIN_STATE_LOADER);
 
 		config.unregisterOnSharedPreferenceChangeListener(this);
 
@@ -120,15 +130,15 @@ public final class WalletDisclaimerFragment extends Fragment implements OnShared
 		final boolean showBackup = config.remindBackup();
 		final boolean showDisclaimer = config.getDisclaimerEnabled();
 
-		final int progressResId;
-		if (download == BlockchainService.ACTION_BLOCKCHAIN_STATE_DOWNLOAD_OK)
-			progressResId = 0;
-		else if ((download & BlockchainService.ACTION_BLOCKCHAIN_STATE_DOWNLOAD_STORAGE_PROBLEM) != 0)
-			progressResId = R.string.blockchain_state_progress_problem_storage;
-		else if ((download & BlockchainService.ACTION_BLOCKCHAIN_STATE_DOWNLOAD_NETWORK_PROBLEM) != 0)
-			progressResId = R.string.blockchain_state_progress_problem_network;
-		else
-			throw new IllegalStateException("download=" + download);
+		int progressResId = 0;
+		if (blockchainState != null)
+		{
+			final Set<Impediment> impediments = blockchainState.impediments;
+			if (impediments.contains(Impediment.STORAGE))
+				progressResId = R.string.blockchain_state_progress_problem_storage;
+			else if (impediments.contains(Impediment.NETWORK))
+				progressResId = R.string.blockchain_state_progress_problem_network;
+		}
 
 		final SpannableStringBuilder text = new SpannableStringBuilder();
 		if (progressResId != 0)
@@ -149,16 +159,25 @@ public final class WalletDisclaimerFragment extends Fragment implements OnShared
 		fragment.setVisibility(text.length() > 0 ? View.VISIBLE : View.GONE);
 	}
 
-	private final BlockchainBroadcastReceiver broadcastReceiver = new BlockchainBroadcastReceiver();
-
-	private final class BlockchainBroadcastReceiver extends BroadcastReceiver
+	private final LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>()
 	{
 		@Override
-		public void onReceive(final Context context, final Intent intent)
+		public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args)
 		{
-			download = intent.getIntExtra(BlockchainService.ACTION_BLOCKCHAIN_STATE_DOWNLOAD, BlockchainService.ACTION_BLOCKCHAIN_STATE_DOWNLOAD_OK);
+			return new BlockchainStateLoader(activity);
+		}
+
+		@Override
+		public void onLoadFinished(final Loader<BlockchainState> loader, final BlockchainState blockchainState)
+		{
+			WalletDisclaimerFragment.this.blockchainState = blockchainState;
 
 			updateView();
 		}
-	}
+
+		@Override
+		public void onLoaderReset(final Loader<BlockchainState> loader)
+		{
+		}
+	};
 }

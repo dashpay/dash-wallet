@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2014 the original author or authors.
+ * Copyright 2011-2015 the original author or authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,6 +38,11 @@ public class Io
 
 	public static final long copy(@Nonnull final Reader reader, @Nonnull final StringBuilder builder) throws IOException
 	{
+		return copy(reader, builder, 0);
+	}
+
+	public static final long copy(@Nonnull final Reader reader, @Nonnull final StringBuilder builder, final long maxChars) throws IOException
+	{
 		final char[] buffer = new char[256];
 		long count = 0;
 		int n = 0;
@@ -45,6 +50,9 @@ public class Io
 		{
 			builder.append(buffer, 0, n);
 			count += n;
+
+			if (maxChars != 0 && count > maxChars)
+				throw new IOException("Read more than the limit of " + maxChars + " characters");
 		}
 		return count;
 	}

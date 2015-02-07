@@ -1,14 +1,24 @@
+<<<<<<< HEAD
 Tenha os seus Darkcoins sempre com você, no seu bolso! Efetue pagamentos rapidamente apenas escaneando um código QR​​. Como comerciante, você pode receber pagamentos de forma confiável e instantaneamente. O Darkcoin Wallet é o primeiro aplicativo Darkcoin móvel, e, possivelmente, o mais seguro!
+=======
+<b>Tenha os seus Bitcoins sempre com você, no seu bolso!</b> Efetue pagamentos rapidamente apenas escaneando um código QR. Como comerciante, você pode receber pagamentos de forma confiável e instantaneamente. O Bitcoin Wallet é o primeiro aplicativo Bitcoin móvel, e, possivelmente, o mais seguro!
+>>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e
 
-CARACTERÍSTICAS:
+
+<b>CARACTERÍSTICAS</b>
 
 • Sem necessidade de cadastro, serviço web ou hospedagem! Esta carteira é descentralizada e "peer to peer".
+<<<<<<< HEAD
 • Exibe a quantidade de Darkcoins em DRK e mDRK.
+=======
+• Exibe a quantidade de Bitcoins em BTC, mBTC e µBTC.
+>>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e
 • Conversão para moedas nacionais.
 • Envio e recebimento de Darkcoins via NFC, códigos QR ou endereços Darkcoin.
 • Catálogo para guardar os endereços mais utilizados.
 • Quando você estiver off-line, você ainda pode pagar via Bluetooth.
 • Notificações do sistema para moedas recebidas.
+<<<<<<< HEAD
 • Widget para saldo de Darkcoins.
 
 Mais informações sobre Darkcoin em
@@ -16,7 +26,29 @@ http://darkcoin.io
 
 Se você deseja contribuir com o Darkcoin Wallet, o projeto encontra-se em
 https://github.com/HashEngineering/darkcoin-wallet
+=======
+• Varrer de carteiras de papel (por exemplo, aqueles usados para o armazenamento a frio).
+• Widget para saldo de Bitcoins.
 
-Licença: GPLv3
-Use por sua conta e risco!
-http://www.gnu.org/licenses/gpl-3.0.en.html
+
+<b>CONTRIBUA</b>
+
+Bitcoin Wallet é <b>open source</ b> e <b>software livre</ b>. Licença: GPLv3
+https://www.gnu.org/licenses/gpl-3.0.en.html
+
+Nosso código fonte está disponível no GitHub:
+https://github.com/schildbach/bitcoin-wallet
+>>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e
+
+Todas as traduções são gerenciadas via Transifex:
+https://www.transifex.com/projects/p/bitcoin-wallet/
+
+
+<b>TESTEMUNHOS</b>
+
+• Muitas carteiras móveis baseiam seu código em Bitcoin Wallet. Exemplos: blockchain.info, colmeia e KNC.
+• Carteira mobile recomendada por https://bitcoin.org
+• Recomendado por BitPay.
+
+
+<i>Use por sua conta e risco!</i>

@@ -4,14 +4,12 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	package="hashengineering.darkcoin.wallet"
 	android:installLocation="internalOnly"
-
-	android:versionCode="11008"
-	android:versionName="1.0.8" >
-
+	android:versionCode="11009"
+	android:versionName="1.0.9" >
 
 	<uses-sdk
-		android:minSdkVersion="10"
-		android:targetSdkVersion="11"
+		android:minSdkVersion="15"
+		android:targetSdkVersion="16"
 		tools:ignore="OldTargetApi" />
 
 	<uses-permission android:name="android.permission.INTERNET" />
@@ -21,7 +19,6 @@
 	<uses-permission android:name="android.permission.CAMERA" />
 	<uses-permission android:name="android.permission.VIBRATE" />
 	<uses-permission android:name="android.permission.WAKE_LOCK" />
-	<uses-permission android:name="android.permission.BROADCAST_STICKY" />
 	<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 	<uses-permission android:name="android.permission.BLUETOOTH" />
 
@@ -60,14 +57,13 @@
 	<application
 		android:name="de.schildbach.wallet.WalletApplication"
 		android:allowBackup="false"
-		android:hardwareAccelerated="true"
-		android:icon="@drawable/app_icon"
-		android:label="@string/app_name"
-		android:theme="@style/My.Theme" >
+		android:icon="@drawable/ic_app_color_48dp"
+		android:label="@string/app_name" >
 		<activity
 			android:name="de.schildbach.wallet.ui.WalletActivity"
 			android:configChanges="keyboard|keyboardHidden"
-			android:launchMode="singleTask" />
+			android:launchMode="singleTask"
+			android:theme="@style/My.Theme" />
 
 		<activity-alias
 			android:name="de.schildbach.wallet.WalletActivity"
@@ -87,10 +83,11 @@
 		</activity-alias>
 
 		<activity
-			android:name="de.schildbach.wallet.ui.SendCoinsActivity"
+			android:name="de.schildbach.wallet.ui.send.SendCoinsActivity"
 			android:configChanges="keyboard|keyboardHidden"
 			android:label="@string/send_coins_activity_title"
 			android:screenOrientation="behind"
+			android:theme="@style/My.Theme.ChildActivity"
 			android:windowSoftInputMode="adjustResize" >
 			<intent-filter android:label="@string/send_coins_activity_title" >
 				<action android:name="android.intent.action.VIEW" />
@@ -107,7 +104,7 @@
 
 				<category android:name="android.intent.category.DEFAULT" />
 			</intent-filter>
-			<intent-filter android:label="@string/send_coins_activity_title">
+			<intent-filter android:label="@string/send_coins_activity_title" >
 				<action android:name="android.intent.action.VIEW" />
 
 				<data android:mimeType="application/darkcoin-paymentrequest" />
@@ -132,46 +129,33 @@
 			android:configChanges="keyboard|keyboardHidden"
 			android:label="@string/request_coins_activity_title"
 			android:screenOrientation="behind"
+			android:theme="@style/My.Theme.ChildActivity"
 			android:windowSoftInputMode="adjustResize" />
-		<activity
-                android:name="de.schildbach.wallet.ui.TransactionActivity"
-                android:configChanges="keyboard|keyboardHidden"
-                android:label="@string/transaction_activity_title"
-                android:screenOrientation="behind" >
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <data android:scheme="drktx" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-            </intent-filter>
-        </activity>
 		<activity
 			android:name="de.schildbach.wallet.ui.AddressBookActivity"
 			android:configChanges="keyboard|keyboardHidden"
 			android:label="@string/address_book_activity_title"
-			android:screenOrientation="behind" />
+			android:screenOrientation="behind"
+			android:theme="@style/My.Theme.ChildActivity" />
 		<activity
 			android:name="de.schildbach.wallet.ui.ExchangeRatesActivity"
 			android:configChanges="keyboard|keyboardHidden"
 			android:label="@string/exchange_rates_activity_title"
-			android:screenOrientation="behind" />
+			android:screenOrientation="behind"
+			android:theme="@style/My.Theme.ChildActivity" />
 		<activity
 			android:name="de.schildbach.wallet.ui.NetworkMonitorActivity"
 			android:configChanges="keyboard|keyboardHidden"
 			android:label="@string/network_monitor_activity_title"
-			android:screenOrientation="behind" />
+			android:screenOrientation="behind"
+			android:theme="@style/My.Theme.ChildActivity" />
 		<activity
-			android:name="de.schildbach.wallet.ui.PreferencesActivity"
+			android:name="de.schildbach.wallet.ui.preference.PreferenceActivity"
 			android:label="@string/preferences_activity_title"
-			android:screenOrientation="behind" />
+			android:screenOrientation="behind"
+			android:theme="@style/My.Theme.ChildActivity" />
 		<activity
-			android:name="de.schildbach.wallet.ui.AboutActivity"
-			android:label="@string/about_title"
-			android:screenOrientation="behind" />
-		<activity
-			android:name="de.schildbach.wallet.ui.ImportKeysActivity"
+			android:name="de.schildbach.wallet.ui.RestoreWalletActivity"
 			android:configChanges="orientation|keyboard|keyboardHidden"
 			android:theme="@style/My.Theme.Dialog" >
 			<intent-filter android:label="@string/import_keys_intent_filter_action" >
@@ -179,7 +163,7 @@
 
 				<category android:name="android.intent.category.DEFAULT" />
 
-				<data android:mimeType="x-darkcoin/private-keys" />
+				<data android:mimeType="application/x-darkcoin-wallet-backup" />
 				<data android:mimeType="application/octet-stream" />
 			</intent-filter>
 		</activity>
@@ -190,7 +174,14 @@
 			android:stateNotNeeded="true"
 			android:theme="@style/My.Theme.Fullscreen"
 			android:windowSoftInputMode="stateAlwaysHidden" />
-        <!-- Need to update this for the coin -->
+		<activity
+			android:name="de.schildbach.wallet.ui.send.SweepWalletActivity"
+			android:configChanges="keyboard|keyboardHidden"
+			android:label="@string/sweep_wallet_activity_title"
+			android:screenOrientation="behind"
+			android:theme="@style/My.Theme.ChildActivity"
+			android:windowSoftInputMode="adjustResize" />
+
 		<provider
 			android:name="de.schildbach.wallet.AddressBookProvider"
 			android:authorities="hashengineering.darkcoin.wallet.address_book"
@@ -200,6 +191,11 @@
 			android:name="de.schildbach.wallet.ExchangeRatesProvider"
 			android:authorities="hashengineering.darkcoin.wallet.exchange_rates"
 			android:exported="false" />
+		<provider
+			android:name="de.schildbach.wallet.FileAttachmentProvider"
+			android:authorities="de.schildbach.wallet_test.file_attachment"
+			android:exported="false"
+			android:grantUriPermissions="true" />
 
 		<receiver
 			android:name="de.schildbach.wallet.WalletBalanceWidgetProvider"
@@ -225,11 +221,17 @@
 				<action android:name="android.intent.action.BOOT_COMPLETED" />
 			</intent-filter>
 			<intent-filter>
-				<action android:name="android.intent.action.PACKAGE_REPLACED" />
-
-				<data android:scheme="package" />
+				<action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
 			</intent-filter>
 		</receiver>
+
+		<service
+			android:name="de.schildbach.wallet.service.UpgradeWalletService"
+			android:exported="false" />
+
+		<meta-data
+			android:name="android.nfc.disable_beam_default"
+			android:value="true" />
 	</application>
 
 </manifest>

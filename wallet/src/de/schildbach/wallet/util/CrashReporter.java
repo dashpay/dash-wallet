@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2014 the original author or authors.
+ * Copyright 2011-2015 the original author or authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +33,9 @@ import java.util.Set;
 
 import javax.annotation.Nonnull;
 
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,14 +43,12 @@ import android.app.ActivityManager;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.os.Build;
 
-import com.google.bitcoin.core.Transaction;
-import com.google.bitcoin.core.TransactionOutput;
-import com.google.bitcoin.core.Wallet;
+import com.google.common.base.Charsets;
 
+import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 
@@ -85,7 +86,7 @@ public class CrashReporter
 
 		try
 		{
-			reader = new BufferedReader(new InputStreamReader(new FileInputStream(backgroundTracesFile), Constants.UTF_8));
+			reader = new BufferedReader(new InputStreamReader(new FileInputStream(backgroundTracesFile), Charsets.UTF_8));
 			copy(reader, report);
 		}
 		finally
@@ -108,7 +109,7 @@ public class CrashReporter
 
 		try
 		{
-			reader = new BufferedReader(new InputStreamReader(new FileInputStream(crashTraceFile), Constants.UTF_8));
+			reader = new BufferedReader(new InputStreamReader(new FileInputStream(crashTraceFile), Charsets.UTF_8));
 			copy(reader, report);
 		}
 		finally
@@ -135,7 +136,7 @@ public class CrashReporter
 	public static void appendDeviceInfo(@Nonnull final Appendable report, final Context context) throws IOException
 	{
 		final Resources res = context.getResources();
-		final Configuration config = res.getConfiguration();
+		final android.content.res.Configuration config = res.getConfiguration();
 		final ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
 
 		report.append("Device Model: " + android.os.Build.MODEL + "\n");
@@ -154,8 +155,8 @@ public class CrashReporter
 		report.append("Type: " + android.os.Build.TYPE + "\n");
 		report.append("User: " + android.os.Build.USER + "\n");
 		report.append("Configuration: " + config + "\n");
-		report.append("Screen Layout: size " + (config.screenLayout & Configuration.SCREENLAYOUT_SIZE_MASK) + " long "
-				+ (config.screenLayout & Configuration.SCREENLAYOUT_LONG_MASK) + "\n");
+		report.append("Screen Layout: size " + (config.screenLayout & android.content.res.Configuration.SCREENLAYOUT_SIZE_MASK) + " long "
+				+ (config.screenLayout & android.content.res.Configuration.SCREENLAYOUT_LONG_MASK) + "\n");
 		report.append("Display Metrics: " + res.getDisplayMetrics() + "\n");
 		report.append("Memory Class: " + activityManager.getMemoryClass()
 				+ (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB ? "/" + largeMemoryClass(activityManager) : "") + "\n");
@@ -195,6 +196,7 @@ public class CrashReporter
 	public static void appendApplicationInfo(@Nonnull final Appendable report, @Nonnull final WalletApplication application) throws IOException
 	{
 		final PackageInfo pi = application.packageInfo();
+		final Configuration configuration = application.getConfiguration();
 		final long now = System.currentTimeMillis();
 
 		report.append("Version: " + pi.versionName + " (" + pi.versionCode + ")\n");
@@ -205,8 +207,12 @@ public class CrashReporter
 				+ "\n");
 		report.append("Time of last update: " + String.format("%tF %tT %tz", pi.lastUpdateTime, pi.lastUpdateTime, pi.lastUpdateTime) + "\n");
 		report.append("Time of first install: " + String.format("%tF %tT %tz", pi.firstInstallTime, pi.firstInstallTime, pi.firstInstallTime) + "\n");
+		final long lastBackupTime = configuration.getLastBackupTime();
+		report.append("Time of backup: "
+				+ (lastBackupTime > 0 ? String.format("%tF %tT %tz", lastBackupTime, lastBackupTime, lastBackupTime) : "none") + "\n");
 		report.append("Network: " + Constants.NETWORK_PARAMETERS.getId() + "\n");
 		final Wallet wallet = application.getWallet();
+		report.append("Encrypted: " + wallet.isEncrypted() + "\n");
 		report.append("Keychain size: " + wallet.getKeychainSize() + "\n");
 
 		final Set<Transaction> transactions = wallet.getTransactions(true);
@@ -264,7 +270,7 @@ public class CrashReporter
 
 			try
 			{
-				writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(backgroundTracesFile, true), Constants.UTF_8));
+				writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(backgroundTracesFile, true), Charsets.UTF_8));
 
 				final long now = System.currentTimeMillis();
 				writer.println(String.format("\n--- collected at %tF %tT %tz on version %s (%d)", now, now, now, packageInfo.versionName,
@@ -309,6 +315,8 @@ public class CrashReporter
 		@Override
 		public synchronized void uncaughtException(final Thread t, final Throwable exception)
 		{
+			log.warn("crashing because of uncaught exception", exception);
+
 			try
 			{
 				saveCrashTrace(exception);
@@ -323,7 +331,7 @@ public class CrashReporter
 
 		private void saveCrashTrace(@Nonnull final Throwable throwable) throws IOException
 		{
-			final PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(crashTraceFile), Constants.UTF_8));
+			final PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(crashTraceFile), Charsets.UTF_8));
 			appendTrace(writer, throwable);
 			writer.close();
 		}

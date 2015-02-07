@@ -1,7 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-	<string name="help_wallet">
+  <string name="help_wallet">
 <![CDATA[
 		<p>
 			La parte in alto a sinistra dello schermo mostra gli indirizzo Darkcoin che le altre persone hanno bisogno per poterti inviare dei Darkcoin.
@@ -28,7 +27,7 @@
 		</p>
 	]]>
 	</string>
-	<string name="help_request_coins">
+  <string name="help_request_coins">
 <![CDATA[
 		<p>
 			Utilizzando questa finestra puoi richiedere dei Darkcoin ad un\'altra persona
@@ -39,8 +38,13 @@
 		</p>
 		<p>
 			Poi puoi generare dei codici QR da far acquisire all\'altra persona.
+<<<<<<< HEAD
 			Oppure puoi inviare la richiesta con il tasto "condividi" nella barra azioni.
 			La persona che riceve la richiesta dovrà cliccare l\'URL Darkcoin.
+=======
+			Oppure puoi inviare la richiesta con il tasto \"condividi\" nella barra azioni.
+			La persona che riceve la richiesta dovrà cliccare l\'URL Bitcoin.
+>>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e
 		</p>
 		<p>
 			In ogni modo alla persona ricevente verrà presentata un modulo precompilato per inviare i Darkcoin.
@@ -48,7 +52,7 @@
 		</p>
 	]]>
 	</string>
-	<string name="help_send_coins">
+  <string name="help_send_coins">
 <![CDATA[
 		<p>
 			Hai iniziato il processo per inviare Darkcoins.
@@ -78,7 +82,7 @@
 		</p>
 	]]>
 	</string>
-	<string name="help_safety">
+  <string name="help_safety">
 <![CDATA[
 		<p>
 			<b>Alcune informazioni riguardo la sicurezza relativa ai vostri Darkcoins:</b>
@@ -108,5 +112,4 @@
 		</p>
 	]]>
 	</string>
-
 </resources>

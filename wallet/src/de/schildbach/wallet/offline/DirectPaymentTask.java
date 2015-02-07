@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2014 the original author or authors.
+ * Copyright 2013-2015 the original author or authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@ import javax.annotation.Nullable;
 
 import org.bitcoin.protocols.payments.Protos;
 import org.bitcoin.protocols.payments.Protos.Payment;
+import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +42,6 @@ import android.os.Handler;
 import android.os.Looper;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.util.Bluetooth;
-import de.schildbach.wallet.util.PaymentProtocol;
 import hashengineering.darkcoin.wallet.R;
 
 /**
@@ -130,7 +130,7 @@ public abstract class DirectPaymentTask
 
 							final Protos.PaymentACK paymentAck = Protos.PaymentACK.parseFrom(is);
 
-							final boolean ack = !"nack".equals(PaymentProtocol.parsePaymentAck(paymentAck));
+							final boolean ack = !"nack".equals(PaymentProtocol.parsePaymentAck(paymentAck).getMemo());
 
 							log.info("received {} via http", ack ? "ack" : "nack");
 
@@ -220,7 +220,7 @@ public abstract class DirectPaymentTask
 
 					try
 					{
-						socket = device.createInsecureRfcommSocketToServiceRecord(Bluetooth.BLUETOOTH_UUID_PAYMENT_PROTOCOL);
+						socket = device.createInsecureRfcommSocketToServiceRecord(Bluetooth.BIP70_PAYMENT_PROTOCOL_UUID);
 						socket.connect();
 
 						log.info("connected to payment protocol {}", bluetoothMac);
@@ -235,7 +235,7 @@ public abstract class DirectPaymentTask
 
 						final Protos.PaymentACK paymentAck = Protos.PaymentACK.parseDelimitedFrom(is);
 
-						final boolean ack = "ack".equals(PaymentProtocol.parsePaymentAck(paymentAck));
+						final boolean ack = "ack".equals(PaymentProtocol.parsePaymentAck(paymentAck).getMemo());
 
 						log.info("received {} via bluetooth", ack ? "ack" : "nack");
 

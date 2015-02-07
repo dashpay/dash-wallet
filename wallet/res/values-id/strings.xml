@@ -12,10 +12,7 @@
 	<string name="blockchain_state_progress_stalled">Sinkronisasi terhenti</string>
 	<string name="blockchain_state_progress_problem_storage">Sinkronisasi: Masalah penyimpanan</string>
 	<string name="blockchain_state_progress_problem_network">Sinkronisasi: Masalah jaringan</string>
-	<string name="wallet_address_fragment_your">Alamat Darkcoin Anda:</string>
-	<string name="wallet_address_fragment_clipboard_msg">Alamat Darkcoin disalin</string>
-	<string name="wallet_addresses_fragment_add_dialog_title">Tambahkan alamat Darkcoin</string>
-	<string name="wallet_addresses_fragment_add_dialog_message">Alamat Darkcoin tidak dapat dihapus. Apakah Anda ingin menambahkan alamat baru?</string>
+	<string name="wallet_address_fragment_clipboard_msg">Alamat Bitcoin disalin</string>
 	<string name="wallet_balance_fragment_replaying">Saldo tidak tersedia saat pengulangan.</string>
 	<string name="exchange_rates_activity_title">Nilai Tukar</string>
 	<string name="exchange_rates_fragment_empty_text">Tidak dapat memuat nilai tukar</string>
@@ -33,7 +30,6 @@
 	<string name="wallet_transactions_row_warning_backup">Selamat, Anda menerima pembayaran pertama Anda! Sudahkah Anda &lt;u&gt;mencadangkan dompet Anda&lt;/u&gt;, utk hindari kehilangan?</string>
 	<string name="wallet_transactions_fragment_coinbase">ditambang</string>
 	<string name="wallet_transactions_fragment_internal">Internal</string>
-	<string name="wallet_options_backup">Cadangkan Kunci</string>
 	<string name="wallet_options_safety">Nota keamanan</string>
 	<string name="wallet_options_donate">Tip / Donasi</string>
 	<string name="wallet_donate_address_label">Donasi untuk Darkcoin Wallet</string>
@@ -53,11 +49,8 @@
 	<string name="send_coins_activity_title">Kirim Darkcoin</string>
 	<string name="send_coins_fragment_receiving_address_label">Bayar ke</string>
 	<string name="send_coins_fragment_receiving_address_hint">masukkan alamat atau nama</string>
-	<string name="send_coins_fragment_receiving_address_error">Alamat Darkcoin Salah!</string>
-	<string name="send_coins_fragment_receiving_address_error_cross_network">Tidak dapat menggunakan %s dgn dompet ini!</string>
-	<string name="send_coins_fragment_receiving_address_error_cross_network_unknown">Tidak dapat menggunakan alamat dari jaringan tak diketahui dgn dompet ini!</string>
-	<string name="send_coins_fragment_pending">(DRK %s menunggu konfirmasi)</string>
-
+	<string name="send_coins_fragment_receiving_address_error">Alamat Bitcoin Salah!</string>
+	<string name="send_coins_fragment_pending">(%s menunggu konfirmasi)</string>
 	<string name="send_coins_fragment_amount_label">Jumlah pembayaran</string>
 	<string name="send_coins_fragment_button_send">Kirim</string>
 	<string name="send_coins_fragment_button_back">Kembali</string>
@@ -82,9 +75,7 @@
 	<string name="address_book_context_send_title">Kirim Darkcoin ke alamat</string>
 	<string name="address_book_context_edit_title">Mengubah alamat</string>
 	<string name="address_book_context_remove_title">Hapus alamat</string>
-	<string name="address_book_context_show_qr_title">Tampilkan kode QR</string>
 	<string name="address_book_context_copy_to_clipboard_title">Salin</string>
-	<string name="address_book_context_default_title">Tetapkan sebagai alamat standar</string>
 	<string name="address_book_options_paste_from_clipboard_title">Tempelkan</string>
 	<string name="address_book_options_paste_from_clipboard_empty">Salinan kosong</string>
 	<string name="address_book_options_scan_title">Pindai alamat</string>
@@ -97,7 +88,6 @@
 	<string name="transaction_row_message_purpose_key_rotation">Transaksi ini memperkuat dompet Anda terhadap pencurian. &lt;u&gt;Rincian.&lt;/u&gt;</string>
 	<string name="transaction_row_message_own_unbroadcasted">Pembayaran ini belum disiarkan.</string>
 	<string name="transaction_row_message_received_unconfirmed_unlocked">Pembayaran ini bisa digunakan dalam beberapa menit.</string>
-	<string name="transaction_row_message_received_unconfirmed_locked">Pembayaran ini tidak standar dan tidak dpt dipercayai.</string>
 	<string name="transaction_row_message_received_dead">Pembayaran ini dibatalkan oleh pengirim.</string>
 	<string name="transaction_row_message_received_dust">Jumlah kecil ini tidak akan pernah bisa digunakan secara ekonomis.</string>
 	<string name="network_monitor_activity_title">Monitor Jaringan</string>
@@ -114,13 +104,9 @@
 	<string name="import_keys_dialog_file_created_automatic">pencadangan otomatis %s</string>
 	<string name="import_keys_dialog_file_created_manual">dicadangkan manual %s</string>
 	<string name="import_keys_dialog_button_import">Pulihkan</string>
-	<string name="import_keys_dialog_success_imported">%d kunci pribadi telah dipulihkan.</string>
-	<string name="import_keys_dialog_success_existing">%d kunci pribadi tidak dipulihkan, karena Anda telah mempunyainya di dompet.</string>
-	<string name="import_keys_dialog_success_reset">Anda perlu mengatur-ulang rantai-blok untuk perbarui saldo Anda. Apakah Anda ingin lakukan?</string>
 	<string name="import_keys_dialog_failure">Kunci pribadi tidak dpt dipulihkan:\n\n%s\n\nKata sandi salah?</string>
-	<string name="import_keys_dialog_button_reset_blockchain">Atur-ulang</string>
 	<string name="export_keys_dialog_title">Cadangkan kunci pribadi</string>
-	<string name="export_keys_dialog_message">Kunci pribadi Anda akan dienkripsi dgn kata sandi terpilih dan akan disimpan ke penyimpanan eksternal.</string>
+	<string name="backup_wallet_dialog_message">Kunci pribadi Anda akan dienkripsi dgn kata sandi terpilih dan akan disimpan ke penyimpanan eksternal.</string>
 	<string name="export_keys_dialog_button_export">Cadangkan</string>
 	<string name="export_keys_dialog_success">Kunci pribadi Anda telah dicadangkan ke\n\n%s\n\nAmankan, dan jagalah kata sandi Anda!\n\nApakah Anda ingin arsipkan dgn apl?</string>
 	<string name="export_keys_dialog_failure">Kunci pribadi Anda tidak dpt dicadangkan:\n%s</string>
@@ -137,7 +123,6 @@
 	<string name="input_parser_invalid_bitcoin_uri">Tautan Darkcoin Salah:\n%s</string>
 	<string name="input_parser_invalid_address">Alamat Darkcoin salah!\n(Keliru dgn Mainet/Testnet?)</string>
 	<string name="preferences_activity_title">Pengaturan</string>
-	<string name="preferences_category_main">Preferensi</string>
 	<string name="preferences_category_diagnostics">Diagnosa</string>
 	<string name="preferences_category_labs">Lab</string>
 	<string name="preferences_connectivity_notification_title">Indikator Konetivitas</string>
@@ -169,10 +154,7 @@
 	<string name="about_credits_bitcoinj_title">Apl ini menggunakan Darkcoinj %s</string>
 	<string name="about_credits_zxing_title">Apl ini menggunakan \'zxing\'</string>
 	<string name="about_credits_icon_title">Apl ini menggunakan ikon oleh \'bitboy\'</string>
-	<string name="about_author_twitter_title">Pembuat di Twitter</string>
-	<string name="about_author_googleplus_title">Pembuat di Google+</string>
 	<string name="about_market_app_title">Halaman Apl Google Play</string>
-	<string name="about_credits_market_publisher_title">Apl lain oleh Pembuat</string>
 	<string name="notification_coins_received_msg">Diterima %s</string>
 	<string name="notification_peers_connected_msg">%d peer terhubung</string>
 	<!-- generic buttons -->
@@ -192,6 +174,7 @@
 	<string name="button_scan">Pindai</string>
 	<string name="button_edit_address">Tambah/ubah alamat</string>
 	<string name="button_settings">Pengaturan</string>
+	<string name="action_show_qr">Tampilkan kode QR</string>
 	<string name="time_today">hari ini</string>
 	<string name="address_unlabeled">(tak berlabel)</string>
     <string name="wallet_options_disconnect">Putuskan</string>

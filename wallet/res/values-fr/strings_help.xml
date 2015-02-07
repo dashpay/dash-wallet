@@ -1,34 +1,28 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-	<string name="help_wallet">
+  <string name="help_wallet">
 <![CDATA[
 		<p>
-			La partie supérieure gauche de l\'écran affiche votre adresse Bitcoin choisie et que d\'autres personnes doivent connaître pour vous envoyer des bitcoins.
-			Toquer pour changer cette adresse.
+			La partie supérieure gauche de l\'écran affiche votre solde en bitcoins ainsi qu\'une monnaie nationale choisie.
+			Toquez pour vous rendre vers la liste des monnaies nationales et tapez sur l\'une d\'elles pour la choisir par défaut.
 		</p>
-		<p>
-			Le code QR à droite contient votre adresse Bitcoin et peut être numérisée par un tiers.
-			Toquer le code QR pour l\'agrandir.
-		</p>
-		<p>
-			Au milieu de l\'écran, votre solde est affiché.
-			La valeur de votre portefeuille est aussi affichée dans une devise locale choisie.
-			Toquer sur le solde pour afficher la liste de toutes les devises locales et toquer sur l\'une d\'entre elles pour la choisir par défaut.
+		 <p>
+			Le QR code à droite contient votre adresse Bitcoin et peut être balayé par un tiers.
+			Toquez sur le code QR pour l\'agrandir.
 		</p>
 		<p>
 			Le bas de l\'écran est couvert par votre liste de transactions, qui est vide initialement.
 			Les transactions en attente sont grisées jusqu\'à ce qu\'elles soient confirmées.
-			Toquer sur une entrée pour ajouter l\'adresse du destinataire ou de l\'envoyeur au carnet d\'adresses.
-			Glisser vers la gauche ou vers la droite pour appliquer des filtres à la liste.
+			Toquez sur une transaction pour ajouter l\'adresse du destinataire ou de l\'envoyeur à votre carnet d\'adresses.
+			Glissez vers la gauche ou vers la droite pour appliquer des filtres à la liste.
 		</p>
 		<p>
-			Vous pouvez envoyer ou recevoir des bitcoins en toquant les boutons dans la barre des actions.
+			Vous pouvez envoyer ou recevoir des bitcoins en toquant les boutons dans la barre d\'action.
 			Plus d\'options sont disponibles dans le menu des options.
 		</p>
 	]]>
 	</string>
-	<string name="help_request_coins">
+  <string name="help_request_coins">
 <![CDATA[
 		<p>
 			En utilisant cette zone de dialogue vous pouvez demander des pièces à une autre personne (qui devrait déjà avoir installé le Bitcoin Wallet).
@@ -46,7 +40,7 @@
 		</p>
 	]]>
 	</string>
-	<string name="help_send_coins">
+  <string name="help_send_coins">
 <![CDATA[
 		<p>
 			Vous avez commencé le processus d\'envoi de bitcoins.
@@ -76,7 +70,7 @@
 		</p>
 	]]>
 	</string>
-	<string name="help_safety">
+  <string name="help_safety">
 <![CDATA[
 		<p>
 			<b>Notes de sécurité importantes :</b>
@@ -86,29 +80,28 @@
 			<b>Si vous le perdez, vous perdez vos bitcoins.</b>
 		</p>
 		<p>
-			Cela signifie que vous devez <b>sauvegarder votre portefeuille</b>!
-			Utiliser la fonction de sauvegarde de l\'appli plutôt qu\'une appli de sauvegarde tierce.
-			Garder votre sauvegarde en sûreté et souvenez-vous de votre mot de passe.
+			Cela signifie que vous devez <b>sauvegarder votre portefeuille</b> !
+			Utilisez la fonction de sauvegarde de l\'appli plutôt qu\'une appli de sauvegarde tierce.
+			Gardez votre sauvegarde en sûreté et souvenez-vous de votre mot de passe.
 		</p>
 		<p>
-			<b>Avant de désinstaller Bitcoin Wallet</b> (ou d\'effacer les données de l\'appli/effacer les données de votre appareil), <b>transférer vos bitcoins vers un autre portefeuille</b>.
-			Les bitcoins restant seront perdus.
+			<b>Avant de désinstaller Bitcoin Wallet</b> (ou d\'effacer les données de l\'appli/effacer les données de votre appareil), <b>transférez vos bitcoins vers un autre portefeuille</b>.
+			Les bitcoins restants seront perdus.
 		</p>
 		<p>
 			<b>Les paiements sont irréversibles</b>.
 			Si vous envoyez vos bitcoins dans le vide, il n\'y a presque aucun moyen de les récupérer.
 		</p>
 		<p>
-			<b>Garder votre appareil mobile en sécurité !</b>
-			Ne pas rooter votre appareil.
-			N\'installer que des applications de confiance.
+			<b>Assurez la sécurité de votre appareil mobile !</b>
+			Ne rootez pas votre appareil.
+			N\'installez que des applications de confiance.
 			Des applications malveillantes pourraient essayer de voler votre portefeuille.
 		</p>
 		<p>
-			Minimiser les risques !
-			<b>N\'utiliser que pour des petits montants</b> pour un usage quotidien.
+			Minimisez les risques !
+			<b>N\'utilisez que pour des petits montants,</b> pour un usage quotidien.
 		</p>
 	]]>
 	</string>
-
 </resources>

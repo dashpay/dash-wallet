@@ -1,20 +1,14 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-	<string name="help_wallet">
+  <string name="help_wallet">
 <![CDATA[
 		<p>
-			Horní levá část obrazovky zobrazuje Vaši aktuální Darkcoin adresu, kterou druhá strana potřebuje znát, aby Vám mohla zaslat platbu.
-			Kliknutím na adresu ji změníte.
+			Horní levá část obrazovky zobrazuje Vaši aktuální Bitcoin bilanci včetně odpovídající částky ve vaší lokální měně.
+			Kliknutím na částku přejdete do seznamu lokálních měn, kde si můžete vybrat jinou.
 		</p>
 		<p>
-			QR kód na pravé straně obsahuje Vaši Darkcoin adresu a může být použit pro naskenování druhou stranou.
+			QR kód na pravé straně obsahuje Vaši Bitcoin adresu a může být použita pro naskenování druhou stranou.
 			Klepněte na QR kód pro zobrazení větší verze.
-		</p>
-		<p>
-			Ve středu obrazovky je zobrazen aktuální zůstatek.
-			Hodnota zůstatků je zobrazena i v jiné zvolené měně.
-			Klepnutím na zůstatek zobrazíte seznam možných jiných měn, vybráním konkrétní měny tuto potom nastavíte jako výchozí.
 		</p>
 		<p>
 			Ve spodní části obrazovky je seznam transakcí, který bude samozřejmě na začátku používání aplikace prázdný.
@@ -28,7 +22,7 @@
 		</p>
 	]]>
 	</string>
-	<string name="help_request_coins">
+  <string name="help_request_coins">
 <![CDATA[
 		<p>
 			Pomocí tohoto dialogu můžete vyžádat Darkcoiny od někoho jiného (kdo by měl také mít nainstalovanou aplikaci Darkcoin Wallet).
@@ -42,12 +36,12 @@
 			Druhá strana potom klikne na získanou adresu.
 		</p>
 		<p>
-			V obou případech bude odesílatel uvidí dialog na zasílání Darkcoinů s předvzplněnými údaji.
+			V obou případech odesílatel uvidí dialog na zasílání Bitcoinů s předvyplněnými údaji.
 			Pokud souhlasí, potvrdí zadané informace a dojde k transakci.
 		</p>
 	]]>
 	</string>
-	<string name="help_send_coins">
+  <string name="help_send_coins">
 <![CDATA[
 		<p>
 			Právě jste zahájil zasílání Darkcoinů.
@@ -77,7 +71,7 @@
 		</p>
 	]]>
 	</string>
-	<string name="help_safety">
+  <string name="help_safety">
 <![CDATA[
 		<p>
 			Několik slov o bezpečnosti vašich Darkcoinů:
@@ -96,7 +90,7 @@
 			Pokud pošlete Darkcoiny někam neznámo kam, neexistuje možnost, jak je získat zpět, jedině byste znali příjemce a on měl zrovna náladu je poctivě vrátit.
 		</p>
 		<p>
-			<b>Udržujte vašeho Androida v bezpečí!</b>
+			<b>Udržujte Váš Android v bezpečí!</b>
 			Instalujte pouze aplikace, kterým plně důvěřujete.
 			Existují škodlivé aplikace, které vás mohou o vaše Darkcoiny připravit.
 		</p>
@@ -106,5 +100,4 @@
 		</p>
 	]]>
 	</string>
-
 </resources>

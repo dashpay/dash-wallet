@@ -12,10 +12,7 @@
 	<string name="blockchain_state_progress_stalled">Synchronizácia pozastavená</string>
 	<string name="blockchain_state_progress_problem_storage">Synchronizácia: Problém s dátovým úložiskom</string>
 	<string name="blockchain_state_progress_problem_network">Synchronizácia: Problém so sieťou</string>
-	<string name="wallet_address_fragment_your">Vaša Darkcoin adresa:</string>
 	<string name="wallet_address_fragment_clipboard_msg">Adresa skopírovaná do schránky</string>
-	<string name="wallet_addresses_fragment_add_dialog_title">Pridať Darkcoin adresu</string>
-	<string name="wallet_addresses_fragment_add_dialog_message">Darkcoin adresa sa nedá zmazať. Chcete pridať do peňaženky novú adresu?</string>
 	<string name="wallet_balance_fragment_replaying">Zostatok je nedostupný počas synchronizácie.</string>
 	<string name="exchange_rates_activity_title">Výmenné kurzy</string>
 	<string name="exchange_rates_fragment_empty_text">Nepodarilo sa načítať výmenné kurzy</string>
@@ -33,8 +30,6 @@
 	<string name="wallet_transactions_row_warning_backup">Gratulujeme, obdržali ste svoju prvú platbu! Urobili ste &lt;u&gt;zálohu peňaženky&lt;/u&gt;, aby ste ju ochránili pred stratou?</string>
 	<string name="wallet_transactions_fragment_coinbase">vyťažené</string>
 	<string name="wallet_transactions_fragment_internal">vnútorné</string>
-	<string name="wallet_transactions_context_show_qr_title">Ukáž QR kód</string>
-	<string name="wallet_options_backup">Zálohovať kľúče</string>
 	<string name="wallet_options_safety">Bezpečnosť</string>
 	<string name="wallet_options_donate">Prispieť</string>
 	<string name="wallet_donate_address_label">Prispieť na Darkcoin Wallet</string>
@@ -58,11 +53,9 @@
 	<string name="send_coins_fragment_payee_verified_by_unknown">neznáme</string>
 	<string name="send_coins_fragment_receiving_address_label">Zaplatiť</string>
 	<string name="send_coins_fragment_receiving_address_hint">zadajte adresu alebo názov</string>
-	<string name="send_coins_fragment_receiving_address_error">Nesprávna Darkcoin adresa!</string>
-	<string name="send_coins_fragment_receiving_address_error_cross_network">Adresu %s nie je možné použiť s touto peňaženkou!</string>
-	<string name="send_coins_fragment_receiving_address_error_cross_network_unknown">Adresu z neznámej siete nie je možné použiť s touto peňaženkou!</string>
-	<string name="send_coins_fragment_pending">(%s DRK čaká na potvrdenie)</string>
+	<string name="send_coins_fragment_receiving_address_error">Nesprávna Bitcoin adresa!</string>
 	<string name="send_coins_fragment_receiving_address_complex">komplexná\nadresa</string>
+	<string name="send_coins_fragment_pending">(%s čaká na potvrdenie)</string>
 	<string name="send_coins_fragment_amount_label">Suma</string>
 	<string name="send_coins_fragment_direct_payment_enable">Odoslať platbu priamo príjemcovi.</string>
 	<string name="send_coins_fragment_direct_payment_ack">Platba bola úspešne odoslaná priamo príjemcovi.</string>
@@ -97,9 +90,7 @@
 	<string name="address_book_context_send_title">Odoslať Darkcoiny na adresu</string>
 	<string name="address_book_context_edit_title">Upraviť adresu</string>
 	<string name="address_book_context_remove_title">Odstrániť adresu</string>
-	<string name="address_book_context_show_qr_title">Zobraziť QR kód</string>
 	<string name="address_book_context_copy_to_clipboard_title">Skopírovať do schránky</string>
-	<string name="address_book_context_default_title">Nastaviť ako predvolenú adresu</string>
 	<string name="address_book_options_paste_from_clipboard_title">Prilepiť zo schránky</string>
 	<string name="address_book_options_paste_from_clipboard_empty">Schránka je prázdna</string>
 	<string name="address_book_options_paste_from_clipboard_invalid">Dáta zo schránky nebolo možné rozpoznať</string>
@@ -115,7 +106,6 @@
 	<string name="transaction_row_message_own_unbroadcasted">Táto platba ešte nebola odoslaná.</string>
 	<string name="transaction_row_message_received_direct">Táto platba bola prijatá priamo. Existuje určité riziko, že sa nikdy nebude dať minúť.</string>
 	<string name="transaction_row_message_received_unconfirmed_unlocked">Táto platba by mala byť potvrdená za pár minút.</string>
-	<string name="transaction_row_message_received_unconfirmed_locked">Táto platba je podozrivá.</string>
 	<string name="transaction_row_message_received_dead">Táto platba bola zrušená odosielateľom.</string>
 	<string name="transaction_row_message_received_dust">Takéto malé množstvo zrejme nebude možné minúť.</string>
 	<string name="network_monitor_activity_title">Stav siete</string>
@@ -132,13 +122,9 @@
 	<string name="import_keys_dialog_file_created_automatic">automaticky zálohované %s</string>
 	<string name="import_keys_dialog_file_created_manual">manuálne zálohované %s</string>
 	<string name="import_keys_dialog_button_import">Obnoviť</string>
-	<string name="import_keys_dialog_success_imported">%d privátne kľúče boli obnovené.</string>
-	<string name="import_keys_dialog_success_existing">%d privátne kľúče neboli obnovené, pretože tieto kľúče už existujú v peňaženke.</string>
-	<string name="import_keys_dialog_success_reset">Je potrebné zresetovať blockchain, aby bolo možné zistiť zostatok. Pokračovať?</string>
 	<string name="import_keys_dialog_failure">Privátne kľúče sa nepodarilo obnoviť:\n\n%s\n\nNesprávne heslo?</string>
-	<string name="import_keys_dialog_button_reset_blockchain">Reset</string>
 	<string name="export_keys_dialog_title">Zálohovať privátne kľúče</string>
-	<string name="export_keys_dialog_message">Privátne kľúče budú zašifrované zvoleným heslom a uložené na externú pamäť.</string>
+	<string name="backup_wallet_dialog_message">Privátne kľúče budú zašifrované zvoleným heslom a uložené na externú pamäť.</string>
 	<string name="export_keys_dialog_button_export">Zálohovať</string>
 	<string name="export_keys_dialog_success">Privátne kľúče boli zálohované do \n\n%s\n\nDržte ich v bezpečí, a taktiež držte v bezpečí vaše heslo!\n\nChcete archivovať kľúče použitím aplikácie?</string>
 	<string name="export_keys_dialog_failure">Vaše privátne kľúče sa nepodarilo zálohovať:\n%s</string>
@@ -160,7 +146,6 @@
 	<string name="input_parser_invalid_paymentrequest">Neplatná žiadosť o platbu:\n%s</string>
 	<string name="input_parser_invalid_transaction">Neplatná transakcia:\n%s</string>
 	<string name="preferences_activity_title">Nastavenia</string>
-	<string name="preferences_category_main">Predvoľby</string>
 	<string name="preferences_category_diagnostics">Diagnostika</string>
 	<string name="preferences_category_labs">Labs</string>
 	<string name="preferences_precision_title">Jednotka a presnosť</string>
@@ -198,11 +183,8 @@
 	<string name="about_credits_icon_title">Táto aplikácia používa ikonu od \'bitboy\'</string>
 	<string name="about_community_googleplus_title">Google+ Komunita</string>
 	<string name="about_community_googleplus_summary">Diskusie o aplikácii</string>
-	<string name="about_author_twitter_title">Twitter autora</string>
-	<string name="about_author_googleplus_title">Autor na Google+</string>
 	<string name="about_market_app_title">Google Play stránka</string>
 	<string name="about_market_app_summary">Ohodnotiť aplikáciu</string>
-	<string name="about_credits_market_publisher_title">Ďalšie aplikácie autora</string>
 	<string name="notification_coins_received_msg">Prijaté %s</string>
 	<string name="notification_peers_connected_msg">%d pripojených uzlov</string>
 	<!-- generic buttons -->
@@ -223,6 +205,7 @@
 	<string name="button_scan">Skenovať</string>
 	<string name="button_edit_address">Pridať/zmeniť adresu</string>
 	<string name="button_settings">Nastavenia</string>
+	<string name="action_show_qr">Ukáž QR kód</string>
 	<string name="action_browse">Otvoriť v prehliadači</string>
 	<string name="time_today">dnes</string>
 	<string name="address_unlabeled">(neoznačené)</string>

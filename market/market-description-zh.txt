@@ -1,19 +1,41 @@
-这是一个独立在安卓设备上运行的比特币钱包。
-比特币是一种网络货币。
-你可以通过扫描二维码的方式，或者经由进场通讯技术在手机之间发送比特币。
+<b>将比特币随身携带，在您的口袋中！</b> 扫描二维码快速支付，即时可靠的接收付款。比特币钱包 (Bitcoin Wallet) 是首选的、最安全的比特币应用！
 
-特点：
 
-• 显示比特币钱包的余额和多种货币对应换算。
-• 通过进场通讯、二维码或比特币链接来支付比特币。
-• 经常使用的比特币地址簿。
-• 离线时输入交易将会在上线时执行。
-• 比特币网络连接状态显示以及交易通知。
-• 比特币余额的程序插件。
+<b>功能</b>
 
+<<<<<<< HEAD
 更多关于比特币的信息请点击：http://darkcoin.io
 如果你想赞助比特币钱包软件开发项目，该项目位于：https://github.com/HashEngineering/darkcoin-wallet
+=======
+• 不需要注册，不需要网络服务，也不需要云！比特币钱包是“去中心化”的，点对点的 (peer to peer)。
+• 以 BTC, mBTC 以及 µBTC 为单位显示比特币金额。
+• 从比特币转换为国家货币，或者从国家货币转换为比特币。
+• 通过 NFC，二维码、比特币链接发送或接收比特币。
+• 为经常使用的比特币地址创建地址簿。
+• 断网情况下仍然可以通过蓝牙付款。
+• 收到比特币时显示系统通知。
+• 与纸钱包交换比特币（纸钱包经常用于冷存储）。
+• 应用程序小部件，用于显示比特币余额。
+>>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e
 
-许可协议: GPLv3
-使用者须自行承担风险！
-http://www.gnu.org/licenses/gpl-3.0.en.html
+
+<b>贡献</b>
+
+Bitcoin Wallet 是 <b>开源项目</b> 和 <b>自由软件</b>，以 GPLv3 授权。
+https://www.gnu.org/licenses/gpl-3.0.en.html
+
+源代码托管在 GitHub:
+https://github.com/schildbach/bitcoin-wallet
+
+所有的本地化翻译均在 Transifex 上进行：
+https://www.transifex.com/projects/p/bitcoin-wallet/
+
+
+<b>评价</b>
+
+• 很多的移动钱包应用程序都基于 Bitcoin Wallet，比如：blockchain.info, Hive 以及 KnC.
+• 由 https://bitcoin.org 推荐的移动钱包。
+• 由 BitPay 推荐的移动钱包。
+
+
+<i>您需要自担风险！</i>

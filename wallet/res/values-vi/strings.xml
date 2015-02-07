@@ -11,10 +11,7 @@
 	<string name="blockchain_state_progress_stalled">Tiến trình đồng bộ hóa đã ngưng lại</string>
 	<string name="blockchain_state_progress_problem_storage">Đồng bộ hóa: Gặp vấn đề về dung lượng lưu trữ</string>
 	<string name="blockchain_state_progress_problem_network">Đồng bộ hóa: Vấn đề về mạng lưới</string>
-	<string name="wallet_address_fragment_your">Địa chỉ Darkcoin của bạn:</string>
-	<string name="wallet_address_fragment_clipboard_msg">Địa chỉ Darkcoin đã được sao chép vào bộ nhớ ảo</string>
-	<string name="wallet_addresses_fragment_add_dialog_title">Thêm địa chỉ Darkcoin</string>
-	<string name="wallet_addresses_fragment_add_dialog_message">Địa chỉ Darkcoin không thể được xóa. Bạn có muốn thêm một địa chỉ mới vào ví tiền của mình không?</string>
+	<string name="wallet_address_fragment_clipboard_msg">Địa chỉ Bitcoin đã được sao chép vào bộ nhớ ảo</string>
 	<string name="wallet_balance_fragment_replaying">Tính năng cân bằng tài khoản không thể được thao tác trong quá trình replay.</string>
 	<string name="exchange_rates_activity_title">Tỉ lệ hoán đổi</string>
 	<string name="exchange_rates_fragment_empty_text">Không thể tải tỉ lệ hoán đổi</string>
@@ -31,7 +28,6 @@
 	<string name="wallet_transactions_fragment_empty_text_howto">Làm cách nào để nhận được Darkcoins?\n\nSử dụng cho các giao dịch bằng tiền như truyền thống,\nbán các sản phẩm hoặc dịch vụ hoặc\ndùng cho việc nhận thanh toán.</string>
 	<string name="wallet_transactions_row_warning_backup">Chúc mừng, bạn đã nhận được phần thanh toán đầu tiên của mình! Bạn đã &lt;u&gt;sao lưu ví tiền của mình&lt;/u&gt;, để tránh việc thất thoát hay chưa?</string>
 	<string name="wallet_transactions_fragment_coinbase">đã khai thác</string>
-	<string name="wallet_options_backup">Sao lưu khóa</string>
 	<string name="wallet_options_safety">Ghi chú an toàn</string>
 	<string name="wallet_options_donate">Gợi ý / Ủng hộ</string>
 	<string name="wallet_donate_address_label">Ủng hộ </string>
@@ -50,11 +46,8 @@
 	<string name="send_coins_activity_title">Gửi Darkcoin</string>
 	<string name="send_coins_fragment_receiving_address_label">Trả cho</string>
 	<string name="send_coins_fragment_receiving_address_hint">loại địa chỉ hoặc tên</string>
-	<string name="send_coins_fragment_receiving_address_error">Địa chỉ Darkcoin không hợp lệ!</string>
-	<string name="send_coins_fragment_receiving_address_error_cross_network">Không thể sử dụng địa chỉ %s với ví tiền này!</string>
-	<string name="send_coins_fragment_receiving_address_error_cross_network_unknown">Không thể sử dụng địa chỉ của những mạng chưa rõ thông tin với ví tiền này!</string>
-	<string name="send_coins_fragment_pending">(DRK %s đợi xác nhận)</string>
-
+	<string name="send_coins_fragment_receiving_address_error">Địa chỉ Bitcoin không hợp lệ!</string>
+	<string name="send_coins_fragment_pending">(%s đợi xác nhận)</string>
 	<string name="send_coins_fragment_amount_label">Số lượng chi trả</string>
 	<string name="send_coins_fragment_button_send">Gửi</string>
 	<string name="send_coins_fragment_button_back">Quay lại</string>
@@ -80,9 +73,7 @@
 	<string name="address_book_context_send_title">Gửi Darkcoin đến địa chỉ</string>
 	<string name="address_book_context_edit_title">Chỉnh sửa địa chỉ</string>
 	<string name="address_book_context_remove_title">Loại bỏ địa chỉ</string>
-	<string name="address_book_context_show_qr_title">Hiển thị mã QR</string>
 	<string name="address_book_context_copy_to_clipboard_title">Sao chép vào bộ nhớ ảo</string>
-	<string name="address_book_context_default_title">Thiết lập làm địa chỉ mặc định</string>
 	<string name="address_book_options_paste_from_clipboard_title">Lấy thông tin từ bộ nhớ ảo</string>
 	<string name="address_book_options_paste_from_clipboard_empty">Bộ nhớ ảo hiện không chứa dữ liệu</string>
 	<string name="address_book_options_scan_title">Quét địa chỉ</string>
@@ -93,7 +84,6 @@
 	<string name="edit_address_book_entry_dialog_button_edit">Lưu</string>
 	<string name="transaction_row_message_own_unbroadcasted">Phần chi trả này vẫn chưa được thực hiện.</string>
 	<string name="transaction_row_message_received_unconfirmed_unlocked">Phần chi trả này nên trở thành dạng có thể gửi đi trong vài phút nữa.</string>
-	<string name="transaction_row_message_received_unconfirmed_locked">Phần chi trả này không theo đúng tiêu chuẩn và bởi thế không đáng tin cậy</string>
 	<string name="transaction_row_message_received_dead">Phần chi trả này đã được chuyển ngược về phía người gửi.</string>
 	<string name="transaction_row_message_received_dust">Số lượng nhỏ này có thể không mang tính kinh tế cho lắm khi dành cho chi tiêu.</string>
 
@@ -111,13 +101,9 @@
 	<string name="import_keys_dialog_file_created_automatic">tự động sao lưu %s</string>
 	<string name="import_keys_dialog_file_created_manual">dữ liệu do người dùng xuất %s</string>
 	<string name="import_keys_dialog_button_import">Nhập dữ liệu</string>
-	<string name="import_keys_dialog_success_imported">đã nhập %d khóa cá nhân.</string>
-	<string name="import_keys_dialog_success_existing">vẫn chưa nhập được %d khóa cá nhân, vì trong ví tiền của bạn đã có những khóa này.</string>
-	<string name="import_keys_dialog_success_reset">Bạn cần phải thiết đặt lại blockchain để cập nhật trạng thái cân bằng tài khoản. Bạn có muốn thực hiện không?</string>
 	<string name="import_keys_dialog_failure">Khóa cá nhân không thể được nhập vào:\n\n%s\n\nDo sai mật khẩu?</string>
-	<string name="import_keys_dialog_button_reset_blockchain">Thiết đặt lại</string>
 	<string name="export_keys_dialog_title">Xuất dữ liệu từ các khóa cá nhân</string>
-	<string name="export_keys_dialog_message">Các khóa cá nhân của bạn sẽ được mã hóa với một mật khẩu do bạn chọn và sau đó ghi dữ liệu mã hóa vào thẻ nhớ.</string>
+	<string name="backup_wallet_dialog_message">Các khóa cá nhân của bạn sẽ được mã hóa với một mật khẩu do bạn chọn và sau đó ghi dữ liệu mã hóa vào thẻ nhớ.</string>
 	<string name="export_keys_dialog_button_export">Xuất dữ liệu</string>
 	<string name="export_keys_dialog_success">Khóa cá nhân đã được xuất đến\n\n%s\n\nGiữ các khóa này ở nơi an toàn cũng ghi nhớ mật khẩu bạn đã đặt!\n\nBạn có muốn lưu giữ các khóa của bạn khi sử dụng ứng này không?</string>
 	<string name="export_keys_dialog_failure">Khóa cá nhân của bạn vẫn chưa được xuất dữ liệu:\n%s</string>
@@ -134,7 +120,6 @@
 	<string name="input_parser_invalid_bitcoin_uri">Darkcoin URI không hợp lệ:\n%s</string>
 	<string name="input_parser_invalid_address">Đã nhận được địa chỉ Darkcoin không hợp lệ!\n(Nhầm lẫn giữa Mainnet/Testnet?)</string>
 	<string name="preferences_activity_title">Thiết lập</string>
-	<string name="preferences_category_main">Tùy biến</string>
 	<string name="preferences_category_diagnostics">Chẩn đoán</string>
 	<string name="preferences_category_labs">Thí nghiệm</string>
 	<string name="preferences_connectivity_notification_title">Chỉ định kết nối</string>
@@ -164,11 +149,8 @@
 	<string name="about_credits_bitcoinj_title">Ứng dụng này đang sử dụng Darkcoinj %s</string>
 	<string name="about_credits_zxing_title">Ứng dụng này sử dụng \'zxing\'</string>
 	<string name="about_credits_icon_title">Ứng dụng này sử dụng biểu tượng bởi \'bitboy\'</string>
-	<string name="about_author_twitter_title">Liên hệ tác giả bằng Twitter</string>
-	<string name="about_author_googleplus_title">Liên hệ tác giả bằng Google+</string>
 	<string name="about_market_app_title">Trang web của ứng dụng trên Google Play</string>
-	<string name="about_credits_market_publisher_title">Các tác giả khác</string>
-    <string name="notification_coins_received_msg">đã nhận %s</string>
+	<string name="notification_coins_received_msg">đã nhận %s</string>
 	<string name="notification_peers_connected_msg">%d mạng ngang hàng đã kết nối</string>
 	<!-- generic buttons -->
 	<string name="button_ok">Đồng ý</string>
@@ -187,6 +169,7 @@
 	<string name="button_scan">Quét</string>
 	<string name="button_edit_address">Thêm/chỉnh sửa địa chỉ</string>
 	<string name="button_settings">Thiết lập</string>
+	<string name="action_show_qr">Hiển thị mã QR</string>
 	<string name="time_today">hôm nay</string>
 	<string name="address_unlabeled">(chưa có nhãn)</string>
     <string name="wallet_options_disconnect">Ngắt kết nối</string>

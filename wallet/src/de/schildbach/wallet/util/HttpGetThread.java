@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2014 the original author or authors.
+ * Copyright 2013-2015 the original author or authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +35,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import android.content.res.AssetManager;
+
+import com.google.common.base.Charsets;
+
 import de.schildbach.wallet.Constants;
 
 /**
@@ -97,7 +100,7 @@ public abstract class HttpGetThread extends Thread
 				final long serverTime = connection.getDate();
 				// TODO parse connection.getContentType() for charset
 
-				final BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), Constants.UTF_8), 64);
+				final BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), Charsets.UTF_8), 64);
 				final String line = reader.readLine().trim();
 				reader.close();
 

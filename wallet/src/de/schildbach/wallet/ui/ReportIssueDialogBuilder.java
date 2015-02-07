@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2014 the original author or authors.
+ * Copyright 2013-2015 the original author or authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,7 +43,11 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.google.common.base.Charsets;
+
 import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.FileAttachmentProvider;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Io;
 import hashengineering.darkcoin.wallet.R;
@@ -179,9 +183,7 @@ public abstract class ReportIssueDialogBuilder extends DialogBuilder implements 
 					os.close();
 					is.close();
 
-					Io.chmod(file, 0777);
-
-					attachments.add(Uri.fromFile(file));
+					attachments.add(FileAttachmentProvider.contentUri(context.getPackageName(), file));
 				}
 			}
 			catch (final IOException x)
@@ -200,13 +202,11 @@ public abstract class ReportIssueDialogBuilder extends DialogBuilder implements 
 				{
 					final File file = File.createTempFile("wallet-dump.", ".txt", cacheDir);
 
-					final Writer writer = new OutputStreamWriter(new FileOutputStream(file), Constants.UTF_8);
+					final Writer writer = new OutputStreamWriter(new FileOutputStream(file), Charsets.UTF_8);
 					writer.write(walletDump.toString());
 					writer.close();
 
-					Io.chmod(file, 0777);
-
-					attachments.add(Uri.fromFile(file));
+					attachments.add(FileAttachmentProvider.contentUri(context.getPackageName(), file));
 				}
 			}
 			catch (final IOException x)
@@ -260,6 +260,8 @@ public abstract class ReportIssueDialogBuilder extends DialogBuilder implements 
 		if (subject != null)
 			intent.putExtra(Intent.EXTRA_SUBJECT, subject);
 		intent.putExtra(Intent.EXTRA_TEXT, text);
+
+		intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
 		try
 		{

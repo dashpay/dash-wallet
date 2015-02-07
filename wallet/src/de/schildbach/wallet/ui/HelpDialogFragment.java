@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2014 the original author or authors.
+ * Copyright 2013-2015 the original author or authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,13 +17,11 @@
 
 package de.schildbach.wallet.ui;
 
-import javax.annotation.Nonnull;
-
 import android.app.Activity;
 import android.app.Dialog;
+import android.app.DialogFragment;
+import android.app.FragmentManager;
 import android.os.Bundle;
-import android.support.v4.app.DialogFragment;
-import android.support.v4.app.FragmentManager;
 import android.text.Html;
 
 
@@ -36,13 +34,13 @@ public final class HelpDialogFragment extends DialogFragment
 
 	private static final String KEY_MESSAGE = "message";
 
-	public static void page(final FragmentManager fm, @Nonnull final int messageResId)
+	public static void page(final FragmentManager fm, final int messageResId)
 	{
 		final DialogFragment newFragment = HelpDialogFragment.instance(messageResId);
 		newFragment.show(fm, FRAGMENT_TAG);
 	}
 
-	private static HelpDialogFragment instance(@Nonnull final int messageResId)
+	private static HelpDialogFragment instance(final int messageResId)
 	{
 		final HelpDialogFragment fragment = new HelpDialogFragment();
 

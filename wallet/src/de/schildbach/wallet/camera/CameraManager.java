@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2014 the original author or authors.
+ * Copyright 2012-2015 the original author or authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -138,7 +138,15 @@ public final class CameraManager
 	{
 		if (camera != null)
 		{
-			camera.stopPreview();
+			try
+			{
+				camera.stopPreview();
+			}
+			catch (final RuntimeException x)
+			{
+				log.warn("something went wrong while stopping camera preview", x);
+			}
+
 			camera.release();
 		}
 	}

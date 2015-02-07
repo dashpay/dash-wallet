@@ -1,35 +1,29 @@
 FILES
 
-Your wallet and your private keys are stored in app internal storage:
+Your wallet contains your private keys and various transaction related metadata. It is stored in app-private
+storage:
 
-/data/data/hashengineering.darkcoin.wallet/files/wallet-protobuf (MODE_PRIVATE)
-	Wallet for Mainnet
+	Mainnet: /data/data/de.schildbach.wallet/files/wallet-protobuf (MODE_PRIVATE)
 
-/data/data/hashengineering.darkcoin.wallet/files/wallet-protobuf-testnet (MODE_WORLD_READABLE | MODE_WORLD_WRITEABLE)
-	Wallet for Testnet
+	Testnet: /data/data/de.schildbach.wallet_test/files/wallet-protobuf-testnet (MODE_WORLD_READABLE | MODE_WORLD_WRITEABLE)
 
 The wallet file format is not compatible to wallet.dat (Satoshi client). Rather, it uses a custom protobuf format
 which should be compatible between clients using darkcoinj.
 
-Certain actions cause automatic rolling backups of your private keys to app-private storage:
+Certain actions cause automatic rolling backups of your wallet to app-private storage:
 
-/data/data/hashengineering.darkcoin.wallet/files/key-backup-base58 (MODE_PRIVATE)
-	Automatic backups of private keys for Mainnet
+	Mainnet: /data/data/de.schildbach.wallet/files/key-backup-protobuf (MODE_PRIVATE)
 
+	Testnet: /data/data/de.schildbach.wallet_test/files/key-backup-protobuf-testnet (MODE_PRIVATE)
 
-Private keys can be manually backed up to and restored from external storage:
+Your wallet can be manually backed up to and restored from external storage:
 
+	Mainnet: /sdcard/Download/bitcoin-wallet-backup-<yyyy-MM-dd>
 
-/sdcard/Download/darkcoin-wallet-keys-<yyyy-MM-dd>
-	Manual backups of private keys for Mainnet
+	Testnet: /sdcard/Download/bitcoin-wallet-backup-testnet-<yyyy-MM-dd>
 
-/sdcard/Download/darkcoin-wallet-keys-testnet-<yyyy-MM-dd>
-	Manual backups of private keys for Testnet
-
-
-The manual backup files are encrypted using your chosen password. You can use OpenSSL to decrypt:
-
-openssl enc -d -aes-256-cbc -a -in <filename>
+If you want to recover coins from manual backups and for whatever reason you cannot use the app
+itself to restore from the backup, see the separate README.recover guide.
 
 
 DEBUGGING
@@ -53,23 +47,24 @@ is world readable/writeable. The goal is to be able to debug easily.
 
 You can probably skip some steps, especially if you built Android apps before.
 
-You'll need git, a Java SDK 6 (or later) and Maven 3.0.4 for this. I'll assume Ubuntu Linux for
-the package installs.
+You'll need git, a Java SDK 6 (or later) and Maven 3.0.4 (or later) for this. I'll assume Ubuntu Linux
+for the package installs.
 
 	# first time only
-	sudo apt-get install git maven openjdk-6-jdk
+	sudo apt-get install git maven openjdk-6-jdk libstdc++6:i386
 
-If you want to use Maven 3.1.0 or later, you need edit pom.xml to use android-maven-plugin version
-3.8.2 or later.
-
-Get the Android SDK Tools from
+Get the Android SDK (Tools only) from
 
 	http://developer.android.com/sdk/
 
-and unpack it to your workspace directory. Switch to that Android SDK directory, and use
+and unpack it to your workspace directory. Point your ANDROID_HOME variable to that Android SDK directory
+and switch to it. Use
 
-	# first time only
-	tools/android update sdk --no-ui --force --filter platform,platform-tools
+	# make sure tools are at the newest version
+	tools/android update sdk --no-ui --force --filter tools
+
+	# fetch required android dependencies
+	tools/android update sdk --no-ui --force --filter build-tools-20.0.0,android-10,android-16,extra-android-m2repository
 
 to download the necessary API level.
 
@@ -82,7 +77,7 @@ use
 	# each time
 	cd bitcoin-wallet
 	git pull
-	mvn clean install -Dandroid.sdk.path=<path to your android sdk>
+	mvn clean install
 
 To upload the app to your Android device, use
 
@@ -112,22 +107,17 @@ separate 'prod' branch that gets rebased against master with each released versi
 
 SETTING UP FOR DEVELOPMENT
 
-Make sure you've got Eclipse 3.7 (Indigo) with ADT 20 installed.
+Make sure you've got Eclipse Luna with ADT 23 installed.
 
 Use Git to check out the project and an Android library dependency to your workspace:
 
 	# clone Bitcoin Wallet project
 	git clone -b master https://github.com/HashEngineering/darkcoin-wallet.git bitcoin-wallet
 
-	# clone ActionBarSherlock library project
-	git clone https://github.com/JakeWharton/ActionBarSherlock.git action-bar-sherlock
-	cd action-bar-sherlock
-	git checkout 4.1.0
-
 Use the maven-eclipse-plugin to create Eclipse project files:
 
 	cd darkcoin-wallet
-	mvn eclipse:eclipse
+	mvn clean install eclipse:eclipse
 
 Optional: In the generated .classpath, remove the org.eclipse.jdt.launching.JRE_CONTAINER
 classpath entry. It does not belong there, but cannot be excluded from being generated currently.
@@ -136,6 +126,35 @@ In Eclipse, use File -> Import -> General -> Existing Project into Workspace to 
 
 If you see loads of "should be tagged with @Override" errors, set Project -> Properties ->
 Java Compiler -> Errors/Warnings -> Annotations -> Missing @Override annotation to 'Warning'
+
+
+TRANSLATIONS
+
+The source language is English. Translations for all languages except German happen on Transifex:
+
+	https://www.transifex.com/projects/p/bitcoin-wallet/
+
+The english resources are pushed to Transifex. Changes are pulled and committed to the git
+repository from time to time. It can be done by manually downloading the files, but using the "tx"
+command line client is more convenient:
+
+	# first time only
+	sudo apt-get install transifex-client
+
+If strings resources are added or changed, the source language files need to be pushed to
+Transifex. This step will probably only be executed by the maintainer of the project, as special
+permission is needed:
+
+	# push source files to Transifex
+	tx push -s
+
+As soon as a translation is ready, it can be pulled:
+
+	# pull translation from Transifex
+	tx pull -f -l <language code>
+
+Note that after pulling, any bugs introduced by either translators or Transifex itself need to be
+corrected manually.
 
 
 NFC (Near field communication)
@@ -164,31 +183,31 @@ Instructions for preparing an NFC tag with your address:
   could overwrite the tag with his own Bitcoin address.
 
 
+BITCOINJ
+
+Bitcoin Wallet uses bitcoinj for Bitcoin specific logic:
+
+	https://bitcoinj.github.io/
+
+
 EXCHANGE RATES
 
-Bitcoin Wallet reads this feed from "bitcoin charts" for getting exchange rates:
+Bitcoin Wallet reads this feed from "BitcoinAverage" for getting exchange rates:
 
-	http://bitcoincharts.com/t/weighted_prices.json
-
-The feed is described on this page (see Weighted Prices):
-
-	http://bitcoincharts.com/about/markets-api/
+	https://api.bitcoinaverage.com/custom/abw
 
 I chose this feed because it is not dependent on a single exchange. However, you should keep in
 mind it's always a 24h average (falling back to 7d or even 30d if no trade occurred for a long
 time).
 
-If Bitcoincharts is not available, the feed from "Blockchain" is fetched instead:
+If the above feed is not available, the feed from "Blockchain.info" is fetched instead:
 
 	https://blockchain.info/ticker
 
-The feed is described here:
 
-	https://blockchain.info/api/exchange_rates_api
+SWEEPING WALLETS
 
+For sweeping wallets, Bitcoin Wallet uses an API by biteasy to query for unspent transaction
+outputs:
 
-BITCOINJ
-
-Bitcoin Wallet uses darkcoinj for Bitcoin specific logic:
-
-http://github.com/HashEngineering/darkcoinj.git
+	https://api.biteasy.com/blockchain/v1/unspent-outputs
