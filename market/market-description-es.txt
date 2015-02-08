@@ -20,7 +20,7 @@ Darkcoin Wallet es <b>código abierto</b> y <b>software libre</b>. Licencia: GPL
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Nuestro código fuente está disponible en GitHub:
-https://github.com/schildbach/bitcoin-wallet
+https://github.com/HashEngineering/darkcoin-wallet
 
 Todas las traducciones son administradas a través de Transifex:
 https://www.transifex.com/projects/p/bitcoin-wallet/
