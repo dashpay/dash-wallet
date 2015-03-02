@@ -17,21 +17,14 @@
 
 package de.schildbach.wallet.data;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
-import java.util.Arrays;
-
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.AddressFormatException;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.ScriptException;
-import org.bitcoinj.core.Transaction;
+import android.os.Parcel;
+import android.os.Parcelable;
+import com.google.common.io.BaseEncoding;
+import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.util.Bluetooth;
+import de.schildbach.wallet.util.GenericUtils;
+import org.bitcoinj.core.*;
 import org.bitcoinj.core.Wallet.SendRequest;
-import org.bitcoinj.core.WrongNetworkException;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.protocols.payments.PaymentProtocolException;
 import org.bitcoinj.script.Script;
@@ -40,14 +33,12 @@ import org.bitcoinj.uri.BitcoinURI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import android.os.Parcel;
-import android.os.Parcelable;
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.Arrays;
 
-import com.google.common.io.BaseEncoding;
-
-import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.util.Bluetooth;
-import de.schildbach.wallet.util.GenericUtils;
+import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * @author Andreas Schildbach
@@ -180,6 +171,9 @@ public final class PaymentIntent implements Parcelable
 	@CheckForNull
 	public final byte[] paymentRequestHash;
 
+	public boolean useInstantX = false;
+	public void setInstantX(boolean set) { useInstantX = set; }
+
 	private static final Logger log = LoggerFactory.getLogger(PaymentIntent.class);
 
 	public PaymentIntent(@Nullable final Standard standard, @Nullable final String payeeName, @Nullable final String payeeVerifiedBy,
@@ -278,7 +272,7 @@ public final class PaymentIntent implements Parcelable
 
 	public SendRequest toSendRequest()
 	{
-		final Transaction transaction = new Transaction(Constants.NETWORK_PARAMETERS);
+		final Transaction transaction = useInstantX ? new TransactionLockRequest(Constants.NETWORK_PARAMETERS) : new Transaction(Constants.NETWORK_PARAMETERS);
 		for (final PaymentIntent.Output output : outputs)
 			transaction.addOutput(output.amount, output.script);
 		return SendRequest.forTx(transaction);

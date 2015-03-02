@@ -17,49 +17,13 @@
 
 package de.schildbach.wallet.ui.send;
 
-import java.io.FileNotFoundException;
-import java.io.InputStream;
-import java.util.Arrays;
-
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-
-import org.bitcoin.protocols.payments.Protos.Payment;
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.AddressFormatException;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.InsufficientMoneyException;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionConfidence;
-import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
-import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.VersionedChecksummedBytes;
-import org.bitcoinj.core.Wallet;
-import org.bitcoinj.core.Wallet.BalanceType;
-import org.bitcoinj.core.Wallet.CouldNotAdjustDownwards;
-import org.bitcoinj.core.Wallet.DustySendRequested;
-import org.bitcoinj.core.Wallet.SendRequest;
-import org.bitcoinj.protocols.payments.PaymentProtocol;
-import org.bitcoinj.utils.MonetaryFormat;
-import org.bitcoinj.wallet.KeyChain.KeyPurpose;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.spongycastle.crypto.params.KeyParameter;
-
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.LoaderManager;
 import android.app.LoaderManager.LoaderCallbacks;
 import android.bluetooth.BluetoothAdapter;
-import android.content.ComponentName;
-import android.content.ContentResolver;
-import android.content.Context;
-import android.content.CursorLoader;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.Loader;
+import android.content.*;
 import android.content.pm.PackageManager;
 import android.database.ContentObserver;
 import android.database.Cursor;
@@ -73,53 +37,44 @@ import android.os.HandlerThread;
 import android.os.Process;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.view.ActionMode;
-import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
-import android.view.View;
+import android.view.*;
 import android.view.View.OnClickListener;
 import android.view.View.OnFocusChangeListener;
-import android.view.ViewGroup;
-import android.widget.AutoCompleteTextView;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
+import android.widget.*;
 import android.widget.CompoundButton.OnCheckedChangeListener;
-import android.widget.CursorAdapter;
-import android.widget.EditText;
-import android.widget.FilterQueryProvider;
-import android.widget.ListView;
-import android.widget.TextView;
-import org.bitcoinj.core.CoinDefinition;
-import de.schildbach.wallet.AddressBookProvider;
-import de.schildbach.wallet.Configuration;
-import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.ExchangeRatesProvider;
+import de.schildbach.wallet.*;
 import de.schildbach.wallet.ExchangeRatesProvider.ExchangeRate;
-import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.data.PaymentIntent.Standard;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.offline.DirectPaymentTask;
-import de.schildbach.wallet.ui.AbstractBindServiceActivity;
-import de.schildbach.wallet.ui.AddressAndLabel;
-import de.schildbach.wallet.ui.CurrencyAmountView;
-import de.schildbach.wallet.ui.CurrencyCalculatorLink;
-import de.schildbach.wallet.ui.DialogBuilder;
-import de.schildbach.wallet.ui.EditAddressBookEntryFragment;
-import de.schildbach.wallet.ui.ExchangeRateLoader;
+import de.schildbach.wallet.ui.*;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StreamInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
-import de.schildbach.wallet.ui.ProgressDialogFragment;
-import de.schildbach.wallet.ui.ScanActivity;
-import de.schildbach.wallet.ui.TransactionsListAdapter;
 import de.schildbach.wallet.util.Bluetooth;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
 import hashengineering.darkcoin.wallet.R;
+import org.bitcoin.protocols.payments.Protos.Payment;
+import org.bitcoinj.core.*;
+import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
+import org.bitcoinj.core.Wallet.BalanceType;
+import org.bitcoinj.core.Wallet.CouldNotAdjustDownwards;
+import org.bitcoinj.core.Wallet.DustySendRequested;
+import org.bitcoinj.core.Wallet.SendRequest;
+import org.bitcoinj.protocols.payments.PaymentProtocol;
+import org.bitcoinj.utils.MonetaryFormat;
+import org.bitcoinj.wallet.KeyChain.KeyPurpose;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.spongycastle.crypto.params.KeyParameter;
+
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.util.Arrays;
 
 /**
  * @author Andreas Schildbach
@@ -149,6 +104,7 @@ public final class SendCoinsFragment extends Fragment
 	private TextView receivingStaticLabelView;
 	private CurrencyCalculatorLink amountCalculatorLink;
 	private CheckBox directPaymentEnableView;
+	private CheckBox instantXenable;
 
 	private TextView hintView;
 	private TextView directPaymentMessageView;
@@ -618,6 +574,8 @@ public final class SendCoinsFragment extends Fragment
 			}
 		});
 
+		instantXenable = (CheckBox) view.findViewById(R.id.send_coins_instantx_enable);
+
 		hintView = (TextView) view.findViewById(R.id.send_coins_hint);
 
 		directPaymentMessageView = (TextView) view.findViewById(R.id.send_coins_direct_payment_message);
@@ -959,13 +917,17 @@ public final class SendCoinsFragment extends Fragment
 				validatedAddress != null ? validatedAddress.address : null);
 		final Coin finalAmount = finalPaymentIntent.getAmount();
 
+		boolean usingInstantX = instantXenable.isChecked();
+
 		// prepare send request
+		finalPaymentIntent.setInstantX(usingInstantX);
 		final SendRequest sendRequest = finalPaymentIntent.toSendRequest();
 		sendRequest.emptyWallet = paymentIntent.mayEditAmount() && finalAmount.equals(wallet.getBalance(BalanceType.AVAILABLE));
-		sendRequest.feePerKb = priority ? SendRequest.DEFAULT_FEE_PER_KB.multiply(10) : SendRequest.DEFAULT_FEE_PER_KB;
+		sendRequest.feePerKb = usingInstantX ? Coin.valueOf(CoinDefinition.INSTANTX_FEE) : priority ? SendRequest.DEFAULT_FEE_PER_KB.multiply(10) : SendRequest.DEFAULT_FEE_PER_KB;
 		sendRequest.memo = paymentIntent.memo;
 		sendRequest.exchangeRate = amountCalculatorLink.getExchangeRate();
 		sendRequest.aesKey = encryptionKey;
+		sendRequest.useInstantX = usingInstantX;
 
 		new SendCoinsOfflineTask(wallet, backgroundHandler)
 		{
@@ -1155,9 +1117,10 @@ public final class SendCoinsFragment extends Fragment
 				{
 					final Address dummy = wallet.currentReceiveAddress(); // won't be used, tx is never committed
 					final SendRequest sendRequest = paymentIntent.mergeWithEditedValues(amount, dummy).toSendRequest();
+					sendRequest.useInstantX = (instantXenable.isChecked());
 					sendRequest.signInputs = false;
 					sendRequest.emptyWallet = paymentIntent.mayEditAmount() && amount.equals(wallet.getBalance(BalanceType.AVAILABLE));
-					sendRequest.feePerKb = priority ? SendRequest.DEFAULT_FEE_PER_KB.multiply(10) : SendRequest.DEFAULT_FEE_PER_KB;
+					sendRequest.feePerKb = sendRequest.useInstantX ? Coin.valueOf(CoinDefinition.INSTANTX_FEE): (priority ? SendRequest.DEFAULT_FEE_PER_KB.multiply(10) : SendRequest.DEFAULT_FEE_PER_KB);
 					wallet.completeTx(sendRequest);
 					dryrunTransaction = sendRequest.tx;
 				}
