@@ -1,4 +1,4 @@
-Welcome to _Darkcoin Wallet_, a standalone Darkcoin payment app for your Android device!
+Welcome to _Dash Wallet_, a standalone Dash payment app for your Android device!
 
 This project contains several sub-projects:
 

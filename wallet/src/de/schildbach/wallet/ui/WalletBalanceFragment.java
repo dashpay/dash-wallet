@@ -17,12 +17,6 @@
 
 package de.schildbach.wallet.ui;
 
-import javax.annotation.CheckForNull;
-
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Wallet;
-import org.bitcoinj.utils.Fiat;
-
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.LoaderManager;
@@ -46,6 +40,11 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
 import hashengineering.darkcoin.wallet.R;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Wallet;
+import org.bitcoinj.utils.Fiat;
+
+import javax.annotation.CheckForNull;
 
 /**
  * @author Andreas Schildbach
@@ -219,7 +218,7 @@ public final class WalletBalanceFragment extends Fragment
 				viewBalanceBtc.setFormat(config.getFormat());
 				viewBalanceBtc.setAmount(balance);
 
-				final boolean tooMuch = balance.isGreaterThan(Coin.COIN);
+				final boolean tooMuch = balance.isGreaterThan(Coin.COIN.multiply(100));
 
 				viewBalanceTooMuch.setVisibility(tooMuch ? View.VISIBLE : View.GONE);
 

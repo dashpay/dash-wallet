@@ -17,27 +17,6 @@
 
 package de.schildbach.wallet.ui;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import javax.annotation.Nonnull;
-
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.Transaction.Purpose;
-import org.bitcoinj.core.TransactionConfidence;
-import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
-import org.bitcoinj.core.Wallet;
-import org.bitcoinj.utils.ExchangeRate;
-import org.bitcoinj.utils.MonetaryFormat;
-import org.bitcoinj.wallet.DefaultCoinSelector;
-
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Color;
@@ -54,6 +33,15 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.util.CircularProgressView;
 import de.schildbach.wallet.util.WalletUtils;
 import hashengineering.darkcoin.wallet.R;
+import org.bitcoinj.core.*;
+import org.bitcoinj.core.Transaction.Purpose;
+import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
+import org.bitcoinj.utils.ExchangeRate;
+import org.bitcoinj.utils.MonetaryFormat;
+import org.bitcoinj.wallet.DefaultCoinSelector;
+
+import javax.annotation.Nonnull;
+import java.util.*;
 
 /**
  * @author Andreas Schildbach
@@ -74,6 +62,7 @@ public class TransactionsListAdapter extends BaseAdapter
 	private final int colorInsignificant;
 	private final int colorError;
 	private final int colorCircularBuilding = Color.parseColor("#44ff44");
+	private final int colorCircularLocked = Color.parseColor("#0000FF");
 	private final String textCoinBase;
 	private final String textInternal;
 
@@ -261,7 +250,7 @@ public class TransactionsListAdapter extends BaseAdapter
 		final TextView rowConfidenceTextual = (TextView) row.findViewById(R.id.transaction_row_confidence_textual);
 
 		// confidence
-		if (confidenceType == ConfidenceType.PENDING)
+		if (confidenceType == ConfidenceType.PENDING || confidenceType == ConfidenceType.INSTANTX_PENDING)
 		{
 			rowConfidenceCircular.setVisibility(View.VISIBLE);
 			rowConfidenceTextual.setVisibility(View.GONE);
@@ -292,6 +281,17 @@ public class TransactionsListAdapter extends BaseAdapter
 			rowConfidenceTextual.setText(CONFIDENCE_SYMBOL_DEAD);
 			rowConfidenceTextual.setTextColor(Color.RED);
 		}
+		else if (confidenceType == ConfidenceType.INSTANTX_LOCKED) {
+			rowConfidenceCircular.setVisibility(View.VISIBLE);
+			rowConfidenceTextual.setVisibility(View.GONE);
+
+			rowConfidenceCircular.setProgress(confidence.getDepthInBlocks() >=1 ? Constants.MAX_NUM_CONFIRMATIONS : 5);
+			rowConfidenceCircular.setMaxProgress(isCoinBase ? Constants.NETWORK_PARAMETERS.getSpendableCoinbaseDepth()
+					: Constants.MAX_NUM_CONFIRMATIONS);
+			rowConfidenceCircular.setSize(1);
+			rowConfidenceCircular.setMaxSize(1);
+			rowConfidenceCircular.setColors(colorCircularLocked, Color.DKGRAY);
+		}
 		else
 		{
 			rowConfidenceCircular.setVisibility(View.GONE);
@@ -300,6 +300,7 @@ public class TransactionsListAdapter extends BaseAdapter
 			rowConfidenceTextual.setText(CONFIDENCE_SYMBOL_UNKNOWN);
 			rowConfidenceTextual.setTextColor(colorInsignificant);
 		}
+
 
 		// spendability
 		final int textColor;
@@ -406,6 +407,30 @@ public class TransactionsListAdapter extends BaseAdapter
 				rowMessage.setText(R.string.transaction_row_message_own_unbroadcasted);
 				rowMessage.setTextColor(colorInsignificant);
 			}
+			/*else if (isOwn && confidenceType == ConfidenceType.INSTANTX_PENDING && confidence.numBroadcastPeers() == 0)
+			{
+				rowExtendMessage.setVisibility(View.VISIBLE);
+				rowMessage.setText(R.string.transaction_row_message_own_instantx_lock_request);
+				rowMessage.setTextColor(colorInsignificant);
+			}
+			else if (isOwn && confidenceType == ConfidenceType.INSTANTX_LOCKED && confidence.numBroadcastPeers() == 0)
+			{
+				rowExtendMessage.setVisibility(View.VISIBLE);
+				rowMessage.setText(R.string.transaction_row_message_own_instantx_locked);
+				rowMessage.setTextColor(colorInsignificant);
+			}
+			else if (!isOwn && confidenceType == ConfidenceType.INSTANTX_PENDING && confidence.numBroadcastPeers() == 0)
+			{
+				rowExtendMessage.setVisibility(View.VISIBLE);
+				rowMessage.setText(R.string.transaction_row_message_received_instantx_lock_request);
+				rowMessage.setTextColor(colorInsignificant);
+			}
+			else if (!isOwn && confidenceType == ConfidenceType.INSTANTX_LOCKED && confidence.numBroadcastPeers() == 0)
+			{
+				rowExtendMessage.setVisibility(View.VISIBLE);
+				rowMessage.setText(R.string.transaction_row_message_received_instantx_locked);
+				rowMessage.setTextColor(colorInsignificant);
+			}*/
 			else if (!isOwn && confidenceType == ConfidenceType.PENDING && confidence.numBroadcastPeers() == 0)
 			{
 				rowExtendMessage.setVisibility(View.VISIBLE);
@@ -422,6 +447,24 @@ public class TransactionsListAdapter extends BaseAdapter
 			{
 				rowExtendMessage.setVisibility(View.VISIBLE);
 				rowMessage.setText(R.string.transaction_row_message_received_unconfirmed_unlocked);
+				rowMessage.setTextColor(colorInsignificant);
+			}
+			else if (!txCache.sent && confidenceType == ConfidenceType.INSTANTX_PENDING)
+			{
+				rowExtendMessage.setVisibility(View.VISIBLE);
+				rowMessage.setText(R.string.transaction_row_message_received_unconfirmed_instantx);
+				rowMessage.setTextColor(colorInsignificant);
+			}
+			else if (txCache.sent && confidenceType == ConfidenceType.INSTANTX_PENDING)
+			{
+				rowExtendMessage.setVisibility(View.VISIBLE);
+				rowMessage.setText(R.string.transaction_row_message_received_unconfirmed_instantx);
+				rowMessage.setTextColor(colorInsignificant);
+			}
+			else if (txCache.sent && confidenceType == ConfidenceType.INSTANTX_LOCKED)
+			{
+				rowExtendMessage.setVisibility(View.VISIBLE);
+				rowMessage.setText(R.string.transaction_row_message_received_instantx_locked2);
 				rowMessage.setTextColor(colorInsignificant);
 			}
 			else if (!txCache.sent && confidenceType == ConfidenceType.DEAD)

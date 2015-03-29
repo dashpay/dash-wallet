@@ -33,7 +33,7 @@ import java.io.File;
  */
 public final class Constants
 {
-	public static final boolean TEST = false; //R.class.getPackage().getName().contains("_test");
+	public static final boolean TEST = true; //R.class.getPackage().getName().contains("_test");
 
 	/** Network this wallet is on (e.g. testnet or mainnet). */
 	public static final NetworkParameters NETWORK_PARAMETERS = TEST ? TestNet3Params.get() : MainNetParams.get();

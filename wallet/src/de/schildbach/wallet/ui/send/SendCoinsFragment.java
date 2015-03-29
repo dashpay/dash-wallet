@@ -574,8 +574,17 @@ public final class SendCoinsFragment extends Fragment
 			}
 		});
 
-		instantXenable = (CheckBox) view.findViewById(R.id.send_coins_instantx_enable);
 
+		instantXenable = (CheckBox) view.findViewById(R.id.send_coins_instantx_enable);
+		instantXenable.setOnCheckedChangeListener(new OnCheckedChangeListener()
+		{
+			@Override
+			public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked)
+			{
+				updateView();
+				handler.post(dryrunRunnable);
+			}
+		});
 		hintView = (TextView) view.findViewById(R.id.send_coins_hint);
 
 		directPaymentMessageView = (TextView) view.findViewById(R.id.send_coins_direct_payment_message);
