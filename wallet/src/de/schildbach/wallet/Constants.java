@@ -135,7 +135,7 @@ public final class Constants
     public static final String CREDITS_WEBSITE_URL = "http://darkcoin.io/";
     public static final String CREDITS_FORUM_URL = "https://darkcointalk.org/";
 
-	public static final MonetaryFormat LOCAL_FORMAT = new MonetaryFormat().noCode().minDecimals(4).optionalDecimals();
+	public static final MonetaryFormat LOCAL_FORMAT = new MonetaryFormat().noCode().minDecimals(2).optionalDecimals();
 
 	public static final String FORKED_FROM_SOURCE = "based on bitcoin-wallet 3.46\n";
 	public static final String FORKED_FROM_SOURCE_BITCOINJ = "based on bitcoinj 0.12\n";
