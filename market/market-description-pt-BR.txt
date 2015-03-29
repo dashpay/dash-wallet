@@ -1,22 +1,22 @@
-<b>Tenha os seus Darkcoins sempre com você, no seu bolso!</b> Efetue pagamentos rapidamente apenas escaneando um código QR. Como comerciante, você pode receber pagamentos de forma confiável e instantaneamente. O Darkcoin Wallet é o primeiro aplicativo Darkcoin móvel, e, possivelmente, o mais seguro!
+<b>Tenha os seus Dashs sempre com você, no seu bolso!</b> Efetue pagamentos rapidamente apenas escaneando um código QR. Como comerciante, você pode receber pagamentos de forma confiável e instantaneamente. O Dash Wallet é o primeiro aplicativo Dash móvel, e, possivelmente, o mais seguro!
 
 
 <b>CARACTERÍSTICAS</b>
 
 • Sem necessidade de cadastro, serviço web ou hospedagem! Esta carteira é descentralizada e "peer to peer".
-• Exibe a quantidade de Darkcoins em DRK, mDRK e µDRK.
+• Exibe a quantidade de Dashs em DASH, mDASH e µDASH.
 • Conversão para moedas nacionais.
-• Envio e recebimento de Darkcoins via NFC, códigos QR ou endereços Darkcoin.
+• Envio e recebimento de Dashs via NFC, códigos QR ou endereços Dash.
 • Catálogo para guardar os endereços mais utilizados.
 • Quando você estiver off-line, você ainda pode pagar via Bluetooth.
 • Notificações do sistema para moedas recebidas.
 • Varrer de carteiras de papel (por exemplo, aqueles usados para o armazenamento a frio).
-• Widget para saldo de Darkcoins.
+• Widget para saldo de Dashs.
 
 
 <b>CONTRIBUA</b>
 
-Darkcoin Wallet é <b>open source</ b> e <b>software livre</ b>. Licença: GPLv3
+Dash Wallet é <b>open source</ b> e <b>software livre</ b>. Licença: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Nosso código fonte está disponível no GitHub:
@@ -28,7 +28,7 @@ https://www.transifex.com/projects/p/bitcoin-wallet/
 
 <b>TESTEMUNHOS</b>
 
-• Muitas carteiras móveis baseiam seu código em Darkcoin Wallet. Exemplos: blockchain.info, colmeia e KNC.
+• Muitas carteiras móveis baseiam seu código em Dash Wallet. Exemplos: blockchain.info, colmeia e KNC.
 • Carteira mobile recomendada por https://bitcoin.org
 • Recomendado por BitPay.
 

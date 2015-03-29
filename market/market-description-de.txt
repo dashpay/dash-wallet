@@ -1,22 +1,22 @@
-<b>Hab deine Darkcoins immer dabei, in deiner Hosentasche!</b> Du zahlst, indem du rasch einen QR-Code scannst. Als Händler empfängst du Zahlungen zuverlässig und sofort. Darkcoin Wallet ist die erste mobile Darkcoin app, und wohl auch die sicherste!
+<b>Hab deine Dashs immer dabei, in deiner Hosentasche!</b> Du zahlst, indem du rasch einen QR-Code scannst. Als Händler empfängst du Zahlungen zuverlässig und sofort. Dash Wallet ist die erste mobile Dash app, und wohl auch die sicherste!
 
 
 <b>FEATURES</b>
 
 • Keine Registrierung, Web-Dienst oder Cloud nötig! Diese Wallet ist dezentral und Peer to Peer.
-• Anzeige von Darkcoin-Werten in DRK, mDRK und µDRK.
+• Anzeige von Dash-Werten in DASH, mDASH und µDASH.
 • Umrechnung von und zu den nationalen Währungen.
-• Senden und Empfangen von Darkcoin via NFC, QR-Codes oder Darkcoin URLs.
+• Senden und Empfangen von Dash via NFC, QR-Codes oder Dash URLs.
 • Adressbuch für regelmäßig genutzte Empfänger.
 • Wenn du offline bist, kannst du trotzdem über Bluetooth zahlen.
 • System-Benachrichtigung für den Empfang von Zahlungen.
 • Entleeren von Paper-Wallets (die z.B. für Cold-Storage genutzt wurden).
-• App-Widget zeigt Darkcoin-Guthaben an.
+• App-Widget zeigt Dash-Guthaben an.
 
 
 <b>MITWIRKEN</b>
 
-Darkcoin Wallet ist <b>Open Source</b> und <b>Freie Software</b>. Lizenz: GPLv3
+Dash Wallet ist <b>Open Source</b> und <b>Freie Software</b>. Lizenz: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.de.html
 
 Unser Source Code ist auf GitHub verfügbar:
@@ -28,7 +28,7 @@ https://www.transifex.com/projects/p/bitcoin-wallet/
 
 <b>EMPFEHLUNGEN</b>
 
-• Viele mobile Wallets basieren auf Darkcoin Wallet. Beispiele: blockchain.info, Hive and KnC.
+• Viele mobile Wallets basieren auf Dash Wallet. Beispiele: blockchain.info, Hive and KnC.
 • Von https://bitcoin.org empfohlenes mobiles Wallet.
 • Von BitPay empfohlen.
 

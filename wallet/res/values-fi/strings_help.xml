@@ -30,7 +30,7 @@
   <string name="help_request_coins">
 <![CDATA[
 		<p>
-			Käyttämällä tätä dialogia, voit pyytää bitcoineja toiselta henkilöltä, jolla pitäisi jo olla Bitcoin Wallet asennettuna.
+			Käyttämällä tätä dialogia, voit pyytää bitcoineja toiselta henkilöltä, jolla pitäisi jo olla Dash Wallet asennettuna.
 		</p>
 		<p>
 			Ensiksi, voit syöttää jonkun määrän bitcoineja, joita pyydät.
@@ -67,7 +67,7 @@
 		</p>
 		<p>
 			Voit asettaa maksun olematta verkossa, eli ollessasi offlinessa.
-			Se lähetetään käynnistäessäsi Bitcoin Wallet:in uudestaan seuraavan kerran.
+			Se lähetetään käynnistäessäsi Dash Wallet:in uudestaan seuraavan kerran.
 			Jos haluat maksun menevän mahdollisimman nopeasti, varmista, että sinulla on hyvä yhteys (kuten WLAN).
 		</p>
 		<p>
@@ -83,7 +83,7 @@
 			<b>Tärkeitä turvallisuus huomioita:</b>
 		</p>
 		<p>
-			Bitcoinit sijaitsevat laitteessasi.
+			Dashit sijaitsevat laitteessasi.
 			<b>Jos hukkaat sen, menetät bitcoinisi.</b>
 		</p>
 		<p>

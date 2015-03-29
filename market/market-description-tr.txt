@@ -1,22 +1,22 @@
-<b>Darkcoin'leriniz daima cebinizde sizinle olsun!</b> Herhangi bir QR kodunu okuyarak çabuk ödeme yapabilirsiniz. Bir tüccar olarak ödemeleri güvenilir ve anında alabilirsiniz. Darkcoin Wallet ilk mobil Darkcoin uygulamasıdır ve muhtemelen en güvenli Darkcoin uygulamasıdır!
+<b>Dash'leriniz daima cebinizde sizinle olsun!</b> Herhangi bir QR kodunu okuyarak çabuk ödeme yapabilirsiniz. Bir tüccar olarak ödemeleri güvenilir ve anında alabilirsiniz. Dash Wallet ilk mobil Dash uygulamasıdır ve muhtemelen en güvenli Dash uygulamasıdır!
 
 
 <b>ÖZELLİKLER</b>
 
 • Hiçbir oturuma, web ya da bulut hizmetine gerek yoktur. Bu cüzdan merkezsiz ve eşten eşedir.
-• Darkcoin meblağlarını DRK, mDRK ve µDRK olarak göster.
+• Dash meblağlarını DASH, mDASH ve µDASH olarak göster.
 • Ulusal para birimlerine ve bu para birimlerinden dönüştürme.
-• QR kodları, Darkcoin bağlantıları ve yakın alan iletişimi ile Darkcoin alımı ve gönderilmesi.
-• Sık kullanılan Darkcoin adresleri için adres defteri içerir.
+• QR kodları, Dash bağlantıları ve yakın alan iletişimi ile Dash alımı ve gönderilmesi.
+• Sık kullanılan Dash adresleri için adres defteri içerir.
 • Çevrimdışı olduğunuzda Bluetooth vasıtasıyla ödemeler.
 • Alınan bitcoin'ler için sistem bildirimleri.
 • Kağıt cüzdanların taranması (mesela soğuk depolama için kullanılanlar).
-• Darkcoin bakiyesini görüntüleyen widget.
+• Dash bakiyesini görüntüleyen widget.
 
 
 <b>İŞTİRAK EDİN</b>
 
-Darkcoin Wallet <b>açık kaynak</b> ve <b>özgür yazılımdır</b>. Lisans: GPLv3
+Dash Wallet <b>açık kaynak</b> ve <b>özgür yazılımdır</b>. Lisans: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Kaynak kodumuz GitHub'da mevcuttur:
@@ -28,7 +28,7 @@ https://www.transifex.com/projects/p/bitcoin-wallet/
 
 <b>REFERANSLAR</b>
 
-• Birçok mobil cüzdan kodları için Darkcoin Wallet'i temel alırlar. Mesela blockchain.info, Hive ve KnC.
+• Birçok mobil cüzdan kodları için Dash Wallet'i temel alırlar. Mesela blockchain.info, Hive ve KnC.
 • https://bitcoin.org tarafından tavsiye edilen mobil cüzdan.
 • BitPay tarafından tavsiye edilir.
 

@@ -1,20 +1,20 @@
-Darkcoiny vždy so sebou vo svojom vrecku. Jednoduché a rýchle platby pomocou QR kódov. Pre obchodníkov ponúka spoľahlivé a okamžité prijímanie platieb. Darkcoin Wallet je prvá mobilná Darkcoin aplikácia a preukázateľne aj najbezpečnejšia.
+Dashy vždy so sebou vo svojom vrecku. Jednoduché a rýchle platby pomocou QR kódov. Pre obchodníkov ponúka spoľahlivé a okamžité prijímanie platieb. Dash Wallet je prvá mobilná Dash aplikácia a preukázateľne aj najbezpečnejšia.
 
 FUNKCIE:
 
 • Nie je potrebná žiadna registrácia ani žiadny účet.
-• Zobrazenie zostatku Darkcoinov v DRK alebo mDRK.
-• Prepočet hodnoty Darkcoinov do viacerých cudzích mien.
-• Posielanie a prijímanie Darkcoinov pomocou NFC, QR kódov alebo Darkcoin adries.
-• Adresár pre často používané Darkcoin adresy.
+• Zobrazenie zostatku Dashov v DASH alebo mDASH.
+• Prepočet hodnoty Dashov do viacerých cudzích mien.
+• Posielanie a prijímanie Dashov pomocou NFC, QR kódov alebo Dash adries.
+• Adresár pre často používané Dash adresy.
 • V offline režime je platba možná aj cez Bluetooth.
-• Notifikácie v stavovej lište pri prijatí Darkcoinov.
+• Notifikácie v stavovej lište pri prijatí Dashov.
 • Widget s celkovým zostatkom.
 
-Viac informácií o Darkcoine
+Viac informácií o Dashe
 http://darkcoin.io
 
-Ak chcete prispieť do projektu Darkcoin Wallet nájdete ho na adrese
+Ak chcete prispieť do projektu Dash Wallet nájdete ho na adrese
 https://github.com/HashEngineering/darkcoin-wallet
 
 Licencia: GPLv3

@@ -3,11 +3,11 @@
   <string name="help_wallet">
 <![CDATA[
 		<p>
-			Horní levá část obrazovky zobrazuje Vaši aktuální Bitcoin bilanci včetně odpovídající částky ve vaší lokální měně.
+			Horní levá část obrazovky zobrazuje Vaši aktuální Dash bilanci včetně odpovídající částky ve vaší lokální měně.
 			Kliknutím na částku přejdete do seznamu lokálních měn, kde si můžete vybrat jinou.
 		</p>
 		<p>
-			QR kód na pravé straně obsahuje Vaši Bitcoin adresu a může být použita pro naskenování druhou stranou.
+			QR kód na pravé straně obsahuje Vaši Dash adresu a může být použita pro naskenování druhou stranou.
 			Klepněte na QR kód pro zobrazení větší verze.
 		</p>
 		<p>
@@ -17,7 +17,7 @@
 			Táhnutím vlevo či vpravo je možné aplikovat na seznam filtr.
 		</p>
 		<p>
-			Můžete poslat nebo si vyžádat Darkcoiny klepnutím na patřičné tlačítko v akční nabídce.
+			Můžete poslat nebo si vyžádat Dashy klepnutím na patřičné tlačítko v akční nabídce.
 			Více možností je v nabídce nastavení.
 		</p>
 	]]>
@@ -25,10 +25,10 @@
   <string name="help_request_coins">
 <![CDATA[
 		<p>
-			Pomocí tohoto dialogu můžete vyžádat Darkcoiny od někoho jiného (kdo by měl také mít nainstalovanou aplikaci Darkcoin Wallet).
+			Pomocí tohoto dialogu můžete vyžádat Dashy od někoho jiného (kdo by měl také mít nainstalovanou aplikaci Dash Wallet).
 		</p>
 		<p>
-			Nejprve zadejte množství Darkcoinů, které chcete vyžádat.
+			Nejprve zadejte množství Dashů, které chcete vyžádat.
 		</p>
 		<p>
 			Potom můžete protistraně nabídnout vygenerovaný QR kód k oskenování,
@@ -36,7 +36,7 @@
 			Druhá strana potom klikne na získanou adresu.
 		</p>
 		<p>
-			V obou případech odesílatel uvidí dialog na zasílání Bitcoinů s předvyplněnými údaji.
+			V obou případech odesílatel uvidí dialog na zasílání Dashů s předvyplněnými údaji.
 			Pokud souhlasí, potvrdí zadané informace a dojde k transakci.
 		</p>
 	]]>
@@ -44,7 +44,7 @@
   <string name="help_send_coins">
 <![CDATA[
 		<p>
-			Právě jste zahájil zasílání Darkcoinů.
+			Právě jste zahájil zasílání Dashů.
 			Sem jste se musel dostat buď přes hlavní obrazovku aplikace, nebo pomocí klepnutí na speciální adresu v prohlížeči.
 		</p>
 		<p>
@@ -53,7 +53,7 @@
 			Můžete také naskenovat QR kód s adresou peněženky nebo požadavek na zaplacení stisknutím tlačítka s QR kódem.
 		</p>
 		<p>
-			V dalším kroku uvidíte, kolik Darkcoinů můžete momentálně utratit.
+			V dalším kroku uvidíte, kolik Dashů můžete momentálně utratit.
 			Jakýkoliv rozdíl vůči zůstatku zobrazenému na výchozí obrazovce je stále nepotvrzen a tudíž nemůže být utracen.
 		</p>
 		<p>
@@ -61,7 +61,7 @@
 		</p>
 		<p>
 			Transakce můžete provádět, i když jste právě offline.
-			Budou provedeny při dalším spuštění aplikace Darkcoin Wallet.
+			Budou provedeny při dalším spuštění aplikace Dash Wallet.
 			Pokud chcete transakci provést co nejrychleji, ujistěte se, že máte rychlé připojení (například jste připojeni pomocí bezdrátové sítě).
 		</p>
 		<p>
@@ -74,29 +74,29 @@
   <string name="help_safety">
 <![CDATA[
 		<p>
-			Několik slov o bezpečnosti vašich Darkcoinů:
+			Několik slov o bezpečnosti vašich Dashů:
 		</p>
 		<p>
-			Darkcoiny v aplikaci Darkcoin Wallet jsou uloženy ve vašem zařízení.
-			<b>Pokud o zařízení přijdete, přijdete i o Darkcoiny v něm.</b>
+			Dashy v aplikaci Dash Wallet jsou uloženy ve vašem zařízení.
+			<b>Pokud o zařízení přijdete, přijdete i o Dashy v něm.</b>
 			Stejně jako při ztrátě normální peněženky.
 		</p>
 		<p>
-			<b>Před odinstalací aplikace Darkcoin Wallet</b> (nebo při odstraňování dat/wipe), <b> si přepošlete zůstatek do jiné peněženky</b>.
+			<b>Před odinstalací aplikace Dash Wallet</b> (nebo při odstraňování dat/wipe), <b> si přepošlete zůstatek do jiné peněženky</b>.
 			Jakékoliv zůstavší Bitcony budou nenávratně ztraceny.
 		</p>
 		<p>
 			<b>Transakce nemohou být zrušeny</b>.
-			Pokud pošlete Darkcoiny někam neznámo kam, neexistuje možnost, jak je získat zpět, jedině byste znali příjemce a on měl zrovna náladu je poctivě vrátit.
+			Pokud pošlete Dashy někam neznámo kam, neexistuje možnost, jak je získat zpět, jedině byste znali příjemce a on měl zrovna náladu je poctivě vrátit.
 		</p>
 		<p>
 			<b>Udržujte Váš Android v bezpečí!</b>
 			Instalujte pouze aplikace, kterým plně důvěřujete.
-			Existují škodlivé aplikace, které vás mohou o vaše Darkcoiny připravit.
+			Existují škodlivé aplikace, které vás mohou o vaše Dashy připravit.
 		</p>
 		<p>
 			Neriskujte zbytečně!
-			<b>V aplikaci Darkcoin Wallet mějte pouze malé částky</b> pro rychlé použití.
+			<b>V aplikaci Dash Wallet mějte pouze malé částky</b> pro rychlé použití.
 		</p>
 	]]>
 	</string>

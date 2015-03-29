@@ -1,19 +1,19 @@
-Dengan aplikasi ini Anda selalu mempunyai Darkcoin dengan Anda, dalam saku Anda! Anda dapat mengirim pembayaran hanya dengan memindai kode-QR atau mendekatkan dua ponsel bersama (NFC). Darkcoin Wallet dirancang untuk mudah digunakan dan diandalkan, sementara juga menjadi lebih aman dan cepat.
+Dengan aplikasi ini Anda selalu mempunyai Dash dengan Anda, dalam saku Anda! Anda dapat mengirim pembayaran hanya dengan memindai kode-QR atau mendekatkan dua ponsel bersama (NFC). Dash Wallet dirancang untuk mudah digunakan dan diandalkan, sementara juga menjadi lebih aman dan cepat.
 
 FITUR:
 
 • Tidak diperlukan server awan atau layanan web! Dompet ini benar-benar peer ke peer.
-• Tampilkan saldo dompet dalam Darkcoin dan mata uang lainnya.
-• Mengirim dan menerima Darkcoin via NFC, kode-QR atau Tautan Darkcoin.
-• Buku alamat untuk alamat penggunaan Darkcoin secara reguler.
+• Tampilkan saldo dompet dalam Dash dan mata uang lainnya.
+• Mengirim dan menerima Dash via NFC, kode-QR atau Tautan Dash.
+• Buku alamat untuk alamat penggunaan Dash secara reguler.
 • Masukkan transaksi saat offline, akan dilaksanakan ketika online.
-• Notifikasi sistem untuk konektivitas Darkcoin dan menerima koin.
-• Widget Apl untuk saldo Darkcoin.
+• Notifikasi sistem untuk konektivitas Dash dan menerima koin.
+• Widget Apl untuk saldo Dash.
 
-Anda dapat mengetahui lebih mengenai Darkcoin di
+Anda dapat mengetahui lebih mengenai Dash di
 http://darkcoin.io
 
-Jika Anda ingin berkontribusi kepada Darkcoin Wallet, proyeknya berada di
+Jika Anda ingin berkontribusi kepada Dash Wallet, proyeknya berada di
 https://github.com/HashEngineering/darkcoin-wallet
 
 Lisensi: GPLv3

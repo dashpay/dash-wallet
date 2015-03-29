@@ -11,7 +11,7 @@
   <string name="blockchain_state_progress_stalled">Synchronisation interrompue</string>
   <string name="blockchain_state_progress_problem_storage">Synchronisation : problème de stockage</string>
   <string name="blockchain_state_progress_problem_network">Synchronisation : problème de réseau</string>
-  <string name="wallet_address_fragment_clipboard_msg">Adresse Bitcoin copiée dans le presse-papiers</string>
+  <string name="wallet_address_fragment_clipboard_msg">Adresse Dash copiée dans le presse-papiers</string>
   <string name="wallet_balance_fragment_too_much">Ce montant est plutôt élevé pour garder dans votre poche. Veuillez en déplacer une partie vers un endroit plus sûr.</string>
   <string name="wallet_balance_fragment_replaying">Le solde est indisponible durant la reprise.</string>
   <string name="exchange_rates_activity_title">Taux de change</string>
@@ -37,9 +37,9 @@
   <string name="wallet_options_encrypt_keys_change">Changer le NIP de dépense</string>
   <string name="wallet_options_safety">Notes de sécurité</string>
   <string name="wallet_options_donate">Faire un don</string>
-  <string name="wallet_donate_address_label">Don pour Bitcoin Wallet</string>
+  <string name="wallet_donate_address_label">Don pour Dash Wallet</string>
   <string name="wallet_low_storage_dialog_title">Espace de stockage interne faible !</string>
-  <string name="wallet_low_storage_dialog_msg">Bitcoin Wallet utilise le stockage interne pour se rappeler des transactions et des blocs. S\'il manque d\'espace, il cessera de fonctionner et vos bitcoins seront à risque !\n\nVoulez-vous ouvrir le gestionnaire d\'applications pour désinstaller des applications inutiles ?</string>
+  <string name="wallet_low_storage_dialog_msg">Dash Wallet utilise le stockage interne pour se rappeler des transactions et des blocs. S\'il manque d\'espace, il cessera de fonctionner et vos bitcoins seront à risque !\n\nVoulez-vous ouvrir le gestionnaire d\'applications pour désinstaller des applications inutiles ?</string>
   <string name="wallet_low_storage_dialog_button_apps">Gérer les applis</string>
   <string name="wallet_timeskew_dialog_title">Vérifiez les réglages de votre horloge !</string>
   <string name="wallet_timeskew_dialog_msg">L\'horloge de votre appareil est déréglée de %d minutes. Vous ne pouvez probablement pas envoyer ou recevoir de bitcoins à cause de ce problème.\n\nVous devriez vérifier et corriger votre horloge et vos paramètres de fuseau horaire.</string>
@@ -49,7 +49,7 @@
   <string name="wallet_version_dialog_button_market">Google Play</string>
   <string name="wallet_version_dialog_button_binary">Télécharger</string>
   <string name="wallet_old_sdk_dialog_title">La version d\'Android est obsolète</string>
-  <string name="wallet_old_sdk_dialog_message">Il est probable qu\'une prochaine version de Bitcoin Wallet ne prenne plus en charge votre appareil. Dans certains cas, il peut être difficile de dépenser des bitcoins avec cet appareil.\n\nÀ moins que vous ne sachiez ce que vous faites, il est recommandé de bientôt déplacer vos bitcoins.</string>
+  <string name="wallet_old_sdk_dialog_message">Il est probable qu\'une prochaine version de Dash Wallet ne prenne plus en charge votre appareil. Dans certains cas, il peut être difficile de dépenser des bitcoins avec cet appareil.\n\nÀ moins que vous ne sachiez ce que vous faites, il est recommandé de bientôt déplacer vos bitcoins.</string>
   <string name="send_coins_activity_title">Envoyer des bitcoins</string>
   <string name="send_coins_fragment_request_payment_request_progress">Récupération de la signature de %s…</string>
   <string name="send_coins_fragment_request_payment_request_failed_title">Échec lors de la récupération de la signature</string>
@@ -58,7 +58,7 @@
   <string name="send_coins_fragment_payee_verified_by_unknown">inconnu</string>
   <string name="send_coins_fragment_receiving_address_label">Payer à</string>
   <string name="send_coins_fragment_receiving_address_hint">saisir l\'adresse ou le nom</string>
-  <string name="send_coins_fragment_receiving_address_error">Adresse Bitcoin invalide !</string>
+  <string name="send_coins_fragment_receiving_address_error">Adresse Dash invalide !</string>
   <string name="send_coins_fragment_receiving_address_complex">adresse\ncomplexe</string>
   <string name="send_coins_fragment_pending">(%s en attente de confirmation)</string>
   <string name="send_coins_fragment_amount_label">Montant à payer</string>
@@ -118,7 +118,7 @@
   <string name="request_coins_fragment_initiate_request_nfc">Ou touchez un appareil ayant la NFC.</string>
   <string name="request_coins_clipboard_msg">Demande de bitcoins copiée dans le presse-papiers</string>
   <string name="request_coins_share_dialog_title">Partager la demande de bitcoins…</string>
-  <string name="request_coins_no_local_app_msg">Aucune autre appli Bitcoin n\'a été trouvée</string>
+  <string name="request_coins_no_local_app_msg">Aucune autre appli Dash n\'a été trouvée</string>
   <string name="request_coins_options_local_app_title">Demander à une appli locale</string>
   <string name="address_book_activity_title">Carnet d\'adresses</string>
   <string name="address_book_list_receiving_title">Vos adresses</string>
@@ -174,7 +174,7 @@
   <string name="export_keys_dialog_success"><![CDATA[<p>Votre portefeuille a été sauvegardé vers <tt>%s</tt></p><p>Si votre appareil a une carte SD amovible, votre sauvegarde <i>devrait</i> être sur cette carte. Enlevez-la et conservez-la dans un endroit sûr. Si la carte n\'est <i>pas</i> amovible, vous devez archiver votre sauvegarde dans un endroit autre que votre appareil.</p><p><b>Si votre sauvegarde existe seulement sur votre appareil, vous courez le risque de perdre les deux en même temps !</b></p><p>Dans tous les cas, assurez-vous de vous souvenir du mot de passe de votre sauvegarde. Voulez-vous archiver votre portefeuille maintenant ?</p>]]></string>
   <string name="export_keys_dialog_failure">Votre portefeuille n\'a pas pu être exporté :\n%s</string>
   <string name="export_keys_dialog_button_archive">Archiver</string>
-  <string name="export_keys_dialog_mail_subject">Sauvegarde du portefeuille Bitcoin</string>
+  <string name="export_keys_dialog_mail_subject">Sauvegarde du portefeuille Dash</string>
   <string name="export_keys_dialog_mail_text">Le fichier chiffré attaché contient les clefs privées bitcoin et doit être gardé en lieu sûr en tout temps. N\'oubliez pas le mot de passe de chiffrement !</string>
   <string name="export_keys_dialog_mail_intent_chooser">Archiver le portefeuille en utilisant…</string>
   <string name="export_keys_dialog_mail_intent_failed">Échec lors de l\'archivage du portefeuille.</string>
@@ -200,8 +200,8 @@
   <string name="scan_camera_problem_dialog_message">L\'appareil photo a un problème. Vous devez probablement redémarrer votre appareil.</string>
   <string name="input_parser_io_error">Impossible de lire les données :\n%s</string>
   <string name="input_parser_cannot_classify">Impossible de reconnaître l\'entrée :\n%s</string>
-  <string name="input_parser_invalid_bitcoin_uri">URI Bitcoin invalide :\n%s</string>
-  <string name="input_parser_invalid_address">Réception d\'une adresse Bitcoin invalide !\n(Mélange mainnet/testnet ?)</string>
+  <string name="input_parser_invalid_bitcoin_uri">URI Dash invalide :\n%s</string>
+  <string name="input_parser_invalid_address">Réception d\'une adresse Dash invalide !\n(Mélange mainnet/testnet ?)</string>
   <string name="input_parser_unverifyable_paymentrequest">Impossible de vérifier la demande de paiement :\n%s</string>
   <string name="input_parser_invalid_paymentrequest">Demande de paiement invalide :\n%s</string>
   <string name="input_parser_invalid_transaction">Transaction invalide :\n%s</string>
@@ -265,8 +265,8 @@
   <string name="button_paste">Coller</string>
   <string name="button_share">Partager</string>
   <string name="button_set_as_default">Définir par défaut</string>
-  <string name="button_request_coins">Demande de DRK</string>
-  <string name="button_send_coins">Envoi de DRK</string>
+  <string name="button_request_coins">Demande de DASH</string>
+  <string name="button_send_coins">Envoi de DASH</string>
   <string name="button_scan">Numériser</string>
   <string name="button_edit_address">Ajouter/modifier une adresse</string>
   <string name="button_settings">Paramètres</string>

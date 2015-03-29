@@ -3,5 +3,10 @@
 
 
 	<string name="send_coins_fragment_instantx_enable">Use InstantX</string>
-
+	<string name="transaction_row_message_own_instantx_lock_request">Sent InstantX transaction lock request</string>
+	<string name="transaction_row_message_own_instantx_locked">Sent InstantX transaction (locked)</string>
+	<string name="transaction_row_message_received_instantx_lock_request">InstantX Lock Request</string>
+	<string name="transaction_row_message_received_instantx_locked">InstantX Locked</string>
+	<string name="transaction_row_message_received_unconfirmed_instantx">Unconfirmed InstantX</string>
+	<string name="transaction_row_message_received_instantx_locked2">Locked InstantX</string>
 </resources>

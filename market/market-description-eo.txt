@@ -1,9 +1,9 @@
-Havu viajn Bitmonojn ĉiam kun vi, en via poŝo! Vi povas pagi per rapide skanado de QR-kodo. Kiel komercisto, vi povas ricevi pagojn fidinde kaj tuj. Darkcoin Wallet estas unua movebla Bitmona aplikaĵo, kaj disputeble ankaŭ la plej sekura!
+Havu viajn Bitmonojn ĉiam kun vi, en via poŝo! Vi povas pagi per rapide skanado de QR-kodo. Kiel komercisto, vi povas ricevi pagojn fidinde kaj tuj. Dash Wallet estas unua movebla Bitmona aplikaĵo, kaj disputeble ankaŭ la plej sekura!
 
 TRAJTOJ:
 
 • Neniu registriĝo, ttt servo aŭ nubo bezonataj! Ĉi monujo estas malcentralizita kaj pajro al pajro.
-• Montro de Bitmona kvanto en DRK kaj mDRK.
+• Montro de Bitmona kvanto en DASH kaj mDASH.
 • Konvertiĝo al kaj de la naciaj valutoj.
 • Sendado kaj ricevo de Bitmono tra NFC, QR-kodoj aŭ Bitmono URLoj.
 • Adreslibro por regule uzataj Bitmonadresoj.
@@ -14,7 +14,7 @@ TRAJTOJ:
 Vi povas trovi pli pri Bitmono ĉe
 http://darkcoin.io
 
-Se vi volas kontribui al Darkcoin Wallet, la projekto lokas ĉe
+Se vi volas kontribui al Dash Wallet, la projekto lokas ĉe
 https://github.com/HashEngineering/darkcoin-wallet
 
 Licenco: GPLv3

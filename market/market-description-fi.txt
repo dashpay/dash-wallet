@@ -1,22 +1,22 @@
-<b>Pidä Darkcoinisi aina mukana taskussasi!</b> Voit maksaa nopeasti skannaamalla QR-koodin. Kauppiaana saat maksut turvallisesti ja välittömästi. Darkcoin Wallet on ensimmäinen Darkcoin-mobiilisovellus ja luultavimmin myös kaikista turvallisin!
+<b>Pidä Dashisi aina mukana taskussasi!</b> Voit maksaa nopeasti skannaamalla QR-koodin. Kauppiaana saat maksut turvallisesti ja välittömästi. Dash Wallet on ensimmäinen Dash-mobiilisovellus ja luultavimmin myös kaikista turvallisin!
 
 
 <b>OMINAISUUDET</b>
 
 • Ei vaadi rekisteröintiä, verkkopalveluja tai pilvitallennusta! Tämä lompakko on hajautettu ja suorayhteyksinen.
-• Mahdollisuus näyttää Darkcoin-varat määrissä DRK, mDRK ja µDRK.
+• Mahdollisuus näyttää Dash-varat määrissä DASH, mDASH ja µDASH.
 • Yksikkömuunnos valtioiden valuuttojen välillä.
-• Darkcoinien lähettäminen ja vastaanottaminen NFC, QR-koodien tai Darkcoin-URL-osotteiden avulla.
-• Osoitekirja säännöllisesti käytettyjä Darkcoin-osoitteita varten.
+• Dashien lähettäminen ja vastaanottaminen NFC, QR-koodien tai Dash-URL-osotteiden avulla.
+• Osoitekirja säännöllisesti käytettyjä Dash-osoitteita varten.
 • Kun et ole verkkoyhteyden ulottuvilla, voit silti maksaa Bluetoothin välityksellä.
-• Järjestelmän ilmoitus vastaanotetuille Darkcoineille.
+• Järjestelmän ilmoitus vastaanotetuille Dasheille.
 • Paperisen lompakon pyyhkäisymahdollisuus (esim. näitä käytetään "kylmissä varastoissa").
-• Android-sovellus Darkcoin-varojen hallintaan.
+• Android-sovellus Dash-varojen hallintaan.
 
 
 <b>OSALLISTU</b>
 
-Darkcoin Wallet on <b>avointa lähdekoodia</b> ja <b>vapaa ohjelmisto</b>. Lisenssi: GPLv3
+Dash Wallet on <b>avointa lähdekoodia</b> ja <b>vapaa ohjelmisto</b>. Lisenssi: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Lähdekoodi saatavilla GitHub:sta:
@@ -28,7 +28,7 @@ https://www.transifex.com/projects/p/bitcoin-wallet/
 
 <b>SUOSITTELUMME</b>
 
-• Useat mobiililompakot perustuvat Darkcoin Wallet-ohjelman lähdekoodiin, esimerkiksi: blockchain.info, Hive and KnC.
+• Useat mobiililompakot perustuvat Dash Wallet-ohjelman lähdekoodiin, esimerkiksi: blockchain.info, Hive and KnC.
 • https://bitcoin.org: suosittelema mobiililompakko
 • BitPay:n suosittelema.
 
