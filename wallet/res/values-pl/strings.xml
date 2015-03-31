@@ -138,7 +138,7 @@
 	<string name="scan_camera_problem_dialog_title">Przepraszam</string>
 	<string name="scan_camera_problem_dialog_message">Nastąpił problem z aparatem fotograficznym. Prawdopodobnie musisz zrestartować urządzenie.</string>
 	<string name="input_parser_cannot_classify">Nie udało się sklasyfikować danych wejściowych:\n%s</string>
-	<string name="input_parser_invalid_Dash_uri">Niepoprawny URI Dash:\n%s</string>
+	<string name="input_parser_invalid_bitcoin_uri">Niepoprawny URI Dash:\n%s</string>
 	<string name="input_parser_invalid_address">Otrzymano niepoprawny adres Dash!\n(Pomylono Testnet z Prodnet?)</string>
 	<string name="input_parser_invalid_transaction">Transakcja nie powiodła się:\n%s</string>
 	<string name="preferences_activity_title">Ustawienia</string>
