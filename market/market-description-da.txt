@@ -3,7 +3,7 @@ Hav altid dine Darkcoins med dig i din lomme! Du betaler ved hurtigt at scanne e
 FUNKTIONER:
 
 • Ingen registrering, webservice eller sky behøves! Tegnebogen er decentraliseret og peer-to-peer.
-• Visning af Darkcoin-beløb i DRK, mDRK og µDRK.
+• Visning af Darkcoin-beløb i DASH, mDASH og µDASH.
 • Konvertering til og fra lokale valutaer.
 • Afsendelse og modtagelse af Darkcoin via NFC, QR-koder eller Darkcoin-URLer.
 • Adressebog til ofte brugte Darkcoin-adresser.

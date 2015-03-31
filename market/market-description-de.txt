@@ -3,7 +3,7 @@ Hab deine Darkcoins immer dabei, in deiner Hosentasche! Du zahlst, indem du rasc
 FEATURES:
 
 • Keine Registrierung, Web-Dienst oder Cloud nötig! Diese Wallet ist dezentral und Peer to Peer.
-• Anzeige von Darkcoin-Werten in DRK, mDRK und µDRK.
+• Anzeige von Darkcoin-Werten in DASH, mDASH und µDASH.
 • Umrechnung von und zu den nationalen Währungen.
 • Senden und Empfangen von Darkcoin via NFC, QR-Codes oder Darkcoin URLs.
 • Adressbuch für regelmäßig genutzte Empfänger.

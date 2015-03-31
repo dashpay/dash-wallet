@@ -2,11 +2,11 @@
 <resources>
 
 	<string-array name="preferences_precision_labels">
-		<item>DRK, 8 dígitos</item>
-		<item>DRK, 6 dígitos</item>
-		<item>DRK, 4 dígitos</item>
-		<item>mDRK, 2 dígitos</item>
-		<item>µDRK, sin dígitos</item>
+		<item>DASH, 8 dígitos</item>
+		<item>DASH, 6 dígitos</item>
+		<item>DASH, 4 dígitos</item>
+		<item>mDASH, 2 dígitos</item>
+		<item>µDASH, sin dígitos</item>
 	</string-array>
 
 </resources>

@@ -3,7 +3,7 @@ Tenha os seus Darkcoins sempre com você, no seu bolso! Efetue pagamentos rapida
 CARACTERÍSTICAS:
 
 • Sem necessidade de cadastro, serviço web ou hospedagem! Esta carteira é descentralizada e "peer to peer".
-• Exibe a quantidade de Darkcoins em DRK e mDRK.
+• Exibe a quantidade de Darkcoins em DASH e mDASH.
 • Conversão para moedas nacionais.
 • Envio e recebimento de Darkcoins via NFC, códigos QR ou endereços Darkcoin.
 • Catálogo para guardar os endereços mais utilizados.

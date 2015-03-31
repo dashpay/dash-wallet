@@ -3,7 +3,7 @@ Ten tus Darkcoins siempre contigo, en tu bolsillo! Paga rápidamente escaneando 
 CARACTERÍSTICAS:
 
 • ¡No requiere registro, servidor en la nube o servicio web! Este monedero es auténticamente entre pares (peer-to-peer).
-• Muestra la cantidad de Darkcoins en DRK y mDRK
+• Muestra la cantidad de Darkcoins en DASH y mDASH
 • Conversión a divisas nacionales.
 • Envío y recepción de Darkcoins vía NFC, códigos QR o URL de Darkcoin.
 • Libreta de direcciones para guardar las direcciones Darkcoin más utilizadas.

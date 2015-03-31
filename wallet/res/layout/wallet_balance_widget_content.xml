@@ -36,7 +36,7 @@
 				android:layout_marginLeft="12dp"
 				android:singleLine="true"
 
-				android:text="DRK"
+				android:text="DASH"
 				android:textColor="#bbb"
 				android:textSize="24sp"
 				tools:ignore="HardcodedText" />

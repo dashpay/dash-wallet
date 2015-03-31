@@ -3,7 +3,7 @@ Nosite svoje novce vedno s seboj v žepu. Plačila so hitra, le prečitate QR-ko
 LASTNOSTI:
 
 • Potrebna ni nobena registracija, spletna storitev ali oblak! Ta denarnica deluje povsem decentralizirano in vrstniško.
-• Prikaz zneskov v DRK, mDRK ali µDRK.
+• Prikaz zneskov v DASH, mDASH ali µDASH.
 • Samodejna pretvorba v evre in druge lokalne valute.
 • Pošiljanje in prejemanje Darkcoinov prek NFC, QR-kod ali Darkcoin URL-jev.
 • Zasebni imenik Darkcoin naslovov.

@@ -2,7 +2,7 @@ Darkcoin'leriniz daima cebinizde sizinle olsun! Herhangi bir QR kodunu okuyarak 
 
 İŞLEVLERİ:
 • Hiçbir oturuma, web ya da bulut hizmetine gerek yoktur. Bu cüzdan merkezsiz ve eşten eşedir.
-• Darkcoin meblağlarının DRK ve mDRK olarak gösterilmesi.
+• Darkcoin meblağlarının DASH ve mDASH olarak gösterilmesi.
 • Ulusal para birimlerine ve bu para birimlerinden dönüştürme.
 • NFC, QR kodu veya Darkcoin bağlantıları ile Darkcoin gönderir ve alır.
 • Sık kullanılan Darkcoin adresleri için adres defteri içerir.

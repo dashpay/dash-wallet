@@ -12,10 +12,10 @@
 	<string name="blockchain_state_progress_stalled">Sincronizzazione bloccata</string>
 	<string name="blockchain_state_progress_problem_storage">Sincronizzazione: problema di Memorizzazione</string>
 	<string name="blockchain_state_progress_problem_network">Sincronizzazione: problema di Rete</string>
-	<string name="wallet_address_fragment_your">Il tuo indirizzo Darkcoin:</string>
-	<string name="wallet_address_fragment_clipboard_msg">Indirizzo Darkcoin copiato negli appunti</string>
-	<string name="wallet_addresses_fragment_add_dialog_title">Aggiungi un indirizzo Darkcoin</string>
-	<string name="wallet_addresses_fragment_add_dialog_message">Gli indirizzi Darkcoin non possono essere cancellati. Ne vuoi aggiungere uno nuovo?</string>
+	<string name="wallet_address_fragment_your">Il tuo indirizzo Dash:</string>
+	<string name="wallet_address_fragment_clipboard_msg">Indirizzo Dash copiato negli appunti</string>
+	<string name="wallet_addresses_fragment_add_dialog_title">Aggiungi un indirizzo Dash</string>
+	<string name="wallet_addresses_fragment_add_dialog_message">Gli indirizzi Dash non possono essere cancellati. Ne vuoi aggiungere uno nuovo?</string>
 	<string name="wallet_balance_fragment_replaying">Il conto non è disponibile durante la ripetizione.</string>
 	<string name="exchange_rates_activity_title">Tassi di cambio</string>
 	<string name="exchange_rates_fragment_empty_text">Impossibile acquisire quotazioni di cambio</string>
@@ -27,9 +27,9 @@
 	<string name="wallet_transactions_fragment_tab_received">Ricevuto</string>
 	<string name="wallet_transactions_fragment_tab_all">Entrambi</string>
 	<string name="wallet_transactions_fragment_tab_sent">Inviato</string>
-	<string name="wallet_transactions_fragment_empty_text_received">Nessun Darkcoin ancora ricevuto</string>
-	<string name="wallet_transactions_fragment_empty_text_sent">Nessun Darkcoin ancora inviato</string>
-	<string name="wallet_transactions_fragment_empty_text_howto">Come ottenere Darkcoin?\n\nBarattali per soldi tradizionali,\nvendi beni o servizi oppure\nricavali lavorando.</string>
+	<string name="wallet_transactions_fragment_empty_text_received">Nessun Dash ancora ricevuto</string>
+	<string name="wallet_transactions_fragment_empty_text_sent">Nessun Dash ancora inviato</string>
+	<string name="wallet_transactions_fragment_empty_text_howto">Come ottenere Dash?\n\nBarattali per soldi tradizionali,\nvendi beni o servizi oppure\nricavali lavorando.</string>
 	<string name="wallet_transactions_row_warning_backup">Congratulazioni, hai ricevuto i tuoi primi pagamenti! Hai già &lt;u&gt;eseguito un backup del tuo portafoglio &lt;/u&gt;, per proteggerlo dai danni?</string>
 	<string name="wallet_transactions_fragment_coinbase">minato</string>
 	<string name="wallet_transactions_fragment_internal">Interna</string>
@@ -37,9 +37,9 @@
 	<string name="wallet_options_backup">Backup delle Chiavi</string>
 	<string name="wallet_options_safety">Note di sicurezza</string>
 	<string name="wallet_options_donate">Donazioni</string>
-	<string name="wallet_donate_address_label">Donazione per Darkcoin Wallet</string>
+	<string name="wallet_donate_address_label">Donazione per Dash Wallet</string>
 	<string name="wallet_low_storage_dialog_title">Spazio di memorizzazione interno quasi esaurito!</string>
-	<string name="wallet_low_storage_dialog_msg">Darkcoin Wallet usa una memoria interna per memorizzare transazioni e blocchi. Se si esaurisce lo spazio, smetterà di funzionare e i tuoi Darkcoin saranno a rischio!\n\nVuoi aprire il Gestore delle Applicazioni per disinstallare app non necessarie?</string>
+	<string name="wallet_low_storage_dialog_msg">Dash Wallet usa una memoria interna per memorizzare transazioni e blocchi. Se si esaurisce lo spazio, smetterà di funzionare e i tuoi Dash saranno a rischio!\n\nVuoi aprire il Gestore delle Applicazioni per disinstallare app non necessarie?</string>
 	<string name="wallet_low_storage_dialog_button_apps">Gestisci applicazioni</string>
 	<string name="wallet_timeskew_dialog_title">Controlla data e ora!</string>
 
@@ -53,7 +53,7 @@
 	<string name="wallet_old_sdk_dialog_title">La versione Android non è aggiornata</string>
 
 	<string name="wallet_old_sdk_dialog_message">Ci sono possibilità che una delle prossime versioni di Bitcoin Wallet non supporterà più il tuo dispositivo. In alcuni casi, può essere difficile spendere denaro su questo dispositivo.\n\nA meno che tu sappia quello che stai facendo, è raccomandato di spostare il tuo denaro al più presto.</string>
-	<string name="send_coins_activity_title">Invia Darkcoins</string>
+	<string name="send_coins_activity_title">Invia Dashs</string>
 	<string name="send_coins_fragment_request_payment_request_progress">Acquisizione firma da %s…</string>
 	<string name="send_coins_fragment_request_payment_request_failed_title">Acquisizione firma fallita</string>
 	<string name="send_coins_fragment_request_payment_request_wrong_signature">Firma errata!</string>
@@ -62,11 +62,11 @@
 
 	<string name="send_coins_fragment_receiving_address_label">Paga a</string>
 	<string name="send_coins_fragment_receiving_address_hint">inserisci indirizzo o nome</string>
-	<string name="send_coins_fragment_receiving_address_error">Indirizzo Darkcoin invalido!</string>
+	<string name="send_coins_fragment_receiving_address_error">Indirizzo Dash invalido!</string>
 	<string name="send_coins_fragment_receiving_address_error_cross_network">Non puoi usare l\'indirizzo %s con questo portafoglio!</string>
 	<string name="send_coins_fragment_receiving_address_error_cross_network_unknown">Non puoi usare l\'indirizzo di una rete sconosciuta con questo portafoglio!</string>
 	<string name="send_coins_fragment_receiving_address_complex">complesso\nindirizzo</string>
-	<string name="send_coins_fragment_pending">(%s DRK in attesa di conferma)</string>
+	<string name="send_coins_fragment_pending">(%s DASH in attesa di conferma)</string>
 	<string name="send_coins_fragment_amount_label">Importo da pagare</string>
 	<string name="send_coins_fragment_direct_payment_enable">Invia il pagamento al beneficiario</string>
 	<string name="send_coins_fragment_direct_payment_ack">Il tuo pagamento è stato inviato con successo.</string>
@@ -82,24 +82,24 @@
 	<string name="send_coins_sending_msg">Invio in corso…</string>
 	<string name="send_coins_sent_msg">Inviato!</string>
 	<string name="send_coins_failed_msg">Fallito!</string>
-	<string name="send_coins_error_msg">Problemi durante l\'invio dei Darkcoins!</string>
+	<string name="send_coins_error_msg">Problemi durante l\'invio dei Dashs!</string>
 	<string name="send_coins_options_empty">Portafoglio vuoto</string>
 	<string name="send_coins_address_context_clear_title">Inserisci nuovo indirizzo</string>
 
-	<string name="request_coins_activity_title">Richiedi Darkcoins</string>
+	<string name="request_coins_activity_title">Richiedi Dashs</string>
 	<string name="request_coins_fragment_amount_label">Importo richiesto (opzionale)</string>
 	<string name="request_coins_fragment_accept_bluetooth_payment">Accettazione pagamento via Bluetooth per un procedimento più affidabile</string>
 	<string name="request_coins_fragment_initiate_request_qr">Questo codice deve essere scansionato dal mittente.</string>
 	<string name="request_coins_fragment_initiate_request_nfc">Oppure tocca un dispositivo abilitato per NFC.</string>
-	<string name="request_coins_clipboard_msg">Richiesta Darkcoin copiata negli appunti</string>
-	<string name="request_coins_share_dialog_title">Condividi richiesta di Darkcoins…</string>
+	<string name="request_coins_clipboard_msg">Richiesta Dash copiata negli appunti</string>
+	<string name="request_coins_share_dialog_title">Condividi richiesta di Dashs…</string>
 
 	<string name="request_coins_options_local_app_title">Richiesta dall\'app locale</string>
 	<string name="address_book_activity_title">Rubrica</string>
 	<string name="address_book_list_receiving_title">I tuoi indirizzi</string>
 	<string name="address_book_list_sending_title">Invio di indirizzi</string>
 	<string name="address_book_empty_text">Nessun indirizzo in rubrica</string>
-	<string name="address_book_context_send_title">Invia Darkcoins all\'indirizzo</string>
+	<string name="address_book_context_send_title">Invia Dashs all\'indirizzo</string>
 	<string name="address_book_context_edit_title">Modifica indirizzo</string>
 	<string name="address_book_context_remove_title">Rimuovi indirizzo</string>
 	<string name="address_book_context_show_qr_title">Mostra codice QR</string>
@@ -149,20 +149,20 @@
 	<string name="export_keys_dialog_success">Le tue chiavi private sono state salvate con un backup a\n\n%s\n\nMantienile sicure, e mantieni sicura anche la tua password!\n\nVuoi archiviare le tue chiavi usando un\'app?</string>
 	<string name="export_keys_dialog_failure">Le tue chiavi private potrebbero non essere salvate con il backup:\n%s</string>
 	<string name="export_keys_dialog_button_archive">Archivio</string>
-	<string name="export_keys_dialog_mail_subject">Backup della chiave pubblica Darkcoin Wallet</string>
-	<string name="export_keys_dialog_mail_text">Il file cifrato allegato contiene chiavi private Darkcoin e dovrebbe essere mantenuto sicuro in ogni momento. Non dimenticarti la password per la crittografia!</string>
+	<string name="export_keys_dialog_mail_subject">Backup della chiave pubblica Dash Wallet</string>
+	<string name="export_keys_dialog_mail_text">Il file cifrato allegato contiene chiavi private Dash e dovrebbe essere mantenuto sicuro in ogni momento. Non dimenticarti la password per la crittografia!</string>
 	<string name="export_keys_dialog_mail_intent_chooser">Archiviazione delle chiavi…</string>
 	<string name="export_keys_dialog_mail_intent_failed">Archiviazione delle chiavi fallita.</string>
 	<string name="import_export_keys_dialog_password">password</string>
 	<string name="import_export_keys_dialog_show">Mostra password</string>
 	<string name="import_export_keys_dialog_failure_title">Errore</string>
-	<string name="import_keys_intent_filter_action">Ripristina la chiave Darkcoin</string>
+	<string name="import_keys_intent_filter_action">Ripristina la chiave Dash</string>
 	<string name="scan_camera_problem_dialog_title">Scusa</string>
 	<string name="scan_camera_problem_dialog_message">La videocamera ha un problema. Probabilmente è necessario riavviare il dispositivo.</string>
 
 	<string name="input_parser_io_error">Impossibile leggere i dati:\n%s</string>
 	<string name="input_parser_cannot_classify">Impossibile classificare ingresso:\n%s</string>
-	<string name="input_parser_invalid_bitcoin_uri">URI Darkcoin non valido:\n%s</string>
+	<string name="input_parser_invalid_bitcoin_uri">URI Dash non valido:\n%s</string>
 	<string name="input_parser_invalid_address">Ricevuto indirizzo bitcoin non valido!\n(Hai mescolato Mainnet/Testnet?)</string>
 	<string name="input_parser_unverifyable_paymentrequest">Impossibile verificare la richiesta di pagamento:\n%s</string>
 	<string name="input_parser_invalid_paymentrequest">Richiesta di pagamento invalida:\n%s</string>
@@ -203,7 +203,7 @@
 	<string name="report_issue_dialog_mail_intent_failed">Invio della segnalazione non riuscito.</string>
 	<string name="about_title">Informazioni</string>
 	<string name="about_license_title">Licenza</string>
-	<string name="about_credits_bitcoinj_title">Questa applicazione fa uso di \'Darkcoinj\'</string>
+	<string name="about_credits_bitcoinj_title">Questa applicazione fa uso di \'Dashj\'</string>
 	<string name="about_credits_zxing_title">Questa applicazione fa uso di \'zxing\'</string>
 	<string name="about_credits_icon_title">Questa applicazione fa uso di una icona di \'bitboy\'</string>
 	<string name="about_community_googleplus_title">Comunità Google+</string>
@@ -228,8 +228,8 @@
 	<string name="button_paste">Incolla</string>
 	<string name="button_share">Condividi</string>
 	<string name="button_set_as_default">Imposta come predefinito</string>
-	<string name="button_request_coins">Richiedi Darkcoins</string>
-	<string name="button_send_coins">Invia Darkcoins</string>
+	<string name="button_request_coins">Richiedi Dashs</string>
+	<string name="button_send_coins">Invia Dashs</string>
 	<string name="button_scan">Analizza</string>
 	<string name="button_edit_address">Aggiungi/modifica indirizzo</string>
 	<string name="button_settings">Impostazioni</string>

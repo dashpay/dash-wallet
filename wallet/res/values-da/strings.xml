@@ -12,10 +12,10 @@
 	<string name="blockchain_state_progress_stalled">Synkronisering står stille</string>
 	<string name="blockchain_state_progress_problem_storage">Synkroniserer: Pladsproblem</string>
 	<string name="blockchain_state_progress_problem_network">Synkroniserer: Netærksproblem</string>
-	<string name="wallet_address_fragment_your">Din Darkcoin-adresse:</string>
-	<string name="wallet_address_fragment_clipboard_msg">Darkcoin-adresse kopieret til udklipsholder</string>
-	<string name="wallet_addresses_fragment_add_dialog_title">Tilføj Darkcoin-adresse</string>
-	<string name="wallet_addresses_fragment_add_dialog_message">Darkcoin-adresser kan ikke slettes. Vil du tilføje en ny adresse til din tegnebog?</string>
+	<string name="wallet_address_fragment_your">Din Dash-adresse:</string>
+	<string name="wallet_address_fragment_clipboard_msg">Dash-adresse kopieret til udklipsholder</string>
+	<string name="wallet_addresses_fragment_add_dialog_title">Tilføj Dash-adresse</string>
+	<string name="wallet_addresses_fragment_add_dialog_message">Dash-adresser kan ikke slettes. Vil du tilføje en ny adresse til din tegnebog?</string>
 	<string name="wallet_balance_fragment_replaying">Saldo er ikke tilgængelig under genafspilning.</string>
 	<string name="exchange_rates_activity_title">Valutakurser</string>
 	<string name="exchange_rates_fragment_empty_text">Kunne ikke indlæse valutakurser</string>
@@ -28,9 +28,9 @@
 	<string name="wallet_transactions_fragment_tab_all">Begge</string>
 	<string name="wallet_transactions_fragment_tab_sent">Sendt</string>
 
-	<string name="wallet_transactions_fragment_empty_text_received">Ingen Darkcoins modtaget endnu.</string>
-	<string name="wallet_transactions_fragment_empty_text_sent">Ingen Darkcoins sendt endnu.</string>
-	<string name="wallet_transactions_fragment_empty_text_howto">Hvordan får man Darkcoins?\n\nKøb for traditionelle penge,\nsælg varer eller ydelser eller\ntjen dem ved at arbejde.</string>
+	<string name="wallet_transactions_fragment_empty_text_received">Ingen Dashs modtaget endnu.</string>
+	<string name="wallet_transactions_fragment_empty_text_sent">Ingen Dashs sendt endnu.</string>
+	<string name="wallet_transactions_fragment_empty_text_howto">Hvordan får man Dashs?\n\nKøb for traditionelle penge,\nsælg varer eller ydelser eller\ntjen dem ved at arbejde.</string>
 	<string name="wallet_transactions_row_warning_backup">Tillykke, du har modtaget din første betaling! Har du &lt;u&gt;taget en sikkerhedskopi af din tegnebog&lt;/u&gt;, for at beskytte dig mod tab?</string>
 
 	<string name="wallet_transactions_fragment_coinbase">mined</string>
@@ -39,20 +39,20 @@
 	<string name="wallet_options_backup">Sikkerhedskopiér nøgler</string>
 	<string name="wallet_options_safety">Sikkerhedsnoter</string>
 	<string name="wallet_options_donate">Giv drikkepenge / donér</string>
-	<string name="wallet_donate_address_label">Donér til Darkcoin Wallet</string>
+	<string name="wallet_donate_address_label">Donér til Dash Wallet</string>
 	<string name="wallet_low_storage_dialog_title">Intern enheds lagerplads er lav!</string>
-	<string name="wallet_low_storage_dialog_msg">Darkcoin Wallet bruger intern lager til at huske transaktioner of blokke. Hvis den løber tør for plads, vil den stoppe med at virke og dine Darkcoins vil risikeres!\n\nVil du åbne app-håndteringen for at afinstallere ubrugte apps?</string>
+	<string name="wallet_low_storage_dialog_msg">Dash Wallet bruger intern lager til at huske transaktioner of blokke. Hvis den løber tør for plads, vil den stoppe med at virke og dine Dashs vil risikeres!\n\nVil du åbne app-håndteringen for at afinstallere ubrugte apps?</string>
 	<string name="wallet_low_storage_dialog_button_apps">Håndtér apps</string>
 	<string name="wallet_timeskew_dialog_title">Tjek dine tidsindstillinger!</string>
-	<string name="wallet_timeskew_dialog_msg">Din enheds tid fraviger med %d minutter. Du kan sandsynligvis ikke sende eller modtage Darkcoins på grund af dette problem.\n\nDu bør tjekke og rette dine tids- og tidzoneindstillinger.</string>
+	<string name="wallet_timeskew_dialog_msg">Din enheds tid fraviger med %d minutter. Du kan sandsynligvis ikke sende eller modtage Dashs på grund af dette problem.\n\nDu bør tjekke og rette dine tids- og tidzoneindstillinger.</string>
 	<string name="wallet_version_dialog_title">En ny version er tilgængelig!</string>
 	<string name="wallet_version_dialog_msg">Denne version retter vigtige fejl. For detaljer, se ændringsloggen på Google Play.</string>
 	<string name="wallet_version_dialog_msg_deprecated">Hvis du ikke ser en opdatering, betyder dette formodentlig, at din version af Android ikke understøttes længere.</string>
 	<string name="wallet_version_dialog_button_market">Google Play</string>
 	<string name="wallet_version_dialog_button_binary">Download</string>
 	<string name="wallet_old_sdk_dialog_title">Android-version er uddateret</string>
-	<string name="wallet_old_sdk_dialog_message">Der er risiko for, at en af de næste udgivelser af Darkcoin Wallet ikke vil understøtte din enhed længere. I nogle tilfælde kan det være svært at bruge mønter på denne enhed.\n\nMed mindre du ved hvad du gør, anbefales det snart at flytte dine mønter væk.</string>
-	<string name="send_coins_activity_title">Send Darkcoins</string>
+	<string name="wallet_old_sdk_dialog_message">Der er risiko for, at en af de næste udgivelser af Dash Wallet ikke vil understøtte din enhed længere. I nogle tilfælde kan det være svært at bruge mønter på denne enhed.\n\nMed mindre du ved hvad du gør, anbefales det snart at flytte dine mønter væk.</string>
+	<string name="send_coins_activity_title">Send Dashs</string>
 	<string name="send_coins_fragment_request_payment_request_progress">Henter signatur fra %s…</string>
 	<string name="send_coins_fragment_request_payment_request_failed_title">Hentning af signatur mislykkedes</string>
 	<string name="send_coins_fragment_request_payment_request_wrong_signature">Forkert signatur!</string>
@@ -60,11 +60,11 @@
 	<string name="send_coins_fragment_payee_verified_by_unknown">ukendt</string>
 	<string name="send_coins_fragment_receiving_address_label">Betal til</string>
 	<string name="send_coins_fragment_receiving_address_hint">skriv adresse eller navn</string>
-	<string name="send_coins_fragment_receiving_address_error">Ugyldig Darkcoin-adresse!</string>
+	<string name="send_coins_fragment_receiving_address_error">Ugyldig Dash-adresse!</string>
 	<string name="send_coins_fragment_receiving_address_error_cross_network">Kan ikke bruge %s adresse med denne tegnebog!</string>
 	<string name="send_coins_fragment_receiving_address_error_cross_network_unknown">Kan ikke bruge adresse for ukendt netværk med denne tegnebog!</string>
 	<string name="send_coins_fragment_receiving_address_complex">kompleks\nadresse</string>
-	<string name="send_coins_fragment_pending">(DRK %s venter på bekræftelse)</string>
+	<string name="send_coins_fragment_pending">(DASH %s venter på bekræftelse)</string>
 	<string name="send_coins_fragment_amount_label">Beløb at betale</string>
 	<string name="send_coins_fragment_direct_payment_enable">Send betaling direkte til modtageren.</string>
 	<string name="send_coins_fragment_direct_payment_ack">Din betaling blev sendt direkte med succes.</string>
@@ -84,20 +84,20 @@
 	<string name="send_coins_options_empty">Tøm tegnebog</string>
 	<string name="send_coins_address_context_clear_title">Skriv ny adresse</string>
 
-	<string name="request_coins_activity_title">Forespørg Darkcoins</string>
+	<string name="request_coins_activity_title">Forespørg Dashs</string>
 	<string name="request_coins_fragment_amount_label">Forespurgt beløb (valgfri)</string>
 	<string name="request_coins_fragment_accept_bluetooth_payment">Modtag betaling via Bluetooth for mere pålidelig bearbejdning</string>
 	<string name="request_coins_fragment_initiate_request_qr">Få afsenderen til at scanne denne kode.</string>
 	<string name="request_coins_fragment_initiate_request_nfc">Eller berør en NFC-aktiveret enhed.</string>
 	<string name="request_coins_clipboard_msg">Bitcoin-forespørgsel kopieret til udklipsholderen</string>
-	<string name="request_coins_share_dialog_title">Del forespørgsel efter Darkcoins …</string>
+	<string name="request_coins_share_dialog_title">Del forespørgsel efter Dashs …</string>
 
 	<string name="request_coins_options_local_app_title">Forespørg fra lokal app</string>
 	<string name="address_book_activity_title">Adressebog</string>
 	<string name="address_book_list_receiving_title">Dine adresser</string>
 	<string name="address_book_list_sending_title">Sender adresser</string>
 	<string name="address_book_empty_text">Ingen elementer i adressebog</string>
-	<string name="address_book_context_send_title">Send Darkcoins til adresse</string>
+	<string name="address_book_context_send_title">Send Dashs til adresse</string>
 	<string name="address_book_context_edit_title">Redigér adresse</string>
 	<string name="address_book_context_remove_title">Fjern adresse</string>
 	<string name="address_book_context_show_qr_title">Vis QR-kode</string>
@@ -147,19 +147,19 @@
 	<string name="export_keys_dialog_success">Dine private nøgler er blevet sikkerhedskopieret til\n\n%s\n\nOpbevar dem sikkert, og opbevar dit kodeord sikkert!\n\nVil du arkivere dine nøgler vha. en app?</string>
 	<string name="export_keys_dialog_failure">Dine private nøfler kunne ikke sikkerhedskopieres:\n%s</string>
 	<string name="export_keys_dialog_button_archive">Arkivér</string>
-	<string name="export_keys_dialog_mail_subject">Sikkerhedskopiering af private nøgler fra Darkcoin-tegnebog</string>
-	<string name="export_keys_dialog_mail_text">Den vedhæftede krypterede fil indeholder private Darkcoin-nøgler og bør til enhver tid opbevares sikkert. Glem ikke krypteringskodeordet!</string>
+	<string name="export_keys_dialog_mail_subject">Sikkerhedskopiering af private nøgler fra Dash-tegnebog</string>
+	<string name="export_keys_dialog_mail_text">Den vedhæftede krypterede fil indeholder private Dash-nøgler og bør til enhver tid opbevares sikkert. Glem ikke krypteringskodeordet!</string>
 	<string name="export_keys_dialog_mail_intent_chooser">Arkivér nøgler med …</string>
 	<string name="export_keys_dialog_mail_intent_failed">Arkivering af nøgler mislykkedes.</string>
 	<string name="import_export_keys_dialog_password">kodeord</string>
 	<string name="import_export_keys_dialog_show">Vis kodeord</string>
 	<string name="import_export_keys_dialog_failure_title">Fejl</string>
-	<string name="import_keys_intent_filter_action">Genoprettelse af Darkcoin-nøgler</string>
+	<string name="import_keys_intent_filter_action">Genoprettelse af Dash-nøgler</string>
 	<string name="scan_camera_problem_dialog_title">Beklager</string>
 	<string name="scan_camera_problem_dialog_message">Der er et problem med kameraet. En gentstart af enheden er sandsynligvis nødvendig.</string>
 	<string name="input_parser_io_error">Kan ikke læse data:\n%s</string>
 	<string name="input_parser_cannot_classify">Kan ikke klassificere input:\n%s</string>
-	<string name="input_parser_invalid_bitcoin_uri">Ugyldig Darkcoin-URI:\n%s</string>
+	<string name="input_parser_invalid_bitcoin_uri">Ugyldig Dash-URI:\n%s</string>
 	<string name="input_parser_invalid_address">Modtog ugyldig bitcoin-adresse!\n(Blanding af Mainnet/Testnet?)</string>
 	<string name="input_parser_unverifyable_paymentrequest">Kan ikke verificere betalingsforespørgsel:\n%s</string>
 	<string name="input_parser_invalid_paymentrequest">Ugyldig betalingsforespørgsel:\n%s</string>
@@ -199,7 +199,7 @@
 	<string name="about_title">Om</string>
 	<string name="about_license_title">Licens</string>
 
-	<string name="about_credits_bitcoinj_title">Denne app bruger Darkcoinj %s</string>
+	<string name="about_credits_bitcoinj_title">Denne app bruger Dashj %s</string>
 	<string name="about_credits_zxing_title">"Denne app bruger 'zxing'"</string>
 	<string name="about_credits_icon_title">"Denne app bruger et ikon af 'bitboy'"</string>
 

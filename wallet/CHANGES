@@ -1,4 +1,4 @@
-Darkcoin Wallet
+Dash Wallet
 
 v1.0.8
 * Enable Bloomfiltering (to resolve missing transactions).
@@ -24,7 +24,7 @@ v0.10.2
 * updated for RC2.
 
 v0.1.1
-* updated all icons for Darkcoin
+* updated all icons for Dash
 
 v0.1.0
 * First version

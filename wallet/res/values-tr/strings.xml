@@ -12,10 +12,10 @@
 	<string name="blockchain_state_progress_stalled">Eşleşme durdu</string>
 	<string name="blockchain_state_progress_problem_storage">Eşleşme: Yedekleme sorunu</string>
 	<string name="blockchain_state_progress_problem_network">Eşleşme: Şebeke sorunu</string>
-	<string name="wallet_address_fragment_your">Darkcoin adresiniz:</string>
-	<string name="wallet_address_fragment_clipboard_msg">Darkcoin adresi panoya kopyalandı</string>
-	<string name="wallet_addresses_fragment_add_dialog_title">Darkcoin adresi ekle</string>
-	<string name="wallet_addresses_fragment_add_dialog_message">Darkcoin adresleri silinemez. Cüzdanınıza yeni bir adres eklemek istediğinizden emin misiniz?</string>
+	<string name="wallet_address_fragment_your">Dash adresiniz:</string>
+	<string name="wallet_address_fragment_clipboard_msg">Dash adresi panoya kopyalandı</string>
+	<string name="wallet_addresses_fragment_add_dialog_title">Dash adresi ekle</string>
+	<string name="wallet_addresses_fragment_add_dialog_message">Dash adresleri silinemez. Cüzdanınıza yeni bir adres eklemek istediğinizden emin misiniz?</string>
 	<string name="wallet_balance_fragment_replaying">Tekrar sırasında bakiye kullanılamaz</string>
 	<string name="exchange_rates_activity_title">Döviz kurları</string>
 
@@ -29,8 +29,8 @@
 	<string name="wallet_transactions_fragment_tab_all">İkisi</string>
 	<string name="wallet_transactions_fragment_tab_sent">Yollanan</string>
 
-	<string name="wallet_transactions_fragment_empty_text_received">Şimdiye kadar hiçbir Darkcoin alınmadı</string>
-	<string name="wallet_transactions_fragment_empty_text_sent">Şimdiye kadar hiçbir Darkcoin gönderilmedi</string>
+	<string name="wallet_transactions_fragment_empty_text_received">Şimdiye kadar hiçbir Dash alınmadı</string>
+	<string name="wallet_transactions_fragment_empty_text_sent">Şimdiye kadar hiçbir Dash gönderilmedi</string>
 	<string name="wallet_transactions_fragment_empty_text_howto">Bitcoin nasıl elde edilir?\n\nGeleneksel parayla alabilir,\nmal veya hizmet satabilir veya\nçalışarak kazanabilirsiniz.</string>
 	<string name="wallet_transactions_row_warning_backup">Tebrikler, ilk ödemenizi almış bulunuyorsunuz! Kayba karşı korunmak için &lt;u&gt;cüzdanınızı yedeklediniz mi&lt;/u&gt;?</string>
 
@@ -42,10 +42,10 @@
 	<string name="wallet_options_donate">Bağış</string>
 	<string name="wallet_donate_address_label">Bu yazılıma bağış yap</string>
 	<string name="wallet_low_storage_dialog_title">Düşük dahili cihaz depolama alanı!</string>
-	<string name="wallet_low_storage_dialog_msg">Darkcoin cüzdanı muameleleri ve blokları hatırlamak için dahili depolama alanını kullanır. Bu alan yetersiz kalırsa cüzdan çalışmayı durduracak ve Darkcoinleriniz risk altında kalacaktır!\n\nKullanılmayan uygulamaları kaldırmak için Uygulama Yöneticisini başlatmak ister misiniz?</string>
+	<string name="wallet_low_storage_dialog_msg">Dash cüzdanı muameleleri ve blokları hatırlamak için dahili depolama alanını kullanır. Bu alan yetersiz kalırsa cüzdan çalışmayı durduracak ve Dashleriniz risk altında kalacaktır!\n\nKullanılmayan uygulamaları kaldırmak için Uygulama Yöneticisini başlatmak ister misiniz?</string>
 	<string name="wallet_low_storage_dialog_button_apps">Uygulama yönetimi</string>
 	<string name="wallet_timeskew_dialog_title">Saat ayarınızı kontrol ediniz!</string>
-	<string name="wallet_timeskew_dialog_msg">Cihazınızın saati %d dakika gecikmiş ya da ileride. Muhtemelen bu problem sebebiyle Darkcoin alamayacaksınız ve yollayamayacaksınız.\n\nSaat ve zaman diliminizi kontrol edip düzeltmeniz gerekir.</string>
+	<string name="wallet_timeskew_dialog_msg">Cihazınızın saati %d dakika gecikmiş ya da ileride. Muhtemelen bu problem sebebiyle Dash alamayacaksınız ve yollayamayacaksınız.\n\nSaat ve zaman diliminizi kontrol edip düzeltmeniz gerekir.</string>
 
 	<string name="wallet_version_dialog_title">Yeni bir sürüm mevcuttur!</string>
 	<string name="wallet_version_dialog_msg">Bu sürüm önemli hata düzeltmeleri içerir. Detaylar için Google Play\'de değişikliklere bakınız.</string>
@@ -54,7 +54,7 @@
 	<string name="wallet_version_dialog_button_binary">İndir</string>
 	<string name="wallet_old_sdk_dialog_title">Android sürümü eski</string>
 
-	<string name="wallet_old_sdk_dialog_message">Gelecek Darkcoin Wallet sürümünün cihazınızı desteklememesi mümkündür. Bazı durumlarda bu cihazla Darkcoin harcamak zor olabilir.\n\nBitcoinlerinizi güvenli bir yere aktarmanız tavsiye edilir.</string>
+	<string name="wallet_old_sdk_dialog_message">Gelecek Dash Wallet sürümünün cihazınızı desteklememesi mümkündür. Bazı durumlarda bu cihazla Dash harcamak zor olabilir.\n\nBitcoinlerinizi güvenli bir yere aktarmanız tavsiye edilir.</string>
 	<string name="send_coins_activity_title">Bitcoin gönder</string>
 	<string name="send_coins_fragment_request_payment_request_progress">%s unsurundan imza alınıyor…</string>
 	<string name="send_coins_fragment_request_payment_request_failed_title">İmza alımı başarısız oldu</string>
@@ -64,12 +64,12 @@
 
 	<string name="send_coins_fragment_receiving_address_label">Şuna öde</string>
 	<string name="send_coins_fragment_receiving_address_hint">adını veya adresini giriniz</string>
-	<string name="send_coins_fragment_receiving_address_error">Geçersiz Darkcoin adresi!</string>
+	<string name="send_coins_fragment_receiving_address_error">Geçersiz Dash adresi!</string>
 	<string name="send_coins_fragment_receiving_address_error_cross_network">%s adresi bu cüzdanla kullanılamaz!</string>
 	<string name="send_coins_fragment_receiving_address_error_cross_network_unknown">Bilinmeyen bir şebekenin adresi bu cüzdanla kullanılamaz!</string>
 
 	<string name="send_coins_fragment_receiving_address_complex">karmaşık\nadres</string>
-	<string name="send_coins_fragment_pending">(%s DRK teyit bekliyor)</string>
+	<string name="send_coins_fragment_pending">(%s DASH teyit bekliyor)</string>
 
 	<string name="send_coins_fragment_amount_label">Ödenecek miktar</string>
 	<string name="send_coins_fragment_direct_payment_enable">Ödemeyi doğrudan alacaklıya gönder.</string>
@@ -87,19 +87,19 @@
 	<string name="send_coins_sent_msg">Gönderildi!</string>
 
 	<string name="send_coins_failed_msg">Başarısız oldu!</string>
-	<string name="send_coins_error_msg">Darkcoin gönderimi sırasında problem oluştu!</string>
+	<string name="send_coins_error_msg">Dash gönderimi sırasında problem oluştu!</string>
 	<string name="send_coins_options_empty">Boş cüzdan</string>
 
 	<string name="send_coins_address_context_clear_title">Yeni adres gir</string>
 
-	<string name="request_coins_activity_title">Darkcoin talebi</string>
+	<string name="request_coins_activity_title">Dash talebi</string>
 	<string name="request_coins_fragment_amount_label">Talep edilen miktar (seçime dayalı)</string>
 	<string name="request_coins_fragment_accept_bluetooth_payment">Daha güvenilir işleme için ödemeyi Bluetooth vasıtasıyla kabul et</string>
 	<string name="request_coins_fragment_initiate_request_qr">Bu kodu gönderici tarafından taratın.</string>
 	<string name="request_coins_fragment_initiate_request_nfc">Ya da NFC destekli bir cihaz ile dokunun.</string>
 
-	<string name="request_coins_clipboard_msg">Darkcoin talebi panoya kopyalandı</string>
-	<string name="request_coins_share_dialog_title">Darkcoin talebini yayınla…</string>
+	<string name="request_coins_clipboard_msg">Dash talebi panoya kopyalandı</string>
+	<string name="request_coins_share_dialog_title">Dash talebini yayınla…</string>
 
 	<string name="request_coins_options_local_app_title">Yerel uygulamadan talep</string>
 
@@ -107,7 +107,7 @@
 	<string name="address_book_list_receiving_title">Alım adresleri</string>
 	<string name="address_book_list_sending_title">Gönderi adresleri</string>
 	<string name="address_book_empty_text">Adres defterinde hiçbir adres yok</string>
-	<string name="address_book_context_send_title">Şu adrese Darkcoin gönder</string>
+	<string name="address_book_context_send_title">Şu adrese Dash gönder</string>
 	<string name="address_book_context_edit_title">Adresi düzenle</string>
 	<string name="address_book_context_remove_title">Adresi kaldır</string>
 	<string name="address_book_context_show_qr_title">QR kodu göster</string>
@@ -119,7 +119,7 @@
 	<string name="address_book_options_scan_title">Adresi tara</string>
 
 	<string name="address_book_options_scan_invalid">Taranan veriler tanınamadı</string>
-	<string name="address_book_row_message_compromised_key">Bu adres tehlikededir. Onu artık Darkcoin almak için kullanmamalısınız.</string>
+	<string name="address_book_row_message_compromised_key">Bu adres tehlikededir. Onu artık Dash almak için kullanmamalısınız.</string>
 
 	<string name="edit_address_book_entry_dialog_title_add">Adres ekle</string>
 	<string name="edit_address_book_entry_dialog_title_edit">Adres düzenle</string>
@@ -160,20 +160,20 @@
 	<string name="export_keys_dialog_success">Özel anahtarlarınız şu konumda yedeklendi:\n\n%s\n\nHem onları hem de parolanızı güvenli bir şekilde saklayın!\n\nAnahtarlarınızı bir uygulama kullanarak arşivlemek istiyor musunuz?</string>
 	<string name="export_keys_dialog_failure">Özel anahtarlarınız yedeklenemedi:\n%s</string>
 	<string name="export_keys_dialog_button_archive">Arşivle</string>
-	<string name="export_keys_dialog_mail_subject">Darkcoin Wallet özel anahtar yedeklemesi</string>
-	<string name="export_keys_dialog_mail_text">Eklenen şifreli dosya Darkcoin özel anahtarlarını içermektedir ve güvenli bir yerde saklanmalıdır. Şifreleme parolanızı unutmayınız!</string>
+	<string name="export_keys_dialog_mail_subject">Dash Wallet özel anahtar yedeklemesi</string>
+	<string name="export_keys_dialog_mail_text">Eklenen şifreli dosya Dash özel anahtarlarını içermektedir ve güvenli bir yerde saklanmalıdır. Şifreleme parolanızı unutmayınız!</string>
 	<string name="export_keys_dialog_mail_intent_chooser">Anahtarları şunu kullanarak arşivle…</string>
 	<string name="export_keys_dialog_mail_intent_failed">Anahtarların arşivlenmesi başarısız oldu.</string>
 	<string name="import_export_keys_dialog_password">parola</string>
 	<string name="import_export_keys_dialog_show">Parolayı göster</string>
 	<string name="import_export_keys_dialog_failure_title">Hata</string>
-	<string name="import_keys_intent_filter_action">Darkcoin anahtar geri yükleme</string>
+	<string name="import_keys_intent_filter_action">Dash anahtar geri yükleme</string>
 	<string name="scan_camera_problem_dialog_title">Üzgünüz</string>
 	<string name="scan_camera_problem_dialog_message">Fotoğraf makinesinde bir problem var. Muhtemelen cihazınızı yeniden başlatmanız gerekiyor.</string>
 	<string name="input_parser_io_error">Veriler okunamadı:\n%s</string>
 	<string name="input_parser_cannot_classify">Girdi sınıflandırılamadı:\n%s</string>
-	<string name="input_parser_invalid_bitcoin_uri">Geçersiz Darkcoin adresi:\n%s</string>
-	<string name="input_parser_invalid_address">Geçersiz bir Darkcoin adresi alındı!\n(Mainnet ve Testnet karışmış olmasın?)</string>
+	<string name="input_parser_invalid_bitcoin_uri">Geçersiz Dash adresi:\n%s</string>
+	<string name="input_parser_invalid_address">Geçersiz bir Dash adresi alındı!\n(Mainnet ve Testnet karışmış olmasın?)</string>
 	<string name="input_parser_unverifyable_paymentrequest">Ödeme talebi kontrol edilemez:\n%s</string>
 	<string name="input_parser_invalid_paymentrequest">Geçersiz ödeme talebi:\n%s</string>
 
@@ -212,7 +212,7 @@
 	<string name="report_issue_dialog_mail_intent_failed">Raporun yollanması başarısız oldu.</string>
 	<string name="about_title">Hakkında</string>
 	<string name="about_license_title">Lisans</string>
-	<string name="about_credits_bitcoinj_title">Bu uygulama Darkcoinj %s kullanmaktadır</string>
+	<string name="about_credits_bitcoinj_title">Bu uygulama Dashj %s kullanmaktadır</string>
 	<string name="about_credits_zxing_title">Bu uygulama \'zxing\' kullanmaktadır</string>
 	<string name="about_credits_icon_title">Bu uygulama \'bitboy\' tarafından oluşturulan bir ikon kullanır</string>
 	<string name="about_community_googleplus_title">Google+ topluluğu</string>
@@ -238,8 +238,8 @@
 	<string name="button_share">Paylaş</string>
 	<string name="button_set_as_default">Varsayılan olarak ayarla</string>
 
-	<string name="button_request_coins">Darkcoin talep et</string>
-	<string name="button_send_coins">Darkcoin gönder</string>
+	<string name="button_request_coins">Dash talep et</string>
+	<string name="button_send_coins">Dash gönder</string>
 	<string name="button_scan">Tara</string>
 	<string name="button_edit_address">Adres ilâve et/düzenle</string>
 	<string name="button_settings">Ayarlar</string>

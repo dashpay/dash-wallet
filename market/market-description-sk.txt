@@ -3,7 +3,7 @@ Darkcoiny vždy so sebou vo svojom vrecku. Jednoduché a rýchle platby pomocou 
 FUNKCIE:
 
 • Nie je potrebná žiadna registrácia ani žiadny účet.
-• Zobrazenie zostatku Darkcoinov v DRK alebo mDRK.
+• Zobrazenie zostatku Darkcoinov v DASH alebo mDASH.
 • Prepočet hodnoty Darkcoinov do viacerých cudzích mien.
 • Posielanie a prijímanie Darkcoinov pomocou NFC, QR kódov alebo Darkcoin adries.
 • Adresár pre často používané Darkcoin adresy.

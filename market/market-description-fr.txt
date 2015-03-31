@@ -3,7 +3,7 @@ Ayez vos Darkcoins toujours avec vous dans votre poche ! Payez rapidement en num
 FONCTIONS :
 
 • Pas d'inscription, de service Web ou de nuage de nécessaire ! Ce portefeuille est décentralisé et de pair-à-pair.
-• Affichage du montant de Darkcoin en DRK et mDRK.
+• Affichage du montant de Darkcoin en DASH et mDASH.
 • Conversion vers et depuis des devises nationales.
 • Envoi et réception des Darkcoins via NFC, codes QR ou des URLs Darkcoin.
 • Carnet d'adresses pour les adresses Darkcoin utilisées régulièrement.

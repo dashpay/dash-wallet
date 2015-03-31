@@ -275,7 +275,7 @@ public class ExchangeRatesProvider extends ContentProvider
                 final JSONObject head = new JSONObject(contentCryptsy.toString());
                 JSONObject returnObject = head.getJSONObject("return");
                 JSONObject markets = returnObject.getJSONObject("markets");
-                JSONObject coinInfo = markets.getJSONObject("DRK"/*CoinDefinition.coinTicker*/);
+                JSONObject coinInfo = markets.getJSONObject("DASH"/*CoinDefinition.coinTicker*/);
 
 
 

@@ -55,7 +55,7 @@
 	<string name="send_coins_fragment_receiving_address_error">Malvalida Bitmonadreso!</string>
 	<string name="send_coins_fragment_receiving_address_error_cross_network">Ne eblas uzi %s adreson kun ĉi tiu monujo!</string>
 	<string name="send_coins_fragment_receiving_address_error_cross_network_unknown">Ne eblas uzi adreson de nekonata reto kun ĉi tiu monujo!</string>
-	<string name="send_coins_fragment_pending">(DRK %s atendadi konfirmon)</string>
+	<string name="send_coins_fragment_pending">(DASH %s atendadi konfirmon)</string>
 	<string name="send_coins_fragment_amount_label">Kvanto pagi</string>
 	<string name="send_coins_fragment_button_send">Sendu</string>
 	<string name="send_coins_fragment_button_back">Reen</string>
@@ -169,7 +169,7 @@
 	<string name="report_issue_dialog_mail_intent_chooser">Sendi reporton uzante…</string>
 	<string name="about_title">Pri</string>
 	<string name="about_license_title">Licenco</string>
-	<string name="about_credits_bitcoinj_title">Ĉi tiu aplikaĵo uzas Darkcoinj-n %s</string>
+	<string name="about_credits_bitcoinj_title">Ĉi tiu aplikaĵo uzas Dashj-n %s</string>
 	<string name="about_credits_zxing_title">Ĉi tiu aplikaĵo uzas \'zxing\'-n</string>
 	<string name="about_credits_icon_title">Ĉi tiu aplikaĵo uzas bildsimbolon per \'bitboy\'</string>
 	<string name="about_community_googleplus_title">\"Google+\" Komunumo</string>

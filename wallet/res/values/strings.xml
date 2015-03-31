@@ -12,10 +12,10 @@
 	<string name="blockchain_state_progress_stalled">Synchronization stalled</string>
 	<string name="blockchain_state_progress_problem_storage">Synchronizing: Storage problem</string>
 	<string name="blockchain_state_progress_problem_network">Synchronizing: Network problem</string>
-	<string name="wallet_address_fragment_your">Your Darkcoin Address:</string>
-	<string name="wallet_address_fragment_clipboard_msg">Darkcoin address copied to clipboard</string>
-	<string name="wallet_addresses_fragment_add_dialog_title">Add Darkcoin address</string>
-	<string name="wallet_addresses_fragment_add_dialog_message">Darkcoin addresses cannot be deleted. Do you want to add a new address to your wallet?</string>
+	<string name="wallet_address_fragment_your">Your Dash Address:</string>
+	<string name="wallet_address_fragment_clipboard_msg">Dash address copied to clipboard</string>
+	<string name="wallet_addresses_fragment_add_dialog_title">Add Dash address</string>
+	<string name="wallet_addresses_fragment_add_dialog_message">Dash addresses cannot be deleted. Do you want to add a new address to your wallet?</string>
 	<string name="wallet_balance_fragment_replaying">Balance is unavailable during replay.</string>
 	<string name="exchange_rates_activity_title">Exchange Rates</string>
 	<string name="exchange_rates_fragment_empty_text">Could not load exchange rates</string>
@@ -28,9 +28,9 @@
 	<string name="wallet_transactions_fragment_tab_all">Both</string>
 	<string name="wallet_transactions_fragment_tab_sent">Sent</string>
 
-	<string name="wallet_transactions_fragment_empty_text_received">No Darkcoins received so far.</string>
-	<string name="wallet_transactions_fragment_empty_text_sent">No Darkcoins sent so far.</string>
-	<string name="wallet_transactions_fragment_empty_text_howto">How to get Darkcoins?\n\nTrade for traditional money,\nsell goods or services or\nearn by working.</string>
+	<string name="wallet_transactions_fragment_empty_text_received">No Dashs received so far.</string>
+	<string name="wallet_transactions_fragment_empty_text_sent">No Dashs sent so far.</string>
+	<string name="wallet_transactions_fragment_empty_text_howto">How to get Dashs?\n\nTrade for traditional money,\nsell goods or services or\nearn by working.</string>
 	<string name="wallet_transactions_row_warning_backup">Congratulations, you received your first payment! Have you already &lt;u&gt;backed up your wallet&lt;/u&gt;, to protect against loss?</string>
 	<string name="wallet_transactions_fragment_coinbase">mined</string>
 	<string name="wallet_transactions_fragment_internal">internal</string>
@@ -40,12 +40,12 @@
 	<string name="wallet_options_backup">Back up Keys</string>
 	<string name="wallet_options_safety">Safety notes</string>
 	<string name="wallet_options_donate">Tip / Donate</string>
-	<string name="wallet_donate_address_label">Donation for Darkcoin Wallet</string>
+	<string name="wallet_donate_address_label">Donation for Dash Wallet</string>
 	<string name="wallet_low_storage_dialog_title">Internal Device Storage Space Low!</string>
-	<string name="wallet_low_storage_dialog_msg">Darkcoin Wallet uses internal storage for remembering transactions and blocks. If it runs out of space, it will stop working and your Darkcoins will be at risk!\n\nDo you want to open the Application Manager to uninstall unneeded apps?</string>
+	<string name="wallet_low_storage_dialog_msg">Dash Wallet uses internal storage for remembering transactions and blocks. If it runs out of space, it will stop working and your Dashs will be at risk!\n\nDo you want to open the Application Manager to uninstall unneeded apps?</string>
 	<string name="wallet_low_storage_dialog_button_apps">Manage Apps</string>
 	<string name="wallet_timeskew_dialog_title">Check your time settings!</string>
-	<string name="wallet_timeskew_dialog_msg">Your device time is off by %d minutes. You probably cannot send or receive Darkcoins due to this problem.\n\nYou should check and correct your time and timezone settings.</string>
+	<string name="wallet_timeskew_dialog_msg">Your device time is off by %d minutes. You probably cannot send or receive Dashs due to this problem.\n\nYou should check and correct your time and timezone settings.</string>
 
 	<string name="wallet_version_dialog_title">A new version is available!</string>
 	<string name="wallet_version_dialog_msg">This version fixes important bugs. For details, see the change log on Google Play.</string>
@@ -54,8 +54,8 @@
 	<string name="wallet_version_dialog_button_binary">Download</string>
 
 	<string name="wallet_old_sdk_dialog_title">Android version is out of date</string>
-	<string name="wallet_old_sdk_dialog_message">Chances are that one of the next releases of Darkcoin Wallet will not support your device any more. In some cases, it can get difficult to spend coins on this device.\n\nUnless you know what you are doing, it is recommended to move out your coins soon.</string>
-	<string name="send_coins_activity_title">Send Darkcoins</string>
+	<string name="wallet_old_sdk_dialog_message">Chances are that one of the next releases of Dash Wallet will not support your device any more. In some cases, it can get difficult to spend coins on this device.\n\nUnless you know what you are doing, it is recommended to move out your coins soon.</string>
+	<string name="send_coins_activity_title">Send Dashs</string>
 	<string name="send_coins_fragment_request_payment_request_progress">Fetching signature from %s…</string>
 	<string name="send_coins_fragment_request_payment_request_failed_title">Fetching signature failed</string>
 	<string name="send_coins_fragment_request_payment_request_wrong_signature">Wrong signature!</string>
@@ -65,12 +65,12 @@
 
 	<string name="send_coins_fragment_receiving_address_label">Pay to</string>
 	<string name="send_coins_fragment_receiving_address_hint">type address or name</string>
-	<string name="send_coins_fragment_receiving_address_error">Invalid Darkcoin Address!</string>
+	<string name="send_coins_fragment_receiving_address_error">Invalid Dash Address!</string>
 	<string name="send_coins_fragment_receiving_address_error_cross_network">Cannot use %s address with this wallet!</string>
 	<string name="send_coins_fragment_receiving_address_error_cross_network_unknown">Cannot use address of unknown network with this wallet!</string>
 
 	<string name="send_coins_fragment_receiving_address_complex">complex\naddress</string>
-	<string name="send_coins_fragment_pending">(DRK %s waiting for confirmation)</string>
+	<string name="send_coins_fragment_pending">(DASH %s waiting for confirmation)</string>
 
 	<string name="send_coins_fragment_amount_label">Amount to pay</string>
 	<string name="send_coins_fragment_direct_payment_enable">Send payment directly to the payee.</string>
@@ -91,22 +91,22 @@
 	<string name="send_coins_options_empty">Empty wallet</string>
 	<string name="send_coins_address_context_clear_title">Enter new address</string>
 
-	<string name="request_coins_activity_title">Request Darkcoins</string>
+	<string name="request_coins_activity_title">Request Dashs</string>
 
 	<string name="request_coins_fragment_amount_label">Requested amount (optional)</string>
 	<string name="request_coins_fragment_accept_bluetooth_payment">Accept payment via Bluetooth for more reliable processing</string>
 	<string name="request_coins_fragment_initiate_request_qr">Have this code scanned by the sender.</string>
 	<string name="request_coins_fragment_initiate_request_nfc">Or tap an NFC enabled device.</string>
 
-	<string name="request_coins_clipboard_msg">Darkcoin request copied to clipboard</string>
-	<string name="request_coins_share_dialog_title">Share request for Darkcoins…</string>
+	<string name="request_coins_clipboard_msg">Dash request copied to clipboard</string>
+	<string name="request_coins_share_dialog_title">Share request for Dashs…</string>
 
 	<string name="request_coins_options_local_app_title">Request from local app</string>
 	<string name="address_book_activity_title">Address Book</string>
 	<string name="address_book_list_receiving_title">Your addresses</string>
 	<string name="address_book_list_sending_title">Sending addresses</string>
 	<string name="address_book_empty_text">No entries in address book</string>
-	<string name="address_book_context_send_title">Send Darkcoins to address</string>
+	<string name="address_book_context_send_title">Send Dashs to address</string>
 	<string name="address_book_context_edit_title">Edit address</string>
 	<string name="address_book_context_remove_title">Remove address</string>
 	<string name="address_book_context_show_qr_title">Show QR code</string>
@@ -173,21 +173,21 @@
 	<string name="export_keys_dialog_success">Your private keys have been backed up to\n\n%s\n\nKeep them safe, and keep your password safe!\n\nDo you want to archive your keys using an app?</string>
 	<string name="export_keys_dialog_failure">Your private keys could not be backed up:\n%s</string>
 	<string name="export_keys_dialog_button_archive">Archive</string>
-	<string name="export_keys_dialog_mail_subject">Darkcoin Wallet private key backup</string>
-	<string name="export_keys_dialog_mail_text">The attached encrypted file contains Darkcoin private keys and should be kept safe at all times. Don\'t forget the encryption password!</string>
+	<string name="export_keys_dialog_mail_subject">Dash Wallet private key backup</string>
+	<string name="export_keys_dialog_mail_text">The attached encrypted file contains Dash private keys and should be kept safe at all times. Don\'t forget the encryption password!</string>
 	<string name="export_keys_dialog_mail_intent_chooser">Archive keys using…</string>
 	<string name="export_keys_dialog_mail_intent_failed">Archiving keys failed.</string>
 	<string name="import_export_keys_dialog_password">password</string>
 	<string name="import_export_keys_dialog_show">Show password</string>
 	<string name="import_export_keys_dialog_failure_title">Error</string>
-	<string name="import_keys_intent_filter_action">Darkcoin key restore</string>
+	<string name="import_keys_intent_filter_action">Dash key restore</string>
 	<string name="scan_camera_problem_dialog_title">Sorry</string>
 	<string name="scan_camera_problem_dialog_message">The camera has a problem. You probably need to restart the device.</string>
 	<string name="input_parser_io_error">Cannot read data:\n%s</string>
 	<string name="input_parser_cannot_classify">Cannot classify input:\n%s</string>
 
-	<string name="input_parser_invalid_bitcoin_uri">Invalid Darkcoin URI:\n%s</string>
-	<string name="input_parser_invalid_address">Got invalid Darkcoin address!\n(Mixing up Mainnet/Testnet?)</string>
+	<string name="input_parser_invalid_bitcoin_uri">Invalid Dash URI:\n%s</string>
+	<string name="input_parser_invalid_address">Got invalid Dash address!\n(Mixing up Mainnet/Testnet?)</string>
 	<string name="input_parser_unverifyable_paymentrequest">Cannot verify payment request:\n%s</string>
 
 	<string name="input_parser_invalid_paymentrequest">Invalid payment request:\n%s</string>
@@ -227,12 +227,12 @@
 	<string name="report_issue_dialog_mail_intent_failed">Sending report failed.</string>
 	<string name="about_title">About</string>
 	<string name="about_license_title">License</string>
-	<string name="about_credits_bitcoinj_title">This app is using Darkcoinj %s</string>
+	<string name="about_credits_bitcoinj_title">This app is using Dashj %s</string>
 	<string name="about_credits_zxing_title">"This app is using 'zxing'"</string>
 
 	<string name="about_credits_icon_title">"This app is using an icon by 'tjb0607'"</string>
-    <string name="about_credits_website_title">"Darkcoin Website"</string>
-    <string name="about_credits_forum_title">"Darkcoin Forum"</string>
+    <string name="about_credits_website_title">"Dash Website"</string>
+    <string name="about_credits_forum_title">"Dash Forum"</string>
 
 
 	<string name="about_community_googleplus_title">Google+ Community</string>

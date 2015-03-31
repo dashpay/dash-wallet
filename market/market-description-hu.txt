@@ -3,7 +3,7 @@ Tartsd a zsebedben Darkcoinjaidat! Egyszerűen, akár QR-kód leolvasásával is
 ELŐNYÖK:
 
 • Nincs regisztráció és nem szükséges semmiféle háttéralkalmazás futtatása (web, vagy cloud)! Decentralizált és közvetlen (P2P).
-• A Darkcoinjaid mennyiségét DRK és mDRK formában is láthatod.
+• A Darkcoinjaid mennyiségét DASH és mDASH formában is láthatod.
 • Átváltás a saját valutádra, oda-vissza.
 • Darkcoin küldése és fogadása NFC, QR-kód vagy közvetlen URL segítségével.
 • Címtár a rendszeresen használt Darkcoin címek számára.
