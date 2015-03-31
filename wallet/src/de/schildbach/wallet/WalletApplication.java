@@ -17,22 +17,6 @@
 
 package de.schildbach.wallet;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.Locale;
-import java.util.concurrent.TimeUnit;
-
-import javax.annotation.Nonnull;
-
-
-import org.bitcoinj.wallet.Protos;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import android.app.ActivityManager;
 import android.app.AlarmManager;
 import android.app.Application;
@@ -52,24 +36,25 @@ import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
-
-import com.google.bitcoin.core.Address;
-import com.google.bitcoin.core.ECKey;
-import com.google.bitcoin.core.Transaction;
-import com.google.bitcoin.core.VersionMessage;
-import com.google.bitcoin.core.Wallet;
-import org.bitcoinj.core.CoinDefinition;
+import com.google.bitcoin.core.*;
 import com.google.bitcoin.store.UnreadableWalletException;
 import com.google.bitcoin.store.WalletProtobufSerializer;
 import com.google.bitcoin.utils.Threading;
 import com.google.bitcoin.wallet.WalletFiles;
-
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet.util.LinuxSecureRandom;
 import hashengineering.darkcoin.wallet.R;
+import org.bitcoinj.wallet.Protos;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nonnull;
+import java.io.*;
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Andreas Schildbach

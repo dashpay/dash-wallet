@@ -17,32 +17,6 @@
 
 package de.schildbach.wallet.ui;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.Reader;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.io.Writer;
-import java.text.DateFormat;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.TimeZone;
-
-import javax.annotation.Nonnull;
-
-
-//import com.google.bitcoin.core.*;
-//import org.slf4j.Logger;
-//import org.slf4j.LoggerFactory;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -67,26 +41,29 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
-
 import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.view.MenuItem;
 import com.google.bitcoin.core.AddressFormatException;
 import com.google.bitcoin.core.ECKey;
 import com.google.bitcoin.core.Transaction;
 import com.google.bitcoin.core.Wallet;
-
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.PaymentIntent;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
-import de.schildbach.wallet.util.CrashReporter;
-import de.schildbach.wallet.util.Crypto;
-import de.schildbach.wallet.util.Iso8601Format;
-import de.schildbach.wallet.util.Nfc;
-import de.schildbach.wallet.util.WalletUtils;
+import de.schildbach.wallet.util.*;
 import hashengineering.darkcoin.wallet.R;
+
+import javax.annotation.Nonnull;
+import java.io.*;
+import java.text.DateFormat;
+import java.util.*;
+
+//import com.google.bitcoin.core.*;
+//import org.slf4j.Logger;
+//import org.slf4j.LoggerFactory;
 
 
 /**
@@ -210,7 +187,7 @@ public final class WalletActivity extends AbstractOnDemandServiceActivity
 		super.onCreateOptionsMenu(menu);
 
 		getSupportMenuInflater().inflate(R.menu.wallet_options, menu);
-		menu.findItem(R.id.wallet_options_donate).setVisible(!Constants.TEST);
+		menu.findItem(R.id.wallet_options_donate).setVisible(false);
 
 		return true;
 	}

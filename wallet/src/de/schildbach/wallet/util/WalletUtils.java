@@ -17,26 +17,6 @@
 
 package de.schildbach.wallet.util;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileFilter;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Writer;
-import java.math.BigInteger;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
 import android.graphics.Typeface;
 import android.text.Editable;
 import android.text.Spannable;
@@ -45,22 +25,22 @@ import android.text.format.DateUtils;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.StyleSpan;
 import android.text.style.TypefaceSpan;
-
-import org.bitcoinj.core.CoinDefinition;
-import com.google.bitcoin.core.Address;
-import com.google.bitcoin.core.AddressFormatException;
-import com.google.bitcoin.core.DumpedPrivateKey;
-import com.google.bitcoin.core.ECKey;
-import com.google.bitcoin.core.ScriptException;
-import com.google.bitcoin.core.Sha256Hash;
-import com.google.bitcoin.core.Transaction;
-import com.google.bitcoin.core.TransactionInput;
-import com.google.bitcoin.core.TransactionOutput;
-import com.google.bitcoin.core.Wallet;
-
+import com.google.bitcoin.core.*;
 import com.google.bitcoin.script.Script;
-
 import de.schildbach.wallet.Constants;
+
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.io.*;
+import java.math.BigInteger;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author Andreas Schildbach

@@ -17,15 +17,6 @@
 
 package de.schildbach.wallet.ui;
 
-import java.math.BigInteger;
-
-import javax.annotation.CheckForNull;
-
-
-import org.bitcoinj.core.CoinDefinition;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
@@ -50,27 +41,27 @@ import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.ImageView;
 import android.widget.TextView;
-
 import com.actionbarsherlock.app.SherlockFragment;
 import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.view.MenuInflater;
 import com.actionbarsherlock.view.MenuItem;
 import com.google.bitcoin.core.Address;
+import com.google.bitcoin.core.CoinDefinition;
 import com.google.bitcoin.core.Wallet;
 import com.google.bitcoin.uri.BitcoinURI;
-
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.ExchangeRatesProvider;
 import de.schildbach.wallet.ExchangeRatesProvider.ExchangeRate;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.offline.AcceptBluetoothService;
-import de.schildbach.wallet.util.BitmapFragment;
-import de.schildbach.wallet.util.Bluetooth;
-import de.schildbach.wallet.util.Nfc;
-import de.schildbach.wallet.util.PaymentProtocol;
-import de.schildbach.wallet.util.Qr;
+import de.schildbach.wallet.util.*;
 import hashengineering.darkcoin.wallet.R;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.CheckForNull;
+import java.math.BigInteger;
 
 /**
  * @author Andreas Schildbach

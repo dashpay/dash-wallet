@@ -49,7 +49,7 @@ import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet.util.PaymentProtocol;
 import de.schildbach.wallet.util.Qr;
 
-import org.bitcoinj.core.CoinDefinition;
+import com.google.bitcoin.core.CoinDefinition;
 import hashengineering.darkcoin.wallet.R;
 
 

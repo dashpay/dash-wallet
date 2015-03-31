@@ -17,17 +17,8 @@
 
 package de.schildbach.wallet.util;
 
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import org.bitcoinj.core.CoinDefinition;
-import org.bitcoin.protocols.payments.Protos;
-
 import com.google.bitcoin.core.Address;
+import com.google.bitcoin.core.CoinDefinition;
 import com.google.bitcoin.core.ScriptException;
 import com.google.bitcoin.core.Transaction;
 import com.google.bitcoin.protocols.payments.PaymentRequestException;
@@ -38,9 +29,15 @@ import com.google.bitcoin.script.ScriptBuilder;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.UninitializedMessageException;
-
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.PaymentIntent;
+import org.bitcoin.protocols.payments.Protos;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Andreas Schildbach

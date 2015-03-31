@@ -17,26 +17,9 @@
 
 package de.schildbach.wallet.ui;
 
-import java.io.FileNotFoundException;
-import java.io.InputStream;
-import java.math.BigInteger;
-
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import org.bitcoin.protocols.payments.Protos.Payment;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
-import android.content.ComponentName;
-import android.content.ContentResolver;
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
+import android.content.*;
 import android.content.pm.PackageManager;
 import android.database.ContentObserver;
 import android.database.Cursor;
@@ -60,53 +43,37 @@ import android.view.View.MeasureSpec;
 import android.view.View.OnClickListener;
 import android.view.View.OnFocusChangeListener;
 import android.view.ViewGroup;
-import android.widget.AutoCompleteTextView;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
+import android.widget.*;
 import android.widget.CompoundButton.OnCheckedChangeListener;
-import android.widget.CursorAdapter;
-import android.widget.ListView;
-import android.widget.PopupWindow;
-import android.widget.TextView;
-
 import com.actionbarsherlock.app.SherlockFragment;
 import com.actionbarsherlock.view.ActionMode;
 import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.view.MenuInflater;
 import com.actionbarsherlock.view.MenuItem;
+import com.google.bitcoin.core.*;
 import com.google.bitcoin.core.TransactionConfidence.ConfidenceType;
 import com.google.bitcoin.core.Wallet.BalanceType;
 import com.google.bitcoin.core.Wallet.SendRequest;
-
-import com.google.bitcoin.core.Transaction;
-import com.google.bitcoin.core.TransactionConfidence;
-import com.google.bitcoin.core.Wallet;
-import org.bitcoinj.core.CoinDefinition;
-import com.google.bitcoin.core.Address;
-import com.google.bitcoin.core.AddressFormatException;
-import com.google.bitcoin.core.Sha256Hash;
-import com.google.bitcoin.core.NetworkParameters;
-
-import de.schildbach.wallet.AddressBookProvider;
-import de.schildbach.wallet.Configuration;
-import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.ExchangeRatesProvider;
+import de.schildbach.wallet.*;
 import de.schildbach.wallet.ExchangeRatesProvider.ExchangeRate;
-import de.schildbach.wallet.PaymentIntent;
 import de.schildbach.wallet.PaymentIntent.Standard;
-import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.offline.DirectPaymentTask;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StreamInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
-import de.schildbach.wallet.util.Bluetooth;
-import de.schildbach.wallet.util.GenericUtils;
-import de.schildbach.wallet.util.Nfc;
-import de.schildbach.wallet.util.PaymentProtocol;
-import de.schildbach.wallet.util.WalletUtils;
+import de.schildbach.wallet.util.*;
 import hashengineering.darkcoin.wallet.R;
+import org.bitcoin.protocols.payments.Protos.Payment;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.math.BigInteger;
 
 /**
  * @author Andreas Schildbach

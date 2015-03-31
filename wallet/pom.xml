@@ -7,8 +7,8 @@
 	<artifactId>wallet</artifactId>
 	<packaging>apk</packaging>
 
-	<version>1.0.8</version>
-	<name>Darkcoin Wallet</name>
+	<version>1.0.9</version>
+	<name>Dash Wallet</name>
 
 
 	<parent>
@@ -63,7 +63,7 @@
 		<dependency>
 			<groupId>com.google</groupId>
 
-			<artifactId>darkcoincoinj</artifactId>
+			<artifactId>darkcoinj</artifactId>
 			<version>0.12-SNAPSHOT</version>
 
 		</dependency>
