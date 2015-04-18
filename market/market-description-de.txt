@@ -1,4 +1,4 @@
-<b>Hab deine Dashs immer dabei, in deiner Hosentasche!</b> Du zahlst, indem du rasch einen QR-Code scannst. Als Händler empfängst du Zahlungen zuverlässig und sofort. Dash Wallet ist die erste mobile Dash app, und wohl auch die sicherste!
+﻿<b>Hab deine Dashs immer dabei, in deiner Hosentasche!</b> Du zahlst, indem du rasch einen QR-Code scannst. Als Händler empfängst du Zahlungen zuverlässig und sofort. Dash Wallet ist die erste mobile Dash app, und wohl auch die sicherste!
 
 
 <b>FEATURES</b>
@@ -28,9 +28,7 @@ https://www.transifex.com/projects/p/bitcoin-wallet/
 
 <b>EMPFEHLUNGEN</b>
 
-• Viele mobile Wallets basieren auf Dash Wallet. Beispiele: blockchain.info, Hive and KnC.
 • Von https://bitcoin.org empfohlenes mobiles Wallet.
-• Von BitPay empfohlen.
 
 
 <i>Nutzung auf eigene Gefahr!</i>
