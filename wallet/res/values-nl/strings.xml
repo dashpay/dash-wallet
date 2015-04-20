@@ -241,7 +241,7 @@
   <string name="about_copyright_title">Auteursrecht</string>
   <string name="about_license_title">Licentie</string>
   <string name="about_source_title">Broncode</string>
-  <string name="about_credits_bitcoinj_title">Deze app gebruikt \'bitcoinj\'</string>
+  <string name="about_credits_bitcoinj_title">Deze app gebruikt \'darkcoinj\'</string>
   <string name="about_credits_zxing_title">Deze app gebruikt \'zxing\'</string>
   <string name="about_credits_icon_title">Deze app gebruikt een icoon door \'bitboy\'</string>
   <string name="about_community_googleplus_title">Google+ community</string>

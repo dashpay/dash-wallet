@@ -241,7 +241,7 @@
   <string name="about_copyright_title">Авторское право</string>
   <string name="about_license_title">Лицензия</string>
   <string name="about_source_title">Исходный код</string>
-  <string name="about_credits_bitcoinj_title">Это приложение использует bitcoinj %s</string>
+  <string name="about_credits_bitcoinj_title">Это приложение использует darkcoinj %s</string>
   <string name="about_credits_zxing_title">Это приложение использует \'zxing\'</string>
   <string name="about_credits_icon_title">Это приложение использует иконку от \'bitboy\'</string>
   <string name="about_community_googleplus_title">Сообщество Google+</string>

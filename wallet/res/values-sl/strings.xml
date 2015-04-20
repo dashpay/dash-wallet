@@ -179,7 +179,7 @@
 	<string name="report_issue_dialog_mail_intent_failed">Pošiljanje poročila je spodletelo.</string>
 	<string name="about_title">Vizitka</string>
 	<string name="about_license_title">Licenca</string>
-	<string name="about_credits_bitcoinj_title">Ta aplikacija uporablja bitcoinj %s</string>
+	<string name="about_credits_bitcoinj_title">Ta aplikacija uporablja darkcoinj %s</string>
 	<string name="about_credits_zxing_title">Ta aplikacija uporablja zxing</string>
 	<string name="about_credits_icon_title">Ta apl. uporablja ikono avtorja bitboy</string>
 	<string name="about_community_googleplus_title">Skupnost na Google+</string>

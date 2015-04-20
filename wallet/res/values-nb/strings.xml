@@ -241,7 +241,7 @@
   <string name="about_copyright_title">Opphavsrett</string>
   <string name="about_license_title">Lisens</string>
   <string name="about_source_title">Kildekode</string>
-  <string name="about_credits_bitcoinj_title">Denne appen bruker bitcoinj %s</string>
+  <string name="about_credits_bitcoinj_title">Denne appen bruker darkcoinj %s</string>
   <string name="about_credits_zxing_title">Denne appen bruker \'zxing\'</string>
   <string name="about_credits_icon_title">Denne appen bruker ett ikon av \'bitboy\'</string>
   <string name="about_community_googleplus_title">Google+ samfunnet</string>

@@ -197,7 +197,7 @@
   <string name="about_copyright_title">著作權</string>
   <string name="about_license_title">授權</string>
   <string name="about_source_title">原始碼</string>
-  <string name="about_credits_bitcoinj_title">本 app 使用 bitcoinj %s</string>
+  <string name="about_credits_bitcoinj_title">本 app 使用 darkcoinj %s</string>
   <string name="about_credits_zxing_title">本 app 使用 \'zxing\'</string>
   <string name="about_credits_icon_title">本 app 使用圖標來自\'bitboy\'</string>
   <string name="about_community_googleplus_title">Google+ 社群</string>

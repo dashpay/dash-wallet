@@ -237,7 +237,7 @@
   <string name="about_copyright_title">Copyright</string>
   <string name="about_license_title">Licens</string>
   <string name="about_source_title">Källkod</string>
-  <string name="about_credits_bitcoinj_title">Denna app använder \'bitcoinj\'</string>
+  <string name="about_credits_bitcoinj_title">Denna app använder \'darkcoinj\'</string>
   <string name="about_credits_zxing_title">Denna app använder \'zxing\'</string>
   <string name="about_credits_icon_title">Appen använder en ikon av \'bitboy\'</string>
   <string name="about_community_googleplus_title">Google+-community</string>

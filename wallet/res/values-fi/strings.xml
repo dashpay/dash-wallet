@@ -234,7 +234,7 @@
   <string name="about_copyright_title">Tekijänoikeus</string>
   <string name="about_license_title">Lisenssi</string>
   <string name="about_source_title">Lähdekoodi</string>
-  <string name="about_credits_bitcoinj_title">Tämä sovellus käyttää \'bitcoinj\'</string>
+  <string name="about_credits_bitcoinj_title">Tämä sovellus käyttää \'darkcoinj\'</string>
   <string name="about_credits_zxing_title">Tämä sovellus käyttää \'zxing\'</string>
   <string name="about_credits_icon_title">Tämä sovellus käyttää ikonia \'bitboy\'</string>
   <string name="about_community_googleplus_title">Google+-yhteisö</string>
