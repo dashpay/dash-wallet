@@ -3,7 +3,7 @@
   <string name="help_wallet">
 <![CDATA[
 		<p>
-			La part superior esquerra de la pantalla mostra l\'adreça Dash que has seleccionat, que és la que ha de conèixer l\'altra gent per a poder enviar-te Dashs.
+			La part superior esquerra de la pantalla mostra l\'adreça Dash que has seleccionat, que és la que ha de conèixer l\'altra gent per a poder enviar-te Dash.
 			Prem per canviar l\'adreça.
 		</p>
 		<p>
@@ -33,7 +33,7 @@
 			Utilitzant aquest guió, pots demanar monedes a una altra persona (que també ha de tenir la Cartera Dash instal·lada).
 		</p>
 		<p>
-			Primer, hauràs d\'anotar la quantitat de Dashs a sol·licitar.
+			Primer, hauràs d\'anotar la quantitat de Dash a sol·licitar.
 		</p>
 		<p>
 			Llavors, els dos tindreu el codi QR que haurà d\'escanejar l\'altra persona.
@@ -55,10 +55,10 @@
 		<p>
 			Primerament, entra l\'adreça Dash a la que vols pagar.
 			L\'adreça es completarà automàticament si ja hi ha entrades coincidents a la teva llibreta d\'adreces.
-			També pots escanejar codis QR que continguen adreces Dash o demanar Dashs premen el botó QR de la barra d\'acció.
+			També pots escanejar codis QR que continguen adreces Dash o demanar Dash premen el botó QR de la barra d\'acció.
 		</p>
 		<p>
-			Seguidament, pots veure quants Dashs pots gastar en aquest moment.
+			Seguidament, pots veure quants Dash pots gastar en aquest moment.
 			Qualsevol diferencia de balanç sobre la pantalla principal, significa que no està confirmat i per això encara no pot ser gastat.
 		</p>
 		<p>
@@ -82,8 +82,8 @@
 			<b>Avisos importants de seguretat:</b>
 		</p>
 		<p>
-			Els Dashs estan emmagatzemats al dispositiu.
-			<b>Si el perds, perdràs tots els teus Dashs.</b>
+			Els Dash estan emmagatzemats al dispositiu.
+			<b>Si el perds, perdràs tots els teus Dash.</b>
 		</p>
 		<p>
 			Això vol dir que necessites <b>fer una còpia de seguretat de la teva cartera</b>!
@@ -91,12 +91,12 @@
 			Conserva la teva còpia de seguretat segura i recorda la teva paraula de pas.
 		</p>
 		<p>
-			<b>Abans de desinstal·lar</b> (o esborrar les dades de l\'aplicació/formatar el teu dispositiu), <b>transfereix els teus Dashs cap a una altra cartera</b>.
-			Els Dashs que es queden es perdran.
+			<b>Abans de desinstal·lar</b> (o esborrar les dades de l\'aplicació/formatar el teu dispositiu), <b>transfereix els teus Dash cap a una altra cartera</b>.
+			Els Dash que es queden es perdran.
 		</p>
 		<p>
 			<b>Els pagaments són irreversibles</b>.
-			Si envies els teus Dashs al buit, no hi ha forma de fer-los tornar.
+			Si envies els teus Dash al buit, no hi ha forma de fer-los tornar.
 		</p>
 		<p>
 			<b>Conserva el teu dispositiu mòbil segur!</b>

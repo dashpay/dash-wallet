@@ -4,7 +4,7 @@
 	<string name="help_wallet">
 <![CDATA[
 		<p>
-			The upper left part of the screen displays your balance in Dashs and one selected national currency.
+			The upper left part of the screen displays your balance in Dash and one selected national currency.
 			Tap to go to the list of national currencies, and tap on one of the currencies to select it as default.
 		</p>
 		<p>
@@ -29,7 +29,7 @@
 			Using this dialog, you can request coins from another person (who should already have installed Dash Wallet).
 		</p>
 		<p>
-			First, you can enter an amount of Dashs to request.
+			First, you can enter an amount of Dash to request.
 		</p>
 		<p>
 			Then, you either have the generated QR code scanned by the other person.
@@ -54,7 +54,7 @@
 			You can also scan QR codes with Dash addresses or Dash requests by pressing the QR button in the action bar.
 		</p>
 		<p>
-			Next, you can see how many Dashs you can spend at the moment.
+			Next, you can see how many Dash you can spend at the moment.
 			Any difference to the balance from the main screen is still unconfirmed and can thus not yet be spent.
 		</p>
 		<p>
@@ -78,8 +78,8 @@
 			<b>Important safety notes:</b>
 		</p>
 		<p>
-			Dashs are stored on the device.
-			<b>If you lose it, you\'ll lose your Dashs.</b>
+			Dash are stored on the device.
+			<b>If you lose it, you\'ll lose your Dash.</b>
 		</p>
 		<p>
 			This means you need to <b>back up your wallet</b>!
@@ -87,12 +87,12 @@
 			Keep your backup safe and remember the password.
 		</p>
 		<p>
-			<b>Before uninstalling</b> (or clearing app data/wiping your device), <b>transfer your Dashs to another wallet</b>.
-			Remaining Dashs will be lost.
+			<b>Before uninstalling</b> (or clearing app data/wiping your device), <b>transfer your Dash to another wallet</b>.
+			Remaining Dash will be lost.
 		</p>
 		<p>
 			<b>Payments are irreversible</b>.
-			If you send your Dashs into the void, there is almost no way to get them back.
+			If you send your Dash into the void, there is almost no way to get them back.
 		</p>
 		<p>
 			<b>Keep your mobile device safe!</b>

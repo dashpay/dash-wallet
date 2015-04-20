@@ -26,7 +26,7 @@
 	<string name="wallet_transactions_fragment_tab_sent">تم الارسال</string>
 	<string name="wallet_transactions_fragment_empty_text_received">لم يتم استلام مبالغ بيتكوين إلى الآن</string>
 	<string name="wallet_transactions_fragment_empty_text_sent">لم يتم ارسال مبالغ بيتكوين إلى الآن</string>
-	<string name="wallet_transactions_fragment_empty_text_howto">كيفية الحصول على البيتكوين Dashs؟\n\nالتجارة التقليدية مقابل المال،\nبيع السلع أو الخدمات أو\nالكسب من خلال العمل.</string>
+	<string name="wallet_transactions_fragment_empty_text_howto">كيفية الحصول على البيتكوين Dash؟\n\nالتجارة التقليدية مقابل المال،\nبيع السلع أو الخدمات أو\nالكسب من خلال العمل.</string>
 	<string name="wallet_transactions_row_warning_backup">تهانينا، لقد تلقيت أول دفعة خاصة بك! قل قمت بحفظ احتياطي لمحفظتك لحمايتها من الضياع؟</string>
 	<string name="wallet_transactions_fragment_coinbase">محفور</string>
 	<string name="wallet_transactions_fragment_internal">داخلي</string>

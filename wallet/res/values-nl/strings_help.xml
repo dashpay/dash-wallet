@@ -30,7 +30,7 @@
   <string name="help_request_coins">
 <![CDATA[
 		<p>
-			Deze dialoog kunt u gebruiken om Dashs te verzoeken van iemand anders (die ook Dash Wallet of een andere Dash client geinstalleerd heeft).
+			Deze dialoog kunt u gebruiken om Dash te verzoeken van iemand anders (die ook Dash Wallet of een andere Dash client geinstalleerd heeft).
 		</p>
 		<p>
 			Als eerste geeft u een Dash bedrag aan wat u wilt verzoeken.
@@ -41,7 +41,7 @@
 			De andere persoon dient op de Dash URL te klikken.
 		</p>
 		<p>
-			De andere persoon zal nu de dialoog te zien krijgen voor het verzenden van Dashs waarin alle velden ingevuld zijn.
+			De andere persoon zal nu de dialoog te zien krijgen voor het verzenden van Dash waarin alle velden ingevuld zijn.
 			Als er akkoord gegaan word met de transactie hoeft deze alleen nog verzonden te worden.
 		</p>
 	]]>
@@ -49,7 +49,7 @@
   <string name="help_send_coins">
 <![CDATA[
 		<p>
-			U heeft het dialoog gestart om Dashs te verzenden.
+			U heeft het dialoog gestart om Dash te verzenden.
 			U bent hier terecht gekomen via het hoofd scherm of door het klikken op een Dash URL in uw browser.
 		</p>
 		<p>
@@ -58,7 +58,7 @@
 			U kan ook QR-codes scannen met een Dash adres of verzoek door op de QR knop in de actie-balk te klikken.
 		</p>
 		<p>
-			Vervolgens kunt u zien hoe veel Dashs op dit moment beschikbaar zijn voor besteding.
+			Vervolgens kunt u zien hoe veel Dash op dit moment beschikbaar zijn voor besteding.
 			Het eventuele verschil met het saldo van het hoofdscherm is nog onbevestigd en kan dus nog niet worden uitgegeven.
 		</p>
 		<p>
@@ -79,20 +79,20 @@
   <string name="help_safety">
 <![CDATA[
 		<p>
-			<b>Enkele woorden over de veiligheid van uw Dashs:</b>
+			<b>Enkele woorden over de veiligheid van uw Dash:</b>
 		</p>
 		<p>
-			Dashs in Dash Wallet zijn opgeslagen op het apparaat.
-			<b>Als u uw apparaat verliest zullen deze Dashs ook verloren zijn.</b>
+			Dash in Dash Wallet zijn opgeslagen op het apparaat.
+			<b>Als u uw apparaat verliest zullen deze Dash ook verloren zijn.</b>
 			Vergelijkbaar met het verlies van uw portemonnee.
 		</p>
 		<p>
-			<b>Voor het verwijderen van Dash Wallet</b> (of verschonen van app data of wipe van het apparaat), <b>dient u de Dashs over te zetten naar een andere wallet.</b>.
-			Overblijvende Dashs zullen verloren gaan.
+			<b>Voor het verwijderen van Dash Wallet</b> (of verschonen van app data of wipe van het apparaat), <b>dient u de Dash over te zetten naar een andere wallet.</b>.
+			Overblijvende Dash zullen verloren gaan.
 		</p>
 		<p>
 			<b>Transacties met Dash kunnen niet ongedaan gemaakt worden</b>.
-			Als u Dashs naar een onbekend adres stuurt zijn ze onmogelijk terug te krijgen tenzij u de eigenaar kent en deze bereid is de Dashs terug te sturen.
+			Als u Dash naar een onbekend adres stuurt zijn ze onmogelijk terug te krijgen tenzij u de eigenaar kent en deze bereid is de Dash terug te sturen.
 		</p>
 		<p>
 			<b>Houd uw Android apparaat veilig!</b>

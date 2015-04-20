@@ -261,8 +261,8 @@
   <string name="button_paste">Klistra in</string>
   <string name="button_share">Dela</string>
   <string name="button_set_as_default">Ange som standard</string>
-  <string name="button_request_coins">Ta emot Dashs</string>
-  <string name="button_send_coins">Skicka Dashs</string>
+  <string name="button_request_coins">Ta emot Dash</string>
+  <string name="button_send_coins">Skicka Dash</string>
   <string name="button_scan">Skanna</string>
   <string name="button_edit_address">Lägg till/ändra adress</string>
   <string name="button_settings">Inställningar</string>

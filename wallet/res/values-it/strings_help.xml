@@ -22,7 +22,7 @@
 			Trascina a destra o sinistra per impostare dei filtri alla lista.
 		</p>
 		<p>
-			Puoi inviare o ricevere Dashs premendo i tasti nella barra delle azioni.
+			Puoi inviare o ricevere Dash premendo i tasti nella barra delle azioni.
 			Sono disponibili ulteriori comandi nel menù opzioni.
 		</p>
 	]]>
@@ -38,13 +38,8 @@
 		</p>
 		<p>
 			Poi puoi generare dei codici QR da far acquisire all\'altra persona.
-<<<<<<< HEAD
-			Oppure puoi inviare la richiesta con il tasto "condividi" nella barra azioni.
-			La persona che riceve la richiesta dovrà cliccare l\'URL Dash.
-=======
 			Oppure puoi inviare la richiesta con il tasto \"condividi\" nella barra azioni.
 			La persona che riceve la richiesta dovrà cliccare l\'URL Dash.
->>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e
 		</p>
 		<p>
 			In ogni modo alla persona ricevente verrà presentata un modulo precompilato per inviare i Dash.
@@ -55,7 +50,7 @@
   <string name="help_send_coins">
 <![CDATA[
 		<p>
-			Hai iniziato il processo per inviare Dashs.
+			Hai iniziato il processo per inviare Dash.
 			Sei giunto qui a partire dalla schermata principale o cliccando su di un URL Dash dal tuo browser.
 		</p>
 		<p>
@@ -85,15 +80,15 @@
   <string name="help_safety">
 <![CDATA[
 		<p>
-			<b>Alcune informazioni riguardo la sicurezza relativa ai vostri Dashs:</b>
+			<b>Alcune informazioni riguardo la sicurezza relativa ai vostri Dash:</b>
 		</p>
 		<p>
-			I Dashs di Dash Wallet vengono memorizzati sul dispositivo.
+			I Dash di Dash Wallet vengono memorizzati sul dispositivo.
 			<b>Se perdi il dispositivo, perdi i tuoi Dash.</b>
 			Esattamente come denaro nel tuo vero portafoglio.
 		</p>
 		<p>
-			<b>Prima di disinstallare Dash Wallet</b> (o cancellare i dati dell\'applicazione o del dispositivo), <b>trasferisci i tuoi Dashs ad un altro portafoglio</b>.
+			<b>Prima di disinstallare Dash Wallet</b> (o cancellare i dati dell\'applicazione o del dispositivo), <b>trasferisci i tuoi Dash ad un altro portafoglio</b>.
 			Eventuali Dash non trasferiti saranno persi per sempre.
 		</p>
 		<p>
