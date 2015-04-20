@@ -1,17 +1,17 @@
-<b>Tenha os seus Dashs sempre com você, no seu bolso!</b> Efetue pagamentos rapidamente apenas escaneando um código QR. Como comerciante, você pode receber pagamentos de forma confiável e instantaneamente. O Dash Wallet é o primeiro aplicativo Dash móvel, e, possivelmente, o mais seguro!
+<b>Tenha os seus Dash sempre com você, no seu bolso!</b> Efetue pagamentos rapidamente apenas escaneando um código QR. Como comerciante, você pode receber pagamentos de forma confiável e instantaneamente. O Dash Wallet é o primeiro aplicativo Dash móvel, e, possivelmente, o mais seguro!
 
 
 <b>CARACTERÍSTICAS</b>
 
 • Sem necessidade de cadastro, serviço web ou hospedagem! Esta carteira é descentralizada e "peer to peer".
-• Exibe a quantidade de Dashs em DASH, mDASH e µDASH.
+• Exibe a quantidade de Dash em DASH, mDASH e µDASH.
 • Conversão para moedas nacionais.
-• Envio e recebimento de Dashs via NFC, códigos QR ou endereços Dash.
+• Envio e recebimento de Dash via NFC, códigos QR ou endereços Dash.
 • Catálogo para guardar os endereços mais utilizados.
 • Quando você estiver off-line, você ainda pode pagar via Bluetooth.
 • Notificações do sistema para moedas recebidas.
 • Varrer de carteiras de papel (por exemplo, aqueles usados para o armazenamento a frio).
-• Widget para saldo de Dashs.
+• Widget para saldo de Dash.
 
 
 <b>CONTRIBUA</b>

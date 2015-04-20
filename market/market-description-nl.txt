@@ -1,4 +1,4 @@
-<b>Draag je Dashs altijd bij je, in je broekzak!</b> Je kunt vlot betalen door een QR-code te scannen. Als handelaar ontvang je je betalingen betrouwbaar en onmiddelijk. Dash Wallet is de eerste mobiele Dash-app, en misschien wel de veiligste!
+<b>Draag je Dash altijd bij je, in je broekzak!</b> Je kunt vlot betalen door een QR-code te scannen. Als handelaar ontvang je je betalingen betrouwbaar en onmiddelijk. Dash Wallet is de eerste mobiele Dash-app, en misschien wel de veiligste!
 
 <b>FEATURES</b>
 
@@ -8,7 +8,7 @@
 * Verzend en ontvang Dash via NFC, QR-codes of Dash-URL's
 • Adresboek voor regelmatig gebruikte Dash-adressen.
 • Ook offline toch betalen via Bluetooth
-• Systeemmelding wanneer je Dashs ontvangt
+• Systeemmelding wanneer je Dash ontvangt
 • App widget voor Dash saldo.
 
 

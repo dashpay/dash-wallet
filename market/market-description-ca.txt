@@ -1,4 +1,4 @@
-<b>Tingues els teus Dashs sempre amb tu, a la teva butxaca!.<b> Per pagar ràpidament escanejant un codi QR. Com a comerciant, pots rebre pagaments amb confiança i instantàniament. La Cartera Dash es la primera aplicació mòbil de Dash i possiblement també la més segura!.
+<b>Tingues els teus Dash sempre amb tu, a la teva butxaca!.<b> Per pagar ràpidament escanejant un codi QR. Com a comerciant, pots rebre pagaments amb confiança i instantàniament. La Cartera Dash es la primera aplicació mòbil de Dash i possiblement també la més segura!.
 
 
 <b>CARACTERÍSTIQUES</b>
@@ -6,7 +6,7 @@
 • Sense enregistrar-se, ni necessitat de servici web o nuvol!. Aquesta cartera és descentralitzada i de parell a parell.
 • Mostra l'import de Dash en DASH, mDASH i µDASH.
 • Conversió cap a i des de divises nacionals.
-• Enviar i rebre Dashs a través d'NFC, codis QR i adreces Dash.
+• Enviar i rebre Dash a través d'NFC, codis QR i adreces Dash.
 • Llibreta d'adreces per a les adreces utilitzades regularment.
 • Quan ets fora de línia, encara pots pagar a través de Bluetooth.
 • Notificació del sistema quan reps monedes.
