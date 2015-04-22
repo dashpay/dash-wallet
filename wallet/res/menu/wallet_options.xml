@@ -49,11 +49,7 @@
 		</menu>
 	</item>
 
-    <item
-    		android:id="@+id/wallet_options_disconnect"
-    		android:showAsAction="never"
-    		android:title="@string/wallet_options_disconnect"/>
- 	<item
+	<item
 		android:id="@+id/wallet_options_exchange_rates"
 		android:showAsAction="never"
 		android:title="@string/exchange_rates_activity_title"/>

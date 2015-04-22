@@ -45,10 +45,10 @@
 	</Preference-->
 	<Preference
 		android:key="about_credits_bitcoinj"
-		android:summary="https://github/HashEngineering/darkcoin" >
+		android:summary="https://github/HashEngineering/darkcoinj" >
 		<intent
 			android:action="android.intent.action.VIEW"
-			android:data="https://github/HashEngineering/darkcoin" />
+			android:data="https://github/HashEngineering/darkcoinj" />
 	</Preference>
 	<Preference
 		android:key="about_credits_zxing"
