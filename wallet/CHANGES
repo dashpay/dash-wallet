@@ -1,5 +1,10 @@
 
 Dash Wallet
+v4.18
+* preparing to release on Google Play
+
+v4.0
+* upgrade to Bitcoin Wallet 4.0
 
 v1.0.8
 * Enable Bloomfiltering (to resolve missing transactions).
