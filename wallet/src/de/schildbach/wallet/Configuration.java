@@ -17,8 +17,6 @@
 
 package de.schildbach.wallet;
 
-import javax.annotation.Nonnull;
-
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
@@ -45,6 +43,7 @@ public class Configuration
 	public static final String PREFS_KEY_EXCHANGE_CURRENCY = "exchange_currency";
 	public static final String PREFS_KEY_TRUSTED_PEER = "trusted_peer";
 	public static final String PREFS_KEY_TRUSTED_PEER_ONLY = "trusted_peer_only";
+	public static final String PREFS_KEY_DATA_USAGE = "data_usage";
 	public static final String PREFS_KEY_DISCLAIMER = "disclaimer";
 	private static final String PREFS_KEY_LABS_QR_PAYMENT_REQUEST = "labs_qr_payment_request";
 
@@ -64,7 +63,7 @@ public class Configuration
 
 	private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
-	public Configuration(@Nonnull final SharedPreferences prefs)
+	public Configuration(final SharedPreferences prefs)
 	{
 		this.prefs = prefs;
 

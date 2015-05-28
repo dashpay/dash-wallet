@@ -17,28 +17,7 @@
 
 package de.schildbach.wallet.ui.send;
 
-import java.util.Collections;
-import java.util.List;
-
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.Wallet;
-import org.bitcoinj.crypto.KeyCrypterException;
-import org.bitcoinj.utils.MonetaryFormat;
-import org.bitcoinj.wallet.DeterministicUpgradeRequiresPassword;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.spongycastle.crypto.params.KeyParameter;
-
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.Dialog;
-import android.app.DialogFragment;
-import android.app.Fragment;
-import android.app.FragmentManager;
+import android.app.*;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnShowListener;
 import android.graphics.Typeface;
@@ -54,13 +33,24 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-
 import com.google.common.util.concurrent.ListenableFuture;
-
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.AbstractWalletActivity;
 import de.schildbach.wallet.ui.DialogBuilder;
 import hashengineering.darkcoin.wallet.R;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.Wallet;
+import org.bitcoinj.crypto.KeyCrypterException;
+import org.bitcoinj.utils.MonetaryFormat;
+import org.bitcoinj.wallet.DeterministicUpgradeRequiresPassword;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.spongycastle.crypto.params.KeyParameter;
+
+import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * @author Andreas Schildbach
@@ -83,7 +73,7 @@ public class MaintenanceDialogFragment extends DialogFragment
 	private WalletApplication application;
 	private Wallet wallet;
 
-	@CheckForNull
+	@Nullable
 	private AlertDialog dialog;
 
 	private View passwordGroup;
@@ -233,7 +223,7 @@ public class MaintenanceDialogFragment extends DialogFragment
 			new DeriveKeyTask(backgroundHandler)
 			{
 				@Override
-				protected void onSuccess(@Nonnull KeyParameter encryptionKey)
+				protected void onSuccess(KeyParameter encryptionKey)
 				{
 					doMaintenance(encryptionKey);
 				}

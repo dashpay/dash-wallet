@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-  <string name="toast_wallet_reset">La cartera s\'ha reiniciat,\ntrigarà una estona a recuperar-se</string>
+  <string name="toast_wallet_reset">La teva cartera s\'ha reiniciat, traigarà uns instants a tornar a recuperar-se</string>
   <string name="wallet_disclaimer_fragment_remind_safety">Utilitzar sota la teva responsabilitat. Llegeix les &lt;u&gt;advertències de seguretat&lt;/u&gt;.</string>
   <string name="wallet_disclaimer_fragment_remind_backup">Necessites &lt;u&gt;fer una còpia de seguretat de la cartera&lt;/u&gt;!</string>
   <string name="blockchain_state_progress_hours">%1$s, %2$d hores restants</string>
@@ -11,8 +11,9 @@
   <string name="blockchain_state_progress_stalled">Sincronització encallada</string>
   <string name="blockchain_state_progress_problem_storage">Sincronitzant: problema d\'emmagatzematge</string>
   <string name="blockchain_state_progress_problem_network">Sincronitzant: problema de xarxa</string>
-  <string name="wallet_address_fragment_clipboard_msg">L\'adreça Dash s\'ha copiat al porta-retalls.</string>
-  <string name="wallet_balance_fragment_too_much">Aquesta quantitat és alta per portar-la a la butxaca, si et plau mou-ne una part a un lloc segur.</string>
+  <string name="wallet_address_fragment_clipboard_msg">L\'adreça Bitcoin s\'ha copiat al porta-retalls.</string>
+  <string name="wallet_address_dialog_fragment_hint">Per protegir la teva privacitat, la teva adreça canviarà quan rebi un pagament.</string>
+  <string name="wallet_balance_fragment_too_much">Aquesta quantitat de diners és molt elevada per portar-la a la butxaca, mou una part a un lloc segur.</string>
   <string name="wallet_balance_fragment_replaying">El saldo no està disponible durant la repetició.</string>
   <string name="exchange_rates_activity_title">Preus de canvi</string>
   <string name="exchange_rates_fragment_empty_text">No es poden carregar el preus de canvi.</string>
@@ -23,12 +24,12 @@
   <string name="exchange_rates_fragment_source">Preu des de %s</string>
   <string name="exchange_rates_options_search">Cercar preu de canvi</string>
   <string name="exchange_rates_context_set_as_default_title">Desar com a moneda estrangera per defecte</string>
-  <string name="wallet_transactions_fragment_tab_received">Rebut</string>
-  <string name="wallet_transactions_fragment_tab_all">Ambdós</string>
-  <string name="wallet_transactions_fragment_tab_sent">Enviats</string>
-  <string name="wallet_transactions_fragment_empty_text_received">Cap Dash rebut fins ara.</string>
-  <string name="wallet_transactions_fragment_empty_text_sent">Cap Dash enviat fins ara.</string>
-  <string name="wallet_transactions_fragment_empty_text_howto">Com aconseguir Dash?\n\nCanvia\'ls per diner tradicional,\nven bens o serveis o bé\nguanyen treballant.</string>
+  <string name="wallet_transactions_options_filter_received">Rebut</string>
+  <string name="wallet_transactions_options_filter_all">Ambdós</string>
+  <string name="wallet_transactions_options_filter_sent">Enviats</string>
+  <string name="wallet_transactions_fragment_empty_text_received">Cap Bitcoin rebut fins ara.</string>
+  <string name="wallet_transactions_fragment_empty_text_sent">Cap Bitcoin enviat fins ara.</string>
+  <string name="wallet_transactions_fragment_empty_text_howto">Com aconseguir Bitcoins?\n\nCanvia\'ls per diner tradicional,\nven bens o serveis o bé\nguanyen treballant.</string>
   <string name="wallet_transactions_row_warning_backup">Enhorabona, has rebut el teu primer pagament! Tens a punt &lt;u&gt;una còpia de seguretat de la teva cartera&lt;/u&gt;, per protegir-te contra la pèrdua?</string>
   <string name="wallet_transactions_fragment_coinbase">minat</string>
   <string name="wallet_transactions_fragment_internal">intern</string>
@@ -85,15 +86,19 @@
   <string name="send_coins_sent_msg">Enviat!</string>
   <string name="send_coins_failed_msg">Fallada!</string>
   <string name="send_coins_error_msg">Hi ha un problema enviant les monedes!</string>
+  <string name="send_coins_options_priority">S\'ha confirmat rapid, la taxa és més elevada</string>
   <string name="send_coins_options_empty">Cartera buida</string>
-  <string name="send_coins_address_context_clear_title">Afegeix una nova adreça</string>
   <string name="sweep_wallet_activity_title">Incorpora una cartera de paper</string>
   <string name="sweep_wallet_fragment_intro">Estàs a punt d\'incorporar una cartera de paper o un cupó. Això mourà totes les monedes d\'aquest paper a la cartera del dispositiu. Quant la transacció es confirmi, el paper no valdrà res i no deurà ser reutilitzat per qüestions de seguretat.</string>
   <string name="sweep_wallet_fragment_hint">Les carteres de paper són utilitzades normalment per a un emmagatzematge en fred. Alguns caixers les imprimeixen en un paperet en comptes d\'enviar les monedes directament al teu dispositiu. La gent a vegades, utilitza carteres de paper per donar-li valor (no es recomana).</string>
   <string name="sweep_wallet_fragment_wallet_unknown">Comença escanejant la clau privada de la cartera de paper. Utilitza el botó d\'acció de la càmera.</string>
+  <string name="sweep_wallet_fragment_encrypted">Aquesta clau esta protegida amb una paraula de pas</string>
   <string name="sweep_wallet_fragment_password">paraula de pas</string>
+  <string name="sweep_wallet_fragment_bad_password">Paraula de pas incorrecte!</string>
   <string name="sweep_wallet_fragment_balance">Balanç a incorporar</string>
+  <string name="sweep_wallet_fragment_button_decrypt">Desencriptació</string>
   <string name="sweep_wallet_fragment_button_sweep">Incorpora</string>
+  <string name="sweep_wallet_fragment_decrypt_progress">La desencriptació \nTrigarà uns 2 minuts aproximadament</string>
   <string name="sweep_wallet_fragment_request_wallet_balance_progress">Carregant balanç…</string>
   <string name="sweep_wallet_fragment_request_wallet_balance_failed_title">Carregant balanç de la cartera fallat</string>
   <string name="sweep_wallet_fragment_insufficient_money_title">No hi ha suficients monedes</string>
@@ -117,6 +122,7 @@
   <string name="request_coins_options_local_app_title">Sol·licitud des de aplicació local</string>
   <string name="address_book_activity_title">Llibreta d\'adreces</string>
   <string name="address_book_list_receiving_title">La teva adreça</string>
+  <string name="address_book_list_receiving_random">Adreces antigues</string>
   <string name="address_book_list_sending_title">Enviant adreces</string>
   <string name="address_book_empty_text">Sense entrades a la llibreta d\'adreces</string>
   <string name="address_book_context_send_title">Envia Dash a l\'adreça</string>
@@ -174,6 +180,8 @@
   <string name="export_keys_dialog_mail_intent_chooser">Desa la cartera utilitzant…</string>
   <string name="export_keys_dialog_mail_intent_failed">Desament de cartera fallat. </string>
   <string name="import_export_keys_dialog_password">paraula de pas</string>
+  <string name="backup_wallet_dialog_password_again">una altra vegada</string>
+  <string name="backup_wallet_dialog_password_mismatch">desajust!</string>
   <string name="import_export_keys_dialog_show">Mostra paraula de pas.</string>
   <string name="import_export_keys_dialog_failure_title">Error</string>
   <string name="import_keys_intent_filter_action">Recuperar cartera</string>
@@ -219,6 +227,11 @@
   <string name="preferences_initiate_reset_summary">Reinicialitza la cadena de blocs, les transaccions i el balanç de la cartera. Re-escanejar trigara una mica.</string>
   <string name="preferences_initiate_reset_dialog_message">Voldries reiniciar i re-escanejar la cadena de blocs?\n\nAixò amagara el saldo de la teva cartera temporalment i esborrara les transaccions. Ambdues es recuperaran mentre es sincronitza.</string>
   <string name="preferences_initiate_reset_dialog_positive">Reinicia</string>
+  <string name="preferences_extended_public_key_title">Mostra xpub</string>
+  <string name="preferences_extended_public_key_summary">Visualitza la clau pública extesa de la teva butxaca, per poder ser importades per altes aplicacions o serveis. Tingues cuidado: Si ho fa, revelar la seva privacitat monetària per a aquesta aplicació.</string>
+  <string name="bitmap_fragment_share">Compartir…</string>
+  <string name="extended_public_key_fragment_title">Clau pública extesa</string>
+  <string name="extended_public_key_fragment_share">Comparteix xpub</string>
   <string name="report_issue_dialog_title_issue">Reportar problema</string>
   <string name="report_issue_dialog_title_crash">Bloqueig previ detectat.</string>
   <string name="report_issue_dialog_message_issue">Per favor descriu el teu problema de manera suficientment precisa per a ser reproduït. Si es especific de la teva cartera, considera d\'adjuntar el buidat de dades.</string>

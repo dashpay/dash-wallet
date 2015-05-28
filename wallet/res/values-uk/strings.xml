@@ -22,12 +22,12 @@
   <string name="exchange_rates_fragment_source">Ціна отримана з %s</string>
   <string name="exchange_rates_options_search">Пошук обмінного курсу</string>
   <string name="exchange_rates_context_set_as_default_title">Встановити як валюту за замовчуванням</string>
-  <string name="wallet_transactions_fragment_tab_received">Отримано</string>
-  <string name="wallet_transactions_fragment_tab_all">Все</string>
-  <string name="wallet_transactions_fragment_tab_sent">Відправлено</string>
-  <string name="wallet_transactions_fragment_empty_text_received">Ще не отримано Dash-монет</string>
-  <string name="wallet_transactions_fragment_empty_text_sent">Ще не відправлено Dash-монет</string>
-  <string name="wallet_transactions_fragment_empty_text_howto">Як отримати Dash?\n\nКупуйте за звичайні гроші,\nпродавайте товари і послуги\nабо заробляйте.</string>
+  <string name="wallet_transactions_options_filter_received">Отримано</string>
+  <string name="wallet_transactions_options_filter_all">Все</string>
+  <string name="wallet_transactions_options_filter_sent">Відправлено</string>
+  <string name="wallet_transactions_fragment_empty_text_received">Ще не отримано Bitcoin-монет</string>
+  <string name="wallet_transactions_fragment_empty_text_sent">Ще не відправлено Bitcoin-монет</string>
+  <string name="wallet_transactions_fragment_empty_text_howto">Як отримати Bitcoin?\n\nКупуйте за звичайні гроші,\nпродавайте товари і послуги\nабо заробляйте.</string>
   <string name="wallet_transactions_row_warning_backup">Вітаємо, ви отримали перший платіж! Ви вже &lt;u&gt;зробили резервну копію гаманця&lt;/u&gt;, щоб убезпечитись від втрат?</string>
   <string name="wallet_transactions_fragment_coinbase">добуто</string>
   <string name="wallet_transactions_fragment_internal">внутрішній</string>
@@ -75,7 +75,6 @@
   <string name="send_coins_failed_msg">Не вдалося!</string>
   <string name="send_coins_error_msg">Проблема з відправкою монет!</string>
   <string name="send_coins_options_empty">Порожній гаманець</string>
-  <string name="send_coins_address_context_clear_title">Введіть нову адресу</string>
   <string name="sweep_wallet_activity_title">Відсканувати паперовий гаманець</string>
   <string name="sweep_wallet_fragment_intro">Ви збираєтесь відсканувати паперовий гаманець або купон. Це перенесе всі монети з паперу у ваш гаманець на цьому пристрої. Коли ця транзакція пройде, паперовий носій буде не дійсним і не повинен повторно використаний з метою безпеки. </string>
   <string name="sweep_wallet_fragment_hint">Паперові гаманці найчастіше використовуються для холодного зберігання. Деякі банкомати друкують їх на папері, а не посилають монети на мобільний пристрій напряму. Деякі люди використовують попередньо заряджені паперові гаманці щоб передавати монети. (це не рекомендуєтся)</string>

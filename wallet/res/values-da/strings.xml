@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-  <string name="toast_wallet_reset">Tegnebog blev nulstillet,\ndet tager nogen tid at genoprette</string>
+  <string name="toast_wallet_reset">Din tegnebog blev nulstillet!\nDet tager nogen tid at genoprette.</string>
   <string name="wallet_disclaimer_fragment_remind_safety">Brug for egen risiko. Læs &lt;u&gt;sikkerhedsnoterne&lt;/u&gt;.</string>
   <string name="wallet_disclaimer_fragment_remind_backup">Du bør &lt;u&gt;tage sikkerhedskopi af din tegnebog&lt;/u&gt;!</string>
   <string name="blockchain_state_progress_hours">%1$s, %2$d timer bagefter</string>
@@ -11,7 +11,8 @@
   <string name="blockchain_state_progress_stalled">Synkronisering står stille</string>
   <string name="blockchain_state_progress_problem_storage">Synkroniserer: Pladsproblem</string>
   <string name="blockchain_state_progress_problem_network">Synkroniserer: Netærksproblem</string>
-  <string name="wallet_address_fragment_clipboard_msg">Dash-adresse kopieret til udklipsholder</string>
+  <string name="wallet_address_fragment_clipboard_msg">Bitcoin-adresse kopieret til udklipsholder</string>
+  <string name="wallet_address_dialog_fragment_hint">For at beskytte dit privatliv vil din adresse ændres, så snart den modtager en betaling.</string>
   <string name="wallet_balance_fragment_too_much">Dette beløb er ret stort at gå rundt med i din lomme. Du bør flytte noget af det til et mere sikkert sted.</string>
   <string name="wallet_balance_fragment_replaying">Saldo er ikke tilgængelig under genafspilning.</string>
   <string name="exchange_rates_activity_title">Valutakurser</string>
@@ -23,12 +24,12 @@
   <string name="exchange_rates_fragment_source">Pris fra %s</string>
   <string name="exchange_rates_options_search">Søg iblandt vekselkurser</string>
   <string name="exchange_rates_context_set_as_default_title">Sæt som standard for fremmed valuta</string>
-  <string name="wallet_transactions_fragment_tab_received">Modtaget</string>
-  <string name="wallet_transactions_fragment_tab_all">Begge</string>
-  <string name="wallet_transactions_fragment_tab_sent">Sendt</string>
-  <string name="wallet_transactions_fragment_empty_text_received">Ingen Dash modtaget endnu.</string>
-  <string name="wallet_transactions_fragment_empty_text_sent">Ingen Dash sendt endnu.</string>
-  <string name="wallet_transactions_fragment_empty_text_howto">Hvordan får man Dash?\n\nKøb for traditionelle penge,\nsælg varer eller ydelser eller\ntjen dem ved at arbejde.</string>
+  <string name="wallet_transactions_options_filter_received">Modtaget</string>
+  <string name="wallet_transactions_options_filter_all">Begge</string>
+  <string name="wallet_transactions_options_filter_sent">Sendt</string>
+  <string name="wallet_transactions_fragment_empty_text_received">Ingen Bitcoins modtaget endnu.</string>
+  <string name="wallet_transactions_fragment_empty_text_sent">Ingen Bitcoins sendt endnu.</string>
+  <string name="wallet_transactions_fragment_empty_text_howto">Hvordan får man Bitcoins?\n\nKøb for traditionelle penge,\nsælg varer eller ydelser eller\ntjen dem ved at arbejde.</string>
   <string name="wallet_transactions_row_warning_backup">Tillykke, du har modtaget din første betaling! Har du &lt;u&gt;taget en sikkerhedskopi af din tegnebog&lt;/u&gt;, for at beskytte dig mod tab?</string>
   <string name="wallet_transactions_fragment_coinbase">mined</string>
   <string name="wallet_transactions_fragment_internal">intern</string>
@@ -87,7 +88,6 @@
   <string name="send_coins_error_msg">Problem under afsendelse af bitcoin!</string>
   <string name="send_coins_options_priority">Hurtig bekræftelse, højere gebyr</string>
   <string name="send_coins_options_empty">Tøm tegnebog</string>
-  <string name="send_coins_address_context_clear_title">Skriv ny adresse</string>
   <string name="sweep_wallet_activity_title">Ryd papirtegnebog</string>
   <string name="sweep_wallet_fragment_intro">Du er ved at rydde en papirtegnebog eller kupon. Dette vil flytte alle bitcoin fra dette stykke papir til din tegnebog på denne enhed. Når transaktionen er bekræftet, vil papiret være værdiløst og bør ikke genanvendes af sikkerhedsgrunde.</string>
   <string name="sweep_wallet_fragment_hint">Papirtegnebøger bruges oftest som kold opbevaring. Nogle hæveautomater udskriver dem på deres papirbon\'er frem for at sende bitcoins direkte til din mobile enhed. Folk bruger nogle gange papirtegnebøger til at sende værdier omkring (anbefales ikke).</string>
@@ -122,6 +122,7 @@
   <string name="request_coins_options_local_app_title">Forespørg fra lokal app</string>
   <string name="address_book_activity_title">Adressebog</string>
   <string name="address_book_list_receiving_title">Dine adresser</string>
+  <string name="address_book_list_receiving_random">Gamle adresser</string>
   <string name="address_book_list_sending_title">Sender adresser</string>
   <string name="address_book_empty_text">Ingen elementer i adressebog</string>
   <string name="address_book_context_send_title">Send Dash til adresse</string>
@@ -179,6 +180,8 @@
   <string name="export_keys_dialog_mail_intent_chooser">Arkivér tegnebog ved hjælp af…</string>
   <string name="export_keys_dialog_mail_intent_failed">Arkivering af tegnebog mislykkedes.</string>
   <string name="import_export_keys_dialog_password">kodeord</string>
+  <string name="backup_wallet_dialog_password_again">igen</string>
+  <string name="backup_wallet_dialog_password_mismatch">uoverensstemmelse!</string>
   <string name="import_export_keys_dialog_show">Vis kodeord</string>
   <string name="import_export_keys_dialog_failure_title">Fejl</string>
   <string name="import_keys_intent_filter_action">Genopret tegnebog</string>
@@ -224,6 +227,11 @@
   <string name="preferences_initiate_reset_summary">Nulstil blokkæde, transaktioner og tegnebogssaldo. Genafspilning vil tage et stykke tid.</string>
   <string name="preferences_initiate_reset_dialog_message">Vil du nulstille og genafspille blokkæden?\n\nDette vil midlertidigt skjule din tegnebogssaldo og fjerne transaktioner. Begge dele vil genskabes efterhånden som blokkæden synkroniseres.</string>
   <string name="preferences_initiate_reset_dialog_positive">Nulstil</string>
+  <string name="preferences_extended_public_key_title">Vis xpub</string>
+  <string name="preferences_extended_public_key_summary">Vis din tegnebogs udvidede offentlige nøgle så den kan importeres til andre apps og tjenester. Vær forsigtig: Du vil afsløre dit økonomiske privatliv til pågældende app, hvis du gør dette.</string>
+  <string name="bitmap_fragment_share">Del …</string>
+  <string name="extended_public_key_fragment_title">Udvidet offentlig nøgle</string>
+  <string name="extended_public_key_fragment_share">Del xpub …</string>
   <string name="report_issue_dialog_title_issue">Rapportér problem</string>
   <string name="report_issue_dialog_title_crash">Tidligere programnedbrud opfanget</string>
   <string name="report_issue_dialog_message_issue">Beskriv venligst problemet så præcist, at det kan genskabes af udviklerne. Hvis det er specifikt til din tegnebog, bør du overveje at vedhæfte dump.</string>

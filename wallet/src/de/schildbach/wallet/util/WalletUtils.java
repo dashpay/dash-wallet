@@ -17,6 +17,38 @@
 
 package de.schildbach.wallet.util;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileFilter;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Writer;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
+
+import javax.annotation.Nullable;
+
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.AddressFormatException;
+import org.bitcoinj.core.DumpedPrivateKey;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.ScriptException;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.Wallet;
+import org.bitcoinj.script.Script;
+import org.bitcoinj.store.UnreadableWalletException;
+import org.bitcoinj.store.WalletProtobufSerializer;
+import org.bitcoinj.wallet.KeyChainGroup;
+
 import android.text.Editable;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
@@ -45,22 +77,22 @@ import java.util.List;
  */
 public class WalletUtils
 {
-	public static Editable formatAddress(@Nonnull final Address address, final int groupSize, final int lineSize)
+	public static Editable formatAddress(final Address address, final int groupSize, final int lineSize)
 	{
 		return formatHash(address.toString(), groupSize, lineSize);
 	}
 
-	public static Editable formatAddress(@Nullable final String prefix, @Nonnull final Address address, final int groupSize, final int lineSize)
+	public static Editable formatAddress(@Nullable final String prefix, final Address address, final int groupSize, final int lineSize)
 	{
 		return formatHash(prefix, address.toString(), groupSize, lineSize, Constants.CHAR_THIN_SPACE);
 	}
 
-	public static Editable formatHash(@Nonnull final String address, final int groupSize, final int lineSize)
+	public static Editable formatHash(final String address, final int groupSize, final int lineSize)
 	{
 		return formatHash(null, address, groupSize, lineSize, Constants.CHAR_THIN_SPACE);
 	}
 
-	public static long longHash(@Nonnull final Sha256Hash hash)
+	public static long longHash(final Sha256Hash hash)
 	{
 		final byte[] bytes = hash.getBytes();
 
@@ -68,7 +100,7 @@ public class WalletUtils
 				| ((bytes[27] & 0xFFl) << 32) | ((bytes[26] & 0xFFl) << 40) | ((bytes[25] & 0xFFl) << 48) | ((bytes[23] & 0xFFl) << 56);
 	}
 
-	public static Editable formatHash(@Nullable final String prefix, @Nonnull final String address, final int groupSize, final int lineSize,
+	public static Editable formatHash(@Nullable final String prefix, final String address, final int groupSize, final int lineSize,
 			final char groupSeparator)
 	{
 		final SpannableStringBuilder builder = prefix != null ? new SpannableStringBuilder(prefix) : new SpannableStringBuilder();
@@ -91,8 +123,8 @@ public class WalletUtils
 		return builder;
 	}
 
-	@CheckForNull
-	public static Address getWalletAddressOfReceived(@Nonnull final Transaction tx, @Nonnull final Wallet wallet)
+	@Nullable
+	public static Address getToAddressOfSent(final Transaction tx, final Wallet wallet)
 	{
 		for (final TransactionOutput output : tx.getOutputs())
 		{
@@ -113,26 +145,26 @@ public class WalletUtils
 		return null;
 	}
 
-	@CheckForNull
-	public static Address getFirstFromAddress(@Nonnull final Transaction tx)
+	@Nullable
+	public static Address getWalletAddressOfReceived(final Transaction tx, final Wallet wallet)
 	{
-		if (tx.isCoinBase())
-			return null;
-
-		try
+		for (final TransactionOutput output : tx.getOutputs())
 		{
-			for (final TransactionInput input : tx.getInputs())
+			try
 			{
-				return input.getFromAddress();
+				if (output.isMine(wallet))
+				{
+					final Script script = output.getScriptPubKey();
+					return script.getToAddress(Constants.NETWORK_PARAMETERS, true);
+				}
 			}
+			catch (final ScriptException x)
+			{
+				// swallow
+			}
+		}
 
-			throw new IllegalStateException();
-		}
-		catch (final ScriptException x)
-		{
-			// this will happen on inputs connected to coinbase transactions
-			return null;
-		}
+		return null;
 	}
 
 	public static Wallet restoreWalletFromProtobufOrBase58(final InputStream is) throws IOException
@@ -184,7 +216,7 @@ public class WalletUtils
 		return new Wallet(Constants.NETWORK_PARAMETERS, group);
 	}
 
-	public static void writeKeys(@Nonnull final Writer out, @Nonnull final List<ECKey> keys) throws IOException
+	public static void writeKeys(final Writer out, final List<ECKey> keys) throws IOException
 	{
 		final DateFormat format = Iso8601Format.newDateTimeFormatT();
 
@@ -202,7 +234,7 @@ public class WalletUtils
 		}
 	}
 
-	public static List<ECKey> readKeys(@Nonnull final BufferedReader in) throws IOException
+	public static List<ECKey> readKeys(final BufferedReader in) throws IOException
 	{
 		try
 		{
@@ -310,7 +342,7 @@ public class WalletUtils
 		}
 	};
 
-	public static byte[] walletToByteArray(@Nonnull final Wallet wallet)
+	public static byte[] walletToByteArray(final Wallet wallet)
 	{
 		try
 		{
@@ -325,7 +357,7 @@ public class WalletUtils
 		}
 	}
 
-	public static Wallet walletFromByteArray(@Nonnull final byte[] walletBytes)
+	public static Wallet walletFromByteArray(final byte[] walletBytes)
 	{
 		try
 		{

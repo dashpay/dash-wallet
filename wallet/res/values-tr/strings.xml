@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-  <string name="toast_wallet_reset">Cüzdan sıfırlandı,\nnormale dönüş biraz vakit alacaktır</string>
+  <string name="toast_wallet_reset">Cüzdanınız sıfırlandı,\nnormale dönüşü biraz vakit alacaktır.</string>
   <string name="wallet_disclaimer_fragment_remind_safety">Tüm riski siz üstlenmiş olursunuz. &lt;u&gt;Güvenlik notlarını&lt;/u&gt; okuyunuz.</string>
   <string name="wallet_disclaimer_fragment_remind_backup">&lt;u&gt;Cüzdanınızı yedeklemeniz&lt;/u&gt; gerekmektedir!</string>
   <string name="blockchain_state_progress_hours">%1$s, %2$d saat geride</string>
@@ -11,8 +11,8 @@
   <string name="blockchain_state_progress_stalled">Eşleşme durdu</string>
   <string name="blockchain_state_progress_problem_storage">Eşleşme: Yedekleme sorunu</string>
   <string name="blockchain_state_progress_problem_network">Eşleşme: Şebeke sorunu</string>
-  <string name="wallet_address_fragment_clipboard_msg">Dash adresi panoya kopyalandı</string>
-  <string name="wallet_balance_fragment_too_much">Bu meblağ cebinizde taşımak için oldukça fazladır, birazını daha güvenli bir yere aktarınız.</string>
+  <string name="wallet_address_fragment_clipboard_msg">Bitcoin adresi panoya kopyalandı</string>
+  <string name="wallet_balance_fragment_too_much">Bu meblağ cebinizde taşımak için oldukça fazladır. Birazını daha güvenli bir yere aktarınız.</string>
   <string name="wallet_balance_fragment_replaying">Tekrar sırasında bakiye kullanılamaz</string>
   <string name="exchange_rates_activity_title">Döviz kurları</string>
   <string name="exchange_rates_fragment_empty_text">Döviz kurları yüklenemedi.</string>
@@ -23,12 +23,12 @@
   <string name="exchange_rates_fragment_source">%s unsurundan fiyat</string>
   <string name="exchange_rates_options_search">Değişim kuru ara</string>
   <string name="exchange_rates_context_set_as_default_title">Varsayılan döviz olarak ayarla</string>
-  <string name="wallet_transactions_fragment_tab_received">Alınan</string>
-  <string name="wallet_transactions_fragment_tab_all">İkisi</string>
-  <string name="wallet_transactions_fragment_tab_sent">Yollanan</string>
-  <string name="wallet_transactions_fragment_empty_text_received">Şimdiye kadar hiçbir Dash alınmadı</string>
-  <string name="wallet_transactions_fragment_empty_text_sent">Şimdiye kadar hiçbir Dash gönderilmedi</string>
-  <string name="wallet_transactions_fragment_empty_text_howto">Nasıl Dash elde edilir?\n\nGeleneksel para ile satın alabilir,\nhizmet veya mal satabilir ya da\nçalışarak kazanabilirsiniz.</string>
+  <string name="wallet_transactions_options_filter_received">Alınan</string>
+  <string name="wallet_transactions_options_filter_all">İkisi</string>
+  <string name="wallet_transactions_options_filter_sent">Yollanan</string>
+  <string name="wallet_transactions_fragment_empty_text_received">Şimdiye kadar hiçbir Bitcoin alınmadı</string>
+  <string name="wallet_transactions_fragment_empty_text_sent">Şimdiye kadar hiçbir Bitcoin gönderilmedi</string>
+  <string name="wallet_transactions_fragment_empty_text_howto">Nasıl Bitcoin elde edilir?\n\nGeleneksel para ile satın alabilir,\nhizmet veya mal satabilir ya da\nçalışarak kazanabilirsiniz.</string>
   <string name="wallet_transactions_row_warning_backup">Tebrikler, ilk ödemenizi almış bulunuyorsunuz! Kayba karşı korunmak için &lt;u&gt;cüzdanınızı yedeklediniz mi&lt;/u&gt;?</string>
   <string name="wallet_transactions_fragment_coinbase">oluşturulan</string>
   <string name="wallet_transactions_fragment_internal">Dahili</string>
@@ -87,7 +87,6 @@
   <string name="send_coins_error_msg">Dash gönderimi sırasında problem oluştu!</string>
   <string name="send_coins_options_priority">Çabuk teyit, daha yüksek ücret</string>
   <string name="send_coins_options_empty">Boş cüzdan</string>
-  <string name="send_coins_address_context_clear_title">Yeni adres gir</string>
   <string name="sweep_wallet_activity_title">Kağıt cüzdanı tara</string>
   <string name="sweep_wallet_fragment_intro">Bir kupon ya da kağıt cüzdan taramak üzeresiniz. Bunu yapmanız bu kağıttaki tüm bitcoinleri cihazınızdaki cüzdana taşıyacaktır. Muamele teyit edildiğinde kağıdın hiçbir değeri kalmayacaktır ve güvenlik nedenleriyle tekrar kullanılmamalıdır.</string>
   <string name="sweep_wallet_fragment_hint">Kağıt cüzdanlar en sık soğuk depolama için kullanılır. Bazı bankamatikler doğrudan mobil cihazınıza bitcoin yollamaktan ziyade bunu kağıt çıktısına yazarlar. Bazı kişiler de bazen ön yüklü kağıt cüzdanları para değeri aktarmak için kullanırlar (tavsiye edilmez).</string>
@@ -179,6 +178,8 @@
   <string name="export_keys_dialog_mail_intent_chooser">Cüzdanı şunu kullanarak arşivle…</string>
   <string name="export_keys_dialog_mail_intent_failed">Cüzdanın arşivlenmesi başarısız oldu.</string>
   <string name="import_export_keys_dialog_password">parola</string>
+  <string name="backup_wallet_dialog_password_again">tekrar</string>
+  <string name="backup_wallet_dialog_password_mismatch">uyumsuzluk!</string>
   <string name="import_export_keys_dialog_show">Parolayı göster</string>
   <string name="import_export_keys_dialog_failure_title">Hata</string>
   <string name="import_keys_intent_filter_action">Cüzdanı geri getir</string>
@@ -224,6 +225,11 @@
   <string name="preferences_initiate_reset_summary">Blok zincirini, muameleleri ve cüzdan bakiyesini sıfırla. Tekrar eşleşme süre alacaktır.</string>
   <string name="preferences_initiate_reset_dialog_message">Blok zincirini sıfırlayıp analizinin tekrarının yapılmasını istiyor musunuz?\n\nBu, geçici olarak cüzdan bakiyenizi saklayıp muameleleri kaldıracaktır. Blok zincirinin eşleşmesi ilerledikçe bu iki unsur normale dönecektir.</string>
   <string name="preferences_initiate_reset_dialog_positive">Sıfırla</string>
+  <string name="preferences_extended_public_key_title">xpub\'ı göster</string>
+  <string name="preferences_extended_public_key_summary">Cüzdanınızın genişletilmiş kamu anahtarını başka uygulama ve servislere aktarılabilmesi için göster. Dikkatli olun: bunu yapmanız parasal gizliliğinizi o uygulamaya ifşa edecektir.</string>
+  <string name="bitmap_fragment_share">Paylaş…</string>
+  <string name="extended_public_key_fragment_title">Genişletilmiş Kamu Anahtarı</string>
+  <string name="extended_public_key_fragment_share">xpub\'ı paylaş…</string>
   <string name="report_issue_dialog_title_issue">Sorun rapor et</string>
   <string name="report_issue_dialog_title_crash">Önceki çökme tespit edildi</string>
   <string name="report_issue_dialog_message_issue">Lütfen probleminizi tekrarlanmasına imkân verecek kadar detaylı olarak açıklayınız. Eğer sorun cüzdanınıza özgü ise dökümü eklemeyi değerlendiriniz.</string>

@@ -21,7 +21,6 @@ import static com.google.common.base.Preconditions.checkState;
 
 import java.util.Collection;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.bitcoinj.core.Address;
@@ -57,6 +56,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
 import android.preference.PreferenceManager;
+import android.support.v7.widget.RecyclerView;
 import android.text.SpannableStringBuilder;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -66,7 +66,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ListView;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
@@ -77,7 +77,7 @@ import de.schildbach.wallet.ui.DialogBuilder;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
 import de.schildbach.wallet.ui.ScanActivity;
-import de.schildbach.wallet.ui.TransactionsListAdapter;
+import de.schildbach.wallet.ui.TransactionsAdapter;
 import de.schildbach.wallet.util.MonetarySpannable;
 import de.schildbach.wallet.util.WalletUtils;
 import hashengineering.darkcoin.wallet.R;
@@ -106,9 +106,10 @@ public class SweepWalletFragment extends Fragment
 	private EditText passwordView;
 	private View badPasswordView;
 	private TextView balanceView;
-	private TransactionsListAdapter sweepTransactionListAdapter;
 	private View hintView;
-	private ListView sweepTransactionView;
+	private FrameLayout sweepTransactionView;
+	private TransactionsAdapter sweepTransactionAdapter;
+	private RecyclerView.ViewHolder sweepTransactionViewHolder;
 	private Button viewGo;
 	private Button viewCancel;
 
@@ -183,9 +184,11 @@ public class SweepWalletFragment extends Fragment
 
 		hintView = view.findViewById(R.id.sweep_wallet_fragment_hint);
 
-		sweepTransactionView = (ListView) view.findViewById(R.id.sweep_wallet_fragment_sent_transaction);
-		sweepTransactionListAdapter = new TransactionsListAdapter(activity, application.getWallet(), application.maxConnectedPeers(), false);
-		sweepTransactionView.setAdapter(sweepTransactionListAdapter);
+		sweepTransactionView = (FrameLayout) view.findViewById(R.id.sweep_wallet_fragment_sent_transaction);
+		sweepTransactionAdapter = new TransactionsAdapter(activity, application.getWallet(), false, application.maxConnectedPeers(), null);
+		sweepTransactionViewHolder = sweepTransactionAdapter.createTransactionViewHolder(sweepTransactionView);
+		sweepTransactionView.addView(sweepTransactionViewHolder.itemView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+				ViewGroup.LayoutParams.WRAP_CONTENT));
 
 		viewGo = (Button) view.findViewById(R.id.send_coins_go);
 		viewGo.setOnClickListener(new View.OnClickListener()
@@ -273,7 +276,7 @@ public class SweepWalletFragment extends Fragment
 				new StringInputParser(input)
 				{
 					@Override
-					protected void handlePrivateKey(@Nonnull final VersionedChecksummedBytes key)
+					protected void handlePrivateKey(final VersionedChecksummedBytes key)
 					{
 						privateKeyToSweep = key;
 						setState(State.DECODE_KEY);
@@ -359,7 +362,7 @@ public class SweepWalletFragment extends Fragment
 					if (!isResumed())
 						return;
 
-					sweepTransactionListAdapter.notifyDataSetChanged();
+					sweepTransactionAdapter.notifyDataSetChanged();
 
 					final TransactionConfidence confidence = sentTransaction.getConfidence();
 					final TransactionConfidence.ConfidenceType confidenceType = confidence.getConfidenceType();
@@ -420,7 +423,7 @@ public class SweepWalletFragment extends Fragment
 				new DecodePrivateKeyTask(backgroundHandler)
 				{
 					@Override
-					protected void onSuccess(@Nonnull ECKey decryptedKey)
+					protected void onSuccess(ECKey decryptedKey)
 					{
 						log.info("successfully decoded BIP38 private key");
 
@@ -560,13 +563,13 @@ public class SweepWalletFragment extends Fragment
 		if (sentTransaction != null)
 		{
 			sweepTransactionView.setVisibility(View.VISIBLE);
-			sweepTransactionListAdapter.setFormat(btcFormat);
-			sweepTransactionListAdapter.replace(sentTransaction);
+			sweepTransactionAdapter.setFormat(btcFormat);
+			sweepTransactionAdapter.replace(sentTransaction);
+			sweepTransactionAdapter.bindViewHolder(sweepTransactionViewHolder, 0);
 		}
 		else
 		{
 			sweepTransactionView.setVisibility(View.GONE);
-			sweepTransactionListAdapter.clear();
 		}
 
 		if (state == State.DECODE_KEY)

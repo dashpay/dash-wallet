@@ -22,9 +22,9 @@
   <string name="exchange_rates_fragment_source">המחיר נתקבל מ: %s</string>
   <string name="exchange_rates_options_search">חפש שער חליפין</string>
   <string name="exchange_rates_context_set_as_default_title">שמור כמטבע ברירת מחדל</string>
-  <string name="wallet_transactions_fragment_tab_received">נתקבל</string>
-  <string name="wallet_transactions_fragment_tab_all">נשלח/נתקבל</string>
-  <string name="wallet_transactions_fragment_tab_sent">נשלח</string>
+  <string name="wallet_transactions_options_filter_received">נתקבל</string>
+  <string name="wallet_transactions_options_filter_all">נשלח/נתקבל</string>
+  <string name="wallet_transactions_options_filter_sent">נשלח</string>
   <string name="wallet_transactions_fragment_empty_text_received">לא נתקבלו ביטקוינים עד כה.</string>
   <string name="wallet_transactions_fragment_empty_text_sent">לא נשלחו ביטקוינים עד כה.</string>
   <string name="wallet_transactions_fragment_empty_text_howto">איך להשיג ביטקוין ?\n\nהמר תמורת כסף פיאט,\nמכור סחורות או שירותים או\nהשג על ידי עבודה.</string>
@@ -75,7 +75,6 @@
   <string name="send_coins_failed_msg">נכשל!</string>
   <string name="send_coins_error_msg">בעיה בשליחת מטבעות</string>
   <string name="send_coins_options_empty">ארנק ריק</string>
-  <string name="send_coins_address_context_clear_title">הקש כתובת חדשה</string>
   <string name="sweep_wallet_activity_title">גרוף ארנק נייר</string>
   <string name="sweep_wallet_fragment_intro">אתה עומד לגרוף ארנק נייר או קופון. זה יעביר את כל המטבעות מהנייר לארנקך במכשיר זה. כאשר התנועה מאושרת, הנייר יהפוך חסר ערך ואין להשתמש בו שנית מסיבות אבטחה.</string>
   <string name="sweep_wallet_fragment_hint">ארנקי נייר משמשים בעיקר לאחסון קר. כספומטים מסוימים מדפיסים אותם על פיסת נייר בניגוד ללשלוח אותם ישירות למכשירך. אנשים לפעמים משתמשים בארנקי נייר טעונים מראש כדי להעביר ערך (לא מומלץ).</string>

@@ -21,9 +21,9 @@
 	<string name="exchange_rates_fragment_balance">מאזן</string>
 	<string name="exchange_rates_fragment_source">המחיר נתקבל מ: %s</string>
 	<string name="exchange_rates_context_set_as_default_title">שמור כמטבע ברירת מחדל</string>
-	<string name="wallet_transactions_fragment_tab_received">נתקבל</string>
-	<string name="wallet_transactions_fragment_tab_all">נשלח/נתקבל</string>
-	<string name="wallet_transactions_fragment_tab_sent">נשלח</string>
+	<string name="wallet_transactions_options_filter_received">נתקבל</string>
+	<string name="wallet_transactions_options_filter_all">נשלח/נתקבל</string>
+	<string name="wallet_transactions_options_filter_sent">נשלח</string>
 	<string name="wallet_transactions_fragment_empty_text_received">לא נתקבלו ביטקוינים עד כה.</string>
 	<string name="wallet_transactions_fragment_empty_text_sent">לא נשלחו ביטקוינים עד כה.</string>
 	<string name="wallet_transactions_fragment_empty_text_howto">איך להשיג ביטקוין ?\n\nהמר תמורת כסף פיאט,\nמכור סחורות או שירותים או\nהשג על ידי עבודה.</string>
@@ -73,7 +73,6 @@
 	<string name="send_coins_failed_msg">נכשל!</string>
 	<string name="send_coins_error_msg">בעיה בשליחת מטבעות</string>
 	<string name="send_coins_options_empty">ארנק ריק</string>
-	<string name="send_coins_address_context_clear_title">הקש כתובת חדשה</string>
 	<string name="request_coins_activity_title">בקש ביטקוין</string>
 	<string name="request_coins_fragment_amount_label">כמות לבקשה</string>
 	<string name="request_coins_fragment_accept_bluetooth_payment">קבל תשלום באמצעות Bluetooth לעיבוד מאובטח יותר</string>

@@ -6,10 +6,8 @@
 
 	<artifactId>wallet</artifactId>
 	<packaging>apk</packaging>
-
-	<version>1.0.9</version>
+	<version>4.28</version>
 	<name>Dash Wallet</name>
-
 
 	<parent>
 		<groupId>de.schildbach.wallet</groupId>
@@ -54,21 +52,39 @@
 		<dependency>
 			<groupId>com.android.support</groupId>
 			<artifactId>support-v4</artifactId>
-			<version>19.1.0</version>
+			<version>22.0.0</version>
+			<type>aar</type>
 		</dependency>
 
 		<!-- android.support.v13.*, provided by android-support -->
 		<dependency>
 			<groupId>com.android.support</groupId>
 			<artifactId>support-v13</artifactId>
-			<version>19.1.0</version>
+			<version>22.0.0</version>
+			<type>aar</type>
+		</dependency>
+
+		<!-- android.support.v7.recyclerview.*, provided by android-support -->
+		<dependency>
+			<groupId>com.android.support</groupId>
+			<artifactId>recyclerview-v7</artifactId>
+			<version>22.0.0</version>
+			<type>aar</type>
+		</dependency>
+
+		<!-- android.support.v7.widget.*, provided by android-support -->
+		<dependency>
+			<groupId>com.android.support</groupId>
+			<artifactId>cardview-v7</artifactId>
+			<version>22.0.0</version>
+			<type>aar</type>
 		</dependency>
 
 		<!-- com.google.bitcoin.* -->
 		<dependency>
 			<groupId>org.bitcoinj</groupId>
 			<artifactId>darkcoinj-core</artifactId>
-			<version>0.12.2</version>
+			<version>0.12.3</version>
 		</dependency>
 
 		<!-- de.schildbach.wallet.integration.android.* -->
@@ -96,14 +112,14 @@
 		<dependency>
 			<groupId>com.google.zxing</groupId>
 			<artifactId>core</artifactId>
-			<version>3.1.0</version>
+			<version>3.2.0</version>
 		</dependency>
 
 		<!-- org.slf4j.* -->
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
-			<version>1.7.7</version>
+			<version>1.7.12</version>
 		</dependency>
 
 		<!-- ch.qos.logback.classic.* -->
@@ -124,7 +140,7 @@
 		<dependency>
 			<groupId>com.google.code.findbugs</groupId>
 			<artifactId>jsr305</artifactId>
-			<version>2.0.1</version>
+			<version>2.0.3</version>
 		</dependency>
 
 		<!-- org.junit.* -->
@@ -148,17 +164,7 @@
 						<artifactId>android-maven-plugin</artifactId>
 						<configuration>
 							<release>true</release>
-							<proguard>
-								<skip>false</skip>
-							</proguard>
 						</configuration>
-						<dependencies>
-							<dependency>
-								<groupId>net.sf.proguard</groupId>
-								<artifactId>proguard-base</artifactId>
-								<version>5.1</version>
-							</dependency>
-						</dependencies>
 					</plugin>
 				</plugins>
 			</build>
@@ -263,6 +269,9 @@
 					<sdk>
 						<platform>16</platform>
 					</sdk>
+					<proguard>
+						<skip>false</skip>
+					</proguard>
 					<sign>
 						<debug>both</debug>
 					</sign>

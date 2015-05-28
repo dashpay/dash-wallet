@@ -46,6 +46,31 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
+import org.bitcoinj.core.TransactionOutput;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import android.os.Handler;
+import android.os.Looper;
+
+import com.google.common.base.Charsets;
+import com.google.common.io.BaseEncoding;
+
+import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.util.Io;
+import org.bitcoinj.core.CoinDefinition;
+
 /**
  * @author Andreas Schildbach
  */
@@ -54,7 +79,7 @@ public final class RequestWalletBalanceTask
 	private final Handler backgroundHandler;
 	private final Handler callbackHandler;
 	private final ResultCallback resultCallback;
-	@CheckForNull
+	@Nullable
 	private final String userAgent;
 
 	private static final Logger log = LoggerFactory.getLogger(RequestWalletBalanceTask.class);
@@ -68,8 +93,7 @@ public final class RequestWalletBalanceTask
 		void onFail(int messageResId, Object... messageArgs);
 	}
 
-	public RequestWalletBalanceTask(@Nonnull final Handler backgroundHandler, @Nonnull final ResultCallback resultCallback,
-			@Nullable final String userAgent)
+	public RequestWalletBalanceTask(final Handler backgroundHandler, final ResultCallback resultCallback, @Nullable final String userAgent)
 	{
 		this.backgroundHandler = backgroundHandler;
 		this.callbackHandler = new Handler(Looper.myLooper());

@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui;
 
+
 import android.content.Context;
 import android.content.DialogInterface.OnClickListener;
 import com.google.common.hash.Hashing;
@@ -27,6 +28,18 @@ import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet.util.Qr;
 import hashengineering.darkcoin.wallet.R;
+import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.regex.Pattern;
+
+import javax.annotation.Nullable;
+
 import org.bitcoin.protocols.payments.Protos;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BIP38PrivateKey;
@@ -64,7 +77,7 @@ public abstract class InputParser
 	{
 		private final String input;
 
-		public StringInputParser(@Nonnull final String input)
+		public StringInputParser(final String input)
 		{
 			this.input = input;
 		}
@@ -190,7 +203,7 @@ public abstract class InputParser
 			}
 		}
 
-		protected void handlePrivateKey(@Nonnull final VersionedChecksummedBytes key)
+		protected void handlePrivateKey(final VersionedChecksummedBytes key)
 		{
 			final Address address = new Address(Constants.NETWORK_PARAMETERS, ((DumpedPrivateKey) key).getKey().getPubKeyHash());
 
@@ -203,7 +216,7 @@ public abstract class InputParser
 		private final String inputType;
 		private final byte[] input;
 
-		public BinaryInputParser(@Nonnull final String inputType, @Nonnull final byte[] input)
+		public BinaryInputParser(final String inputType, final byte[] input)
 		{
 			this.inputType = inputType;
 			this.input = input;
@@ -253,7 +266,7 @@ public abstract class InputParser
 		}
 
 		@Override
-		protected final void handleDirectTransaction(@Nonnull final Transaction transaction) throws VerificationException
+		protected final void handleDirectTransaction(final Transaction transaction) throws VerificationException
 		{
 			throw new UnsupportedOperationException();
 		}
@@ -264,7 +277,7 @@ public abstract class InputParser
 		private final String inputType;
 		private final InputStream is;
 
-		public StreamInputParser(@Nonnull final String inputType, @Nonnull final InputStream is)
+		public StreamInputParser(final String inputType, final InputStream is)
 		{
 			this.inputType = inputType;
 			this.is = is;
@@ -330,7 +343,7 @@ public abstract class InputParser
 		}
 
 		@Override
-		protected final void handleDirectTransaction(@Nonnull final Transaction transaction) throws VerificationException
+		protected final void handleDirectTransaction(final Transaction transaction) throws VerificationException
 		{
 			throw new UnsupportedOperationException();
 		}
@@ -338,14 +351,14 @@ public abstract class InputParser
 
 	public abstract void parse();
 
-	protected final void parseAndHandlePaymentRequest(@Nonnull final byte[] serializedPaymentRequest) throws PaymentProtocolException
+	protected final void parseAndHandlePaymentRequest(final byte[] serializedPaymentRequest) throws PaymentProtocolException
 	{
 		final PaymentIntent paymentIntent = parsePaymentRequest(serializedPaymentRequest);
 
 		handlePaymentIntent(paymentIntent);
 	}
 
-	public static PaymentIntent parsePaymentRequest(@Nonnull final byte[] serializedPaymentRequest) throws PaymentProtocolException
+	public static PaymentIntent parsePaymentRequest(final byte[] serializedPaymentRequest) throws PaymentProtocolException
 	{
 		try
 		{
@@ -416,13 +429,13 @@ public abstract class InputParser
 		}
 	}
 
-	protected abstract void handlePaymentIntent(@Nonnull PaymentIntent paymentIntent);
+	protected abstract void handlePaymentIntent(PaymentIntent paymentIntent);
 
-	protected abstract void handleDirectTransaction(@Nonnull Transaction transaction) throws VerificationException;
+	protected abstract void handleDirectTransaction(Transaction transaction) throws VerificationException;
 
 	protected abstract void error(int messageResId, Object... messageArgs);
 
-	protected void cannotClassify(@Nonnull final String input)
+	protected void cannotClassify(final String input)
 	{
 		error(R.string.input_parser_cannot_classify, input);
 	}

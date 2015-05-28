@@ -21,12 +21,12 @@
 	<string name="exchange_rates_fragment_balance">zostatok</string>
 	<string name="exchange_rates_fragment_source">Cena získaná z %s</string>
 	<string name="exchange_rates_context_set_as_default_title">Nastaviť ako predvolenú cudziu menu</string>
-	<string name="wallet_transactions_fragment_tab_received">Prijaté</string>
-	<string name="wallet_transactions_fragment_tab_all">Všetky</string>
-	<string name="wallet_transactions_fragment_tab_sent">Odoslané</string>
-	<string name="wallet_transactions_fragment_empty_text_received">Zatiaľ neboli prijaté žiadne Dashy</string>
-	<string name="wallet_transactions_fragment_empty_text_sent">Zatiaľ neboli odoslané žiadne Dashy</string>
-	<string name="wallet_transactions_fragment_empty_text_howto">Ako získať Dashy?\n\nVýmenou za tradičné peniaze,\npredajom tovarov a služieb,\nalebo prácou.</string>
+	<string name="wallet_transactions_options_filter_received">Prijaté</string>
+	<string name="wallet_transactions_options_filter_all">Všetky</string>
+	<string name="wallet_transactions_options_filter_sent">Odoslané</string>
+	<string name="wallet_transactions_fragment_empty_text_received">Zatiaľ neboli prijaté žiadne Bitcoiny</string>
+	<string name="wallet_transactions_fragment_empty_text_sent">Zatiaľ neboli odoslané žiadne Bitcoiny</string>
+	<string name="wallet_transactions_fragment_empty_text_howto">Ako získať Bitcoiny?\n\nVýmenou za tradičné peniaze,\npredajom tovarov a služieb,\nalebo prácou.</string>
 	<string name="wallet_transactions_row_warning_backup">Gratulujeme, obdržali ste svoju prvú platbu! Urobili ste &lt;u&gt;zálohu peňaženky&lt;/u&gt;, aby ste ju ochránili pred stratou?</string>
 	<string name="wallet_transactions_fragment_coinbase">vyťažené</string>
 	<string name="wallet_transactions_fragment_internal">vnútorné</string>
@@ -73,10 +73,7 @@
 	<string name="send_coins_failed_msg">Zlyhalo!</string>
 	<string name="send_coins_error_msg">Problém pri odosielaní!</string>
 	<string name="send_coins_options_empty">Vyprázdniť peňaženku</string>
-	<string name="send_coins_address_context_clear_title">Zadajte novú adresu</string>
-
-	<string name="request_coins_activity_title">Vyžiadať Dashy</string>
-
+	<string name="request_coins_activity_title">Vyžiadať Bitcoiny</string>
 	<string name="request_coins_fragment_amount_label">Vyžadovaná suma (nepovinné)</string>
 	<string name="request_coins_fragment_initiate_request_qr">Dejte odosielateľovi oskenovať tento kód.</string>
 	<string name="request_coins_fragment_initiate_request_nfc">Alebo stlačte, ak vaše zariadenie podporuje NFC.</string>

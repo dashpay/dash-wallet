@@ -1,5 +1,8 @@
 
 Dash Wallet
+v4.27
+* Upgrade to Bitcoin Wallet 4.27
+
 v4.18
 * preparing to release on Google Play
 
@@ -86,6 +89,64 @@ v1.00
 
 Bitcoin Wallet
 -------------------
+=======
+v4.28
+
+* Add Hindi and Croatian translations. Update Greek and Albanian.
+* Design bugfixes.
+
+v4.27
+
+* Tint incoming transactions in green, outgoing in red.
+* Tint action bar labels.
+
+v4.26
+
+* Material design for list of transactions.
+* Update Albanian, Turkish, Finnish, Spanish, Russian, Norwegian Bokmål, Japanese, Italian,
+  French, Danish, Czech and Catalan translations.
+
+v4.25
+
+* Update android-maven-plugin to 4.2.0, so we can use AARs.
+* Bugfixes.
+
+v4.24
+
+* Use action bar submenu for filtering wallet transactions, rather than a ViewPager.
+* Speed up transactions list.
+* Update QR-code scanner to ZXing 3.2.0.
+
+v4.23
+
+* Update Dutch and Albanian translations.
+* Bugfixes.
+
+v4.22
+
+* Show derived addresses in address book under "your addresses".
+* Show "to addresses" of received payments, rather than "from addresses".
+* Speed up blockchain sync.
+* Based on bitcoinj 0.12.3.
+
+v4.21
+
+* Bugfixes.
+
+v4.20
+
+* Improve entry of password in backup wallet dialog.
+* Share current wallet address by tapping on it.
+* Update dialogs to material theme on Lollipop devices.
+* New translations into Albanian and Swahill.
+* Update Spanish, Turkish, Russian, Brazilian Portuguese, Norwegian Bokmål, Japanese, Italian,
+  French, Finnish, Danish, Czech and Catalan translations.
+
+v4.19
+
+* Remove donate action.
+
+>>>>>>> upstream/master
 v4.18
 
 * Show and share extended public key. This can be used to grant read-only access to your wallet.

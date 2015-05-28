@@ -23,9 +23,9 @@
   <string name="exchange_rates_fragment_source">价格来自 %s</string>
   <string name="exchange_rates_options_search">搜索汇率</string>
   <string name="exchange_rates_context_set_as_default_title">设置为默认货币</string>
-  <string name="wallet_transactions_fragment_tab_received">收到的</string>
-  <string name="wallet_transactions_fragment_tab_all">全部</string>
-  <string name="wallet_transactions_fragment_tab_sent">发送的</string>
+  <string name="wallet_transactions_options_filter_received">收到的</string>
+  <string name="wallet_transactions_options_filter_all">全部</string>
+  <string name="wallet_transactions_options_filter_sent">发送的</string>
   <string name="wallet_transactions_fragment_empty_text_received">尚未收到比特币。</string>
   <string name="wallet_transactions_fragment_empty_text_sent">尚未发送比特币。</string>
   <string name="wallet_transactions_fragment_empty_text_howto">如何获得比特币？\n\n用传统货币进行交易，\n出售商品或服务，或者\n通过劳动赚取。</string>
@@ -87,7 +87,6 @@
   <string name="send_coins_error_msg">支付比特币时出现了问题！</string>
   <string name="send_coins_options_priority">快速确认，需要更高的费率</string>
   <string name="send_coins_options_empty">清空钱包</string>
-  <string name="send_coins_address_context_clear_title">输入新的地址</string>
   <string name="sweep_wallet_activity_title">交换纸钱包上的比特币</string>
   <string name="sweep_wallet_fragment_intro">您将要扫描纸质的钱包或者coupon。这会将纸钱上的所有比特币转移到您的当前设备上。当交易被确认后，那张纸将会分文不值，而且将不能作为安全措施重新使用该纸钱包。</string>
   <string name="sweep_wallet_fragment_hint">纸钱包常常用于进行冷存储。一些 ATM 机经常会将比特币打印在纸上，而不是直接发送到您的移动设备上。人们有时候会使用已经预付的 (pre-charged) 纸钱包来互相转移金额（不推荐）。</string>

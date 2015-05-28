@@ -21,12 +21,12 @@
 	<string name="exchange_rates_fragment_balance">saldo</string>
 	<string name="exchange_rates_fragment_source">Cena pobrana z %s</string>
 	<string name="exchange_rates_context_set_as_default_title">Ustaw jako domyślną obcą walutę</string>
-	<string name="wallet_transactions_fragment_tab_received">Otrzymane</string>
-	<string name="wallet_transactions_fragment_tab_all">Wszystkie</string>
-	<string name="wallet_transactions_fragment_tab_sent">Wysłane</string>
-	<string name="wallet_transactions_fragment_empty_text_received">Nie otrzymano jeszcze żadnych Dashów.</string>
-	<string name="wallet_transactions_fragment_empty_text_sent">Nie wysłano jeszcze żadnych Dashów.</string>
-	<string name="wallet_transactions_fragment_empty_text_howto">Jak zdobyć Dashy?\n\nWymień za tradycyjną walutę,\nsprzedawaj dobra bądź usługi lub\nzarabiaj pracując.</string>
+	<string name="wallet_transactions_options_filter_received">Otrzymane</string>
+	<string name="wallet_transactions_options_filter_all">Wszystkie</string>
+	<string name="wallet_transactions_options_filter_sent">Wysłane</string>
+	<string name="wallet_transactions_fragment_empty_text_received">Nie otrzymano jeszcze żadnych Bitcoinów.</string>
+	<string name="wallet_transactions_fragment_empty_text_sent">Nie wysłano jeszcze żadnych Bitcoinów.</string>
+	<string name="wallet_transactions_fragment_empty_text_howto">Jak zdobyć Bitcoiny?\n\nWymień za tradycyjną walutę,\nsprzedawaj dobra bądź usługi lub\nzarabiaj pracując.</string>
 	<string name="wallet_transactions_row_warning_backup">Gratulacje, otrzymałeś swoją pierwszą płatność! Czy już &lt;u&gt;wykonałeś kopię zapasową swojego portfela&lt;/u&gt;, by ochronić się przed jej utratą?</string>
 	<string name="wallet_transactions_fragment_coinbase">wykopany</string>
 	<string name="wallet_transactions_fragment_internal">wewnętrzny</string>
@@ -59,9 +59,7 @@
 	<string name="send_coins_error_msg">Problem z wysłaniem monet!</string>
 
 	<string name="send_coins_options_empty">Opróżnij portfel</string>
-	<string name="send_coins_address_context_clear_title">Podaj nowy adres</string>
-
-	<string name="request_coins_activity_title">Poproś o Dashy</string>
+	<string name="request_coins_activity_title">Poproś o Bitcoiny</string>
 	<string name="request_coins_fragment_amount_label">Żądana kwota (opcjonalnie)</string>
 	<string name="request_coins_fragment_initiate_request_qr">Niech nadawca zeskanuje ten kod QR</string>
 	<string name="request_coins_fragment_initiate_request_nfc">Lub zbliż do siebie urządzenia z aktywnym NFC</string>

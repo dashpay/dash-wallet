@@ -1,5 +1,1 @@
-<<<<<<< HEAD
-Dina Dash, i din ficka!
-=======
-Dina egna bitcoin, i din egen ficka!
->>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e
+Dina egna dash, i din egen ficka!

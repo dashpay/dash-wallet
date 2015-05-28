@@ -13,6 +13,7 @@
 	<string name="blockchain_state_progress_problem_storage">Synchronizing: Storage problem</string>
 	<string name="blockchain_state_progress_problem_network">Synchronizing: Network problem</string>
 	<string name="wallet_address_fragment_clipboard_msg">Dash address copied to clipboard</string>
+	<string name="wallet_address_dialog_fragment_hint">To protect your privacy, your address will change once it receives a payment.</string>
 	<string name="wallet_balance_fragment_too_much">This amount is quite high for carrying in your pocket. Please move some to a safer place.</string>
 	<string name="wallet_balance_fragment_replaying">Balance is unavailable during replay.</string>
 	<string name="exchange_rates_activity_title">Exchange rates</string>
@@ -24,16 +25,16 @@
 	<string name="exchange_rates_fragment_source">Price from %s</string>
 	<string name="exchange_rates_options_search">Search exchange rate</string>
 	<string name="exchange_rates_context_set_as_default_title">Set as default foreign currency</string>
-	<string name="wallet_transactions_fragment_tab_received">Received</string>
-	<string name="wallet_transactions_fragment_tab_all">Both</string>
-	<string name="wallet_transactions_fragment_tab_sent">Sent</string>
-
 	<string name="wallet_transactions_fragment_empty_text_received">No Dash received so far.</string>
 	<string name="wallet_transactions_fragment_empty_text_sent">No Dash sent so far.</string>
 	<string name="wallet_transactions_fragment_empty_text_howto">How to get Dash?\n\nTrade for traditional money,\nsell goods or services or\nearn by working.</string>
 	<string name="wallet_transactions_row_warning_backup">Congratulations, you received your first payment! Have you already &lt;u&gt;backed up your wallet&lt;/u&gt;, to protect against loss?</string>
 	<string name="wallet_transactions_fragment_coinbase">mined</string>
 	<string name="wallet_transactions_fragment_internal">internal</string>
+	<string name="wallet_transactions_options_filter">Filter</string>
+	<string name="wallet_transactions_options_filter_all">All payments</string>
+	<string name="wallet_transactions_options_filter_received">Received payments</string>
+	<string name="wallet_transactions_options_filter_sent">Sent payments</string>
 	<string name="wallet_options_safety_menu">Safety</string>
 	<string name="wallet_options_encrypt_keys_set">Set spending PIN</string>
 	<string name="wallet_options_encrypt_keys_change">Change spending PIN</string>
@@ -65,6 +66,7 @@
 	<string name="send_coins_fragment_receiving_address_label">Pay to</string>
 	<string name="send_coins_fragment_receiving_address_hint">type address or name</string>
 	<string name="send_coins_fragment_receiving_address_error">Invalid Dash address!</string>
+	<string name="send_coins_fragment_receiving_address_own">You\'re about to send to yourself!</string>
 	<string name="send_coins_fragment_receiving_address_complex">complex\naddress</string>
 	<string name="send_coins_fragment_pending">(%s waiting for confirmation)</string>
 	<string name="send_coins_fragment_amount_label">Amount to pay</string>
@@ -93,7 +95,6 @@
 	<string name="send_coins_error_msg">Problem sending coins!</string>
 	<string name="send_coins_options_priority">Quick confirm, higher fee</string>
 	<string name="send_coins_options_empty">Empty wallet</string>
-	<string name="send_coins_address_context_clear_title">Enter new address</string>
 	<string name="sweep_wallet_activity_title">Sweep paper wallet</string>
 	<string name="sweep_wallet_fragment_intro">You are about to sweep a paper wallet or coupon. This will move all coins from that paper to your wallet on this device. When the transaction is confirmed, the paper will be worthless and should not be re-used for safety reasons.</string>
 	<string name="sweep_wallet_fragment_hint">Paper wallets are most commonly used for cold storage. Some ATMs print them on their paper slip rather than sending the coins to your mobile device directly. People sometimes use pre-charged paper wallets to pass value around (not recommended).</string>
@@ -128,6 +129,7 @@
 	<string name="request_coins_options_local_app_title">Request from local app</string>
 	<string name="address_book_activity_title">Address book</string>
 	<string name="address_book_list_receiving_title">Your addresses</string>
+	<string name="address_book_list_receiving_random">Old addresses</string>
 	<string name="address_book_list_sending_title">Sending addresses</string>
 	<string name="address_book_empty_text">No entries in address book</string>
 	<string name="address_book_context_send_title">Send Dash to address</string>
@@ -137,13 +139,17 @@
 	<string name="address_book_options_paste_from_clipboard_title">Paste from clipboard</string>
 	<string name="address_book_options_paste_from_clipboard_empty">Clipboard is empty</string>
 	<string name="address_book_options_paste_from_clipboard_invalid">Data from clipboard is unrecognizable</string>
+	<string name="address_book_options_paste_from_clipboard_own_address">The address on the clipboard is your own.</string>
 	<string name="address_book_options_scan_title">Scan address</string>
 	<string name="address_book_options_scan_invalid">Scanned data is unrecognizable</string>
+	<string name="address_book_options_scan_own_address">The scanned address is your own.</string>
 	<string name="address_book_row_message_compromised_key">This address might be compromised. You should not use it any more for receiving coins.</string>
-	<string name="edit_address_book_entry_dialog_title_add">Add address</string>
-	<string name="edit_address_book_entry_dialog_title_edit">Edit address</string>
+	<string name="edit_address_book_entry_dialog_title_add">Add sending address</string>
+	<string name="edit_address_book_entry_dialog_title_edit">Edit label of sending address</string>
+	<string name="edit_address_book_entry_dialog_title_add_receive">Add label to your address</string>
+	<string name="edit_address_book_entry_dialog_title_edit_receive">Edit label of your address</string>
 	<string name="edit_address_book_entry_dialog_address_label">Address</string>
-	<string name="edit_address_book_entry_dialog_label_label">Name</string>
+	<string name="edit_address_book_entry_dialog_label_label">Label</string>
 	<string name="edit_address_book_entry_dialog_button_edit">Save</string>
 	<string name="transaction_row_fee">Network fee</string>
 	<string name="transaction_row_message_purpose_key_rotation">This transaction strengthens your wallet against theft. &lt;u&gt;More info.&lt;/u&gt;</string>
@@ -161,7 +167,7 @@
 	<string name="peer_list_fragment_empty">No peers connected</string>
 	<string name="peer_list_row_ping_time">⇆ %d&#x2009;ms</string>
 	<string name="import_keys_dialog_title">Restore wallet</string>
-	<string name="import_keys_dialog_message">Pick a wallet backup file from external or app-private storage:</string>
+	<string name="import_keys_dialog_message">Pick a wallet backup file from external storage (%s):</string>
 	<string name="restore_wallet_dialog_replace_warning">You are about to replace your current wallet. Any coins in the current wallet will be lost unless you\'ve got a separate backup of that.</string>
 	<string name="import_keys_dialog_warning">Important: Do not load private keys from dubious sources! Others can gain control over your funds if you do.</string>
 	<string name="import_keys_dialog_file_security_encrypted">password encrypted</string>
@@ -186,6 +192,8 @@
 	<string name="export_keys_dialog_mail_intent_chooser">Archive wallet using…</string>
 	<string name="export_keys_dialog_mail_intent_failed">Archiving wallet failed.</string>
 	<string name="import_export_keys_dialog_password">password</string>
+	<string name="backup_wallet_dialog_password_again">again</string>
+	<string name="backup_wallet_dialog_password_mismatch">mismatch!</string>
 	<string name="import_export_keys_dialog_show">Show password</string>
 	<string name="import_export_keys_dialog_failure_title">Error</string>
 	<string name="import_keys_intent_filter_action">Restore wallet</string>
@@ -235,6 +243,7 @@
 	<string name="preferences_initiate_reset_dialog_positive">Reset</string>
 	<string name="preferences_extended_public_key_title">Show xpub</string>
 	<string name="preferences_extended_public_key_summary">View the extended public key of your wallet, so it can be imported into other apps and services. Be careful: doing so will disclose your monetary privacy to that app.</string>
+	<string name="bitmap_fragment_share">Share…</string>
 	<string name="extended_public_key_fragment_title">Extended Public Key</string>
 	<string name="extended_public_key_fragment_share">Share xpub…</string>
 	<string name="report_issue_dialog_title_issue">Report issue</string>

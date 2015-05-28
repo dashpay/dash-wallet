@@ -33,8 +33,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.bitcoinj.core.AbstractPeerEventListener;
@@ -106,7 +104,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 	private BlockStore blockStore;
 	private File blockChainFile;
 	private BlockChain blockChain;
-	@CheckForNull
+	@Nullable
 	private PeerGroup peerGroup;
 
 	private final Handler handler = new Handler();
@@ -150,7 +148,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
 			final int bestChainHeight = blockChain.getBestChainHeight();
 
-			final Address from = WalletUtils.getFirstFromAddress(tx);
+			final Address address = WalletUtils.getWalletAddressOfReceived(tx, wallet);
 			final Coin amount = tx.getValue(wallet);
 			final ConfidenceType confidenceType = tx.getConfidence().getConfidenceType();
 
@@ -164,7 +162,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 					final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && replaying;
 
 					if (isReceived && !isReplayedTx)
-						notifyCoinsReceived(from, amount);
+						notifyCoinsReceived(address, amount);
 				}
 			});
 		}
@@ -176,15 +174,15 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 		}
 	};
 
-	private void notifyCoinsReceived(@Nullable final Address from, @Nonnull final Coin amount)
+	private void notifyCoinsReceived(@Nullable final Address address, final Coin amount)
 	{
 		if (notificationCount == 1)
 			nm.cancel(NOTIFICATION_ID_COINS_RECEIVED);
 
 		notificationCount++;
 		notificationAccumulatedAmount = notificationAccumulatedAmount.add(amount);
-		if (from != null && !notificationAddresses.contains(from))
-			notificationAddresses.add(from);
+		if (address != null && !notificationAddresses.contains(address))
+			notificationAddresses.add(address);
 
 		final MonetaryFormat btcFormat = config.getFormat();
 
@@ -195,12 +193,12 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 		final String msg = getString(R.string.notification_coins_received_msg, btcFormat.format(notificationAccumulatedAmount)) + msgSuffix;
 
 		final StringBuilder text = new StringBuilder();
-		for (final Address address : notificationAddresses)
+		for (final Address notificationAddress : notificationAddresses)
 		{
 			if (text.length() > 0)
 				text.append(", ");
 
-			final String addressStr = address.toString();
+			final String addressStr = notificationAddress.toString();
 			final String label = AddressBookProvider.resolveLabel(getApplicationContext(), addressStr);
 			text.append(label != null ? label : addressStr);
 		}
@@ -659,10 +657,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 		if (!blockChainFileExists)
 		{
 			log.info("blockchain does not exist, resetting wallet");
-
-			wallet.clearTransactions(0);
-			wallet.setLastBlockSeenHeight(-1); // magic value
-			wallet.setLastBlockSeenHash(null);
+			wallet.reset();
 		}
 
 		try

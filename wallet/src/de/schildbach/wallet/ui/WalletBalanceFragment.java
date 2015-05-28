@@ -17,6 +17,12 @@
 
 package de.schildbach.wallet.ui;
 
+import javax.annotation.Nullable;
+
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Wallet;
+import org.bitcoinj.utils.Fiat;
+
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.LoaderManager;
@@ -30,7 +36,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
 import android.widget.TextView;
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
@@ -60,17 +65,16 @@ public final class WalletBalanceFragment extends Fragment
 	private View viewBalance;
 	private CurrencyTextView viewBalanceBtc;
 	private View viewBalanceTooMuch;
-	private FrameLayout viewBalanceLocalFrame;
 	private CurrencyTextView viewBalanceLocal;
 	private TextView viewProgress;
 
 	private boolean showLocalBalance;
 
-	@CheckForNull
+	@Nullable
 	private Coin balance = null;
-	@CheckForNull
+	@Nullable
 	private ExchangeRate exchangeRate = null;
-	@CheckForNull
+	@Nullable
 	private BlockchainState blockchainState = null;
 
 	private static final int ID_BALANCE_LOADER = 0;
@@ -78,6 +82,7 @@ public final class WalletBalanceFragment extends Fragment
 	private static final int ID_BLOCKCHAIN_STATE_LOADER = 2;
 
 	private static final long BLOCKCHAIN_UPTODATE_THRESHOLD_MS = DateUtils.HOUR_IN_MILLIS;
+	private static final Coin TOO_MUCH_BALANCE_THRESHOLD = Coin.COIN.multiply(2);
 
 	@Override
 	public void onAttach(final Activity activity)
@@ -127,10 +132,6 @@ public final class WalletBalanceFragment extends Fragment
 		viewBalanceBtc.setPrefixScaleX(0.9f);
 
 		viewBalanceTooMuch = view.findViewById(R.id.wallet_balance_too_much);
-
-		viewBalanceLocalFrame = (FrameLayout) view.findViewById(R.id.wallet_balance_local_frame);
-		if (showExchangeRatesOption)
-			viewBalanceLocalFrame.setForeground(getResources().getDrawable(R.drawable.dropdown_ic_arrow_small));
 
 		viewBalanceLocal = (CurrencyTextView) view.findViewById(R.id.wallet_balance_local);
 		viewBalanceLocal.setInsignificantRelativeSize(1);
@@ -210,7 +211,7 @@ public final class WalletBalanceFragment extends Fragment
 			viewBalance.setVisibility(View.VISIBLE);
 
 			if (!showLocalBalance)
-				viewBalanceLocalFrame.setVisibility(View.GONE);
+				viewBalanceLocal.setVisibility(View.GONE);
 
 			if (balance != null)
 			{
@@ -218,7 +219,7 @@ public final class WalletBalanceFragment extends Fragment
 				viewBalanceBtc.setFormat(config.getFormat());
 				viewBalanceBtc.setAmount(balance);
 
-				final boolean tooMuch = balance.isGreaterThan(Coin.COIN.multiply(100));
+				final boolean tooMuch = balance.isGreaterThan(TOO_MUCH_BALANCE_THRESHOLD);
 
 				viewBalanceTooMuch.setVisibility(tooMuch ? View.VISIBLE : View.GONE);
 
@@ -227,14 +228,14 @@ public final class WalletBalanceFragment extends Fragment
 					if (exchangeRate != null)
 					{
 						final Fiat localValue = exchangeRate.rate.coinToFiat(balance);
-						viewBalanceLocalFrame.setVisibility(View.VISIBLE);
+						viewBalanceLocal.setVisibility(View.VISIBLE);
 						viewBalanceLocal.setFormat(Constants.LOCAL_FORMAT.code(0, Constants.PREFIX_ALMOST_EQUAL_TO + exchangeRate.getCurrencyCode()));
 						viewBalanceLocal.setAmount(localValue);
 						viewBalanceLocal.setTextColor(getResources().getColor(R.color.fg_less_significant));
 					}
 					else
 					{
-						viewBalanceLocalFrame.setVisibility(View.INVISIBLE);
+						viewBalanceLocal.setVisibility(View.INVISIBLE);
 					}
 				}
 			}

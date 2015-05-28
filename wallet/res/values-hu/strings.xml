@@ -21,12 +21,12 @@
 	<string name="exchange_rates_fragment_balance">egyenleg</string>
 	<string name="exchange_rates_fragment_source">Ár letöltve innen: %s</string>
 	<string name="exchange_rates_context_set_as_default_title">Alapértelmezett külföldi pénznem beállítása</string>
-	<string name="wallet_transactions_fragment_tab_received">Fogadott</string>
-	<string name="wallet_transactions_fragment_tab_all">Mindkettő</string>
-	<string name="wallet_transactions_fragment_tab_sent">Küldött</string>
-	<string name="wallet_transactions_fragment_empty_text_received">Nem érkezett Dash eddig.</string>
-	<string name="wallet_transactions_fragment_empty_text_sent">Dash küldés nem történt eddig.</string>
-	<string name="wallet_transactions_fragment_empty_text_howto">Hogy szerezz Dash-t?\n\nVásárolj hagyományos pénzért,\nárusíts termékeket, kínálj szolgáltatásokat vagy\nkeress munkával.</string>
+	<string name="wallet_transactions_options_filter_received">Fogadott</string>
+	<string name="wallet_transactions_options_filter_all">Mindkettő</string>
+	<string name="wallet_transactions_options_filter_sent">Küldött</string>
+	<string name="wallet_transactions_fragment_empty_text_received">Nem érkezett Bitcoin eddig.</string>
+	<string name="wallet_transactions_fragment_empty_text_sent">Bitcoin küldés nem történt eddig.</string>
+	<string name="wallet_transactions_fragment_empty_text_howto">Hogy szerezz Bitcoin-t?\n\nVásárolj hagyományos pénzért,\nárusíts termékeket, kínálj szolgáltatásokat vagy\nkeress munkával.</string>
 	<string name="wallet_transactions_row_warning_backup">Gratulálunk, megérkezett az első kifizetésed! Ugye rendszeresen &lt;u&gt;elmented a tárcád&lt;/u&gt;, tartalmát, hogy biztonságban legyen?</string>
 	<string name="wallet_transactions_fragment_coinbase">bányászott</string>
 	<string name="wallet_transactions_fragment_internal">belső</string>
@@ -58,9 +58,7 @@
 	<string name="send_coins_failed_msg">Sikertelen!</string>
 	<string name="send_coins_error_msg">Probléma merült fel a küldés során!</string>
 	<string name="send_coins_options_empty">Üres tárca</string>
-	<string name="send_coins_address_context_clear_title">Adj meg egy új címet</string>
-
-	<string name="request_coins_activity_title">Dash kérés</string>
+	<string name="request_coins_activity_title">Bitcoin kérés</string>
 	<string name="request_coins_fragment_amount_label">Igényelt összeg (opcionális)</string>
 	<string name="request_coins_fragment_initiate_request_qr">A kód a küldő által beolvasva.</string>
 	<string name="request_coins_fragment_initiate_request_nfc">Vagy válaszd ki az NFC-képes eszközt.</string>

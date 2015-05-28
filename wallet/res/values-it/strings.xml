@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-  <string name="toast_wallet_reset">Il portafoglio è stato reinizializzato,\noccorrerà del tempo per ripristinarlo</string>
+  <string name="toast_wallet_reset">Il portafoglio è stato reinizializzato!\nOccorrerà del tempo per ripristinarlo.</string>
   <string name="wallet_disclaimer_fragment_remind_safety">Usalo a tuo rischio. Leggi le &lt;u&gt;avvertenze per la sicurezza&lt;/u&gt;.</string>
   <string name="wallet_disclaimer_fragment_remind_backup">Hai bisogno di &lt;u&gt;eseguire un backup del tuo portafoglio&lt;/u&gt;!</string>
   <string name="blockchain_state_progress_hours">%1$s, %2$d ore indietro</string>
@@ -11,8 +11,9 @@
   <string name="blockchain_state_progress_stalled">Sincronizzazione bloccata</string>
   <string name="blockchain_state_progress_problem_storage">Sincronizzazione: problema di Memorizzazione</string>
   <string name="blockchain_state_progress_problem_network">Sincronizzazione: problema di Rete</string>
-  <string name="wallet_address_fragment_clipboard_msg">Indirizzo Dash copiato negli appunti</string>
-  <string name="wallet_balance_fragment_too_much">Questo importo è abbastanza grande per essere portato nella tua tasca, considera l\'idea di spostarlo in un posto più sicuro.</string>
+  <string name="wallet_address_fragment_clipboard_msg">Indirizzo Bitcoin copiato negli appunti</string>
+  <string name="wallet_address_dialog_fragment_hint">Per proteggere la tua privacy, il tuo indirizzo cambierà alla ricezione di un pagamento.</string>
+  <string name="wallet_balance_fragment_too_much">Questo importo è alto per essere portato con se. Si prega di spostarne alcuni in un luogo più sicuro.</string>
   <string name="wallet_balance_fragment_replaying">Il conto non è disponibile durante la ripetizione.</string>
   <string name="exchange_rates_activity_title">Tasso di cambio</string>
   <string name="exchange_rates_fragment_empty_text">Impossibile caricare tassi di cambio.</string>
@@ -23,12 +24,12 @@
   <string name="exchange_rates_fragment_source">Prezzo da %s</string>
   <string name="exchange_rates_options_search">Ricerca tasso di cambio</string>
   <string name="exchange_rates_context_set_as_default_title">Imposta come valuta straniera predefinita</string>
-  <string name="wallet_transactions_fragment_tab_received">Ricevuto</string>
-  <string name="wallet_transactions_fragment_tab_all">Entrambi</string>
-  <string name="wallet_transactions_fragment_tab_sent">Inviato</string>
-  <string name="wallet_transactions_fragment_empty_text_received">Nessun Dash ancora ricevuto</string>
-  <string name="wallet_transactions_fragment_empty_text_sent">Nessun Dash ancora inviato</string>
-  <string name="wallet_transactions_fragment_empty_text_howto">Come ottenere Dash?\n\nBarattali per soldi reali,\nvendi beni o servizi oppure\nricavali lavorando.</string>
+  <string name="wallet_transactions_options_filter_received">Ricevuto</string>
+  <string name="wallet_transactions_options_filter_all">Entrambi</string>
+  <string name="wallet_transactions_options_filter_sent">Inviato</string>
+  <string name="wallet_transactions_fragment_empty_text_received">Nessun Bitcoin ancora ricevuto</string>
+  <string name="wallet_transactions_fragment_empty_text_sent">Nessun Bitcoin ancora inviato</string>
+  <string name="wallet_transactions_fragment_empty_text_howto">Come ottenere Bitcoins?\n\nBarattali per soldi reali,\nvendi beni o servizi oppure\nricavali lavorando.</string>
   <string name="wallet_transactions_row_warning_backup">Congratulazioni, hai ricevuto i tuoi primi pagamenti! Hai già &lt;u&gt;eseguito un backup del tuo portafoglio &lt;/u&gt;, per proteggerlo dai danni?</string>
   <string name="wallet_transactions_fragment_coinbase">minato</string>
   <string name="wallet_transactions_fragment_internal">Interna</string>
@@ -87,7 +88,6 @@
   <string name="send_coins_error_msg">Problemi durante l\'invio dei Dash!</string>
   <string name="send_coins_options_priority">Conferma veloce, tasse alte</string>
   <string name="send_coins_options_empty">Portafoglio vuoto</string>
-  <string name="send_coins_address_context_clear_title">Inserisci nuovo indirizzo</string>
   <string name="sweep_wallet_activity_title">Spazzola portafoglio cartaceo</string>
   <string name="sweep_wallet_fragment_intro">Stai per spazzolare un portamonete carteceo o coupon. Questo sposterà tutte le monete dal foglio al tuo portamonete su questo dispositivo. Quando la transazione è confermata, il foglio non avrà più alcun valore e non dovrebbe essere ri-utilizzato per ragioni di sicurezza.</string>
   <string name="sweep_wallet_fragment_hint">I portafogli cartacei sono per lo più comunemente utilizzzati come cold storage. Alcuni ATM li stampano sui loro scontrini invece che inviare le monete al vostro dispositivo mobile. La gente a volte usano portafogli cartacei pre-caricati per spostare valore in giro (non raccomandato)</string>
@@ -122,6 +122,7 @@
   <string name="request_coins_options_local_app_title">Richiesta dall\'app locale</string>
   <string name="address_book_activity_title">Rubrica</string>
   <string name="address_book_list_receiving_title">I tuoi indirizzi</string>
+  <string name="address_book_list_receiving_random">Vecchi indirizzi</string>
   <string name="address_book_list_sending_title">Invio di indirizzi</string>
   <string name="address_book_empty_text">Nessun indirizzo in rubrica</string>
   <string name="address_book_context_send_title">Invia Dash all\'indirizzo</string>
@@ -179,6 +180,8 @@
   <string name="export_keys_dialog_mail_intent_chooser">Archiviare portafoglio usando…</string>
   <string name="export_keys_dialog_mail_intent_failed">Archiviazione portafoglio non riuscita.</string>
   <string name="import_export_keys_dialog_password">password</string>
+  <string name="backup_wallet_dialog_password_again">ancora</string>
+  <string name="backup_wallet_dialog_password_mismatch">sbagliata!</string>
   <string name="import_export_keys_dialog_show">Mostra password</string>
   <string name="import_export_keys_dialog_failure_title">Errore</string>
   <string name="import_keys_intent_filter_action">Ripristina portafoglio</string>
@@ -224,6 +227,11 @@
   <string name="preferences_initiate_reset_summary">Riavvia blockchain, transazioni e il conto del portafoglio. Per la ripetizione ci vorrà un po\'.</string>
   <string name="preferences_initiate_reset_dialog_message">Vorresti riavviare e ripetere il blockchain?\n\nQuesto nasconderà temporaneamente il tuo bilancio dal portafoglio, e rimuoverà le transazioni. Entrambi saranno recuperati con la sincronizzazione del blockchain.</string>
   <string name="preferences_initiate_reset_dialog_positive">Reset</string>
+  <string name="preferences_extended_public_key_title">Mostra xpub</string>
+  <string name="preferences_extended_public_key_summary">Mostra la chiave pubblica estesa del tuo portafoglio, in modo tale che possa essere importata su altre applicazioni e servizi. Fai attenzione: facendo ciò ti priverai della tua privacy monetaria nei confronti dell\'applicazione.</string>
+  <string name="bitmap_fragment_share">Condividi…</string>
+  <string name="extended_public_key_fragment_title">Chiave pubblica estesa</string>
+  <string name="extended_public_key_fragment_share">Condividi xpub…</string>
   <string name="report_issue_dialog_title_issue">Segnala un problema</string>
   <string name="report_issue_dialog_title_crash">Crash precedente rilevato</string>
   <string name="report_issue_dialog_message_issue">Descrivi il problema abbastanza precisamente da riprodurre. Se è specifico per il portafoglio, considera di allegare il dump.</string>

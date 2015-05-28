@@ -18,6 +18,8 @@ Ha hozzájárulnál a Dash Wallet projekthez:
 https://github.com/HashEngineering/darkcoin-wallet
 
 
+Bővebben a Bitcoin-ról:
+https://bitcoin.org
 
 
 Licensz: GPLv3

@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-  <string name="toast_wallet_reset">Zresetováno,\nobnova chvilku potrvá</string>
+  <string name="toast_wallet_reset">Vaše peněženka byla zresetována!\nObnova chvíli potrvá.</string>
   <string name="wallet_disclaimer_fragment_remind_safety">Použití na vlastní riziko. Čtěte &lt;u&gt;bezpečnostní instrukce&lt;/u&gt;.</string>
   <string name="wallet_disclaimer_fragment_remind_backup">Musíte si &lt;u&gt;zazálohovat vaši peněženku&lt;/u&gt;!</string>
   <string name="blockchain_state_progress_hours">%1$s, %2$d hodin pozadu</string>
@@ -12,7 +12,8 @@
   <string name="blockchain_state_progress_problem_storage">Synchronizace: Problém úložiště</string>
   <string name="blockchain_state_progress_problem_network">Synchronizace: Problém se sítí</string>
   <string name="wallet_address_fragment_clipboard_msg">Adresa zkopírována do schránky</string>
-  <string name="wallet_balance_fragment_too_much">Tato částka je poměrně vysoká na nošení v kapse, převeďte ji prosím na bezpečnější místo.</string>
+  <string name="wallet_address_dialog_fragment_hint">Z důvodu ochrany vašeho soukromí dojde ke změně vaší adresy pokaždé po přijetí platby.</string>
+  <string name="wallet_balance_fragment_too_much">Tato částka je poměrně vysoká na nosení v kapse. Převeďte ji prosím na bezpečnější místo.</string>
   <string name="wallet_balance_fragment_replaying">Bilance je nedostupná během synchronizace.</string>
   <string name="exchange_rates_activity_title">Směnné kurzy</string>
   <string name="exchange_rates_fragment_empty_text">Nepodařilo se nahrát směnné kurzy.</string>
@@ -23,9 +24,9 @@
   <string name="exchange_rates_fragment_source">Cena z %s</string>
   <string name="exchange_rates_options_search">Vyhledat směnný kurz</string>
   <string name="exchange_rates_context_set_as_default_title">Nastavit jako výchozí cizí měnu</string>
-  <string name="wallet_transactions_fragment_tab_received">Obdrženo</string>
-  <string name="wallet_transactions_fragment_tab_all">Oboje</string>
-  <string name="wallet_transactions_fragment_tab_sent">Zasláno</string>
+  <string name="wallet_transactions_options_filter_received">Obdrženo</string>
+  <string name="wallet_transactions_options_filter_all">Oboje</string>
+  <string name="wallet_transactions_options_filter_sent">Zasláno</string>
   <string name="wallet_transactions_fragment_empty_text_received">Zatím žádné bitcoiny neobdrženy</string>
   <string name="wallet_transactions_fragment_empty_text_sent">Zatím žádné bitcoiny neodeslány</string>
   <string name="wallet_transactions_fragment_empty_text_howto">Jak získat Dashy?\n\nSměnou za klasické peníze,\nprodejem zboží nebo služeb\nnebo vyděláním prací.</string>
@@ -87,7 +88,6 @@
   <string name="send_coins_error_msg">Problém při zasílání!</string>
   <string name="send_coins_options_priority">Rychlé potvrzení, vyšší poplatky</string>
   <string name="send_coins_options_empty">Prázdná peněženka</string>
-  <string name="send_coins_address_context_clear_title">Zadat novou adresu</string>
   <string name="sweep_wallet_activity_title">Načíst papírovou peněženku</string>
   <string name="sweep_wallet_fragment_intro">Chystáte se načíst papírovou peněženku nebo kupón. Tato akce přemístí veškeré mince z papíru do vaší peněženky na tomto zařízení. Poté co bude transakce potvrzena už papír nepotřebujete a neměl by být z bezpečnostních důvodů dále používán.</string>
   <string name="sweep_wallet_fragment_hint">Papírové peněženky se nejčastěji používají jako cold storage. Některé bitcoinmaty je tisknou na lístcích, než aby je poslali přímo do vašeho zařízení. Lidé také někdy používají přednabité papírové peněženky pro směnu bitcoinů (což ale není doporučeno)</string>
@@ -122,6 +122,7 @@
   <string name="request_coins_options_local_app_title">Požadavek z lokální aplikace</string>
   <string name="address_book_activity_title">Adresář</string>
   <string name="address_book_list_receiving_title">Vaše adresy</string>
+  <string name="address_book_list_receiving_random">Staré adresy</string>
   <string name="address_book_list_sending_title">Odchozí adresy</string>
   <string name="address_book_empty_text">Žádný záznam v adresáři</string>
   <string name="address_book_context_send_title">Poslat Dashy na adresu</string>
@@ -179,6 +180,8 @@
   <string name="export_keys_dialog_mail_intent_chooser">Archivovat peněženku pomocí…</string>
   <string name="export_keys_dialog_mail_intent_failed">Archivace peněženky selhala.</string>
   <string name="import_export_keys_dialog_password">heslo</string>
+  <string name="backup_wallet_dialog_password_again">znovu</string>
+  <string name="backup_wallet_dialog_password_mismatch">nesouhlasí!</string>
   <string name="import_export_keys_dialog_show">Ukázat heslo</string>
   <string name="import_export_keys_dialog_failure_title">Chyba</string>
   <string name="import_keys_intent_filter_action">Obnovit peněženku</string>
@@ -224,6 +227,11 @@
   <string name="preferences_initiate_reset_summary">Vyresetovat blockchain, transakce a bilanci peněženky. Znovunačtení bude nějakou dobu trvat.</string>
   <string name="preferences_initiate_reset_dialog_message">Přejete si vyresetovat a znovu načíst blockchain?\n\nTato akce dočasně schová bilanci vaší peněženky a odstraní transakce. Obojí se postupně obnoví s průběhem synchronizace.</string>
   <string name="preferences_initiate_reset_dialog_positive">Obnovit</string>
+  <string name="preferences_extended_public_key_title">Zobrazit xpub</string>
+  <string name="preferences_extended_public_key_summary">Zobrazit rozšířený veřejný klíč Vaší peněženky za účelem importování do jiných aplikací a služeb. Buďte opatrní: tímro sdílíte Vaše peněžní soukromí s danou aplikaci.</string>
+  <string name="bitmap_fragment_share">Sdílet…</string>
+  <string name="extended_public_key_fragment_title">Rozšířený veřejný klíč</string>
+  <string name="extended_public_key_fragment_share">Sdílet xpub…</string>
   <string name="report_issue_dialog_title_issue">Nahlásit problém</string>
   <string name="report_issue_dialog_title_crash">Detekován předchozí pád aplikace</string>
   <string name="report_issue_dialog_message_issue">Popište prosím problém tak přesně aby se dal zopakovat. Pokud je specifický pro vaši peněženku, zvažte připojení dumpu.</string>

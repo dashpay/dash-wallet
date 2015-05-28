@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-  <string name="toast_wallet_reset">Le portefeuille a été réinitialisé\net prendra du temps pour récupérer</string>
+  <string name="toast_wallet_reset">Votre portefeuille a été réinitialisé\net prendra du temps pour récupérer.</string>
   <string name="wallet_disclaimer_fragment_remind_safety">Utilisez à vos propres risques. Lire les &lt;u&gt;notes de sécurité&lt;/u&gt;.</string>
   <string name="wallet_disclaimer_fragment_remind_backup">Vous devez &lt;u&gt;sauvegarder votre portefeuille&lt;/u&gt; !</string>
   <string name="blockchain_state_progress_hours">%1$s, %2$d heures en retard</string>
@@ -11,8 +11,9 @@
   <string name="blockchain_state_progress_stalled">Synchronisation interrompue</string>
   <string name="blockchain_state_progress_problem_storage">Synchronisation : problème de stockage</string>
   <string name="blockchain_state_progress_problem_network">Synchronisation : problème de réseau</string>
-  <string name="wallet_address_fragment_clipboard_msg">Adresse Dash copiée dans le presse-papiers</string>
-  <string name="wallet_balance_fragment_too_much">Ce montant est plutôt élevé pour garder dans votre poche. Veuillez en déplacer une partie vers un endroit plus sûr.</string>
+  <string name="wallet_address_fragment_clipboard_msg">Adresse Bitcoin copiée dans le presse-papiers</string>
+  <string name="wallet_address_dialog_fragment_hint">Par souci de confidentialité, votre adresse changera après avoir reçu un paiement.</string>
+  <string name="wallet_balance_fragment_too_much">Ce montant est plutôt élevé pour être gardé dans votre poche, veuillez en déplacer un peu dans un endroit plus sûr.</string>
   <string name="wallet_balance_fragment_replaying">Le solde est indisponible durant la reprise.</string>
   <string name="exchange_rates_activity_title">Taux de change</string>
   <string name="exchange_rates_fragment_empty_text">Impossible de charger les taux de change</string>
@@ -23,9 +24,9 @@
   <string name="exchange_rates_fragment_source">Prix de %s</string>
   <string name="exchange_rates_options_search">Chercher le taux de change</string>
   <string name="exchange_rates_context_set_as_default_title">Définir comme devise étrangère par défaut</string>
-  <string name="wallet_transactions_fragment_tab_received">Reçus</string>
-  <string name="wallet_transactions_fragment_tab_all">Envoyés/reçus</string>
-  <string name="wallet_transactions_fragment_tab_sent">Envoyés</string>
+  <string name="wallet_transactions_options_filter_received">Reçus</string>
+  <string name="wallet_transactions_options_filter_all">Envoyés/reçus</string>
+  <string name="wallet_transactions_options_filter_sent">Envoyés</string>
   <string name="wallet_transactions_fragment_empty_text_received">Aucun bitcoin reçu jusqu\'à présent</string>
   <string name="wallet_transactions_fragment_empty_text_sent">Aucun bitcoin envoyé jusqu\'à présent</string>
   <string name="wallet_transactions_fragment_empty_text_howto">Comment obtenir des bitcoins ?\n\nÉchangez-en contre de l\'argent traditionnel,\nvendez des biens ou des services ou\ngagnez-en en travaillant.</string>
@@ -43,7 +44,7 @@
   <string name="wallet_low_storage_dialog_button_apps">Gérer les applis</string>
   <string name="wallet_timeskew_dialog_title">Vérifiez les réglages de votre horloge !</string>
   <string name="wallet_timeskew_dialog_msg">L\'horloge de votre appareil est déréglée de %d minutes. Vous ne pouvez probablement pas envoyer ou recevoir de bitcoins à cause de ce problème.\n\nVous devriez vérifier et corriger votre horloge et vos paramètres de fuseau horaire.</string>
-  <string name="wallet_version_dialog_title">Une nouvelle version est disponible !</string>
+  <string name="wallet_version_dialog_title">Une nouvelle version est proposée !</string>
   <string name="wallet_version_dialog_msg">Cette version corrige des bogues importants. Pour plus de détails, voir le journal des changements sur Google Play Store.</string>
   <string name="wallet_version_dialog_msg_deprecated">Si vous ne voyez pas de mise à jour, ceci signifie probablement que votre version d\'Android n\'est plus prise en charge.</string>
   <string name="wallet_version_dialog_button_market">Google Play</string>
@@ -87,11 +88,10 @@
   <string name="send_coins_error_msg">Problème durant l\'envoi des pièces !</string>
   <string name="send_coins_options_priority">Confirmation rapide, frais plus élevés</string>
   <string name="send_coins_options_empty">Vider le portefeuille</string>
-  <string name="send_coins_address_context_clear_title">Saisir une nouvelle adresse</string>
   <string name="sweep_wallet_activity_title">Balayer un portefeuille papier</string>
   <string name="sweep_wallet_fragment_intro">Vous allez balayer un portefeuille papier ou un coupon. Ceci déplacera toutes les pièces de ce papier vers votre portefeuille sur cet appareil. Quand la transaction sera confirmée, le papier sera sans valeur et ne devrait pas être réutilisé pour des raisons de sécurité.</string>
   <string name="sweep_wallet_fragment_hint">Les portefeuilles papier sont habituellement utilisés pour le stockage à froid. Certains GAB les imprimes sur le reçu papier plutôt que d\'envoyer les pièces directement vers votre appareil mobile. Certaines personnes utilisent des portefeuilles papier préchargés pour passer des valeurs (non recommandé).</string>
-  <string name="sweep_wallet_fragment_wallet_unknown">Commencez par balayer la clef privé d\'un portefeuille papier. Utilisez le bouton d\'action de l\'appareil photo.</string>
+  <string name="sweep_wallet_fragment_wallet_unknown">Commencez par numériser la clef privée d\'un portefeuille papier. Utilisez le bouton d\'action de l\'appareil photo.</string>
   <string name="sweep_wallet_fragment_encrypted">La clef privée est protégée par un mot de passe.</string>
   <string name="sweep_wallet_fragment_password">mot de passe</string>
   <string name="sweep_wallet_fragment_bad_password">mot de passe erroné !</string>
@@ -114,7 +114,7 @@
   <string name="request_coins_activity_title">Demander des bitcoins</string>
   <string name="request_coins_fragment_amount_label">Montant demandé (optionnel)</string>
   <string name="request_coins_fragment_accept_bluetooth_payment">Accepter les paiements par Bluetooth pour un traitement plus fiable.</string>
-  <string name="request_coins_fragment_initiate_request_qr">Faites balayer ce code par l\'expéditeur.</string>
+  <string name="request_coins_fragment_initiate_request_qr">Faites numériser ce code par l\'expéditeur.</string>
   <string name="request_coins_fragment_initiate_request_nfc">Ou touchez un appareil ayant la NFC.</string>
   <string name="request_coins_clipboard_msg">Demande de bitcoins copiée dans le presse-papiers</string>
   <string name="request_coins_share_dialog_title">Partager la demande de bitcoins…</string>
@@ -122,6 +122,7 @@
   <string name="request_coins_options_local_app_title">Demander à une appli locale</string>
   <string name="address_book_activity_title">Carnet d\'adresses</string>
   <string name="address_book_list_receiving_title">Vos adresses</string>
+  <string name="address_book_list_receiving_random">Anciennes adresses</string>
   <string name="address_book_list_sending_title">Adresses d\'envoi</string>
   <string name="address_book_empty_text">Carnet d\'adresses vide</string>
   <string name="address_book_context_send_title">Envoyer des bitcoins à une adresse</string>
@@ -132,7 +133,7 @@
   <string name="address_book_options_paste_from_clipboard_empty">Le presse-papiers est vide</string>
   <string name="address_book_options_paste_from_clipboard_invalid">Les données provenant du presse-papiers ne peuvent pas être reconnues.</string>
   <string name="address_book_options_scan_title">Numériser l\'adresse</string>
-  <string name="address_book_options_scan_invalid">Les données balayées ne peuvent pas être reconnues</string>
+  <string name="address_book_options_scan_invalid">Les données numérisées ne peuvent pas être reconnues</string>
   <string name="address_book_row_message_compromised_key">Cette adresse peut-être compromise. Vous ne devriez plus l\'utiliser pour recevoir des bitcoins.</string>
   <string name="edit_address_book_entry_dialog_title_add">Ajouter l\'adresse</string>
   <string name="edit_address_book_entry_dialog_title_edit">Modifier l\'adresse</string>
@@ -174,11 +175,13 @@
   <string name="export_keys_dialog_success"><![CDATA[<p>Votre portefeuille a été sauvegardé vers <tt>%s</tt></p><p>Si votre appareil a une carte SD amovible, votre sauvegarde <i>devrait</i> être sur cette carte. Enlevez-la et conservez-la dans un endroit sûr. Si la carte n\'est <i>pas</i> amovible, vous devez archiver votre sauvegarde dans un endroit autre que votre appareil.</p><p><b>Si votre sauvegarde existe seulement sur votre appareil, vous courez le risque de perdre les deux en même temps !</b></p><p>Dans tous les cas, assurez-vous de vous souvenir du mot de passe de votre sauvegarde. Voulez-vous archiver votre portefeuille maintenant ?</p>]]></string>
   <string name="export_keys_dialog_failure">Votre portefeuille n\'a pas pu être exporté :\n%s</string>
   <string name="export_keys_dialog_button_archive">Archiver</string>
-  <string name="export_keys_dialog_mail_subject">Sauvegarde du portefeuille Dash</string>
-  <string name="export_keys_dialog_mail_text">Le fichier chiffré attaché contient les clefs privées bitcoin et doit être gardé en lieu sûr en tout temps. N\'oubliez pas le mot de passe de chiffrement !</string>
+  <string name="export_keys_dialog_mail_subject">Sauvegarde du portefeuille Bitcoin</string>
+  <string name="export_keys_dialog_mail_text">Le fichier chiffré attaché contient les clefs privées Bitcoin et doit être gardé en lieu sûr en tout temps. N\'oubliez pas le mot de passe de chiffrement !</string>
   <string name="export_keys_dialog_mail_intent_chooser">Archiver le portefeuille en utilisant…</string>
   <string name="export_keys_dialog_mail_intent_failed">Échec lors de l\'archivage du portefeuille.</string>
   <string name="import_export_keys_dialog_password">mot de passe</string>
+  <string name="backup_wallet_dialog_password_again">de nouveau</string>
+  <string name="backup_wallet_dialog_password_mismatch">différence !</string>
   <string name="import_export_keys_dialog_show">Montrer le mot de passe</string>
   <string name="import_export_keys_dialog_failure_title">Erreur</string>
   <string name="import_keys_intent_filter_action">Restaurer le portefeuille</string>
@@ -224,6 +227,11 @@
   <string name="preferences_initiate_reset_summary">Réinitialiser la chaîne de blocs, les transactions et le solde du portefeuille. La resynchronisation prendra du temps.</string>
   <string name="preferences_initiate_reset_dialog_message">Voudriez-vous réinitialiser la chaîne de blocs et la resynchroniser ?\n\nCeci cachera temporairement votre solde et enlèvera les transactions. Ces deux éléments reviendront à la normale au fur et à mesure que la synchronisation progressera.</string>
   <string name="preferences_initiate_reset_dialog_positive">Réinitialiser</string>
+  <string name="preferences_extended_public_key_title">Montrer la xpub</string>
+  <string name="preferences_extended_public_key_summary">Visualisez la clef privée étendue de votre portefeuille afin qu\'elle puisse être importée dans d\'autres applis et services. Attention : ceci divulguera vos informations monétaires à cette appli.</string>
+  <string name="bitmap_fragment_share">Partager…</string>
+  <string name="extended_public_key_fragment_title">Clef privée étendue</string>
+  <string name="extended_public_key_fragment_share">Partager la xpub…</string>
   <string name="report_issue_dialog_title_issue">Signaler un problème</string>
   <string name="report_issue_dialog_title_crash">Un plantage précédent a été détecté</string>
   <string name="report_issue_dialog_message_issue">Veuillez décrire votre problème avec assez de précisions pour qu\'il soit reproduit. S\'il est spécifique à votre portefeuille, pensez à joindre le vidage.</string>

@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-  <string name="toast_wallet_reset">Кошелёк был сброшен,\nна восстановление требуется какое-то время</string>
+  <string name="toast_wallet_reset">Ваш кошелёк был сброшен!\nВосстановление займёт некоторое время.</string>
   <string name="wallet_disclaimer_fragment_remind_safety">Используйте на свой страх и риск. Прочитайте &lt;u&gt;заметки по безопасности&lt;/u&gt;.</string>
   <string name="wallet_disclaimer_fragment_remind_backup">Вам необходимо &lt;u&gt;сделать резервную копию вашего кошелька&lt;/u&gt;!</string>
   <string name="blockchain_state_progress_hours">%1$s, %2$d часов отставания</string>
@@ -12,7 +12,8 @@
   <string name="blockchain_state_progress_problem_storage">Синхронизация: проблема с хранилищем</string>
   <string name="blockchain_state_progress_problem_network">Синхронизация: проблема с сетью</string>
   <string name="wallet_address_fragment_clipboard_msg">Адрес скопирован в буфер обмена</string>
-  <string name="wallet_balance_fragment_too_much">Сумма в вашем кошельке довольно существенная, пожалуйста, переместите её часть в более безопасное место.</string>
+  <string name="wallet_address_dialog_fragment_hint">Для защиты вашей конфиденциальности ваш адрес будет меняться , как только он получает деньги.</string>
+  <string name="wallet_balance_fragment_too_much">Сумма монет довольно существенная для карманного бумажника. Пожалуйста, перенесите её часть в более безопасное хранение.</string>
   <string name="wallet_balance_fragment_replaying">Во время воспроизведения баланс недоступен.</string>
   <string name="exchange_rates_activity_title">Обменный курс</string>
   <string name="exchange_rates_fragment_empty_text">Не удалось загрузить курсы валют.</string>
@@ -23,11 +24,11 @@
   <string name="exchange_rates_fragment_source">Цена получена с %s</string>
   <string name="exchange_rates_options_search">Поиск обменного курса</string>
   <string name="exchange_rates_context_set_as_default_title">Установить как валюту по умолчанию</string>
-  <string name="wallet_transactions_fragment_tab_received">Получено</string>
-  <string name="wallet_transactions_fragment_tab_all">Все</string>
-  <string name="wallet_transactions_fragment_tab_sent">Отправлено</string>
-  <string name="wallet_transactions_fragment_empty_text_received">Ещё не получено Dash-монет</string>
-  <string name="wallet_transactions_fragment_empty_text_sent">Ещё не отправлено Dash-монет</string>
+  <string name="wallet_transactions_options_filter_received">Получено</string>
+  <string name="wallet_transactions_options_filter_all">Все</string>
+  <string name="wallet_transactions_options_filter_sent">Отправлено</string>
+  <string name="wallet_transactions_fragment_empty_text_received">Ещё не получено Bitcoin-монет</string>
+  <string name="wallet_transactions_fragment_empty_text_sent">Ещё не отправлено Bitcoin-монет</string>
   <string name="wallet_transactions_fragment_empty_text_howto">Как получить монеты?\n\nОбменяйте обычные деньги,\nпродайте товары и услуги или\nзаработайте.</string>
   <string name="wallet_transactions_row_warning_backup">Поздравляем, вы получили первый платёж! Вы уже &lt;u&gt;сделали резервную копию кошелька&lt;/u&gt;, чтобы обезопаситься от потерь?</string>
   <string name="wallet_transactions_fragment_coinbase">добыто</string>
@@ -78,7 +79,7 @@
   <string name="send_coins_fragment_insufficient_money_title">Недостаточно монет</string>
   <string name="send_coins_fragment_insufficient_money_msg1">Вы упускаете %s.</string>
   <string name="send_coins_fragment_insufficient_money_msg2">Вы хотите оплатить всем, что у вас есть?</string>
-  <string name="send_coins_fragment_empty_wallet_failed_title">Не удалось очистить кошелек</string>
+  <string name="send_coins_fragment_empty_wallet_failed_title">Не удалось опустошить кошелек</string>
   <string name="send_coins_fragment_state_decrypting">Расшифровка…</string>
   <string name="send_coins_preparation_msg">Подписываю…</string>
   <string name="send_coins_sending_msg">Отправка…</string>
@@ -86,10 +87,9 @@
   <string name="send_coins_failed_msg">Не удалось!</string>
   <string name="send_coins_error_msg">Проблема с отправкой монет!</string>
   <string name="send_coins_options_priority">Быстрее, но выше комиссия</string>
-  <string name="send_coins_options_empty">Пустой кошелек</string>
-  <string name="send_coins_address_context_clear_title">Введите новый адрес</string>
-  <string name="sweep_wallet_activity_title">Отсканировать бумажный кошелек</string>
-  <string name="sweep_wallet_fragment_intro">Вы собираетесь отсканировать бумажный кошелек или купон. Это перенесет все монеты с бумаги на ваш кошелек на этом устройстве. Когда эта транзакция пройдет, бумажный носитель будет бесполезен и не должен быть повторно использован в целях безопасности.</string>
+  <string name="send_coins_options_empty">Опустошить кошелёк</string>
+  <string name="sweep_wallet_activity_title">Забрать с бумажного кошелька</string>
+  <string name="sweep_wallet_fragment_intro">Вы собираетесь забрать с бумажного кошелька или купона. Это перенесет все монеты с бумаги на ваш кошелек на этом устройстве. Когда эта транзакция пройдет, бумажный носитель будет бесполезен и не должен быть повторно использован в целях безопасности.</string>
   <string name="sweep_wallet_fragment_hint">Бумажные кошельки наиболее часто используются для холодного хранения. Некоторые банкоматы печатают их на бумаге, а не посылают монеты на мобильное устройство напрямую. Некоторые люди используют предварительно заряженные бумажные кошельки чтобы передавать монеты. (это не рекомендуется)</string>
   <string name="sweep_wallet_fragment_wallet_unknown">Для начала отсканируйте частный ключ напечатанный на бумажном кошельке. Используйте кнопку \"Камера\"</string>
   <string name="sweep_wallet_fragment_encrypted">Этот личный ключ защищён паролем.</string>
@@ -122,6 +122,7 @@
   <string name="request_coins_options_local_app_title">Запрос от локального приложения</string>
   <string name="address_book_activity_title">Адресная книга</string>
   <string name="address_book_list_receiving_title">Ваши адреса</string>
+  <string name="address_book_list_receiving_random">Старые адреса</string>
   <string name="address_book_list_sending_title">Адреса отправки</string>
   <string name="address_book_empty_text">Адресная книга пуста</string>
   <string name="address_book_context_send_title">Отправить монеты на адрес</string>
@@ -179,6 +180,8 @@
   <string name="export_keys_dialog_mail_intent_chooser">Архивировать кошелек с помощью…</string>
   <string name="export_keys_dialog_mail_intent_failed">Архивация кошелка прошла с ошибкой.</string>
   <string name="import_export_keys_dialog_password">пароль</string>
+  <string name="backup_wallet_dialog_password_again">Снова</string>
+  <string name="backup_wallet_dialog_password_mismatch">Несоответствие !</string>
   <string name="import_export_keys_dialog_show">Показать пароль</string>
   <string name="import_export_keys_dialog_failure_title">Ошибка</string>
   <string name="import_keys_intent_filter_action">Восстановить кошелек</string>
@@ -224,6 +227,11 @@
   <string name="preferences_initiate_reset_summary">Сбросить цепочку блоков, транзакции и баланс кошелька. Повторная загрузка займёт некоторое время и трафик.</string>
   <string name="preferences_initiate_reset_dialog_message">Хотите загрузить блокчейн заново?\n\nЭто временно скроет баланс вашего кошелька и транзакции. Все восстановится по мере повторной синхронизации блокчейна.</string>
   <string name="preferences_initiate_reset_dialog_positive">Сброс</string>
+  <string name="preferences_extended_public_key_title">Показать xpub</string>
+  <string name="preferences_extended_public_key_summary">Просмотр расширенного открытого ключа вашего кошелька может быть полезен для импортирования в другие приложения и услуги. Будьте осторожны: делая так вы раскрываете ваш приватный счет.</string>
+  <string name="bitmap_fragment_share">Рассказать…</string>
+  <string name="extended_public_key_fragment_title">Расширенный  публичный ключ</string>
+  <string name="extended_public_key_fragment_share">Поделиться xpub…</string>
   <string name="report_issue_dialog_title_issue">Сообщить о проблеме</string>
   <string name="report_issue_dialog_title_crash">Обнаружено аварийное завершение</string>
   <string name="report_issue_dialog_message_issue">Пожалуйста, опишите вашу проблему достаточно точно. Если она специфична для вашего кошелька, приложите дамп.</string>
