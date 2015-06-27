@@ -72,7 +72,7 @@ public final class PaymentIntent implements Parcelable
 			}
 			catch (final ScriptException x)
 			{
-				throw new PaymentProtocolException.InvalidOutputs("unparseable script in output: " + Arrays.toString(output.scriptData));
+				throw new PaymentProtocolException.InvalidOutputs("unparseable script in output: " + Constants.HEX.encode(output.scriptData));
 			}
 		}
 
@@ -93,8 +93,7 @@ public final class PaymentIntent implements Parcelable
 			if (script.isSentToAddress() || script.isPayToScriptHash())
 				builder.append(script.getToAddress(Constants.NETWORK_PARAMETERS));
 			else if (script.isSentToRawPubKey())
-				for (final byte b : script.getPubKey())
-					builder.append(String.format("%02x", b));
+				builder.append(Constants.HEX.encode(script.getPubKey()));
 			else if (script.isSentToMultiSig())
 				builder.append("multisig");
 			else
@@ -452,8 +451,8 @@ public final class PaymentIntent implements Parcelable
 		builder.append(paymentUrl);
 		if (payeeData != null)
 		{
-			builder.append(',');
-			builder.append(Arrays.toString(payeeData));
+			builder.append(",payeeData=");
+			builder.append(Constants.HEX.encode(payeeData));
 		}
 		if (paymentRequestUrl != null)
 		{
@@ -463,7 +462,7 @@ public final class PaymentIntent implements Parcelable
 		if (paymentRequestHash != null)
 		{
 			builder.append(",paymentRequestHash=");
-			builder.append(BaseEncoding.base16().lowerCase().encode(paymentRequestHash));
+			builder.append(Constants.HEX.encode(paymentRequestHash));
 		}
 		builder.append(']');
 

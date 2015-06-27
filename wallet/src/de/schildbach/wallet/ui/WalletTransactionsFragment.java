@@ -273,7 +273,25 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
 		final PopupMenu popupMenu = new PopupMenu(activity, view);
 		popupMenu.inflate(R.menu.wallet_transactions_context);
-		popupMenu.getMenu().findItem(R.id.wallet_transactions_context_edit_address).setVisible(!txRotation && txAddress != null);
+		final MenuItem editAddressMenuItem = popupMenu.getMenu().findItem(R.id.wallet_transactions_context_edit_address);
+		if (!txRotation && txAddress != null)
+		{
+			editAddressMenuItem.setVisible(true);
+			final boolean isAdd = AddressBookProvider.resolveLabel(activity, txAddress.toString()) == null;
+			final boolean isOwn = wallet.isPubKeyHashMine(txAddress.getHash160());
+
+			if (isOwn)
+				editAddressMenuItem.setTitle(isAdd ? R.string.edit_address_book_entry_dialog_title_add_receive
+						: R.string.edit_address_book_entry_dialog_title_edit_receive);
+			else
+				editAddressMenuItem.setTitle(isAdd ? R.string.edit_address_book_entry_dialog_title_add
+						: R.string.edit_address_book_entry_dialog_title_edit);
+		}
+		else
+		{
+			editAddressMenuItem.setVisible(false);
+		}
+
 		popupMenu.getMenu().findItem(R.id.wallet_transactions_context_show_qr)
 				.setVisible(!txRotation && txSerialized.length < SHOW_QR_THRESHOLD_BYTES);
 		popupMenu.setOnMenuItemClickListener(new OnMenuItemClickListener()
@@ -334,7 +352,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 		final Direction direction = ((TransactionsLoader) loader).getDirection();
 
 		adapter.replace(transactions);
-		adapter.setShowBackupWarning(direction == null || direction == Direction.RECEIVED);
 
 		if (transactions.isEmpty())
 		{
@@ -500,13 +517,13 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 	@Override
 	public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences, final String key)
 	{
-		if (Configuration.PREFS_KEY_BTC_PRECISION.equals(key))
+		if (Configuration.PREFS_KEY_BTC_PRECISION.equals(key) || Configuration.PREFS_KEY_REMIND_BACKUP.equals(key))
 			updateView();
 	}
 
 	private void updateView()
 	{
 		adapter.setFormat(config.getFormat());
-		adapter.notifyDataSetChanged();
+		adapter.setShowBackupWarning(config.remindBackup());
 	}
 }

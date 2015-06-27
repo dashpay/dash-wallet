@@ -65,11 +65,11 @@ import android.os.Handler;
 import android.os.Looper;
 
 import com.google.common.base.Charsets;
-import com.google.common.io.BaseEncoding;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.util.Io;
 import org.bitcoinj.core.CoinDefinition;
+import static de.schildbach.wallet.Constants.HEX;
 
 /**
  * @author Andreas Schildbach
@@ -83,8 +83,6 @@ public final class RequestWalletBalanceTask
 	private final String userAgent;
 
 	private static final Logger log = LoggerFactory.getLogger(RequestWalletBalanceTask.class);
-
-	private final BaseEncoding HEX = BaseEncoding.base16().lowerCase();
 
 	public interface ResultCallback
 	{
@@ -242,7 +240,7 @@ public final class RequestWalletBalanceTask
 
 							final Sha256Hash uxtoHash = new Sha256Hash(jsonOutput.getString("transaction_hash"));
 							final int uxtoIndex = jsonOutput.getInt("transaction_index");
-							final byte[] uxtoScriptBytes = HEX.decode(jsonOutput.getString("script_pub_key"));
+							final byte[] uxtoScriptBytes = Constants.HEX.decode(jsonOutput.getString("script_pub_key"));
 							final Coin uxtoValue = Coin.valueOf(Long.parseLong(jsonOutput.getString("value")));
 */
 

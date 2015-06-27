@@ -89,7 +89,37 @@ v1.00
 
 Bitcoin Wallet
 -------------------
-=======
+v4.33
+
+* Upwards-adjust default network fee again. We're still way below estimated fee.
+* Small bugfixes.
+* Update Greek and Swedish translations.
+* Migrate build from Maven to Gradle. This should make things easier for Android Studio users.
+  See README for building the app.
+
+v4.32
+
+* Bugfixes.
+* In-app payments integration (integration-android) now available on Maven Central and jCenter.
+  Also see: https://github.com/schildbach/bitcoin-wallet/wiki/InAppPayments
+
+v4.31
+
+* Update Italian, Spanish, Finnish and Japanese translations.
+
+v4.30
+
+* Upwards-adjust default fee, because transactions at the old fee level have become a bit slow.
+  You can switch back to 'economic' in the send coins options menu.
+* Small bugfixes.
+
+v4.29
+
+* Nice slide-in animation for sent payment.
+* Update Brazilian Portuguese, Danish, Japanese, French, Turkish and Norwegian Bokmål
+  translations.
+* Small bugfixes.
+
 v4.28
 
 * Add Hindi and Croatian translations. Update Greek and Albanian.
@@ -146,7 +176,6 @@ v4.19
 
 * Remove donate action.
 
->>>>>>> upstream/master
 v4.18
 
 * Show and share extended public key. This can be used to grant read-only access to your wallet.

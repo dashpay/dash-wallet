@@ -86,7 +86,6 @@
   <string name="send_coins_sent_msg">Odesláno!</string>
   <string name="send_coins_failed_msg">Chyba!</string>
   <string name="send_coins_error_msg">Problém při zasílání!</string>
-  <string name="send_coins_options_priority">Rychlé potvrzení, vyšší poplatky</string>
   <string name="send_coins_options_empty">Prázdná peněženka</string>
   <string name="sweep_wallet_activity_title">Načíst papírovou peněženku</string>
   <string name="sweep_wallet_fragment_intro">Chystáte se načíst papírovou peněženku nebo kupón. Tato akce přemístí veškeré mince z papíru do vaší peněženky na tomto zařízení. Poté co bude transakce potvrzena už papír nepotřebujete a neměl by být z bezpečnostních důvodů dále používán.</string>
@@ -276,7 +275,6 @@
   <string name="button_request_coins">Vyžádat Dashy</string>
   <string name="button_send_coins">Zaslat Dashy</string>
   <string name="button_scan">Skenovat</string>
-  <string name="button_edit_address">Přidat/upravit adresu</string>
   <string name="button_settings">Nastavení</string>
   <string name="action_show_qr">Zobrazit QR kód</string>
   <string name="action_browse">Prohlédnout</string>
@@ -286,5 +284,5 @@
   <string name="error_io">I/O chyba: %s</string>
   <string name="error_parse">Chyba při načítání: %s</string>
   <string name="error_http">HTTP chyba %1$s:\n%2$s</string>
-  <string name="error_bluetooth">Bluetooth chyba %1$s</string>
+  <string name="error_bluetooth">Bluetooth chyba: %1$s</string>
 </resources>

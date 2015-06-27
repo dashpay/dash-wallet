@@ -85,8 +85,7 @@
   <string name="send_coins_sending_msg">Bezig met verzenden…</string>
   <string name="send_coins_sent_msg">Verzonden!</string>
   <string name="send_coins_failed_msg">Mislukt!</string>
-  <string name="send_coins_error_msg">Probleem bij het versturen van Dash!</string>
-  <string name="send_coins_options_priority">Snelle bevestiging, hogere toeslag / heffing</string>
+  <string name="send_coins_error_msg">Probleem bij het versturen van Bitcoins!</string>
   <string name="send_coins_options_empty">Lege portemonnee</string>
   <string name="sweep_wallet_activity_title">Opnemen vanaf papieren wallet</string>
   <string name="sweep_wallet_fragment_intro">U staat op het punt geld op te nemen vanaf een papieren wallet of coupon. Hierbij worden alle bitcoins van dat papier overgebracht naar uw apparaat. Zodra deze transactie bevestigd wordt zal het papier zijn waarde verloren hebben en om veiligheidsredenen niet meer opnieuw gebruikt moeten worden.</string>
@@ -275,7 +274,6 @@
   <string name="button_request_coins">Verzoek Dash</string>
   <string name="button_send_coins">Verzend Dash</string>
   <string name="button_scan">Zoeken</string>
-  <string name="button_edit_address">Adres toevoegen/aanpassen</string>
   <string name="button_settings">Instellingen</string>
   <string name="action_show_qr">Geef QR-code weer</string>
   <string name="action_browse">Bladeren</string>

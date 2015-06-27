@@ -93,7 +93,10 @@
 	<string name="send_coins_sent_msg">Sent!</string>
 	<string name="send_coins_failed_msg">Failed!</string>
 	<string name="send_coins_error_msg">Problem sending coins!</string>
-	<string name="send_coins_options_priority">Quick confirm, higher fee</string>
+	<string name="send_coins_options_fee_category">Fee</string>
+	<string name="send_coins_options_fee_category_economic">Economic</string>
+	<string name="send_coins_options_fee_category_normal">Normal</string>
+	<string name="send_coins_options_fee_category_priority">Priority</string>
 	<string name="send_coins_options_empty">Empty wallet</string>
 	<string name="sweep_wallet_activity_title">Sweep paper wallet</string>
 	<string name="sweep_wallet_fragment_intro">You are about to sweep a paper wallet or coupon. This will move all coins from that paper to your wallet on this device. When the transaction is confirmed, the paper will be worthless and should not be re-used for safety reasons.</string>
@@ -237,9 +240,9 @@
 	<string name="preferences_data_usage_summary">Show options to restrict data usage on mobile networks.</string>
 	<string name="preferences_report_issue_title">Report issue</string>
 	<string name="preferences_report_issue_summary">Collect information about your issue and email your report to the developers.</string>
-	<string name="preferences_initiate_reset_title">Reset blockchain</string>
-	<string name="preferences_initiate_reset_summary">Reset blockchain, transactions and wallet balance. Replay will take a while.</string>
-	<string name="preferences_initiate_reset_dialog_message">Would you like to reset and replay the blockchain?\n\nThis will temporarily hide your wallet balance and remove transactions. Both will recover as blockchain sync progresses.</string>
+	<string name="preferences_initiate_reset_title">Reset block chain</string>
+	<string name="preferences_initiate_reset_summary">Reset block chain, transactions and wallet balance. Replay will take a while.</string>
+	<string name="preferences_initiate_reset_dialog_message">Would you like to reset and replay the block chain?\n\nThis will temporarily hide your wallet balance and remove transactions. Both will recover as block chain sync progresses.</string>
 	<string name="preferences_initiate_reset_dialog_positive">Reset</string>
 	<string name="preferences_extended_public_key_title">Show xpub</string>
 	<string name="preferences_extended_public_key_summary">View the extended public key of your wallet, so it can be imported into other apps and services. Be careful: doing so will disclose your monetary privacy to that app.</string>
@@ -294,7 +297,6 @@
 	<string name="button_request_coins">Request coins</string>
 	<string name="button_send_coins">Send coins</string>
 	<string name="button_scan">Scan</string>
-	<string name="button_edit_address">Add/edit address</string>
 	<string name="button_settings">Settings</string>
 	<string name="action_show_qr">Show QR code</string>
 	<string name="action_browse">Browse</string>
@@ -306,7 +308,7 @@
 	<string name="error_io">I/O error: %s</string>
 	<string name="error_parse">Parse error: %s</string>
 	<string name="error_http">HTTP error %1$s:\n%2$s</string>
-	<string name="error_bluetooth">Bluetooth error %1$s</string>
+	<string name="error_bluetooth">Bluetooth error: %1$s</string>
 
 <string name="transaction_fragment_confirmations_label">Confirmations</string>
 

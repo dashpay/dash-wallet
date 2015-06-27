@@ -97,8 +97,11 @@
 	<string name="send_coins_sending_msg">Versenden…</string>
 	<string name="send_coins_sent_msg">Versendet!</string>
 	<string name="send_coins_failed_msg">Fehlgeschlagen!</string>
-	<string name="send_coins_error_msg">Problem beim Versenden der Dash!</string>
-	<string name="send_coins_options_priority">Schnelle Bestätigung, höhere Gebühr</string>
+	<string name="send_coins_error_msg">Problem beim Versenden der Bitcoins!</string>
+	<string name="send_coins_options_fee_category">Netzwerk-Gebühr</string>
+	<string name="send_coins_options_fee_category_economic">Kostengünstig</string>
+	<string name="send_coins_options_fee_category_normal">Normal</string>
+	<string name="send_coins_options_fee_category_priority">Express</string>
 	<string name="send_coins_options_empty">Wallet entleeren</string>
 
 	<string name="sweep_wallet_activity_title">Paper-Wallet leeren</string>
@@ -312,7 +315,6 @@
 	<string name="button_request_coins">Anfordern</string>
 	<string name="button_send_coins">Senden</string>
 	<string name="button_scan">Scannen</string>
-	<string name="button_edit_address">Adresse hinzufügen/ändern</string>
 	<string name="button_settings">Einstellungen</string>
 
 	<string name="action_show_qr">QR-Code zeigen</string>
@@ -325,6 +327,6 @@
 	<!-- generic error messages -->
 	<string name="error_io">I/O-Fehler: %s</string>
 	<string name="error_http">HTTP-Fehler %1$s:\n%2$s</string>
-	<string name="error_bluetooth">Bluetooth-Fehler %1$s</string>
+	<string name="error_bluetooth">Bluetooth-Fehler: %1$s</string>
 
 </resources>

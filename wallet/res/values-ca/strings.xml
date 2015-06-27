@@ -86,7 +86,6 @@
   <string name="send_coins_sent_msg">Enviat!</string>
   <string name="send_coins_failed_msg">Fallada!</string>
   <string name="send_coins_error_msg">Hi ha un problema enviant les monedes!</string>
-  <string name="send_coins_options_priority">S\'ha confirmat rapid, la taxa és més elevada</string>
   <string name="send_coins_options_empty">Cartera buida</string>
   <string name="sweep_wallet_activity_title">Incorpora una cartera de paper</string>
   <string name="sweep_wallet_fragment_intro">Estàs a punt d\'incorporar una cartera de paper o un cupó. Això mourà totes les monedes d\'aquest paper a la cartera del dispositiu. Quant la transacció es confirmi, el paper no valdrà res i no deurà ser reutilitzat per qüestions de seguretat.</string>
@@ -276,7 +275,6 @@
   <string name="button_request_coins">Demana monedes</string>
   <string name="button_send_coins">Envia monedes</string>
   <string name="button_scan">Escanejar</string>
-  <string name="button_edit_address">Afegir/modificar adreça</string>
   <string name="button_settings">Ajustaments</string>
   <string name="action_show_qr">Mostra codi QR</string>
   <string name="action_browse">Navega</string>
@@ -286,5 +284,5 @@
   <string name="error_io">Error I/O: %s</string>
   <string name="error_parse">Anàlisis d\'errors: %s</string>
   <string name="error_http">Error HTTP %1$s:\n%2$s</string>
-  <string name="error_bluetooth">Error Bluetooth %1$s</string>
+  <string name="error_bluetooth">Error Bluetooth: %1$s</string>
 </resources>
