@@ -65,11 +65,10 @@ repositories {
             exclude 'org/bitcoinj/crypto/cacerts'
         }
     }
-
-    /*task svgToPng(type: fr.avianey.androidsvgdrawable.gradle.SvgDrawableTask) {
+}
+    task svgToPng(type: fr.avianey.androidsvgdrawable.gradle.SvgDrawableTask) {
         from = file('graphics')
         to = file('res')
         targetedDensities = ['hdpi', 'xhdpi', 'xxhdpi']
         outputFormat = 'PNG'
-    }*/
-}
+    }
