@@ -4,7 +4,7 @@
 	package="hashengineering.darkcoin.wallet"
 	android:installLocation="internalOnly"
 	android:versionCode="40020"
-	android:versionName="4.27.11.1.22" >
+	android:versionName="4.33.11.2.23" >
 
 
 	<uses-sdk
