@@ -52,6 +52,10 @@ repositories {
                 java.srcDirs = ['src']
                 res.srcDirs = ['res']
                 assets.srcDirs = ['assets']
+
+                jniLibs.srcDir 'src/main/libs'
+                jni.srcDirs = []           //disable automatic ndk-build call
+                jniLibs.srcDirs = ['libs']
             }
         }
 
@@ -72,3 +76,21 @@ repositories {
         targetedDensities = ['hdpi', 'xhdpi', 'xxhdpi']
         outputFormat = 'PNG'
     }
+
+// most important part to include .so files into the project
+task copyNativeLibs(type: Copy) {
+    from(new File(getProjectDir(), 'src/main/native-libs')) { include '**/*.so' }
+    into new File(buildDir, 'native-libs')
+}
+
+tasks.withType(org.gradle.api.tasks.compile.JavaCompile) {
+    compileTask -> compileTask.dependsOn copyNativeLibs
+}
+
+clean.dependsOn 'cleanCopyNativeLibs'
+
+tasks.withType(com.android.build.gradle.tasks.PackageApplication) {
+    pkgTask ->
+        pkgTask.jniFolders = new HashSet()
+        pkgTask.jniFolders.add(new File(buildDir, 'native-libs'))
+}

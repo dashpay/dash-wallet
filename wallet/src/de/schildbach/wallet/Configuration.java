@@ -57,6 +57,7 @@ public class Configuration
 	private static final String PREFS_KEY_CHANGE_LOG_VERSION = "change_log_version";
 	public static final String PREFS_KEY_REMIND_BACKUP = "remind_backup";
 	private static final String PREFS_KEY_LAST_BACKUP = "last_backup";
+	public static final String PREFS_KEY_INSTANTX_ENABLED = "labs_instantx_enabled";
 
 	private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
 	private static final int PREFS_DEFAULT_BTC_PRECISION = 2;
@@ -264,5 +265,10 @@ public class Configuration
 	public void unregisterOnSharedPreferenceChangeListener(final OnSharedPreferenceChangeListener listener)
 	{
 		prefs.unregisterOnSharedPreferenceChangeListener(listener);
+	}
+
+	public boolean getInstantXEnabled()
+	{
+		return prefs.getBoolean("enable_instantx", false);
 	}
 }

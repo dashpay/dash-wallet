@@ -498,6 +498,7 @@ public final class SendCoinsFragment extends Fragment
 
 
 		instantXenable = (CheckBox) view.findViewById(R.id.send_coins_instantx_enable);
+		instantXenable.setVisibility(config.getInstantXEnabled() == true ? View.VISIBLE : View.INVISIBLE);
 		instantXenable.setOnCheckedChangeListener(new OnCheckedChangeListener()
 		{
 			@Override

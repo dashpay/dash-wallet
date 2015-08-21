@@ -58,6 +58,7 @@ import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
+import org.darkcoinj.InstantXSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -255,6 +256,10 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 		{
 			if (Configuration.PREFS_KEY_CONNECTIVITY_NOTIFICATION.equals(key))
 				changed(peerCount);
+			if(Configuration.PREFS_KEY_INSTANTX_ENABLED.equals(key))
+			{
+				InstantXSystem.get(blockChain).setEnabled(sharedPreferences.getBoolean(Configuration.PREFS_KEY_INSTANTX_ENABLED, false));
+			}
 		}
 
 		private void changed(final int numPeers)
