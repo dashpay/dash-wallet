@@ -41,6 +41,7 @@ import org.bitcoinj.core.Block;
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.CheckpointManager;
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.FilteredBlock;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerEventListener;
 import org.bitcoinj.core.PeerGroup;
@@ -328,7 +329,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 		private final AtomicLong lastMessageTime = new AtomicLong(0);
 
 		@Override
-		public void onBlocksDownloaded(final Peer peer, final Block block, final int blocksLeft)
+		public void onBlocksDownloaded(final Peer peer, final Block block, final FilteredBlock filteredBlock, final int blocksLeft)
 		{
 			config.maybeIncrementBestChainHeightEver(blockChain.getChainHead().getHeight());
 
@@ -743,7 +744,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 			}
 			else if (BlockchainService.ACTION_BROADCAST_TRANSACTION.equals(action))
 			{
-				final Sha256Hash hash = new Sha256Hash(intent.getByteArrayExtra(BlockchainService.ACTION_BROADCAST_TRANSACTION_HASH));
+				final Sha256Hash hash = Sha256Hash.wrap(intent.getByteArrayExtra(BlockchainService.ACTION_BROADCAST_TRANSACTION_HASH));
 				final Transaction tx = application.getWallet().getTransaction(hash);
 
 				if (peerGroup != null)
@@ -782,8 +783,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 		{
 			peerGroup.removeEventListener(peerConnectivityListener);
 			peerGroup.removeWallet(application.getWallet());
-			peerGroup.stopAsync();
-			peerGroup.awaitTerminated();
+			peerGroup.stop();
 
 			log.info("peergroup stopped");
 		}

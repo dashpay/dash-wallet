@@ -39,6 +39,7 @@ import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.DumpedPrivateKey;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ScriptException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
@@ -374,5 +375,22 @@ public class WalletUtils
 		{
 			throw new RuntimeException(x);
 		}
+	}
+
+	public static Address newAddressOrThrow(final NetworkParameters params, final String base58) throws IllegalArgumentException
+	{
+		try
+		{
+			return new Address(params, base58);
+		}
+		catch (AddressFormatException x)
+		{
+			throw new IllegalArgumentException(x);
+		}
+	}
+
+	public static boolean isPayToManyTransaction(final Transaction transaction)
+	{
+		return transaction.getOutputs().size() > 20;
 	}
 }

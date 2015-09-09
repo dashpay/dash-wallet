@@ -3,9 +3,10 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	package="hashengineering.darkcoin.wallet"
 	android:installLocation="internalOnly"
-	android:versionCode="40021"
-	android:versionName="4.33.11.2.23b" >
-
+	android:versionCode="40025"
+	android:versionName="4.40.12a" >
+	android:versionCode="230"
+	android:versionName="4.40-test" >
 
 	<uses-sdk
 		android:minSdkVersion="15"

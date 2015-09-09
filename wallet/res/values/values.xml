@@ -16,11 +16,11 @@
 		<item>0/6</item>
 	</string-array>
 	<string-array name="preferences_precision_labels">
-		<item>DASH, 8 digits</item>
-		<item>DASH, 6 digits</item>
-		<item>DASH, 4 digits</item>
-		<item>mDASH, 2 digits</item>
-		<item>µDASH, no digits</item>
+		<item>@string/preferences_precision_labels_8</item>
+		<item>@string/preferences_precision_labels_6</item>
+		<item>@string/preferences_precision_labels_4</item>
+		<item>@string/preferences_precision_labels_2_3</item>
+		<item>@string/preferences_precision_labels_0_6</item>
 	</string-array>
 
 </resources>

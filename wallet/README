@@ -79,15 +79,18 @@ use
 	# each time
 	cd bitcoin-wallet
 	git pull
-	gradle clean build
+	gradle clean test build
 
-To upload the app to your Android device, use
+To install the app on your Android device, use
 
 	# first time only
 	sudo apt-get install android-tools-adb
 
 	# each time
 	adb install wallet/build/outputs/apk/bitcoin-wallet-debug.apk
+
+If installing fails, make sure "Developer options" and "USB debugging" are enabled on your Android device, and an ADB
+connection is established.
 
 
 BUILDING THE PRODUCTIVE VERSION
@@ -104,7 +107,7 @@ separate 'prod' branch that gets rebased against master with each released versi
 	cd bitcoin-wallet
 	git fetch origin
 	git checkout origin/prod
-	gradle clean build
+	gradle clean test build
 
 
 SETTING UP FOR DEVELOPMENT

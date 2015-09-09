@@ -252,13 +252,7 @@ public final class ExchangeRatesFragment extends FancyListFragment implements On
 		balance = application.getWallet().getBalance(BalanceType.ESTIMATED);
 
 		if (adapter != null)
-		{
-			final int btcShift = config.getBtcShift();
-
-			final Coin base = btcShift == 0 ? Coin.COIN : Coin.MILLICOIN;
-
-			adapter.setRateBase(base);
-		}
+			adapter.setRateBase(config.getBtcBase());
 	}
 
 	private final LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
@@ -383,7 +377,7 @@ public final class ExchangeRatesFragment extends FancyListFragment implements On
 			currencyCodeView.setText(exchangeRate.getCurrencyCode());
 
 			final CurrencyTextView rateView = (CurrencyTextView) view.findViewById(R.id.exchange_rate_row_rate);
-			rateView.setFormat(Constants.LOCAL_FORMAT);
+			rateView.setFormat(!rateBase.isLessThan(Coin.COIN) ? Constants.LOCAL_FORMAT.minDecimals(2) : Constants.LOCAL_FORMAT.minDecimals(4));
 			rateView.setAmount(exchangeRate.rate.coinToFiat(rateBase));
 
 			final CurrencyTextView walletView = (CurrencyTextView) view.findViewById(R.id.exchange_rate_row_balance);

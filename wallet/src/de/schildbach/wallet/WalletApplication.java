@@ -17,6 +17,28 @@
 
 package de.schildbach.wallet;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.concurrent.TimeUnit;
+
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.core.VersionMessage;
+import org.bitcoinj.core.Wallet;
+import org.bitcoinj.crypto.LinuxSecureRandom;
+import org.bitcoinj.crypto.MnemonicCode;
+import org.bitcoinj.store.UnreadableWalletException;
+import org.bitcoinj.store.WalletProtobufSerializer;
+import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.Protos;
+import org.bitcoinj.wallet.WalletFiles;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import android.app.ActivityManager;
 import android.app.AlarmManager;
 import android.app.Application;
@@ -41,8 +63,7 @@ import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Io;
-import de.schildbach.wallet.util.LinuxSecureRandom;
-import hashengineering.darkcoin.wallet.R;
+
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.MnemonicCode;
 import org.bitcoinj.store.UnreadableWalletException;
@@ -55,6 +76,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.concurrent.TimeUnit;
+import hashengineering.darkcoin.wallet.R;
 
 /**
  * @author Andreas Schildbach
@@ -263,6 +285,14 @@ public class WalletApplication extends Application
 				wallet = restoreWalletFromBackup();
 			}
 			catch (final UnreadableWalletException x)
+			{
+				log.error("problem loading wallet", x);
+
+				Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
+
+				wallet = restoreWalletFromBackup();
+			}
+			catch (final IllegalArgumentException x)
 			{
 				log.error("problem loading wallet", x);
 

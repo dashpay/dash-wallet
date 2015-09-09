@@ -55,7 +55,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
-import android.preference.PreferenceManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.SpannableStringBuilder;
 import android.view.LayoutInflater;
@@ -135,7 +134,6 @@ public class SweepWalletFragment extends Fragment
 		this.activity = (AbstractBindServiceActivity) activity;
 		this.application = (WalletApplication) activity.getApplication();
 		this.config = application.getConfiguration();
-		this.config = new Configuration(PreferenceManager.getDefaultSharedPreferences(activity));
 		this.fragmentManager = getFragmentManager();
 	}
 
@@ -352,7 +350,7 @@ public class SweepWalletFragment extends Fragment
 	private final TransactionConfidence.Listener sentTransactionConfidenceListener = new TransactionConfidence.Listener()
 	{
 		@Override
-		public void onConfidenceChanged(final Transaction tx, final TransactionConfidence.Listener.ChangeReason reason)
+		public void onConfidenceChanged(final TransactionConfidence confidence, final TransactionConfidence.Listener.ChangeReason reason)
 		{
 			activity.runOnUiThread(new Runnable()
 			{
@@ -628,6 +626,7 @@ public class SweepWalletFragment extends Fragment
 		setState(State.PREPARATION);
 
 		final SendRequest sendRequest = SendRequest.emptyWallet(application.getWallet().freshReceiveAddress());
+		sendRequest.feePerKb = FeeCategory.NORMAL.feePerKb;
 
 		new SendCoinsOfflineTask(walletToSweep, backgroundHandler)
 		{

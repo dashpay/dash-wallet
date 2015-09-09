@@ -5,26 +5,27 @@ def localMavenRepo = 'file://' + new File(System.getProperty('user.home'), '.m2/
 repositories {
     maven { url localMavenRepo }
 
-    dependencies {
-        compile(project(':integration-android')) {
-            exclude(group: 'com.google.android', module: 'android')
-        }
-        compile 'com.android.support:support-annotations:22.0.0'
-        compile 'com.android.support:support-v4:22.0.0'
-        compile 'com.android.support:support-v13:22.0.0'
-        compile 'com.android.support:recyclerview-v7:22.0.0'
-        compile 'com.android.support:cardview-v7:22.0.0'
-        compile 'org.bitcoinj:darkcoinj-core:0.12.3'
-        compile 'com.google.protobuf:protobuf-java:2.5.0'
-        compile 'com.google.guava:guava:16.0.1'
-        compile 'com.google.zxing:core:3.2.0'
-        compile 'org.slf4j:slf4j-api:1.7.12'
-        compile('com.github.tony19:logback-android-classic:1.1.1-3') {
-            exclude(group: 'com.google.android', module: 'android')
-        }
-        compile 'com.github.tony19:logback-android-core:1.1.1-3'
-        compile 'com.google.code.findbugs:jsr305:2.0.3'
+dependencies {
+    compile(project(':integration-android')) {
+        exclude(group: 'com.google.android', module: 'android')
     }
+    compile 'com.android.support:support-annotations:22.2.1'
+    compile 'com.android.support:support-v4:22.2.1'
+    compile 'com.android.support:support-v13:22.2.1'
+    compile 'com.android.support:recyclerview-v7:22.2.1'
+    compile 'com.android.support:cardview-v7:22.2.1'
+    compile 'org.bitcoinj:darkcoinj-core:0.13.2'
+    compile 'com.google.protobuf:protobuf-java:2.5.0'
+    compile 'com.google.guava:guava:16.0.1'
+    compile 'com.google.zxing:core:3.2.0'
+    compile 'org.slf4j:slf4j-api:1.7.12'
+    compile('com.github.tony19:logback-android-classic:1.1.1-3') {
+        exclude(group: 'com.google.android', module: 'android')
+    }
+    compile 'com.github.tony19:logback-android-core:1.1.1-3'
+    compile 'com.google.code.findbugs:jsr305:2.0.3'
+    testCompile 'junit:junit:4.11'
+}
 
     ext {
         archivesBaseName = 'bitcoin-wallet'
@@ -34,7 +35,10 @@ repositories {
         compileSdkVersion 'android-16'
         buildToolsVersion '22.0.1'
 
-        lintOptions { abortOnError false }
+    lintOptions {
+        abortOnError false
+        disable 'MissingTranslation'
+    }
 
         buildTypes {
             all {
@@ -57,6 +61,10 @@ repositories {
                 jni.srcDirs = []           //disable automatic ndk-build call
                 jniLibs.srcDirs = ['libs']
             }
+            test {
+                java.srcDirs = ['test']
+                resources.srcDirs = ['test']
+            }
         }
 
         packagingOptions {
@@ -70,12 +78,6 @@ repositories {
         }
     }
 }
-    task svgToPng(type: fr.avianey.androidsvgdrawable.gradle.SvgDrawableTask) {
-        from = file('graphics')
-        to = file('res')
-        targetedDensities = ['hdpi', 'xhdpi', 'xxhdpi']
-        outputFormat = 'PNG'
-    }
 
 // most important part to include .so files into the project
 task copyNativeLibs(type: Copy) {
@@ -93,4 +95,11 @@ tasks.withType(com.android.build.gradle.tasks.PackageApplication) {
     pkgTask ->
         pkgTask.jniFolders = new HashSet()
         pkgTask.jniFolders.add(new File(buildDir, 'native-libs'))
+}
+
+task svgToPng(type: fr.avianey.androidsvgdrawable.gradle.SvgDrawableTask) {
+    from = file('graphics')
+    to = file('res')
+    targetedDensities = ['hdpi', 'xhdpi', 'xxhdpi']
+    outputFormat = 'PNG'
 }

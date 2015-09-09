@@ -84,8 +84,6 @@
 	<string name="send_coins_fragment_direct_payment_nack">Die Zahlung wurde über die direkte Verbindung abgelehnt.</string>
 	<string name="send_coins_fragment_direct_payment_failed_title">Direkte Zahlung fehlgeschlagen</string>
 	<string name="send_coins_fragment_direct_payment_failed_msg">Deine Zahlung wird trotzdem über das P2P-Netzwerk übertragen.</string>
-	<string name="send_coins_fragment_private_key_password">PIN</string>
-	<string name="send_coins_fragment_private_key_bad_password">falsche PIN!</string>
 	<string name="send_coins_fragment_button_send">Senden</string>
 	<string name="send_coins_fragment_button_back">Zurück</string>
 	<string name="send_coins_fragment_insufficient_money_title">Nicht genug verfügbare Dash</string>
@@ -103,6 +101,12 @@
 	<string name="send_coins_options_fee_category_normal">Normal</string>
 	<string name="send_coins_options_fee_category_priority">Express</string>
 	<string name="send_coins_options_empty">Wallet entleeren</string>
+
+	<string name="raise_fee_dialog_title">Netzwerk-Gebühr erhöhen</string>
+	<string name="raise_fee_dialog_message">Willst du die Netzwerk-Gebühr für diese Zahlung um %s anheben? Das beschleunigt die Bestätigung der Zahlung.</string>
+	<string name="raise_fee_dialog_state_decrypting">Entschlüsselung…</string>
+	<string name="raise_fee_dialog_state_done">Fertig.</string>
+	<string name="raise_fee_dialog_button_raise">Erhöhen</string>
 
 	<string name="sweep_wallet_activity_title">Paper-Wallet leeren</string>
 	<string name="sweep_wallet_fragment_intro">Du bist dabei eine Paper-Wallet oder Coupon zu leeren. Dies wird alle Dash von diesem Papier in deine Wallet auf diesem Gerät verschieben. Sobald die Transaktion bestätigt ist, wird das Papier wertlos und sollte aus Sicherheitsgründen nicht wiederverwendet werden.</string>
@@ -122,9 +126,7 @@
 	<string name="sweep_wallet_options_reload">Guthaben aktualisieren</string>
 
 	<string name="maintenance_dialog_title">Wartung empfohlen</string>
-	<string name="maintenance_dialog_message">Du hast %1$s auf unsicheren Adressen erhalten. Möchtest du diese Dash auf sichere Adressen verschieben? Eine geringe Netzwerk-Gebühr von %2$s wird gezahlt.</string>
-	<string name="maintenance_dialog_private_key_password">PIN</string>
-	<string name="maintenance_dialog_private_key_bad_password">falsche PIN!</string>
+	<string name="maintenance_dialog_message">Du hast %1$s auf unsicheren Adressen erhalten. Möchtest du diese Bitcoins auf sichere Adressen verschieben? Eine geringe Netzwerk-Gebühr von %2$s wird gezahlt.</string>
 	<string name="maintenance_dialog_state_decrypting">Entschlüsselung…</string>
 	<string name="maintenance_dialog_state_done">Fertig.</string>
 	<string name="maintenance_dialog_button_move">Verschieben</string>
@@ -168,6 +170,7 @@
 
 	<string name="transaction_row_fee">Netzwerk-Gebühr</string>
 	<string name="transaction_row_message_purpose_key_rotation">Diese Transaktion stärkt deine Wallet gegen Diebstahl. &lt;u&gt;Mehr Information.&lt;/u&gt;</string>
+	<string name="transaction_row_message_purpose_raise_fee">Diese Transaktion erhöht die Netzwerk-Gebühr für eine vorherige Zahlung.</string>
 	<string name="transaction_row_message_own_unbroadcasted">Diese Zahlung ist noch nicht übertragen.</string>
 	<string name="transaction_row_message_received_direct">Diese Zahlung wurde direkt empfangen. Es besteht das Risiko, daß sie niemals verfügbar wird.</string>
 	<string name="transaction_row_message_received_unconfirmed_unlocked">Diese Zahlung sollte in ein paar Minuten verfügbar werden.</string>
@@ -217,10 +220,8 @@
 
 	<string name="encrypt_keys_dialog_title">Ausgabe-PIN</string>
 	<string name="encrypt_keys_dialog_message">Ausgaben von deiner Wallet werden durch die gewählte PIN geschützt.</string>
-	<string name="encrypt_keys_dialog_warning">Wichtig: Nutze keine oft verwendete Nummern (z.B. Geburtstage) in deiner PIN.</string>
+	<string name="encrypt_keys_dialog_warning">Wichtig: Vergiss deine PIN nicht! Nutze keine oft verwendete Nummern (z.B. Geburtstage).</string>
 	<string name="encrypt_keys_dialog_password_old">Alte PIN</string>
-	<string name="encrypt_keys_dialog_password_new">PIN</string>
-	<string name="encrypt_keys_dialog_bad_password">falsche PIN!</string>
 	<string name="encrypt_keys_dialog_password_strength_weak">schwach</string>
 	<string name="encrypt_keys_dialog_password_strength_fair">mittel</string>
 	<string name="encrypt_keys_dialog_password_strength_good">gut</string>
@@ -246,6 +247,13 @@
 	<string name="preferences_category_labs">Labor</string>
 	<string name="preferences_precision_title">Stückelung und Genauigkeit</string>
 	<string name="preferences_precision_summary">Maßeinheit für die Anzeige von Werten. Dies beeinflußt keine Berechnungen.</string>
+	<string name="preferences_precision_labels_8">BTC, 8 Dezimalen</string>
+	<string name="preferences_precision_labels_6">BTC, 6 Dezimalen</string>
+	<string name="preferences_precision_labels_4">BTC, 4 Dezimalen</string>
+	<string name="preferences_precision_labels_2_3">mBTC, 2 Dezimalen</string>
+	<string name="preferences_precision_labels_0_6">µBTC, keine Dezimalen</string>
+	<string name="preferences_own_name_title">Eigener Name</string>
+	<string name="preferences_own_name_summary">Dein eigener Name, der zu Zahlungsanforderungen hinzugefügt wird. Versuch ihn kurz zu halten.</string>
 	<string name="preferences_connectivity_notification_title">Konnektivitäts-Anzeige</string>
 	<string name="preferences_connectivity_notification_summary">Zeigt die aktuelle Anzahl von verbundenen Peers im Notifizierungsbereich an.</string>
 	<string name="preferences_trusted_peer_title">Vertrauenswürdiger Peer</string>
@@ -269,7 +277,7 @@
 
 	<string name="report_issue_dialog_title_issue">Problem melden</string>
 	<string name="report_issue_dialog_title_crash">Absturz erkannt</string>
-	<string name="report_issue_dialog_message_issue">Bitte beschreibe dein Problem genau, so daß es nachvollzogen werden kann. Hänge den Dump der Wallet an, falls das Problem speziell deine Wallet betrifft.</string>
+	<string name="report_issue_dialog_message_issue">Bitte beschreibe dein Problem genau, so daß es nachvollzogen werden kann.</string>
 	<string name="report_issue_dialog_message_crash">Möchtest du einen Fehlerbericht senden, um bei der Fehlerbehebung zu helfen?</string>
 	<string name="report_issue_dialog_description">Problembeschreibung</string>
 	<string name="report_issue_dialog_report">Senden</string>
@@ -320,9 +328,11 @@
 	<string name="action_show_qr">QR-Code zeigen</string>
 	<string name="action_browse">Im Browser öffnen</string>
 
-
+	<!-- generic strings -->
 	<string name="time_today">heute</string>
 	<string name="address_unlabeled">(unbenannt)</string>
+	<string name="private_key_password">PIN</string>
+	<string name="private_key_bad_password">falsche PIN!</string>
 
 	<!-- generic error messages -->
 	<string name="error_io">I/O-Fehler: %s</string>

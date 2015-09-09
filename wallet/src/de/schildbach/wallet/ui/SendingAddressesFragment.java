@@ -318,7 +318,7 @@ public final class SendingAddressesFragment extends FancyListFragment implements
 						return true;
 
 					case R.id.sending_addresses_context_show_qr:
-						handleShowQr(getAddress(position));
+						handleShowQr(getAddress(position), getLabel(position));
 
 						mode.finish();
 						return true;
@@ -371,9 +371,9 @@ public final class SendingAddressesFragment extends FancyListFragment implements
 		activity.getContentResolver().delete(uri, null, null);
 	}
 
-	private void handleShowQr(final String address)
+	private void handleShowQr(final String address, final String label)
 	{
-		final String uri = BitcoinURI.convertToBitcoinURI(address, null, null, null);
+		final String uri = BitcoinURI.convertToBitcoinURI(address, null, label, null);
 		final int size = getResources().getDimensionPixelSize(R.dimen.bitmap_dialog_qr_size);
 		BitmapFragment.show(getFragmentManager(), Qr.bitmap(uri, size));
 	}

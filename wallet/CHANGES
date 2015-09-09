@@ -1,5 +1,9 @@
 
 Dash Wallet
+4.40
+
+4.33
+
 v4.27
 * Upgrade to Bitcoin Wallet 4.27
 
@@ -89,6 +93,43 @@ v1.00
 
 Bitcoin Wallet
 -------------------
+v4.40
+
+* Bugfixes.
+* Update Hungarian, French and Swedish translations.
+
+v4.39
+
+* Update Finnish translation.
+* Based on bitcoinj 0.13.2.
+
+v4.38
+
+* Bugfixes.
+* Update Korean translation.
+
+v4.37
+
+* Allow raising the fee of an unconfirmed transaction. Uses child-pays-for-parent (CPFP).
+* Fix crash when sharing address.
+
+v4.36
+
+* Pay the default fee for sweeping paper wallets.
+* Update Turkish, Swedish, Norwegian Bokmål, Japanese, Italian, Hungarian, French and Danish
+  translations.
+* Based on bitcoinj 0.13.1.
+
+v4.35
+
+* Upwards-adjust default network fee again. We're forced to do this due to the high number of
+  spam transactions.
+
+v4.34
+
+* Setting for own name, to be added as a label/memo to payment requests.
+* List animations for network monitor.
+
 v4.33
 
 * Upwards-adjust default network fee again. We're still way below estimated fee.

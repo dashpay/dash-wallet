@@ -74,8 +74,6 @@
   <string name="send_coins_fragment_direct_payment_nack">Il tuo pagamento via connessione diretta è stato rifiutato.</string>
   <string name="send_coins_fragment_direct_payment_failed_title">Pagamento diretto fallito</string>
   <string name="send_coins_fragment_direct_payment_failed_msg">Il tuo pagamento sarà trasmesso tramite la rete P2P.</string>
-  <string name="send_coins_fragment_private_key_password">PIN</string>
-  <string name="send_coins_fragment_private_key_bad_password">PIN errato!</string>
   <string name="send_coins_fragment_button_send">Invia</string>
   <string name="send_coins_fragment_button_back">Indietro</string>
   <string name="send_coins_fragment_insufficient_money_title">Non abbastanza monete disponibili</string>
@@ -111,8 +109,6 @@
   <string name="sweep_wallet_options_reload">Ricarica saldo</string>
   <string name="maintenance_dialog_title">Manutenzione raccomandata</string>
   <string name="maintenance_dialog_message">Hai ricevuto %1$s su indirizzi insicuri. Vorresti muovere queste monete su indirizzi sicuri? Si pagherà una piccola commissione di rete di %2$s.</string>
-  <string name="maintenance_dialog_private_key_password">PIN</string>
-  <string name="maintenance_dialog_private_key_bad_password">PIN errato!</string>
   <string name="maintenance_dialog_state_decrypting">Decrittazione in corso…</string>
   <string name="maintenance_dialog_state_done">Fatto.</string>
   <string name="maintenance_dialog_button_move">Sposta</string>
@@ -196,10 +192,8 @@
   <string name="import_keys_intent_filter_action">Ripristina portafoglio</string>
   <string name="encrypt_keys_dialog_title">PIN di sicurezza</string>
   <string name="encrypt_keys_dialog_message">La spesa dal tuo wallet verrà protetta con il PIN scelto.</string>
-  <string name="encrypt_keys_dialog_warning">Importante: Non usare numeri scontati (ex. il tuo compleanno) come PIN.</string>
+  <string name="encrypt_keys_dialog_warning">Importante: Dovrai ricordarti il tuo PIN! Non usare numeri comuni (come il tuo compleanno).</string>
   <string name="encrypt_keys_dialog_password_old">Vecchio PIN</string>
-  <string name="encrypt_keys_dialog_password_new">PIN</string>
-  <string name="encrypt_keys_dialog_bad_password">PIN errato!</string>
   <string name="encrypt_keys_dialog_password_strength_weak">debole</string>
   <string name="encrypt_keys_dialog_password_strength_fair">giusta</string>
   <string name="encrypt_keys_dialog_password_strength_good">buono</string>
@@ -222,6 +216,8 @@
   <string name="preferences_category_labs">Laboratori</string>
   <string name="preferences_precision_title">Denominazione e precisione</string>
   <string name="preferences_precision_summary">Unità per mostrare gli importi. Questo non influisce calcoli.</string>
+  <string name="preferences_own_name_title">Nome</string>
+  <string name="preferences_own_name_summary">Il tuo nome da aggiungere alle richieste di pagamento. Prova a mantenerlo corto.</string>
   <string name="preferences_connectivity_notification_title">Indicatore di connettività</string>
   <string name="preferences_connectivity_notification_summary">Mostra il numero corrente di peer connessi nell\'area di notifica.</string>
   <string name="preferences_trusted_peer_title">Peer attendibili</string>
@@ -232,8 +228,8 @@
   <string name="preferences_data_usage_summary">Mostra le opzioni per restringere l\'utilizzo dei dati su reti mobili.</string>
   <string name="preferences_report_issue_title">Segnala un problema</string>
   <string name="preferences_report_issue_summary">Colleziona informazioni sul tuo problema e invia tramite email la tua segnalazione agli sviluppatori.</string>
-  <string name="preferences_initiate_reset_title">Riavvia il Blockchain</string>
-  <string name="preferences_initiate_reset_summary">Riavvia blockchain, transazioni e il conto del portafoglio. Per la ripetizione ci vorrà un po\'.</string>
+  <string name="preferences_initiate_reset_title">Reinizializza il blockchain</string>
+  <string name="preferences_initiate_reset_summary">Reinizializza il blockchain, transazioni e conto del portafoglio. Il processo impiegherà un po\'.</string>
   <string name="preferences_initiate_reset_dialog_message">Vorresti riavviare e ripetere il blockchain?\n\nQuesto nasconderà temporaneamente il tuo bilancio dal portafoglio, e rimuoverà le transazioni. Entrambi saranno recuperati con la sincronizzazione del blockchain.</string>
   <string name="preferences_initiate_reset_dialog_positive">Reset</string>
   <string name="preferences_extended_public_key_title">Mostra xpub</string>
@@ -243,7 +239,7 @@
   <string name="extended_public_key_fragment_share">Condividi xpub…</string>
   <string name="report_issue_dialog_title_issue">Segnala un problema</string>
   <string name="report_issue_dialog_title_crash">Crash precedente rilevato</string>
-  <string name="report_issue_dialog_message_issue">Descrivi il problema abbastanza precisamente da riprodurre. Se è specifico per il portafoglio, considera di allegare il dump.</string>
+  <string name="report_issue_dialog_message_issue">Descrivi il problema in modo specifico da poter essere riprodotto.</string>
   <string name="report_issue_dialog_message_crash">Vorresti inviare una segnalazione di crash, aiutando a correggere questo problema nel futuro?</string>
   <string name="report_issue_dialog_description">descrizione del problema</string>
   <string name="report_issue_dialog_report">Segnala</string>
@@ -290,6 +286,8 @@
   <string name="action_browse">Sfoglia</string>
   <string name="time_today">oggi</string>
   <string name="address_unlabeled">(non etichettato)</string>
+  <string name="private_key_password">PIN</string>
+  <string name="private_key_bad_password">PIN errato!</string>
   <!--generic error messages-->
   <string name="error_io">I/O errore: %s</string>
   <string name="error_parse">Errore di analisi: %s</string>
