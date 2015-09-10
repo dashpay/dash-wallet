@@ -291,6 +291,6 @@ public class Configuration
 
 	public boolean getInstantXEnabled()
 	{
-		return prefs.getBoolean("enable_instantx", false);
+		return prefs.getBoolean("labs_instantx_enabled", false);
 	}
 }

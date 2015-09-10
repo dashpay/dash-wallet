@@ -536,7 +536,7 @@ public final class SendCoinsFragment extends Fragment
 
 
 		instantXenable = (CheckBox) view.findViewById(R.id.send_coins_instantx_enable);
-		instantXenable.setVisibility(config.getInstantXEnabled() == true ? View.VISIBLE : View.INVISIBLE);
+		instantXenable.setVisibility(View.INVISIBLE /*config.getInstantXEnabled() == true ? View.VISIBLE : View.INVISIBLE*/);
 		instantXenable.setOnCheckedChangeListener(new OnCheckedChangeListener()
 		{
 			@Override
@@ -914,6 +914,7 @@ public final class SendCoinsFragment extends Fragment
 		// prepare send request
 		finalPaymentIntent.setInstantX(usingInstantX);
 		final SendRequest sendRequest = finalPaymentIntent.toSendRequest();
+		sendRequest.useInstantX = usingInstantX;
 		sendRequest.emptyWallet = paymentIntent.mayEditAmount() && finalAmount.equals(wallet.getBalance(BalanceType.AVAILABLE));
 		sendRequest.feePerKb = feeCategory.feePerKb;
         sendRequest.feePerKb = sendRequest.useInstantX ? Coin.valueOf(CoinDefinition.INSTANTX_FEE): sendRequest.feePerKb;
@@ -921,7 +922,7 @@ public final class SendCoinsFragment extends Fragment
 		sendRequest.memo = paymentIntent.memo;
 		sendRequest.exchangeRate = amountCalculatorLink.getExchangeRate();
 		sendRequest.aesKey = encryptionKey;
-		sendRequest.useInstantX = usingInstantX;
+
 
 		new SendCoinsOfflineTask(wallet, backgroundHandler)
 		{
