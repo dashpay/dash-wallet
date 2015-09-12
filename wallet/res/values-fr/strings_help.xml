@@ -3,11 +3,11 @@
   <string name="help_wallet">
 <![CDATA[
 		<p>
-			La partie supérieure gauche de l\'écran affiche votre solde en bitcoins ainsi qu\'une monnaie nationale choisie.
+			La partie supérieure gauche de l\'écran affiche votre solde en Dash ainsi qu\'une monnaie nationale choisie.
 			Toquez pour vous rendre vers la liste des monnaies nationales et tapez sur l\'une d\'elles pour la choisir par défaut.
 		</p>
 		 <p>
-			Le QR code à droite contient votre adresse Bitcoin et peut être numérisé par un tiers.
+			Le QR code à droite contient votre adresse Dash et peut être numérisé par un tiers.
 			Toquez sur le code QR pour l\'agrandir.
 		</p>
 		<p>
@@ -17,7 +17,7 @@
 			Glissez vers la gauche ou vers la droite pour appliquer des filtres à la liste.
 		</p>
 		<p>
-			Vous pouvez envoyer ou recevoir des bitcoins en toquant les boutons dans la barre d\'action.
+			Vous pouvez envoyer ou recevoir des Dash en toquant les boutons dans la barre d\'action.
 			Plus d\'options sont offertes dans le menu des options.
 		</p>
 	]]>
@@ -28,12 +28,12 @@
 			En utilisant cette zone de dialogue vous pouvez demander des pièces à une autre personne (qui devrait déjà avoir installé le Dash Wallet).
 		</p>
 		<p>
-			Vous pouvez d\'abord saisir un montant de bitcoins à demander.
+			Vous pouvez d\'abord saisir un montant de Dash à demander.
 		</p>
 		<p>
 			Ensuite, l\'autre personne peut numériser le code QR généré.
 			Vous pouvez aussi envoyer votre demande à une personne éloignée avec le bouton Partager de la barre de menu.
-			L\'autre personne devra cliquer sur l\'URL Bitcoin.
+			L\'autre personne devra cliquer sur l\'URL Dash.
 		</p>
 		<p>
 			Dans les deux cas, l\'autre personne obtiendra une zone de dialogue préremplie pour envoyer les pièces.
@@ -44,16 +44,16 @@
   <string name="help_send_coins">
 <![CDATA[
 		<p>
-			Vous avez commencé le processus d\'envoi de bitcoins.
-			Vous êtes arrivé ici depuis l\'écran principal ou en cliquant sur une URL Bitcoin dans votre navigateur.
+			Vous avez commencé le processus d\'envoi de Dash.
+			Vous êtes arrivé ici depuis l\'écran principal ou en cliquant sur une URL Dash dans votre navigateur.
 		</p>
 		<p>
 			D\'abord, saisir l\'adresse Dash de destination.
 			L\'adresse sera complétée automatiquement pour les adresses enregistrées dans votre carnet.
-			Vous pouvez aussi numériser des codes QR avec des adresses Bitcoin ou des demandes de bitcoins en pressant le bouton QR dans la barre d\'actions.
+			Vous pouvez aussi numériser des codes QR avec des adresses Dash ou des demandes de Dash en pressant le bouton QR dans la barre d\'actions.
 		</p>
 		<p>
-			Ensuite, vous pouvez voir combien de bitcoins peuvent être dépensés actuellement.
+			Ensuite, vous pouvez voir combien de Dash peuvent être dépensés actuellement.
 			Tout écart avec le solde de l\'écran principal n\'est pas encore confirmé et ne peut donc pas être dépensé.
 		</p>
 		<p>
@@ -77,8 +77,8 @@
 			<b>Notes de sécurité importantes :</b>
 		</p>
 		<p>
-			Les bitcoins sont stockés sur l\'appareil.
-			<b>Si vous le perdez, vous perdez vos bitcoins.</b>
+			Les Dash sont stockés sur l\'appareil.
+			<b>Si vous le perdez, vous perdez vos Dash.</b>
 		</p>
 		<p>
 			Cela signifie que vous devez <b>sauvegarder votre portefeuille</b> !
@@ -86,12 +86,12 @@
 			Gardez votre sauvegarde en sûreté et souvenez-vous de votre mot de passe.
 		</p>
 		<p>
-			<b>Avant de désinstaller Dash Wallet</b> (ou d\'effacer les données de l\'appli/effacer les données de votre appareil), <b>transférez vos bitcoins vers un autre portefeuille</b>.
-			Les bitcoins restants seront perdus.
+			<b>Avant de désinstaller Dash Wallet</b> (ou d\'effacer les données de l\'appli/effacer les données de votre appareil), <b>transférez vos Dash vers un autre portefeuille</b>.
+			Les Dash restants seront perdus.
 		</p>
 		<p>
 			<b>Les paiements sont irréversibles</b>.
-			Si vous envoyez vos bitcoins dans le vide, il n\'y a presque aucun moyen de les récupérer.
+			Si vous envoyez vos Dash dans le vide, il n\'y a presque aucun moyen de les récupérer.
 		</p>
 		<p>
 			<b>Assurez la sécurité de votre appareil mobile !</b>

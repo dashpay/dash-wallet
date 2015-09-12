@@ -3,11 +3,11 @@
   <string name="help_wallet">
 <![CDATA[
 		<p>
-			I den övre delen av skärmen visas ditt saldo i bitcoin samt värdet i en vald nationell valuta.
+			I den övre delen av skärmen visas ditt saldo i Dash samt värdet i en vald nationell valuta.
 			Tryck för att lista nationella valutor, och välj en av valutorna för att visa den som standard.
 		</p>
 		<p>
-			QR-koden till höger inehåller din bitcoinaddress och kan scannas av den som vill skicka bitcoin till dig.
+			QR-koden till höger inehåller din Dashaddress och kan scannas av den som vill skicka Dash till dig.
 			Tryck med fingret på QR-koden för att få en större version av den.
 		</p>
 		<p>
@@ -17,7 +17,7 @@
 			Dra med fingret åt vänster eller höger för att filtrera listan.
 		</p>
 		<p>
-			Du kan skicka eller ta emot bitcoin genom att trycka på knapparna i aktivitetslistan.
+			Du kan skicka eller ta emot Dash genom att trycka på knapparna i aktivitetslistan.
 			Fler val är möjliga i menyn.
 		</p>
 	]]>
@@ -25,26 +25,26 @@
   <string name="help_request_coins">
 <![CDATA[
 		<p>
-			Med denna dialog kan du ta emot bitcoin från någon annan (som redan har Dash Wallet installerad på sin telefon).
+			Med denna dialog kan du ta emot Dash från någon annan (som redan har Dash Wallet installerad på sin telefon).
 		</p>
 		<p>
-			Först anger du hur många bitcoin du vill att de skickar.
+			Först anger du hur många Dash du vill att de skickar.
 		</p>
 		<p>
 			Sedan kan den andra personen scanna QR-koden.
-			Eller så använder du \"Dela\" knappen i aktivitetslistan för att skicka din uppmaning att skicka bitcoin.
+			Eller så använder du \"Dela\" knappen i aktivitetslistan för att skicka din uppmaning att skicka Dash.
 			Den andra personen behöver sedan bara klicka på den Dash-URL du skickat.
 		</p>
 		<p>
 			Sedan kommer den andra personen att få se en dialogruta där alla fält redan är ifyllda.
-			Om han eller hon sedan accapterar transaktionen så skickas bitcoin till dig.
+			Om han eller hon sedan accapterar transaktionen så skickas Dash till dig.
 		</p>
 	]]>
 	</string>
   <string name="help_send_coins">
 <![CDATA[
 		<p>
-			Du har påbörjat skickandet av bitcoin.
+			Du har påbörjat skickandet av Dash.
 			Du kom hit från huvudskärmen eller genom att klicka på en Dash-URL i din webbläsare.
 		</p>
 		<p>
@@ -53,11 +53,11 @@
 			Du kan också scanna en QR-kod innehållande en Dash-adress, genom att trycka på QR knappen i aktivitetslistan.
 		</p>
 		<p>
-			Sedan kan du se hur många bitcoin du för tillfället kan skicka.
+			Sedan kan du se hur många Dash du för tillfället kan skicka.
 			Om det antalet skiljer sig från det som visas på huvudskärmen, så beror det på hittills obekräftade överföringar som du ännu inte får använda.
 		</p>
 		<p>
-			Slutligen anger du hur många bitcoin du skicka.
+			Slutligen anger du hur många Dash du skicka.
 		</p>
 		<p>
 			Du kan skapa en transaktion även om du inte är online.
@@ -74,20 +74,20 @@
   <string name="help_safety">
 <![CDATA[
 		<p>
-			<b>Några ord om säkerhet och bitcoin:</n>
+			<b>Några ord om säkerhet och Dash:</n>
 		</p>
 		<p>
-			Dina bitcoin i Dash Wallet sparas på din Android telefon.
-			<b>Om du tappar bort din telefon, så tappar du bort dina bitcoin.</b>
+			Dina Dash i Dash Wallet sparas på din Android telefon.
+			<b>Om du tappar bort din telefon, så tappar du bort dina Dash.</b>
 			Precis som pengar i din vanliga plånbok.
 		</p>
 		<p>
-			<b>Innan du avinstallerar Dash Wallet</b> (eller tar bort appens data/rensar din telefon), <b>skicka dina bitcoin till en annan wallet</b>.
-			Alla kvarvarande bitcoin kommer att försvinna.
+			<b>Innan du avinstallerar Dash Wallet</b> (eller tar bort appens data/rensar din telefon), <b>skicka dina Dash till en annan wallet</b>.
+			Alla kvarvarande Dash kommer att försvinna.
 		</p>
 		<p>
 			<b>Transaktioner kan inte stoppas</b>.
-			Efter att du skickat bitcoin finns det inget sätt att få dem tillbaka, annat än om du vet vem mottagaren är, och han/hon skickar dem tillbaka.
+			Efter att du skickat Dash finns det inget sätt att få dem tillbaka, annat än om du vet vem mottagaren är, och han/hon skickar dem tillbaka.
 		</p>
 		<p>
 			<b>Se till att skydda din telefon!</b>

@@ -3,7 +3,7 @@
   <string name="help_wallet">
 <![CDATA[
 		<p>
-			Den øvre venstre delen av skjermen viser balansen i bitcoins og en valgt nasjonal valuta.
+			Den øvre venstre delen av skjermen viser balansen i Dash og en valgt nasjonal valuta.
 			Trykk for å gå til listen over nasjonale valutaer, og trykk på en av valutaene for å velge den som standard.
 		</p>
 		<p>
@@ -28,7 +28,7 @@
       Ved å bruke denne dialogen kan du be om mynter fra en annen person (som allerede har installert Dash Wallet).
     </p>
     <p>
-      Først kan du legge inn et beløp på antall bitcoins som skal forespørres.
+      Først kan du legge inn et beløp på antall Dash som skal forespørres.
     </p>
     <p>
       Etterpå får du enten QR-koden skannet av den andre personen,
@@ -53,7 +53,7 @@
       Du kan også skanne QR-koder med Dash-adresser eller Dash-forespørsler ved å trykke på QR-knappen i handlingsfeltet.
     </p>
     <p>
-      Deretter kan du se hvor mange bitcoins du kan bruke for øyeblikket.
+      Deretter kan du se hvor mange Dash du kan bruke for øyeblikket.
       En eventuell forskjell i saldoen fra hovedskjermen er fortsatt ubekreftet, og kan dermed ikke brukes.
     </p>
     <p>
@@ -78,7 +78,7 @@
     </p>
     <p>
       Dash er lagret på enheten.
-      <b>Hvis du mister den, mister du dine bitcoins.</b>
+      <b>Hvis du mister den, mister du dine Dash.</b>
     </p>
     <p>
       Dette betyr at du må <b>sikkerhetskopiere lommeboken din</b>!
@@ -86,12 +86,12 @@
       Oppbevar sikkerhetskopien sikkert og husk passordet.
     </p>
     <p>
-      <b>Før avinstallering</b> (eller sletting av appdata/nullstilling av enheten til fabrikkinnstillinger), <b>overfør dine bitcoins til en annen lommebok</b>.
-      Resterende bitcoins vil gå tapt.
+      <b>Før avinstallering</b> (eller sletting av appdata/nullstilling av enheten til fabrikkinnstillinger), <b>overfør dine Dash til en annen lommebok</b>.
+      Resterende Dash vil gå tapt.
     </p>
     <p>
       <b>Betalinger er irreversible</b>.
-      Hvis du sender dine bitcoins ut i det blå, er det stort sett ikke mulig å få dem tilbake.
+      Hvis du sender dine Dash ut i det blå, er det stort sett ikke mulig å få dem tilbake.
     </p>
     <p>
       <b>Oppbevar din mobile enhet sikkert!</b>

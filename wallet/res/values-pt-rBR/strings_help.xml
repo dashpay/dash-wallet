@@ -7,7 +7,7 @@
 			Toque para ver as listas das moedas nacionais, e toque em uma delas para selecioná-la como padrão.
 		</p>
 		<p>
-			O código QR à direita contém o seu endereço bitcoin e pode ser usado para ser lido por outro dispositivo.
+			O código QR à direita contém o seu endereço Dash e pode ser usado para ser lido por outro dispositivo.
 			Toque no código QR para ampliá-lo.
 		</p>
 		<p>
@@ -17,7 +17,7 @@
 			Deslize para a esquerda ou direita para aplicar filtros na lista.
 		</p>
 		<p>
-			Você pode enviar ou solicitar bitcoins tocando os botões na barra de ações.
+			Você pode enviar ou solicitar Dash tocando os botões na barra de ações.
 			Mais opções estão disponíveis no menu de opções.
 		</p>
 	]]>
@@ -25,18 +25,18 @@
   <string name="help_request_coins">
 <![CDATA[
 		<p>
-			Usando essa tela, você consegue solicitar bitcoins para outra pessoa (que também já tenha instalado uma carteira Bitcoin).
+			Usando essa tela, você consegue solicitar Dash para outra pessoa (que também já tenha instalado uma carteira Dash).
 		</p>
 		<p>
-			Primeiro, você pode opcionalmente inserir uma quantidade de Bitcoins a ser solicitada.
+			Primeiro, você pode opcionalmente inserir uma quantidade de Dash a ser solicitada.
 		</p>
 		<p>
 			Um código QR será gerado e ele deve ser escaneado pela outra pessoa.
 			Você também pode enviar sua solicitação para uma pessoa remotamente, usando o botão compartilhar na barra de ações.
-			A outra pessoa deverá clicar na Bitcoin URL.
+			A outra pessoa deverá clicar na Dash URL.
 		</p>
 		<p>
-			A solicitação irá mostrar para a outra pessoa uma caixa de diálogo para o envio de bitcoins com todos os campos pré-preenchidos.
+			A solicitação irá mostrar para a outra pessoa uma caixa de diálogo para o envio de Dash com todos os campos pré-preenchidos.
 			Se ela concordar com o valor, tudo o que ela precisa fazer é enviar o pagamento.
 		</p>
 	]]>
@@ -45,15 +45,15 @@
 <![CDATA[
 		<p>
 			Você iniciou o processo de envio de moedas.
-			Você veio aqui, quer através da tela principal ou clicando em uma URL Bitcoin no seu nabegador mobile.
+			Você veio aqui, quer através da tela principal ou clicando em uma URL Dash no seu nabegador mobile.
 		</p>
 		<p>
-			Primeiro insira o endereço Bitcoin para o qual quer realizar o pagamento.
+			Primeiro insira o endereço Dash para o qual quer realizar o pagamento.
 			O endereço será completado automaticamente através de entradas conhecidas em seu catálogo de endereços.
-			Você também pode escanear QR codes com endereços Bitcoin ou requisitar pressionando o botão QR na barra de ações.
+			Você também pode escanear QR codes com endereços Dash ou requisitar pressionando o botão QR na barra de ações.
 		</p>
 		<p>
-			Em seguida, você pode ver quantas Bitcoins você pode gasta no momento.
+			Em seguida, você pode ver quantas Dash você pode gasta no momento.
 			Qualquer diferença para o saldo da tela principal ainda não está confirmado e pode ainda não ser gasto.
 		</p>
 		<p>
@@ -61,7 +61,7 @@
 		</p>
 		<p>
 			Você pode inserir um pagamento estando offline.
-			Ele será enviado na próxima reinicialização do Bitcoin Wallet.
+			Ele será enviado na próxima reinicialização do Dash Wallet.
 			Se você quer que um pagamento seja processado o mais rápido possível, certifique-se que você está bem conectado (i.e. em uma WLAN).
 		</p>
 		<p>
@@ -77,8 +77,8 @@
 			<b>Notas importantes sobre segurança:</b>
 		</p>
 		<p>
-			Bitcoins são armazenadas no dispositivo.
-			<b>Se você o perder, também perde suas Bitcoins.</b>
+			Dash são armazenadas no dispositivo.
+			<b>Se você o perder, também perde suas Dash.</b>
 		</p>
 		<p>
 			Isso significa que você tem que fazer um <b>back up de sua carteira</b>!
@@ -86,12 +86,12 @@
 			Mantenha o seu backup seguro e lembre a senha.
 		</p>
 		<p>
-			<b>Antes de Instalar</b> (ou limpar as informações do app ou realizar um reset em seu dispositivo), <b>transfira seus Bitcoins para outra carteira</b>.
-			Bitcoins restantes serão perdidas.
+			<b>Antes de Instalar</b> (ou limpar as informações do app ou realizar um reset em seu dispositivo), <b>transfira seus Dash para outra carteira</b>.
+			Dash restantes serão perdidas.
 		</p>
 		<p>
 			<b>Pagamentos são irreversíveis</b>.
-			Se você enviar seus Bitcoins no vazio, não há quase nenhuma maneira de obtê-los de volta.
+			Se você enviar seus Dash no vazio, não há quase nenhuma maneira de obtê-los de volta.
 		</p>
 		<p>
 			<b>Mantenha o seu dispositivo mobile seguro!</b>

@@ -11,7 +11,7 @@
   <string name="blockchain_state_progress_stalled">Sincronització encallada</string>
   <string name="blockchain_state_progress_problem_storage">Sincronitzant: problema d\'emmagatzematge</string>
   <string name="blockchain_state_progress_problem_network">Sincronitzant: problema de xarxa</string>
-  <string name="wallet_address_fragment_clipboard_msg">L\'adreça Bitcoin s\'ha copiat al porta-retalls.</string>
+  <string name="wallet_address_fragment_clipboard_msg">L\'adreça Dash s\'ha copiat al porta-retalls.</string>
   <string name="wallet_address_dialog_fragment_hint">Per protegir la teva privacitat, la teva adreça canviarà quan rebi un pagament.</string>
   <string name="wallet_balance_fragment_too_much">Aquesta quantitat de diners és molt elevada per portar-la a la butxaca, mou una part a un lloc segur.</string>
   <string name="wallet_balance_fragment_replaying">El saldo no està disponible durant la repetició.</string>
@@ -27,9 +27,9 @@
   <string name="wallet_transactions_options_filter_received">Rebut</string>
   <string name="wallet_transactions_options_filter_all">Ambdós</string>
   <string name="wallet_transactions_options_filter_sent">Enviats</string>
-  <string name="wallet_transactions_fragment_empty_text_received">Cap Bitcoin rebut fins ara.</string>
-  <string name="wallet_transactions_fragment_empty_text_sent">Cap Bitcoin enviat fins ara.</string>
-  <string name="wallet_transactions_fragment_empty_text_howto">Com aconseguir Bitcoins?\n\nCanvia\'ls per diner tradicional,\nven bens o serveis o bé\nguanyen treballant.</string>
+  <string name="wallet_transactions_fragment_empty_text_received">Cap Dash rebut fins ara.</string>
+  <string name="wallet_transactions_fragment_empty_text_sent">Cap Dash enviat fins ara.</string>
+  <string name="wallet_transactions_fragment_empty_text_howto">Com aconseguir Dash?\n\nCanvia\'ls per diner tradicional,\nven bens o serveis o bé\nguanyen treballant.</string>
   <string name="wallet_transactions_row_warning_backup">Enhorabona, has rebut el teu primer pagament! Tens a punt &lt;u&gt;una còpia de seguretat de la teva cartera&lt;/u&gt;, per protegir-te contra la pèrdua?</string>
   <string name="wallet_transactions_fragment_coinbase">minat</string>
   <string name="wallet_transactions_fragment_internal">intern</string>

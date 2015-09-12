@@ -23,9 +23,9 @@
 	<string name="wallet_transactions_options_filter_received">Đã nhận</string>
 	<string name="wallet_transactions_options_filter_all">Cả hai</string>
 	<string name="wallet_transactions_options_filter_sent">Đã gửi</string>
-	<string name="wallet_transactions_fragment_empty_text_received">Hiện vẫn chưa nhận được Bitcoin nào.</string>
-	<string name="wallet_transactions_fragment_empty_text_sent">Hiện vẫn chưa gửi Bitcoin nào.</string>
-	<string name="wallet_transactions_fragment_empty_text_howto">Làm cách nào để nhận được Bitcoins?\n\nSử dụng cho các giao dịch bằng tiền như truyền thống,\nbán các sản phẩm hoặc dịch vụ hoặc\ndùng cho việc nhận thanh toán.</string>
+	<string name="wallet_transactions_fragment_empty_text_received">Hiện vẫn chưa nhận được Dash nào.</string>
+	<string name="wallet_transactions_fragment_empty_text_sent">Hiện vẫn chưa gửi Dash nào.</string>
+	<string name="wallet_transactions_fragment_empty_text_howto">Làm cách nào để nhận được Dash?\n\nSử dụng cho các giao dịch bằng tiền như truyền thống,\nbán các sản phẩm hoặc dịch vụ hoặc\ndùng cho việc nhận thanh toán.</string>
 	<string name="wallet_transactions_row_warning_backup">Chúc mừng, bạn đã nhận được phần thanh toán đầu tiên của mình! Bạn đã &lt;u&gt;sao lưu ví tiền của mình&lt;/u&gt;, để tránh việc thất thoát hay chưa?</string>
 	<string name="wallet_transactions_fragment_coinbase">đã khai thác</string>
 	<string name="wallet_options_safety">Ghi chú an toàn</string>
@@ -56,7 +56,7 @@
 	<string name="send_coins_sent_msg">Đã gửi!</string>
 	<string name="send_coins_failed_msg">Thất bại!</string>
 	<string name="send_coins_error_msg">Xảy ra vấn đề khi gửi coin!</string>
-	<string name="request_coins_activity_title">Yêu cầu Bitcoin</string>
+	<string name="request_coins_activity_title">Yêu cầu Dash</string>
 	<string name="request_coins_fragment_amount_label">Số lượng đã yêu cầu (tùy chọn)</string>
 	<string name="request_coins_fragment_initiate_request_qr">Đã nhận được mã này được quét từ người gửi.</string>
 	<string name="request_coins_fragment_initiate_request_nfc">Hoặc chạm vào phần NFC để bật thiết bị.</string>
@@ -143,7 +143,7 @@
 	<string name="report_issue_dialog_mail_intent_chooser">Gửi báo cáo sử dụng…</string>
 	<string name="about_title">Thông tin</string>
 	<string name="about_license_title">Giấy phép</string>
-	<string name="about_credits_bitcoinj_title">Ứng dụng này đang sử dụng Dashj %s</string>
+	<string name="about_credits_bitcoinj_title">Ứng dụng này đang sử dụng darkcoinj %s</string>
 	<string name="about_credits_zxing_title">Ứng dụng này sử dụng \'zxing\'</string>
 	<string name="about_credits_icon_title">Ứng dụng này sử dụng biểu tượng bởi \'bitboy\'</string>
 	<string name="about_market_app_title">Trang web của ứng dụng trên Google Play</string>

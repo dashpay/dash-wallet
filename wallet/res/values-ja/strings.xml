@@ -222,11 +222,11 @@
   <string name="preferences_category_labs">ラボ</string>
   <string name="preferences_precision_title">通貨単位の切り下げと切り上げ</string>
   <string name="preferences_precision_summary">総額の表示単位。これは計算に影響しません。</string>
-  <string name="preferences_precision_labels_8">BTC、小数点以下8桁</string>
-  <string name="preferences_precision_labels_6">BTC、小数点以下6桁</string>
-  <string name="preferences_precision_labels_4">BTC、小数点以下4桁</string>
-  <string name="preferences_precision_labels_2_3">mBTC、小数点以下2桁</string>
-  <string name="preferences_precision_labels_0_6">µBTC、小数点無し</string>
+  <string name="preferences_precision_labels_8">DASH、小数点以下8桁</string>
+  <string name="preferences_precision_labels_6">DASH、小数点以下6桁</string>
+  <string name="preferences_precision_labels_4">DASH、小数点以下4桁</string>
+  <string name="preferences_precision_labels_2_3">mDASH、小数点以下2桁</string>
+  <string name="preferences_precision_labels_0_6">µDASH、小数点無し</string>
   <string name="preferences_own_name_title">自身の名前</string>
   <string name="preferences_own_name_summary">支払いリクエストに含める、あなた自身の名前。短いものにしてください。</string>
   <string name="preferences_connectivity_notification_title">接続インジゲーター</string>
@@ -265,7 +265,7 @@
   <string name="about_copyright_title">コピーライト</string>
   <string name="about_license_title">ライセンス</string>
   <string name="about_source_title">ソースコード</string>
-  <string name="about_credits_bitcoinj_title">このアプリはbitcoinj %s を使用しています。</string>
+  <string name="about_credits_bitcoinj_title">このアプリはdarkcoinj %s を使用しています。</string>
   <string name="about_credits_zxing_title">このアプリは\'zxing\'を使用しています。</string>
   <string name="about_credits_icon_title">このアプリは\'bitboy\'によるアイコンを使用しています。</string>
   <string name="about_community_googleplus_title">Google+ コミュニティ</string>

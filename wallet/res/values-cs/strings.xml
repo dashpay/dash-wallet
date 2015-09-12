@@ -27,8 +27,8 @@
   <string name="wallet_transactions_options_filter_received">Obdrženo</string>
   <string name="wallet_transactions_options_filter_all">Oboje</string>
   <string name="wallet_transactions_options_filter_sent">Zasláno</string>
-  <string name="wallet_transactions_fragment_empty_text_received">Zatím žádné bitcoiny neobdrženy</string>
-  <string name="wallet_transactions_fragment_empty_text_sent">Zatím žádné bitcoiny neodeslány</string>
+  <string name="wallet_transactions_fragment_empty_text_received">Zatím žádné Dashy neobdrženy</string>
+  <string name="wallet_transactions_fragment_empty_text_sent">Zatím žádné Dashy neodeslány</string>
   <string name="wallet_transactions_fragment_empty_text_howto">Jak získat Dashy?\n\nSměnou za klasické peníze,\nprodejem zboží nebo služeb\nnebo vyděláním prací.</string>
   <string name="wallet_transactions_row_warning_backup">Gratulujeme, přijal jste vaši první platbu! Už jste si &lt;u&gt;zazálohoval vaši peněženku&lt;/u&gt;, aby jste se ochránil proti ztrátě?</string>
   <string name="wallet_transactions_fragment_coinbase">vytěženo</string>
@@ -59,7 +59,7 @@
   <string name="send_coins_fragment_payee_verified_by_unknown">neznámý</string>
   <string name="send_coins_fragment_receiving_address_label">Zaplatit</string>
   <string name="send_coins_fragment_receiving_address_hint">napište adresu či jméno</string>
-  <string name="send_coins_fragment_receiving_address_error">Neplatná bitcoinová adresa!</string>
+  <string name="send_coins_fragment_receiving_address_error">Neplatná Dashová adresa!</string>
   <string name="send_coins_fragment_receiving_address_complex">komplex\nadresa</string>
   <string name="send_coins_fragment_pending">(%s čeká na potvrzení)</string>
   <string name="send_coins_fragment_amount_label">Částka k zaplacení</string>
@@ -87,7 +87,7 @@
   <string name="send_coins_options_empty">Prázdná peněženka</string>
   <string name="sweep_wallet_activity_title">Načíst papírovou peněženku</string>
   <string name="sweep_wallet_fragment_intro">Chystáte se načíst papírovou peněženku nebo kupón. Tato akce přemístí veškeré mince z papíru do vaší peněženky na tomto zařízení. Poté co bude transakce potvrzena už papír nepotřebujete a neměl by být z bezpečnostních důvodů dále používán.</string>
-  <string name="sweep_wallet_fragment_hint">Papírové peněženky se nejčastěji používají jako cold storage. Některé bitcoinmaty je tisknou na lístcích, než aby je poslali přímo do vašeho zařízení. Lidé také někdy používají přednabité papírové peněženky pro směnu bitcoinů (což ale není doporučeno)</string>
+  <string name="sweep_wallet_fragment_hint">Papírové peněženky se nejčastěji používají jako cold storage. Některé Dashmaty je tisknou na lístcích, než aby je poslali přímo do vašeho zařízení. Lidé také někdy používají přednabité papírové peněženky pro směnu Dashů (což ale není doporučeno)</string>
   <string name="sweep_wallet_fragment_wallet_unknown">Začněte načtením privátního klíče z papírové peněženky. Použijte tlačítko kamery z menu.</string>
   <string name="sweep_wallet_fragment_encrypted">Tento soukromý klíč je chráněn heslem.</string>
   <string name="sweep_wallet_fragment_password">heslo</string>
@@ -197,7 +197,7 @@
   <string name="input_parser_io_error">Nelze přečíst data:\n%s</string>
   <string name="input_parser_cannot_classify">Nelze rozpoznat vstup:\n%s</string>
   <string name="input_parser_invalid_bitcoin_uri">Nevalidní Dash URI:\n%s</string>
-  <string name="input_parser_invalid_address">Obdržená neplatná bitcoinová adresa!\n(Nemícháte mainnet/testnet?)</string>
+  <string name="input_parser_invalid_address">Obdržená neplatná Dashová adresa!\n(Nemícháte mainnet/testnet?)</string>
   <string name="input_parser_unverifyable_paymentrequest">Nelze ověřit požadavek na platbu:\n%s</string>
   <string name="input_parser_invalid_paymentrequest">Neplatný požadavek na platbu:\n%s</string>
   <string name="input_parser_invalid_transaction">Neplatná transakce:\n%s</string>

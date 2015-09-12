@@ -11,7 +11,7 @@
   <string name="blockchain_state_progress_stalled">Sincronização parada</string>
   <string name="blockchain_state_progress_problem_storage">Sincronizando: Problema de armazenamento</string>
   <string name="blockchain_state_progress_problem_network">Sincronizando: Problema na rede</string>
-  <string name="wallet_address_fragment_clipboard_msg">Endereço Bitcoin copiado</string>
+  <string name="wallet_address_fragment_clipboard_msg">Endereço Dash copiado</string>
   <string name="wallet_address_dialog_fragment_hint">Para proteger a sua privacidade, seu endereço irá mudar assim que você receber um pagamento.</string>
   <string name="wallet_balance_fragment_too_much">Este valor é bastante alto para transportar no seu bolso. Por favor, envie um pouco para um lugar mais seguro.</string>
   <string name="wallet_balance_fragment_replaying">Saldo indisponível durante a reavaliação.</string>
@@ -24,10 +24,10 @@
   <string name="exchange_rates_fragment_source">Preço de %s</string>
   <string name="exchange_rates_options_search">Pesquisa da taxa de câmbio</string>
   <string name="exchange_rates_context_set_as_default_title">Definir como moeda padrão</string>
-  <string name="wallet_transactions_fragment_empty_text_received">Nenhum Bitcoin recebido até o momento.</string>
-  <string name="wallet_transactions_fragment_empty_text_sent">Nenhum Bitcoin enviado até o momento.</string>
-  <string name="wallet_transactions_fragment_empty_text_howto">Como conseguir Bitcoins?\n\nTroque por dinheiro tradicional,\nvenda bens ou serviços ou\nganhe trabalhando.</string>
-  <string name="wallet_transactions_row_warning_backup">Parabéns, você recebeu o seu primeiro pagamento! Deseja efetuar o &lt;u&gt;backup de sua carteira&lt;/u&gt;, para proteger seus Bitcoins?</string>
+  <string name="wallet_transactions_fragment_empty_text_received">Nenhum Dash recebido até o momento.</string>
+  <string name="wallet_transactions_fragment_empty_text_sent">Nenhum Dash enviado até o momento.</string>
+  <string name="wallet_transactions_fragment_empty_text_howto">Como conseguir Dash?\n\nTroque por dinheiro tradicional,\nvenda bens ou serviços ou\nganhe trabalhando.</string>
+  <string name="wallet_transactions_row_warning_backup">Parabéns, você recebeu o seu primeiro pagamento! Deseja efetuar o &lt;u&gt;backup de sua carteira&lt;/u&gt;, para proteger seus Dash?</string>
   <string name="wallet_transactions_fragment_coinbase">minados</string>
   <string name="wallet_transactions_fragment_internal">interno</string>
   <string name="wallet_transactions_options_filter">Filtro</string>
@@ -60,7 +60,7 @@
   <string name="send_coins_fragment_payee_verified_by_unknown">desconhecido</string>
   <string name="send_coins_fragment_receiving_address_label">Pagar a</string>
   <string name="send_coins_fragment_receiving_address_hint">insira o endereço ou nome</string>
-  <string name="send_coins_fragment_receiving_address_error">Endereço Bitcoin inválido</string>
+  <string name="send_coins_fragment_receiving_address_error">Endereço Dash inválido</string>
   <string name="send_coins_fragment_receiving_address_own">Você está prestes a enviar para si mesmo!</string>
   <string name="send_coins_fragment_receiving_address_complex">complexo\nendereço</string>
   <string name="send_coins_fragment_pending">(%s esperando confirmação)</string>
@@ -85,7 +85,7 @@
   <string name="send_coins_sending_msg">Enviando…</string>
   <string name="send_coins_sent_msg">Enviado!</string>
   <string name="send_coins_failed_msg">Erro!</string>
-  <string name="send_coins_error_msg">Erro ao enviar Bitcoins!</string>
+  <string name="send_coins_error_msg">Erro ao enviar Dash!</string>
   <string name="send_coins_options_empty">Carteira vazia</string>
   <string name="sweep_wallet_activity_title">Varrer papel carteira</string>
   <string name="sweep_wallet_fragment_intro">Você está prestes a varrer uma carteira de papel ou cupom. Isto irá mover todas as moedas do que o papel de sua carteira neste dispositivo. Quando a transação for confirmada, o papel será inútil e não deve ser re-utilizado por razões de segurança.</string>

@@ -27,8 +27,8 @@
   <string name="wallet_transactions_options_filter_received">Получено</string>
   <string name="wallet_transactions_options_filter_all">Все</string>
   <string name="wallet_transactions_options_filter_sent">Отправлено</string>
-  <string name="wallet_transactions_fragment_empty_text_received">Ещё не получено Bitcoin-монет</string>
-  <string name="wallet_transactions_fragment_empty_text_sent">Ещё не отправлено Bitcoin-монет</string>
+  <string name="wallet_transactions_fragment_empty_text_received">Ещё не получено Dash-монет</string>
+  <string name="wallet_transactions_fragment_empty_text_sent">Ещё не отправлено Dash-монет</string>
   <string name="wallet_transactions_fragment_empty_text_howto">Как получить монеты?\n\nОбменяйте обычные деньги,\nпродайте товары и услуги или\nзаработайте.</string>
   <string name="wallet_transactions_row_warning_backup">Поздравляем, вы получили первый платёж! Вы уже &lt;u&gt;сделали резервную копию кошелька&lt;/u&gt;, чтобы обезопаситься от потерь?</string>
   <string name="wallet_transactions_fragment_coinbase">добыто</string>

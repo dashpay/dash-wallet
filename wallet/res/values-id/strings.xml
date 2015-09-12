@@ -24,9 +24,9 @@
 	<string name="wallet_transactions_options_filter_received">Diterima</string>
 	<string name="wallet_transactions_options_filter_all">Keduanya</string>
 	<string name="wallet_transactions_options_filter_sent">Dikirim</string>
-	<string name="wallet_transactions_fragment_empty_text_received">Tidak ada Bitcoin yg diterima.</string>
-	<string name="wallet_transactions_fragment_empty_text_sent">Tidak ada Bitcoin yg dikirim.</string>
-	<string name="wallet_transactions_fragment_empty_text_howto">Bagaimana mendapatkan Bitcoin?\n\nTukar dgn uang tradisional,\njual barang atau jasa atau\ndengan bekerja.</string>
+	<string name="wallet_transactions_fragment_empty_text_received">Tidak ada Dash yg diterima.</string>
+	<string name="wallet_transactions_fragment_empty_text_sent">Tidak ada Dash yg dikirim.</string>
+	<string name="wallet_transactions_fragment_empty_text_howto">Bagaimana mendapatkan Dash?\n\nTukar dgn uang tradisional,\njual barang atau jasa atau\ndengan bekerja.</string>
 	<string name="wallet_transactions_row_warning_backup">Selamat, Anda menerima pembayaran pertama Anda! Sudahkah Anda &lt;u&gt;mencadangkan dompet Anda&lt;/u&gt;, utk hindari kehilangan?</string>
 	<string name="wallet_transactions_fragment_coinbase">ditambang</string>
 	<string name="wallet_transactions_fragment_internal">Internal</string>
@@ -60,7 +60,7 @@
 	<string name="send_coins_failed_msg">Gagal!</string>
 	<string name="send_coins_error_msg">Gagal mengirim koin!</string>
 	<string name="send_coins_options_empty">Dompet kosong</string>
-	<string name="request_coins_activity_title">Meminta BItcoin</string>
+	<string name="request_coins_activity_title">Meminta Dash</string>
 	<string name="request_coins_fragment_amount_label">Jumlah permintaan (pilihan)</string>
 	<string name="request_coins_fragment_initiate_request_qr">Berikan kode untuk dipindai oleh pengirim.</string>
 	<string name="request_coins_fragment_initiate_request_nfc">Atau tempelkan pada ponsel dgn NFC</string>
@@ -150,7 +150,7 @@
 	<string name="report_issue_dialog_mail_intent_chooser">Kirim laporan dgn…</string>
 	<string name="about_title">Mengenai</string>
 	<string name="about_license_title">Lisensi</string>
-	<string name="about_credits_bitcoinj_title">Apl ini menggunakan Dashj %s</string>
+	<string name="about_credits_bitcoinj_title">Apl ini menggunakan darkcoinj %s</string>
 	<string name="about_credits_zxing_title">Apl ini menggunakan \'zxing\'</string>
 	<string name="about_credits_icon_title">Apl ini menggunakan ikon oleh \'bitboy\'</string>
 	<string name="about_market_app_title">Halaman Apl Google Play</string>

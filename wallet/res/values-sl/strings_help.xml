@@ -4,7 +4,7 @@
 	<string name="help_wallet">
 <![CDATA[
 		<p>
-			V zgornjem levem kotu zaslona je zapisan vaš bitcoin naslov. Oseba, ki vam pošilja novce, mora poznati na naslov.
+			V zgornjem levem kotu zaslona je zapisan vaš Dash naslov. Oseba, ki vam pošilja novce, mora poznati na naslov.
 			Z dotikom ga lahko spremenite.
 		</p>
 		<p>
@@ -33,7 +33,7 @@
 	<string name="help_request_coins">
 <![CDATA[
 		<p>
-			S pomočjo tega pogovornega okna lahko drugi osebi, ki že ima nameščeno bitcoin denarnico, posredujete zahtevek za plačilo.
+			S pomočjo tega pogovornega okna lahko drugi osebi, ki že ima nameščeno Dash denarnico, posredujete zahtevek za plačilo.
 		</p>
 		<p>
 			Najprej lahko vnesete znesek za plačilo.
@@ -58,7 +58,7 @@
 			Lahko tudi začnete tipkati in naslov se bo samodejno dopolnil iz imenika, če ga uporabljate.
 		</p>
 		<p>
-			Preverite, koliko bitcoinov imate na voljo za potrošnjo.
+			Preverite, koliko Dashov imate na voljo za potrošnjo.
 			Nepotrjenih prejetih novcev še ne morete potrošiti; počakati morate na potrditev iz omrežja.
 		</p>
 		<p>
@@ -81,7 +81,7 @@
 		</p>
 		<p>
 			Dashi so shranjeni na tej napravi.
-			<b>Če izgubite napravo, izgubite svoje bitcoine.</b>
+			<b>Če izgubite napravo, izgubite svoje Dashe.</b>
 		</p>
 		<p>
 			Zato morate imeti <b>rezervno kopijo svoje denarnice</b>!

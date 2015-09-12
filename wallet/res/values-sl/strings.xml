@@ -26,7 +26,7 @@
 	<string name="wallet_transactions_options_filter_sent">Poslano</string>
 	<string name="wallet_transactions_fragment_empty_text_received">Prejeli niste še nobenih novcev.</string>
 	<string name="wallet_transactions_fragment_empty_text_sent">Poslali niste še nobenih novcev.</string>
-	<string name="wallet_transactions_fragment_empty_text_howto">Kako dobim bitcoine?\n\nLahko jih kupite,\nprodate kaj za bitcoin\nali pa zaslužite z delom.</string>
+	<string name="wallet_transactions_fragment_empty_text_howto">Kako dobim Dashe?\n\nLahko jih kupite,\nprodate kaj za Dash\nali pa zaslužite z delom.</string>
 	<string name="wallet_transactions_row_warning_backup">Čestitke, prejeli ste prvo plačilo! Ste že napravili &lt;u&gt;rezervno kopijo ključev&lt;/u&gt; za zaščito pred izgubo novcev?</string>
 	<string name="wallet_transactions_fragment_coinbase">narudarjeno</string>
 	<string name="wallet_transactions_fragment_internal">notranji</string>
@@ -129,7 +129,7 @@
 	<string name="export_keys_dialog_failure">Zasebnih ključev ni bilo mogoče rezervno kopirati:\n%s</string>
 	<string name="export_keys_dialog_button_archive">Arhiviraj</string>
 	<string name="export_keys_dialog_mail_subject">Varnostna kopija zasebnih ključev denarnice Dash Wallet</string>
-	<string name="export_keys_dialog_mail_text">Pripeta šifrirana datoteka vsebuje zasebne ključe za bitcoin, zato jo morate vedno varno hraniti. Ne pozabite gesla, s katerim je bila datoteka šifrirana!</string>
+	<string name="export_keys_dialog_mail_text">Pripeta šifrirana datoteka vsebuje zasebne ključe za Dash, zato jo morate vedno varno hraniti. Ne pozabite gesla, s katerim je bila datoteka šifrirana!</string>
 	<string name="export_keys_dialog_mail_intent_chooser">Arhiviraj ključe z aplikacijo…</string>
 	<string name="export_keys_dialog_mail_intent_failed">Arhiviranje ključev spodletelo.</string>
 	<string name="import_export_keys_dialog_password">geslo</string>
@@ -140,8 +140,8 @@
 	<string name="scan_camera_problem_dialog_message">Težava s kamero. Najbrž boste morali ponovno zagnati napravo.</string>
 	<string name="input_parser_io_error">Branje podatkov spodletelo:\n%s</string>
 	<string name="input_parser_cannot_classify">Neznana vrsta vhoda:\n%s</string>
-	<string name="input_parser_invalid_bitcoin_uri">Neveljaven bitcoin URI:\n%s</string>
-	<string name="input_parser_invalid_address">Neveljaven bitcoin naslov!\n(Zamenjava testnega in pravega omrežja?)</string>
+	<string name="input_parser_invalid_bitcoin_uri">Neveljaven Dash URI:\n%s</string>
+	<string name="input_parser_invalid_address">Neveljaven Dash naslov!\n(Zamenjava testnega in pravega omrežja?)</string>
 	<string name="input_parser_unverifyable_paymentrequest">Ne morem preveriti zahtevka za plačilo:\n%s</string>
 	<string name="input_parser_invalid_paymentrequest">Neveljavna prošnja za plačilo:\n%s</string>
 	<string name="input_parser_invalid_transaction">Neveljavno nakazilo:\n%s</string>

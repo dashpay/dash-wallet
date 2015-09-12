@@ -11,7 +11,7 @@
   <string name="blockchain_state_progress_stalled">Sincronizzazione bloccata</string>
   <string name="blockchain_state_progress_problem_storage">Sincronizzazione: problema di Memorizzazione</string>
   <string name="blockchain_state_progress_problem_network">Sincronizzazione: problema di Rete</string>
-  <string name="wallet_address_fragment_clipboard_msg">Indirizzo Bitcoin copiato negli appunti</string>
+  <string name="wallet_address_fragment_clipboard_msg">Indirizzo Dash copiato negli appunti</string>
   <string name="wallet_address_dialog_fragment_hint">Per proteggere la tua privacy, il tuo indirizzo cambierà alla ricezione di un pagamento.</string>
   <string name="wallet_balance_fragment_too_much">Questo importo è alto per essere portato con se. Si prega di spostarne alcuni in un luogo più sicuro.</string>
   <string name="wallet_balance_fragment_replaying">Il conto non è disponibile durante la ripetizione.</string>
@@ -24,9 +24,9 @@
   <string name="exchange_rates_fragment_source">Prezzo da %s</string>
   <string name="exchange_rates_options_search">Ricerca tasso di cambio</string>
   <string name="exchange_rates_context_set_as_default_title">Imposta come valuta straniera predefinita</string>
-  <string name="wallet_transactions_fragment_empty_text_received">Nessun Bitcoin ancora ricevuto</string>
-  <string name="wallet_transactions_fragment_empty_text_sent">Nessun Bitcoin ancora inviato</string>
-  <string name="wallet_transactions_fragment_empty_text_howto">Come ottenere Bitcoins?\n\nBarattali per soldi reali,\nvendi beni o servizi oppure\nricavali lavorando.</string>
+  <string name="wallet_transactions_fragment_empty_text_received">Nessun Dash ancora ricevuto</string>
+  <string name="wallet_transactions_fragment_empty_text_sent">Nessun Dash ancora inviato</string>
+  <string name="wallet_transactions_fragment_empty_text_howto">Come ottenere Dash?\n\nBarattali per soldi reali,\nvendi beni o servizi oppure\nricavali lavorando.</string>
   <string name="wallet_transactions_row_warning_backup">Congratulazioni, hai ricevuto i tuoi primi pagamenti! Hai già &lt;u&gt;eseguito un backup del tuo portafoglio &lt;/u&gt;, per proteggerlo dai danni?</string>
   <string name="wallet_transactions_fragment_coinbase">minato</string>
   <string name="wallet_transactions_fragment_internal">Interna</string>
@@ -60,7 +60,7 @@
   <string name="send_coins_fragment_payee_verified_by_unknown">sconosciuto</string>
   <string name="send_coins_fragment_receiving_address_label">Paga a</string>
   <string name="send_coins_fragment_receiving_address_hint">inserisci indirizzo o nome</string>
-  <string name="send_coins_fragment_receiving_address_error">Indirizzo Bitcoin errato!</string>
+  <string name="send_coins_fragment_receiving_address_error">Indirizzo Dash errato!</string>
   <string name="send_coins_fragment_receiving_address_own">Stai per inviare a te stesso!</string>
   <string name="send_coins_fragment_receiving_address_complex">completo\nindirizzo</string>
   <string name="send_coins_fragment_pending">(%s in attesa di conferma)</string>
@@ -85,7 +85,7 @@
   <string name="send_coins_sending_msg">Invio in corso…</string>
   <string name="send_coins_sent_msg">Inviato!</string>
   <string name="send_coins_failed_msg">Fallito!</string>
-  <string name="send_coins_error_msg">Problemi durante l\'invio dei Bitcoins!</string>
+  <string name="send_coins_error_msg">Problemi durante l\'invio dei Dash!</string>
   <string name="send_coins_options_fee_category">Commissione</string>
   <string name="send_coins_options_fee_category_economic">Economica</string>
   <string name="send_coins_options_fee_category_normal">Normale</string>
@@ -207,7 +207,7 @@
   <string name="input_parser_io_error">Impossibile leggere i dati:\n%s</string>
   <string name="input_parser_cannot_classify">Impossibile classificare l\'input:\n%s</string>
   <string name="input_parser_invalid_bitcoin_uri">URI Dash errato:\n%s</string>
-  <string name="input_parser_invalid_address">Ricevuto indirizzo bitcoin non valido!\n(Hai mescolato la mainnet con la testnet?)</string>
+  <string name="input_parser_invalid_address">Ricevuto indirizzo Dash non valido!\n(Hai mescolato la mainnet con la testnet?)</string>
   <string name="input_parser_unverifyable_paymentrequest">Impossibile verificare la richiesta di pagamento:\%s</string>
   <string name="input_parser_invalid_paymentrequest">Richiesta di pagamento invalida:\n%s</string>
   <string name="input_parser_invalid_transaction">Transazione non valida:\n%s</string>
