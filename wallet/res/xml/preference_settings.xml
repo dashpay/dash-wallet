@@ -45,11 +45,11 @@
 			android:icon="@drawable/ic_warning_grey600_24dp"
 			android:summary="This is all unfinished stuff. Use at your own risk!"
 			android:title="Warning" />
-		<!--CheckBoxPreference
+		<CheckBoxPreference
 			android:defaultValue="false"
 			android:key="labs_instantx_enabled"
 			android:summary="Allow InstantX to be used on Send Coins."
-			android:title="Enable InstantX" /-->
+			android:title="Enable InstantX" />
 		<CheckBoxPreference
 			android:defaultValue="true"
 			android:key="disclaimer"
