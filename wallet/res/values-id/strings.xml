@@ -175,5 +175,4 @@
 	<string name="action_show_qr">Tampilkan kode QR</string>
 	<string name="time_today">hari ini</string>
 	<string name="address_unlabeled">(tak berlabel)</string>
-    <string name="wallet_options_disconnect">Putuskan</string>
 </resources>

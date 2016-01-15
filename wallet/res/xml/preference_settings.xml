@@ -46,7 +46,7 @@
 			android:summary="This is all unfinished stuff. Use at your own risk!"
 			android:title="Warning" />
 		<CheckBoxPreference
-			android:defaultValue="false"
+			android:defaultValue="true"
 			android:key="labs_instantx_enabled"
 			android:summary="Allow InstantX to be used on Send Coins."
 			android:title="Enable InstantX" />
