@@ -42,6 +42,7 @@ import org.bitcoinj.core.Wallet.DustySendRequested;
 import org.bitcoinj.core.Wallet.SendRequest;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.utils.MonetaryFormat;
+import org.bitcoinj.wallet.InstantXCoinSelector;
 import org.bitcoinj.wallet.KeyChain.KeyPurpose;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -183,6 +184,8 @@ public final class SendCoinsFragment extends Fragment
 	private static final int REQUEST_CODE_ENABLE_BLUETOOTH_FOR_DIRECT_PAYMENT = 2;
 
 	private static final Logger log = LoggerFactory.getLogger(SendCoinsFragment.class);
+
+	InstantXCoinSelector ixCoinSelector = new InstantXCoinSelector();
 
 	private enum State
 	{
@@ -919,6 +922,7 @@ public final class SendCoinsFragment extends Fragment
 		sendRequest.feePerKb = feeCategory.feePerKb;
         sendRequest.feePerKb = sendRequest.useInstantX ? Coin.valueOf(CoinDefinition.INSTANTX_FEE): sendRequest.feePerKb;
 
+
 		sendRequest.memo = paymentIntent.memo;
 		sendRequest.exchangeRate = amountCalculatorLink.getExchangeRate();
 		sendRequest.aesKey = encryptionKey;
@@ -1121,11 +1125,14 @@ public final class SendCoinsFragment extends Fragment
 					final Address dummy = wallet.currentReceiveAddress(); // won't be used, tx is never committed
 					final SendRequest sendRequest = paymentIntent.mergeWithEditedValues(amount, dummy).toSendRequest();
 					sendRequest.useInstantX = (instantXenable.isChecked());
+					ixCoinSelector.setUsingInstantX(sendRequest.useInstantX);
+					sendRequest.coinSelector = ixCoinSelector;
 					sendRequest.signInputs = false;
 					sendRequest.emptyWallet = paymentIntent.mayEditAmount() && amount.equals(wallet.getBalance(BalanceType.AVAILABLE));
 
 					sendRequest.feePerKb = feeCategory.feePerKb;
 					sendRequest.feePerKb = sendRequest.useInstantX ? Coin.valueOf(CoinDefinition.INSTANTX_FEE): sendRequest.feePerKb;
+
 					wallet.completeTx(sendRequest);
 					dryrunTransaction = sendRequest.tx;
 				}
