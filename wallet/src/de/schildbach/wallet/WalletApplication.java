@@ -130,7 +130,7 @@ public class WalletApplication extends Application
 		};
 
 		initMnemonicCode();
-
+		PreferenceManager.setDefaultValues(this, R.xml.preference_settings, false);
 		config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this));
 		activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
 
