@@ -3,8 +3,8 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	package="hashengineering.darkcoin.wallet"
 	android:installLocation="internalOnly"
-	android:versionCode="40030"
-	android:versionName="4.40.12c.ix-b" >
+	android:versionCode="40031"
+	android:versionName="4.40.12c.ix-c" >
 	<uses-sdk
 		android:minSdkVersion="15"
 		android:targetSdkVersion="16"
@@ -106,14 +106,14 @@
 			<intent-filter android:label="@string/send_coins_activity_title" >
 				<action android:name="android.intent.action.VIEW" />
 
-				<data android:mimeType="application/darkcoin-paymentrequest" />
+				<data android:mimeType="application/dash-paymentrequest" />
 
 				<category android:name="android.intent.category.DEFAULT" />
 			</intent-filter>
 			<intent-filter android:label="@string/send_coins_activity_title" >
 				<action android:name="android.nfc.action.NDEF_DISCOVERED" />
 
-				<data android:mimeType="application/darkcoin-paymentrequest" />
+				<data android:mimeType="application/dash-paymentrequest" />
 
 				<category android:name="android.intent.category.DEFAULT" />
 			</intent-filter>
