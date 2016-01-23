@@ -1,4 +1,4 @@
-<b>Draag je Dash altijd bij je, in je broekzak!</b> Je kunt vlot betalen door een QR-code te scannen. Als handelaar ontvang je je betalingen betrouwbaar en onmiddelijk. Dash Wallet is de eerste mobiele Dash-app, en misschien wel de veiligste!
+﻿<b>Draag je Dash altijd bij je, in je broekzak!</b> Je kunt vlot betalen door een QR-code te scannen. Als handelaar ontvang je je betalingen betrouwbaar en onmiddelijk. Dash Wallet is de eerste mobiele Dash-app, en misschien wel de veiligste!
 
 <b>FEATURES</b>
 
@@ -19,17 +19,8 @@ https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Onze broncode is beschikbaar op GitHub:
 https://github.com/HashEngineering/darkcoin-wallet
->>>>>>> 31fe793bd49ad8b5416891ba7f68b60549c9761e
 
 Alle vertalingen worden geregeld via Transifex:
 https://www.transifex.com/projects/p/bitcoin-wallet/
-
-
-<b>TESTIMONIALS</b>
-
-* Veel mobiele portemonnees gebruiken Dash Wallet als basis, bijvoorbeeld: blockchain.info, Hive en KnC.
-* Aanbevolen mobiele portemonnee op https://bitcoin.org
-* Aangeraden door BitPay.
-
 
 <i>Gebruik op eigen risico!</i>

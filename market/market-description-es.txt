@@ -1,17 +1,17 @@
-<b>Ten tus bitcoins siempre contigo, ¡en tu bolsillo!</b> Puedes pagar leyendo rápidamente el código QR. Como comerciante, puedes recibir pagos de forma fiable e instantánea. Dash Wallet es la primera aplicación móvil Dash. ¡Y posiblemente también la más segura!
+﻿<b>Ten tus Dash siempre contigo, ¡en tu bolsillo!</b> Puedes pagar leyendo rápidamente el código QR. Como comerciante, puedes recibir pagos de forma fiable e instantánea. Dash Wallet es la primera aplicación móvil Dash. ¡Y posiblemente también la más segura!
 
 
 <b>CARACTERÍSTICAS</b>
 
 • ¡No requiere registro, servidor en la nube o servicio web! Este monedero es auténticamente descentralizado y entre pares (peer-to-peer).
-• Muestra la cantidad de bitcoins en DASH, mDASH, y µDASH.
+• Muestra la cantidad de Dash en DASH, mDASH, y µDASH.
 • Conversión hacia y desde divisas nacionales.
-• Envío y recepción de bitcoins mediante NFC, códigos QR o identificadores URL Dash.
+• Envío y recepción de Dash mediante NFC, códigos QR o identificadores URL Dash.
 • Libreta de direcciones para guardar las direcciones Dash más utilizadas.
 • Cuando no tengas conexión, puedes seguir pagando via Bluetooth.
-• Notificación de sistema al recibir bitcoins.
+• Notificación de sistema al recibir Dash.
 • Barrido de monederos de papel (por ejemplo, los que se utilizan para custodia en frio).
-• Widget para el saldo de bitcoins.
+• Widget para el saldo de Dash.
 
 
 <b>CONTRIBUIR</b>
@@ -25,12 +25,6 @@ https://github.com/HashEngineering/darkcoin-wallet
 Todas las traducciones son administradas a través de Transifex:
 https://www.transifex.com/projects/p/bitcoin-wallet/
 
-
-<b>TESTIMONIOS</b>
-
-• Muchos monederos móviles basan su código en Dash Wallet. Ejemplos: blockchain.info, Hive y KnC.
-• Monedero móvil recomendado por https://bitcoin.org
-• Recomendado por BitPay.
 
 
 <i>¡Úsalo bajo tu propio riesgo!</i>
