@@ -3,8 +3,8 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	package="hashengineering.darkcoin.wallet"
 	android:installLocation="internalOnly"
-	android:versionCode="40031"
-	android:versionName="4.40.12c.ix-c" >
+	android:versionCode="40032"
+	android:versionName="4.40.12d.ix" >
 	<uses-sdk
 		android:minSdkVersion="15"
 		android:targetSdkVersion="16"
@@ -190,7 +190,7 @@
 			android:exported="false" />
 		<provider
 			android:name="de.schildbach.wallet.FileAttachmentProvider"
-			android:authorities="de.schildbach.wallet_test.file_attachment"
+			android:authorities="hashengineering.darkcoin.wallet.file_attachment"
 			android:exported="false"
 			android:grantUriPermissions="true" />
 
