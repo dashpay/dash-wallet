@@ -9,4 +9,6 @@
 	<string name="transaction_row_message_received_instantx_locked">InstantX Locked</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">Unconfirmed InstantX</string>
 	<string name="transaction_row_message_received_instantx_locked2">Locked InstantX</string>
+
+	<string name="wallet_options_disconnect">Disconnect</string>
 </resources>
