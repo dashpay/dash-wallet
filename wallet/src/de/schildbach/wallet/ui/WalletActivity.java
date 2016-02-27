@@ -24,9 +24,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
@@ -57,6 +54,11 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.support.design.widget.NavigationView;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v7.widget.Toolbar;
 import android.text.format.DateUtils;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -79,7 +81,6 @@ import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import hashengineering.darkcoin.wallet.R;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Crypto;
-import de.schildbach.wallet.util.HttpGetThread;
 import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
@@ -88,7 +89,7 @@ import de.schildbach.wallet.util.WalletUtils;
  * @author Andreas Schildbach
  */
 public final class WalletActivity extends AbstractWalletActivity
-{
+		implements NavigationView.OnNavigationItemSelectedListener {
 	private static final int DIALOG_RESTORE_WALLET = 0;
 	private static final int DIALOG_TIMESKEW_ALERT = 1;
 	private static final int DIALOG_VERSION_ALERT = 2;
@@ -121,6 +122,44 @@ public final class WalletActivity extends AbstractWalletActivity
 		handleIntent(getIntent());
 
 		MaybeMaintenanceFragment.add(getFragmentManager());
+
+		initView();
+	}
+
+	private void initView()
+    {
+        Toolbar toolbarView = initToolbar();
+		initNavigationDrawer(toolbarView);
+	}
+
+    private Toolbar initToolbar()
+    {
+        Toolbar toolbarView = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbarView);
+        setTitle("");
+        return toolbarView;
+    }
+
+    private void initNavigationDrawer(Toolbar toolbarView)
+	{
+        final NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+        navigationView.setNavigationItemSelectedListener(this);
+
+		DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+		ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+				this, drawer, toolbarView, R.string.navigation_drawer_open,
+				R.string.navigation_drawer_close) {
+
+			@Override
+			public void onDrawerOpened(View drawerView) {
+				super.onDrawerOpened(drawerView);
+                final Resources res = getResources();
+                Menu menu = navigationView.getMenu();
+                menu.findItem(R.id.nav_exchenge_rates).setEnabled(res.getBoolean(R.bool.show_exchange_rates_option));
+			}
+		};
+		drawer.addDrawerListener(toggle);
+		toggle.syncState();
 	}
 
 	@Override
@@ -237,7 +276,6 @@ public final class WalletActivity extends AbstractWalletActivity
 		final Resources res = getResources();
 		final String externalStorageState = Environment.getExternalStorageState();
 
-		menu.findItem(R.id.wallet_options_exchange_rates).setVisible(res.getBoolean(R.bool.show_exchange_rates_option));
 		menu.findItem(R.id.wallet_options_restore_wallet).setEnabled(
 				Environment.MEDIA_MOUNTED.equals(externalStorageState) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(externalStorageState));
 		menu.findItem(R.id.wallet_options_backup_wallet).setEnabled(Environment.MEDIA_MOUNTED.equals(externalStorageState));
@@ -264,22 +302,6 @@ public final class WalletActivity extends AbstractWalletActivity
 				handleScan();
 				return true;
 
-			case R.id.wallet_options_address_book:
-				AddressBookActivity.start(this);
-				return true;
-
-			case R.id.wallet_options_exchange_rates:
-				startActivity(new Intent(this, ExchangeRatesActivity.class));
-				return true;
-
-			case R.id.wallet_options_sweep_wallet:
-				SweepWalletActivity.start(this);
-				return true;
-
-			case R.id.wallet_options_network_monitor:
-				startActivity(new Intent(this, NetworkMonitorActivity.class));
-				return true;
-
 			case R.id.wallet_options_restore_wallet:
 				showDialog(DIALOG_RESTORE_WALLET);
 				return true;
@@ -290,10 +312,6 @@ public final class WalletActivity extends AbstractWalletActivity
 
 			case R.id.wallet_options_encrypt_keys:
 				handleEncryptKeys();
-				return true;
-
-			case R.id.wallet_options_preferences:
-				startActivity(new Intent(this, PreferenceActivity.class));
 				return true;
 
 			case R.id.wallet_options_safety:
@@ -889,5 +907,31 @@ public final class WalletActivity extends AbstractWalletActivity
 			}
 		});
 		dialog.show();
+	}
+
+	@Override
+	public boolean onNavigationItemSelected(MenuItem item) {
+		// Handle navigation view item clicks here.
+		int id = item.getItemId();
+
+		if (id == R.id.nav_home) {
+
+		} else if (id == R.id.nav_address_book) {
+			AddressBookActivity.start(this);
+		} else if (id == R.id.nav_exchenge_rates) {
+			startActivity(new Intent(this, ExchangeRatesActivity.class));
+		} else if (id == R.id.nav_paper_wallet) {
+			SweepWalletActivity.start(this);
+		} else if (id == R.id.nav_network_monitor) {
+			startActivity(new Intent(this, NetworkMonitorActivity.class));
+		} else if (id == R.id.nav_settings) {
+			startActivity(new Intent(this, PreferenceActivity.class));
+		}
+//
+//        }
+
+		DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+		drawer.closeDrawer(GravityCompat.START);
+		return true;
 	}
 }
