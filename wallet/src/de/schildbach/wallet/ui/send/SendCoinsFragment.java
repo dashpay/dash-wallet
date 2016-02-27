@@ -42,24 +42,19 @@ import org.bitcoinj.core.Wallet.DustySendRequested;
 import org.bitcoinj.core.Wallet.SendRequest;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.utils.MonetaryFormat;
+import org.bitcoinj.wallet.InstantXCoinSelector;
 import org.bitcoinj.wallet.KeyChain.KeyPurpose;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.params.KeyParameter;
 
 import android.app.Activity;
-import android.app.Fragment;
-import android.app.FragmentManager;
-import android.app.LoaderManager;
-import android.app.LoaderManager.LoaderCallbacks;
 import android.bluetooth.BluetoothAdapter;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.CursorLoader;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.Loader;
 import android.content.pm.PackageManager;
 import android.database.ContentObserver;
 import android.database.Cursor;
@@ -71,6 +66,11 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -183,6 +183,8 @@ public final class SendCoinsFragment extends Fragment
 	private static final int REQUEST_CODE_ENABLE_BLUETOOTH_FOR_DIRECT_PAYMENT = 2;
 
 	private static final Logger log = LoggerFactory.getLogger(SendCoinsFragment.class);
+
+	InstantXCoinSelector ixCoinSelector = new InstantXCoinSelector();
 
 	private enum State
 	{
@@ -310,7 +312,7 @@ public final class SendCoinsFragment extends Fragment
 		}
 	};
 
-	private final LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
+	private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
 	{
 		@Override
 		public Loader<Cursor> onCreateLoader(final int id, final Bundle args)
@@ -337,7 +339,7 @@ public final class SendCoinsFragment extends Fragment
 		}
 	};
 
-	private final LoaderCallbacks<Cursor> receivingAddressLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
+	private final LoaderManager.LoaderCallbacks<Cursor> receivingAddressLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
 	{
 		@Override
 		public Loader<Cursor> onCreateLoader(final int id, final Bundle args)
@@ -1121,6 +1123,8 @@ public final class SendCoinsFragment extends Fragment
 					final Address dummy = wallet.currentReceiveAddress(); // won't be used, tx is never committed
 					final SendRequest sendRequest = paymentIntent.mergeWithEditedValues(amount, dummy).toSendRequest();
 					sendRequest.useInstantX = (instantXenable.isChecked());
+					ixCoinSelector.setUsingInstantX(sendRequest.useInstantX);
+					sendRequest.coinSelector = ixCoinSelector;
 					sendRequest.signInputs = false;
 					sendRequest.emptyWallet = paymentIntent.mayEditAmount() && amount.equals(wallet.getBalance(BalanceType.AVAILABLE));
 

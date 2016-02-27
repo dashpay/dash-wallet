@@ -23,18 +23,18 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Wallet;
 import org.bitcoinj.core.Wallet.BalanceType;
 
-import android.app.Activity;
-import android.app.LoaderManager;
-import android.app.LoaderManager.LoaderCallbacks;
 import android.content.Context;
-import android.content.CursorLoader;
-import android.content.Loader;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
+import android.support.v4.view.MenuItemCompat;
+import android.support.v7.widget.SearchView;
 import android.view.ActionMode;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -42,8 +42,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ListView;
 import android.widget.ResourceCursorAdapter;
-import android.widget.SearchView;
-import android.widget.SearchView.OnQueryTextListener;
 import android.widget.TextView;
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
@@ -66,7 +64,7 @@ public final class ExchangeRatesFragment extends FancyListFragment implements On
 	private Configuration config;
 	private Wallet wallet;
 	private Uri contentUri;
-	private LoaderManager loaderManager;
+	private android.support.v4.app.LoaderManager loaderManager;
 
 	private ExchangeRatesAdapter adapter;
 	private String query = null;
@@ -82,15 +80,15 @@ public final class ExchangeRatesFragment extends FancyListFragment implements On
 	private static final int ID_BLOCKCHAIN_STATE_LOADER = 2;
 
 	@Override
-	public void onAttach(final Activity activity)
+	public void onAttach(final Context context)
 	{
-		super.onAttach(activity);
+		super.onAttach(context);
 
-		this.activity = (AbstractWalletActivity) activity;
+		this.activity = (AbstractWalletActivity) context;
 		this.application = (WalletApplication) activity.getApplication();
 		this.config = application.getConfiguration();
 		this.wallet = application.getWallet();
-		this.contentUri = ExchangeRatesProvider.contentUri(activity.getPackageName(), false);
+		this.contentUri = ExchangeRatesProvider.contentUri(context.getPackageName(), false);
 		this.loaderManager = getLoaderManager();
 	}
 
@@ -154,8 +152,9 @@ public final class ExchangeRatesFragment extends FancyListFragment implements On
 	{
 		inflater.inflate(R.menu.exchange_rates_fragment_options, menu);
 
-		final SearchView searchView = (SearchView) menu.findItem(R.id.exchange_rates_options_search).getActionView();
-		searchView.setOnQueryTextListener(new OnQueryTextListener()
+		MenuItem item = menu.findItem(R.id.exchange_rates_options_search);
+		final SearchView searchView = (SearchView) MenuItemCompat.getActionView(item);
+		searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener()
 		{
 			@Override
 			public boolean onQueryTextChange(final String newText)
@@ -255,7 +254,7 @@ public final class ExchangeRatesFragment extends FancyListFragment implements On
 			adapter.setRateBase(config.getBtcBase());
 	}
 
-	private final LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
+	private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
 	{
 		@Override
 		public Loader<Cursor> onCreateLoader(final int id, final Bundle args)
@@ -302,7 +301,7 @@ public final class ExchangeRatesFragment extends FancyListFragment implements On
 		}
 	};
 
-	private final LoaderCallbacks<Coin> balanceLoaderCallbacks = new LoaderManager.LoaderCallbacks<Coin>()
+	private final LoaderManager.LoaderCallbacks<Coin> balanceLoaderCallbacks = new LoaderManager.LoaderCallbacks<Coin>()
 	{
 		@Override
 		public Loader<Coin> onCreateLoader(final int id, final Bundle args)
@@ -324,7 +323,7 @@ public final class ExchangeRatesFragment extends FancyListFragment implements On
 		}
 	};
 
-	private final LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>()
+	private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>()
 	{
 		@Override
 		public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args)

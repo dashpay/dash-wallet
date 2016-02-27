@@ -24,13 +24,12 @@ import org.bitcoinj.core.Wallet;
 import org.bitcoinj.utils.Fiat;
 
 import android.app.Activity;
-import android.app.Fragment;
-import android.app.LoaderManager;
-import android.app.LoaderManager.LoaderCallbacks;
 import android.content.Intent;
-import android.content.Loader;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -253,7 +252,7 @@ public final class WalletBalanceFragment extends Fragment
 		}
 	}
 
-	private final LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>()
+	private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>()
 	{
 		@Override
 		public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args)
@@ -275,7 +274,7 @@ public final class WalletBalanceFragment extends Fragment
 		}
 	};
 
-	private final LoaderCallbacks<Coin> balanceLoaderCallbacks = new LoaderManager.LoaderCallbacks<Coin>()
+	private final LoaderManager.LoaderCallbacks<Coin> balanceLoaderCallbacks = new LoaderManager.LoaderCallbacks<Coin>()
 	{
 		@Override
 		public Loader<Coin> onCreateLoader(final int id, final Bundle args)
@@ -297,7 +296,7 @@ public final class WalletBalanceFragment extends Fragment
 		}
 	};
 
-	private final LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
+	private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
 	{
 		@Override
 		public Loader<Cursor> onCreateLoader(final int id, final Bundle args)
