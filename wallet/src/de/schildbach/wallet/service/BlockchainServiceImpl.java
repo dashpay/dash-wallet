@@ -259,7 +259,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 				changed(peerCount);
 			if(Configuration.PREFS_KEY_INSTANTX_ENABLED.equals(key))
 			{
-				InstantXSystem.get(blockChain).setEnabled(sharedPreferences.getBoolean(Configuration.PREFS_KEY_INSTANTX_ENABLED, false));
+				//InstantXSystem.get(blockChain).setEnabled(sharedPreferences.getBoolean(Configuration.PREFS_KEY_INSTANTX_ENABLED, false));
 			}
 		}
 
