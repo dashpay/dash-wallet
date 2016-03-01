@@ -927,8 +927,6 @@ public final class WalletActivity extends AbstractWalletActivity
 		} else if (id == R.id.nav_settings) {
 			startActivity(new Intent(this, PreferenceActivity.class));
 		}
-//
-//        }
 
 		DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
 		drawer.closeDrawer(GravityCompat.START);

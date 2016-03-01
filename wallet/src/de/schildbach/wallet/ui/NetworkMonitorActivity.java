@@ -22,6 +22,7 @@ import android.app.FragmentManager;
 import android.os.Bundle;
 import android.support.v13.app.FragmentStatePagerAdapter;
 import android.support.v4.view.ViewPager;
+import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
 import de.schildbach.wallet.util.ViewPagerTabs;
 import hashengineering.darkcoin.wallet.R;
@@ -65,6 +66,15 @@ public final class NetworkMonitorActivity extends AbstractWalletActivity
 			peerListFragment = (PeerListFragment) fm.findFragmentById(R.id.peer_list_fragment);
 			blockListFragment = (BlockListFragment) fm.findFragmentById(R.id.block_list_fragment);
 		}
+
+		initToolbar();
+	}
+
+	private void initToolbar()
+	{
+		Toolbar toolbarView = (Toolbar) findViewById(R.id.toolbar);
+		setSupportActionBar(toolbarView);
+		setTitle("");
 	}
 
 	@Override

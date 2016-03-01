@@ -10,6 +10,8 @@
 	<color name="vivid_red">#ec2227</color>
 	<color name="white">#ffffff</color>
 
+	<color name="ripple_light">#40ffffff</color>
+
 	<!-- foreground -->
 	<color name="fg_significant">#ff000000</color>
 	<color name="fg_less_significant">#ff666666</color>

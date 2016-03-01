@@ -19,20 +19,20 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-        <ImageView
-            android:layout_width="120dp"
-            android:layout_height="20dp"
-            android:layout_gravity="center_vertical"
-            android:scaleType="fitStart"
-            android:src="@drawable/dash_logo_white" />
+            <ImageView
+                android:layout_width="100dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center_vertical"
+                android:scaleType="fitStart"
+                android:src="@drawable/dash_logo_white" />
 
-        <fragment
-            android:id="@+id/wallet_balance_fragment_toolbar"
-            android:name="de.schildbach.wallet.ui.WalletBalanceToolbarFragment"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            tools:layout="@layout/wallet_balance_toolbar_fragment"
-            android:layout_gravity="center_vertical|right" />
+            <fragment
+                android:id="@+id/wallet_balance_fragment_toolbar"
+                android:name="de.schildbach.wallet.ui.WalletBalanceToolbarFragment"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_gravity="center_vertical|right"
+                tools:layout="@layout/wallet_balance_toolbar_fragment" />
 
         </FrameLayout>
 

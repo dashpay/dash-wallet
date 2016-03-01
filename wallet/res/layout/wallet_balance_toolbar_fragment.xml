@@ -1,54 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
-    android:layout_height="wrap_content">
+    android:layout_height="?attr/actionBarSize">
 
     <LinearLayout
         android:id="@+id/wallet_balance"
-        style="@style/My.Widget.Button.Borderless.Unpadded"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="vertical">
+        android:layout_width="wrap_content"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@drawable/selectable_item_background"
+        android:orientation="horizontal">
 
-        <de.schildbach.wallet.ui.CurrencyTextView
-            android:id="@+id/wallet_balance_btc"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/white"
-            android:textSize="@dimen/font_size_small" />
+            android:layout_gravity="center_vertical"
+            android:layout_marginLeft="4dp"
+            android:layout_marginRight="4dp"
+            android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/wallet_balance_too_much"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:layout_marginLeft="@dimen/list_entry_padding_horizontal"
-            android:layout_marginRight="@dimen/list_entry_padding_horizontal_cram"
-            android:text="@string/wallet_balance_fragment_too_much"
-            android:textColor="@color/white"
-            android:textSize="@dimen/font_size_tiny"
-            android:visibility="gone" />
+            <de.schildbach.wallet.ui.ToolbarCurrencyTextView
+                android:id="@+id/wallet_balance_btc"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableLeft="@drawable/ic_dash_d_white_bottom"
+                android:textColor="@color/white"
+                android:textSize="20sp"
+                android:textStyle="bold|italic" />
 
-        <de.schildbach.wallet.ui.CurrencyTextView
-            android:id="@+id/wallet_balance_local"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:paddingRight="8dp"
-            android:textColor="@color/white"
-            android:textSize="@dimen/font_size_tiny" />
+            <de.schildbach.wallet.ui.ToolbarCurrencyTextView
+                android:id="@+id/wallet_balance_local"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right"
+                android:textColor="@color/white"
+                android:textSize="@dimen/font_size_tiny" />
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/wallet_balance_too_much_warning"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_gravity="center_vertical"
+            android:src="@drawable/ic_warning" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/wallet_balance_progress"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+    <ProgressBar
+        android:id="@+id/progress"
+        android:layout_width="?attr/actionBarSize"
+        android:layout_height="?attr/actionBarSize"
         android:layout_gravity="center"
-        android:layout_marginLeft="@dimen/list_entry_padding_horizontal_lax"
-        android:layout_marginRight="@dimen/list_entry_padding_horizontal_lax"
-        android:textColor="@color/white"
-        android:textSize="@dimen/font_size_small"
-        android:visibility="gone" />
+        android:background="@drawable/selectable_item_background"
+        android:indeterminate="true"
+        android:indeterminateDrawable="@drawable/white_progress"
+        android:padding="8dp" />
 
 </FrameLayout>

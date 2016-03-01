@@ -141,7 +141,7 @@
 			android:configChanges="keyboard|keyboardHidden"
 			android:label="@string/exchange_rates_activity_title"
 			android:screenOrientation="behind"
-			android:theme="@style/My.Theme.NoActionBar" />
+			android:theme="@style/My.Theme.ChildActivity" />
 		<activity
 			android:name="de.schildbach.wallet.ui.NetworkMonitorActivity"
 			android:configChanges="keyboard|keyboardHidden"

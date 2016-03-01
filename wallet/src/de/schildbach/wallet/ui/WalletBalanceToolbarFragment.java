@@ -17,9 +17,7 @@
 
 package de.schildbach.wallet.ui;
 
-import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -30,7 +28,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
-import android.widget.TextView;
+import android.widget.Toast;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Wallet;
@@ -59,12 +57,14 @@ public final class WalletBalanceToolbarFragment extends Fragment
 	private LoaderManager loaderManager;
 
 	private View viewBalance;
+	private View progressView;
 	private CurrencyTextView viewBalanceBtc;
 	private View viewBalanceTooMuch;
 	private CurrencyTextView viewBalanceLocal;
-	private TextView viewProgress;
 
 	private boolean showLocalBalance;
+
+    private String progressMessage;
 
 	@Nullable
 	private Coin balance = null;
@@ -78,7 +78,14 @@ public final class WalletBalanceToolbarFragment extends Fragment
 	private static final int ID_BLOCKCHAIN_STATE_LOADER = 2;
 
 	private static final long BLOCKCHAIN_UPTODATE_THRESHOLD_MS = DateUtils.HOUR_IN_MILLIS;
-	private static final Coin TOO_MUCH_BALANCE_THRESHOLD = Coin.COIN.multiply(4);
+	private static final Coin TOO_MUCH_BALANCE_THRESHOLD = Coin.COIN.multiply(10);
+
+    @Override
+    public void onCreate(Bundle savedInstanceState)
+    {
+        super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true);
+    }
 
 	@Override
 	public void onAttach(final Context context)
@@ -105,38 +112,21 @@ public final class WalletBalanceToolbarFragment extends Fragment
 	{
 		super.onViewCreated(view, savedInstanceState);
 
-		final boolean showExchangeRatesOption = getResources().getBoolean(R.bool.show_exchange_rates_option);
+		progressView = view.findViewById(R.id.progress);
 
 		viewBalance = view.findViewById(R.id.wallet_balance);
-		if (showExchangeRatesOption)
-		{
-			viewBalance.setOnClickListener(new OnClickListener()
-			{
-				@Override
-				public void onClick(final View v)
-				{
-					startActivity(new Intent(getActivity(), ExchangeRatesActivity.class));
-				}
-			});
-		}
-		else
-		{
-			viewBalance.setEnabled(false);
-		}
 
 		viewBalanceBtc = (CurrencyTextView) view.findViewById(R.id.wallet_balance_btc);
 		viewBalanceBtc.setPrefixScaleX(0.9f);
 
-		viewBalanceTooMuch = view.findViewById(R.id.wallet_balance_too_much);
+		viewBalanceTooMuch = view.findViewById(R.id.wallet_balance_too_much_warning);
 
 		viewBalanceLocal = (CurrencyTextView) view.findViewById(R.id.wallet_balance_local);
 		viewBalanceLocal.setInsignificantRelativeSize(1);
 		viewBalanceLocal.setStrikeThru(Constants.TEST);
-
-		viewProgress = (TextView) view.findViewById(R.id.wallet_balance_progress);
 	}
 
-	@Override
+    @Override
 	public void onResume()
 	{
 		super.onResume();
@@ -179,22 +169,22 @@ public final class WalletBalanceToolbarFragment extends Fragment
 			if (blockchainLag < 2 * DateUtils.DAY_IN_MILLIS)
 			{
 				final long hours = blockchainLag / DateUtils.HOUR_IN_MILLIS;
-				viewProgress.setText(getString(R.string.blockchain_state_progress_hours, downloading, hours));
+                progressMessage = getString(R.string.blockchain_state_progress_hours, downloading, hours);
 			}
 			else if (blockchainLag < 2 * DateUtils.WEEK_IN_MILLIS)
 			{
 				final long days = blockchainLag / DateUtils.DAY_IN_MILLIS;
-				viewProgress.setText(getString(R.string.blockchain_state_progress_days, downloading, days));
+                progressMessage = getString(R.string.blockchain_state_progress_days, downloading, days);
 			}
 			else if (blockchainLag < 90 * DateUtils.DAY_IN_MILLIS)
 			{
 				final long weeks = blockchainLag / DateUtils.WEEK_IN_MILLIS;
-				viewProgress.setText(getString(R.string.blockchain_state_progress_weeks, downloading, weeks));
+                progressMessage = getString(R.string.blockchain_state_progress_weeks, downloading, weeks);
 			}
 			else
 			{
 				final long months = blockchainLag / (30 * DateUtils.DAY_IN_MILLIS);
-				viewProgress.setText(getString(R.string.blockchain_state_progress_months, downloading, months));
+                progressMessage = getString(R.string.blockchain_state_progress_months, downloading, months);
 			}
 		}
 		else
@@ -215,9 +205,7 @@ public final class WalletBalanceToolbarFragment extends Fragment
 				viewBalanceBtc.setFormat(config.getFormat());
 				viewBalanceBtc.setAmount(balance);
 
-				final boolean tooMuch = balance.isGreaterThan(TOO_MUCH_BALANCE_THRESHOLD);
-
-				viewBalanceTooMuch.setVisibility(tooMuch ? View.VISIBLE : View.GONE);
+                updateBalanceTooMuchWarning();
 
 				if (showLocalBalance)
 				{
@@ -227,7 +215,6 @@ public final class WalletBalanceToolbarFragment extends Fragment
 						viewBalanceLocal.setVisibility(View.VISIBLE);
 						viewBalanceLocal.setFormat(Constants.LOCAL_FORMAT.code(0, Constants.PREFIX_ALMOST_EQUAL_TO + exchangeRate.getCurrencyCode()));
 						viewBalanceLocal.setAmount(localValue);
-//						viewBalanceLocal.setTextColor(getResources().getColor(R.color.fg_less_significant));
 					}
 					else
 					{
@@ -240,14 +227,41 @@ public final class WalletBalanceToolbarFragment extends Fragment
 				viewBalanceBtc.setVisibility(View.INVISIBLE);
 			}
 
-			viewProgress.setVisibility(View.GONE);
-		}
+            progressView.setVisibility(View.GONE);
+        }
 		else
 		{
-			viewProgress.setVisibility(View.VISIBLE);
-			viewBalance.setVisibility(View.INVISIBLE);
-		}
-	}
+            progressView.setVisibility(View.VISIBLE);
+            progressView.setOnClickListener(new OnClickListener()
+            {
+                @Override
+                public void onClick(View v)
+                {
+                    Toast.makeText(getContext(), progressMessage, Toast.LENGTH_LONG).show();
+                }
+            });
+            viewBalance.setVisibility(View.INVISIBLE);
+        }
+    }
+
+    private void updateBalanceTooMuchWarning() {
+        if (balance == null)
+            return;
+
+        final boolean tooMuch = balance.isGreaterThan(TOO_MUCH_BALANCE_THRESHOLD);
+        viewBalanceTooMuch.setVisibility(tooMuch ? View.VISIBLE : View.GONE);
+        if (tooMuch)
+        {
+            viewBalance.setOnClickListener(new OnClickListener()
+            {
+                @Override
+                public void onClick(View v)
+                {
+                    Toast.makeText(getContext(), getString(R.string.wallet_balance_fragment_too_much), Toast.LENGTH_LONG).show();
+                }
+            });
+        }
+    }
 
 	private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>()
 	{
