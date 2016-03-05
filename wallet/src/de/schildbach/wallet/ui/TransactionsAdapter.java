@@ -103,15 +103,19 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 		private final Address address;
 		@Nullable
 		private final String addressLabel;
+		private final boolean isIX;
+		private final boolean isLocked;
 
 		private TransactionCacheEntry(final Coin value, final boolean sent, final boolean showFee, final @Nullable Address address,
-				final @Nullable String addressLabel)
+				final @Nullable String addressLabel, final boolean isIX, final boolean isLocked)
 		{
 			this.value = value;
 			this.sent = sent;
 			this.showFee = showFee;
 			this.address = address;
 			this.addressLabel = addressLabel;
+			this.isIX = isIX;
+			this.isLocked = isLocked;
 		}
 	}
 
@@ -336,6 +340,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 		private final View extendMessageView;
 		private final TextView messageView;
 		private final ImageButton menuView;
+		private final View ixView;
+		private final TextView ixStatusView;
 
 		private TransactionViewHolder(final View itemView)
 		{
@@ -358,6 +364,9 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 			extendMessageView = itemView.findViewById(R.id.transaction_row_extend_message);
 			messageView = (TextView) itemView.findViewById(R.id.transaction_row_message);
 			menuView = (ImageButton) itemView.findViewById(R.id.transaction_row_menu);
+			//Dash
+			ixView = itemView.findViewById(R.id.transaction_row_ix);
+			ixStatusView = (TextView) itemView.findViewById(R.id.transaction_row_ix_status);
 		}
 
 		private void bind(final Transaction tx)
@@ -375,7 +384,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
 			final boolean isIX = confidence.isIX();
 			final boolean isLocked = confidence.isTransactionLocked();
-			final int votes = confidence.getConsensusVotes();
 
 			TransactionCacheEntry txCache = transactionCache.get(tx.getHash());
 			if (txCache == null)
@@ -390,7 +398,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 					address = WalletUtils.getWalletAddressOfReceived(tx, wallet);
 				final String addressLabel = address != null ? AddressBookProvider.resolveLabel(context, address.toString()) : null;
 
-				txCache = new TransactionCacheEntry(value, sent, showFee, address, addressLabel);
+				txCache = new TransactionCacheEntry(value, sent, showFee, address, addressLabel, isIX, isLocked);
 				transactionCache.put(tx.getHash(), txCache);
 			}
 
@@ -427,16 +435,24 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
 				confidenceCircularView.setProgress(1);
 				confidenceCircularView.setMaxProgress(1);
-				confidenceCircularView.setSize(confidence.numBroadcastPeers());
-				confidenceCircularView.setMaxSize(maxConnectedPeers / 2); // magic value
-				confidenceCircularView.setColors(colorInsignificant, Color.TRANSPARENT);
+				if(isLocked)
+				{
+					confidenceCircularView.setProgress(5);
+					confidenceCircularView.setMaxProgress(Constants.MAX_NUM_CONFIRMATIONS);
+					confidenceCircularView.setColors(valueColor, Color.TRANSPARENT);
+				}
+				else {
+					confidenceCircularView.setSize(confidence.numBroadcastPeers());
+					confidenceCircularView.setMaxSize(maxConnectedPeers / 2); // magic value
+					confidenceCircularView.setColors(colorInsignificant, Color.TRANSPARENT);
+				}
 			}
 			else if (confidenceType == ConfidenceType.BUILDING)
 			{
 				confidenceCircularView.setVisibility(View.VISIBLE);
 				confidenceTextualView.setVisibility(View.GONE);
 
-				confidenceCircularView.setProgress(isLocked ? java.lang.Math.max(6, confidence.getDepthInBlocks()) : confidence.getDepthInBlocks());
+				confidenceCircularView.setProgress(isLocked ? confidence.getDepthInBlocks()+5 : confidence.getDepthInBlocks());
 				confidenceCircularView.setMaxProgress(isCoinBase ? Constants.NETWORK_PARAMETERS.getSpendableCoinbaseDepth()
 						: Constants.MAX_NUM_CONFIRMATIONS);
 				confidenceCircularView.setSize(1);
@@ -574,15 +590,15 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 			// message
 			extendMessageView.setVisibility(View.GONE);
 			messageView.setSingleLine(false);
+			ixView.setVisibility(View.GONE);
+			ixStatusView.setSingleLine(false);
 
 			//
 			// Display Building, but with InstantX info, if available.
 			//
-			//org.bitcoinj.core.Context jcontext = org.bitcoinj.core.Context.get();
-			//boolean locked = jcontext.getParams().instantx.isTransactionLocked(tx);
 			if(isLocked) {
-				messageView.setText(R.string.transaction_row_message_received_instantx_locked);
-				extendMessageView.setVisibility(View.VISIBLE);
+				ixStatusView.setText(R.string.transaction_row_message_received_instantx_locked);
+				ixView.setVisibility(View.VISIBLE);
 			}
 
 			if (purpose == Purpose.KEY_ROTATION)
@@ -602,18 +618,18 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 				extendMessageView.setVisibility(View.VISIBLE);
 				messageView.setText(R.string.transaction_row_message_own_unbroadcasted);
 				messageView.setTextColor(colorInsignificant);
-				if(isIX)
+				if(txCache.isIX)
 				{
 					messageView.setText(R.string.transaction_row_message_own_instantx_lock_request_notsent);
 				}
 			}
-			else if (txCache.sent && confidenceType == ConfidenceType.PENDING && isIX) // Added for sending IX
+			else if (txCache.sent && confidenceType == ConfidenceType.PENDING && txCache.isIX) // Added for sending IX
 			{
-				extendMessageView.setVisibility(View.VISIBLE);
-				messageView.setTextColor(colorInsignificant);
-				messageView.setText(R.string.transaction_row_message_own_instantx_lock_request);
+				ixView.setVisibility(View.VISIBLE);
+				ixStatusView.setTextColor(colorInsignificant);
+				ixStatusView.setText(R.string.transaction_row_message_own_instantx_lock_request);
 				if(isLocked)
-						messageView.setText(R.string.transaction_row_message_received_instantx_locked);
+					ixStatusView.setText(R.string.transaction_row_message_received_instantx_locked);
 			}
 			else if (!isOwn && confidenceType == ConfidenceType.PENDING && confidence.numBroadcastPeers() == 0)
 			{
@@ -632,11 +648,12 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 				extendMessageView.setVisibility(View.VISIBLE);
 				messageView.setText(R.string.transaction_row_message_received_unconfirmed_unlocked);
 				messageView.setTextColor(colorInsignificant);
-				if(/*tx instanceof TransactionLockRequest*/isIX)
+				if(txCache.isIX)
 				{
-					messageView.setText(R.string.transaction_row_message_received_instantx_lock_request);
+					ixView.setVisibility(View.VISIBLE);
+					ixStatusView.setText(R.string.transaction_row_message_received_instantx_lock_request);
 					if(isLocked)
-						messageView.setText(R.string.transaction_row_message_received_instantx_locked);
+						ixStatusView.setText(R.string.transaction_row_message_received_instantx_locked);
 				}
 			}
 			else if (!txCache.sent && confidenceType == ConfidenceType.DEAD)
