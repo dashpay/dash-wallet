@@ -29,7 +29,7 @@ dependencies {
 }
 
     ext {
-        archivesBaseName = 'bitcoin-wallet'
+        archivesBaseName = 'dash-wallet'
     }
 
     android {

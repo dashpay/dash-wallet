@@ -81,7 +81,7 @@ public final class WalletBalanceFragment extends Fragment
 	private static final int ID_BLOCKCHAIN_STATE_LOADER = 2;
 
 	private static final long BLOCKCHAIN_UPTODATE_THRESHOLD_MS = DateUtils.HOUR_IN_MILLIS;
-	private static final Coin TOO_MUCH_BALANCE_THRESHOLD = Coin.COIN.multiply(10);
+	private static final Coin TOO_MUCH_BALANCE_THRESHOLD = Coin.COIN.multiply(350);
 
 	@Override
 	public void onAttach(final Activity activity)

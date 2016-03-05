@@ -1,4 +1,4 @@
-<b>Tenha os seus Dash sempre com você, no seu bolso!</b> Efetue pagamentos rapidamente apenas escaneando um código QR. Como comerciante, você pode receber pagamentos de forma confiável e instantaneamente. O Dash Wallet é o primeiro aplicativo Dash móvel, e, possivelmente, o mais seguro!
+﻿<b>Tenha os seus Dash sempre com você, no seu bolso!</b> Efetue pagamentos rapidamente apenas escaneando um código QR. Como comerciante, você pode receber pagamentos de forma confiável e instantaneamente. O Dash Wallet é o primeiro aplicativo Dash móvel, e, possivelmente, o mais seguro!
 
 
 <b>CARACTERÍSTICAS</b>
@@ -24,13 +24,6 @@ https://github.com/HashEngineering/darkcoin-wallet
 
 Todas as traduções são gerenciadas via Transifex:
 https://www.transifex.com/projects/p/bitcoin-wallet/
-
-
-<b>TESTEMUNHOS</b>
-
-• Muitas carteiras móveis baseiam seu código em Dash Wallet. Exemplos: blockchain.info, colmeia e KNC.
-• Carteira mobile recomendada por https://bitcoin.org
-• Recomendado por BitPay.
 
 
 <i>Use por sua conta e risco!</i>

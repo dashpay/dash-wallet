@@ -2,7 +2,7 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
 
 	<ListPreference
-		android:defaultValue="2/3"
+		android:defaultValue="4/0"
 		android:entries="@array/preferences_precision_labels"
 		android:entryValues="@array/preferences_precision_values"
 		android:key="btc_precision"
@@ -45,11 +45,11 @@
 			android:icon="@drawable/ic_warning_grey600_24dp"
 			android:summary="This is all unfinished stuff. Use at your own risk!"
 			android:title="Warning" />
-		<!--CheckBoxPreference
-			android:defaultValue="false"
+		<CheckBoxPreference
+			android:defaultValue="true"
 			android:key="labs_instantx_enabled"
 			android:summary="Allow InstantX to be used on Send Coins."
-			android:title="Enable InstantX" /-->
+			android:title="Enable InstantX" />
 		<CheckBoxPreference
 			android:defaultValue="true"
 			android:key="disclaimer"

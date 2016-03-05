@@ -310,6 +310,10 @@ public final class WalletActivity extends AbstractWalletActivity
 				handleBackupWallet();
 				return true;
 
+            case R.id.wallet_options_disconnect:
+                handleDisconnect();
+                return true;
+
 			case R.id.wallet_options_encrypt_keys:
 				handleEncryptKeys();
 				return true;
