@@ -20,15 +20,16 @@ package de.schildbach.wallet.ui;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import android.app.Activity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+
 import de.schildbach.wallet.WalletApplication;
 
 
 /**
  * @author Andreas Schildbach
  */
-public abstract class AbstractWalletActivity extends Activity
+public abstract class AbstractWalletActivity extends AppCompatActivity
 {
 	private WalletApplication application;
 

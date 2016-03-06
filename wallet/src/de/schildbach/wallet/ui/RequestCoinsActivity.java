@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui;
 
 import android.os.Bundle;
 
+import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import hashengineering.darkcoin.wallet.R;
@@ -35,6 +36,15 @@ public final class RequestCoinsActivity extends AbstractBindServiceActivity
 		super.onCreate(savedInstanceState);
 
 		setContentView(R.layout.request_coins_content);
+
+		initToolbar();
+	}
+
+	private void initToolbar()
+	{
+		Toolbar toolbarView = (Toolbar) findViewById(R.id.toolbar);
+		setSupportActionBar(toolbarView);
+		setTitle("");
 	}
 
 	@Override
@@ -55,7 +65,7 @@ public final class RequestCoinsActivity extends AbstractBindServiceActivity
 				return true;
 
 			case R.id.request_coins_options_help:
-				HelpDialogFragment.page(getFragmentManager(), R.string.help_request_coins);
+				HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_request_coins);
 				return true;
 		}
 
