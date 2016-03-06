@@ -56,12 +56,12 @@ public class ToolbarCurrencyTextView extends CurrencyTextView
         else
         {
             String textStr = text.toString();
-            if (textStr.contains(MonetaryFormat.CODE_UBTC))
+            /*if (textStr.contains(MonetaryFormat.CODE_UBTC)) //TODO: fix this
             {
                 textStr = textStr.replace(MonetaryFormat.CODE_UBTC, "");
                 setCompoundDrawablesWithIntrinsicBounds(R.drawable.balance_prefix_micro, 0, 0, 0);
             }
-            else if (textStr.contains(MonetaryFormat.CODE_MBTC))
+            else*/ if (textStr.contains(MonetaryFormat.CODE_MBTC))
             {
                 textStr = textStr.replace(MonetaryFormat.CODE_MBTC, "");
                 setCompoundDrawablesWithIntrinsicBounds(R.drawable.balance_prefix_milli, 0, 0, 0);

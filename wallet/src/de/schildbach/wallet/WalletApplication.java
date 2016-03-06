@@ -143,6 +143,9 @@ public class WalletApplication extends Application
 
 		loadWalletFromProtobuf();
 
+		//Dash Specific - TODO:  need to separate out these parts.
+		Constants.NETWORK_PARAMETERS.initDash();
+
 		if (config.versionCodeCrossed(packageInfo.versionCode, VERSION_CODE_SHOW_BACKUP_REMINDER) && !wallet.getImportedKeys().isEmpty())
 		{
 			log.info("showing backup reminder once, because of imported keys being present");

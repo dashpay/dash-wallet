@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui;
 import javax.annotation.Nullable;
 
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.Wallet;
 import org.bitcoinj.utils.Fiat;
 
@@ -44,6 +45,7 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
 import hashengineering.darkcoin.wallet.R;
+
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Wallet;
 import org.bitcoinj.utils.Fiat;
@@ -75,10 +77,13 @@ public final class WalletBalanceFragment extends Fragment
 	private ExchangeRate exchangeRate = null;
 	@Nullable
 	private BlockchainState blockchainState = null;
+    @Nullable
+    private int masternodeSyncStatus = MasternodeSync.MASTERNODE_SYNC_FINISHED;
 
 	private static final int ID_BALANCE_LOADER = 0;
 	private static final int ID_RATE_LOADER = 1;
 	private static final int ID_BLOCKCHAIN_STATE_LOADER = 2;
+    private static final int ID_MASTERNODE_SYNC_LOADER = 3;
 
 	private static final long BLOCKCHAIN_UPTODATE_THRESHOLD_MS = DateUtils.HOUR_IN_MILLIS;
 	private static final Coin TOO_MUCH_BALANCE_THRESHOLD = Coin.COIN.multiply(350);
@@ -147,6 +152,7 @@ public final class WalletBalanceFragment extends Fragment
 		loaderManager.initLoader(ID_BALANCE_LOADER, null, balanceLoaderCallbacks);
 		loaderManager.initLoader(ID_RATE_LOADER, null, rateLoaderCallbacks);
 		loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
+        loaderManager.initLoader(ID_MASTERNODE_SYNC_LOADER, null, masternodeSyncLoaderCallbacks);
 
 		updateView();
 	}
@@ -244,6 +250,13 @@ public final class WalletBalanceFragment extends Fragment
 			}
 
 			viewProgress.setVisibility(View.GONE);
+            //TODO:  Dash move to a better place
+			if(masternodeSyncStatus != MasternodeSync.MASTERNODE_SYNC_FINISHED)
+			{
+				viewProgress.setVisibility(View.VISIBLE);
+				viewProgress.setText(wallet.getParams().masternodeSync.getSyncStatus());
+                viewBalance.setVisibility(View.INVISIBLE);
+			}
 		}
 		else
 		{
@@ -317,6 +330,28 @@ public final class WalletBalanceFragment extends Fragment
 
 		@Override
 		public void onLoaderReset(final Loader<Cursor> loader)
+		{
+		}
+	};
+	private final LoaderManager.LoaderCallbacks<Integer> masternodeSyncLoaderCallbacks = new LoaderManager.LoaderCallbacks<Integer>()
+	{
+		@Override
+		public Loader<Integer> onCreateLoader(final int id, final Bundle args)
+		{
+			return new MasternodeSyncLoader(activity, wallet);
+		}
+
+		@Override
+		public void onLoadFinished(final Loader<Integer> loader, final Integer newStatus)
+		{
+			WalletBalanceFragment.this.masternodeSyncStatus = newStatus;
+
+			updateView();
+
+		}
+
+		@Override
+		public void onLoaderReset(final Loader<Integer> loader)
 		{
 		}
 	};

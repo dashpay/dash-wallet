@@ -106,6 +106,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 	private BlockStore blockStore;
 	private File blockChainFile;
 	private BlockChain blockChain;
+	private File mncachePath; //Dash
 	@Nullable
 	private PeerGroup peerGroup;
 
@@ -259,7 +260,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 				changed(peerCount);
 			if(Configuration.PREFS_KEY_INSTANTX_ENABLED.equals(key))
 			{
-				InstantXSystem.get(blockChain).setEnabled(sharedPreferences.getBoolean(Configuration.PREFS_KEY_INSTANTX_ENABLED, false));
+				//InstantXSystem.get(blockChain).setEnabled(sharedPreferences.getBoolean(Configuration.PREFS_KEY_INSTANTX_ENABLED, false));
 			}
 		}
 
@@ -425,19 +426,17 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 				peerGroup.setMaxConnections(connectTrustedPeerOnly ? 1 : maxConnectedPeers);
 				peerGroup.setConnectTimeoutMillis(Constants.PEER_TIMEOUT_MS);
 
-				peerGroup.addPeerDiscovery(new PeerDiscovery()
-				{
+				peerGroup.addPeerDiscovery(new PeerDiscovery() {
 					private final PeerDiscovery normalPeerDiscovery = new DnsDiscovery(Constants.NETWORK_PARAMETERS);
-                    //private PeerDiscovery dbPeerDiscovery = null;
-                    //Random rand = new Random();
-                    //int i = 0; //rand.nextInt(50);
-                    //String channel = "#AuroraCoin" + String.format("%02d", i);
-                    //String channel = "#"+CoinDefinition.coinName.toLowerCase() +"00";
-                    //private final PeerDiscovery fallbackPeerDiscovery = new IrcDiscovery(channel);
+					//private PeerDiscovery dbPeerDiscovery = null;
+					//Random rand = new Random();
+					//int i = 0; //rand.nextInt(50);
+					//String channel = "#AuroraCoin" + String.format("%02d", i);
+					//String channel = "#"+CoinDefinition.coinName.toLowerCase() +"00";
+					//private final PeerDiscovery fallbackPeerDiscovery = new IrcDiscovery(channel);
 
 					@Override
-					public InetSocketAddress[] getPeers(final long timeoutValue, final TimeUnit timeoutUnit) throws PeerDiscoveryException
-					{
+					public InetSocketAddress[] getPeers(final long timeoutValue, final TimeUnit timeoutUnit) throws PeerDiscoveryException {
                         /*try {
                         	if (dbPeerDiscovery == null) 
         					{
@@ -454,13 +453,11 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
 						boolean needsTrimPeersWorkaround = false;
 
-						if (hasTrustedPeer)
-						{
+						if (hasTrustedPeer) {
 							log.info("trusted peer '" + trustedPeerHost + "'" + (connectTrustedPeerOnly ? " only" : ""));
 
 							final InetSocketAddress addr = new InetSocketAddress(trustedPeerHost, Constants.NETWORK_PARAMETERS.getPort());
-							if (addr.getAddress() != null)
-							{
+							if (addr.getAddress() != null) {
 								peers.add(addr);
 								needsTrimPeersWorkaround = true;
 							}
@@ -471,8 +468,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 							peers.addAll(Arrays.asList(normalPeerDiscovery.getPeers(timeoutValue, timeoutUnit)));
 							//log.info("Peer count "+ peers.size());
 							//log.info("Adding dbdiscovery peers ");
-                            //if(dbPeerDiscovery != null)
-                             //   peers.addAll(Arrays.asList(dbPeerDiscovery.getPeers(1, TimeUnit.SECONDS)));
+							//if(dbPeerDiscovery != null)
+							//   peers.addAll(Arrays.asList(dbPeerDiscovery.getPeers(1, TimeUnit.SECONDS)));
 							//log.info("Peer count "+ peers.size());
                             /*if (peers.size() < 6 && CoinDefinition.supportsIrcDiscovery())
                             {
@@ -485,7 +482,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                                 }
     							//log.info("Peer count "+ peers.size());
                             } */
-                        }
+						}
 
 						// workaround because PeerGroup will shuffle peers
 						if (needsTrimPeersWorkaround)
@@ -496,13 +493,12 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 					}
 
 					@Override
-					public void shutdown()
-					{
+					public void shutdown() {
 						normalPeerDiscovery.shutdown();
-                        //if(dbPeerDiscovery != null)
-                         //   dbPeerDiscovery.shutdown();
-                        //if(fallbackPeerDiscovery != null)
-                          //  fallbackPeerDiscovery.shutdown();
+						//if(dbPeerDiscovery != null)
+						//   dbPeerDiscovery.shutdown();
+						//if(fallbackPeerDiscovery != null)
+						//  fallbackPeerDiscovery.shutdown();
 					}
 				});
 
@@ -715,6 +711,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 		application.getWallet().addEventListener(walletEventListener, Threading.SAME_THREAD);
 
 		registerReceiver(tickReceiver, new IntentFilter(Intent.ACTION_TIME_TICK));
+
+		Constants.NETWORK_PARAMETERS.initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
 	}
 
 	@Override
@@ -802,6 +800,12 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 		}
 
 		application.saveWallet();
+
+		//Dash Specific
+
+		Constants.NETWORK_PARAMETERS.masternodeDB.write(Constants.NETWORK_PARAMETERS.masternodeManager);
+
+		//Dash Specific
 
 		if (wakeLock.isHeld())
 		{
