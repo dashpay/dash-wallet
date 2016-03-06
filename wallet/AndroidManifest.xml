@@ -3,8 +3,8 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	package="hashengineering.darkcoin.wallet"
 	android:installLocation="internalOnly"
-	android:versionCode="40034"
-	android:versionName="4.40.12f.ix" >
+	android:versionCode="40035"
+	android:versionName="4.40.12g.ix" >
 	<uses-sdk
 		android:minSdkVersion="15"
 		android:targetSdkVersion="16"
@@ -62,7 +62,7 @@
 			android:configChanges="keyboard|keyboardHidden"
 			android:exported="true"
 			android:launchMode="singleTask"
-			android:theme="@style/My.Theme" />
+			android:theme="@style/My.Theme.NoActionBar" />
 
 		<activity-alias
 			android:name="de.schildbach.wallet.WalletActivity"

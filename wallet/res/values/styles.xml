@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-	<style name="My.Theme" parent="@android:style/Theme.Holo.Light.DarkActionBar">
+	<style name="My.Theme" parent="Theme.AppCompat.Light.DarkActionBar">
+		<item name="colorPrimary">@color/colorPrimary</item>
+		<item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+		<item name="colorAccent">@color/colorAccent</item>
+
 		<item name="android:actionBarStyle">@style/My.Widget.ActionBar</item>
 		<item name="android:actionModeStyle">@style/My.Widget.ActionMode</item>
 		<item name="android:actionMenuTextColor">@color/fg_network</item>
@@ -12,9 +16,17 @@
 		<item name="android:autoCompleteTextViewStyle">@style/My.Widget.AutoCompleteTextView</item>
 		<item name="android:checkboxStyle">@style/My.Widget.CompoundButton.CheckBox</item>
 		<item name="android:spinnerStyle">@style/My.Widget.Spinner</item>
+		<item name="android:windowContentOverlay">@null</item>
 	</style>
 
-	<style name="My.Theme.ChildActivity" parent="@style/My.Theme">
+	<style name="My.Theme.NoActionBar" parent="@style/My.Theme">
+		<item name="windowActionBar">false</item>
+		<item name="windowNoTitle">true</item>
+	</style>
+
+	<style name="My.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+
+	<style name="My.Theme.ChildActivity" parent="@style/My.Theme.NoActionBar">
 		<item name="android:actionBarStyle">@style/My.Widget.ActionBar.ChildActivity</item>
 		<item name="android:homeAsUpIndicator">@drawable/action_bar_up_indicator</item>
 	</style>

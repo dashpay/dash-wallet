@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="180dp"
+    android:background="@drawable/drawer_header"
+    android:gravity="bottom"
+    android:orientation="vertical"
+    android:theme="@style/ThemeOverlay.AppCompat.Dark">
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="www.dash.org"
+        android:layout_gravity="right"
+        android:layout_marginRight="22dp"
+        android:layout_marginBottom="4dp"
+        android:textColor="#000000"
+        android:textStyle="italic"
+        android:textSize="13sp" />
+
+</LinearLayout>

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:tools="http://schemas.android.com/tools"
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
 	android:orientation="vertical" >
@@ -17,7 +18,8 @@
 			android:layout_height="wrap_content"
 			android:layout_gravity="top"
 			android:layout_margin="12dp"
-			android:background="@color/bg_panel" />
+			android:background="@color/bg_panel"
+			tools:layout="@layout/wallet_address_fragment" />
 
 		<FrameLayout
 			android:layout_width="0px"
@@ -41,7 +43,8 @@
 						android:name="de.schildbach.wallet.ui.WalletBalanceFragment"
 						android:layout_width="match_parent"
 						android:layout_height="wrap_content"
-						android:layout_gravity="center" />
+						android:layout_gravity="center"
+						tools:layout="@layout/wallet_balance_fragment" />
 				</FrameLayout>
 
 				<FrameLayout
@@ -57,7 +60,8 @@
 						android:name="de.schildbach.wallet.ui.WalletTransactionsFragment"
 						android:layout_width="match_parent"
 						android:layout_height="match_parent"
-						android:layout_gravity="bottom|center_horizontal" />
+						android:layout_gravity="bottom|center_horizontal"
+						tools:layout="@layout/wallet_transactions_fragment" />
 				</FrameLayout>
 			</LinearLayout>
 		</FrameLayout>
