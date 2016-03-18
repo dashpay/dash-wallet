@@ -1,0 +1,104 @@
+<android.support.design.widget.CollapsingToolbarLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/collapsing_toolbar"
+    android:layout_width="match_parent"
+    android:layout_height="176dp"
+    android:background="@drawable/toolbar_background"
+    android:fitsSystemWindows="true"
+    app:contentScrim="@android:color/transparent"
+    app:layout_scrollFlags="scroll|exitUntilCollapsed">
+
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:layout_collapseMode="pin"
+        app:popupTheme="@style/My.PopupOverlay">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <fragment
+                android:id="@+id/wallet_balance_fragment_toolbar"
+                android:name="de.schildbach.wallet.ui.WalletBalanceToolbarFragment"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_gravity="center_vertical|right"
+                tools:layout="@layout/wallet_balance_toolbar_fragment" />
+
+        </FrameLayout>
+
+    </android.support.v7.widget.Toolbar>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_collapseMode="parallax"
+        app:layout_collapseParallaxMultiplier="1">
+
+        <fragment
+            android:id="@+id/wallet_balance_fragment"
+            android:name="de.schildbach.wallet.ui.WalletBalanceFragment"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_marginBottom="16dp"
+            android:layout_marginLeft="16dp"
+            android:layout_marginTop="24dp"
+            tools:layout="@layout/wallet_balance_fragment" />
+
+        <fragment
+            android:id="@+id/wallet_address_fragment"
+            android:name="de.schildbach.wallet.ui.WalletAddressFragment"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right|bottom"
+            android:layout_marginBottom="32dp"
+            android:layout_marginRight="16dp"
+            app:layout_collapseMode="pin"
+            tools:layout="@layout/wallet_address_fragment" />
+
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="56dp"
+        android:layout_marginTop="18dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:clickable="true"
+        android:orientation="vertical"
+        app:layout_collapseMode="pin">
+
+        <ImageView
+            android:id="@+id/toolbar_logo"
+            android:layout_width="130dp"
+            android:layout_height="14dp"
+            android:scaleType="fitStart"
+            android:src="@drawable/dash_logo_white" />
+
+        <TextView
+            android:id="@+id/toolbar_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="WALLET"
+            android:scaleY="0.7"
+            android:layout_marginTop="-4dp"
+            android:textColor="#ffffff"
+            android:textSize="15sp"
+            android:textStyle="bold|italic" />
+
+        <TextView
+            android:id="@+id/toolbar_link"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="www.dash.org"
+            android:textColor="#ffffff"
+            android:textSize="15sp"
+            android:textStyle="bold|italic" />
+    </LinearLayout>
+
+</android.support.design.widget.CollapsingToolbarLayout>
+

@@ -15,7 +15,7 @@ dependencies {
     compile(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
     }
-    compile 'org.bitcoinj:darkcoinj-core:0.13.2.ix'
+    compile 'org.bitcoinj:darkcoinj-core:0.13.2.rix'
     compile 'com.google.protobuf:protobuf-java:2.5.0'
     compile 'com.google.guava:guava:16.0.1'
     compile 'com.google.zxing:core:3.2.0'
@@ -73,6 +73,5 @@ dependencies {
                 exclude 'org/bitcoinj/crypto/mnemonic/wordlist/english.txt'
                 exclude 'org/bitcoinj/crypto/cacerts'
             }
-        }
     }
 }

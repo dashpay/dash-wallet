@@ -19,6 +19,10 @@
 		<item name="android:windowContentOverlay">@null</item>
 	</style>
 
+	<style name="My.Theme.NoStatusBar" parent="My.Theme.NoActionBar">
+
+	</style>
+
 	<style name="My.Theme.NoActionBar" parent="@style/My.Theme">
 		<item name="windowActionBar">false</item>
 		<item name="windowNoTitle">true</item>

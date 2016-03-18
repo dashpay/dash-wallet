@@ -112,7 +112,7 @@ public class CurrencyTextView extends TextView
 	{
 		super.onFinishInflate();
 
-		setPrefixColor(ContextCompat.getColor(getContext(), R.color.fg_less_significant));
+		setPrefixColor(ContextCompat.getColor(getContext(), R.color.white));
 		setPrefixScaleX(1);
 		setInsignificantRelativeSize(0.85f);
 		setSingleLine();

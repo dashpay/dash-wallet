@@ -112,7 +112,7 @@ public final class WalletActivity extends AbstractWalletActivity
 		config = application.getConfiguration();
 		wallet = application.getWallet();
 
-		setContentView(R.layout.wallet_content);
+		setContentView(R.layout.wallet_activity_onepane_vertical);
 
 		if (savedInstanceState == null)
 			checkAlerts();
