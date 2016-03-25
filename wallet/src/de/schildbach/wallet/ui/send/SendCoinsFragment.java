@@ -66,6 +66,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.LoaderManager;
@@ -161,6 +162,7 @@ public final class SendCoinsFragment extends Fragment
 	private View privateKeyBadPasswordView;
 	private Button viewGo;
 	private Button viewCancel;
+	private FloatingActionButton viewFabScanQr;
 
 	@Nullable
 	private State state = null;
@@ -417,17 +419,38 @@ public final class SendCoinsFragment extends Fragment
 	};
 
 	@Override
-	public void onAttach(final Activity activity)
+	public void onAttach(final Context context)
 	{
-		super.onAttach(activity);
+		super.onAttach(context);
 
-		this.activity = (AbstractBindServiceActivity) activity;
+		this.activity = (AbstractBindServiceActivity) context;
 		this.application = (WalletApplication) activity.getApplication();
 		this.config = application.getConfiguration();
 		this.wallet = application.getWallet();
 		this.contentResolver = activity.getContentResolver();
 		this.loaderManager = getLoaderManager();
 		this.fragmentManager = getFragmentManager();
+	}
+
+	@Override
+	public void onActivityCreated(@android.support.annotation.Nullable Bundle savedInstanceState) {
+		super.onActivityCreated(savedInstanceState);
+		initFloatingButton();
+	}
+
+	private void initFloatingButton()
+	{
+		viewFabScanQr = (FloatingActionButton) this.activity.findViewById(R.id.fab_scan_qr);
+		final PackageManager pm = this.activity.getPackageManager();
+		boolean hasCamera = pm.hasSystemFeature(PackageManager.FEATURE_CAMERA) || pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT);
+		viewFabScanQr.setVisibility(hasCamera ? View.VISIBLE : View.GONE);
+		viewFabScanQr.setEnabled(state == State.INPUT);
+		viewFabScanQr.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				handleScan();
+			}
+		});
 	}
 
 	@Override
@@ -758,11 +781,6 @@ public final class SendCoinsFragment extends Fragment
 	@Override
 	public void onPrepareOptionsMenu(final Menu menu)
 	{
-		final MenuItem scanAction = menu.findItem(R.id.send_coins_options_scan);
-		final PackageManager pm = activity.getPackageManager();
-		scanAction.setVisible(pm.hasSystemFeature(PackageManager.FEATURE_CAMERA) || pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT));
-		scanAction.setEnabled(state == State.INPUT);
-
 		final MenuItem emptyAction = menu.findItem(R.id.send_coins_options_empty);
 		emptyAction.setEnabled(state == State.INPUT && paymentIntent.mayEditAmount());
 
@@ -783,9 +801,6 @@ public final class SendCoinsFragment extends Fragment
 	{
 		switch (item.getItemId())
 		{
-			case R.id.send_coins_options_scan:
-				handleScan();
-				return true;
 
 			case R.id.send_coins_options_fee_category_economic:
 				handleFeeCategory(FeeCategory.ECONOMIC);
@@ -1358,6 +1373,7 @@ public final class SendCoinsFragment extends Fragment
 		{
 			getView().setVisibility(View.GONE);
 		}
+		viewFabScanQr.setEnabled(state == State.INPUT);
 	}
 
 	private void initStateFromIntentExtras(final Bundle extras)

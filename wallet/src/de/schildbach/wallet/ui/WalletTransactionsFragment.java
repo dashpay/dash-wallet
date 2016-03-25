@@ -100,8 +100,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 	private ContentResolver resolver;
 	private LoaderManager loaderManager;
 
-	private ViewAnimator viewGroup;
-	private TextView emptyView;
+//	private ViewAnimator viewGroup;
+//	private TextView emptyView;
 	private RecyclerView recyclerView;
 	private TransactionsAdapter adapter;
 
@@ -159,9 +159,9 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 	{
 		final View view = inflater.inflate(R.layout.wallet_transactions_fragment, container, false);
 
-		viewGroup = (ViewAnimator) view.findViewById(R.id.wallet_transactions_group);
+//		viewGroup = (ViewAnimator) view.findViewById(R.id.wallet_transactions_group);
 
-		emptyView = (TextView) view.findViewById(R.id.wallet_transactions_empty);
+//		emptyView = (TextView) view.findViewById(R.id.wallet_transactions_empty);
 
 		recyclerView = (RecyclerView) view.findViewById(R.id.wallet_transactions_list);
 		recyclerView.setHasFixedSize(true);
@@ -361,7 +361,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
 		if (transactions.isEmpty())
 		{
-			viewGroup.setDisplayedChild(1);
+//			viewGroup.setDisplayedChild(1);
 
 			final SpannableStringBuilder emptyText = new SpannableStringBuilder(
 					getString(direction == Direction.SENT ? R.string.wallet_transactions_fragment_empty_text_sent
@@ -369,11 +369,11 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 			emptyText.setSpan(new StyleSpan(Typeface.BOLD), 0, emptyText.length(), SpannableStringBuilder.SPAN_POINT_MARK);
 			if (direction != Direction.SENT)
 				emptyText.append("\n\n").append(getString(R.string.wallet_transactions_fragment_empty_text_howto));
-			emptyView.setText(emptyText);
+//			emptyView.setText(emptyText);
 		}
 		else
 		{
-			viewGroup.setDisplayedChild(2);
+//			viewGroup.setDisplayedChild(2);
 		}
 	}
 

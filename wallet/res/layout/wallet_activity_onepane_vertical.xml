@@ -12,40 +12,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginTop="?attr/actionBarSize"
-            android:orientation="vertical">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="0px"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <FrameLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="0px"
-                    android:layout_weight="1"
-                    android:background="@color/bg_less_bright"
-                    android:foreground="@drawable/view_shadow_bottom"
-                    android:foregroundGravity="top|fill_horizontal">
-
-                    <fragment
-                        android:id="@+id/wallet_transactions_fragment"
-                        android:name="de.schildbach.wallet.ui.WalletTransactionsFragment"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:layout_gravity="bottom|center_horizontal"
-                        tools:layout="@layout/wallet_transactions_fragment" />
-                </FrameLayout>
-            </LinearLayout>
-
-            <include layout="@layout/wallet_activity_bottom_include" />
-
-        </LinearLayout>
-
         <de.schildbach.wallet.ui.ExtAppBarLayout
             android:id="@+id/appbar"
             android:layout_width="match_parent"
@@ -53,6 +19,50 @@
             android:fitsSystemWindows="true"
             android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
             app:elevation="0dp" />
+
+        <fragment
+            android:id="@+id/wallet_transactions_fragment"
+            android:name="de.schildbach.wallet.ui.WalletTransactionsFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:layout_behavior="@string/appbar_scrolling_view_behavior"
+            tools:layout="@layout/wallet_transactions_fragment" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_anchor="@id/wallet_transactions_fragment"
+            app:layout_anchorGravity="bottom|end">
+
+            <TextView
+                android:id="@+id/message_panel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/vivid_red"
+                android:padding="16dp"
+                android:text="Test message"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:visibility="gone"/>
+
+            <include
+                layout="@layout/wallet_activity_bottom_include"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom" />
+
+        </LinearLayout>
+
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/fab_scan_qr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_marginBottom="92dp"
+            android:layout_marginRight="16dp"
+            android:src="@drawable/ic_qrcode"
+            app:backgroundTint="@color/strong_blue_new" />
 
     </android.support.design.widget.CoordinatorLayout>
 

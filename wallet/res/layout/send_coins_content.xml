@@ -1,29 +1,45 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<android.support.design.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <ScrollView
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginTop="61dp"
-        android:background="@color/bg_form"
-        android:fillViewport="true"
-        android:scrollbars="none">
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
 
-        <fragment
-            android:id="@+id/send_coins_fragment"
-            android:name="de.schildbach.wallet.ui.send.SendCoinsFragment"
+        <include
+            layout="@layout/app_bar_main"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            tools:layout="@layout/address_book_row" />
+            android:layout_height="wrap_content" />
 
-    </ScrollView>
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/bg_form"
+            android:fillViewport="true"
+            android:scrollbars="none">
 
-    <include
-        layout="@layout/app_bar_main"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+            <fragment
+                android:id="@+id/send_coins_fragment"
+                android:name="de.schildbach.wallet.ui.send.SendCoinsFragment"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                tools:layout="@layout/address_book_row" />
 
-</FrameLayout>
+        </ScrollView>
+    </LinearLayout>
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/fab_scan_qr"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="16dp"
+        android:layout_marginRight="16dp"
+        android:src="@drawable/ic_qrcode"
+        app:backgroundTint="@color/strong_blue_new" />
+
+</android.support.design.widget.CoordinatorLayout>

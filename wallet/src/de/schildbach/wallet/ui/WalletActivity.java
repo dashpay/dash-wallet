@@ -54,6 +54,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
@@ -130,9 +131,10 @@ public final class WalletActivity extends AbstractWalletActivity
     {
         Toolbar toolbarView = initToolbar();
 		initNavigationDrawer(toolbarView);
+		initFloatingButton();
 	}
 
-    private Toolbar initToolbar()
+	private Toolbar initToolbar()
     {
         Toolbar toolbarView = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbarView);
@@ -160,6 +162,17 @@ public final class WalletActivity extends AbstractWalletActivity
 		};
 		drawer.addDrawerListener(toggle);
 		toggle.syncState();
+	}
+
+	private void initFloatingButton()
+    {
+		FloatingActionButton fabScanQr = (FloatingActionButton) findViewById(R.id.fab_scan_qr);
+		fabScanQr.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View view) {
+                handleScan();
+			}
+		});
 	}
 
 	@Override
@@ -296,10 +309,6 @@ public final class WalletActivity extends AbstractWalletActivity
 
 			case R.id.wallet_options_send:
 				handleSendCoins();
-				return true;
-
-			case R.id.wallet_options_scan:
-				handleScan();
 				return true;
 
 			case R.id.wallet_options_restore_wallet:

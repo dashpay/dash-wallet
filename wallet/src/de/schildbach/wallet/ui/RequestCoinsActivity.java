@@ -36,15 +36,6 @@ public final class RequestCoinsActivity extends AbstractBindServiceActivity
 		super.onCreate(savedInstanceState);
 
 		setContentView(R.layout.request_coins_content);
-
-		initToolbar();
-	}
-
-	private void initToolbar()
-	{
-		Toolbar toolbarView = (Toolbar) findViewById(R.id.toolbar);
-		setSupportActionBar(toolbarView);
-		setTitle("");
 	}
 
 	@Override

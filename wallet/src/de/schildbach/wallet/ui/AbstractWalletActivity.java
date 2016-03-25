@@ -20,10 +20,15 @@ package de.schildbach.wallet.ui;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import android.graphics.Color;
 import android.os.Bundle;
+import android.support.annotation.LayoutRes;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 
 import de.schildbach.wallet.WalletApplication;
+import hashengineering.darkcoin.wallet.R;
 
 
 /**
@@ -41,6 +46,30 @@ public abstract class AbstractWalletActivity extends AppCompatActivity
 		application = (WalletApplication) getApplication();
 
 		super.onCreate(savedInstanceState);
+	}
+
+	@Override
+	public void setContentView(@LayoutRes int layoutResID)
+	{
+		super.setContentView(layoutResID);
+
+		initToolbar();
+	}
+
+	private void initToolbar()
+	{
+		Toolbar toolbarView = (Toolbar) findViewById(R.id.toolbar);
+		if (toolbarView != null)
+		{
+//			toolbarView.setTitleTextColor(Color.WHITE);
+			setSupportActionBar(toolbarView);
+			ActionBar actionBar = getSupportActionBar();
+			if (actionBar != null)
+			{
+				actionBar.setDisplayHomeAsUpEnabled(true);
+				actionBar.setDisplayShowHomeEnabled(true);
+			}
+		}
 	}
 
 	protected WalletApplication getWalletApplication()

@@ -19,11 +19,15 @@ package de.schildbach.wallet.ui.send;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 
+import android.support.design.widget.FloatingActionButton;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.HelpDialogFragment;
@@ -51,15 +55,6 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity
 		setContentView(R.layout.send_coins_content);
 
 		getWalletApplication().startBlockchainService(false);
-
-		initToolbar();
-	}
-
-	private void initToolbar()
-	{
-		Toolbar toolbarView = (Toolbar) findViewById(R.id.toolbar);
-		setSupportActionBar(toolbarView);
-		setTitle("");
 	}
 
 	@Override

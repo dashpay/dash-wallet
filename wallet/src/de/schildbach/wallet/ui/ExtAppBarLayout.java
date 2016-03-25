@@ -1,12 +1,17 @@
 package de.schildbach.wallet.ui;
 
+import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
+import android.net.Uri;
+import android.os.Handler;
 import android.support.design.widget.AppBarLayout;
 import android.util.AttributeSet;
 import android.view.View;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
+import android.widget.Toast;
 
 import hashengineering.darkcoin.wallet.R;
 
@@ -15,9 +20,12 @@ import hashengineering.darkcoin.wallet.R;
  */
 public class ExtAppBarLayout extends AppBarLayout implements AppBarLayout.OnOffsetChangedListener {
 
-    private View toolbarLogo;
-    private View toolbarTitle;
-    private View toolbarLink;
+    private static final String DASH_WEBPAGE_URL = "http://www.dash.org";
+
+    private View toolbarTitlePanelView;
+    private View toolbarLogoView;
+    private View toolbarTitleView;
+    private View toolbarSloganView;
 
     private boolean expanded = true;
 
@@ -47,31 +55,32 @@ public class ExtAppBarLayout extends AppBarLayout implements AppBarLayout.OnOffs
         inflate(getContext(), R.layout.ext_app_bar_bottom_layout, this);
         setBackgroundColor(Color.TRANSPARENT);
         addOnOffsetChangedListener(this);
-        toolbarLogo = findViewById(R.id.toolbar_logo);
-        toolbarTitle = findViewById(R.id.toolbar_title);
-        toolbarLink = findViewById(R.id.toolbar_link);
+        toolbarTitlePanelView = findViewById(R.id.toolbar_title_panel);
+        toolbarLogoView = findViewById(R.id.toolbar_logo);
+        toolbarTitleView = findViewById(R.id.toolbar_title);
+        toolbarSloganView = findViewById(R.id.toolbar_slogan);
     }
 
     @Override
     public void onOffsetChanged(AppBarLayout appBarLayout, int verticalOffset) {
         float totalScrollRange = appBarLayout.getTotalScrollRange();
         float scaleFactor = (totalScrollRange + verticalOffset) / totalScrollRange;
-        float scale = 1f + 0.3f * scaleFactor;
-        toolbarLogo.setPivotX(0);
-        toolbarLogo.setPivotY(0);
-        toolbarLogo.setScaleX(scale);
-        toolbarLogo.setScaleY(scale);
+        float scale = 1f + 0.68f * scaleFactor;
+        toolbarLogoView.setPivotX(0);
+        toolbarLogoView.setPivotY(0);
+        toolbarLogoView.setScaleX(scale);
+        toolbarLogoView.setScaleY(scale);
 
         if (scaleFactor > 0.1) {
-            toolbarTitle.setVisibility(GONE);
+            toolbarTitleView.setVisibility(INVISIBLE);
         } else {
-            toolbarTitle.setVisibility(VISIBLE);
+            toolbarTitleView.setVisibility(VISIBLE);
         }
 
         if (scaleFactor > 0.5) {
             if (!expanded) {
                 expanded = true;
-                showLink();
+                showSlogan();
             }
         } else {
             if (expanded) {
@@ -81,43 +90,55 @@ public class ExtAppBarLayout extends AppBarLayout implements AppBarLayout.OnOffs
         }
     }
 
-    private void showLink() {
-        toolbarLink.startAnimation(fadeInAnimation);
-        fadeInAnimation.setAnimationListener(new Animation.AnimationListener() {
+    private void showSlogan() {
+        toolbarSloganView.startAnimation(fadeInAnimation);
+        fadeInAnimation.setAnimationListener(new AnimationListenerAdapter() {
             @Override
             public void onAnimationStart(Animation animation) {
-                toolbarLink.setVisibility(VISIBLE);
+                toolbarSloganView.setVisibility(VISIBLE);
             }
-
+        });
+        toolbarTitlePanelView.setOnClickListener(new OnClickListener() {
             @Override
-            public void onAnimationEnd(Animation animation) {
-
-            }
-
-            @Override
-            public void onAnimationRepeat(Animation animation) {
-
+            public void onClick(View v) {
+                blinkViews(toolbarLogoView, toolbarSloganView);
+                openUrl(DASH_WEBPAGE_URL);
             }
         });
     }
 
+    private void openUrl(String url) {
+        try {
+            Intent i = new Intent(Intent.ACTION_VIEW);
+            i.setData(Uri.parse(url));
+            getContext().startActivity(i);
+        } catch (ActivityNotFoundException ex) {
+            Toast.makeText(getContext(), "Unable to open " + url, Toast.LENGTH_LONG).show();
+        }
+    }
+
     private void hideLink() {
-        toolbarLink.startAnimation(fadeOutAnimation);
-        fadeOutAnimation.setAnimationListener(new Animation.AnimationListener() {
-            @Override
-            public void onAnimationStart(Animation animation) {
-
-            }
-
+        toolbarTitlePanelView.setOnClickListener(null);
+        fadeOutAnimation.setAnimationListener(new AnimationListenerAdapter() {
             @Override
             public void onAnimationEnd(Animation animation) {
-                toolbarLink.setVisibility(INVISIBLE);
-            }
-
-            @Override
-            public void onAnimationRepeat(Animation animation) {
-
+                toolbarSloganView.setVisibility(INVISIBLE);
             }
         });
+        toolbarSloganView.startAnimation(fadeOutAnimation);
+    }
+
+    private void blinkViews(final View... views) {
+        for (View v : views) {
+            v.setAlpha(0.8f);
+        }
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                for (View v : views) {
+                    v.setAlpha(1.0f);
+                }
+            }
+        }, 200);
     }
 }

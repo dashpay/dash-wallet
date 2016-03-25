@@ -16,12 +16,7 @@
 		android:titleCondensed="@string/button_send_coins"
 		android:visible="@bool/wallet_actions_top"
 		app:showAsAction="ifRoom" />
-	<item
-		android:id="@+id/wallet_options_scan"
-		android:icon="@drawable/ic_photo_camera_white_24dp"
-		android:title="@string/button_scan"
-		android:visible="@bool/wallet_actions_top"
-		app:showAsAction="ifRoom" />
+
 	<item
 		app:showAsAction="never"
 		android:title="@string/wallet_options_safety_menu">
