@@ -61,7 +61,9 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.widget.Toolbar;
 import android.text.format.DateUtils;
+import android.view.ContextMenu;
 import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -99,6 +101,9 @@ public final class WalletActivity extends AbstractWalletActivity
 	private WalletApplication application;
 	private Configuration config;
 	private Wallet wallet;
+
+	private DrawerLayout viewDrawer;
+	private View viewFakeForSafetySubmenu;
 
 	private Handler handler = new Handler();
 
@@ -147,9 +152,9 @@ public final class WalletActivity extends AbstractWalletActivity
         final NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
-		DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+		viewDrawer = (DrawerLayout) findViewById(R.id.drawer_layout);
 		ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-				this, drawer, toolbarView, R.string.navigation_drawer_open,
+				this, viewDrawer, toolbarView, R.string.navigation_drawer_open,
 				R.string.navigation_drawer_close) {
 
 			@Override
@@ -160,8 +165,13 @@ public final class WalletActivity extends AbstractWalletActivity
                 menu.findItem(R.id.nav_exchenge_rates).setEnabled(res.getBoolean(R.bool.show_exchange_rates_option));
 			}
 		};
-		drawer.addDrawerListener(toggle);
+		viewDrawer.addDrawerListener(toggle);
 		toggle.syncState();
+
+		viewFakeForSafetySubmenu = new View(this);
+		viewFakeForSafetySubmenu.setVisibility(View.GONE);
+		viewDrawer.addView(viewFakeForSafetySubmenu);
+		registerForContextMenu(viewFakeForSafetySubmenu);
 	}
 
 	private void initFloatingButton()
@@ -282,23 +292,6 @@ public final class WalletActivity extends AbstractWalletActivity
 	}
 
 	@Override
-	public boolean onPrepareOptionsMenu(final Menu menu)
-	{
-		super.onPrepareOptionsMenu(menu);
-
-		final Resources res = getResources();
-		final String externalStorageState = Environment.getExternalStorageState();
-
-		menu.findItem(R.id.wallet_options_restore_wallet).setEnabled(
-				Environment.MEDIA_MOUNTED.equals(externalStorageState) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(externalStorageState));
-		menu.findItem(R.id.wallet_options_backup_wallet).setEnabled(Environment.MEDIA_MOUNTED.equals(externalStorageState));
-		menu.findItem(R.id.wallet_options_encrypt_keys).setTitle(
-				wallet.isEncrypted() ? R.string.wallet_options_encrypt_keys_change : R.string.wallet_options_encrypt_keys_set);
-
-		return true;
-	}
-
-	@Override
 	public boolean onOptionsItemSelected(final MenuItem item)
 	{
 		switch (item.getItemId())
@@ -311,25 +304,9 @@ public final class WalletActivity extends AbstractWalletActivity
 				handleSendCoins();
 				return true;
 
-			case R.id.wallet_options_restore_wallet:
-				showDialog(DIALOG_RESTORE_WALLET);
-				return true;
-
-			case R.id.wallet_options_backup_wallet:
-				handleBackupWallet();
-				return true;
-
             case R.id.wallet_options_disconnect:
                 handleDisconnect();
                 return true;
-
-			case R.id.wallet_options_encrypt_keys:
-				handleEncryptKeys();
-				return true;
-
-			case R.id.wallet_options_safety:
-				HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_safety);
-				return true;
 
 			case R.id.wallet_options_donate:
 				handleDonate();
@@ -923,6 +900,50 @@ public final class WalletActivity extends AbstractWalletActivity
 	}
 
 	@Override
+	public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo)
+	{
+		super.onCreateContextMenu(menu, v, menuInfo);
+		MenuInflater inflater = getMenuInflater();
+		if (v == viewFakeForSafetySubmenu)
+		{
+			inflater.inflate(R.menu.wallet_safety_options, menu);
+
+			final String externalStorageState = Environment.getExternalStorageState();
+
+			menu.findItem(R.id.wallet_options_restore_wallet).setEnabled(
+					Environment.MEDIA_MOUNTED.equals(externalStorageState) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(externalStorageState));
+			menu.findItem(R.id.wallet_options_backup_wallet).setEnabled(Environment.MEDIA_MOUNTED.equals(externalStorageState));
+			menu.findItem(R.id.wallet_options_encrypt_keys).setTitle(
+					wallet.isEncrypted() ? R.string.wallet_options_encrypt_keys_change : R.string.wallet_options_encrypt_keys_set);
+		}
+	}
+
+	@Override
+	public boolean onContextItemSelected(MenuItem item)
+	{
+		switch (item.getItemId())
+		{
+			case R.id.wallet_options_safety:
+				HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_safety);
+				return true;
+
+			case R.id.wallet_options_backup_wallet:
+				handleBackupWallet();
+				return true;
+
+			case R.id.wallet_options_restore_wallet:
+				showDialog(DIALOG_RESTORE_WALLET);
+				return true;
+
+			case R.id.wallet_options_encrypt_keys:
+				handleEncryptKeys();
+				return true;
+		}
+
+		return super.onContextItemSelected(item);
+	}
+
+	@Override
 	public boolean onNavigationItemSelected(MenuItem item) {
 		// Handle navigation view item clicks here.
 		int id = item.getItemId();
@@ -937,12 +958,13 @@ public final class WalletActivity extends AbstractWalletActivity
 			SweepWalletActivity.start(this);
 		} else if (id == R.id.nav_network_monitor) {
 			startActivity(new Intent(this, NetworkMonitorActivity.class));
+		} else if (id == R.id.nav_safety) {
+			openContextMenu(viewFakeForSafetySubmenu);
 		} else if (id == R.id.nav_settings) {
 			startActivity(new Intent(this, PreferenceActivity.class));
 		}
 
-		DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-		drawer.closeDrawer(GravityCompat.START);
+		viewDrawer.closeDrawer(GravityCompat.START);
 		return true;
 	}
 }

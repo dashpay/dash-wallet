@@ -18,28 +18,6 @@
 		app:showAsAction="ifRoom" />
 
 	<item
-		app:showAsAction="never"
-		android:title="@string/wallet_options_safety_menu">
-		<menu>
-			<item
-				android:id="@+id/wallet_options_safety"
-				app:showAsAction="never"
-				android:title="@string/wallet_options_safety" />
-			<item
-				android:id="@+id/wallet_options_backup_wallet"
-				app:showAsAction="never"
-				android:title="@string/export_keys_dialog_title" />
-			<item
-				android:id="@+id/wallet_options_restore_wallet"
-				app:showAsAction="never"
-				android:title="@string/import_keys_dialog_title" />
-			<item
-				android:id="@+id/wallet_options_encrypt_keys"
-				app:showAsAction="never"
-				android:title="@string/encrypt_keys_dialog_title" />
-		</menu>
-	</item>
-	<item
 		android:id="@+id/wallet_options_donate"
 		app:showAsAction="never"
 		android:title="@string/wallet_options_donate" />
