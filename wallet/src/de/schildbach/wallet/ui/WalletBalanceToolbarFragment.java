@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui;
 
+import android.app.Activity;
 import android.content.Context;
 import android.database.Cursor;
 import android.os.Bundle;
@@ -53,7 +54,7 @@ import hashengineering.darkcoin.wallet.R;
 public final class WalletBalanceToolbarFragment extends Fragment
 {
 	private WalletApplication application;
-	private AbstractWalletActivity activity;
+	private Activity activity;
 	private Configuration config;
 	private Wallet wallet;
 	private LoaderManager loaderManager;
@@ -98,7 +99,7 @@ public final class WalletBalanceToolbarFragment extends Fragment
 	{
 		super.onAttach(context);
 
-		this.activity = (AbstractWalletActivity) context;
+		this.activity = (Activity) context;
 		this.application = (WalletApplication) activity.getApplication();
 		this.config = application.getConfiguration();
 		this.wallet = application.getWallet();

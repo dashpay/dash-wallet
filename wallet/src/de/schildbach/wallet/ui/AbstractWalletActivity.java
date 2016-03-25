@@ -61,7 +61,6 @@ public abstract class AbstractWalletActivity extends AppCompatActivity
 		Toolbar toolbarView = (Toolbar) findViewById(R.id.toolbar);
 		if (toolbarView != null)
 		{
-//			toolbarView.setTitleTextColor(Color.WHITE);
 			setSupportActionBar(toolbarView);
 			ActionBar actionBar = getSupportActionBar();
 			if (actionBar != null)
