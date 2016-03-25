@@ -419,11 +419,11 @@ public final class SendCoinsFragment extends Fragment
 	};
 
 	@Override
-	public void onAttach(final Context context)
+	public void onAttach(final Activity activity)
 	{
-		super.onAttach(context);
+		super.onAttach(activity);
 
-		this.activity = (AbstractBindServiceActivity) context;
+		this.activity = (AbstractBindServiceActivity) activity;
 		this.application = (WalletApplication) activity.getApplication();
 		this.config = application.getConfiguration();
 		this.wallet = application.getWallet();
