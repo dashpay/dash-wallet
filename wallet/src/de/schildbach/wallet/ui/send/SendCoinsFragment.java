@@ -444,7 +444,6 @@ public final class SendCoinsFragment extends Fragment
 		final PackageManager pm = this.activity.getPackageManager();
 		boolean hasCamera = pm.hasSystemFeature(PackageManager.FEATURE_CAMERA) || pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT);
 		viewFabScanQr.setVisibility(hasCamera ? View.VISIBLE : View.GONE);
-		viewFabScanQr.setEnabled(state == State.INPUT);
 		viewFabScanQr.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view) {
