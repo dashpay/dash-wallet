@@ -4,7 +4,7 @@
 <b>VEÇORIT</b>
 
 • Nuk kërkohet regjistrim, ueb shërbim apo cloud! Kjo kulet është e de-centralizuar dhe 'peer to peer'.
-• Shfaq shumën e Bitcoins në BTC, mBTC dhe µBTC.
+• Shfaq shumën e Bitcoins në DASH, mDASH dhe µDASH.
 • Konvertimi nga monedhat nacionale.
 • Dërgimi dhe pranimi i Bitcoin-ave me anë të NFC, QR kodeve ose Bircoin URL-ve.
 • Libri i adresave të cilat i përdorni rregullisht për monedha.
