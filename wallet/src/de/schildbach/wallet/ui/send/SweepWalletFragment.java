@@ -44,8 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import android.app.Activity;
-import android.app.Fragment;
-import android.app.FragmentManager;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -55,6 +54,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
+import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.SpannableStringBuilder;
 import android.view.LayoutInflater;
@@ -111,9 +113,9 @@ public class SweepWalletFragment extends Fragment
 	private RecyclerView.ViewHolder sweepTransactionViewHolder;
 	private Button viewGo;
 	private Button viewCancel;
+	private FloatingActionButton viewFabScanQr;
 
 	private MenuItem reloadAction;
-	private MenuItem scanAction;
 
 	private static final int REQUEST_CODE_SCAN = 0;
 
@@ -127,14 +129,34 @@ public class SweepWalletFragment extends Fragment
 	private static final Logger log = LoggerFactory.getLogger(SweepWalletFragment.class);
 
 	@Override
-	public void onAttach(final Activity activity)
+	public void onAttach(final Context context)
 	{
-		super.onAttach(activity);
+		super.onAttach(context);
 
-		this.activity = (AbstractBindServiceActivity) activity;
+		this.activity = (AbstractBindServiceActivity) context;
 		this.application = (WalletApplication) activity.getApplication();
 		this.config = application.getConfiguration();
 		this.fragmentManager = getFragmentManager();
+	}
+
+	@Override
+	public void onActivityCreated(@android.support.annotation.Nullable Bundle savedInstanceState) {
+		super.onActivityCreated(savedInstanceState);
+		initFloatingButton();
+	}
+
+	private void initFloatingButton()
+	{
+		viewFabScanQr = (FloatingActionButton) this.activity.findViewById(R.id.fab_scan_qr);
+		final PackageManager pm = this.activity.getPackageManager();
+		boolean hasCamera = pm.hasSystemFeature(PackageManager.FEATURE_CAMERA) || pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT);
+		viewFabScanQr.setVisibility(hasCamera ? View.VISIBLE : View.GONE);
+		viewFabScanQr.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				handleScan();
+			}
+		});
 	}
 
 	@Override
@@ -309,10 +331,6 @@ public class SweepWalletFragment extends Fragment
 		inflater.inflate(R.menu.sweep_wallet_fragment_options, menu);
 
 		reloadAction = menu.findItem(R.id.sweep_wallet_options_reload);
-		scanAction = menu.findItem(R.id.sweep_wallet_options_scan);
-
-		final PackageManager pm = activity.getPackageManager();
-		scanAction.setVisible(pm.hasSystemFeature(PackageManager.FEATURE_CAMERA) || pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT));
 
 		super.onCreateOptionsMenu(menu, inflater);
 	}
@@ -324,10 +342,6 @@ public class SweepWalletFragment extends Fragment
 		{
 			case R.id.sweep_wallet_options_reload:
 				handleReload();
-				return true;
-
-			case R.id.sweep_wallet_options_scan:
-				handleScan();
 				return true;
 		}
 
@@ -612,8 +626,8 @@ public class SweepWalletFragment extends Fragment
 		// enable actions
 		if (reloadAction != null)
 			reloadAction.setEnabled(state == State.CONFIRM_SWEEP && walletToSweep != null);
-		if (scanAction != null)
-			scanAction.setEnabled(state == State.DECODE_KEY || state == State.CONFIRM_SWEEP);
+		if (viewFabScanQr != null)
+			viewFabScanQr.setEnabled(state == State.DECODE_KEY || state == State.CONFIRM_SWEEP);
 	}
 
 	private void handleDecrypt()

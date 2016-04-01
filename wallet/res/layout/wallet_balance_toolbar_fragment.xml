@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="?attr/actionBarSize">
+
+    <LinearLayout
+        android:id="@+id/wallet_balance"
+        android:layout_width="wrap_content"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@drawable/selectable_item_background"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_marginLeft="4dp"
+            android:layout_marginRight="4dp"
+            android:orientation="vertical">
+
+            <de.schildbach.wallet.ui.ToolbarCurrencyTextView
+                android:id="@+id/wallet_balance_btc"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableLeft="@drawable/ic_dash_d_white_bottom"
+                android:textColor="@color/white"
+                android:textSize="20sp"
+                android:textStyle="bold|italic" />
+
+            <de.schildbach.wallet.ui.ToolbarCurrencyTextView
+                android:id="@+id/wallet_balance_local"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right"
+                android:textColor="@color/white"
+                android:textSize="@dimen/font_size_tiny" />
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/wallet_balance_too_much_warning"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_gravity="center_vertical"
+            android:src="@drawable/ic_warning" />
+    </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/progress"
+        android:layout_width="?attr/actionBarSize"
+        android:layout_height="?attr/actionBarSize"
+        android:layout_gravity="center"
+        android:background="@drawable/selectable_item_background"
+        android:indeterminate="true"
+        android:indeterminateDrawable="@drawable/white_progress"
+        android:padding="8dp" />
+
+</FrameLayout>

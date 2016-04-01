@@ -22,6 +22,7 @@ import org.bitcoinj.utils.MonetaryFormat;
 
 import android.content.Context;
 import android.graphics.Paint;
+import android.support.v4.content.ContextCompat;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.ScaleXSpan;
@@ -34,7 +35,7 @@ import de.schildbach.wallet.util.MonetarySpannable;
 /**
  * @author Andreas Schildbach
  */
-public final class CurrencyTextView extends TextView
+public class CurrencyTextView extends TextView
 {
 	private Monetary amount = null;
 	private MonetaryFormat format = null;
@@ -111,7 +112,7 @@ public final class CurrencyTextView extends TextView
 	{
 		super.onFinishInflate();
 
-		setPrefixColor(getResources().getColor(R.color.fg_less_significant));
+		setPrefixColor(ContextCompat.getColor(getContext(), R.color.white));
 		setPrefixScaleX(1);
 		setInsignificantRelativeSize(0.85f);
 		setSingleLine();
@@ -127,6 +128,11 @@ public final class CurrencyTextView extends TextView
 		else
 			text = null;
 
-		setText(text);
+		setTextFormat(text);
 	}
+
+    protected void setTextFormat(CharSequence text)
+    {
+        setText(text);
+    }
 }

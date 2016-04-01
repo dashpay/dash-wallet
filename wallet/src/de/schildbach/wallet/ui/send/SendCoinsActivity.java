@@ -19,10 +19,15 @@ package de.schildbach.wallet.ui.send;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 
+import android.support.design.widget.FloatingActionButton;
+import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.HelpDialogFragment;
@@ -70,7 +75,7 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity
 				return true;
 
 			case R.id.send_coins_options_help:
-				HelpDialogFragment.page(getFragmentManager(), R.string.help_send_coins);
+				HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_send_coins);
 				return true;
 		}
 

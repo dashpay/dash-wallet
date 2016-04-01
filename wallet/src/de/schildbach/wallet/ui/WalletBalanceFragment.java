@@ -25,13 +25,12 @@ import org.bitcoinj.core.Wallet;
 import org.bitcoinj.utils.Fiat;
 
 import android.app.Activity;
-import android.app.Fragment;
-import android.app.LoaderManager;
-import android.app.LoaderManager.LoaderCallbacks;
 import android.content.Intent;
-import android.content.Loader;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -46,6 +45,7 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
 import hashengineering.darkcoin.wallet.R;
+
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Wallet;
 import org.bitcoinj.utils.Fiat;
@@ -265,7 +265,7 @@ public final class WalletBalanceFragment extends Fragment
 		}
 	}
 
-	private final LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>()
+	private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>()
 	{
 		@Override
 		public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args)
@@ -287,7 +287,7 @@ public final class WalletBalanceFragment extends Fragment
 		}
 	};
 
-	private final LoaderCallbacks<Coin> balanceLoaderCallbacks = new LoaderManager.LoaderCallbacks<Coin>()
+	private final LoaderManager.LoaderCallbacks<Coin> balanceLoaderCallbacks = new LoaderManager.LoaderCallbacks<Coin>()
 	{
 		@Override
 		public Loader<Coin> onCreateLoader(final int id, final Bundle args)
@@ -309,50 +309,50 @@ public final class WalletBalanceFragment extends Fragment
 		}
 	};
 
-	private final LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
-{
-    @Override
-    public Loader<Cursor> onCreateLoader(final int id, final Bundle args)
-    {
-        return new ExchangeRateLoader(activity, config);
-    }
+	private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
+	{
+		@Override
+		public Loader<Cursor> onCreateLoader(final int id, final Bundle args)
+		{
+			return new ExchangeRateLoader(activity, config);
+		}
 
-    @Override
-    public void onLoadFinished(final Loader<Cursor> loader, final Cursor data)
-    {
-        if (data != null && data.getCount() > 0)
-        {
-            data.moveToFirst();
-            exchangeRate = ExchangeRatesProvider.getExchangeRate(data);
-            updateView();
-        }
-    }
+		@Override
+		public void onLoadFinished(final Loader<Cursor> loader, final Cursor data)
+		{
+			if (data != null && data.getCount() > 0)
+			{
+				data.moveToFirst();
+				exchangeRate = ExchangeRatesProvider.getExchangeRate(data);
+				updateView();
+			}
+		}
 
-    @Override
-    public void onLoaderReset(final Loader<Cursor> loader)
-    {
-    }
-};
-    private final LoaderCallbacks<Integer> masternodeSyncLoaderCallbacks = new LoaderManager.LoaderCallbacks<Integer>()
-    {
-        @Override
-        public Loader<Integer> onCreateLoader(final int id, final Bundle args)
-        {
-            return new MasternodeSyncLoader(activity, wallet);
-        }
+		@Override
+		public void onLoaderReset(final Loader<Cursor> loader)
+		{
+		}
+	};
+	private final LoaderManager.LoaderCallbacks<Integer> masternodeSyncLoaderCallbacks = new LoaderManager.LoaderCallbacks<Integer>()
+	{
+		@Override
+		public Loader<Integer> onCreateLoader(final int id, final Bundle args)
+		{
+			return new MasternodeSyncLoader(activity, wallet);
+		}
 
-        @Override
-        public void onLoadFinished(final Loader<Integer> loader, final Integer newStatus)
-        {
-            WalletBalanceFragment.this.masternodeSyncStatus = newStatus;
+		@Override
+		public void onLoadFinished(final Loader<Integer> loader, final Integer newStatus)
+		{
+			WalletBalanceFragment.this.masternodeSyncStatus = newStatus;
 
-            updateView();
+			updateView();
 
-        }
+		}
 
-        @Override
-        public void onLoaderReset(final Loader<Integer> loader)
-        {
-        }
-    };
+		@Override
+		public void onLoaderReset(final Loader<Integer> loader)
+		{
+		}
+	};
 }

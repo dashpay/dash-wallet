@@ -37,16 +37,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import android.app.Activity;
-import android.app.Fragment;
-import android.app.LoaderManager;
-import android.app.LoaderManager.LoaderCallbacks;
-import android.content.AsyncTaskLoader;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.Loader;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.database.ContentObserver;
@@ -56,6 +51,10 @@ import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.AsyncTaskLoader;
+import android.support.v4.content.Loader;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -86,7 +85,7 @@ import de.schildbach.wallet.util.WalletUtils;
 /**
  * @author Andreas Schildbach
  */
-public class WalletTransactionsFragment extends Fragment implements LoaderCallbacks<List<Transaction>>, TransactionsAdapter.OnClickListener,
+public class WalletTransactionsFragment extends Fragment implements LoaderManager.LoaderCallbacks<List<Transaction>>, TransactionsAdapter.OnClickListener,
 		OnSharedPreferenceChangeListener
 {
 	public enum Direction
@@ -101,8 +100,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 	private ContentResolver resolver;
 	private LoaderManager loaderManager;
 
-	private ViewAnimator viewGroup;
-	private TextView emptyView;
+//	private ViewAnimator viewGroup;
+//	private TextView emptyView;
 	private RecyclerView recyclerView;
 	private TransactionsAdapter adapter;
 
@@ -160,9 +159,9 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 	{
 		final View view = inflater.inflate(R.layout.wallet_transactions_fragment, container, false);
 
-		viewGroup = (ViewAnimator) view.findViewById(R.id.wallet_transactions_group);
+//		viewGroup = (ViewAnimator) view.findViewById(R.id.wallet_transactions_group);
 
-		emptyView = (TextView) view.findViewById(R.id.wallet_transactions_empty);
+//		emptyView = (TextView) view.findViewById(R.id.wallet_transactions_empty);
 
 		recyclerView = (RecyclerView) view.findViewById(R.id.wallet_transactions_list);
 		recyclerView.setHasFixedSize(true);
@@ -362,7 +361,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
 		if (transactions.isEmpty())
 		{
-			viewGroup.setDisplayedChild(1);
+//			viewGroup.setDisplayedChild(1);
 
 			final SpannableStringBuilder emptyText = new SpannableStringBuilder(
 					getString(direction == Direction.SENT ? R.string.wallet_transactions_fragment_empty_text_sent
@@ -370,11 +369,11 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 			emptyText.setSpan(new StyleSpan(Typeface.BOLD), 0, emptyText.length(), SpannableStringBuilder.SPAN_POINT_MARK);
 			if (direction != Direction.SENT)
 				emptyText.append("\n\n").append(getString(R.string.wallet_transactions_fragment_empty_text_howto));
-			emptyView.setText(emptyText);
+//			emptyView.setText(emptyText);
 		}
 		else
 		{
-			viewGroup.setDisplayedChild(2);
+//			viewGroup.setDisplayedChild(2);
 		}
 	}
 

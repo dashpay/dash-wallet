@@ -1,0 +1,77 @@
+<android.support.design.widget.CollapsingToolbarLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/collapsing_toolbar"
+    android:layout_width="match_parent"
+    android:layout_height="72dp"
+    android:background="@drawable/toolbar_background"
+    android:fitsSystemWindows="true"
+    app:contentScrim="@android:color/transparent"
+    app:layout_scrollFlags="scroll|exitUntilCollapsed">
+
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:layout_collapseMode="pin"
+        app:popupTheme="@style/My.PopupOverlay">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <fragment
+                android:id="@+id/wallet_balance_fragment_toolbar"
+                android:name="de.schildbach.wallet.ui.WalletBalanceToolbarFragment"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_gravity="center_vertical|right"
+                tools:layout="@layout/wallet_balance_toolbar_fragment" />
+
+        </FrameLayout>
+
+    </android.support.v7.widget.Toolbar>
+
+    <RelativeLayout
+        android:id="@+id/toolbar_title_panel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="56dp"
+        android:layout_marginTop="18dp"
+        android:clickable="true"
+        android:orientation="vertical"
+        app:layout_collapseMode="pin">
+
+        <ImageView
+            android:id="@+id/toolbar_logo"
+            android:layout_width="148dp"
+            android:layout_height="14dp"
+            android:scaleType="fitStart"
+            android:src="@drawable/dash_logo_white" />
+
+        <TextView
+            android:id="@+id/toolbar_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="-4dp"
+            android:scaleY="0.7"
+            android:text="@string/dash_wallet"
+            android:textAllCaps="true"
+            android:textColor="#ffffff"
+            android:textSize="15sp"
+            android:textStyle="bold|italic"
+            android:layout_below="@+id/toolbar_logo" />
+
+        <TextView
+            android:id="@+id/toolbar_slogan"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/dash_slogan"
+            android:textColor="#ffffff"
+            android:textSize="13sp"
+            android:layout_below="@+id/toolbar_logo"
+            android:layout_marginTop="10dp" />
+    </RelativeLayout>
+
+</android.support.design.widget.CollapsingToolbarLayout>
+
