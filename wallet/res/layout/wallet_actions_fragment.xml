@@ -1,7 +1,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
 	android:layout_width="match_parent"
 	android:layout_height="wrap_content"
-	android:divider="@drawable/divider_dark"
+	android:background="@drawable/toolbar_background"
 	android:dividerPadding="8dp"
 	android:measureWithLargestChild="true"
 	android:orientation="horizontal" >
@@ -36,13 +36,5 @@
 		android:textColor="@color/fg_network"
 		android:textSize="@dimen/font_size_tiny"
 		android:textStyle="bold" />
-
-	<ImageButton
-		android:id="@+id/wallet_actions_send_qr"
-		style="@style/My.Widget.Button.Borderless"
-		android:layout_width="wrap_content"
-		android:layout_height="wrap_content"
-		android:contentDescription="@string/button_scan"
-		android:src="@drawable/ic_photo_camera_white_24dp" />
 
 </LinearLayout>

@@ -49,18 +49,12 @@ import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.params.KeyParameter;
 
 import android.app.Activity;
-import android.app.Fragment;
-import android.app.FragmentManager;
-import android.app.LoaderManager;
-import android.app.LoaderManager.LoaderCallbacks;
 import android.bluetooth.BluetoothAdapter;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.CursorLoader;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.Loader;
 import android.content.pm.PackageManager;
 import android.database.ContentObserver;
 import android.database.Cursor;
@@ -72,6 +66,12 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
+import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -162,6 +162,7 @@ public final class SendCoinsFragment extends Fragment
 	private View privateKeyBadPasswordView;
 	private Button viewGo;
 	private Button viewCancel;
+	private FloatingActionButton viewFabScanQr;
 
 	@Nullable
 	private State state = null;
@@ -313,7 +314,7 @@ public final class SendCoinsFragment extends Fragment
 		}
 	};
 
-	private final LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
+	private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
 	{
 		@Override
 		public Loader<Cursor> onCreateLoader(final int id, final Bundle args)
@@ -340,7 +341,7 @@ public final class SendCoinsFragment extends Fragment
 		}
 	};
 
-	private final LoaderCallbacks<Cursor> receivingAddressLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
+	private final LoaderManager.LoaderCallbacks<Cursor> receivingAddressLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
 	{
 		@Override
 		public Loader<Cursor> onCreateLoader(final int id, final Bundle args)
@@ -429,6 +430,26 @@ public final class SendCoinsFragment extends Fragment
 		this.contentResolver = activity.getContentResolver();
 		this.loaderManager = getLoaderManager();
 		this.fragmentManager = getFragmentManager();
+	}
+
+	@Override
+	public void onActivityCreated(@android.support.annotation.Nullable Bundle savedInstanceState) {
+		super.onActivityCreated(savedInstanceState);
+		initFloatingButton();
+	}
+
+	private void initFloatingButton()
+	{
+		viewFabScanQr = (FloatingActionButton) this.activity.findViewById(R.id.fab_scan_qr);
+		final PackageManager pm = this.activity.getPackageManager();
+		boolean hasCamera = pm.hasSystemFeature(PackageManager.FEATURE_CAMERA) || pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT);
+		viewFabScanQr.setVisibility(hasCamera ? View.VISIBLE : View.GONE);
+		viewFabScanQr.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				handleScan();
+			}
+		});
 	}
 
 	@Override
@@ -759,11 +780,6 @@ public final class SendCoinsFragment extends Fragment
 	@Override
 	public void onPrepareOptionsMenu(final Menu menu)
 	{
-		final MenuItem scanAction = menu.findItem(R.id.send_coins_options_scan);
-		final PackageManager pm = activity.getPackageManager();
-		scanAction.setVisible(pm.hasSystemFeature(PackageManager.FEATURE_CAMERA) || pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT));
-		scanAction.setEnabled(state == State.INPUT);
-
 		final MenuItem emptyAction = menu.findItem(R.id.send_coins_options_empty);
 		emptyAction.setEnabled(state == State.INPUT && paymentIntent.mayEditAmount());
 
@@ -784,9 +800,6 @@ public final class SendCoinsFragment extends Fragment
 	{
 		switch (item.getItemId())
 		{
-			case R.id.send_coins_options_scan:
-				handleScan();
-				return true;
 
 			case R.id.send_coins_options_fee_category_economic:
 				handleFeeCategory(FeeCategory.ECONOMIC);
@@ -1359,6 +1372,7 @@ public final class SendCoinsFragment extends Fragment
 		{
 			getView().setVisibility(View.GONE);
 		}
+		viewFabScanQr.setEnabled(state == State.INPUT);
 	}
 
 	private void initStateFromIntentExtras(final Bundle extras)
