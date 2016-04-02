@@ -63,6 +63,17 @@ dependencies {
                     resources.srcDirs = ['test']
                 }
             }
+            productFlavors {
+                beta {
+                    applicationId = "hashegineering.dash.wallet.beta"
+                }
+                prod {
+                    applicationId = "hashegineering.darkcoin.wallet"
+                }
+                _testNet3 {
+                    applicationId = "hashegineering.darkcoin.wallet_test"
+                }
+            }
 
             packagingOptions {
                 exclude 'lib/x86_64/darwin/libscrypt.dylib'

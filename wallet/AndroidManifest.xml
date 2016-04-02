@@ -182,15 +182,15 @@
 
 		<provider
 			android:name="de.schildbach.wallet.AddressBookProvider"
-			android:authorities="hashengineering.darkcoin.wallet.address_book"
+			android:authorities="{$applicationId}.address_book"
 			android:exported="false" />
 		<provider
 			android:name="de.schildbach.wallet.ExchangeRatesProvider"
-			android:authorities="hashengineering.darkcoin.wallet.exchange_rates"
+			android:authorities="{$applicationId}.exchange_rates"
 			android:exported="false" />
 		<provider
 			android:name="de.schildbach.wallet.FileAttachmentProvider"
-			android:authorities="hashengineering.darkcoin.wallet.file_attachment"
+			android:authorities="{$applicationId}.file_attachment"
 			android:exported="false"
 			android:grantUriPermissions="true" />
 
