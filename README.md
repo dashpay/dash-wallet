@@ -15,19 +15,19 @@ This project contains several sub-projects:
 
 You can build all sub-projects at once using Gradle:
 
-`gradle clean build`
+`gradle clean build -x test`
 
 Full Guide for building the APK:
 
-$ git clone https://github.com/HashEngineering/darkcoinj.git
-$ cd darkcoinj
-$ git checkout release-0.13
-$ mvn clean install -DskipTests
+`$ git clone https://github.com/HashEngineering/darkcoinj.git`
+`$ cd darkcoinj`
+`$ git checkout release-0.13`
+`$ mvn clean install -DskipTests`
 
-$ cd ..
-$ git clone https://github.com/HashEngineering/darkcoin-wallet.git
-$ cd darkcoin-wallet
-$ git checkout release-4
-$ gradle clean build -x test
+`$ cd ..
+`$ git clone https://github.com/HashEngineering/darkcoin-wallet.git`
+`$ cd darkcoin-wallet`
+`$ git checkout release-4`
+`$ gradle clean build -x test`
 
 
