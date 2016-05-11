@@ -27,7 +27,7 @@ Full Guide for building the APK:
 
 `$ mvn clean install -DskipTests`
 
-`$ cd ..
+`$ cd ..`
 
 `$ git clone https://github.com/HashEngineering/darkcoin-wallet.git `
 
