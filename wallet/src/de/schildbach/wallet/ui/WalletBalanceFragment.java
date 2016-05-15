@@ -254,7 +254,7 @@ public final class WalletBalanceFragment extends Fragment
 			if(masternodeSyncStatus != MasternodeSync.MASTERNODE_SYNC_FINISHED)
 			{
 				viewProgress.setVisibility(View.VISIBLE);
-				viewProgress.setText(wallet.getParams().masternodeSync.getSyncStatus());
+				viewProgress.setText(wallet.getContext().masternodeSync.getSyncStatus());
                 viewBalance.setVisibility(View.INVISIBLE);
 			}
 		}

@@ -17,18 +17,14 @@
 
 package de.schildbach.wallet.ui;
 
-
-import android.content.BroadcastReceiver;
+import android.content.AsyncTaskLoader;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.support.v4.content.AsyncTaskLoader;
-import android.support.v4.content.LocalBroadcastManager;
+
 
 import org.bitcoinj.core.MasternodeManager;
+import org.bitcoinj.core.MasternodeManagerListener;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.MasternodeSyncListener;
-import org.bitcoinj.core.MasternodeManagerListener;
 import org.bitcoinj.core.Wallet;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
@@ -36,34 +32,23 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.RejectedExecutionException;
 
-import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
-
 /**
  * @author Andreas Schildbach
  */
-public final class MasternodeSyncLoader extends AsyncTaskLoader<Integer>
+public final class MasternodeLoader extends AsyncTaskLoader<Integer>
 {
 	//private LocalBroadcastManager broadcastManager;
 	private final MasternodeSync masternodeSync;
 	private final MasternodeManager masternodeManager;
 	private int masternodeSyncStatus;
 
-	private static final Logger log = LoggerFactory.getLogger(MasternodeSyncLoader.class);
+	private static final Logger log = LoggerFactory.getLogger(MasternodeLoader.class);
+	org.bitcoinj.core.Context dashContext;
 
-	public MasternodeSyncLoader(final Context context, Wallet wallet)
+	public MasternodeLoader(final Context context, org.bitcoinj.core.Context dashContext)
 	{
 		super(context);
-
-		//this.broadcastManager = LocalBroadcastManager.getInstance(context.getApplicationContext());
-		this.masternodeSync = wallet.getContext().masternodeSync;
-		this.masternodeSyncStatus = masternodeSync.getSyncStatusInt();
-		this.masternodeManager = wallet.getContext().masternodeManager;
-	}
-
-	public MasternodeSyncLoader(final Context context, org.bitcoinj.core.Context dashContext)
-	{
-		super(context);
+		this.dashContext = dashContext;
 
 		//this.broadcastManager = LocalBroadcastManager.getInstance(context.getApplicationContext());
 		this.masternodeSync = dashContext.masternodeSync;
@@ -77,7 +62,7 @@ public final class MasternodeSyncLoader extends AsyncTaskLoader<Integer>
 		super.onStartLoading();
 
 		masternodeSync.addEventListener(masternodeSyncListener, Threading.SAME_THREAD);
-		//masternodeManager.addEventListener(masternodeManagerListener, Threading.SAME_THREAD);
+		masternodeManager.addEventListener(masternodeManagerListener, Threading.SAME_THREAD);
 		//broadcastManager.registerReceiver(masternodeSyncReceiver, new IntentFilter(WalletApplication.ACTION_WALLET_REFERENCE_CHANGED));
 
 		safeForceLoad();
@@ -88,7 +73,7 @@ public final class MasternodeSyncLoader extends AsyncTaskLoader<Integer>
 	{
 		//broadcastManager.unregisterReceiver(masternodeSyncReceiver);
 		masternodeSync.removeEventListener(masternodeSyncListener);
-		//masternodeManager.removeEventListener(masternodeManagerListener);
+		masternodeManager.removeEventListener(masternodeManagerListener);
 		//masternodeSyncListener.removeCallbacks();
 
 		super.onStopLoading();
@@ -99,6 +84,7 @@ public final class MasternodeSyncLoader extends AsyncTaskLoader<Integer>
 	{
 		//broadcastManager.unregisterReceiver(masternodeSyncReceiver);
 		masternodeSync.removeEventListener(masternodeSyncListener);
+		masternodeManager.removeEventListener(masternodeManagerListener);
 		//masternodeSyncListener.removeCallbacks();
 
 		super.onReset();
@@ -147,7 +133,7 @@ public final class MasternodeSyncLoader extends AsyncTaskLoader<Integer>
 		}
 		catch (final RejectedExecutionException x)
 		{
-			log.info("rejected execution: " + MasternodeSyncLoader.this.toString());
+			log.info("rejected execution: " + MasternodeLoader.this.toString());
 		}
 	}
 }

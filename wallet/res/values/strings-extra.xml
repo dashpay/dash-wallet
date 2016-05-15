@@ -12,4 +12,6 @@
 	<string name="transaction_row_message_received_instantx_locked2">Locked InstantX</string>
 
 	<string name="wallet_options_disconnect">Disconnect</string>
+
+	<string name="network_monitor_masternodes_title">Masternodes</string>
 </resources>

@@ -159,6 +159,7 @@ public final class WalletBalanceToolbarFragment extends Fragment
 		loaderManager.destroyLoader(ID_BLOCKCHAIN_STATE_LOADER);
 		loaderManager.destroyLoader(ID_RATE_LOADER);
 		loaderManager.destroyLoader(ID_BALANCE_LOADER);
+		loaderManager.destroyLoader(ID_MASTERNODE_SYNC_LOADER);
 
 		super.onPause();
 	}
@@ -246,11 +247,22 @@ public final class WalletBalanceToolbarFragment extends Fragment
             {
                 progressView.setVisibility(View.VISIBLE);
                 viewBalance.setVisibility(View.INVISIBLE);
-                String syncStatus = wallet.getParams().masternodeSync.getSyncStatus();
+                String syncStatus = wallet.getContext().masternodeSync.getSyncStatus();
                 showAppBarMessage(syncStatus);
             } else {
-                progressView.setVisibility(View.GONE);
-                showAppBarMessage(null);
+				//Show sync status of Masternodes
+				//int masternodesLoaded = wallet.getContext().masternodeSync.mapSeenSyncMNB.size();
+				//int totalMasternodes = wallet.getContext().masternodeSync.masterNodeCountFromNetwork();
+
+				//if(totalMasternodes == 0 || totalMasternodes < masternodesLoaded + 100) {
+					progressView.setVisibility(View.GONE);
+					showAppBarMessage(null);
+				//}
+				//else
+				//{
+					//showAppBarMessage("Masternodes Loaded: " + masternodesLoaded *100 /totalMasternodes +"%");
+				//	showAppBarMessage("Masternodes Loaded: " + masternodesLoaded +" of "+ totalMasternodes);
+				//}
             }
         }
 		else

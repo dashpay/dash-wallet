@@ -8,7 +8,7 @@
             android:icon="@drawable/ic_menu_home"
             android:title="Home" />
         <item
-        android:id="@+id/wallet_options_disconnect"
+        android:id="@+id/nav_disconnect"
         android:icon="@drawable/ic_menu_disconnect"
         android:title="@string/wallet_options_disconnect"
         />

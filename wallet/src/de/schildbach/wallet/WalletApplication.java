@@ -144,7 +144,9 @@ public class WalletApplication extends Application
 		loadWalletFromProtobuf();
 
 		//Dash Specific - TODO:  need to separate out these parts.
-		Constants.NETWORK_PARAMETERS.initDash();
+		org.bitcoinj.core.Context context = wallet.getContext();
+
+		wallet.getContext().initDash(config.getLiteMode(), config.getInstantXEnabled());
 
 		if (config.versionCodeCrossed(packageInfo.versionCode, VERSION_CODE_SHOW_BACKUP_REMINDER) && !wallet.getImportedKeys().isEmpty())
 		{
@@ -394,6 +396,19 @@ public class WalletApplication extends Application
 		}
 	}
 
+	public void saveMasternodes()
+	{
+		//try
+		//{
+			wallet.getContext().masternodeDB.write(wallet.getContext().masternodeManager);
+			//Constants.NETWORK_PARAMETERS.masternodeDB.write(Constants.NETWORK_PARAMETERS.masternodeManager);
+		//}
+		//catch (final IOException x)
+		{
+		//	throw new RuntimeException(x);
+		}
+	}
+
 	private void protobufSerializeWallet(final Wallet wallet) throws IOException
 	{
 		final long start = System.currentTimeMillis();
@@ -589,5 +604,14 @@ public class WalletApplication extends Application
 		// workaround for no inexact set() before KitKat
 		final long now = System.currentTimeMillis();
 		alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, now + alarmInterval, AlarmManager.INTERVAL_DAY, alarmIntent);
+	}
+
+	//dash Specific
+	public void updateDashMode()
+	{
+		org.bitcoinj.core.Context context = wallet.getContext();
+
+		context.setAllowInstantXinLiteMode(config.getInstantXEnabled());
+		context.setLiteMode(config.getLiteMode());
 	}
 }

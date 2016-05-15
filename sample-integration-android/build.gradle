@@ -7,7 +7,7 @@ dependencies {
     compile(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
     }
-    compile 'org.bitcoinj:darkcoinj-core:0.13.2.ix'
+    compile 'org.bitcoinj:darkcoinj-core:0.13.2.rix'
 }
 
 android {

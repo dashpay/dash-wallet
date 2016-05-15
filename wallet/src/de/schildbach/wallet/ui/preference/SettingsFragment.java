@@ -44,6 +44,9 @@ public final class SettingsFragment extends PreferenceFragment implements OnPref
 	private Preference btcPrecisionPreference;
 	private Preference trustedPeerPreference;
 	private Preference trustedPeerOnlyPreference;
+	//Dash Specific
+	private Preference allowInstantXPreference;
+	private Preference liteModePreference;
 
 	@Override
 	public void onAttach(final Activity activity)
@@ -77,6 +80,12 @@ public final class SettingsFragment extends PreferenceFragment implements OnPref
 		final SharedPreferences prefs = getPreferenceManager().getSharedPreferences();
 		final String trustedPeer = prefs.getString(Configuration.PREFS_KEY_TRUSTED_PEER, "").trim();
 		updateTrustedPeer(trustedPeer);
+
+		//Dash Specific
+		allowInstantXPreference = findPreference(Configuration.PREFS_KEY_INSTANTX_ENABLED);
+		allowInstantXPreference.setOnPreferenceChangeListener(this);
+		liteModePreference = findPreference(Configuration.PREFS_KEY_LITE_MODE);
+		liteModePreference.setOnPreferenceChangeListener(this);
 	}
 
 	@Override
@@ -109,6 +118,16 @@ public final class SettingsFragment extends PreferenceFragment implements OnPref
 				}
 				else if (preference.equals(trustedPeerOnlyPreference))
 				{
+					application.stopBlockchainService();
+				}
+				else if(preference.equals(allowInstantXPreference))
+				{
+					application.updateDashMode();
+					application.stopBlockchainService();
+				}
+				else if(preference.equals(liteModePreference))
+				{
+					application.updateDashMode();
 					application.stopBlockchainService();
 				}
 			}

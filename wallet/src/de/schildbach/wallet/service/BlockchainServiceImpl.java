@@ -712,7 +712,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
 		registerReceiver(tickReceiver, new IntentFilter(Intent.ACTION_TIME_TICK));
 
-		Constants.NETWORK_PARAMETERS.initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
+		wallet.getContext().initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
 	}
 
 	@Override
@@ -803,7 +803,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
 		//Dash Specific
 
-		Constants.NETWORK_PARAMETERS.masternodeDB.write(Constants.NETWORK_PARAMETERS.masternodeManager);
+		//Constants.NETWORK_PARAMETERS.masternodeDB.write(Constants.NETWORK_PARAMETERS.masternodeManager);
+		application.saveMasternodes();
 
 		//Dash Specific
 

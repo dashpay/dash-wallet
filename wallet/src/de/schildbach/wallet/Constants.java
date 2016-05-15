@@ -109,7 +109,7 @@ public final class Constants
 	public static final String MIMETYPE_WALLET_BACKUP = "application/x-"+CoinDefinition.coinName.toLowerCase()+"-wallet-backup";
 
 	/** Number of confirmations until a transaction is fully confirmed. */
-	public static final int MAX_NUM_CONFIRMATIONS = 7;
+	public static final int MAX_NUM_CONFIRMATIONS = 6;
 
 	/** User-agent to use for network access. */
 	public static final String USER_AGENT = CoinDefinition.coinName +" Wallet";

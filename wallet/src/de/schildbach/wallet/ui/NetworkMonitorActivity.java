@@ -34,6 +34,7 @@ public final class NetworkMonitorActivity extends AbstractWalletActivity
 {
 	private PeerListFragment peerListFragment;
 	private BlockListFragment blockListFragment;
+	private MasternodeFragment masternodeFragment;
 
 	@Override
 	protected void onCreate(final Bundle savedInstanceState)
@@ -49,7 +50,7 @@ public final class NetworkMonitorActivity extends AbstractWalletActivity
 		if (pager != null)
 		{
 			final ViewPagerTabs pagerTabs = (ViewPagerTabs) findViewById(R.id.network_monitor_pager_tabs);
-			pagerTabs.addTabLabels(R.string.network_monitor_peer_list_title, R.string.network_monitor_block_list_title);
+			pagerTabs.addTabLabels(R.string.network_monitor_peer_list_title, R.string.network_monitor_block_list_title/* R.string.network_monitor_masternodes_title*/);
 
 			final PagerAdapter pagerAdapter = new PagerAdapter(fm);
 
@@ -60,11 +61,13 @@ public final class NetworkMonitorActivity extends AbstractWalletActivity
 
 			peerListFragment = new PeerListFragment();
 			blockListFragment = new BlockListFragment();
+			//masternodeFragment = new MasternodeFragment();
 		}
 		else
 		{
 			peerListFragment = (PeerListFragment) fm.findFragmentById(R.id.peer_list_fragment);
 			blockListFragment = (BlockListFragment) fm.findFragmentById(R.id.block_list_fragment);
+			//masternodeFragment = null;
 		}
 
 		initToolbar();
@@ -108,8 +111,10 @@ public final class NetworkMonitorActivity extends AbstractWalletActivity
 		{
 			if (position == 0)
 				return peerListFragment;
-			else
+			else //if(position == 1)
 				return blockListFragment;
+			//else
+			//	return masternodeFragment;
 		}
 	}
 }

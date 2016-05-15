@@ -1,0 +1,54 @@
+<ViewAnimator xmlns:android="http://schemas.android.com/apk/res/android"
+	android:id="@+id/peer_list_group"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent" >
+
+	<ProgressBar
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_gravity="center" />
+
+	<TextView
+		android:id="@+id/peer_list_row_ip"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:textStyle="bold"
+		android:text="What is love?"/>
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal" >
+
+		<TextView
+
+			android:layout_width="0px"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:text="Lite Mode"/>
+
+		<TextView
+			android:id="@+id/masternode_lite_mode"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content" />
+	</LinearLayout>
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal" >
+
+		<TextView
+			android:id="@+id/peer_list_row_version"
+			android:layout_width="0px"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:text="Masternodes Loaded"/>
+
+		<TextView
+			android:id="@+id/masternode_info"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content" />
+	</LinearLayout>
+
+</ViewAnimator>

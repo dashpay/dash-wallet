@@ -109,6 +109,8 @@ public final class WalletActivity extends AbstractWalletActivity
 
 	private static final int REQUEST_CODE_SCAN = 0;
 
+	private boolean installedFromGooglePlay;
+
 	@Override
 	protected void onCreate(final Bundle savedInstanceState)
 	{
@@ -130,6 +132,8 @@ public final class WalletActivity extends AbstractWalletActivity
 		MaybeMaintenanceFragment.add(getFragmentManager());
 
 		initView();
+
+		installedFromGooglePlay = "com.android.vending".equals(application.getPackageManager().getInstallerPackageName(application.getPackageName()));
 	}
 
 	private void initView()
@@ -201,6 +205,8 @@ public final class WalletActivity extends AbstractWalletActivity
 		}, 1000);
 
 		checkLowStorageAlert();
+
+		installedFromGooglePlay = "com.android.vending".equals(application.getPackageManager().getInstallerPackageName(application.getPackageName()));
 	}
 
 	@Override
@@ -286,7 +292,8 @@ public final class WalletActivity extends AbstractWalletActivity
 		super.onCreateOptionsMenu(menu);
 
 		getMenuInflater().inflate(R.menu.wallet_options, menu);
-		menu.findItem(R.id.wallet_options_donate).setVisible(false);
+
+		menu.findItem(R.id.wallet_options_donate).setVisible(!Constants.TEST && !installedFromGooglePlay);
 
 		return true;
 	}
@@ -304,9 +311,9 @@ public final class WalletActivity extends AbstractWalletActivity
 				handleSendCoins();
 				return true;
 
-            case R.id.wallet_options_disconnect:
-                handleDisconnect();
-                return true;
+            //case R.id.wallet_options_disconnect:
+            //    handleDisconnect();
+            //    return true;
 
 			case R.id.wallet_options_donate:
 				handleDonate();
@@ -962,6 +969,8 @@ public final class WalletActivity extends AbstractWalletActivity
 			openContextMenu(viewFakeForSafetySubmenu);
 		} else if (id == R.id.nav_settings) {
 			startActivity(new Intent(this, PreferenceActivity.class));
+		} else if(id == R.id.nav_disconnect) {
+			handleDisconnect();
 		}
 
 		viewDrawer.closeDrawer(GravityCompat.START);
