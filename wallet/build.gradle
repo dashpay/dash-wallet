@@ -62,6 +62,12 @@ dependencies {
                     java.srcDirs = ['test']
                     resources.srcDirs = ['test']
                 }
+                _testNet3 {
+                    res.srcDirs = ["testNet3/res"]
+                }
+                beta {
+                    res.srcDirs = ["beta/res"]
+                }
             }
             productFlavors {
                 beta {
