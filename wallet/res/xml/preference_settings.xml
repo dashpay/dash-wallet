@@ -48,8 +48,8 @@
 		<CheckBoxPreference
 			android:defaultValue="true"
 			android:key="labs_instantx_enabled"
-			android:summary="Allow InstantX to be used to send and receive coins."
-			android:title="Enable InstantX" />
+			android:summary="Allow InstantSend to be used to send and receive coins."
+			android:title="Enable InstantSend" />
 		<CheckBoxPreference
 			android:defaultValue="true"
 			android:key="labs_lite_mode"
