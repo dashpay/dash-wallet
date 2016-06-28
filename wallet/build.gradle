@@ -71,13 +71,13 @@ dependencies {
             }
             productFlavors {
                 beta {
-                    applicationId = "hashegineering.dash.wallet.beta"
+                    applicationId = "hashengineering.dash.wallet.beta"
                 }
                 prod {
-                    applicationId = "hashegineering.darkcoin.wallet"
+                    applicationId = "hashengineering.darkcoin.wallet"
                 }
                 _testNet3 {
-                    applicationId = "hashegineering.darkcoin.wallet_test"
+                    applicationId = "hashengineering.darkcoin.wallet_test"
                 }
             }
 
