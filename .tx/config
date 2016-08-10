@@ -1,28 +1,35 @@
 [main]
 host = https://www.transifex.com
 
-[bitcoin-wallet.strings]
+[dash-wallet.strings]
 type = ANDROID
 source_file = wallet/res/values/strings.xml
 source_lang = en
 file_filter = wallet/res/values-<lang>/strings.xml
 lang_map = sl_SI:sl, pt_BR:pt-rBR, zh_TW:zh-rTW
 
-[bitcoin-wallet.strings_help]
+[dash-wallet.strings-extra]
+type = ANDROID
+source_file = wallet/res/values/strings-extra.xml
+source_lang = en
+file_filter = wallet/res/values-<lang>/strings-extra.xml
+lang_map = sl_SI:sl, pt_BR:pt-rBR, zh_TW:zh-rTW
+
+[dash-wallet.strings_help]
 type = ANDROID
 source_file = wallet/res/values/strings_help.xml
 source_lang = en
 file_filter = wallet/res/values-<lang>/strings_help.xml
 lang_map = sl_SI:sl, pt_BR:pt-rBR, zh_TW:zh-rTW
 
-[bitcoin-wallet.market-promo-text]
+[dash-wallet.market-promo-text]
 type = TXT
 source_file = market/market-promo-text.txt
 source_lang = en
 file_filter = market/market-promo-text-<lang>.txt
 lang_map = sl_SI:sl, pt_BR:pt-BR, zh_TW:zh-TW
 
-[bitcoin-wallet.market-description]
+[dash-wallet.market-description]
 type = TXT
 source_file = market/market-description.txt
 source_lang = en
