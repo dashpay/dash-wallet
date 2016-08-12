@@ -24,7 +24,7 @@ https://www.gnu.org/licenses/gpl-3.0.ja.html
 https://github.com/HashEngineering/darkcoin-wallet
 
 全ての翻訳はTransifexで管理されています:
-https://www.transifex.com/bitcoin-wallet/bitcoin-wallet/
+https://www.transifex.com/dash/dash-wallet/
 
 
 <b>推薦文</b>

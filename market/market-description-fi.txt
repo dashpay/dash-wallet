@@ -23,7 +23,7 @@ Lähdekoodi saatavilla GitHub:sta:
 https://github.com/HashEngineering/darkcoin-wallet
 
 Kaikki käännökset on hallinnoitu Transifex:n kautta:
-https://www.transifex.com/bitcoin-wallet/bitcoin-wallet/
+https://www.transifex.com/dash/dash-wallet/
 
 
 <b>SUOSITTELUMME</b>

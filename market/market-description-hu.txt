@@ -14,7 +14,7 @@ A forráskódunk elérhető a GitHub-on:
 https://github.com/HashEngineering/darkcoin-wallet
 
 Minden fordítást a Transifex kezelt:
-https://www.transifex.com/bitcoin-wallet/bitcoin-wallet/
+https://www.transifex.com/dash/dash-wallet/
 
 
 <b>AJÁNLÓLEVELEK</b>

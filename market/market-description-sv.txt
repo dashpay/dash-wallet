@@ -22,7 +22,7 @@ Vår källkod finns tillgänglig på GitHub:
 https://github.com/HashEngineering/darkcoin-wallet
 
 All översättning hanteras via Transifex:
-https://www.transifex.com/bitcoin-wallet/bitcoin-wallet/
+https://www.transifex.com/dash/dash-wallet/
 
 
 <b>REKOMMENDATIONER</b>

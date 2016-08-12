@@ -23,7 +23,7 @@ Náš zdrojový kód je k dispozici na GitHubu:
 https://github.com/HashEngineering/darkcoin-wallet
 
 Veškeré překlady jsou tvořeny pomocí Transflex.
-https://www.transifex.com/bitcoin-wallet/bitcoin-wallet/
+https://www.transifex.com/dash/dash-wallet/
 
 
 <b>UZNÁNÍ</b>

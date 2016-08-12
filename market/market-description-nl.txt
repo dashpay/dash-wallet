@@ -3,7 +3,7 @@
 <b>EIGENSCHAPPEN</b>
 
 • Geen registratie, webservice of cloud vereist! Deze portemonnee is decentraal en peer-to-peer.
-• Toon Bitcoin bedrag in BTC, mBTC en µBTC.
+• Toon Bitcoin bedrag in DASH, mDASH en µDASH.
 • Conversie van en naar nationale valuta.
 * Verzend en ontvang Bitcoin via NFC, QR-codes of Bitcoin-URL's
 • Adresboek voor regelmatig gebruikte Bitcoin-adressen.
@@ -22,11 +22,11 @@ Onze broncode is beschikbaar op GitHub:
 https://github.com/HashEngineering/darkcoin-wallet
 
 Alle vertalingen worden geregeld via Transifex:
-https://www.transifex.com/bitcoin-wallet/bitcoin-wallet/
+https://www.transifex.com/dash/dash-wallet/
 
 <b>TESTIMONIALS</b>
 
-* Veel mobiele portemonnees baseren hun code op Bitcoin Wallet. Voorbeelden: blockchain.info en BTCX.
+* Veel mobiele portemonnees baseren hun code op Bitcoin Wallet. Voorbeelden: blockchain.info en DASHX.
 * Aanbevolen mobiele portemonnee op https://bitcoin.org
 * Aangeraden door BitPay.
 

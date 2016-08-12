@@ -23,7 +23,7 @@ https://www.gnu.org/licenses/gpl-3.0.ru.html
 https://github.com/HashEngineering/darkcoin-wallet
 
 Всі переклади зроблені через Transifex:
-https://www.transifex.com/bitcoin-wallet/bitcoin-wallet/
+https://www.transifex.com/dash/dash-wallet/
 
 
 <b>РЕКОМЕНДАЦІЇ</b>

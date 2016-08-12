@@ -23,7 +23,7 @@ Nuestro código fuente está disponible en GitHub:
 https://github.com/HashEngineering/darkcoin-wallet
 
 Todas las traducciones son administradas a través de Transifex:
-https://www.transifex.com/bitcoin-wallet/bitcoin-wallet/
+https://www.transifex.com/dash/dash-wallet/
 
 
 

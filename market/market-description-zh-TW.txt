@@ -4,7 +4,7 @@
 <b>特點</b>
 
 • 不需要註冊、不用登記網路服務、也不使用任何雲端服務！這個錢包 app 完全去中心，並使用對等網路(P2P)來服務。
-• 可以顯示不同 Bitcoin 金額單位，如 BTC、mBTC 與 µBTC。
+• 可以顯示不同 Bitcoin 金額單位，如 DASH、mDASH 與 µDASH。
 • 可以轉換各國貨幣。
 • 可以透過 NFC、QR 條碼、或是 Bitcoin 付款網址來付款及收款。
 • 可以用位址簿管理常用的 Bitcoin 位址。
@@ -23,12 +23,12 @@ Our source code is available at GitHub:
 https://github.com/HashEngineering/darkcoin-wallet
 
 所有的翻譯工作都用 Transifex 管理:
-https://www.transifex.com/bitcoin-wallet/bitcoin-wallet/
+https://www.transifex.com/dash/dash-wallet/
 
 
 <b>大推</b>
 
-• 很多行動錢包的程式都從 Bitcoin Wallet 發展而來。比如說: blockchain.info、以及 BTCX。
+• 很多行動錢包的程式都從 Bitcoin Wallet 發展而來。比如說: blockchain.info、以及 DASHX。
 • https://bitcoin.org 推薦的行動錢包
 • BitPay 推薦使用。
 

@@ -4,7 +4,7 @@
 <b>CARACTERÍSTIQUES</b>
 
 • Sense enregistrar-se ni amb necessitat d'un servei web o al núvol!. Aquesta cartera és descentralitzada i de parell a parell.
-• Mostra l'import de bitcoin en BTC, mBTC i µBTC.
+• Mostra l'import de bitcoin en DASH, mDASH i µDASH.
 • Conversió cap a i des de divises nacionals.
 • Enviar i rebre bitcoins a través d'NFC, codis QR i adreces Bitcoin.
 • Llibreta d'adreces per a les adreces utilitzades regularment.
@@ -23,7 +23,7 @@ El nostre codi està disponible a GitHub:
 https://github.com/HashEngineering/darkcoin-wallet
 
 Totes les traduccions estan gestionades a través de Transifex:
-https://www.transifex.com/bitcoin-wallet/bitcoin-wallet/
+https://www.transifex.com/dash/dash-wallet/
 
 
 <b>TESTIMONIS</b>
