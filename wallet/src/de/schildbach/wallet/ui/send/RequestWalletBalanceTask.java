@@ -106,6 +106,8 @@ public final class RequestWalletBalanceTask
 			@Override
 			public void run()
 			{
+				org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+
 				final StringBuilder url = new StringBuilder(Constants.BITEASY_API_URL);
 				if(CoinDefinition.UnspentAPI == CoinDefinition.UnspentAPIType.BitEasy)
 				{
@@ -234,15 +236,6 @@ public final class RequestWalletBalanceTask
 								uxtoScriptBytes = ScriptBuilder.createOutputScript(addresses[0]).getProgram();
 								uxtoValue = Coin.valueOf(jsonOutput.getLong("value"));
 							}
-/*=======
-							if (jsonOutput.getInt("is_spent") != 0)
-								throw new IllegalStateException("UXTO not spent");
-
-							final Sha256Hash uxtoHash = Sha256Hash.wrap(jsonOutput.getString("transaction_hash"));
-							final int uxtoIndex = jsonOutput.getInt("transaction_index");
-							final byte[] uxtoScriptBytes = Constants.HEX.decode(jsonOutput.getString("script_pub_key"));
-							final Coin uxtoValue = Coin.valueOf(Long.parseLong(jsonOutput.getString("value")));
-*/
 
 							Transaction tx = transactions.get(uxtoHash);
 							if (tx == null)

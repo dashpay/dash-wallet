@@ -25,9 +25,9 @@ import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.Wallet;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
+import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -354,15 +354,7 @@ public final class SendingAddressesFragment extends FancyListFragment implements
 
 	private void handleSend(final String address)
 	{
-		try
-		{
-			SendCoinsActivity.start(activity, PaymentIntent.fromAddress(address, null));
-		}
-		catch (final AddressFormatException x)
-		{
-			// cannot happen, address was picked from address book
-			throw new RuntimeException(x);
-		}
+		SendCoinsActivity.start(activity, PaymentIntent.fromAddress(address, null));
 	}
 
 	private void handleRemove(final String address)
@@ -373,7 +365,7 @@ public final class SendingAddressesFragment extends FancyListFragment implements
 
 	private void handleShowQr(final String address, final String label)
 	{
-		final String uri = BitcoinURI.convertToBitcoinURI(address, null, label, null);
+		final String uri = BitcoinURI.convertToBitcoinURI(Constants.NETWORK_PARAMETERS, address, null, label, null);
 		final int size = getResources().getDimensionPixelSize(R.dimen.bitmap_dialog_qr_size);
 		BitmapFragment.show(getFragmentManager(), Qr.bitmap(uri, size));
 	}
@@ -381,7 +373,7 @@ public final class SendingAddressesFragment extends FancyListFragment implements
 	private void handleCopyToClipboard(final String address)
 	{
 		clipboardManager.setPrimaryClip(ClipData.newPlainText("Bitcoin address", address));
-		log.info("address copied to clipboard: {}", address.toString());
+		log.info("sending address copied to clipboard: {}", address.toString());
 		new Toast(activity).toast(R.string.wallet_address_fragment_clipboard_msg);
 	}
 
@@ -412,7 +404,7 @@ public final class SendingAddressesFragment extends FancyListFragment implements
 	{
 		final StringBuilder builder = new StringBuilder();
 		for (final Address address : addresses)
-			builder.append(address.toString()).append(",");
+			builder.append(address.toBase58()).append(",");
 		if (addresses.size() > 0)
 			builder.setLength(builder.length() - 1);
 
@@ -435,7 +427,7 @@ public final class SendingAddressesFragment extends FancyListFragment implements
 
 			try
 			{
-				return new Address(Constants.NETWORK_PARAMETERS, clipText.toString().trim());
+				return Address.fromBase58(Constants.NETWORK_PARAMETERS, clipText.toString().trim());
 			}
 			catch (final AddressFormatException x)
 			{

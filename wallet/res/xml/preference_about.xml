@@ -5,7 +5,7 @@
 		android:key="about_version"
 		android:title="@string/about_version_title" />
 	<Preference
-		android:summary="© 2011-2016, the Bitcoin Wallet developers\n© 2014-2016 the Dash Wallet Developers"
+		android:summary="© 2011-2016, the Dash Wallet developers\n© 2014-2016 the Dash Wallet Developers"
 		android:title="@string/about_copyright_title" />
 	<Preference
 		android:key="about_license"
@@ -17,11 +17,11 @@
 	</Preference>
 	<Preference
 		android:key="about_source"
-		android:summary="https://github.com/HashEngineering/darkcoin-wallet"
+		android:summary="https://github.com/HashEngineering/dash-wallet"
 		android:title="@string/about_source_title" >
 		<intent
 			android:action="android.intent.action.VIEW"
-			android:data="https://github.com/HashEngineering/darkcoin-wallet" />
+			android:data="https://github.com/HashEngineering/dash-wallet" />
 	</Preference>
 	<Preference
 		android:key="about_market_app"
@@ -37,11 +37,11 @@
 	</Preference>
 	<!--Preference
 		android:key="about_twitter"
-		android:summary="\@bitcoin_wallet"
+		android:summary="\@Dash_wallet"
 		android:title="Twitter" >
 		<intent
 			android:action="android.intent.action.VIEW"
-			android:data="https://twitter.com/#!/bitcoin_wallet" />
+			android:data="https://twitter.com/#!/Dash_wallet" />
 	</Preference-->
 	<Preference
 		android:key="about_credits_bitcoinj"

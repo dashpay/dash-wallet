@@ -6,9 +6,9 @@
 • Ingen registrering, webtjeneste eller sky trengs! Denne lommeboken er desentralisert og peer-to-peer.
 • Visning av bitcoinbeløpet i DASH, mDASH og μDASH.
 • Konvertering til og fra nasjonale valutaer.
-• Sende og motta bitcoin via NFC, QR-koder eller Dash-URLer.
-• Adressebok for regelmessig brukte Dash-adresser.
-• Når du er frakoblet, kan du fortsatt betale via Bluetooth.
+• Sende og motta bitcoin via NFC, QR-koder eller Bitcoin-URLer.
+• Adressebok for regelmessig brukte Bitcoin-adresser.
+• Når du er frakoblet, kan du fortsatt betale via blåtann.
 • Systemvarsling for mottatte mynter.
 • Sveiping av papirlommebøker (f.eks. de som brukes til kaldlagring).
 • Miniprogram for saldo over bitcoins.
@@ -23,12 +23,12 @@ Vår kildekode er tilgjengelig på GitHub:
 https://github.com/HashEngineering/darkcoin-wallet
 
 Alle oversettelser skjer via Transifex:
-https://www.transifex.com/projects/p/bitcoin-wallet/
+https://www.transifex.com/bitcoin-wallet/bitcoin-wallet/
 
 
 <b>ANBEFALINGER</b>
 
-• Mange mobillommebøker baserer sin kildekode på Dash Wallet. Eksempler: blockchain.info, Hive og KnC.
+• Mange mobillommebøker baserer sin kildekode på Bitcoin Wallet. Eksempler: blockchain.info og BTCX.
 • Anbefalt mobillommebok av https://bitcoin.org
 • Anbefalt av BitPay.
 

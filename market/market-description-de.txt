@@ -23,11 +23,12 @@ Unser Source Code ist auf GitHub verfügbar:
 https://github.com/HashEngineering/darkcoin-wallet
 
 Alle Übersetzungen werden auf Transifex organisiert:
-https://www.transifex.com/projects/p/bitcoin-wallet/
+https://www.transifex.com/bitcoin-wallet/bitcoin-wallet/
 
 
 <b>EMPFEHLUNGEN</b>
 
+• Viele mobile Wallets basieren auf Bitcoin Wallet. Beispiele: blockchain.info und BTCX.
 • Von https://bitcoin.org empfohlenes mobiles Wallet.
 
 

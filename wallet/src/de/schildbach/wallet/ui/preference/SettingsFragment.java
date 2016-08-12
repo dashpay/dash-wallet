@@ -18,13 +18,21 @@
 package de.schildbach.wallet.ui.preference;
 
 import android.app.Activity;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Process;
+import android.preference.EditTextPreference;
 import android.preference.Preference;
 import android.preference.Preference.OnPreferenceChangeListener;
 import android.preference.PreferenceFragment;
+
+import java.net.InetAddress;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
@@ -37,9 +45,12 @@ public final class SettingsFragment extends PreferenceFragment implements OnPref
 {
 	private Activity activity;
 	private WalletApplication application;
+	private Configuration config;
 	private PackageManager pm;
 
 	private final Handler handler = new Handler();
+	private HandlerThread backgroundThread;
+	private Handler backgroundHandler;
 
 	private Preference btcPrecisionPreference;
 	private Preference trustedPeerPreference;
@@ -48,6 +59,8 @@ public final class SettingsFragment extends PreferenceFragment implements OnPref
 	private Preference allowInstantXPreference;
 	private Preference liteModePreference;
 
+	private static final Logger log = LoggerFactory.getLogger(SettingsFragment.class);
+
 	@Override
 	public void onAttach(final Activity activity)
 	{
@@ -55,6 +68,7 @@ public final class SettingsFragment extends PreferenceFragment implements OnPref
 
 		this.activity = activity;
 		this.application = (WalletApplication) activity.getApplication();
+		this.config = application.getConfiguration();
 		this.pm = activity.getPackageManager();
 	}
 
@@ -65,10 +79,15 @@ public final class SettingsFragment extends PreferenceFragment implements OnPref
 
 		addPreferencesFromResource(R.xml.preference_settings);
 
+		backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);
+		backgroundThread.start();
+		backgroundHandler = new Handler(backgroundThread.getLooper());
+
 		btcPrecisionPreference = findPreference(Configuration.PREFS_KEY_BTC_PRECISION);
 		btcPrecisionPreference.setOnPreferenceChangeListener(this);
 
 		trustedPeerPreference = findPreference(Configuration.PREFS_KEY_TRUSTED_PEER);
+		((EditTextPreference) trustedPeerPreference).getEditText().setSingleLine();
 		trustedPeerPreference.setOnPreferenceChangeListener(this);
 
 		trustedPeerOnlyPreference = findPreference(Configuration.PREFS_KEY_TRUSTED_PEER_ONLY);
@@ -77,15 +96,13 @@ public final class SettingsFragment extends PreferenceFragment implements OnPref
 		final Preference dataUsagePreference = findPreference(Configuration.PREFS_KEY_DATA_USAGE);
 		dataUsagePreference.setEnabled(pm.resolveActivity(dataUsagePreference.getIntent(), 0) != null);
 
-		final SharedPreferences prefs = getPreferenceManager().getSharedPreferences();
-		final String trustedPeer = prefs.getString(Configuration.PREFS_KEY_TRUSTED_PEER, "").trim();
-		updateTrustedPeer(trustedPeer);
 
 		//Dash Specific
 		allowInstantXPreference = findPreference(Configuration.PREFS_KEY_INSTANTX_ENABLED);
 		allowInstantXPreference.setOnPreferenceChangeListener(this);
 		liteModePreference = findPreference(Configuration.PREFS_KEY_LITE_MODE);
 		liteModePreference.setOnPreferenceChangeListener(this);
+		updateTrustedPeer();
 	}
 
 	@Override
@@ -94,6 +111,8 @@ public final class SettingsFragment extends PreferenceFragment implements OnPref
 		trustedPeerOnlyPreference.setOnPreferenceChangeListener(null);
 		trustedPeerPreference.setOnPreferenceChangeListener(null);
 		btcPrecisionPreference.setOnPreferenceChangeListener(null);
+
+		backgroundThread.getLooper().quit();
 
 		super.onDestroy();
 	}
@@ -114,7 +133,7 @@ public final class SettingsFragment extends PreferenceFragment implements OnPref
 				else if (preference.equals(trustedPeerPreference))
 				{
 					application.stopBlockchainService();
-					updateTrustedPeer((String) newValue);
+					updateTrustedPeer();
 				}
 				else if (preference.equals(trustedPeerOnlyPreference))
 				{
@@ -136,17 +155,35 @@ public final class SettingsFragment extends PreferenceFragment implements OnPref
 		return true;
 	}
 
-	private void updateTrustedPeer(final String trustedPeer)
+	private void updateTrustedPeer()
 	{
-		if (trustedPeer.isEmpty())
+		final String trustedPeer = config.getTrustedPeerHost();
+
+		if (trustedPeer == null)
 		{
 			trustedPeerPreference.setSummary(R.string.preferences_trusted_peer_summary);
 			trustedPeerOnlyPreference.setEnabled(false);
 		}
 		else
 		{
-			trustedPeerPreference.setSummary(trustedPeer);
+			trustedPeerPreference.setSummary(trustedPeer + "\n[" + getString(R.string.preferences_trusted_peer_resolve_progress) + "]");
 			trustedPeerOnlyPreference.setEnabled(true);
+
+			new ResolveDnsTask(backgroundHandler)
+			{
+				@Override
+				protected void onSuccess(final InetAddress address)
+				{
+					trustedPeerPreference.setSummary(trustedPeer);
+					log.info("trusted peer '{}' resolved to {}", trustedPeer, address);
+				}
+
+				@Override
+				protected void onUnknownHost()
+				{
+					trustedPeerPreference.setSummary(trustedPeer + "\n[" + getString(R.string.preferences_trusted_peer_resolve_unknown_host) + "]");
+				}
+			}.resolve(trustedPeer);
 		}
 	}
 }

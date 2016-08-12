@@ -34,7 +34,7 @@ import android.widget.Toast;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.MasternodeSync;
-import org.bitcoinj.core.Wallet;
+import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.utils.Fiat;
 
 import javax.annotation.Nullable;

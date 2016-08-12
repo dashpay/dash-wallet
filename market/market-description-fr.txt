@@ -22,11 +22,14 @@ Notre code source est disponible sur GutHub :
 https://github.com/HashEngineering/darkcoin-wallet
 
 Toutes les traductions sont gérées sur Transifex :
-https://www.transifex.com/projects/p/bitcoin-wallet/
+https://www.transifex.com/bitcoin-wallet/bitcoin-wallet/
 
 
 <b>TÉMOIGNAGES</b>
 
+• De nombreux portefeuilles basent leur code sur Bitcoin Wallet. Par exemples : blockchain.info et BTCX.
+• Portefeuille mobile recommandé par https://bitcoin.org
+• Recommandé par BitPay.
 
 
 <i>Utilisez à vos propres risques !</i>

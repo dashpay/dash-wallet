@@ -3,22 +3,21 @@
   <string name="help_wallet">
 <![CDATA[
 		<p>
-			La parte superior izquierda de la pantalla muestra su balance en Dash y en una moneda nacional que elija.
+			La parte superior izquierda de la pantalla muestra su balance entre Dash y la moneda nacional que elija.
 			Toque para ir a la lista de monedas nacionales, y toque en una de las monedas para seleccionarla como predeterminada.
 		</p>
 		<p>
-			El código QR en la derecha contiene su dirección de Dash y se puede usar para ser escaneada por alguien más.
-			Toque en el código QR para ver una versión más grande.
+			El código QR de la derecha contiene su dirección de Dash, y se puede usar para ser escaneado por un tercero.
+			Toque el código QR para ver la versión más grande.
 		</p>
 		<p>
 			La parte inferior de la pantalla está cubierta por la lista de sus transacciones, la cual está vacía al principio.
 			Las transacciones pendientes están en gris hasta que sean confirmadas.
-			Toque en una entrada para añadir las direcciones de los remitentes o destinatarios a su lista de contactos.
-			Deslice hacia la derecha o izquierda para aplicar filtros a la lista.
+			Toque en la entrada para añadir las direcciones de los remitentes o destinatarios a su lista de contactos.
 		</p>
 		<p>
-			Puede enviar o solicitar Dash al tocar los botones en la barra de acción.
-			Más opciones están disponibles en el menú de opciones.
+			Puede enviar o solicitar Dash tocando los botones en la barra de acción.
+			Más opciones disponibles en el menú de opciones.
 		</p>
 	]]>
 	</string>

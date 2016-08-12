@@ -23,6 +23,7 @@ import android.text.format.DateUtils;
 
 import hashengineering.darkcoin.wallet.BuildConfig;
 import org.bitcoinj.core.CoinDefinition;
+import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
@@ -41,6 +42,9 @@ public final class Constants
 
 	/** Network this wallet is on (e.g. testnet or mainnet). */
 	public static final NetworkParameters NETWORK_PARAMETERS = TEST ? TestNet3Params.get() : MainNetParams.get();
+
+	/** Bitcoinj global context. */
+	public static final Context CONTEXT = new Context(NETWORK_PARAMETERS);
 
 	public final static class Files
 	{
@@ -95,6 +99,9 @@ public final class Constants
 	public static final String BITEASY_API_URL = NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET) ? BITEASY_API_URL_PROD
 			: BITEASY_API_URL_TEST;
 
+	/** Currency code for the wallet name resolver. */
+	public static final String WALLET_NAME_CURRENCY_CODE = NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET) ? "btc" : "tbtc";
+
 	/** URL to fetch version alerts from. */
 	public static final String VERSION_URL = "https://wallet.schildbach.de/version";
 
@@ -115,7 +122,8 @@ public final class Constants
 	public static final String DEFAULT_EXCHANGE_CURRENCY = "USD";
 
 	/** Donation address for tip/donate action. */
-	public static final String DONATION_ADDRESS = CoinDefinition.DONATION_ADDRESS;
+	public static final String DONATION_ADDRESS = NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET)
+			? CoinDefinition.DONATION_ADDRESS : null;
 
 	/** Recipient e-mail address for reports. */
 	public static final String REPORT_EMAIL = "hashengineeringsolutions@gmail.com";
@@ -153,19 +161,23 @@ public final class Constants
 	public static final String WEBMARKET_APP_URL = "https://play.google.com/store/apps/details?id=%s";
 
 	public static final int HTTP_TIMEOUT_MS = 15 * (int) DateUtils.SECOND_IN_MILLIS;
+	public static final int PEER_DISCOVERY_TIMEOUT_MS = 10 * (int) DateUtils.SECOND_IN_MILLIS;
 	public static final int PEER_TIMEOUT_MS = 15 * (int) DateUtils.SECOND_IN_MILLIS;
 
 	public static final long LAST_USAGE_THRESHOLD_JUST_MS = DateUtils.HOUR_IN_MILLIS;
 	public static final long LAST_USAGE_THRESHOLD_RECENTLY_MS = 2 * DateUtils.DAY_IN_MILLIS;
+	public static final long LAST_USAGE_THRESHOLD_INACTIVE_MS = 4 * DateUtils.WEEK_IN_MILLIS;
 
-	public static final int SDK_JELLY_BEAN = 16;
-	public static final int SDK_JELLY_BEAN_MR2 = 18;
-	public static final int SDK_LOLLIPOP = 21;
+	public static final long DELAYED_TRANSACTION_THRESHOLD_MS = 2 * DateUtils.HOUR_IN_MILLIS;
 
 	public static final int SDK_DEPRECATED_BELOW = Build.VERSION_CODES.ICE_CREAM_SANDWICH;
 
-	public static final boolean BUG_OPENSSL_HEARTBLEED = Build.VERSION.SDK_INT == Constants.SDK_JELLY_BEAN
+	public static final boolean BUG_OPENSSL_HEARTBLEED = Build.VERSION.SDK_INT == Build.VERSION_CODES.JELLY_BEAN
 			&& Build.VERSION.RELEASE.startsWith("4.1.1");
 
 	public static final int MEMORY_CLASS_LOWEND = 48;
+
+	public static final int NOTIFICATION_ID_CONNECTED = 0;
+	public static final int NOTIFICATION_ID_COINS_RECEIVED = 1;
+	public static final int NOTIFICATION_ID_INACTIVITY = 2;
 }

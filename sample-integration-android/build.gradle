@@ -7,12 +7,12 @@ dependencies {
     compile(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
     }
-    compile 'org.bitcoinj:darkcoinj-core:0.13.2.rix'
+    compile 'org.dashj:dashj-core:0.14.3'
 }
 
 android {
-    compileSdkVersion 'android-10'
-    buildToolsVersion '22.0.1'
+    compileSdkVersion 'android-15'
+    buildToolsVersion '24'
 
     lintOptions { abortOnError false }
 

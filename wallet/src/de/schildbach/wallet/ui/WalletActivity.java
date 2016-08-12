@@ -29,13 +29,13 @@ import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
-import org.bitcoinj.core.Wallet;
-import org.bitcoinj.core.Wallet.BalanceType;
+import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.Wallet.BalanceType;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -60,6 +60,8 @@ import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.widget.Toolbar;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.text.format.DateUtils;
 import android.view.ContextMenu;
 import android.view.Menu;
@@ -91,12 +93,14 @@ import de.schildbach.wallet.util.WalletUtils;
 /**
  * @author Andreas Schildbach
  */
-public final class WalletActivity extends AbstractWalletActivity
-		implements NavigationView.OnNavigationItemSelectedListener {
-	private static final int DIALOG_RESTORE_WALLET = 0;
-	private static final int DIALOG_TIMESKEW_ALERT = 1;
-	private static final int DIALOG_VERSION_ALERT = 2;
-	private static final int DIALOG_LOW_STORAGE_ALERT = 3;
+public final class WalletActivity extends AbstractWalletActivity implements ActivityCompat.OnRequestPermissionsResultCallback, NavigationView.OnNavigationItemSelectedListener
+{
+	private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
+	private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
+	private static final int DIALOG_RESTORE_WALLET = 2;
+	private static final int DIALOG_TIMESKEW_ALERT = 3;
+	private static final int DIALOG_VERSION_ALERT = 4;
+	private static final int DIALOG_LOW_STORAGE_ALERT = 5;
 
 	private WalletApplication application;
 	private Configuration config;
@@ -108,6 +112,8 @@ public final class WalletActivity extends AbstractWalletActivity
 	private Handler handler = new Handler();
 
 	private static final int REQUEST_CODE_SCAN = 0;
+	private static final int REQUEST_CODE_BACKUP_WALLET = 1;
+	private static final int REQUEST_CODE_RESTORE_WALLET = 2;
 
 	private boolean installedFromGooglePlay;
 
@@ -251,6 +257,25 @@ public final class WalletActivity extends AbstractWalletActivity
 	}
 
 	@Override
+	public void onRequestPermissionsResult(final int requestCode, final String[] permissions, final int[] grantResults)
+	{
+		if (requestCode == REQUEST_CODE_BACKUP_WALLET)
+		{
+			if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+				handleBackupWallet();
+			else
+				showDialog(DIALOG_BACKUP_WALLET_PERMISSION);
+		}
+		else if (requestCode == REQUEST_CODE_RESTORE_WALLET)
+		{
+			if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+				handleRestoreWallet();
+			else
+				showDialog(DIALOG_RESTORE_WALLET_PERMISSION);
+		}
+	}
+
+	@Override
 	public void onActivityResult(final int requestCode, final int resultCode, final Intent intent)
 	{
 		if (requestCode == REQUEST_CODE_SCAN && resultCode == Activity.RESULT_OK)
@@ -311,14 +336,46 @@ public final class WalletActivity extends AbstractWalletActivity
 				handleSendCoins();
 				return true;
 
-            //case R.id.wallet_options_disconnect:
-            //    handleDisconnect();
-            //    return true;
-
-			case R.id.wallet_options_donate:
-				handleDonate();
+			/*case R.id.wallet_options_scan:
+				handleScan();
 				return true;
 
+			case R.id.wallet_options_address_book:
+				AddressBookActivity.start(this);
+				return true;
+
+			case R.id.wallet_options_exchange_rates:
+				startActivity(new Intent(this, ExchangeRatesActivity.class));
+				return true;
+
+			case R.id.wallet_options_sweep_wallet:
+				SweepWalletActivity.start(this);
+				return true;
+
+			case R.id.wallet_options_network_monitor:
+				startActivity(new Intent(this, NetworkMonitorActivity.class));
+				return true;
+
+			case R.id.wallet_options_restore_wallet:
+				handleRestoreWallet();
+				return true;
+
+			case R.id.wallet_options_backup_wallet:
+				handleBackupWallet();
+				return true;
+
+			case R.id.wallet_options_encrypt_keys:
+				handleEncryptKeys();
+				return true;
+
+			case R.id.wallet_options_preferences:
+				startActivity(new Intent(this, PreferenceActivity.class));
+				return true;
+
+			case R.id.wallet_options_safety:
+				HelpDialogFragment.page(getFragmentManager(), R.string.help_safety);
+				return true;
+*/
 			case R.id.wallet_options_help:
 				HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_wallet);
 				return true;
@@ -344,12 +401,18 @@ public final class WalletActivity extends AbstractWalletActivity
 
 	public void handleBackupWallet()
 	{
-		BackupWalletDialogFragment.show(getFragmentManager());
+		if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
+			BackupWalletDialogFragment.show(getFragmentManager());
+		else
+			ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE }, REQUEST_CODE_BACKUP_WALLET);
 	}
 
-	public void handleEncryptKeys()
+	public void handleRestoreWallet()
 	{
-		EncryptKeysDialogFragment.show(getFragmentManager());
+		if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
+			showDialog(DIALOG_RESTORE_WALLET);
+		else
+			ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.READ_EXTERNAL_STORAGE }, REQUEST_CODE_RESTORE_WALLET);
 	}
     private void handleDisconnect()
     {
@@ -357,23 +420,19 @@ public final class WalletActivity extends AbstractWalletActivity
     	finish();
     }
 
-	private void handleDonate()
+	public void handleEncryptKeys()
 	{
-		try
-		{
-			SendCoinsActivity.start(this, PaymentIntent.fromAddress(Constants.DONATION_ADDRESS, getString(R.string.wallet_donate_address_label)));
-		}
-		catch (final AddressFormatException x)
-		{
-			// cannot happen, address is hardcoded
-			throw new RuntimeException(x);
-		}
+		EncryptKeysDialogFragment.show(getFragmentManager());
 	}
 
 	@Override
 	protected Dialog onCreateDialog(final int id, final Bundle args)
 	{
-		if (id == DIALOG_RESTORE_WALLET)
+		if (id == DIALOG_BACKUP_WALLET_PERMISSION)
+			return createBackupWalletPermissionDialog();
+		else if (id == DIALOG_RESTORE_WALLET_PERMISSION)
+			return createRestoreWalletPermissionDialog();
+		else if (id == DIALOG_RESTORE_WALLET)
 			return createRestoreWalletDialog();
 		else if (id == DIALOG_TIMESKEW_ALERT)
 			return createTimeskewAlertDialog(args.getLong("diff_minutes"));
@@ -390,6 +449,24 @@ public final class WalletActivity extends AbstractWalletActivity
 	{
 		if (id == DIALOG_RESTORE_WALLET)
 			prepareRestoreWalletDialog(dialog);
+	}
+
+	private Dialog createBackupWalletPermissionDialog()
+	{
+		final DialogBuilder dialog = new DialogBuilder(this);
+		dialog.setTitle(R.string.backup_wallet_permission_dialog_title);
+		dialog.setMessage(getString(R.string.backup_wallet_permission_dialog_message));
+		dialog.singleDismissButton(null);
+		return dialog.create();
+	}
+
+	private Dialog createRestoreWalletPermissionDialog()
+	{
+		final DialogBuilder dialog = new DialogBuilder(this);
+		dialog.setTitle(R.string.restore_wallet_permission_dialog_title);
+		dialog.setMessage(getString(R.string.restore_wallet_permission_dialog_message));
+		dialog.singleDismissButton(null);
+		return dialog.create();
 	}
 
 	private Dialog createRestoreWalletDialog()
@@ -574,7 +651,7 @@ public final class WalletActivity extends AbstractWalletActivity
 		final String base = Constants.VERSION_URL + (versionNameSplit >= 0 ? packageInfo.versionName.substring(versionNameSplit) : "");
 		final String url = base + "?package=" + packageInfo.packageName + "&current=" + packageInfo.versionCode;
 
-		/*new HttpGetThread(getAssets(), url, application.httpUserAgent())
+		/*new HttpGetThread(url, application.httpUserAgent())
 		{
 			@Override
 			protected void handleLine(final String line, final long serverTime)
@@ -773,7 +850,7 @@ public final class WalletActivity extends AbstractWalletActivity
 			final byte[] plainText = Crypto.decryptBytes(cipherText.toString(), password.toCharArray());
 			final InputStream is = new ByteArrayInputStream(plainText);
 
-			restoreWallet(WalletUtils.restoreWalletFromProtobufOrBase58(is));
+			restoreWallet(WalletUtils.restoreWalletFromProtobufOrBase58(is, Constants.NETWORK_PARAMETERS));
 
 			log.info("successfully restored encrypted wallet: {}", file);
 		}
@@ -802,7 +879,7 @@ public final class WalletActivity extends AbstractWalletActivity
 		try
 		{
 			is = new FileInputStream(file);
-			restoreWallet(WalletUtils.restoreWalletFromProtobuf(is));
+			restoreWallet(WalletUtils.restoreWalletFromProtobuf(is, Constants.NETWORK_PARAMETERS));
 
 			log.info("successfully restored unencrypted wallet: {}", file);
 		}
@@ -845,7 +922,7 @@ public final class WalletActivity extends AbstractWalletActivity
 		try
 		{
 			is = new FileInputStream(file);
-			restoreWallet(WalletUtils.restorePrivateKeysFromBase58(is));
+			restoreWallet(WalletUtils.restorePrivateKeysFromBase58(is, Constants.NETWORK_PARAMETERS));
 
 			log.info("successfully restored unencrypted private keys: {}", file);
 		}

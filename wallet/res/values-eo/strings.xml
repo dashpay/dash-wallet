@@ -153,7 +153,7 @@
 	<string name="report_issue_dialog_mail_intent_chooser">Sendi reporton uzante…</string>
 	<string name="about_title">Pri</string>
 	<string name="about_license_title">Licenco</string>
-	<string name="about_credits_bitcoinj_title">Ĉi tiu aplikaĵo uzas darkcoinj-n %s</string>
+	<string name="about_credits_bitcoinj_title">Ĉi tiu aplikaĵo uzas dashj-n %s</string>
 	<string name="about_credits_zxing_title">Ĉi tiu aplikaĵo uzas \'zxing\'-n</string>
 	<string name="about_credits_icon_title">Ĉi tiu aplikaĵo uzas bildsimbolon per \'bitboy\'</string>
 	<string name="about_community_googleplus_title">\"Google+\" Komunumo</string>

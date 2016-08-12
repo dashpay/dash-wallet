@@ -20,15 +20,14 @@ package de.schildbach.wallet.ui;
 import javax.annotation.Nullable;
 
 import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Wallet;
-import org.bitcoinj.core.Wallet.BalanceType;
+import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.Wallet.BalanceType;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
@@ -98,7 +97,7 @@ public final class ExchangeRatesFragment extends FancyListFragment implements On
 		super.onCreate(savedInstanceState);
 
 		setRetainInstance(true);
-		setHasOptionsMenu(Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB);
+		setHasOptionsMenu(true);
 
 		adapter = new ExchangeRatesAdapter(activity);
 		setListAdapter(adapter);

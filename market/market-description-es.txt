@@ -1,4 +1,4 @@
-﻿<b>Ten tus Dash siempre contigo, ¡en tu bolsillo!</b> Puedes pagar leyendo rápidamente el código QR. Como comerciante, puedes recibir pagos de forma fiable e instantánea. Dash Wallet es la primera aplicación móvil Dash. ¡Y posiblemente también la más segura!
+<b>Ten tus bitcoins siempre contigo, ¡en tu bolsillo!</b> Paga rápidamente leyendo el código QR. Como comercio puedes recibir pagos de forma fiable e instantánea. Bitcoin Wallet es la primera aplicación móvil Bitcoin. ¡Y posiblemente también la más segura!
 
 
 <b>CARACTERÍSTICAS</b>
@@ -23,8 +23,14 @@ Nuestro código fuente está disponible en GitHub:
 https://github.com/HashEngineering/darkcoin-wallet
 
 Todas las traducciones son administradas a través de Transifex:
-https://www.transifex.com/projects/p/bitcoin-wallet/
+https://www.transifex.com/bitcoin-wallet/bitcoin-wallet/
 
+
+
+• Muchos monederos móviles basan su código en Bitcoin Wallet. Ejemplos: blockchain.info y BTCX.
+• Monedero móvil recomendado por https://bitcoin.org
+• Recomendado por BitPay.
 
 
 <i>¡Úsalo bajo tu propio riesgo!</i>
+>>>>>>> c7022b0381011ed8a85b305909f2133882edb0bb

@@ -24,8 +24,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-import org.bitcoinj.core.Wallet;
-import org.bitcoinj.core.Wallet.BalanceType;
+import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.Wallet.BalanceType;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -181,7 +181,7 @@ public final class RestoreWalletActivity extends AbstractWalletActivity
 			final byte[] plainText = Crypto.decryptBytes(cipherText.toString(), password.toCharArray());
 			final InputStream is = new ByteArrayInputStream(plainText);
 
-			restoreWallet(WalletUtils.restoreWalletFromProtobufOrBase58(is));
+			restoreWallet(WalletUtils.restoreWalletFromProtobufOrBase58(is, Constants.NETWORK_PARAMETERS));
 
 			log.info("successfully restored encrypted wallet from external source");
 		}

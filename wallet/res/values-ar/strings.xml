@@ -175,7 +175,7 @@
 	<string name="report_issue_dialog_mail_intent_failed">فشل إرسال التقرير.</string>
 	<string name="about_title">تعليمات</string>
 	<string name="about_license_title">رخصة</string>
-	<string name="about_credits_bitcoinj_title">هذا البرنامج يستخدم darkcoinj %s</string>
+	<string name="about_credits_bitcoinj_title">هذا البرنامج يستخدم dashj %s</string>
 	<string name="about_credits_zxing_title">هذا البرنامج يستخدم ’zxing’</string>
 	<string name="about_credits_icon_title">هذا البرنامج يستخدم أيقونة من إعداد ’bitboy’</string>
 	<string name="about_community_googleplus_title">مجتمع جوجل بلس +Google</string>

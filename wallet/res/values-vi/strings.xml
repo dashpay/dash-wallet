@@ -143,7 +143,7 @@
 	<string name="report_issue_dialog_mail_intent_chooser">Gửi báo cáo sử dụng…</string>
 	<string name="about_title">Thông tin</string>
 	<string name="about_license_title">Giấy phép</string>
-	<string name="about_credits_bitcoinj_title">Ứng dụng này đang sử dụng darkcoinj %s</string>
+	<string name="about_credits_bitcoinj_title">Ứng dụng này đang sử dụng dashj %s</string>
 	<string name="about_credits_zxing_title">Ứng dụng này sử dụng \'zxing\'</string>
 	<string name="about_credits_icon_title">Ứng dụng này sử dụng biểu tượng bởi \'bitboy\'</string>
 	<string name="about_market_app_title">Trang web của ứng dụng trên Google Play</string>

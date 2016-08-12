@@ -20,9 +20,9 @@ package de.schildbach.wallet.ui;
 import java.util.concurrent.RejectedExecutionException;
 
 import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Wallet;
-import org.bitcoinj.core.Wallet.BalanceType;
 import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +32,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.LocalBroadcastManager;
+
+import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 
@@ -58,7 +60,9 @@ public final class WalletBalanceLoader extends AsyncTaskLoader<Coin>
 	{
 		super.onStartLoading();
 
-		wallet.addEventListener(walletChangeListener, Threading.SAME_THREAD);
+		wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, walletChangeListener);
+		wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletChangeListener);
+		wallet.addChangeEventListener(Threading.SAME_THREAD, walletChangeListener);
 		broadcastManager.registerReceiver(walletChangeReceiver, new IntentFilter(WalletApplication.ACTION_WALLET_REFERENCE_CHANGED));
 
 		safeForceLoad();
@@ -68,7 +72,9 @@ public final class WalletBalanceLoader extends AsyncTaskLoader<Coin>
 	protected void onStopLoading()
 	{
 		broadcastManager.unregisterReceiver(walletChangeReceiver);
-		wallet.removeEventListener(walletChangeListener);
+		wallet.removeChangeEventListener(walletChangeListener);
+		wallet.removeCoinsSentEventListener(walletChangeListener);
+		wallet.removeCoinsReceivedEventListener(walletChangeListener);
 		walletChangeListener.removeCallbacks();
 
 		super.onStopLoading();
@@ -78,7 +84,9 @@ public final class WalletBalanceLoader extends AsyncTaskLoader<Coin>
 	protected void onReset()
 	{
 		broadcastManager.unregisterReceiver(walletChangeReceiver);
-		wallet.removeEventListener(walletChangeListener);
+		wallet.removeChangeEventListener(walletChangeListener);
+		wallet.removeCoinsSentEventListener(walletChangeListener);
+		wallet.removeCoinsReceivedEventListener(walletChangeListener);
 		walletChangeListener.removeCallbacks();
 
 		super.onReset();
@@ -87,6 +95,8 @@ public final class WalletBalanceLoader extends AsyncTaskLoader<Coin>
 	@Override
 	public Coin loadInBackground()
 	{
+		org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+
 		return wallet.getBalance(BalanceType.ESTIMATED);
 	}
 

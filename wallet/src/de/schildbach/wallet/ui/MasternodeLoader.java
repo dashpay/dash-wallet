@@ -25,7 +25,7 @@ import org.bitcoinj.core.MasternodeManager;
 import org.bitcoinj.core.MasternodeManagerListener;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.MasternodeSyncListener;
-import org.bitcoinj.core.Wallet;
+import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

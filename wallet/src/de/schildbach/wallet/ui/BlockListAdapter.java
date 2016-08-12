@@ -30,8 +30,8 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Transaction.Purpose;
-import org.bitcoinj.core.Wallet;
 import org.bitcoinj.utils.MonetaryFormat;
+import org.bitcoinj.wallet.Wallet;
 
 import android.content.Context;
 import android.graphics.Typeface;
@@ -43,6 +43,7 @@ import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import de.schildbach.wallet.AddressBookProvider;
+import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.util.WalletUtils;
 import hashengineering.darkcoin.wallet.R;
 
@@ -146,6 +147,9 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
 		final StoredBlock storedBlock = getItem(position);
 		final Block header = storedBlock.getHeader();
 
+		holder.miningRewardAdjustmentView.setVisibility(isMiningRewardHalvingPoint(storedBlock) ? View.VISIBLE : View.GONE);
+		holder.miningDifficultyAdjustmentView.setVisibility(isDifficultyTransitionPoint(storedBlock) ? View.VISIBLE : View.GONE);
+
 		final int height = storedBlock.getHeight();
 		holder.heightView.setText(Integer.toString(height));
 
@@ -231,10 +235,10 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
 		else if (isInternal)
 			label = textInternal;
 		else if (address != null)
-			label = AddressBookProvider.resolveLabel(context, address.toString());
+			label = AddressBookProvider.resolveLabel(context, address.toBase58());
 		else
 			label = "?";
-		rowAddress.setText(label != null ? label : address.toString());
+		rowAddress.setText(label != null ? label : address.toBase58());
 		rowAddress.setTypeface(label != null ? Typeface.DEFAULT : Typeface.MONOSPACE);
 
 		// value
@@ -252,6 +256,8 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
 	public static class BlockViewHolder extends RecyclerView.ViewHolder
 	{
 		private final ViewGroup transactionsViewGroup;
+		private final View miningRewardAdjustmentView;
+		private final View miningDifficultyAdjustmentView;
 		private final TextView heightView;
 		private final TextView timeView;
 		private final TextView hashView;
@@ -262,10 +268,22 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
 			super(itemView);
 
 			transactionsViewGroup = (ViewGroup) itemView.findViewById(R.id.block_list_row_transactions_group);
+			miningRewardAdjustmentView = itemView.findViewById(R.id.block_list_row_mining_reward_adjustment);
+			miningDifficultyAdjustmentView = itemView.findViewById(R.id.block_list_row_mining_difficulty_adjustment);
 			heightView = (TextView) itemView.findViewById(R.id.block_list_row_height);
 			timeView = (TextView) itemView.findViewById(R.id.block_list_row_time);
 			hashView = (TextView) itemView.findViewById(R.id.block_list_row_hash);
 			menuView = (ImageButton) itemView.findViewById(R.id.block_list_row_menu);
 		}
+	}
+
+	public final boolean isMiningRewardHalvingPoint(final StoredBlock storedPrev)
+	{
+		return ((storedPrev.getHeight() + 1) % 210000) == 0;
+	}
+
+	public final boolean isDifficultyTransitionPoint(final StoredBlock storedPrev)
+	{
+		return ((storedPrev.getHeight() + 1) % Constants.NETWORK_PARAMETERS.getInterval()) == 0;
 	}
 }

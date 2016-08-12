@@ -29,7 +29,6 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 import hashengineering.darkcoin.wallet.R;
-import de.schildbach.wallet.Constants;
 
 /**
  * @author Andreas Schildbach
@@ -50,7 +49,7 @@ public class DialogBuilder extends AlertDialog.Builder
 
 	public DialogBuilder(final Context context)
 	{
-		super(context, Build.VERSION.SDK_INT < Constants.SDK_LOLLIPOP ? AlertDialog.THEME_HOLO_LIGHT : AlertDialog.THEME_DEVICE_DEFAULT_LIGHT);
+		super(context, Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP ? AlertDialog.THEME_HOLO_LIGHT : AlertDialog.THEME_DEVICE_DEFAULT_LIGHT);
 
 		this.customTitle = LayoutInflater.from(context).inflate(R.layout.dialog_title, null);
 		this.iconView = (ImageView) customTitle.findViewById(android.R.id.icon);

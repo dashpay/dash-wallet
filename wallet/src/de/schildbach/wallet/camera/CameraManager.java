@@ -29,16 +29,18 @@ import org.slf4j.LoggerFactory;
 
 import android.annotation.SuppressLint;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.PreviewCallback;
-import android.view.SurfaceHolder;
+import android.view.TextureView;
 
 import com.google.zxing.PlanarYUVLuminanceSource;
 
 /**
  * @author Andreas Schildbach
  */
+@SuppressWarnings("deprecation")
 public final class CameraManager
 {
 	private static final int MIN_FRAME_SIZE = 240;
@@ -47,9 +49,10 @@ public final class CameraManager
 	private static final int MAX_PREVIEW_PIXELS = 1280 * 720;
 
 	private Camera camera;
+	private CameraInfo cameraInfo = new CameraInfo();
 	private Camera.Size cameraResolution;
 	private Rect frame;
-	private Rect framePreview;
+	private RectF framePreview;
 
 	private static final Logger log = LoggerFactory.getLogger(CameraManager.class);
 
@@ -58,52 +61,54 @@ public final class CameraManager
 		return frame;
 	}
 
-	public Rect getFramePreview()
+	public RectF getFramePreview()
 	{
 		return framePreview;
 	}
 
-	public Camera open(final SurfaceHolder holder, final boolean continuousAutoFocus) throws IOException
+	public int getFacing()
 	{
-		// try back-facing camera
-		camera = Camera.open();
+		return cameraInfo.facing;
+	}
 
-		// fall back to using front-facing camera
-		if (camera == null)
-		{
-			final int cameraCount = Camera.getNumberOfCameras();
-			final CameraInfo cameraInfo = new CameraInfo();
+	public int getOrientation()
+	{
+		return cameraInfo.orientation;
+	}
 
-			// search for front-facing camera
-			for (int i = 0; i < cameraCount; i++)
-			{
-				Camera.getCameraInfo(i, cameraInfo);
-				if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT)
-				{
-					camera = Camera.open(i);
-					break;
-				}
-			}
-		}
+	public Camera open(final TextureView textureView, final int displayOrientation, final boolean continuousAutoFocus) throws IOException
+	{
+		final int cameraId = determineCameraId();
+		Camera.getCameraInfo(cameraId, cameraInfo);
 
-		camera.setPreviewDisplay(holder);
+		log.info("opening camera id {}: {}-facing, camera orientation: {}, display orientation: {}", cameraId,
+				cameraInfo.facing == CameraInfo.CAMERA_FACING_BACK ? "back" : "front", cameraInfo.orientation, displayOrientation);
+		camera = Camera.open(cameraId);
+
+		if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT)
+			camera.setDisplayOrientation((720 - displayOrientation - cameraInfo.orientation) % 360);
+		else if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK)
+			camera.setDisplayOrientation((720 - displayOrientation + cameraInfo.orientation) % 360);
+		else
+			throw new IllegalStateException("facing: " + cameraInfo.facing);
+
+		camera.setPreviewTexture(textureView.getSurfaceTexture());
 
 		final Camera.Parameters parameters = camera.getParameters();
 
-		final Rect surfaceFrame = holder.getSurfaceFrame();
-		cameraResolution = findBestPreviewSizeValue(parameters, surfaceFrame);
+		cameraResolution = findBestPreviewSizeValue(parameters, textureView.getWidth(), textureView.getHeight());
 
-		final int surfaceWidth = surfaceFrame.width();
-		final int surfaceHeight = surfaceFrame.height();
+		final int width = textureView.getWidth();
+		final int height = textureView.getHeight();
 
-		final int rawSize = Math.min(surfaceWidth * 2 / 3, surfaceHeight * 2 / 3);
+		final int rawSize = Math.min(width * 2 / 3, height * 2 / 3);
 		final int frameSize = Math.max(MIN_FRAME_SIZE, Math.min(MAX_FRAME_SIZE, rawSize));
 
-		final int leftOffset = (surfaceWidth - frameSize) / 2;
-		final int topOffset = (surfaceHeight - frameSize) / 2;
+		final int leftOffset = (width - frameSize) / 2;
+		final int topOffset = (height - frameSize) / 2;
 		frame = new Rect(leftOffset, topOffset, leftOffset + frameSize, topOffset + frameSize);
-		framePreview = new Rect(frame.left * cameraResolution.width / surfaceWidth, frame.top * cameraResolution.height / surfaceHeight, frame.right
-				* cameraResolution.width / surfaceWidth, frame.bottom * cameraResolution.height / surfaceHeight);
+		framePreview = new RectF(frame.left * cameraResolution.width / width, frame.top * cameraResolution.height / height,
+				frame.right * cameraResolution.width / width, frame.bottom * cameraResolution.height / height);
 
 		final String savedParameters = parameters == null ? null : parameters.flatten();
 
@@ -129,9 +134,41 @@ public final class CameraManager
 			}
 		}
 
-		camera.startPreview();
+		try
+		{
+			camera.startPreview();
+			return camera;
+		}
+		catch (final RuntimeException x)
+		{
+			log.warn("something went wrong while starting camera preview", x);
+			camera.release();
+			throw x;
+		}
+	}
 
-		return camera;
+	private int determineCameraId()
+	{
+		final int cameraCount = Camera.getNumberOfCameras();
+		final CameraInfo cameraInfo = new CameraInfo();
+
+		// prefer back-facing camera
+		for (int i = 0; i < cameraCount; i++)
+		{
+			Camera.getCameraInfo(i, cameraInfo);
+			if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK)
+				return i;
+		}
+
+		// fall back to front-facing camera
+		for (int i = 0; i < cameraCount; i++)
+		{
+			Camera.getCameraInfo(i, cameraInfo);
+			if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT)
+				return i;
+		}
+
+		return -1;
 	}
 
 	public void close()
@@ -168,12 +205,16 @@ public final class CameraManager
 		}
 	};
 
-	private static Camera.Size findBestPreviewSizeValue(final Camera.Parameters parameters, Rect surfaceResolution)
+	private static Camera.Size findBestPreviewSizeValue(final Camera.Parameters parameters, int width, int height)
 	{
-		if (surfaceResolution.height() > surfaceResolution.width())
-			surfaceResolution = new Rect(0, 0, surfaceResolution.height(), surfaceResolution.width());
+		if (height > width)
+		{
+			final int temp = width;
+			width = height;
+			height = temp;
+		}
 
-		final float screenAspectRatio = (float) surfaceResolution.width() / (float) surfaceResolution.height();
+		final float screenAspectRatio = (float) width / (float) height;
 
 		final List<Camera.Size> rawSupportedSizes = parameters.getSupportedPreviewSizes();
 		if (rawSupportedSizes == null)
@@ -197,7 +238,7 @@ public final class CameraManager
 			final boolean isCandidatePortrait = realWidth < realHeight;
 			final int maybeFlippedWidth = isCandidatePortrait ? realHeight : realWidth;
 			final int maybeFlippedHeight = isCandidatePortrait ? realWidth : realHeight;
-			if (maybeFlippedWidth == surfaceResolution.width() && maybeFlippedHeight == surfaceResolution.height())
+			if (maybeFlippedWidth == width && maybeFlippedHeight == height)
 				return supportedPreviewSize;
 
 			final float aspectRatio = (float) maybeFlippedWidth / (float) maybeFlippedHeight;
@@ -236,13 +277,20 @@ public final class CameraManager
 
 	public void requestPreviewFrame(final PreviewCallback callback)
 	{
-		camera.setOneShotPreviewCallback(callback);
+		try
+		{
+			camera.setOneShotPreviewCallback(callback);
+		}
+		catch (final RuntimeException x)
+		{
+			log.warn("problem requesting preview frame, callback won't be called", x);
+		}
 	}
 
 	public PlanarYUVLuminanceSource buildLuminanceSource(final byte[] data)
 	{
-		return new PlanarYUVLuminanceSource(data, cameraResolution.width, cameraResolution.height, framePreview.left, framePreview.top,
-				framePreview.width(), framePreview.height(), false);
+		return new PlanarYUVLuminanceSource(data, cameraResolution.width, cameraResolution.height, (int) framePreview.left, (int) framePreview.top,
+				(int) framePreview.width(), (int) framePreview.height(), false);
 	}
 
 	public void setTorch(final boolean enabled)

@@ -20,10 +20,10 @@ package de.schildbach.wallet;
 import java.lang.reflect.Method;
 
 import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Wallet;
-import org.bitcoinj.core.Wallet.BalanceType;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
+import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -111,7 +111,7 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider
 	private static void updateWidget(final Context context, final AppWidgetManager appWidgetManager, final int appWidgetId,
 			final Bundle appWidgetOptions, final Coin balance)
 	{
-		final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context));
+		final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context), context.getResources());
 		final MonetaryFormat btcFormat = config.getFormat();
 
 		final Spannable balanceStr = new MonetarySpannable(btcFormat.noCode(), balance).applyMarkup(null,

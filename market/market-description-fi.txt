@@ -23,12 +23,12 @@ Lähdekoodi saatavilla GitHub:sta:
 https://github.com/HashEngineering/darkcoin-wallet
 
 Kaikki käännökset on hallinnoitu Transifex:n kautta:
-https://www.transifex.com/projects/p/bitcoin-wallet/
+https://www.transifex.com/bitcoin-wallet/bitcoin-wallet/
 
 
 <b>SUOSITTELUMME</b>
 
-• Useat mobiililompakot perustuvat Dash Wallet-ohjelman lähdekoodiin, esimerkiksi: blockchain.info, Hive and KnC.
+• Useat mobiililompakot perustuvat Bitcoin Wallet-ohjelman lähdekoodiin, esimerkiksi: blockchain.info ja BTCX.
 • https://bitcoin.org: suosittelema mobiililompakko
 • BitPay:n suosittelema.
 

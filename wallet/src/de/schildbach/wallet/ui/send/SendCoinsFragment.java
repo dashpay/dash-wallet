@@ -17,9 +17,12 @@
 
 package de.schildbach.wallet.ui.send;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.concurrent.RejectedExecutionException;
 
 import javax.annotation.Nullable;
 
@@ -35,29 +38,46 @@ import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
-import org.bitcoinj.core.Wallet;
-import org.bitcoinj.core.Wallet.BalanceType;
-import org.bitcoinj.core.Wallet.CouldNotAdjustDownwards;
-import org.bitcoinj.core.Wallet.DustySendRequested;
-import org.bitcoinj.core.Wallet.SendRequest;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
+import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.InstantXCoinSelector;
+import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.KeyChain.KeyPurpose;
+import org.bitcoinj.wallet.SendRequest;
+import org.bitcoinj.wallet.Wallet.BalanceType;
+import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards;
+import org.bitcoinj.wallet.Wallet.DustySendRequested;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.params.KeyParameter;
 
+import com.google.common.base.Strings;
+import com.netki.WalletNameResolver;
+import com.netki.dns.DNSBootstrapService;
+import com.netki.dnssec.DNSSECResolver;
+import com.netki.exceptions.WalletNameCurrencyUnavailableException;
+import com.netki.exceptions.WalletNameLookupException;
+import com.netki.tlsa.CACertService;
+import com.netki.tlsa.CertChainValidator;
+import com.netki.tlsa.TLSAValidator;
+
 import android.app.Activity;
+import android.support.v4.app.LoaderManager;
 import android.bluetooth.BluetoothAdapter;
+import android.support.v4.content.AsyncTaskLoader;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.support.v4.content.CursorLoader;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.support.v4.content.Loader;
 import android.content.pm.PackageManager;
 import android.database.ContentObserver;
 import android.database.Cursor;
+import android.database.MatrixCursor;
+import android.database.MergeCursor;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.nfc.NdefMessage;
@@ -69,9 +89,6 @@ import android.os.Process;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.app.LoaderManager;
-import android.support.v4.content.CursorLoader;
-import android.support.v4.content.Loader;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -83,6 +100,7 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnFocusChangeListener;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -90,7 +108,6 @@ import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.CursorAdapter;
 import android.widget.EditText;
-import android.widget.FilterQueryProvider;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import de.schildbach.wallet.AddressBookProvider;
@@ -144,6 +161,7 @@ public final class SendCoinsFragment extends Fragment
 	private TextView payeeVerifiedByView;
 	private AutoCompleteTextView receivingAddressView;
 	private ReceivingAddressViewAdapter receivingAddressViewAdapter;
+	private ReceivingAddressLoaderCallbacks receivingAddressLoaderCallbacks;
 	private View receivingStaticView;
 	private TextView receivingStaticAddressView;
 	private TextView receivingStaticLabelView;
@@ -178,7 +196,8 @@ public final class SendCoinsFragment extends Fragment
 	private Exception dryrunException;
 
 	private static final int ID_RATE_LOADER = 0;
-	private static final int ID_RECEIVING_ADDRESS_LOADER = 1;
+	private static final int ID_RECEIVING_ADDRESS_BOOK_LOADER = 1;
+	private static final int ID_RECEIVING_ADDRESS_NAME_LOADER = 2;
 
 	private static final int REQUEST_CODE_SCAN = 0;
 	private static final int REQUEST_CODE_ENABLE_BLUETOOTH_FOR_PAYMENT_REQUEST = 1;
@@ -195,7 +214,7 @@ public final class SendCoinsFragment extends Fragment
 		DECRYPTING, SIGNING, SENDING, SENT, FAILED // sending states
 	}
 
-	private final class ReceivingAddressListener implements OnFocusChangeListener, TextWatcher
+	private final class ReceivingAddressListener implements OnFocusChangeListener, TextWatcher, AdapterView.OnItemClickListener
 	{
 		@Override
 		public void onFocusChange(final View v, final boolean hasFocus)
@@ -214,6 +233,13 @@ public final class SendCoinsFragment extends Fragment
 				validateReceivingAddress();
 			else
 				updateView();
+
+			final Bundle args = new Bundle();
+			args.putString(ReceivingAddressLoaderCallbacks.ARG_CONSTRAINT, s.toString());
+
+			loaderManager.restartLoader(ID_RECEIVING_ADDRESS_BOOK_LOADER, args, receivingAddressLoaderCallbacks);
+			if (config.getLookUpWalletNames())
+				loaderManager.restartLoader(ID_RECEIVING_ADDRESS_NAME_LOADER, args, receivingAddressLoaderCallbacks);
 		}
 
 		@Override
@@ -224,6 +250,24 @@ public final class SendCoinsFragment extends Fragment
 		@Override
 		public void onTextChanged(final CharSequence s, final int start, final int before, final int count)
 		{
+		}
+
+		@Override
+		public void onItemClick(final AdapterView<?> parent, final View view, final int position, final long id)
+		{
+			final Cursor cursor = receivingAddressViewAdapter.getCursor();
+			cursor.moveToPosition(position);
+			final String address = cursor.getString(cursor.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS));
+			final String label = cursor.getString(cursor.getColumnIndexOrThrow(AddressBookProvider.KEY_LABEL));
+			try
+			{
+				validatedAddress = new AddressAndLabel(Constants.NETWORK_PARAMETERS, address, label);
+				receivingAddressView.setText(null);
+			}
+			catch (final AddressFormatException x)
+			{
+				// swallow
+			}
 		}
 	}
 
@@ -293,9 +337,26 @@ public final class SendCoinsFragment extends Fragment
 					if (state == State.SENDING)
 					{
 						if (confidenceType == ConfidenceType.DEAD)
+						{
 							setState(State.FAILED);
+						}
 						else if (numBroadcastPeers > 1 || confidenceType == ConfidenceType.BUILDING)
+						{
 							setState(State.SENT);
+
+							// Auto-close the dialog after a short delay
+							if (config.getSendCoinsAutoclose())
+							{
+								handler.postDelayed(new Runnable()
+								{
+									@Override
+									public void run()
+									{
+										activity.finish();
+									}
+								}, 500);
+							}
+						}
 					}
 
 					if (reason == ChangeReason.SEEN_PEERS && confidenceType == ConfidenceType.PENDING)
@@ -341,35 +402,145 @@ public final class SendCoinsFragment extends Fragment
 		}
 	};
 
-	private final LoaderManager.LoaderCallbacks<Cursor> receivingAddressLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
+	private static class ReceivingAddressLoaderCallbacks implements LoaderManager.LoaderCallbacks<Cursor>
 	{
+		private final static String ARG_CONSTRAINT = "constraint";
+
+		private final Context context;
+		private final CursorAdapter targetAdapter;
+		private Cursor receivingAddressBookCursor, receivingAddressNameCursor;
+
+		public ReceivingAddressLoaderCallbacks(final Context context, final CursorAdapter targetAdapter)
+		{
+			this.context = checkNotNull(context);
+			this.targetAdapter = checkNotNull(targetAdapter);
+		}
+
 		@Override
 		public Loader<Cursor> onCreateLoader(final int id, final Bundle args)
 		{
-			final String constraint = args != null ? args.getString("constraint") : null;
-			return new CursorLoader(activity, AddressBookProvider.contentUri(activity.getPackageName()), null, AddressBookProvider.SELECTION_QUERY,
-					new String[] { constraint != null ? constraint : "" }, null);
+			final String constraint = Strings.nullToEmpty(args != null ? args.getString(ARG_CONSTRAINT) : null);
+
+			if (id == ID_RECEIVING_ADDRESS_BOOK_LOADER)
+				return new CursorLoader(context, AddressBookProvider.contentUri(context.getPackageName()), null, AddressBookProvider.SELECTION_QUERY,
+						new String[] { constraint }, null);
+			else if (id == ID_RECEIVING_ADDRESS_NAME_LOADER)
+				return new ReceivingAddressNameLoader(context, constraint);
+			else
+				throw new IllegalArgumentException();
 		}
 
 		@Override
-		public void onLoadFinished(final Loader<Cursor> cursor, final Cursor data)
+		public void onLoadFinished(final Loader<Cursor> loader, Cursor data)
 		{
-			receivingAddressViewAdapter.swapCursor(data);
+			if (data.getCount() == 0)
+				data = null;
+			if (loader instanceof CursorLoader)
+				receivingAddressBookCursor = data;
+			else
+				receivingAddressNameCursor = data;
+			swapTargetCursor();
 		}
 
 		@Override
-		public void onLoaderReset(final Loader<Cursor> cursor)
+		public void onLoaderReset(final Loader<Cursor> loader)
 		{
-			receivingAddressViewAdapter.swapCursor(null);
+			if (loader instanceof CursorLoader)
+				receivingAddressBookCursor = null;
+			else
+				receivingAddressNameCursor = null;
+			swapTargetCursor();
 		}
-	};
 
-	private final class ReceivingAddressViewAdapter extends CursorAdapter implements FilterQueryProvider
+		private void swapTargetCursor()
+		{
+			if (receivingAddressBookCursor == null && receivingAddressNameCursor == null)
+				targetAdapter.swapCursor(null);
+			else if (receivingAddressBookCursor != null && receivingAddressNameCursor == null)
+				targetAdapter.swapCursor(receivingAddressBookCursor);
+			else if (receivingAddressBookCursor == null && receivingAddressNameCursor != null)
+				targetAdapter.swapCursor(receivingAddressNameCursor);
+			else
+				targetAdapter.swapCursor(new MergeCursor(new Cursor[] { receivingAddressBookCursor, receivingAddressNameCursor }));
+		}
+	}
+
+	private static class ReceivingAddressNameLoader extends AsyncTaskLoader<Cursor>
+	{
+		private String constraint;
+
+		public ReceivingAddressNameLoader(final Context context, final String constraint)
+		{
+			super(context);
+			this.constraint = constraint;
+		}
+
+		@Override
+		protected void onStartLoading()
+		{
+			super.onStartLoading();
+			safeForceLoad();
+		}
+
+		@Override
+		public Cursor loadInBackground()
+		{
+			final MatrixCursor cursor = new MatrixCursor(
+					new String[] { AddressBookProvider.KEY_ROWID, AddressBookProvider.KEY_LABEL, AddressBookProvider.KEY_ADDRESS }, 1);
+
+			if (constraint.indexOf('.') >= 0 || constraint.indexOf('@') >= 0)
+			{
+				try
+				{
+					final WalletNameResolver resolver = new WalletNameResolver(new DNSSECResolver(new DNSBootstrapService()),
+							new TLSAValidator(new DNSSECResolver(new DNSBootstrapService()), CACertService.getInstance(), new CertChainValidator()));
+					final BitcoinURI resolvedUri = resolver.resolve(constraint, Constants.WALLET_NAME_CURRENCY_CODE, true);
+					if (resolvedUri != null)
+					{
+						final Address resolvedAddress = resolvedUri.getAddress();
+						if (resolvedAddress != null && resolvedAddress.getParameters().equals(Constants.NETWORK_PARAMETERS))
+						{
+							final String resolvedLabel = Strings.emptyToNull(resolvedUri.getLabel());
+							cursor.addRow(new Object[] { -1, resolvedLabel != null ? resolvedLabel : constraint, resolvedAddress.toString() });
+							log.info("looked up wallet name: " + resolvedUri);
+						}
+					}
+				}
+				catch (final WalletNameCurrencyUnavailableException x)
+				{
+					// swallow
+				}
+				catch (final WalletNameLookupException x)
+				{
+					log.info("error looking up wallet name '" + constraint + "': " + x.getMessage());
+				}
+				catch (final Exception x)
+				{
+					log.info("error looking up wallet name", x);
+				}
+			}
+
+			return cursor;
+		}
+
+		private void safeForceLoad()
+		{
+			try
+			{
+				forceLoad();
+			}
+			catch (final RejectedExecutionException x)
+			{
+				log.info("rejected execution: " + ReceivingAddressNameLoader.this.toString());
+			}
+		}
+	}
+
+	private final class ReceivingAddressViewAdapter extends CursorAdapter
 	{
 		public ReceivingAddressViewAdapter(final Context context)
 		{
 			super(context, null, false);
-			setFilterQueryProvider(this);
 		}
 
 		@Override
@@ -396,16 +567,6 @@ public final class SendCoinsFragment extends Fragment
 		public CharSequence convertToString(final Cursor cursor)
 		{
 			return cursor.getString(cursor.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS));
-		}
-
-		@Override
-		public Cursor runQuery(final CharSequence constraint)
-		{
-			final Bundle args = new Bundle();
-			if (constraint != null)
-				args.putString("constraint", constraint.toString());
-			loaderManager.restartLoader(ID_RECEIVING_ADDRESS_LOADER, args, receivingAddressLoaderCallbacks);
-			return getCursor();
 		}
 	}
 
@@ -523,9 +684,11 @@ public final class SendCoinsFragment extends Fragment
 
 		receivingAddressView = (AutoCompleteTextView) view.findViewById(R.id.send_coins_receiving_address);
 		receivingAddressViewAdapter = new ReceivingAddressViewAdapter(activity);
+		receivingAddressLoaderCallbacks = new ReceivingAddressLoaderCallbacks(activity, receivingAddressViewAdapter);
 		receivingAddressView.setAdapter(receivingAddressViewAdapter);
 		receivingAddressView.setOnFocusChangeListener(receivingAddressListener);
 		receivingAddressView.addTextChangedListener(receivingAddressListener);
+		receivingAddressView.setOnItemClickListener(receivingAddressListener);
 
 		receivingStaticView = view.findViewById(R.id.send_coins_receiving_static);
 		receivingStaticAddressView = (TextView) view.findViewById(R.id.send_coins_receiving_static_address);
@@ -633,7 +796,8 @@ public final class SendCoinsFragment extends Fragment
 		privateKeyPasswordView.addTextChangedListener(privateKeyPasswordListener);
 
 		loaderManager.initLoader(ID_RATE_LOADER, null, rateLoaderCallbacks);
-		loaderManager.initLoader(ID_RECEIVING_ADDRESS_LOADER, null, receivingAddressLoaderCallbacks);
+		loaderManager.initLoader(ID_RECEIVING_ADDRESS_BOOK_LOADER, null, receivingAddressLoaderCallbacks);
+		loaderManager.initLoader(ID_RECEIVING_ADDRESS_NAME_LOADER, null, receivingAddressLoaderCallbacks);
 
 		updateView();
 		handler.post(dryrunRunnable);
@@ -642,7 +806,8 @@ public final class SendCoinsFragment extends Fragment
 	@Override
 	public void onPause()
 	{
-		loaderManager.destroyLoader(ID_RECEIVING_ADDRESS_LOADER);
+		loaderManager.destroyLoader(ID_RECEIVING_ADDRESS_NAME_LOADER);
+		loaderManager.destroyLoader(ID_RECEIVING_ADDRESS_BOOK_LOADER);
 		loaderManager.destroyLoader(ID_RATE_LOADER);
 
 		privateKeyPasswordView.removeTextChangedListener(privateKeyPasswordListener);
@@ -925,15 +1090,15 @@ public final class SendCoinsFragment extends Fragment
 				validatedAddress != null ? validatedAddress.address : null);
 		final Coin finalAmount = finalPaymentIntent.getAmount();
 
-		boolean usingInstantX = instantXenable.isChecked();
+		boolean usingInstantSend = instantXenable.isChecked();
 
 		// prepare send request
-		finalPaymentIntent.setInstantX(usingInstantX);
+		finalPaymentIntent.setInstantX(usingInstantSend);
 		final SendRequest sendRequest = finalPaymentIntent.toSendRequest();
-		sendRequest.useInstantX = usingInstantX;
+		sendRequest.useInstantSend = usingInstantSend;
 		sendRequest.emptyWallet = paymentIntent.mayEditAmount() && finalAmount.equals(wallet.getBalance(BalanceType.AVAILABLE));
 		sendRequest.feePerKb = feeCategory.feePerKb;
-        sendRequest.feePerKb = sendRequest.useInstantX ? Coin.valueOf(CoinDefinition.INSTANTX_FEE): sendRequest.feePerKb;
+        sendRequest.feePerKb = sendRequest.useInstantSend ? Coin.valueOf(CoinDefinition.INSTANTX_FEE): sendRequest.feePerKb;
 
 
 		sendRequest.memo = paymentIntent.memo;
@@ -1137,14 +1302,14 @@ public final class SendCoinsFragment extends Fragment
 				{
 					final Address dummy = wallet.currentReceiveAddress(); // won't be used, tx is never committed
 					final SendRequest sendRequest = paymentIntent.mergeWithEditedValues(amount, dummy).toSendRequest();
-					sendRequest.useInstantX = (instantXenable.isChecked());
-					ixCoinSelector.setUsingInstantX(sendRequest.useInstantX);
+					sendRequest.useInstantSend = (instantXenable.isChecked());
+					ixCoinSelector.setUsingInstantX(sendRequest.useInstantSend);
 					sendRequest.coinSelector = ixCoinSelector;
 					sendRequest.signInputs = false;
 					sendRequest.emptyWallet = paymentIntent.mayEditAmount() && amount.equals(wallet.getBalance(BalanceType.AVAILABLE));
 
 					sendRequest.feePerKb = feeCategory.feePerKb;
-					sendRequest.feePerKb = sendRequest.useInstantX ? Coin.valueOf(CoinDefinition.INSTANTX_FEE): sendRequest.feePerKb;
+					sendRequest.feePerKb = sendRequest.useInstantSend ? Coin.valueOf(CoinDefinition.INSTANTX_FEE): sendRequest.feePerKb;
 
 					wallet.completeTx(sendRequest);
 					dryrunTransaction = sendRequest.tx;
@@ -1167,6 +1332,9 @@ public final class SendCoinsFragment extends Fragment
 
 	private void updateView()
 	{
+		if (!isResumed())
+			return;
+
 		if (paymentIntent != null)
 		{
 			final MonetaryFormat btcFormat = config.getFormat();
@@ -1212,7 +1380,7 @@ public final class SendCoinsFragment extends Fragment
 
 				receivingStaticAddressView.setText(WalletUtils.formatAddress(validatedAddress.address, Constants.ADDRESS_FORMAT_GROUP_SIZE,
 						Constants.ADDRESS_FORMAT_LINE_SIZE));
-				final String addressBookLabel = AddressBookProvider.resolveLabel(activity, validatedAddress.address.toString());
+				final String addressBookLabel = AddressBookProvider.resolveLabel(activity, validatedAddress.address.toBase58());
 				final String staticLabel;
 				if (addressBookLabel != null)
 					staticLabel = addressBookLabel;
@@ -1378,6 +1546,13 @@ public final class SendCoinsFragment extends Fragment
 	private void initStateFromIntentExtras(final Bundle extras)
 	{
 		final PaymentIntent paymentIntent = extras.getParcelable(SendCoinsActivity.INTENT_EXTRA_PAYMENT_INTENT);
+		final FeeCategory feeCategory = (FeeCategory) extras.getSerializable(SendCoinsActivity.INTENT_EXTRA_FEE_CATEGORY);
+
+		if (feeCategory != null)
+		{
+			log.info("got fee category {}", feeCategory);
+			this.feeCategory = feeCategory;
+		}
 
 		updateStateFrom(paymentIntent);
 	}

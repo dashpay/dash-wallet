@@ -23,8 +23,13 @@ https://www.gnu.org/licenses/gpl-3.0.ru.html
 https://github.com/HashEngineering/darkcoin-wallet
 
 Все переводы сделаны через Transifex:
-https://www.transifex.com/projects/p/bitcoin-wallet/
+https://www.transifex.com/bitcoin-wallet/bitcoin-wallet/
 
+
+
+• Многие мобильные кошельки основывают свой код на Bitcoin Wallet. Примеры: blockchain.info и BTCX.
+• Мобильный кошелек рекомендованный https://bitcoin.org
+• Рекомендуется BitPay.
 
 
 <i>Используйте на свой страх и риск!</i>

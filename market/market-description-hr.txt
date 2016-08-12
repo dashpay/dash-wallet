@@ -19,15 +19,15 @@ Bitcoin Wallet je <b>javno dostupan kod</b> i <b>besplatna aplikacija</b>. Licen
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Naš izvorni kod je dostušan na GitHub-u:
-https://github.com/schildbach/bitcoin-wallet
+https://github.com/bitcoin-wallet/bitcoin-wallet
 
 Sve transakcije se provode preko Transifex-a:
-https://www.transifex.com/projects/p/bitcoin-wallet/
+https://www.transifex.com/bitcoin-wallet/bitcoin-wallet/
 
 
 <b>IZJAVE</b>
 
-• Mnoge  mobilne aplikacije temelje svoj kod na Bitcoin Wallet. Primjer: blockchain.info, Hive i KnC.
+• Mnoge  mobilne aplikacije temelje svoj kod na Bitcoin Wallet. Primjer: blockchain.info i BTCX.
 • Preporučeni pokretni novčanik od https://bitcoin.org
 • Preporučava BitPay.
 

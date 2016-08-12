@@ -23,7 +23,8 @@
 		android:title="@string/wallet_options_donate" />
 	<item
 		android:id="@+id/wallet_options_help"
-		app:showAsAction="never"
-		android:title="@string/button_help" />
+		android:showAsAction="never"
+		android:orderInCategory="999"
+		android:title="@string/button_help"/>
 
 </menu>

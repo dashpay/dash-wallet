@@ -23,7 +23,7 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import hashengineering.darkcoin.wallet.R;
-
+import android.view.WindowManager;
 
 /**
  * @author Andreas Schildbach
@@ -36,6 +36,12 @@ public final class RequestCoinsActivity extends AbstractBindServiceActivity
 		super.onCreate(savedInstanceState);
 
 		setContentView(R.layout.request_coins_content);
+	}
+
+	@Override
+	public void onAttachedToWindow()
+	{
+		getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
 	}
 
 	@Override

@@ -23,12 +23,12 @@ Vores kildekode er tilgængelig på GitHub:
 https://github.com/HashEngineering/darkcoin-wallet
 
 Alle oversættelser håndteres via Transifex:
-https://www.transifex.com/projects/p/bitcoin-wallet/
+https://www.transifex.com/bitcoin-wallet/bitcoin-wallet/
 
 
 <b>ANBEFALINGER</b>
 
-• Mange mobile tegnebøger baserer deres kode på Dash Wallet. Eksempler: blockchain.info, Hive og KnC.
+• Mange mobile tegnebøger baserer deres kode på Bitcoin Wallet. Eksempler: blockchain.info og BTCX.
 • Anbefalet mobil-tegnebog af https://bitcoin.org
 • Anbefalet af BitPay.
 

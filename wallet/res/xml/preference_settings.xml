@@ -15,6 +15,11 @@
 		android:title="@string/preferences_own_name_title" />
 
 	<CheckBoxPreference
+		android:defaultValue="true"
+		android:key="send_coins_autoclose"
+		android:summary="@string/preferences_send_coins_autoclose_summary"
+		android:title="@string/preferences_send_coins_autoclose_title" />
+	<CheckBoxPreference
 		android:defaultValue="false"
 		android:key="connectivity_notification"
 		android:summary="@string/preferences_connectivity_notification_summary"
@@ -31,6 +36,13 @@
 		android:summary="@string/preferences_trusted_peer_only_summary"
 		android:title="@string/preferences_trusted_peer_only_title" />
 
+	<ListPreference
+		android:entries="@array/preferences_block_explorer_labels"
+		android:entryValues="@array/preferences_block_explorer_values"
+		android:key="block_explorer"
+		android:summary="@string/preferences_block_explorer_summary"
+		android:title="@string/preferences_block_explorer_title" />
+
 	<Preference
 		android:key="data_usage"
 		android:summary="@string/preferences_data_usage_summary"
@@ -39,6 +51,12 @@
 			android:targetClass="com.android.settings.Settings$DataUsageSummaryActivity"
 			android:targetPackage="com.android.settings" />
 	</Preference>
+
+	<CheckBoxPreference
+		android:defaultValue="true"
+		android:key="remind_balance"
+		android:summary="@string/preferences_remind_balance_summary"
+		android:title="@string/preferences_remind_balance_title" />
 
 	<PreferenceCategory android:title="@string/preferences_category_labs" >
 		<Preference
@@ -58,13 +76,18 @@
 		<CheckBoxPreference
 			android:defaultValue="true"
 			android:key="disclaimer"
-			android:summary="Have you really read the safety notes? Did you already back up your private keys to a safe place?"
+			android:summary="Have you really read the safety notes? Did you already back up your wallet to a safe place?"
 			android:title="Show disclaimer" />
 		<CheckBoxPreference
 			android:defaultValue="false"
 			android:key="labs_qr_payment_request"
 			android:summary="Use payment protocol for QR-code initiated payments"
 			android:title="BIP70 for scan-to-pay" />
+		<CheckBoxPreference
+			android:defaultValue="false"
+			android:key="look_up_wallet_names"
+			android:summary="When sending coins, use DNSSEC to look up wallet names from the domain name system."
+			android:title="Look up wallet names" />
 	</PreferenceCategory>
 
 </PreferenceScreen>

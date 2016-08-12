@@ -23,9 +23,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
 
 import org.bitcoinj.core.Address;
-import org.bitcoinj.core.Wallet;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,6 +56,7 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import de.schildbach.wallet.Configuration;
+import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.util.Qr;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
@@ -174,7 +175,9 @@ public final class WalletAddressFragment extends Fragment implements NfcAdapter.
 		{
 			super.onStartLoading();
 
-			wallet.addEventListener(walletChangeListener, Threading.SAME_THREAD);
+			wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, walletChangeListener);
+			wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletChangeListener);
+			wallet.addChangeEventListener(Threading.SAME_THREAD, walletChangeListener);
 			broadcastManager.registerReceiver(walletChangeReceiver, new IntentFilter(WalletApplication.ACTION_WALLET_REFERENCE_CHANGED));
 			config.registerOnSharedPreferenceChangeListener(preferenceChangeListener);
 
@@ -186,7 +189,9 @@ public final class WalletAddressFragment extends Fragment implements NfcAdapter.
 		{
 			config.unregisterOnSharedPreferenceChangeListener(preferenceChangeListener);
 			broadcastManager.unregisterReceiver(walletChangeReceiver);
-			wallet.removeEventListener(walletChangeListener);
+			wallet.removeChangeEventListener(walletChangeListener);
+			wallet.removeCoinsSentEventListener(walletChangeListener);
+			wallet.removeCoinsReceivedEventListener(walletChangeListener);
 			walletChangeListener.removeCallbacks();
 
 			super.onStopLoading();
@@ -197,7 +202,9 @@ public final class WalletAddressFragment extends Fragment implements NfcAdapter.
 		{
 			config.unregisterOnSharedPreferenceChangeListener(preferenceChangeListener);
 			broadcastManager.unregisterReceiver(walletChangeReceiver);
-			wallet.removeEventListener(walletChangeListener);
+			wallet.removeChangeEventListener(walletChangeListener);
+			wallet.removeCoinsSentEventListener(walletChangeListener);
+			wallet.removeCoinsReceivedEventListener(walletChangeListener);
 			walletChangeListener.removeCallbacks();
 
 			super.onReset();
@@ -206,6 +213,8 @@ public final class WalletAddressFragment extends Fragment implements NfcAdapter.
 		@Override
 		public Address loadInBackground()
 		{
+			org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+
 			return wallet.currentReceiveAddress();
 		}
 

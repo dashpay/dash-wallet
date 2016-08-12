@@ -3,22 +3,25 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	package="hashengineering.darkcoin.wallet"
 	android:installLocation="internalOnly"
-	android:versionCode="40039"
-	android:versionName="4.40.12L" >
+	android:versionCode="40040"
+	android:versionName="4.65.12" >
 	<uses-sdk
 		android:minSdkVersion="15"
-		android:targetSdkVersion="16"
+		android:targetSdkVersion="23"
 		tools:ignore="OldTargetApi" />
 
+	<!-- normal permissions -->
 	<uses-permission android:name="android.permission.INTERNET" />
-	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-	<uses-permission android:name="android.permission.NFC" />
-	<uses-permission android:name="android.permission.CAMERA" />
-	<uses-permission android:name="android.permission.VIBRATE" />
-	<uses-permission android:name="android.permission.WAKE_LOCK" />
 	<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 	<uses-permission android:name="android.permission.BLUETOOTH" />
+	<uses-permission android:name="android.permission.NFC" />
+	<uses-permission android:name="android.permission.VIBRATE" />
+	<uses-permission android:name="android.permission.WAKE_LOCK" />
+
+	<!-- dangerous permissions -->
+	<uses-permission android:name="android.permission.CAMERA" /> <!-- group: CAMERA -->
+	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /> <!-- group: STORAGE -->
+	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /> <!-- group: STORAGE -->
 
 	<uses-feature
 		android:name="android.hardware.touchscreen"
@@ -60,6 +63,7 @@
 		<activity
 			android:name="de.schildbach.wallet.ui.WalletActivity"
 			android:configChanges="keyboard|keyboardHidden"
+			android:label="@string/app_name_short"
 			android:exported="true"
 			android:launchMode="singleTask"
 			android:theme="@style/My.Theme.NoStatusBar" />
@@ -67,7 +71,7 @@
 		<activity-alias
 			android:name="de.schildbach.wallet.WalletActivity"
 			android:targetActivity="de.schildbach.wallet.ui.WalletActivity" >
-			<intent-filter>
+			<intent-filter android:label="@string/app_name_short">
 				<action android:name="android.intent.action.MAIN" />
 
 				<category android:name="android.intent.category.LAUNCHER" />
@@ -215,7 +219,7 @@
 			android:name="de.schildbach.wallet.offline.AcceptBluetoothService"
 			android:exported="false" />
 
-		<receiver android:name="de.schildbach.wallet.service.AutosyncReceiver" >
+		<receiver android:name="de.schildbach.wallet.service.BootstrapReceiver" >
 			<intent-filter>
 				<action android:name="android.intent.action.BOOT_COMPLETED" />
 			</intent-filter>
@@ -226,6 +230,10 @@
 
 		<service
 			android:name="de.schildbach.wallet.service.UpgradeWalletService"
+			android:exported="false" />
+
+		<service
+			android:name="de.schildbach.wallet.service.InactivityNotificationService"
 			android:exported="false" />
 
 		<meta-data
