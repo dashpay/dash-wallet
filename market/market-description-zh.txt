@@ -1,35 +1,36 @@
-<b>将比特币随身携带，在您的口袋中！</b> 扫描二维码快速支付，即时可靠的接收付款。比特币钱包 (Dash Wallet) 是首选的、最安全的比特币应用！
+<b>达世币伴您左右，由您掌控！</b> 您可以通过扫QR码轻松支付。 作为商户，您能够即时接收可靠的每笔交易。达世币手机钱包是达世币第一款移动app，十分安全！
 
 
-<b>功能</b>
 
-• 不需要注册，不需要网络服务，也不需要云！比特币钱包是“去中心化”的，点对点的 (peer to peer)。
-• 以 DASH, mDASH 以及 µDASH 为单位显示比特币金额。
-• 从比特币转换为国家货币，或者从国家货币转换为比特币。
-• 通过 NFC，二维码、比特币链接发送或接收比特币。
-• 为经常使用的比特币地址创建地址簿。
-• 断网情况下仍然可以通过蓝牙付款。
-• 收到比特币时显示系统通知。
-• 与纸钱包交换比特币（纸钱包经常用于冷存储）。
-• 应用程序小部件，用于显示比特币余额。
+<b>特性</b>
+
+• 无需注册；连接网络云服务器即可！本钱包完全去中心化，采用点对点技术。
+• 以DASH，mDASH，或µDASH表示。
+• 与国际货币进行兑换。
+• 通过NFC、QR码或链接发送或接收达世币。
+• 通过通讯簿记录常用达世币地址。
+• 当您断网时，您仍可以通过蓝牙支付。
+• 接收到达世币时系统提示。
+• 扫描纸钱包（如那些用于冷存储的方式）。
+• 达世币余额小工具。
+
 
 <b>贡献</b>
 
-Dash Wallet 是 <b>开源项目</b> 和 <b>自由软件</b>，以 GPLv3 授权。
+达世币钱包是<b>开源</b> 的 <b>免费软件</b>。证书：GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
-源代码托管在 GitHub:
-https://github.com/HashEngineering/darkcoin-wallet
+可以在GitHub查看我们的源代码：
+https://github.com/HashEngineering/dash-wallet
 
-所有的本地化翻译均在 Transifex 上进行：
+所有翻译经由Transifex管理注入：
 https://www.transifex.com/dash/dash-wallet/
 
 
-<b>评价</b>
+<b>客户评价</b>
 
-• 很多的移动钱包应用程序都基于 Bitcoin Wallet，比如：blockchain.info 以及 BTCX.
-• 由 https://bitcoin.org 推荐的移动钱包。
-• 由 BitPay 推荐的移动钱包。
+• 由 https://bitcoin.org 推荐使用的移动钱包
 
 
-<i>您需要自担风险！</i>
+
+<i>妥善使用，风险自负</i>
