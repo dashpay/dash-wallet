@@ -29,7 +29,7 @@ https://www.transifex.com/dash/dash-wallet/
 <b>UZNÁNÍ</b>
 
 • Mnoho mobilních peněženek využívá zdrojový kód Bitcoin Wallet. Například: blockchain.info a BTCX.
-• Doporučená mobilní peněženka stránkou https://bitcoin.org
+• Doporučená mobilní peněženka stránkou https://dash.org
 • Doporučeno službou BitPay.
 
 

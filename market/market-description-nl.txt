@@ -27,7 +27,7 @@ https://www.transifex.com/dash/dash-wallet/
 <b>TESTIMONIALS</b>
 
 * Veel mobiele portemonnees baseren hun code op Bitcoin Wallet. Voorbeelden: blockchain.info en DASHX.
-* Aanbevolen mobiele portemonnee op https://bitcoin.org
+* Aanbevolen mobiele portemonnee op https://dash.org
 * Aangeraden door BitPay.
 
 

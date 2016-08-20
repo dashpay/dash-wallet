@@ -29,7 +29,7 @@ https://www.transifex.com/dash/dash-wallet/
 <b>РЕКОМЕНДАЦІЇ</b>
 
 • Багато мобільних гаманців мають за  основу код Bitcoin Wallet. Приклади: blockchain.info і BTCX.
-• Мобільний гаманець рекомендований https://bitcoin.org
+• Мобільний гаманець рекомендований https://dash.org
 • Рекомендується BitPay.
 
 

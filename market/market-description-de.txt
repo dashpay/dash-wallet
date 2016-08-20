@@ -29,7 +29,7 @@ https://www.transifex.com/dash/dash-wallet/
 <b>EMPFEHLUNGEN</b>
 
 • Viele mobile Wallets basieren auf Bitcoin Wallet. Beispiele: blockchain.info und BTCX.
-• Von https://bitcoin.org empfohlenes mobiles Wallet.
+• Von https://dash.org empfohlenes mobiles Wallet.
 
 
 <i>Nutzung auf eigene Gefahr!</i>

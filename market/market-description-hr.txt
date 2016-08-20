@@ -28,7 +28,7 @@ https://www.transifex.com/dash/dash-wallet/
 <b>IZJAVE</b>
 
 • Mnoge  mobilne aplikacije temelje svoj kod na Bitcoin Wallet. Primjer: blockchain.info i BTCX.
-• Preporučeni pokretni novčanik od https://bitcoin.org
+• Preporučeni pokretni novčanik od https://dash.org
 • Preporučava BitPay.
 
 

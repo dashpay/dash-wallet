@@ -29,7 +29,7 @@ https://www.transifex.com/dash/dash-wallet/
 <b>DЁSHMIT</b>
 
 • Shumë kuleta mobile bazohen ne kodin e Bitcoin Wallet. Shembuj: blockchain.info dhe BTCX.
-• Kulet mobile e rekomanduar nga https://bitcoin.org
+• Kulet mobile e rekomanduar nga https://dash.org
 • Rekomanduar nga BitPay.
 
 

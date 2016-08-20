@@ -3,7 +3,7 @@
 
 	<string name="toast_wallet_reset">钱包已重置，\n需要一些时间才能恢复</string>
 	<string name="wallet_disclaimer_fragment_remind_safety">使用时请您自担风险。请务必阅读 &lt;u&gt;安全提示&lt;/u&gt;.</string>
-	<string name="wallet_disclaimer_fragment_remind_backup">你需要 &lt;u&gt;备份你的钱包&lt;/u&gt;!</string>
+	<string name="wallet_disclaimer_fragment_remind_backup">您需要 &lt;u&gt;备份你的钱包&lt;/u&gt;!</string>
 	<string name="blockchain_state_progress_hours">%1$s, %2$d 小时延迟</string>
 	<string name="blockchain_state_progress_days">%1$s, %2$d 天延迟</string>
 	<string name="blockchain_state_progress_weeks">%1$s, %2$d 星期延迟</string>
@@ -40,8 +40,8 @@
 	<string name="wallet_options_encrypt_keys_set">设置支付 PIN 码</string>
 	<string name="wallet_options_encrypt_keys_change">更改支付 PIN 码</string>
 	<string name="wallet_options_safety">安全及风险提示</string>
-	<string name="wallet_options_donate">技巧 / 捐助</string>
-	<string name="wallet_donate_address_label">向达世币钱包 (Dash Wallet) 捐款</string>
+	<string name="wallet_options_donate">打赏 / 捐赠</string>
+	<string name="wallet_donate_address_label">向达世币钱包团队捐款</string>
 	<string name="wallet_low_storage_dialog_title">内部设备存储空间不足！</string>
 	<string name="wallet_low_storage_dialog_msg">达世币钱包使用内部存储设备来记录交易和区块。如果存储空间不足，它将会停止工作，并且您的达世币将存在风险！\\n您是否想要打开应用程序管理器，以卸载掉一些不需要的应用程序？</string>
 	<string name="wallet_low_storage_dialog_button_apps">管理应用程序</string>
@@ -49,7 +49,7 @@
 	<string name="wallet_timeskew_dialog_msg">您的设备停止了 %d 分钟。由于此原因，您可能无法发送或接收达世币。\\n\\n您应当检查，并修正您的日期、时区设置。</string>
 	<string name="wallet_version_dialog_title">有新的版本可用！</string>
 	<string name="wallet_version_dialog_msg">该版本修复了重要的bug，详情请详见 Google Play 上的更改日志。</string>
-	<string name="wallet_version_dialog_msg_deprecated">如果你没有看到更新，这可能意味您的 Android 版本已经不被支持了。</string>
+	<string name="wallet_version_dialog_msg_deprecated">如果您没有看到更新，这可能意味您的 Android 版本已经不被支持了。</string>
 	<string name="wallet_version_dialog_button_market">Google Play</string>
 	<string name="wallet_version_dialog_button_binary">下载</string>
 
@@ -66,7 +66,7 @@
 	<string name="send_coins_fragment_receiving_address_label">支付给</string>
 	<string name="send_coins_fragment_receiving_address_hint">输入地址或名称</string>
 	<string name="send_coins_fragment_receiving_address_error">无效的达世币地址！</string>
-	<string name="send_coins_fragment_receiving_address_own">你将要向自己发送交易！</string>
+	<string name="send_coins_fragment_receiving_address_own">您将要向自己发送交易！</string>
 	<string name="send_coins_fragment_receiving_address_complex">复杂\n地址</string>
 	<string name="send_coins_fragment_pending">(%s 正在等待确认)</string>
 	<string name="send_coins_fragment_amount_label">要支付的金额</string>
@@ -82,8 +82,8 @@
 	<string name="send_coins_fragment_button_send">发送</string>
 	<string name="send_coins_fragment_button_back">返回</string>
 	<string name="send_coins_fragment_insufficient_money_title">达世币余额不足</string>
-	<string name="send_coins_fragment_insufficient_money_msg1">你还缺少 %s.</string>
-	<string name="send_coins_fragment_insufficient_money_msg2">您想要用您拥有的所有比特币进行支付吗？</string>
+	<string name="send_coins_fragment_insufficient_money_msg1">您还缺少 %s.</string>
+	<string name="send_coins_fragment_insufficient_money_msg2">您想要用您拥有的所有达世币进行支付吗？</string>
 	<string name="send_coins_fragment_empty_wallet_failed_title">清空钱包失败</string>
 	<string name="send_coins_fragment_state_decrypting">正在解密…</string>
 	<string name="send_coins_preparation_msg">正在签名…</string>
@@ -97,13 +97,13 @@
 	<string name="send_coins_options_fee_category_priority">优先级</string>
 	<string name="send_coins_options_empty">清空钱包</string>
 	<string name="raise_fee_dialog_title">增加网络费用</string>
-	<string name="raise_fee_dialog_message">你想增加 %s的网络费用么？它将使你的交易被更快的确认。</string>
+	<string name="raise_fee_dialog_message">您想增加 %s的网络费用么？它将使您的交易被更快的确认。</string>
 	<string name="raise_fee_dialog_state_decrypting">正在解密…</string>
 	<string name="raise_fee_dialog_state_done">已完成。</string>
 	<string name="raise_fee_dialog_button_raise">增加</string>
-	<string name="sweep_wallet_activity_title">交换纸钱包上的比特币</string>
-	<string name="sweep_wallet_fragment_intro">您将要扫描纸质的钱包或者coupon。这会将纸钱上的所有达世币转移到您的当前设备上。当交易被确认后，那张纸将会分文不值，而且将不能作为安全措施重新使用该纸钱包。</string>
-	<string name="sweep_wallet_fragment_hint">纸钱包常常用于进行冷存储。一些 ATM 机经常会将达世币打印在纸上，而不是直接发送到您的移动设备上。人们有时候会使用已经预付的 (pre-charged) 纸钱包来互相转移金额（不推荐）。</string>
+	<string name="sweep_wallet_activity_title">交换纸钱包上的达世币</string>
+	<string name="sweep_wallet_fragment_intro">您将要扫描纸质的钱包或者优惠券。这会将纸钱上的所有达世币转移到您的当前设备上。当交易被确认后，那张纸将会分文不值，而且将不能作为安全措施重新使用该纸钱包。</string>
+	<string name="sweep_wallet_fragment_hint">纸钱包常常用于进行冷存储。一些 ATM 机经常会将达世币打印在纸上，而不是直接发送到您的移动设备上。人们有时候会使用已经预付的纸钱包来互相转移金额（不推荐）。</string>
 	<string name="sweep_wallet_fragment_wallet_unknown">该操作将从扫描纸钱包上的私钥开始。请使用界面上的相机按钮。</string>
 	<string name="sweep_wallet_fragment_encrypted">该私钥受密码保护。</string>
 	<string name="sweep_wallet_fragment_password">密码</string>
@@ -122,17 +122,17 @@
 	<string name="maintenance_dialog_state_decrypting">正在解密…</string>
 	<string name="maintenance_dialog_state_done">已完成。</string>
 	<string name="maintenance_dialog_button_move">转移</string>
-	<string name="request_coins_activity_title">索取达世币</string>
-	<string name="request_coins_fragment_amount_label">需要索取的数量（可选）</string>
+	<string name="request_coins_activity_title">接收达世币</string>
+	<string name="request_coins_fragment_amount_label">需要接收的数量（可选）</string>
 	<string name="request_coins_fragment_accept_bluetooth_payment">通过蓝牙接受支付，以确保支付更加可靠</string>
-	<string name="request_coins_fragment_initiate_request_qr">请比特币发送者扫描该二维码。</string>
+	<string name="request_coins_fragment_initiate_request_qr">请达世币发送者扫描该二维码。</string>
 	<string name="request_coins_fragment_initiate_request_nfc">或者靠近并轻敲已启用NFC的设备。</string>
-	<string name="request_coins_clipboard_msg">索取达世币的请求已复制到剪贴板</string>
-	<string name="request_coins_share_dialog_title">分享索取达世币的请求…</string>
+	<string name="request_coins_clipboard_msg">接收达世币的请求已复制到剪贴板</string>
+	<string name="request_coins_share_dialog_title">分享接收达世币的请求…</string>
 	<string name="request_coins_no_local_app_msg">未找到其它达世币应用程序</string>
 	<string name="request_coins_options_local_app_title">从本地应用程序索取</string>
 	<string name="address_book_activity_title">地址簿</string>
-	<string name="address_book_list_receiving_title">您的比特币地址</string>
+	<string name="address_book_list_receiving_title">您的达世币地址</string>
 	<string name="address_book_list_receiving_random">旧地址</string>
 	<string name="address_book_list_sending_title">发送的地址</string>
 	<string name="address_book_empty_text">地址薄中无记录</string>
@@ -143,15 +143,15 @@
 	<string name="address_book_options_paste_from_clipboard_title">从剪贴板中粘贴</string>
 	<string name="address_book_options_paste_from_clipboard_empty">剪贴板为空</string>
 	<string name="address_book_options_paste_from_clipboard_invalid">无法识别剪贴板中的数据</string>
-	<string name="address_book_options_paste_from_clipboard_own_address">剪切板中的是你自己的地址。</string>
+	<string name="address_book_options_paste_from_clipboard_own_address">剪切板中的是您自己的地址。</string>
 	<string name="address_book_options_scan_title">掃描地址</string>
 	<string name="address_book_options_scan_invalid">无法识别扫描的数据</string>
-	<string name="address_book_options_scan_own_address">被扫描的是你自己的地址。</string>
-	<string name="address_book_row_message_compromised_key">这个地址可能已被盗用。你不应该再使用它来接收达世币了。</string>
+	<string name="address_book_options_scan_own_address">被扫描的是您自己的地址。</string>
+	<string name="address_book_row_message_compromised_key">这个地址可能已被盗用。您不应该再使用它来接收达世币了。</string>
 	<string name="edit_address_book_entry_dialog_title_add">添加地址</string>
 	<string name="edit_address_book_entry_dialog_title_edit">编辑地址</string>
 	<string name="edit_address_book_entry_dialog_title_add_receive">为自己的地址标记</string>
-	<string name="edit_address_book_entry_dialog_title_edit_receive">编辑你的地址</string>
+	<string name="edit_address_book_entry_dialog_title_edit_receive">编辑您的地址</string>
 	<string name="edit_address_book_entry_dialog_address_label">地址</string>
 	<string name="edit_address_book_entry_dialog_label_label">名称</string>
 	<string name="edit_address_book_entry_dialog_button_edit">保存</string>
@@ -159,21 +159,21 @@
 	<string name="transaction_row_message_purpose_key_rotation">该项交易能加强您的钱包安全性，防止被盗。&lt;u&gt;更多信息.&lt;/u&gt;</string>
 	<string name="transaction_row_message_purpose_raise_fee">由于此前的支付，本次交易会增加网络费用</string>
 	<string name="transaction_row_message_own_unbroadcasted">此项支付尚未传输。</string>
-	<string name="transaction_row_message_received_direct">此项付款已经被直接接收。这存在所获取的比特币可能永远无法使用的风险。</string>
+	<string name="transaction_row_message_received_direct">此项付款已经被直接接收。这存在所获取的达世币可能永远无法使用的风险。</string>
 	<string name="transaction_row_message_received_unconfirmed_delayed">本交易的网络确认延误，可能是因为达世币网络拥堵。</string>
-	<string name="transaction_row_message_received_unconfirmed_unlocked">此项付款所获得的比特币将在几分钟之后可以使用。</string>
+	<string name="transaction_row_message_received_unconfirmed_unlocked">此项付款所获得的达世币将在几分钟之后可以使用。</string>
 	<string name="transaction_row_message_received_in_conflict">本交易很可能被发送者撤销！如果可以，请等待网络确认。</string>
 	<string name="transaction_row_message_received_dead">此项付款已被付款人撤销。</string>
 	<string name="transaction_row_message_received_dust">如此小的金额，在经济意义上可能永远也无法花费。</string>
 	<string name="transaction_row_message_received_pay_to_many">此项付款除了支付给您以外，还支付给很多其它的钱包，这导致程序运行时间变慢，如果可能，请尝试仅接收支付给您一个人的付款。</string>
 	<string name="transaction_row_message_received_rbf">本交易延误，因为发送者使用的是不安全的交易方式。</string>
 	<string name="network_monitor_activity_title">网络监视器</string>
-	<string name="network_monitor_peer_list_title">Peers</string>
+	<string name="network_monitor_peer_list_title">网络节点</string>
 	<string name="network_monitor_block_list_title">区块</string>
 	<string name="block_row_mining_difficulty_adjustment">挖矿难度调整</string>
 	<string name="block_row_mining_reward_adjustment">挖矿奖励减少</string>
 	<string name="block_row_now">刚刚</string>
-	<string name="peer_list_fragment_empty">没有已连接的peer</string>
+	<string name="peer_list_fragment_empty">没有已连接的网络节点</string>
 	<string name="peer_list_row_ping_time">⇆ %d&#x2009;ms</string>
 
 	<string name="restore_wallet_permission_dialog_title">读取权限确实</string>
@@ -252,13 +252,13 @@
 	<string name="preferences_send_coins_autoclose_title">自动关闭发送币窗口</string>
 	<string name="preferences_send_coins_autoclose_summary">当交易完成后，发送窗口将自动关闭。</string>
 	<string name="preferences_connectivity_notification_title">连接指示器</string>
-	<string name="preferences_connectivity_notification_summary">在通知区域中显示已连接的peer数。</string>
-	<string name="preferences_trusted_peer_title">受信任的peer</string>
-	<string name="preferences_trusted_peer_summary">要连接的单个peer的IP地址或主机名称。</string>
+	<string name="preferences_connectivity_notification_summary">在通知区域中显示已连接的节点数。</string>
+	<string name="preferences_trusted_peer_title">受信任的节点</string>
+	<string name="preferences_trusted_peer_summary">要连接的单个节点的IP地址或主机名称。</string>
 	<string name="preferences_trusted_peer_resolve_progress">解析中...</string>
 	<string name="preferences_trusted_peer_resolve_unknown_host">未知主机名称！</string>
-	<string name="preferences_trusted_peer_only_title">跳过常规peer发现</string>
-	<string name="preferences_trusted_peer_only_summary">除了受信任peer外，防止连接到任何其它的peer。</string>
+	<string name="preferences_trusted_peer_only_title">跳过常规节点发现</string>
+	<string name="preferences_trusted_peer_only_summary">除了受信任节点外，防止连接到任何其它的节点。</string>
 	<string name="preferences_block_explorer_title">区块浏览器</string>
 	<string name="preferences_block_explorer_summary">外部区块浏览器用于网页交易、地址、和区块。</string>
 	<string name="preferences_data_usage_title">数据使用</string>
@@ -266,7 +266,7 @@
 	<string name="preferences_remind_balance_title">余额贴士</string>
 	<string name="preferences_remind_balance_summary">若钱包中依然存有达世币，几周都未曾使用，app将发送通知提醒用户。</string>
 	<string name="preferences_report_issue_title">报告问题</string>
-	<string name="preferences_report_issue_summary">搜集你碰到的问题的相关信息，然后通过邮件发给开发者。</string>
+	<string name="preferences_report_issue_summary">搜集您碰到的问题的相关信息，然后通过邮件发给开发者。</string>
 	<string name="preferences_initiate_reset_title">重置区块链 (blockchain)</string>
 	<string name="preferences_initiate_reset_summary">复位blockchain，交易和钱包的余额。过程将需要一段时间。</string>
 	<string name="preferences_initiate_reset_dialog_message">您是否想要重置并重放(replay)区块链？\n\n这将暂时隐藏您的钱包余额并移除交易。在同步过程之后钱包余额和交易记录将会恢复。</string>
@@ -279,7 +279,7 @@
 	<string name="report_issue_dialog_title_issue">报告问题</string>
 	<string name="report_issue_dialog_title_crash">检测到了之前的一次奔溃</string>
 	<string name="report_issue_dialog_message_issue">请描述您的问题予以重现。</string>
-	<string name="report_issue_dialog_message_crash">你想发送崩溃报告，在未来帮助解决这个问题？</string>
+	<string name="report_issue_dialog_message_crash">您想发送崩溃报告，帮助在未来解决这个问题？</string>
 	<string name="report_issue_dialog_description">问题描述</string>
 	<string name="report_issue_dialog_report">报告</string>
 	<string name="report_issue_dialog_collect_device_info">附加设备信息</string>
@@ -304,7 +304,7 @@
 	<string name="about_market_app_summary">评价这个应用</string>
 	<string name="notification_coins_received_msg">收到了 %s</string>
 
-	<string name="notification_peers_connected_msg">%d 个已连接的peer </string>
+	<string name="notification_peers_connected_msg">%d 个已连接的网络节点</string>
 	<string name="notification_inactivity_title">您的设备中依然存有达世币！</string>
 	<string name="notification_inactivity_message">请记住，若您在卸载达世币钱包app之前没有将余额 %s 转移，那您将永远失去它。</string>
 	<string name="notification_inactivity_message_donate">如果您不想要您的币了，您也可以选择把它们捐献给达世币钱包项目。</string>
@@ -350,7 +350,7 @@
 	<string name="navigation_drawer_open">开启导航抽屉</string>
 	<string name="navigation_drawer_close">关闭导航抽屉</string>
 
-	<string name="dash_slogan">瞬时-隐私-安全</string>
+	<string name="dash_slogan">即时-隐私-安全</string>
 	<string name="dash_wallet">钱包</string>
 
 </resources>

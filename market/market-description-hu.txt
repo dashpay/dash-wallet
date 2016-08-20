@@ -20,7 +20,7 @@ https://www.transifex.com/dash/dash-wallet/
 <b>AJÁNLÓLEVELEK</b>
 
 • Sok mobiltárca a Bitcoin Wallet-re alapozza a kódját. Például: blockchain.info és BTCX.
-• Ajánlott mobiltárca a https://bitcoin.org által
+• Ajánlott mobiltárca a https://dash.org által
 • Ajánlva a BitPay által.
 
 

@@ -30,7 +30,7 @@ https://www.transifex.com/dash/dash-wallet/
 
 
 • Birçok mobil cüzdan kodları için Bitcoin Wallet'i temel alırlar. Mesela blockchain.info ve BTCX.
-• https://bitcoin.org tarafından tavsiye edilen mobil cüzdan.
+• https://dash.org tarafından tavsiye edilen mobil cüzdan.
 • BitPay tarafından tavsiye edilir.
 
 

@@ -29,7 +29,7 @@ https://www.transifex.com/dash/dash-wallet/
 <b>ANBEFALINGER</b>
 
 • Mange mobile tegnebøger baserer deres kode på Bitcoin Wallet. Eksempler: blockchain.info og BTCX.
-• Anbefalet mobil-tegnebog af https://bitcoin.org
+• Anbefalet mobil-tegnebog af https://dash.org
 • Anbefalet af BitPay.
 
 

@@ -29,7 +29,7 @@ https://www.transifex.com/dash/dash-wallet/
 <b>ANBEFALINGER</b>
 
 • Mange mobillommebøker baserer sin kildekode på Bitcoin Wallet. Eksempler: blockchain.info og BTCX.
-• Anbefalt mobillommebok av https://bitcoin.org
+• Anbefalt mobillommebok av https://dash.org
 • Anbefalt av BitPay.
 
 

@@ -28,7 +28,7 @@ https://www.transifex.com/dash/dash-wallet/
 
 
 • Многие мобильные кошельки основывают свой код на Bitcoin Wallet. Примеры: blockchain.info и BTCX.
-• Мобильный кошелек рекомендованный https://bitcoin.org
+• Мобильный кошелек рекомендованный https://dash.org
 • Рекомендуется BitPay.
 
 

@@ -28,7 +28,7 @@ https://www.transifex.com/dash/dash-wallet/
 <b>REKOMMENDATIONER</b>
 
 • Många mobila plånböcker baserar sin kod på Bitcoin Wallet. Exempelvis: blockchain.info och BTCX.
-• Rekommenderad mobil wallet av https://bitcoin.org
+• Rekommenderad mobil wallet av https://dash.org
 • Rekommenderad av BitPay.
 
 

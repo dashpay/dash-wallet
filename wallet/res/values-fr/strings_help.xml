@@ -1,27 +1,28 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-  <string name="help_wallet">
+
+	<string name="help_wallet">
 <![CDATA[
-		<p>
-			La partie supérieure gauche de l\'écran affiche votre solde en Dash ainsi qu\'une monnaie nationale choisie.
-			Toquer pour vous rendre vers la liste des monnaies nationales et toquer sur l\'une d\'elles pour la choisir par défaut.
-		</p>
-		<p>
-			Le QR code à droite contient votre adresse Dash et peut être numérisé par un tiers.
-			Toquer sur le code QR pour l\'agrandir.
-		</p>
-		<p>
-			Le bas de l\'écran est couvert par votre liste de transactions, qui est vide initialement.
-			Les transactions en attente sont grisées jusqu\'à ce qu\'elles soient confirmées.
-			Toquer sur une transaction pour ajouter l\'adresse du destinataire ou de l\'envoyeur à votre carnet d\'adresses.
-		</p>
-		<p>
-			Vous pouvez envoyer ou recevoir des Dash en toquant les boutons dans la barre d\'action.
-			Plus d\'options sont offertes dans le menu des options.
-		</p>
-	]]>
-	</string>
-  <string name="help_request_coins">
+⇥⇥<p>
+⇥⇥⇥En haut à gauche de l\'écran s\'affiche votre solde en Dash et l\'équivalent en monnaie nationale.
+⇥⇥⇥Touchez pour afficher une liste de monnaies nationales, et tapez sur l\'une d\'elles pour la sélectionner par défaut.
+⇥⇥</p>
+⇥⇥<p>
+⇥⇥⇥Le QR-code à droite contient votre adresse Dash et peut être scanné par quelqu\'un d\'autre.
+⇥⇥⇥Touchez le QR-code pour l\'afficher en plus grand.
+⇥⇥</p>
+⇥⇥<p>
+⇥⇥⇥La liste de vos transactions apparaît au bas de l\'écran. Au départ, elle est vide.
+⇥⇥⇥Les transactions en cours sont grisées jusqu\'à ce qu\'elles soient confirmées.
+⇥⇥⇥Touchez une des entrées pour ajouter l\'adresse de l\'envoyeur ou du destinataire à votre carnet d\'adresses.
+⇥⇥</p>
+⇥⇥<p>
+⇥⇥⇥Envoyez ou demandez des pièces en touchant les boutons dans la barre d\'action.
+⇥⇥⇥Plus d\'options sont disponibles dans le menu options.
+⇥⇥</p>
+⇥]]>
+⇥</string>
+	<string name="help_request_coins">
 <![CDATA[
 		<p>
 			En utilisant cette zone de dialogue vous pouvez demander des pièces à une autre personne (qui devrait déjà avoir installé le Dash Wallet).
@@ -40,7 +41,7 @@
 		</p>
 	]]>
 	</string>
-  <string name="help_send_coins">
+	<string name="help_send_coins">
 <![CDATA[
 		<p>
 			Vous avez commencé le processus d\'envoi de Dash.
@@ -70,7 +71,7 @@
 		</p>
 	]]>
 	</string>
-  <string name="help_safety">
+	<string name="help_safety">
 <![CDATA[
 		<p>
 			<b>Notes de sécurité importantes :</b>
@@ -104,4 +105,5 @@
 		</p>
 	]]>
 	</string>
+
 </resources>

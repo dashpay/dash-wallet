@@ -1,33 +1,36 @@
-﻿<b>Tenha os seus Dash sempre com você, no seu bolso!</b> Efetue pagamentos rapidamente apenas escaneando um código QR. Como comerciante, você pode receber pagamentos de forma confiável e instantaneamente. O Dash Wallet é o primeiro aplicativo Dash móvel, e, possivelmente, o mais seguro!
+<b>Ter seu Dash sempre com você, no seu bolso!</b> Você paga rapidamente apenas verificação um QR code. Como um comerciante, você recebe pagamentos confiável e instantaneamente. Carteira do traço é o primeiro app móvel do traço e sem dúvida também o mais seguro!
+
 
 
 <b>CARACTERÍSTICAS</b>
 
-• Sem necessidade de cadastro, serviço web ou hospedagem! Esta carteira é descentralizada e "peer to peer".
-• Exibe a quantidade de Dash em DASH, mDASH e µDASH.
-• Conversão para moedas nacionais.
-• Envio e recebimento de Dash via NFC, códigos QR ou endereços Dash.
-• Catálogo para guardar os endereços mais utilizados.
-• Quando você estiver off-line, você ainda pode pagar via Bluetooth.
-• Notificações do sistema para moedas recebidas.
-• Varrer de carteiras de papel (por exemplo, aqueles usados para o armazenamento a frio).
-• Widget para saldo de Dash.
+• Nenhum registo, serviço web ou nuvem necessários! Esta carteira é descentralizada e peer to peer.
+• Display da quantidade de Dash em mDASH e µDASH.
+• Conversão para outras moedas nacionais.
+• Envio e recebimento de Dash através de NFC, códigos QR ou URLs de Dash.
+• Livro de endereços Dash usados regularmente.
+• Quando estiver offline, você pode pagar via Bluetooth.
+• Sistema de notificação para moedas recebidas.
+• Varrer carteiras de papel (por exemplo, aquelas usadas para armazenagem offline).
+• Widget de app para o saldo de Dash.
 
 
-<b>CONTRIBUA</b>
+<b>CONTRIBUIR</b>
 
-Dash Wallet é <b>open source</ b> e <b>software livre</ b>. Licença: GPLv3
+Carteira Dash e <b>open source</b> e <b>software livre</b>. Licença: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Nosso código fonte está disponível no GitHub:
-https://github.com/HashEngineering/darkcoin-wallet
+https://github.com/HashEngineering/dash-wallet
 
-Todas as traduções são gerenciadas via Transifex:
+Todas as traduções são gerenciadas por meio do Transifex:
 https://www.transifex.com/dash/dash-wallet/
 
 
-<b>TESTEMUNHOS</b>
+<b>DEPOIMENTOS</b>
 
-• Muitas carteiras móveis baseiam seu código em Bitcoin Wallet. Exemplos: blockchain.info e BTCX.
-• Carteira mobile recomendada por https://bitcoin.org
-• Recomendado por BitPay.
+• Carteira mobile recomendada https://dash.org
+
+
+
+<i>Use por sua conta em risco!</i>
