@@ -1,6 +1,6 @@
+﻿Use at your own risk! (Requires Android 4 or higher)
+
 <b>Have your Dash always with you, in your pocket!</b> You pay by quickly scanning a QR code. As a merchant, you receive payments reliably and instantly. Dash Wallet is the first mobile Dash app, and arguably also the most secure!
-
-
 
 <b>FEATURES</b>
 
@@ -26,11 +26,11 @@ https://github.com/HashEngineering/dash-wallet
 All translations are managed via Transifex:
 https://www.transifex.com/dash/dash-wallet/
 
+You can find more about Dash at
+https://www.dash.org/
 
 <b>TESTIMONIALS</b>
 
-• Recommended mobile wallet by https://www.dash.org
-
-
+• A recommended mobile wallet by https://www.dash.org
 
 <i>Use at your own risk!</i>
