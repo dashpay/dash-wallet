@@ -19,19 +19,19 @@ You can build all sub-projects at once using Gradle:
 
 Full Guide for building the APK:
 
-`$ git clone https://github.com/HashEngineering/darkcoinj.git `
+`$ git clone https://github.com/HashEngineering/dashj.git `
 
-`$ cd darkcoinj`
+`$ cd dashj`
 
-`$ git checkout release-0.13`
+`$ git checkout release-0.14`
 
 `$ mvn clean install -DskipTests`
 
 `$ cd ..`
 
-`$ git clone https://github.com/HashEngineering/darkcoin-wallet.git `
+`$ git clone https://github.com/HashEngineering/dash-wallet.git `
 
-`$ cd darkcoin-wallet`
+`$ cd dash-wallet`
 
 `$ git checkout release-4`
 

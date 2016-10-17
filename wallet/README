@@ -3,24 +3,24 @@ FILES
 Your wallet contains your private keys and various transaction related metadata. It is stored in app-private
 storage:
 
-	Mainnet: /data/data/de.schildbach.wallet/files/wallet-protobuf (MODE_PRIVATE)
+	Mainnet: /data/data/hashengineering.darkcoin.wallet/files/wallet-protobuf (MODE_PRIVATE)
 
-	Testnet: /data/data/de.schildbach.wallet_test/files/wallet-protobuf-testnet (MODE_WORLD_READABLE | MODE_WORLD_WRITEABLE)
+	Testnet: /data/data/hashengineering.darkcoin.wallet_test/files/wallet-protobuf-testnet (MODE_WORLD_READABLE | MODE_WORLD_WRITEABLE)
 
 The wallet file format is not compatible to wallet.dat (Satoshi client). Rather, it uses a custom protobuf format
 which should be compatible between clients using darkcoinj.
 
 Certain actions cause automatic rolling backups of your wallet to app-private storage:
 
-	Mainnet: /data/data/de.schildbach.wallet/files/key-backup-protobuf (MODE_PRIVATE)
+	Mainnet: /data/data/hashengineering.darkcoin.wallet/files/key-backup-protobuf (MODE_PRIVATE)
 
-	Testnet: /data/data/de.schildbach.wallet_test/files/key-backup-protobuf-testnet (MODE_PRIVATE)
+	Testnet: /data/data/hashengineering.darkcoin.wallet_test/files/key-backup-protobuf-testnet (MODE_PRIVATE)
 
 Your wallet can be manually backed up to and restored from external storage:
 
-	Mainnet: /sdcard/Download/bitcoin-wallet-backup-<yyyy-MM-dd>
+	Mainnet: /sdcard/Download/dash-wallet-backup-<yyyy-MM-dd>
 
-	Testnet: /sdcard/Download/bitcoin-wallet-backup-testnet-<yyyy-MM-dd>
+	Testnet: /sdcard/Download/dash-wallet-backup-testnet-<yyyy-MM-dd>
 
 If you want to recover coins from manual backups and for whatever reason you cannot use the app
 itself to restore from the backup, see the separate README.recover guide.
@@ -30,7 +30,7 @@ DEBUGGING
 
 Wallet file for Testnet can be pulled from an (even un-rooted) device using
 
-	adb pull /data/data/de.schildbach.wallet/files/wallet-protobuf-testnet
+	adb pull /data/data/hashengineering.darkcoin.wallet/files/wallet-protobuf-testnet
 
 Log messages can be viewed by
 
@@ -85,7 +85,7 @@ To install the app on your Android device, use
 	sudo apt install android-tools-adb
 
 	# each time
-	adb install wallet/build/outputs/apk/bitcoin-wallet-debug.apk
+	adb install wallet/build/outputs/apk/dash-wallet-debug.apk
 
 If installing fails, make sure "Developer options" and "USB debugging" are enabled on your Android device, and an ADB
 connection is established.
@@ -102,7 +102,7 @@ wallet file is protected against access from non-root users. In the code reposit
 separate 'prod' branch that gets rebased against master with each released version.
 
 	# each time
-	cd bitcoin-wallet
+	cd dash-wallet
 	git fetch origin
 	git checkout origin/prod
 	gradle clean test build
@@ -160,7 +160,7 @@ Instructions for preparing an NFC tag with your address:
 
 - The tag needs to contain a Dash URI. You can construct one with the "Request coins" dialog,
   then share with messaging or email. You can also construct the URI manually. Example for Mainnet:
-  bitcoin:1G2Y2jP5YFZ5RGk2PXaeWwbeA5y1ZtFhoL
+  dash:XywwpkwZYAypoW2cCmdczh4kFcvWWb9ZZW
 
 - The type of the message needs to be URI or URL (not Text).
 
@@ -168,11 +168,12 @@ Instructions for preparing an NFC tag with your address:
   could overwrite the tag with his own Dash address.
 
 
-BITCOINJ
+DASHJ
 
-Dash Wallet uses bitcoinj for Bitcoin specific logic:
+Dash Wallet uses dashj for Dash specific logic:
 
-	https://bitcoinj.github.io/
+    (dashj) https://github.com/HashEngineering/dashj
+	(bitcoinj)  https://bitcoinj.github.io/
 
 
 EXCHANGE RATES
@@ -192,7 +193,7 @@ If the above feed is not available, the feed from "Blockchain.info" is fetched i
 
 SWEEPING WALLETS
 
-For sweeping wallets, Dash Wallet uses an API by biteasy to query for unspent transaction
+For sweeping wallets, Dash Wallet uses an API by chainz to query for unspent transaction
 outputs:
 
-	https://api.biteasy.com/v2/btc/mainnet/outputs
+	https://chainz.cryptoid.info/dash/api.dws?q=unspent
