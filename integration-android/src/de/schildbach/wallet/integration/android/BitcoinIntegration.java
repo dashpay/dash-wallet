@@ -274,7 +274,6 @@ public final class BitcoinIntegration
 		final Intent marketIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=hashengineering.digitalcoin.wallet"));
 		final Intent binaryIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/HashEngineering/digitalcoin-wallet/releases"));
 
-
 		final PackageManager pm = context.getPackageManager();
 		if (pm.resolveActivity(marketIntent, 0) != null)
 			context.startActivity(marketIntent);

@@ -26,7 +26,7 @@ import java.util.concurrent.RejectedExecutionException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.Wallet;
+import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,7 +82,7 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 	private static final int ID_BLOCK_LOADER = 0;
 	private static final int ID_TRANSACTION_LOADER = 1;
 
-	private static final int MAX_BLOCKS = 32;
+	private static final int MAX_BLOCKS = 64;
 
 	private static final Logger log = LoggerFactory.getLogger(BlockListFragment.class);
 
@@ -185,8 +185,8 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 				switch (item.getItemId())
 				{
 					case R.id.blocks_context_browse:
-						startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(Constants.EXPLORE_BASE_URL + Constants.EXPLORE_BLOCK_PATH
-								+ block.getHeader().getHashAsString())));
+						startActivity(new Intent(Intent.ACTION_VIEW,
+								Uri.withAppendedPath(config.getBlockExplorer(), Constants.EXPLORE_BLOCK_PATH + block.getHeader().getHashAsString())));
 						return true;
 				}
 				return false;
@@ -317,6 +317,8 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 		@Override
 		public Set<Transaction> loadInBackground()
 		{
+			org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+
 			final Set<Transaction> transactions = wallet.getTransactions(true);
 
 			final Set<Transaction> filteredTransactions = new HashSet<Transaction>(transactions.size());

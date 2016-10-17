@@ -198,7 +198,7 @@
   <string name="about_copyright_title">Авторське право</string>
   <string name="about_license_title">Ліцензія</string>
   <string name="about_source_title">Початковий код</string>
-  <string name="about_credits_bitcoinj_title">Цей додаток використовує darkcoinj %s</string>
+  <string name="about_credits_bitcoinj_title">Цей додаток використовує dashj %s</string>
   <string name="about_credits_zxing_title">Цей додаток використовує \'zxing\'</string>
   <string name="about_credits_icon_title">Цей додаток використовує іконку від \'bitboy\'</string>
   <string name="about_community_googleplus_title">Спільнота в Google+</string>

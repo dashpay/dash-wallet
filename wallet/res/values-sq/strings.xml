@@ -247,7 +247,7 @@
   <string name="about_copyright_title">Copyright</string>
   <string name="about_license_title">Licenca</string>
   <string name="about_source_title">Kodi burimor</string>
-  <string name="about_credits_bitcoinj_title">Ky program përdor darkcoinj %s</string>
+  <string name="about_credits_bitcoinj_title">Ky program përdor dashj %s</string>
   <string name="about_credits_zxing_title">Ky program përdor \'zxing\'</string>
   <string name="about_credits_icon_title">Ky program përdor një ikon nga \'bitboy\'</string>
   <string name="about_community_googleplus_title">Komuniteti Google+</string>

@@ -28,14 +28,14 @@ import java.util.concurrent.TimeUnit;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionMessage;
-import org.bitcoinj.core.Wallet;
 import org.bitcoinj.crypto.LinuxSecureRandom;
 import org.bitcoinj.crypto.MnemonicCode;
-import org.bitcoinj.store.UnreadableWalletException;
-import org.bitcoinj.store.WalletProtobufSerializer;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Protos;
+import org.bitcoinj.wallet.UnreadableWalletException;
+import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletFiles;
+import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,8 +66,6 @@ import de.schildbach.wallet.util.Io;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.MnemonicCode;
-import org.bitcoinj.store.UnreadableWalletException;
-import org.bitcoinj.store.WalletProtobufSerializer;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.WalletFiles;
@@ -110,6 +108,8 @@ public class WalletApplication extends Application
 		StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectAll().permitDiskReads().permitDiskWrites().penaltyLog().build());
 
 		Threading.throwOnLockCycles();
+		org.bitcoinj.core.Context.enableStrictMode();
+		org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
 
 		log.info("=== starting app using configuration: {}, {}", Constants.TEST ? "test" : "prod", Constants.NETWORK_PARAMETERS.getId());
 
@@ -131,7 +131,7 @@ public class WalletApplication extends Application
 
 		initMnemonicCode();
 		PreferenceManager.setDefaultValues(this, R.xml.preference_settings, false);
-		config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this));
+		config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
 		activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
 
 		blockchainServiceIntent = new Intent(this, BlockchainServiceImpl.class);
@@ -142,6 +142,11 @@ public class WalletApplication extends Application
 		walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
 
 		loadWalletFromProtobuf();
+
+		//Dash Specific - TODO:  need to separate out these parts.
+		org.bitcoinj.core.Context context = wallet.getContext();
+
+		wallet.getContext().initDash(config.getLiteMode(), config.getInstantXEnabled());
 
 		if (config.versionCodeCrossed(packageInfo.versionCode, VERSION_CODE_SHOW_BACKUP_REMINDER) && !wallet.getImportedKeys().isEmpty())
 		{
@@ -292,14 +297,6 @@ public class WalletApplication extends Application
 
 				wallet = restoreWalletFromBackup();
 			}
-			catch (final IllegalArgumentException x)
-			{
-				log.error("problem loading wallet", x);
-
-				Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
-
-				wallet = restoreWalletFromBackup();
-			}
 			finally
 			{
 				if (walletStream != null)
@@ -345,7 +342,7 @@ public class WalletApplication extends Application
 		{
 			is = openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
 
-			final Wallet wallet = new WalletProtobufSerializer().readWallet(is);
+			final Wallet wallet = new WalletProtobufSerializer().readWallet(is, true, null);
 
 			if (!wallet.isConsistent())
 				throw new Error("inconsistent backup");
@@ -388,6 +385,19 @@ public class WalletApplication extends Application
 		catch (final IOException x)
 		{
 			throw new RuntimeException(x);
+		}
+	}
+
+	public void saveMasternodes()
+	{
+		//try
+		//{
+			wallet.getContext().masternodeDB.write(wallet.getContext().masternodeManager);
+			//Constants.NETWORK_PARAMETERS.masternodeDB.write(Constants.NETWORK_PARAMETERS.masternodeManager);
+		//}
+		//catch (final IOException x)
+		{
+		//	throw new RuntimeException(x);
 		}
 	}
 
@@ -564,7 +574,7 @@ public class WalletApplication extends Application
 
 	public static void scheduleStartBlockchainService(final Context context)
 	{
-		final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context));
+		final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context), context.getResources());
 		final long lastUsedAgo = config.getLastUsedAgo();
 
 		// apply some backoff
@@ -586,5 +596,14 @@ public class WalletApplication extends Application
 		// workaround for no inexact set() before KitKat
 		final long now = System.currentTimeMillis();
 		alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, now + alarmInterval, AlarmManager.INTERVAL_DAY, alarmIntent);
+	}
+
+	//dash Specific
+	public void updateDashMode()
+	{
+		org.bitcoinj.core.Context context = wallet.getContext();
+
+		context.setAllowInstantXinLiteMode(config.getInstantXEnabled());
+		context.setLiteMode(config.getLiteMode());
 	}
 }

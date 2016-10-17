@@ -179,7 +179,7 @@
 	<string name="about_title">על אודות</string>
 	<string name="about_license_title">רישיון</string>
 
-	<string name="about_credits_bitcoinj_title">darkcoinj זו משתמשת בdarkcoinj %s</string>
+	<string name="about_credits_bitcoinj_title">dashj זו משתמשת בdashj %s</string>
 	<string name="about_credits_zxing_title">אפליקציה זו משתמש ב\'zxing\'</string>
 	<string name="about_credits_icon_title">אפליקציה זו משתמשת בסמליל של \'bitboy\'</string>
 	<string name="about_community_googleplus_title">קהילת גוגל+</string>

@@ -4,7 +4,7 @@
 <b>ZNAČAJKE</b>
 
 • Bez registracije, web servis ili cloud potreban! Ovaj novčanik je de-centraliziran i klijent prema klijentu.
-• Prikaži Bitcoin iznos u BTC, mBTC i uBTC.
+• Prikaži Bitcoin iznos u DASH, mDASH i uDASH.
 • Pretvorba u ili iz nacionalnih valuta.
 • Slanje i primanje Bitcoina s NFC, QR kodom ili Bitcoin URL-om.
 • Adresar za često korištene Bitcoin adrese.
@@ -19,16 +19,16 @@ Bitcoin Wallet je <b>javno dostupan kod</b> i <b>besplatna aplikacija</b>. Licen
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Naš izvorni kod je dostušan na GitHub-u:
-https://github.com/schildbach/bitcoin-wallet
+https://github.com/HashEngineering/dash-wallet
 
 Sve transakcije se provode preko Transifex-a:
-https://www.transifex.com/projects/p/bitcoin-wallet/
+https://www.transifex.com/dash/dash-wallet/
 
 
 <b>IZJAVE</b>
 
-• Mnoge  mobilne aplikacije temelje svoj kod na Bitcoin Wallet. Primjer: blockchain.info, Hive i KnC.
-• Preporučeni pokretni novčanik od https://bitcoin.org
+• Mnoge  mobilne aplikacije temelje svoj kod na Bitcoin Wallet. Primjer: blockchain.info i BTCX.
+• Preporučeni pokretni novčanik od https://dash.org
 • Preporučava BitPay.
 
 

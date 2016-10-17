@@ -1,28 +1,16 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-  <string name="help_wallet">
-<![CDATA[
-		<p>
-			O canto superior esquerdo da tela exibe o seu saldo da sua carteira.
-			Toque para ver as listas das moedas nacionais, e toque em uma delas para selecioná-la como padrão.
-		</p>
-		<p>
-			O código QR à direita contém o seu endereço Dash e pode ser usado para ser lido por outro dispositivo.
-			Toque no código QR para ampliá-lo.
-		</p>
-		<p>
-			A parte inferior da tela é preenchida com sua lista de transações, que está vazia no início.
-			Transações pendentes são exibidas na cor cinza até que sejam confirmadas.
-			Toque em uma transação para adicionar o endereço de remetentes ou destinatários para o livro de endereços.
-			Deslize para a esquerda ou direita para aplicar filtros na lista.
-		</p>
-		<p>
-			Você pode enviar ou solicitar Dash tocando os botões na barra de ações.
-			Mais opções estão disponíveis no menu de opções.
-		</p>
-	]]>
-	</string>
-  <string name="help_request_coins">
+
+	<string name="help_wallet">A parte superior esquerda da tela exibe o saldo na Dash e selecione uma moeda nacional 
+Toque para ir para a lista das moedas nacionais e toque em uma das moedas para selecioná-la como padrão.
+O código QR no lado direito contém seu endereço Dash e pode ser usado para fazer a varredura.
+Toque no código QR para obter uma versão do mesmo.
+Parte inferior da tela é coberta por sua lista de transações, que está vazia no início.
+Transações pendentes são acinzentado até que sejam confirmadas.
+Toque em uma entrada para adicionar os endereços de remetentes ou destinatários para o catálogo de endereços.
+Você pode enviar ou solicitar moedas através dos botões na barra de ação.
+Mais opções estão disponíveis no menu de opções.</string>
+	<string name="help_request_coins">
 <![CDATA[
 		<p>
 			Usando essa tela, você consegue solicitar Dash para outra pessoa (que também já tenha instalado uma carteira Dash).
@@ -41,7 +29,7 @@
 		</p>
 	]]>
 	</string>
-  <string name="help_send_coins">
+	<string name="help_send_coins">
 <![CDATA[
 		<p>
 			Você iniciou o processo de envio de moedas.
@@ -71,7 +59,7 @@
 		</p>
 	]]>
 	</string>
-  <string name="help_safety">
+	<string name="help_safety">
 <![CDATA[
 		<p>
 			<b>Notas importantes sobre segurança:</b>
@@ -105,4 +93,5 @@
 		</p>
 	]]>
 	</string>
+
 </resources>

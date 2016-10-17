@@ -204,7 +204,7 @@
   <string name="about_copyright_title">Πνευματικά δικαιώματα</string>
   <string name="about_license_title">Άδεια</string>
   <string name="about_source_title">Πηγαίος κώδικας</string>
-  <string name="about_credits_bitcoinj_title">Αυτή η εφαρμογή χρησιμοποιεί \'darkcoinj\'</string>
+  <string name="about_credits_bitcoinj_title">Αυτή η εφαρμογή χρησιμοποιεί \'dashj\'</string>
   <string name="about_credits_zxing_title">Αυτή η εφαρμογή χρησιμοποιεί\'zxing\'</string>
   <string name="about_credits_icon_title">Η εφαρμογή αυτή χρησιμοποιεί ένα εικονίδιο από τη \'bitboy\'</string>
   <string name="about_community_googleplus_title">Google+ κοινότητα</string>

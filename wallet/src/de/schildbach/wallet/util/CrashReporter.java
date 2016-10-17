@@ -34,16 +34,17 @@ import java.util.Set;
 
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.core.Wallet;
+import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import android.app.ActivityManager;
+import android.app.admin.DevicePolicyManager;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
-import android.os.Build;
 
 import com.google.common.base.Charsets;
 
@@ -137,6 +138,7 @@ public class CrashReporter
 		final Resources res = context.getResources();
 		final android.content.res.Configuration config = res.getConfiguration();
 		final ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+		final DevicePolicyManager devicePolicyManager = (DevicePolicyManager) context.getSystemService(Context.DEVICE_POLICY_SERVICE);
 
 		report.append("Device Model: " + android.os.Build.MODEL + "\n");
 		report.append("Android Version: " + android.os.Build.VERSION.RELEASE + "\n");
@@ -157,8 +159,9 @@ public class CrashReporter
 		report.append("Screen Layout: size " + (config.screenLayout & android.content.res.Configuration.SCREENLAYOUT_SIZE_MASK) + " long "
 				+ (config.screenLayout & android.content.res.Configuration.SCREENLAYOUT_LONG_MASK) + "\n");
 		report.append("Display Metrics: " + res.getDisplayMetrics() + "\n");
-		report.append("Memory Class: " + activityManager.getMemoryClass()
-				+ (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB ? "/" + largeMemoryClass(activityManager) : "") + "\n");
+		report.append("Memory Class: " + activityManager.getMemoryClass() + "/" + largeMemoryClass(activityManager) + "\n");
+		report.append("Storage Encryption Status: " + devicePolicyManager.getStorageEncryptionStatus() + "\n");
+		report.append("Bluetooth MAC: " + bluetoothMac() + "\n");
 	}
 
 	private static int largeMemoryClass(final ActivityManager activityManager)
@@ -170,6 +173,21 @@ public class CrashReporter
 		catch (final Exception x)
 		{
 			throw new RuntimeException(x);
+		}
+	}
+
+	private static String bluetoothMac()
+	{
+		try
+		{
+			final BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+			if (adapter == null)
+				return null;
+			return adapter.getAddress();
+		}
+		catch (final Exception x)
+		{
+			return x.getMessage();
 		}
 	}
 
@@ -215,7 +233,7 @@ public class CrashReporter
 		report.append("Network: " + Constants.NETWORK_PARAMETERS.getId() + "\n");
 		final Wallet wallet = application.getWallet();
 		report.append("Encrypted: " + wallet.isEncrypted() + "\n");
-		report.append("Keychain size: " + wallet.getKeychainSize() + "\n");
+		report.append("Keychain size: " + wallet.getKeyChainGroupSize() + "\n");
 
 		final Set<Transaction> transactions = wallet.getTransactions(true);
 		int numInputs = 0;
@@ -256,7 +274,7 @@ public class CrashReporter
 			report.append("  - ");
 
 		final Formatter formatter = new Formatter(report);
-		formatter.format("%tF %tT %8d  %s\n", file.lastModified(), file.lastModified(), file.length(), file.getName());
+		formatter.format(Locale.US, "%tF %tT %8d  %s\n", file.lastModified(), file.lastModified(), file.length(), file.getName());
 		formatter.close();
 
 		if (file.isDirectory())

@@ -1,22 +1,36 @@
-Miej swoje Dashy zawsze w swojej kieszeni! Zapłacisz skanując kod QR. Jako sprzedawca odbierzesz płatności niezawodnie i natychmiastowo. Dash Wallet jest pierwszą aplikacją Dashową na telefony i niezaprzeczalnie najbezpieczniejszą.
+<b>Miej swoje Dash zawsze przy sobie, w portfelu!</b> Płacisz błyskawicznie skanując kody QR. Jako sprzedawca odbierzesz Dash szybko i bezpiecznie. Dash Wallet jest pierwszą mobilną aplikacją i prawdopodobnie również najbardziej bezpieczną!
 
-WŁAŚCIWOŚCI:
 
-• Brak konieczności rejestracji, serwisu online lub chmury! Ten portfel używa zdecentralizowanej sieci peer-to-peer.
-• Wyświetl ilość kwotę w DASH i mDASH.
-• Zamiana z i na waluty narodowe
-• Wysyłąnie i odbieranie Dash za pomocą NFC, kodów QR czy adresów Dash URL.
-• Książka adresowa dla regularnie używanych adresów Dash.
-• Gdy jesteś offline, wciąż możesz zapłacić przy użyciu Bluetooth.
-• System powiadomień dla przychodzących transakcji.
-• Widget aplikacji dla stanu konta.
 
-Dowiedz się więcej o Dash
-http://darkcoin.io
+<b>FUNKCJE</b>
 
-Jeśli chcesz przyczynić się do rozwoju Dash Wallet to projekt znajduje się pod adresem
-https://github.com/HashEngineering/darkcoin-wallet
+• Niewymagana rejestracja! Ten portfel bazuje na technologii peer to peer oraz jest w pełni zdecentralizowany.
+• Możliwość wyświetlania ilości Dash w formie: DASH, mDASH oraz µDASH.
+• Konwersja do lokalnej waluty.
+• Wysyłanie i odbieranie Dash przez NFC, kody QR oraz Dash URLs.
+• Książka adresowa do przechowywania często używanych adresów Dash.
+• Jeśli nie masz dostępu do sieci, nadal możesz płatności korzystając z Bluetooth.
+• Powiadomienia systemowe o transakcjach przychodzących.
+• Wymiana portfeli papierowych (np. tych używanych jako cold storage).
+• Widget wyświetlający aktualne saldo.
 
-Licencja: GPLv3
-Używasz na własne ryzyko!
-http://www.gnu.org/licenses/gpl-3.0.en.html
+
+<b>WKŁAD</b>
+
+Dash Wallet bazuje na <b>open source</b> oraz <b>free software</b>. Licencja: GPLv3
+https://www.gnu.org/licenses/gpl-3.0.en.html
+
+Kod źródłowy dostępny na GitHub:
+https://github.com/HashEngineering/dash-wallet
+
+Do zarządzania tłumaczeniami wykorzystano portal Transifex:
+https://www.transifex.com/dash/dash-wallet/
+
+
+<b>REFERENCJE</b>
+
+• Portfel rekomendowany przez https://dash.org
+
+
+
+<i>Używasz na własne ryzyko!<i>

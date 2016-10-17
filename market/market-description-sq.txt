@@ -4,7 +4,7 @@
 <b>VEÇORIT</b>
 
 • Nuk kërkohet regjistrim, ueb shërbim apo cloud! Kjo kulet është e de-centralizuar dhe 'peer to peer'.
-• Shfaq shumën e Bitcoins në BTC, mBTC dhe µBTC.
+• Shfaq shumën e Bitcoins në DASH, mDASH dhe µDASH.
 • Konvertimi nga monedhat nacionale.
 • Dërgimi dhe pranimi i Bitcoin-ave me anë të NFC, QR kodeve ose Bircoin URL-ve.
 • Libri i adresave të cilat i përdorni rregullisht për monedha.
@@ -20,16 +20,16 @@ Bitcoin Wallet është <b>kod i hapur</b> dhe <b>softuer i lirë</b>. Licenca: G
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Kodi jonë burimor është i hapur në GitHub:
-https://github.com/schildbach/bitcoin-wallet
+https://github.com/HashEngineering/dash-wallet
 
 Të gjitha përkthimet menagjohen nga Transifex:
-https://www.transifex.com/projects/p/bitcoin-wallet/
+https://www.transifex.com/dash/dash-wallet/
 
 
 <b>DЁSHMIT</b>
 
-• Shumë kuleta mobile bazohen ne kodin e Bitcoin Wallet. Shembuj: blockchain.info, Hive dhe KnC.
-• Kulet mobile e rekomanduar nga https://bitcoin.org
+• Shumë kuleta mobile bazohen ne kodin e Bitcoin Wallet. Shembuj: blockchain.info dhe BTCX.
+• Kulet mobile e rekomanduar nga https://dash.org
 • Rekomanduar nga BitPay.
 
 

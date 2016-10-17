@@ -4,22 +4,22 @@
 	<string name="help_wallet">
 <![CDATA[
 		<p>
-			The upper left part of the screen displays your balance in Dash and one selected national currency.
+			The upper left right of the screen displays your balance in Dash and one selected national currency.
 			Tap to go to the list of national currencies, and tap on one of the currencies to select it as default.
 		</p>
 		<p>
-			The QR code on the right contains your Dash address and can be used for scanning by another party.
+			The QR code that contains your Dash address is accessed from the navigation menu (top left) and can be used for scanning by another party.
 			Tap on the QR code to get a larger version of it.
 		</p>
 		<p>
 			The bottom of the screen is covered by your transactions list, which is empty at the beginning.
 			Pending transactions are greyed out until they are confirmed.
-			Tap on one entry to add the senders or receivers address to the address book.
-			Swipe left or right to apply filters to the list.
+			Tap on one entry to see details or add the senders or receivers address to the address book.
+			The address book is accessed from the navigation menu (top left).
 		</p>
 		<p>
 			You can send or request coins by tapping the buttons in the action bar.
-			More options are available in the options menu.
+			More options are available in the navigation (top left) and options menus.
 		</p>
 	]]>
 	</string>
@@ -38,7 +38,7 @@
 		</p>
 		<p>
 			Either way, the other person will be presented a dialog for sending coins with all fields pre-populated.
-			If she accepts, all she needs to do is sending the payment.
+			If she accepts, all she needs to do is send the payment.
 		</p>
 	]]>
 	</string>
@@ -51,13 +51,14 @@
 		<p>
 			First, you enter the Dash address to pay to.
 			The address will autocomplete from known entries in your address book.
-			You can also scan QR codes with Dash addresses or Dash requests by pressing the QR button in the action bar.
+			You can also scan QR codes with Dash addresses or Dash requests by pressing the QR button.
 		</p>
 		<p>
 			Next, you can see how many Dash you can spend at the moment.
 			Any difference to the balance from the main screen is still unconfirmed and can thus not yet be spent.
 		</p>
 		<p>
+			Tap InstantSend if you intend to make an instant payment.  The fee is higher (0.01 DASH).
 			Last, you enter the amount to pay.
 		</p>
 		<p>
@@ -85,6 +86,7 @@
 			This means you need to <b>back up your wallet</b>!
 			Use the in-app backup facility for this, rather than a third party backup app.
 			Keep your backup safe and remember the password.
+			This is an HD wallet.  Only one backup is required.
 		</p>
 		<p>
 			<b>Before uninstalling</b> (or clearing app data/wiping your device), <b>transfer your Dash to another wallet</b>.

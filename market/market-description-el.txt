@@ -3,7 +3,7 @@
 <b>ΧΑΡΑΚΤΗΡΙΣΤΙΚΑ</b>
 
 • Χωρίς ανάγκη εγγραφής, διαδικτυακής υπηρεσίας ή νέφος απαραίτητο! Αυτό το πορτοφόλι είναι αποκεντρωμένης λειτουργίας και peer to peer.
-• Απεικόνιση του ποσού Bitcoin BTC, mBTC και µBTC.
+• Απεικόνιση του ποσού Bitcoin DASH, mDASH και µDASH.
 • Μετατροπή προς και από εθνικά νομίσματα.
 • Αποστολή και παραλαβή Bitcoin μέσω NFC, κωδικών QR ή Bitcoin URL.
 • Διευθυνσιολόγιο για συχνά χρησιμοποιούμενες διευθύνσεις Bitcoin.
@@ -19,11 +19,10 @@
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Ο κώδικάς μας είναι διαθέσιμος στο GitHub.
-https://github.com/schildbach/bitcoin-wallet
->>>>>>> upstream/master
+https://github.com/HashEngineering/dash-wallet
 
 Διαχείρηση όλων των μεταφράσεων μέσω του Transifex:
-https://www.transifex.com/projects/p/bitcoin-wallet/
+https://www.transifex.com/dash/dash-wallet/
 
 
 <b>ΣΥΣΤΑΣΕΙΣ</b>

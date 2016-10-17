@@ -22,13 +22,13 @@ Il nostro codice sorgente è disponibile su GitHub
 https://github.com/HashEngineering/darkcoin-wallet
 
 Tutte le traduzioni sono gestite attraverso Transifex:
-https://www.transifex.com/projects/p/bitcoin-wallet/
+https://www.transifex.com/dash/dash-wallet/
 
 
 <b>TESTIMONIANZE</b>
 
-• Molti portafogli mobile basano il loro codice basato su Dash Wallet. Esempi: blockchain.info, Hive e KnC.
-• Portafoglio mobile raccomandato da https://bitcoin.org
+• Molti portafogli mobile basano il loro codice basato su Bitcoin Wallet. Esempi: blockchain.info e BTCX.
+• Portafoglio mobile raccomandato da https://dash.org
 • Raccomandato da BitPay.
 
 

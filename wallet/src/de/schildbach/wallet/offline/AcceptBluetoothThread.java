@@ -68,6 +68,8 @@ public abstract class AcceptBluetoothThread extends Thread
 		@Override
 		public void run()
 		{
+			org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+
 			while (running.get())
 			{
 				BluetoothSocket socket = null;
@@ -166,6 +168,8 @@ public abstract class AcceptBluetoothThread extends Thread
 		@Override
 		public void run()
 		{
+			org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+
 			while (running.get())
 			{
 				BluetoothSocket socket = null;

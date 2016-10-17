@@ -22,13 +22,12 @@ import java.util.Set;
 import javax.annotation.Nullable;
 
 import android.app.Activity;
-import android.app.Fragment;
-import android.app.LoaderManager;
-import android.app.LoaderManager.LoaderCallbacks;
-import android.content.Loader;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.text.Html;
 import android.text.SpannableStringBuilder;
 import android.view.LayoutInflater;
@@ -150,7 +149,7 @@ public final class WalletDisclaimerFragment extends Fragment implements OnShared
 		fragment.setVisibility(text.length() > 0 ? View.VISIBLE : View.GONE);
 	}
 
-	private final LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>()
+	private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>()
 	{
 		@Override
 		public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args)

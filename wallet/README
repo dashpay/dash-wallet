@@ -47,13 +47,11 @@ is world readable/writeable. The goal is to be able to debug easily.
 
 You can probably skip some steps, especially if you built Android apps before.
 
-You'll need git, a Java SDK 6 (or later) and Gradle 2.4 (or later) for this. I'll assume Ubuntu Linux
-for the package installs.
+You'll need git, a Java SDK 6 (or later) and Gradle 2.10 (or later) for this. I'll assume Ubuntu Xenial Linux
+for the package installs, which comes with slightly more recent versions.
 
 	# first time only
-	sudo add-apt-repository ppa:cwchien/gradle
-	sudo apt-get update
-	sudo apt-get install git gradle openjdk-6-jdk libstdc++6:i386
+	sudo apt install git gradle openjdk-8-jdk libstdc++6:i386 zlib1g:i386
 
 Get the Android SDK (Tools only) from
 
@@ -66,7 +64,7 @@ and switch to it. Use
 	tools/android update sdk --no-ui --force --filter tools
 
 	# fetch required android dependencies
-	tools/android update sdk --no-ui --force --filter build-tools-22.0.1,android-15,android-16,extra-android-m2repository
+	tools/android update sdk --no-ui --force --filter build-tools-24,android-15,android-23,extra-android-m2repository
 
 to download the necessary API level.
 
@@ -74,17 +72,17 @@ Finally, you can build Dash Wallet and sign it with your development key. Again 
 use
 
 	# first time only
-	git clone -b master https://github.com/HashEngineering/darkcoin-wallet.git bitcoin-wallet
+	git clone -b master https://github.com/HashEngineering/dash-wallet.git dash-wallet
 
 	# each time
-	cd bitcoin-wallet
+	cd dash-wallet
 	git pull
 	gradle clean test build
 
 To install the app on your Android device, use
 
 	# first time only
-	sudo apt-get install android-tools-adb
+	sudo apt install android-tools-adb
 
 	# each time
 	adb install wallet/build/outputs/apk/bitcoin-wallet-debug.apk
@@ -119,14 +117,14 @@ TRANSLATIONS
 
 The source language is English. Translations for all languages except German happen on Transifex:
 
-	https://www.transifex.com/projects/p/bitcoin-wallet/
+	https://www.transifex.com/dash/dash-wallet/
 
 The english resources are pushed to Transifex. Changes are pulled and committed to the git
 repository from time to time. It can be done by manually downloading the files, but using the "tx"
 command line client is more convenient:
 
 	# first time only
-	sudo apt-get install transifex-client
+	sudo apt install transifex-client
 
 If strings resources are added or changed, the source language files need to be pushed to
 Transifex. This step will probably only be executed by the maintainer of the project, as special
@@ -197,4 +195,4 @@ SWEEPING WALLETS
 For sweeping wallets, Dash Wallet uses an API by biteasy to query for unspent transaction
 outputs:
 
-	https://api.biteasy.com/blockchain/v1/unspent-outputs
+	https://api.biteasy.com/v2/btc/mainnet/outputs

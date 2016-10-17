@@ -242,7 +242,7 @@
   <string name="about_copyright_title">Copyright</string>
   <string name="about_license_title">Licence</string>
   <string name="about_source_title">Zdrojový kód</string>
-  <string name="about_credits_bitcoinj_title">Aplikace používá \'darkcoinj\'</string>
+  <string name="about_credits_bitcoinj_title">Aplikace používá \'dashj\'</string>
   <string name="about_credits_zxing_title">Aplikace používá \'zxing\'</string>
   <string name="about_credits_icon_title">Aplikace používá ikonu od \'bitboy\'</string>
   <string name="about_community_googleplus_title">Komunita Google+</string>

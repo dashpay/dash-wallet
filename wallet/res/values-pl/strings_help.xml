@@ -4,28 +4,17 @@
 	<string name="help_wallet">
 <![CDATA[
 		<p>
-			Po lewej górnej stronie ekranu wyświetlany jest Twój aktualnie wybrany adres Dash, który inne osoby muszą znać żeby wysłać Ci Dash.
-			Naciśnij żeby, go zmienić.
+			W lewej górnej części ekranu wyświetlane jest saldo Dash oraz wartość w wybranej walucie narodowej.
+			Lokalną walutę możesz wybrać w ustawieniach aplikacji.
 		</p>
 		<p>
-			Kod QR po prawej zawiera Twój adres Dash i może zeskanowany przez inną osobę.
-			Naciśnij na kod QR żeby otrzymać jego większą wersje.
+			Kod QR w menu bocznym zawiera twój adres Dash, i może być zeskanowany przez innych odbiorców.
+			Kliknij na kod QR aby go powiększyć.
 		</p>
 		<p>
-			Na środku ekranu wyświetlany jest stan Twojego konta.
-			Wartość Twojego portfela pokazana jest też w jednej wybranej lokalnej walucie.
-			Naciśnij na stan konta żeby wyświetliła się lista wszystkich lokalnych walut. Naciśnij na jedną z walut, żeby wybrać ją jako domyślną.
-		</p>
-		<p>
-			Dół ekranu jest pokryty listą twoich transakcji, która na początku jest pusta.
-			Transakcje w toku są dotąd podświetlone na szaro póki nie zostaną potwierdzone.
-			Naciśnij na wejście żeby dodać adres wysyłającego lub odbiorcy do książki adresowej.
-			Przeciągając po ekranie palcem na lewo lub prawo możesz zaaplikować filtry na listę.
-		</p>
-		<p>
-			Możesz wysłać lub zapytać o monety naciskając guziki na listwie menu.
-			Więcej opcji jest dostępnych w menu opcji.
-		</p>
+			W centralnej części aplikacji wyświetlana jest historia transakcji. Na początku jest ona pusta.
+			Oczekujące transakcje są zaznaczane na szaro, aż nie zostaną zatwierdzone.
+			Kliknij na transakcję, aby dodać adres Dash do książki adresowej.		</p>
 	]]>
 	</string>
 	<string name="help_request_coins">

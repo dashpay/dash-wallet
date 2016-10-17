@@ -15,7 +15,7 @@
 http://darkcoin.io
 
 Ако сакаш да придонесеш за Биткоин Паричник, проектот е лоциран на
-https://github.com/schildbach/Dash-wallet
+https://github.com/HashEngineering/dash-wallet
 
 License: GPLv3
 Користи на сопствен ризик!

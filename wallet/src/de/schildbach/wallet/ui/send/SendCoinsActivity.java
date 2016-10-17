@@ -19,10 +19,19 @@ package de.schildbach.wallet.ui.send;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 
+import android.support.design.widget.FloatingActionButton;
+import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+
+import javax.annotation.Nullable;
+
+import org.bitcoinj.core.Coin;
+
+import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.HelpDialogFragment;
@@ -34,12 +43,28 @@ import hashengineering.darkcoin.wallet.R;
 public final class SendCoinsActivity extends AbstractBindServiceActivity
 {
 	public static final String INTENT_EXTRA_PAYMENT_INTENT = "payment_intent";
+	public static final String INTENT_EXTRA_FEE_CATEGORY = "fee_category";
 
-	public static void start(final Context context, PaymentIntent paymentIntent)
+	public static void start(final Context context, final PaymentIntent paymentIntent, final @Nullable FeeCategory feeCategory, final int intentFlags)
 	{
 		final Intent intent = new Intent(context, SendCoinsActivity.class);
 		intent.putExtra(INTENT_EXTRA_PAYMENT_INTENT, paymentIntent);
+		if (feeCategory != null)
+			intent.putExtra(INTENT_EXTRA_FEE_CATEGORY, feeCategory);
+		if (intentFlags != 0)
+			intent.setFlags(intentFlags);
 		context.startActivity(intent);
+	}
+
+	public static void start(final Context context, final PaymentIntent paymentIntent)
+	{
+		start(context, paymentIntent, null, 0);
+	}
+
+	public static void startDonate(final Context context, final Coin amount, final @Nullable FeeCategory feeCategory, final int intentFlags)
+	{
+		start(context, PaymentIntent.from(Constants.DONATION_ADDRESS, context.getString(R.string.wallet_donate_address_label), amount), feeCategory,
+				intentFlags);
 	}
 
 	@Override
@@ -70,7 +95,7 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity
 				return true;
 
 			case R.id.send_coins_options_help:
-				HelpDialogFragment.page(getFragmentManager(), R.string.help_send_coins);
+				HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_send_coins);
 				return true;
 		}
 

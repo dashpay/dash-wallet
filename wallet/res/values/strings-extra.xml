@@ -2,13 +2,16 @@
 <resources>
 
 
-	<string name="send_coins_fragment_instantx_enable">Use InstantX</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Sent InstantX transaction lock request</string>
-	<string name="transaction_row_message_own_instantx_locked">Sent InstantX transaction (locked)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">InstantX Lock Request</string>
-	<string name="transaction_row_message_received_instantx_locked">InstantX Locked</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">Unconfirmed InstantX</string>
-	<string name="transaction_row_message_received_instantx_locked2">Locked InstantX</string>
+	<string name="send_coins_fragment_instantx_enable">Use InstantSend</string>
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">This InstantSend payment has not been transmitted yet.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">This InstantSend payment is awaiting verification by the Dash Network.</string>
+	<string name="transaction_row_message_own_instantx_locked">Sent InstantSend transaction (locked)</string>
+	<string name="transaction_row_message_received_instantx_lock_request">This InstantSend payment is awaiting verification by the Dash Network.</string>
+	<string name="transaction_row_message_received_instantx_locked">This InstantSend payment has been verified by the Dash Network.</string>
+	<string name="transaction_row_message_received_unconfirmed_instantx">Unconfirmed InstantSend</string>
+	<string name="transaction_row_message_received_instantx_locked2">Locked InstantSend</string>
 
 	<string name="wallet_options_disconnect">Disconnect</string>
+
+	<string name="network_monitor_masternodes_title">Masternodes</string>
 </resources>

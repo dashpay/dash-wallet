@@ -1,28 +1,28 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-  <string name="help_wallet">
+
+	<string name="help_wallet">
 <![CDATA[
 		<p>
-			La parte superior izquierda de la pantalla muestra su balance en Dash y en una moneda nacional que elija.
-			Toque para ir a la lista de monedas nacionales, y toque en una de las monedas para seleccionarla como predeterminada.
+			La parte superior de la pantalla despliega tu balance en Dash y una divisa nacional seleccionada..
+			Haz tap para ir a la lista de divisas nacionales, y otro tap en la divisa que quieres como predeterminada..
 		</p>
 		<p>
-			El código QR en la derecha contiene su dirección de Dash y se puede usar para ser escaneada por alguien más.
-			Toque en el código QR para ver una versión más grande.
+			El código QR esta a la derecha de tu dirección de Dash y puede ser usado para escanear alguna otra dirección.
+			Tap en el código QR para obtener una versión de mayor tamaño.
 		</p>
 		<p>
-			La parte inferior de la pantalla está cubierta por la lista de sus transacciones, la cual está vacía al principio.
-			Las transacciones pendientes están en gris hasta que sean confirmadas.
-			Toque en una entrada para añadir las direcciones de los remitentes o destinatarios a su lista de contactos.
-			Deslice hacia la derecha o izquierda para aplicar filtros a la lista.
+			La parte inferior de la panalla esta cubiera por una lista de transacciones, la cual esta vacia al inicio.
+			Las transacciones pendientes estan con gris hasta que esten confirmadas.
+			Tap en la entrada para agregar destinatarios o recibir direcciones a la libreta de direcciones.
 		</p>
 		<p>
-			Puede enviar o solicitar Dash al tocar los botones en la barra de acción.
-			Más opciones están disponibles en el menú de opciones.
+			Puedes enviar o solicitar monedas haciendo tap en los botones de la barra de acciones.
+			Existen más opciones en el menú de opciones.
 		</p>
 	]]>
 	</string>
-  <string name="help_request_coins">
+	<string name="help_request_coins">
 <![CDATA[
 		<p>
 			Mediante este cuadro de diálogo puedes solicitar Dash de otra persona (que debería tener instalada Dash Wallet).
@@ -41,7 +41,7 @@
 		</p>
 	]]>
 	</string>
-  <string name="help_send_coins">
+	<string name="help_send_coins">
 <![CDATA[
 		<p>
 			Has iniciado el proceso de enviar Dash.
@@ -71,7 +71,7 @@
 		</p>
 	]]>
 	</string>
-  <string name="help_safety">
+	<string name="help_safety">
 <![CDATA[
 		<p>
 			<b>Algunos comentarios sobre la seguridad de tus Dash:</b>
@@ -100,4 +100,5 @@
 		</p>
 	]]>
 	</string>
+
 </resources>

@@ -31,22 +31,23 @@ import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Transaction.Purpose;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
-import org.bitcoinj.core.Wallet;
 import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import android.app.Activity;
-import android.app.Fragment;
-import android.app.LoaderManager;
-import android.app.LoaderManager.LoaderCallbacks;
-import android.content.AsyncTaskLoader;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.app.LoaderManager.LoaderCallbacks;
+import android.app.admin.DevicePolicyManager;
+import android.support.v4.content.AsyncTaskLoader;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.Loader;
+import android.support.v4.content.Loader;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.database.ContentObserver;
@@ -54,8 +55,10 @@ import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.provider.Settings;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -77,6 +80,7 @@ import de.schildbach.wallet.AddressBookProvider;
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.ui.TransactionsAdapter.Warning;
 import de.schildbach.wallet.ui.send.RaiseFeeDialogFragment;
 import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.Qr;
@@ -86,7 +90,7 @@ import de.schildbach.wallet.util.WalletUtils;
 /**
  * @author Andreas Schildbach
  */
-public class WalletTransactionsFragment extends Fragment implements LoaderCallbacks<List<Transaction>>, TransactionsAdapter.OnClickListener,
+public class WalletTransactionsFragment extends Fragment implements LoaderManager.LoaderCallbacks<List<Transaction>>, TransactionsAdapter.OnClickListener,
 		OnSharedPreferenceChangeListener
 {
 	public enum Direction
@@ -100,9 +104,10 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 	private Wallet wallet;
 	private ContentResolver resolver;
 	private LoaderManager loaderManager;
+	private DevicePolicyManager devicePolicyManager;
 
-	private ViewAnimator viewGroup;
-	private TextView emptyView;
+//	private ViewAnimator viewGroup;
+//	private TextView emptyView;
 	private RecyclerView recyclerView;
 	private TransactionsAdapter adapter;
 
@@ -140,6 +145,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 		this.wallet = application.getWallet();
 		this.resolver = activity.getContentResolver();
 		this.loaderManager = getLoaderManager();
+		this.devicePolicyManager = (DevicePolicyManager) application.getSystemService(Context.DEVICE_POLICY_SERVICE);
 	}
 
 	@Override
@@ -160,9 +166,9 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 	{
 		final View view = inflater.inflate(R.layout.wallet_transactions_fragment, container, false);
 
-		viewGroup = (ViewAnimator) view.findViewById(R.id.wallet_transactions_group);
+//		viewGroup = (ViewAnimator) view.findViewById(R.id.wallet_transactions_group);
 
-		emptyView = (TextView) view.findViewById(R.id.wallet_transactions_empty);
+//		emptyView = (TextView) view.findViewById(R.id.wallet_transactions_empty);
 
 		recyclerView = (RecyclerView) view.findViewById(R.id.wallet_transactions_list);
 		recyclerView.setHasFixedSize(true);
@@ -201,7 +207,10 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 		args.putSerializable(ARG_DIRECTION, direction);
 		loaderManager.initLoader(ID_TRANSACTION_LOADER, args, this);
 
-		wallet.addEventListener(transactionChangeListener, Threading.SAME_THREAD);
+		wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, transactionChangeListener);
+		wallet.addCoinsSentEventListener(Threading.SAME_THREAD, transactionChangeListener);
+		wallet.addChangeEventListener(Threading.SAME_THREAD, transactionChangeListener);
+		wallet.addTransactionConfidenceEventListener(Threading.SAME_THREAD, transactionChangeListener);
 
 		updateView();
 	}
@@ -209,7 +218,10 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 	@Override
 	public void onPause()
 	{
-		wallet.removeEventListener(transactionChangeListener);
+		wallet.removeTransactionConfidenceEventListener(transactionChangeListener);
+		wallet.removeChangeEventListener(transactionChangeListener);
+		wallet.removeCoinsSentEventListener(transactionChangeListener);
+		wallet.removeCoinsReceivedEventListener(transactionChangeListener);
 		transactionChangeListener.removeCallbacks();
 
 		loaderManager.destroyLoader(ID_TRANSACTION_LOADER);
@@ -278,7 +290,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 		if (!txRotation && txAddress != null)
 		{
 			editAddressMenuItem.setVisible(true);
-			final boolean isAdd = AddressBookProvider.resolveLabel(activity, txAddress.toString()) == null;
+			final boolean isAdd = AddressBookProvider.resolveLabel(activity, txAddress.toBase58()) == null;
 			final boolean isOwn = wallet.isPubKeyHashMine(txAddress.getHash160());
 
 			if (isOwn)
@@ -313,7 +325,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
 					case R.id.wallet_transactions_context_browse:
 						if (!txRotation)
-							startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(Constants.EXPLORE_BASE_URL + "tx/" + tx.getHashAsString())));
+							startActivity(
+									new Intent(Intent.ACTION_VIEW, Uri.withAppendedPath(config.getBlockExplorer(), "tx/" + tx.getHashAsString())));
 						else
 							startActivity(new Intent(Intent.ACTION_VIEW, KEY_ROTATION_URI));
 						return true;
@@ -344,7 +357,16 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 	@Override
 	public void onWarningClick()
 	{
-		((WalletActivity) activity).handleBackupWallet();
+		switch (warning())
+		{
+			case BACKUP:
+				((WalletActivity) activity).handleBackupWallet();
+				break;
+
+			case STORAGE_ENCRYPTION:
+				startActivity(new Intent(Settings.ACTION_SECURITY_SETTINGS));
+				break;
+		}
 	}
 
 	@Override
@@ -362,7 +384,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
 		if (transactions.isEmpty())
 		{
-			viewGroup.setDisplayedChild(1);
+//			viewGroup.setDisplayedChild(1);
 
 			final SpannableStringBuilder emptyText = new SpannableStringBuilder(
 					getString(direction == Direction.SENT ? R.string.wallet_transactions_fragment_empty_text_sent
@@ -370,11 +392,11 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 			emptyText.setSpan(new StyleSpan(Typeface.BOLD), 0, emptyText.length(), SpannableStringBuilder.SPAN_POINT_MARK);
 			if (direction != Direction.SENT)
 				emptyText.append("\n\n").append(getString(R.string.wallet_transactions_fragment_empty_text_howto));
-			emptyView.setText(emptyText);
+//			emptyView.setText(emptyText);
 		}
 		else
 		{
-			viewGroup.setDisplayedChild(2);
+//			viewGroup.setDisplayedChild(2);
 		}
 	}
 
@@ -419,7 +441,9 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 		{
 			super.onStartLoading();
 
-			wallet.addEventListener(transactionAddRemoveListener, Threading.SAME_THREAD);
+			wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, transactionAddRemoveListener);
+			wallet.addCoinsSentEventListener(Threading.SAME_THREAD, transactionAddRemoveListener);
+			wallet.addChangeEventListener(Threading.SAME_THREAD, transactionAddRemoveListener);
 			broadcastManager.registerReceiver(walletChangeReceiver, new IntentFilter(WalletApplication.ACTION_WALLET_REFERENCE_CHANGED));
 			transactionAddRemoveListener.onReorganize(null); // trigger at least one reload
 
@@ -430,7 +454,9 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 		protected void onStopLoading()
 		{
 			broadcastManager.unregisterReceiver(walletChangeReceiver);
-			wallet.removeEventListener(transactionAddRemoveListener);
+			wallet.removeChangeEventListener(transactionAddRemoveListener);
+			wallet.removeCoinsSentEventListener(transactionAddRemoveListener);
+			wallet.removeCoinsReceivedEventListener(transactionAddRemoveListener);
 			transactionAddRemoveListener.removeCallbacks();
 
 			super.onStopLoading();
@@ -440,7 +466,9 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 		protected void onReset()
 		{
 			broadcastManager.unregisterReceiver(walletChangeReceiver);
-			wallet.removeEventListener(transactionAddRemoveListener);
+			wallet.removeChangeEventListener(transactionAddRemoveListener);
+			wallet.removeCoinsSentEventListener(transactionAddRemoveListener);
+			wallet.removeCoinsReceivedEventListener(transactionAddRemoveListener);
 			transactionAddRemoveListener.removeCallbacks();
 
 			super.onReset();
@@ -449,6 +477,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 		@Override
 		public List<Transaction> loadInBackground()
 		{
+			org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+
 			final Set<Transaction> transactions = wallet.getTransactions(true);
 			final List<Transaction> filteredTransactions = new ArrayList<Transaction>(transactions.size());
 
@@ -531,6 +561,17 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 	private void updateView()
 	{
 		adapter.setFormat(config.getFormat());
-		adapter.setShowBackupWarning(config.remindBackup());
+		adapter.setWarning(warning());
+	}
+
+	private Warning warning()
+	{
+		if (config.remindBackup())
+			return Warning.BACKUP;
+		else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
+				&& devicePolicyManager.getStorageEncryptionStatus() != DevicePolicyManager.ENCRYPTION_STATUS_ACTIVE)
+			return Warning.STORAGE_ENCRYPTION;
+		else
+			return null;
 	}
 }

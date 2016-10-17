@@ -150,7 +150,7 @@
 	<string name="report_issue_dialog_mail_intent_chooser">Kirim laporan dgn…</string>
 	<string name="about_title">Mengenai</string>
 	<string name="about_license_title">Lisensi</string>
-	<string name="about_credits_bitcoinj_title">Apl ini menggunakan darkcoinj %s</string>
+	<string name="about_credits_bitcoinj_title">Apl ini menggunakan dashj %s</string>
 	<string name="about_credits_zxing_title">Apl ini menggunakan \'zxing\'</string>
 	<string name="about_credits_icon_title">Apl ini menggunakan ikon oleh \'bitboy\'</string>
 	<string name="about_market_app_title">Halaman Apl Google Play</string>

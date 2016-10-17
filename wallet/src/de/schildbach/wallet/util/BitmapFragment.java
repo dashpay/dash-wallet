@@ -19,13 +19,16 @@ package de.schildbach.wallet.util;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import android.app.Activity;
 import android.app.Dialog;
-import android.app.DialogFragment;
-import android.app.FragmentManager;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.support.v4.app.DialogFragment;
+import android.support.v4.app.FragmentManager;
 import android.text.Html;
 import android.text.Spanned;
 import android.view.View;
@@ -45,6 +48,8 @@ public class BitmapFragment extends DialogFragment
 	private static final String KEY_BITMAP = "bitmap";
 	private static final String KEY_ADDRESS = "address";
 	private static final String KEY_LABEL = "label";
+
+	private static final Logger log = LoggerFactory.getLogger(BitmapFragment.class);
 
 	public static void show(final FragmentManager fm, final Bitmap bitmap)
 	{
@@ -115,6 +120,7 @@ public class BitmapFragment extends DialogFragment
 						intent.setType("text/plain");
 						intent.putExtra(Intent.EXTRA_TEXT, address);
 						startActivity(Intent.createChooser(intent, getString(R.string.bitmap_fragment_share)));
+						log.info("address shared via intent: {}", address);
 					}
 				});
 			}

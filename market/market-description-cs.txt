@@ -23,13 +23,13 @@ Náš zdrojový kód je k dispozici na GitHubu:
 https://github.com/HashEngineering/darkcoin-wallet
 
 Veškeré překlady jsou tvořeny pomocí Transflex.
-https://www.transifex.com/projects/p/bitcoin-wallet/
+https://www.transifex.com/dash/dash-wallet/
 
 
 <b>UZNÁNÍ</b>
 
-• Mnoho mobilních peněženek využívá zdrojový kód Dash Wallet. Například: blockchain.info, Hive a KnC.
-• Doporučená mobilní peněženka stránkou https://bitcoin.org
+• Mnoho mobilních peněženek využívá zdrojový kód Bitcoin Wallet. Například: blockchain.info a BTCX.
+• Doporučená mobilní peněženka stránkou https://dash.org
 • Doporučeno službou BitPay.
 
 

@@ -20,16 +20,17 @@ Dash Wallet <b>açık kaynak</b> ve <b>özgür yazılımdır</b>. Lisans: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Kaynak kodumuz GitHub'da mevcuttur:
-https://github.com/HashEngineering/darkcoin-wallet
+https://github.com/HashEngineering/dash-wallet
 
 Tüm tercümeler Transifex üzerinde yönetilir:
-https://www.transifex.com/projects/p/bitcoin-wallet/
+https://www.transifex.com/dash/dash-wallet/
 
 
 <b>REFERANSLAR</b>
 
-• Birçok mobil cüzdan kodları için Dash Wallet'i temel alırlar. Mesela blockchain.info, Hive ve KnC.
-• https://bitcoin.org tarafından tavsiye edilen mobil cüzdan.
+
+• Birçok mobil cüzdan kodları için Bitcoin Wallet'i temel alırlar. Mesela blockchain.info ve BTCX.
+• https://dash.org tarafından tavsiye edilen mobil cüzdan.
 • BitPay tarafından tavsiye edilir.
 
 

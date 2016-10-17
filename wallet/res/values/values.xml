@@ -5,8 +5,7 @@
 	<string name="symbol_from">←</string>
 	<string name="symbol_internal">⇄</string>
 	<string name="app_name">Dash Wallet</string>
-
-
+	<string name="app_name_short">Dash</string>
 
 	<string-array name="preferences_precision_values">
 		<item>8</item>
@@ -21,6 +20,16 @@
 		<item>@string/preferences_precision_labels_4</item>
 		<item>@string/preferences_precision_labels_2_3</item>
 		<item>@string/preferences_precision_labels_0_6</item>
+	</string-array>
+	<string-array name="preferences_block_explorer_values">
+		<item>http://explorer.dash.org/chain/Dash/</item>
+		<item>http://explorer.darkcoin.qa/</item>
+		<item>https://bitinfocharts.com/darkcoin/</item>
+	</string-array>
+	<string-array name="preferences_block_explorer_labels">
+		<item>Dash Block Explorer (Official)</item>
+		<item>Dash Block Explorer (Mirror)</item>
+		<item>BitinfoCharts</item>
 	</string-array>
 
 </resources>

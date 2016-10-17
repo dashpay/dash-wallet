@@ -20,19 +20,22 @@ package de.schildbach.wallet.ui;
 import javax.annotation.Nullable;
 
 import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Wallet;
+import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.utils.Fiat;
+import org.bitcoinj.wallet.Wallet;
 
 import android.app.Activity;
-import android.app.Fragment;
-import android.app.LoaderManager;
-import android.app.LoaderManager.LoaderCallbacks;
 import android.content.Intent;
-import android.content.Loader;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.text.format.DateUtils;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
@@ -45,11 +48,7 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
 import hashengineering.darkcoin.wallet.R;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Wallet;
-import org.bitcoinj.utils.Fiat;
-
-import javax.annotation.CheckForNull;
+import de.schildbach.wallet.ui.send.SendCoinsActivity;
 
 /**
  * @author Andreas Schildbach
@@ -69,6 +68,7 @@ public final class WalletBalanceFragment extends Fragment
 	private TextView viewProgress;
 
 	private boolean showLocalBalance;
+	private boolean installedFromGooglePlay;
 
 	@Nullable
 	private Coin balance = null;
@@ -76,13 +76,18 @@ public final class WalletBalanceFragment extends Fragment
 	private ExchangeRate exchangeRate = null;
 	@Nullable
 	private BlockchainState blockchainState = null;
+    @Nullable
+    private int masternodeSyncStatus = MasternodeSync.MASTERNODE_SYNC_FINISHED;
 
 	private static final int ID_BALANCE_LOADER = 0;
 	private static final int ID_RATE_LOADER = 1;
 	private static final int ID_BLOCKCHAIN_STATE_LOADER = 2;
+    private static final int ID_MASTERNODE_SYNC_LOADER = 3;
 
 	private static final long BLOCKCHAIN_UPTODATE_THRESHOLD_MS = DateUtils.HOUR_IN_MILLIS;
-	private static final Coin TOO_MUCH_BALANCE_THRESHOLD = Coin.COIN.multiply(350);
+
+	private static final Coin SOME_BALANCE_THRESHOLD = Coin.COIN.divide(20);
+	private static final Coin TOO_MUCH_BALANCE_THRESHOLD = Coin.COIN.multiply(300);
 
 	@Override
 	public void onAttach(final Activity activity)
@@ -96,6 +101,15 @@ public final class WalletBalanceFragment extends Fragment
 		this.loaderManager = getLoaderManager();
 
 		showLocalBalance = getResources().getBoolean(R.bool.show_local_balance);
+		installedFromGooglePlay = "com.android.vending".equals(application.getPackageManager().getInstallerPackageName(application.getPackageName()));
+	}
+
+	@Override
+	public void onCreate(final Bundle savedInstanceState)
+	{
+		setHasOptionsMenu(true);
+
+		super.onCreate(savedInstanceState);
 	}
 
 	@Override
@@ -148,6 +162,7 @@ public final class WalletBalanceFragment extends Fragment
 		loaderManager.initLoader(ID_BALANCE_LOADER, null, balanceLoaderCallbacks);
 		loaderManager.initLoader(ID_RATE_LOADER, null, rateLoaderCallbacks);
 		loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
+        loaderManager.initLoader(ID_MASTERNODE_SYNC_LOADER, null, masternodeSyncLoaderCallbacks);
 
 		updateView();
 	}
@@ -160,6 +175,42 @@ public final class WalletBalanceFragment extends Fragment
 		loaderManager.destroyLoader(ID_BALANCE_LOADER);
 
 		super.onPause();
+	}
+
+	@Override
+	public void onCreateOptionsMenu(final Menu menu, final MenuInflater inflater)
+	{
+		inflater.inflate(R.menu.wallet_balance_fragment_options, menu);
+
+		super.onCreateOptionsMenu(menu, inflater);
+	}
+
+	@Override
+	public void onPrepareOptionsMenu(final Menu menu)
+	{
+		final boolean hasSomeBalance = balance != null && !balance.isLessThan(SOME_BALANCE_THRESHOLD);
+		menu.findItem(R.id.wallet_balance_options_donate)
+				.setVisible(Constants.DONATION_ADDRESS != null && (!installedFromGooglePlay || hasSomeBalance));
+
+		super.onPrepareOptionsMenu(menu);
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(final MenuItem item)
+	{
+		switch (item.getItemId())
+		{
+			case R.id.wallet_balance_options_donate:
+				handleDonate();
+				return true;
+		}
+
+		return super.onOptionsItemSelected(item);
+	}
+
+	private void handleDonate()
+	{
+		SendCoinsActivity.startDonate(activity, null, null, 0);
 	}
 
 	private void updateView()
@@ -245,6 +296,13 @@ public final class WalletBalanceFragment extends Fragment
 			}
 
 			viewProgress.setVisibility(View.GONE);
+            //TODO:  Dash move to a better place
+			if(masternodeSyncStatus != MasternodeSync.MASTERNODE_SYNC_FINISHED)
+			{
+				viewProgress.setVisibility(View.VISIBLE);
+				viewProgress.setText(wallet.getContext().masternodeSync.getSyncStatus());
+                viewBalance.setVisibility(View.INVISIBLE);
+			}
 		}
 		else
 		{
@@ -253,7 +311,7 @@ public final class WalletBalanceFragment extends Fragment
 		}
 	}
 
-	private final LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>()
+	private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>()
 	{
 		@Override
 		public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args)
@@ -275,7 +333,7 @@ public final class WalletBalanceFragment extends Fragment
 		}
 	};
 
-	private final LoaderCallbacks<Coin> balanceLoaderCallbacks = new LoaderManager.LoaderCallbacks<Coin>()
+	private final LoaderManager.LoaderCallbacks<Coin> balanceLoaderCallbacks = new LoaderManager.LoaderCallbacks<Coin>()
 	{
 		@Override
 		public Loader<Coin> onCreateLoader(final int id, final Bundle args)
@@ -288,6 +346,7 @@ public final class WalletBalanceFragment extends Fragment
 		{
 			WalletBalanceFragment.this.balance = balance;
 
+			activity.invalidateOptionsMenu();
 			updateView();
 		}
 
@@ -297,7 +356,7 @@ public final class WalletBalanceFragment extends Fragment
 		}
 	};
 
-	private final LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
+	private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
 	{
 		@Override
 		public Loader<Cursor> onCreateLoader(final int id, final Bundle args)
@@ -318,6 +377,28 @@ public final class WalletBalanceFragment extends Fragment
 
 		@Override
 		public void onLoaderReset(final Loader<Cursor> loader)
+		{
+		}
+	};
+	private final LoaderManager.LoaderCallbacks<Integer> masternodeSyncLoaderCallbacks = new LoaderManager.LoaderCallbacks<Integer>()
+	{
+		@Override
+		public Loader<Integer> onCreateLoader(final int id, final Bundle args)
+		{
+			return new MasternodeSyncLoader(activity, wallet);
+		}
+
+		@Override
+		public void onLoadFinished(final Loader<Integer> loader, final Integer newStatus)
+		{
+			WalletBalanceFragment.this.masternodeSyncStatus = newStatus;
+
+			updateView();
+
+		}
+
+		@Override
+		public void onLoaderReset(final Loader<Integer> loader)
 		{
 		}
 	};

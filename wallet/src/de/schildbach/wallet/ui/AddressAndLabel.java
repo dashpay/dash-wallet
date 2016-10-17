@@ -30,7 +30,6 @@ import android.os.Parcelable;
 import com.google.common.base.Objects;
 
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.util.WalletUtils;
 
 /**
  * @author Andreas Schildbach
@@ -49,7 +48,7 @@ public class AddressAndLabel implements Parcelable
 	public AddressAndLabel(final NetworkParameters addressParams, final String address, @Nullable final String label) throws WrongNetworkException,
 			AddressFormatException
 	{
-		this(new Address(addressParams, address), label);
+		this(Address.fromBase58(addressParams, address), label);
 	}
 
 	@Override
@@ -78,7 +77,7 @@ public class AddressAndLabel implements Parcelable
 	@Override
 	public void writeToParcel(final Parcel dest, final int flags)
 	{
-		dest.writeString(address.toString());
+		dest.writeString(address.toBase58());
 		dest.writeString(label);
 	}
 
@@ -99,7 +98,7 @@ public class AddressAndLabel implements Parcelable
 
 	private AddressAndLabel(final Parcel in)
 	{
-		address = WalletUtils.newAddressOrThrow(Constants.NETWORK_PARAMETERS, in.readString());
+		address = Address.fromBase58(Constants.NETWORK_PARAMETERS, in.readString());
 		label = in.readString();
 	}
 }

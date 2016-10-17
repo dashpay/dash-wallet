@@ -23,13 +23,13 @@ https://www.gnu.org/licenses/gpl-3.0.ru.html
 https://github.com/HashEngineering/darkcoin-wallet
 
 Всі переклади зроблені через Transifex:
-https://www.transifex.com/projects/p/bitcoin-wallet/
+https://www.transifex.com/dash/dash-wallet/
 
 
 <b>РЕКОМЕНДАЦІЇ</b>
 
-• Багато мобільних гаманців мають за  основу код Dash Wallet. Приклади: blockchain.info, Hive і KnC.
-• Мобільний гаманець рекомендований https://bitcoin.org
+• Багато мобільних гаманців мають за  основу код Bitcoin Wallet. Приклади: blockchain.info і BTCX.
+• Мобільний гаманець рекомендований https://dash.org
 • Рекомендується BitPay.
 
 

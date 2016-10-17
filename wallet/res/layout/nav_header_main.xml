@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="180dp"
+    android:background="@drawable/drawer_header"
+    android:orientation="vertical"
+    android:theme="@style/ThemeOverlay.AppCompat.Dark">
+
+    <fragment
+        android:id="@+id/wallet_address_fragment"
+        android:name="de.schildbach.wallet.ui.WalletAddressFragment"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentTop="false"
+        android:background="@color/bg_panel"
+        tools:layout="@layout/wallet_address_fragment"
+        android:layout_marginRight="12dp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="68dp" />
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="right"
+        android:layout_marginBottom="4dp"
+        android:layout_marginRight="22dp"
+        android:text="www.dash.org"
+        android:textColor="#000000"
+        android:textSize="13sp"
+        android:textStyle="italic"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true" />
+
+</RelativeLayout>

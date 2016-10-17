@@ -26,16 +26,13 @@ import javax.annotation.Nullable;
 import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Wallet;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.uri.BitcoinURI;
+import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import android.app.Activity;
-import android.app.Fragment;
-import android.app.LoaderManager;
-import android.app.LoaderManager.LoaderCallbacks;
 import android.bluetooth.BluetoothAdapter;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
@@ -43,7 +40,6 @@ import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.Loader;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -53,8 +49,10 @@ import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
 import android.nfc.NfcEvent;
-import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.support.v7.widget.CardView;
 import android.text.SpannableStringBuilder;
 import android.view.LayoutInflater;
@@ -117,11 +115,9 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
 
 	private static final int ID_RATE_LOADER = 0;
 
-	private static boolean ENABLE_BLUETOOTH_LISTENING = Build.VERSION.SDK_INT >= Constants.SDK_JELLY_BEAN_MR2;
-
 	private static final Logger log = LoggerFactory.getLogger(RequestCoinsFragment.class);
 
-	private final LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
+	private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
 	{
 		@Override
 		public Loader<Cursor> onCreateLoader(final int id, final Bundle args)
@@ -168,6 +164,8 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
 	{
 		super.onCreate(savedInstanceState);
 
+		setHasOptionsMenu(true);
+
 		if (nfcAdapter != null && nfcAdapter.isEnabled())
 			nfcAdapter.setNdefPushMessageCallback(this, activity);
 
@@ -178,6 +176,7 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
 		else
 		{
 			address = wallet.freshReceiveAddress();
+			log.info("request coins started: {}", address);
 		}
 	}
 
@@ -211,14 +210,14 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
 		amountCalculatorLink = new CurrencyCalculatorLink(btcAmountView, localAmountView);
 
 		acceptBluetoothPaymentView = (CheckBox) view.findViewById(R.id.request_coins_accept_bluetooth_payment);
-		acceptBluetoothPaymentView.setVisibility(ENABLE_BLUETOOTH_LISTENING && bluetoothAdapter != null ? View.VISIBLE : View.GONE);
-		acceptBluetoothPaymentView.setChecked(ENABLE_BLUETOOTH_LISTENING && bluetoothAdapter != null && bluetoothAdapter.isEnabled());
+		acceptBluetoothPaymentView.setVisibility(Bluetooth.canListen(bluetoothAdapter) ? View.VISIBLE : View.GONE);
+		acceptBluetoothPaymentView.setChecked(Bluetooth.canListen(bluetoothAdapter) && bluetoothAdapter.isEnabled());
 		acceptBluetoothPaymentView.setOnCheckedChangeListener(new OnCheckedChangeListener()
 		{
 			@Override
 			public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked)
 			{
-				if (ENABLE_BLUETOOTH_LISTENING && bluetoothAdapter != null && isChecked)
+				if (Bluetooth.canListen(bluetoothAdapter) && isChecked)
 				{
 					if (bluetoothAdapter.isEnabled())
 					{
@@ -249,9 +248,6 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
 	{
 		super.onViewCreated(view, savedInstanceState);
 
-		// don't call in onCreate() because ActionBarSherlock invokes onCreateOptionsMenu() too early
-		setHasOptionsMenu(true);
-
 		amountCalculatorLink.setExchangeDirection(config.getLastExchangeDirection());
 		amountCalculatorLink.requestFocus();
 	}
@@ -277,7 +273,7 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
 
 		loaderManager.initLoader(ID_RATE_LOADER, null, rateLoaderCallbacks);
 
-		if (ENABLE_BLUETOOTH_LISTENING && bluetoothAdapter != null && bluetoothAdapter.isEnabled() && acceptBluetoothPaymentView.isChecked())
+		if (Bluetooth.canListen(bluetoothAdapter) && bluetoothAdapter.isEnabled() && acceptBluetoothPaymentView.isChecked())
 			startBluetoothListening();
 
 		updateView();
@@ -392,10 +388,12 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
 
 	private void handleShare()
 	{
+		final String request = determineBitcoinRequestStr(false);
 		final Intent intent = new Intent(Intent.ACTION_SEND);
 		intent.setType("text/plain");
-		intent.putExtra(Intent.EXTRA_TEXT, determineBitcoinRequestStr(false));
+		intent.putExtra(Intent.EXTRA_TEXT, request);
 		startActivity(Intent.createChooser(intent, getString(R.string.request_coins_share_dialog_title)));
+		log.info("payment request shared via intent: {}", request);
 	}
 
 	private void handleLocalApp()
