@@ -198,6 +198,14 @@ public final class PaymentIntent implements Parcelable
 		this.paymentRequestHash = paymentRequestHash;
 	}
 
+	public PaymentIntent(@Nullable final Standard standard, @Nullable final String payeeName, @Nullable final String payeeVerifiedBy,
+						 @Nullable final Output[] outputs, @Nullable final String memo, @Nullable final String paymentUrl, @Nullable final byte[] payeeData,
+						 @Nullable final String paymentRequestUrl, @Nullable final byte[] paymentRequestHash, boolean useInstantX)
+	{
+		this(standard, payeeName, payeeVerifiedBy, outputs, memo, paymentUrl, payeeData, paymentRequestUrl, paymentRequestHash);
+		this.useInstantX = useInstantX;
+	}
+
 	private PaymentIntent(final Address address, @Nullable final String addressLabel)
 	{
 		this(null, null, null, buildSimplePayTo(Coin.ZERO, address), addressLabel, null, null, null, null);
@@ -233,9 +241,10 @@ public final class PaymentIntent implements Parcelable
 		final String bluetoothMac = (String) bitcoinUri.getParameterByName(Bluetooth.MAC_URI_PARAM);
 		final String paymentRequestHashStr = (String) bitcoinUri.getParameterByName("h");
 		final byte[] paymentRequestHash = paymentRequestHashStr != null ? base64UrlDecode(paymentRequestHashStr) : null;
+		final boolean useInstantSend = bitcoinUri.getRequestInstantSend();
 
 		return new PaymentIntent(PaymentIntent.Standard.BIP21, null, null, outputs, bitcoinUri.getLabel(), bluetoothMac != null ? "bt:"
-				+ bluetoothMac : null, null, bitcoinUri.getPaymentRequestUrl(), paymentRequestHash);
+				+ bluetoothMac : null, null, bitcoinUri.getPaymentRequestUrl(), paymentRequestHash, useInstantSend);
 	}
 
 	private static final BaseEncoding BASE64URL = BaseEncoding.base64Url().omitPadding();
@@ -281,7 +290,7 @@ public final class PaymentIntent implements Parcelable
 			outputs = buildSimplePayTo(editedAmount, editedAddress);
 		}
 
-		return new PaymentIntent(standard, payeeName, payeeVerifiedBy, outputs, memo, null, payeeData, null, null);
+		return new PaymentIntent(standard, payeeName, payeeVerifiedBy, outputs, memo, null, payeeData, null, null, useInstantX);
 	}
 
 	public SendRequest toSendRequest()
@@ -531,6 +540,7 @@ public final class PaymentIntent implements Parcelable
 		{
 			dest.writeInt(0);
 		}
+		dest.writeByte(useInstantX ? (byte)1 : (byte)0);
 	}
 
 	public static final Parcelable.Creator<PaymentIntent> CREATOR = new Parcelable.Creator<PaymentIntent>()
@@ -593,5 +603,8 @@ public final class PaymentIntent implements Parcelable
 		{
 			paymentRequestHash = null;
 		}
+		useInstantX = in.readByte() == 1;
 	}
+
+	public boolean getUseInstantSend() { return useInstantX; }
 }

@@ -1673,6 +1673,9 @@ public final class SendCoinsFragment extends Fragment
 					else if (paymentIntent.isHttpPaymentUrl())
 						directPaymentEnableView.setChecked(!Constants.BUG_OPENSSL_HEARTBLEED);
 
+					instantXenable.setChecked(paymentIntent.getUseInstantSend());
+
+
 					requestFocusFirst();
 					updateView();
 					handler.post(dryrunRunnable);
