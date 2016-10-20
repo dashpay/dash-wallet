@@ -1,36 +1,36 @@
-<b>Mějte své Dashy vždy s sebou ve své kapse!</b> Plaťte rychlým oskenováním QR kódu. A jako prodejce můžete přijímat platby spolehlivě a rychle. Dash Wallet je mobilní Dash aplikace číslo jedna a jedna z nejbezpečnějších!
+<b>Mějte Dash neustále u sebe ve své kapse!</b> Oskenujte QR kód a zaplaťte rychle. Jako obchodník obdržíte platby téměř okamžitě a spolehlivě. Elektronická peněženka Dash je první mobilní aplikací Dash a pravděpodobně taky tou nejbezpečnější.
 
 
-<b>FUNKCE</b>
 
-• Žádná registrace, žádná webová služba ani cloud není potřeba! Tato peněženka je de-centralizovaná a peer to peer.
-• Zobrazení Dash částek v DASH, mDASH a µDASH.
-• Přepočet z a do národních měn.
-• Odesílání a přijímání plateb přes NFC, QR kódy nebo Dash URL.
+<b>VLASTNOSTI</b>
+
+• Není zapotřebí žádná registrace, webová služba ani cloud! Peněženka je decentralizovaná a funguje na bázi peer-to-peer sítě.
+• Dash si můžete zobrazit buď jako DASH, mDASH nebo µDASH.
+• Dash lze vyměnit za běžné peníze nebo ho za ně koupit.
+• Dash lze posílat i přijímat skrze NFC, QR kódy nebo Dash URL.
 • Adresář pro často používané Dash adresy.
-• Pokud jste offline, stále můžete platit přes Bluetooth.
-• Systémové notifikace při přijaté platbě
-• Načítání papírových peněženek (např. ty co se používají u cold storage).
-• Widget pro zobrazení Dash bilance.
+• Pokud jste offline, můžete stále zaplatit přes Bluetooth.
+• Systémová oznámení při obdržení mincí.
+• Výběr z papírových peněženek (např. těch, které jsou uloženy offline).
+Widget aplikace pro bilanci účtu.
 
 
-<b>PŘISPĚJTE</b>
+<b>ZAPOJTE SE TAKÉ</b>
 
-Dash Wallet je <b>open source</b> a <b>svobodný software</b>. Licence: GPLv3
+Peněženka Dash je <b>open source</b> a <b>bezplatný software</b>. Licence: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
-Náš zdrojový kód je k dispozici na GitHubu:
-https://github.com/HashEngineering/darkcoin-wallet
+Náš zdrojový kód je dostupný na GitHub:
+https://github.com/HashEngineering/dash-wallet
 
-Veškeré překlady jsou tvořeny pomocí Transflex.
+Všechny překlady probíhají na stránkách Transifex:
 https://www.transifex.com/dash/dash-wallet/
 
 
-<b>UZNÁNÍ</b>
+<b>REFERENCE</b>
 
-• Mnoho mobilních peněženek využívá zdrojový kód Bitcoin Wallet. Například: blockchain.info a BTCX.
-• Doporučená mobilní peněženka stránkou https://dash.org
-• Doporučeno službou BitPay.
+• Doporučená mobilní peněženka od https://bitcoin.org
 
 
-<i>Použití na vlastní riziko!</i>
+
+<i>Používejte na vlastní riziko!</i>

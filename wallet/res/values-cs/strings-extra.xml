@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources>
+
+
+	<string name="send_coins_fragment_instantx_enable">Použít InstantSend</string>
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">Tato platba nebyla ještě odeslána.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">Tato platba čeká na ověření systémem Dash.</string>
+	<string name="transaction_row_message_own_instantx_locked">Zaslaná InstantSend transakce (uzamčeno)</string>
+	<string name="transaction_row_message_received_instantx_lock_request">Tato platba čeká na ověření systémem Dash.</string>
+	<string name="transaction_row_message_received_instantx_locked">Tato platba byla ověřena systémem Dash.</string>
+	<string name="transaction_row_message_received_unconfirmed_instantx">Nepotvrzená platba</string>
+	<string name="transaction_row_message_received_instantx_locked2">Uzamčená platba</string>
+
+	<string name="wallet_options_disconnect">Odpojit</string>
+
+	<string name="network_monitor_masternodes_title">Masternody</string>
+</resources>

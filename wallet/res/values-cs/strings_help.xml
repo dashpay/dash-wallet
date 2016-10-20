@@ -1,27 +1,48 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-  <string name="help_wallet">
+
+	<string name="help_wallet">
+
 <![CDATA[
-		<p>
-			Horní levá část obrazovky zobrazuje Vaši aktuální Dash bilanci včetně odpovídající částky ve vaší lokální měně.
-			Kliknutím na částku přejdete do seznamu lokálních měn, kde si můžete vybrat jinou.
-		</p>
-		<p>
-			QR kód na pravé straně obsahuje Vaši Dash adresu a může být použita pro naskenování druhou stranou.
-			Klepněte na QR kód pro zobrazení větší verze.
-		</p>
-		<p>
-			Ve spodní části obrazovky je seznam transakcí, který bude samozřejmě na začátku používání aplikace prázdný.
-			Probíhající transakce jsou zobrazeny šedě, dokud nejsou potvrzeny.
-			Kliknutím na řádek záznamu můžete příjemce či odesilatele přidat do adresáře.
-		</p>
-		<p>
-			Můžete poslat nebo si vyžádat Dashy klepnutím na patřičné tlačítko v akční nabídce.
-			Více možností je v nabídce nastavení.
-		</p>
-	]]>
-	</string>
-  <string name="help_request_coins">
+
+⇥⇥<p>
+
+⇥⇥⇥Na levé horní části displeje se zobrazuje vaše bilance v Dashi a jedna ve zvolené národní měně.
+
+⇥⇥⇥Klepněte na seznam národních měn a zvolte jednu jako výchozí.
+
+⇥⇥</p>
+
+⇥⇥<p>
+
+⇥⇥⇥QR kód napravo obsahuje vaši Dash adresu, kterou si může oskenovat jiný uživatel .
+
+⇥⇥⇥Chcete-li QR kód zvětšit, klepněte na něj .
+
+⇥⇥</p>
+
+⇥⇥<p>
+
+⇥⇥⇥Ve spodní části obrazovky se nachází seznam vašich transakcí, který bude ze začátku prázdný.
+
+⇥⇥⇥Transakce čekající na schválení jsou vyznačené šedě, dokud se nepotvrdí.
+
+⇥⇥⇥Pokud si chcete do adresáře přidat adresy odesílatelů nebo příjemců, klepněte na jednu z položek.
+
+⇥⇥</p>
+
+⇥⇥<p>
+
+⇥⇥⇥Zaslat mince nebo si je vyžádat můžete prostřednictvím tlačítek v panelu akcí.
+
+⇥⇥⇥Více možností naleznete v menu „možností“.
+
+⇥⇥</p>
+
+⇥]]>
+
+⇥</string>
+	<string name="help_request_coins">
 <![CDATA[
 		<p>
 			Pomocí tohoto dialogu můžete vyžádat Dashy od někoho jiného (kdo by měl také mít nainstalovanou aplikaci Dash Wallet).
@@ -40,7 +61,7 @@
 		</p>
 	]]>
 	</string>
-  <string name="help_send_coins">
+	<string name="help_send_coins">
 <![CDATA[
 		<p>
 			Právě jste zahájil zasílání Dashů.
@@ -70,7 +91,7 @@
 		</p>
 	]]>
 	</string>
-  <string name="help_safety">
+	<string name="help_safety">
 <![CDATA[
 		<p>
 			Několik slov o bezpečnosti vašich Dashů:
@@ -99,4 +120,5 @@
 		</p>
 	]]>
 	</string>
+
 </resources>
