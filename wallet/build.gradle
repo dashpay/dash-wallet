@@ -3,7 +3,7 @@ apply plugin: 'com.android.application'
 def localMavenRepo = 'file://' + new File(System.getProperty('user.home'), '.m2/repository').absolutePath
 repositories {
     maven { url localMavenRepo }
-
+}
 dependencies {
     compile 'com.android.support:design:23.2.0'
     compile 'com.android.support:appcompat-v7:23.2.0'
@@ -21,6 +21,7 @@ dependencies {
     compile 'com.android.support:recyclerview-v7:23.4.0'
     compile 'com.android.support:cardview-v7:23.4.0'
     compile 'org.dashj:dashj-core:0.14.3'
+
     compile 'com.google.protobuf:protobuf-java:2.6.1'
     compile 'com.google.guava:guava:18.0'
     compile 'com.google.zxing:core:3.2.1'
@@ -34,9 +35,9 @@ dependencies {
     testCompile 'junit:junit:4.11'
 }
 
-        ext {
-            archivesBaseName = 'dash-wallet'
-        }
+ext {
+     archivesBaseName = 'dash-wallet'
+}
 
 android {
     compileSdkVersion 'android-23'
@@ -56,6 +57,7 @@ android {
                     debuggable true
                 }
             }
+
 
             sourceSets {
                 main {
@@ -100,4 +102,4 @@ android {
     }
 }
 
-}
+
