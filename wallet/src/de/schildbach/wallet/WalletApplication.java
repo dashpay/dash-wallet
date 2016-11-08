@@ -30,6 +30,7 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.crypto.LinuxSecureRandom;
 import org.bitcoinj.crypto.MnemonicCode;
+import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
@@ -392,7 +393,9 @@ public class WalletApplication extends Application
 	{
 		//try
 		//{
-			wallet.getContext().masternodeDB.write(wallet.getContext().masternodeManager);
+		//	wallet.getContext().masternodeDB.write(wallet.getContext().masternodeManager);
+		//TODO:  Save the new way with FlatDB
+
 			//Constants.NETWORK_PARAMETERS.masternodeDB.write(Constants.NETWORK_PARAMETERS.masternodeManager);
 		//}
 		//catch (final IOException x)

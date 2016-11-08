@@ -100,7 +100,7 @@ public final class MasternodeLoader extends AsyncTaskLoader<Integer>
 	private final MasternodeSyncListener masternodeSyncListener = new MasternodeSyncListener()
 	{
 		@Override
-		public void onSyncStatusChanged(int newStatus)
+		public void onSyncStatusChanged(int newStatus, double progress)
 		{
 			masternodeSyncStatus = newStatus;
 			safeForceLoad();
