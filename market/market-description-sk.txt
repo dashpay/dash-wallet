@@ -1,22 +1,36 @@
-Dashy vždy so sebou vo svojom vrecku. Jednoduché a rýchle platby pomocou QR kódov. Pre obchodníkov ponúka spoľahlivé a okamžité prijímanie platieb. Dash Wallet je prvá mobilná Dash aplikácia a preukázateľne aj najbezpečnejšia.
+<b>Majte Dash neustále pri sebe vo svojom vrecku!</b> Naskenujte QR kód a rýchlo zaplaťte. Ako obchodník obdržíte platby takmer okamžite a spoľahlivo. Elektronická peňaženka Dash je prvá mobilná Dash aplikácia a pravdepodobne tiež tou najnebezpečnejšou.
 
-FUNKCIE:
 
-• Nie je potrebná žiadna registrácia ani žiadny účet.
-• Zobrazenie zostatku Dashov v DASH alebo mDASH.
-• Prepočet hodnoty Dashov do viacerých cudzích mien.
-• Posielanie a prijímanie Dashov pomocou NFC, QR kódov alebo Dash adries.
+
+<b>VLASTNOSTI</b>
+
+• Nie je potrebná žiadna registrácia, webová služba ani cloud! Peňaženka je decentralizovaná a funguje na báze peer-to-peer siete.
+• Dash si môžete zobraziť buď ako DASH, mDASH alebo µDASH.
+• Konverzia na bežné peniaze alebo opačne.
+• Dash je možné posielať aj prijímať pomocou NFC, QR kódmi alebo Dash URL.
 • Adresár pre často používané Dash adresy.
-• V offline režime je platba možná aj cez Bluetooth.
-• Notifikácie v stavovej lište pri prijatí Dashov.
-• Widget s celkovým zostatkom.
+• Keď ste offline, môžete stále zaplatiť cez Bluetooth.
+• Systémové oznámenie pri obdržaní mincí.
+• Výber z papierových peňaženiek (napr. tých, ktoré sú uložené offline).
+• Widget aplikácia pro stav Dash účtu.
 
-Viac informácií o Dashe
-http://darkcoin.io
 
-Ak chcete prispieť do projektu Dash Wallet nájdete ho na adrese
-https://github.com/HashEngineering/darkcoin-wallet
+<b>ZAPOJTE SA</b>
 
-Licencia: GPLv3
-Použitie len na vlastné riziko!
-http://www.gnu.org/licenses/gpl-3.0.en.html
+Peňaženka Dash má <b>otvorený zdrojový kód</b> a je to <b>bezplatný softwér</b>. Licencia: GPLv3
+https://www.gnu.org/licenses/gpl-3.0.en.html
+
+Náš zdrojový kód je dostupný na GitHube:
+https://github.com/HashEngineering/dash-wallet
+
+Všetky preklady prebiehajú cez Transifex:
+https://www.transifex.com/dash/dash-wallet/
+
+
+<b>DOPORUČENIA</b>
+
+• Doporučená mobilná peňaženka od https://bitcoin.org
+
+
+
+<i>Používajte na vlastní riziko.</i>

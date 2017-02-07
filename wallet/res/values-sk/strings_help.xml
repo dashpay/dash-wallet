@@ -4,26 +4,21 @@
 	<string name="help_wallet">
 <![CDATA[
 		<p>
-			V ľavej hornej časti obrazovky je Vaša aktuálna Dash adresa, túto adresu potrebuje poznať odosielateľ, aby Vám mohol poslať Dashy.
-			Kliknutím na adresu ju môžte zmeniť.
+			Na levej hornej časti displeja sa zobrazuje vaša bilancia v Dash a jedna vo zvolenej národnej mene.
+			Poklepte na zoznam národných mien a zvolte jednu ako predvolenú.
 		</p>
 		<p>
-			QR kód na pravej strane obsahuje Vašu Dash adresu, odosielateľ ho môže jednoducho naskenovať.
-			Kliknite na QR kód, aby ste ho zväčšili.
+			QR kód napravo obsahuje vašu Dash adresu, ktorú si môžete oskenovať iný užívateľ.
+			Ak chcete väčší QR kód, poklepte naň.
 		</p>
 		<p>
-			V strede obrazovky je zobrazený aktuálny zostatok.
-			Hodnota Vašich Dashov je zobrazená aj v inej zvolenej mene.
-			Kliknutím na zostatok zobrazíte zoznam cudzích mien, následným kliknutím na menu ju môžte nastaviť ako predvolenú.
+			V spodní časti obrazovky sa nachádza zoznam vašich transakcií, ktorý bude zo začiatku prázdny.
+			Transakcie čakajúce na potvrdenie sú vyznačené šedo až pokým sa nepotvrdia.
+			Ak si chcete do adresára pridať adresy odosielateľov alebo príjemcov, poklepte na jednu z položiek.
 		</p>
 		<p>
-			V spodnej časti obrazovky sa nachádza zoznam transakcií. Zoznam je na začiatku prázdny.
-			Aktuálne prebiehajúce transakcie sú šedé, až kým nie sú potvrdené.
-			Kliknutím na transakciu môžete pridať danú adresu do adresára.
-		</p>
-		<p>
-			Kliknutím na tlačidlá naspodku môžte poslať alebo vyžiadať Dashy.
-			Ďalšie možnosti sú v ponuke nastavení.
+			Zaslať mince alebo si ich vyžiadať môžete poklepaním na tlačítka v panelu akcií.
+			Ďaľšie možností nájdete v menu možností.
 		</p>
 	]]>
 	</string>

@@ -20,6 +20,4 @@
 		android:id="@+id/wallet_transactions_context_raise_fee"
 		android:showAsAction="never"
 		android:title="@string/raise_fee_dialog_title"/>
-
->>>>>>> v4.40
 </menu>
