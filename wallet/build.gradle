@@ -20,12 +20,12 @@ dependencies {
     compile 'com.android.support:support-v13:23.4.0'
     compile 'com.android.support:recyclerview-v7:23.4.0'
     compile 'com.android.support:cardview-v7:23.4.0'
-    compile 'org.dashj:dashj-core:0.14.3-testnet'
+    compile 'org.dashj:dashj-core:0.14.3-12.1'
 
     compile 'com.google.protobuf:protobuf-java:2.6.1'
     compile 'com.google.guava:guava:18.0'
     compile 'com.google.zxing:core:3.2.1'
-    compile 'com.hashengineering:dash-wallet-name-resolver:0.1.4-testnet'
+    compile 'com.hashengineering:dash-wallet-name-resolver:0.1.4-12.1'
     compile 'org.slf4j:slf4j-api:1.7.20'
     compile('com.github.tony19:logback-android-classic:1.1.1-5') {
         exclude(group: 'com.google.android', module: 'android')
