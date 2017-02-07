@@ -28,6 +28,7 @@ import java.util.concurrent.RejectedExecutionException;
 import javax.annotation.Nullable;
 
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Transaction.Purpose;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
@@ -307,7 +308,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
 		popupMenu.getMenu().findItem(R.id.wallet_transactions_context_show_qr)
 				.setVisible(!txRotation && txSerialized.length < SHOW_QR_THRESHOLD_BYTES);
-		popupMenu.getMenu().findItem(R.id.wallet_transactions_context_raise_fee).setVisible(RaiseFeeDialogFragment.feeCanBeRaised(wallet, tx));
+		popupMenu.getMenu().findItem(R.id.wallet_transactions_context_raise_fee).setVisible(CoinDefinition.feeCanBeRaised && RaiseFeeDialogFragment.feeCanBeRaised(wallet, tx));
 		popupMenu.setOnMenuItemClickListener(new OnMenuItemClickListener()
 		{
 			@Override
