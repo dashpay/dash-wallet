@@ -724,7 +724,7 @@ public final class SendCoinsFragment extends Fragment
 
 
 		instantXenable = (CheckBox) view.findViewById(R.id.send_coins_instantx_enable);
-		instantXenable.setVisibility(config.getInstantXEnabled() == true && wallet.getContext().sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTX) ? View.VISIBLE : View.INVISIBLE);
+		instantXenable.setVisibility(config.getInstantXEnabled() == true && wallet.getContext().sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED) ? View.VISIBLE : View.INVISIBLE);
 		instantXenable.setOnCheckedChangeListener(new OnCheckedChangeListener()
 		{
 			@Override
