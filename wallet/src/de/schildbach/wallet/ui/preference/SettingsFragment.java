@@ -24,16 +24,19 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
 import android.preference.EditTextPreference;
+import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.Preference.OnPreferenceChangeListener;
 import android.preference.PreferenceFragment;
 
 import java.net.InetAddress;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.schildbach.wallet.Configuration;
+import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import hashengineering.darkcoin.wallet.R;
@@ -55,6 +58,7 @@ public final class SettingsFragment extends PreferenceFragment implements OnPref
 	private Preference btcPrecisionPreference;
 	private Preference trustedPeerPreference;
 	private Preference trustedPeerOnlyPreference;
+
 	//Dash Specific
 	private Preference allowInstantXPreference;
 	private Preference liteModePreference;
@@ -96,6 +100,12 @@ public final class SettingsFragment extends PreferenceFragment implements OnPref
 		final Preference dataUsagePreference = findPreference(Configuration.PREFS_KEY_DATA_USAGE);
 		dataUsagePreference.setEnabled(pm.resolveActivity(dataUsagePreference.getIntent(), 0) != null);
 
+		if(Constants.TEST) {
+			final ListPreference blockExplorerPreference = (ListPreference) findPreference(Configuration.PREFS_KEY_BLOCK_EXPLORER);
+			blockExplorerPreference.setEntries(R.array.preferences_block_explorer_labels_testnet);
+
+			blockExplorerPreference.setEntryValues(R.array.preferences_block_explorer_values_testnet);
+		}
 
 		//Dash Specific
 		allowInstantXPreference = findPreference(Configuration.PREFS_KEY_INSTANTX_ENABLED);

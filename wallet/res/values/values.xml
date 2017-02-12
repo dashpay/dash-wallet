@@ -31,5 +31,13 @@
 		<item>Dash Block Explorer (Mirror)</item>
 		<item>BitinfoCharts</item>
 	</string-array>
+	<string-array name="preferences_block_explorer_values_testnet">
+		<item>http://test.explorer.dash.org/chain/Dash/</item>
+		<item>http://test.explorer.dashninja.pl/</item>
+	</string-array>
+	<string-array name="preferences_block_explorer_labels_testnet">
+		<item>Dash Block Explorer (Official Testnet)</item>
+		<item>Dash Ninja</item>
+	</string-array>
 
 </resources>
