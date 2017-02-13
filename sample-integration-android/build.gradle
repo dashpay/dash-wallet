@@ -7,7 +7,7 @@ dependencies {
     compile(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
     }
-    compile 'org.dashj:dashj-core:0.14.3-testnet'
+    compile 'org.dashj:dashj-core:0.14.3-12.1'
 }
 
 android {
