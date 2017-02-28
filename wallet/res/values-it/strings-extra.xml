@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources>
+
+
+	<string name="send_coins_fragment_instantx_enable">Usi InstantSend</string>
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">Questo InstantSend pagamento non è ancora stato trasmesso.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">Questo InstantSend pagamento è in attesa di verificazione dal Dash Network.</string>
+	<string name="transaction_row_message_own_instantx_locked">Invia InstantSend transazione (bloccato)</string>
+	<string name="transaction_row_message_received_instantx_lock_request">Questo InstantSend pagamento è in attesa di verificazione dal Dash Network.</string>
+	<string name="transaction_row_message_received_instantx_locked">Questo InstantSend pagamento è stato verificato dal Dash Network.</string>
+	<string name="transaction_row_message_received_unconfirmed_instantx">Non confermato InstantSend</string>
+	<string name="transaction_row_message_received_instantx_locked2">Bloccato InstantSend</string>
+
+	<string name="wallet_options_disconnect">Disconnetto</string>
+
+	<string name="network_monitor_masternodes_title">Masternodes</string>
+</resources>
