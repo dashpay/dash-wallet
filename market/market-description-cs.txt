@@ -3,7 +3,6 @@
 
 
 <b>VLASTNOSTI</b>
-
 • Není zapotřebí žádná registrace, webová služba ani cloud! Peněženka je decentralizovaná a funguje na bázi peer-to-peer sítě.
 • Dash si můžete zobrazit buď jako DASH, mDASH nebo µDASH.
 • Dash lze vyměnit za běžné peníze nebo ho za ně koupit.
@@ -12,7 +11,7 @@
 • Pokud jste offline, můžete stále zaplatit přes Bluetooth.
 • Systémová oznámení při obdržení mincí.
 • Výběr z papírových peněženek (např. těch, které jsou uloženy offline).
-Widget aplikace pro bilanci účtu.
+• Widget aplikace pro bilanci účtu.
 
 
 <b>ZAPOJTE SE TAKÉ</b>
@@ -29,7 +28,6 @@ https://www.transifex.com/dash/dash-wallet/
 
 <b>REFERENCE</b>
 
-• Doporučená mobilní peněženka od https://bitcoin.org
 
 
 

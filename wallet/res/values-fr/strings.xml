@@ -1,6 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
 	<string name="toast_wallet_reset">Votre portefeuille a été réinitialisé\net prendra du temps pour récupérer.</string>
 	<string name="wallet_disclaimer_fragment_remind_safety">Utilisez à vos propres risques. Lire les &lt;u&gt;notes de sécurité&lt;/u&gt;.</string>
 	<string name="wallet_disclaimer_fragment_remind_backup">Vous devez &lt;u&gt;sauvegarder votre portefeuille&lt;/u&gt; !</string>

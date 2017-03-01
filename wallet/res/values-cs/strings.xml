@@ -1,6 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
 	<string name="toast_wallet_reset">Vaše peněženka byla zresetována!\nObnova chvíli potrvá.</string>
 	<string name="wallet_disclaimer_fragment_remind_safety">Použití na vlastní riziko. Čtěte &lt;u&gt;bezpečnostní instrukce&lt;/u&gt;.</string>
 	<string name="wallet_disclaimer_fragment_remind_backup">Musíte si &lt;u&gt;zazálohovat vaši peněženku&lt;/u&gt;!</string>

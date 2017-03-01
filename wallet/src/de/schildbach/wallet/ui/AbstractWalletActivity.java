@@ -28,7 +28,12 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 
 import de.schildbach.wallet.WalletApplication;
-import hashengineering.darkcoin.wallet.R;
+import de.schildbach.wallet_test.R;
+
+import android.app.Activity;
+import android.app.ActivityManager.TaskDescription;
+import android.os.Build;
+import android.os.Bundle;
 
 
 /**
@@ -36,17 +41,19 @@ import hashengineering.darkcoin.wallet.R;
  */
 public abstract class AbstractWalletActivity extends AppCompatActivity
 {
-	private WalletApplication application;
+    private WalletApplication application;
 
-	protected static final Logger log = LoggerFactory.getLogger(AbstractWalletActivity.class);
+    protected static final Logger log = LoggerFactory.getLogger(AbstractWalletActivity.class);
 
-	@Override
-	protected void onCreate(final Bundle savedInstanceState)
-	{
-		application = (WalletApplication) getApplication();
+    @Override
+    protected void onCreate(final Bundle savedInstanceState) {
+        application = (WalletApplication) getApplication();
 
-		super.onCreate(savedInstanceState);
-	}
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+            setTaskDescription(new TaskDescription(null, null, getResources().getColor(R.color.bg_action_bar)));
+
+        super.onCreate(savedInstanceState);
+    }
 
 	@Override
 	public void setContentView(@LayoutRes int layoutResID)

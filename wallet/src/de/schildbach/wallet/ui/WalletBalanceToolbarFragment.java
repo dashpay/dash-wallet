@@ -21,9 +21,9 @@ import android.app.Activity;
 import android.content.Context;
 import android.database.Cursor;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.LoaderManager;
-import android.support.v4.content.Loader;
+import android.app.Fragment;
+import android.app.LoaderManager;
+import android.content.Loader;
 import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -41,12 +41,13 @@ import javax.annotation.Nullable;
 
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.ExchangeRatesProvider;
-import de.schildbach.wallet.ExchangeRatesProvider.ExchangeRate;
+import de.schildbach.wallet.data.ExchangeRatesProvider;
+import de.schildbach.wallet.data.ExchangeRate;
+import de.schildbach.wallet.data.ExchangeRatesLoader;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
-import hashengineering.darkcoin.wallet.R;
+import de.schildbach.wallet_test.R;
 
 /**
  * @author Andreas Schildbach
@@ -218,7 +219,7 @@ public final class WalletBalanceToolbarFragment extends Fragment
 			if (balance != null)
 			{
 				viewBalanceBtc.setVisibility(View.VISIBLE);
-				viewBalanceBtc.setFormat(config.getFormat());
+				viewBalanceBtc.setFormat(config.getFormat().noCode());
 				viewBalanceBtc.setAmount(balance);
 
                 updateBalanceTooMuchWarning();
@@ -358,7 +359,7 @@ public final class WalletBalanceToolbarFragment extends Fragment
 		@Override
 		public Loader<Cursor> onCreateLoader(final int id, final Bundle args)
 		{
-			return new ExchangeRateLoader(activity, config);
+			return new ExchangeRatesLoader(activity, config);
 		}
 
 		@Override

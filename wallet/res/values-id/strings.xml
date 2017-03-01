@@ -20,7 +20,6 @@
 	<string name="exchange_rates_fragment_rate">nilai</string>
 	<string name="exchange_rates_fragment_balance">saldo</string>
 	<string name="exchange_rates_fragment_source">Harga diambil dari %s</string>
-	<string name="exchange_rates_context_set_as_default_title">Tetapkan sebagai mata uang asing standar</string>
 	<string name="wallet_transactions_options_filter_received">Diterima</string>
 	<string name="wallet_transactions_options_filter_all">Keduanya</string>
 	<string name="wallet_transactions_options_filter_sent">Dikirim</string>
@@ -133,7 +132,6 @@
 	<string name="preferences_data_usage_title">Penggunaan data</string>
 	<string name="preferences_data_usage_summary">Tampilkan pilihan utk pembatasan penggunaan data ponsel.</string>
 	<string name="preferences_report_issue_title">Laporkan Masalah</string>
-	<string name="preferences_report_issue_summary">Kumpulkan informasi masalah Anda dan kirimkan laporan Anda ke pengembang.</string>
 	<string name="preferences_initiate_reset_title">Atur-ulang Rantai-blok</string>
 	<string name="preferences_initiate_reset_summary">Atur-ulang rantai-blok, transaksi dan saldo dompet. pengulangan akan berlangsung lama.</string>
 	<string name="preferences_initiate_reset_dialog_message">Apakah Anda ingin mengatur-ulang untuk pengulangan rantai-blok?\n\nIni akan menyembunyikan saldo Anda dan hapus transaksi sementara. Keduanya akan pulih setelah rantai-blok sinkron.</string>
@@ -150,9 +148,9 @@
 	<string name="report_issue_dialog_mail_intent_chooser">Kirim laporan dgn…</string>
 	<string name="about_title">Mengenai</string>
 	<string name="about_license_title">Lisensi</string>
-	<string name="about_credits_bitcoinj_title">Apl ini menggunakan dashj %s</string>
-	<string name="about_credits_zxing_title">Apl ini menggunakan \'zxing\'</string>
-	<string name="about_credits_icon_title">Apl ini menggunakan ikon oleh \'bitboy\'</string>
+	<string name="about_category_credits">Apl ini menggunakan…</string>
+	<string name="about_credits_bitcoinj_title">bitcoinj %s</string>
+	<string name="about_credits_zxing_title">ZXing</string>
 	<string name="about_market_app_title">Halaman Apl Google Play</string>
 	<string name="notification_coins_received_msg">Diterima %s</string>
 	<string name="notification_peers_connected_msg">%d peer terhubung</string>

@@ -13,7 +13,7 @@ import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.widget.Toast;
 
-import hashengineering.darkcoin.wallet.R;
+import de.schildbach.wallet_test.R;
 
 /**
  * @author Tomasz Ludek

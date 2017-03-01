@@ -29,7 +29,7 @@ https://www.transifex.com/dash/dash-wallet/
 
 <b>客户评价</b>
 
-• 由 https://bitcoin.org 推荐使用的移动钱包
+• 由 https://dash.org 推荐使用的移动钱包
 
 
 

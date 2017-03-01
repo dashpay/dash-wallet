@@ -31,6 +31,19 @@ import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.AddressBookProvider;
+import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.ui.InputParser.StringInputParser;
+import de.schildbach.wallet.ui.send.SendCoinsActivity;
+import de.schildbach.wallet.util.BitmapFragment;
+import de.schildbach.wallet.util.Qr;
+import de.schildbach.wallet.util.Toast;
+import de.schildbach.wallet.util.WalletUtils;
+import de.schildbach.wallet.util.WholeStringBuilder;
+import de.schildbach.wallet_test.R;
+
 import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipDescription;
@@ -43,9 +56,9 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.v4.app.LoaderManager;
-import android.support.v4.content.CursorLoader;
-import android.support.v4.content.Loader;
+import android.app.LoaderManager;
+import android.content.CursorLoader;
+import android.content.Loader;
 import android.view.ActionMode;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -55,408 +68,338 @@ import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
 import android.widget.SimpleCursorAdapter.ViewBinder;
 import android.widget.TextView;
-import de.schildbach.wallet.AddressBookProvider;
-import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.ui.InputParser.StringInputParser;
-import de.schildbach.wallet.ui.send.SendCoinsActivity;
-import de.schildbach.wallet.util.BitmapFragment;
-import de.schildbach.wallet.util.Qr;
-import de.schildbach.wallet.util.Toast;
-import de.schildbach.wallet.util.WalletUtils;
-import de.schildbach.wallet.util.WholeStringBuilder;
-import hashengineering.darkcoin.wallet.R;
 
 /**
  * @author Andreas Schildbach
  */
-public final class SendingAddressesFragment extends FancyListFragment implements LoaderManager.LoaderCallbacks<Cursor>, OnPrimaryClipChangedListener
-{
-	private AbstractWalletActivity activity;
-	private Wallet wallet;
-	private ClipboardManager clipboardManager;
-	private LoaderManager loaderManager;
+public final class SendingAddressesFragment extends FancyListFragment
+        implements LoaderManager.LoaderCallbacks<Cursor>, OnPrimaryClipChangedListener {
+    private AbstractWalletActivity activity;
+    private Wallet wallet;
+    private ClipboardManager clipboardManager;
+    private LoaderManager loaderManager;
 
-	private SimpleCursorAdapter adapter;
-	private String walletAddressesSelection;
+    private SimpleCursorAdapter adapter;
+    private String walletAddressesSelection;
 
-	private final Handler handler = new Handler();
+    private final Handler handler = new Handler();
 
-	private static final int REQUEST_CODE_SCAN = 0;
+    private static final int REQUEST_CODE_SCAN = 0;
 
-	private static final Logger log = LoggerFactory.getLogger(SendingAddressesFragment.class);
+    private static final Logger log = LoggerFactory.getLogger(SendingAddressesFragment.class);
 
-	@Override
-	public void onAttach(final Activity activity)
-	{
-		super.onAttach(activity);
+    @Override
+    public void onAttach(final Activity activity) {
+        super.onAttach(activity);
 
-		this.activity = (AbstractWalletActivity) activity;
-		final WalletApplication application = (WalletApplication) activity.getApplication();
-		this.wallet = application.getWallet();
-		this.clipboardManager = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
-		this.loaderManager = getLoaderManager();
-	}
+        this.activity = (AbstractWalletActivity) activity;
+        final WalletApplication application = (WalletApplication) activity.getApplication();
+        this.wallet = application.getWallet();
+        this.clipboardManager = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
+        this.loaderManager = getLoaderManager();
+    }
 
-	@Override
-	public void onCreate(final Bundle savedInstanceState)
-	{
-		super.onCreate(savedInstanceState);
+    @Override
+    public void onCreate(final Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
 
-		setHasOptionsMenu(true);
+        setHasOptionsMenu(true);
 
-		adapter = new SimpleCursorAdapter(activity, R.layout.address_book_row, null, new String[] { AddressBookProvider.KEY_LABEL,
-				AddressBookProvider.KEY_ADDRESS }, new int[] { R.id.address_book_row_label, R.id.address_book_row_address }, 0);
-		adapter.setViewBinder(new ViewBinder()
-		{
-			@Override
-			public boolean setViewValue(final View view, final Cursor cursor, final int columnIndex)
-			{
-				if (!AddressBookProvider.KEY_ADDRESS.equals(cursor.getColumnName(columnIndex)))
-					return false;
+        adapter = new SimpleCursorAdapter(activity, R.layout.address_book_row, null,
+                new String[] { AddressBookProvider.KEY_LABEL, AddressBookProvider.KEY_ADDRESS },
+                new int[] { R.id.address_book_row_label, R.id.address_book_row_address }, 0);
+        adapter.setViewBinder(new ViewBinder() {
+            @Override
+            public boolean setViewValue(final View view, final Cursor cursor, final int columnIndex) {
+                if (!AddressBookProvider.KEY_ADDRESS.equals(cursor.getColumnName(columnIndex)))
+                    return false;
 
-				((TextView) view).setText(WalletUtils.formatHash(cursor.getString(columnIndex), Constants.ADDRESS_FORMAT_GROUP_SIZE,
-						Constants.ADDRESS_FORMAT_LINE_SIZE));
+                ((TextView) view).setText(WalletUtils.formatHash(cursor.getString(columnIndex),
+                        Constants.ADDRESS_FORMAT_GROUP_SIZE, Constants.ADDRESS_FORMAT_LINE_SIZE));
 
-				return true;
-			}
-		});
-		setListAdapter(adapter);
+                return true;
+            }
+        });
+        setListAdapter(adapter);
 
-		loaderManager.initLoader(0, null, this);
-	}
+        loaderManager.initLoader(0, null, this);
+    }
 
-	@Override
-	public void onResume()
-	{
-		super.onResume();
+    @Override
+    public void onResume() {
+        super.onResume();
 
-		clipboardManager.addPrimaryClipChangedListener(this);
-	}
+        clipboardManager.addPrimaryClipChangedListener(this);
+    }
 
-	@Override
-	public void onPause()
-	{
-		clipboardManager.removePrimaryClipChangedListener(this);
+    @Override
+    public void onPause() {
+        clipboardManager.removePrimaryClipChangedListener(this);
 
-		super.onPause();
-	}
+        super.onPause();
+    }
 
-	@Override
-	public void onDestroy()
-	{
-		loaderManager.destroyLoader(0);
+    @Override
+    public void onDestroy() {
+        loaderManager.destroyLoader(0);
 
-		super.onDestroy();
-	}
+        super.onDestroy();
+    }
 
-	@Override
-	public void onActivityResult(final int requestCode, final int resultCode, final Intent intent)
-	{
-		if (requestCode == REQUEST_CODE_SCAN && resultCode == Activity.RESULT_OK)
-		{
-			final String input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT);
+    @Override
+    public void onActivityResult(final int requestCode, final int resultCode, final Intent intent) {
+        if (requestCode == REQUEST_CODE_SCAN && resultCode == Activity.RESULT_OK) {
+            final String input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT);
 
-			new StringInputParser(input)
-			{
-				@Override
-				protected void handlePaymentIntent(final PaymentIntent paymentIntent)
-				{
-					// workaround for "IllegalStateException: Can not perform this action after onSaveInstanceState"
-					handler.postDelayed(new Runnable()
-					{
-						@Override
-						public void run()
-						{
-							if (paymentIntent.hasAddress())
-							{
-								final Address address = paymentIntent.getAddress();
-								if (!wallet.isPubKeyHashMine(address.getHash160()))
-									EditAddressBookEntryFragment.edit(getFragmentManager(), address);
-								else
-									dialog(activity, null, R.string.address_book_options_scan_title, R.string.address_book_options_scan_own_address);
-							}
-							else
-							{
-								dialog(activity, null, R.string.address_book_options_scan_title, R.string.address_book_options_scan_invalid);
-							}
-						}
-					}, 500);
-				}
+            new StringInputParser(input) {
+                @Override
+                protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
+                    // workaround for "IllegalStateException: Can not perform this action after
+                    // onSaveInstanceState"
+                    handler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (paymentIntent.hasAddress()) {
+                                final Address address = paymentIntent.getAddress();
+                                if (!wallet.isPubKeyHashMine(address.getHash160()))
+                                    EditAddressBookEntryFragment.edit(getFragmentManager(), address);
+                                else
+                                    dialog(activity, null, R.string.address_book_options_scan_title,
+                                            R.string.address_book_options_scan_own_address);
+                            } else {
+                                dialog(activity, null, R.string.address_book_options_scan_title,
+                                        R.string.address_book_options_scan_invalid);
+                            }
+                        }
+                    }, 500);
+                }
 
-				@Override
-				protected void handleDirectTransaction(final Transaction transaction) throws VerificationException
-				{
-					cannotClassify(input);
-				}
+                @Override
+                protected void handleDirectTransaction(final Transaction transaction) throws VerificationException {
+                    cannotClassify(input);
+                }
 
-				@Override
-				protected void error(final int messageResId, final Object... messageArgs)
-				{
-					dialog(activity, null, R.string.address_book_options_scan_title, messageResId, messageArgs);
-				}
-			}.parse();
-		}
-	}
-
-	@Override
-	public void onCreateOptionsMenu(final Menu menu, final MenuInflater inflater)
-	{
-        //Fixed menu item doubling on rotate in address screen - langerhans (https://github.com/langerhans/dogecoin-wallet-new)
-        if (menu.findItem(R.id.sending_addresses_options_paste) == null && menu.findItem(R.id.sending_addresses_options_scan) == null)
-        {
-            inflater.inflate(R.menu.sending_addresses_fragment_options, menu);
-
-		    final PackageManager pm = activity.getPackageManager();
-		    menu.findItem(R.id.sending_addresses_options_scan).setVisible(
-				pm.hasSystemFeature(PackageManager.FEATURE_CAMERA) || pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT));
-
-		    super.onCreateOptionsMenu(menu, inflater);
+                @Override
+                protected void error(final int messageResId, final Object... messageArgs) {
+                    dialog(activity, null, R.string.address_book_options_scan_title, messageResId, messageArgs);
+                }
+            }.parse();
         }
-	}
+    }
 
-	@Override
-	public void onPrepareOptionsMenu(final Menu menu)
-	{
-		menu.findItem(R.id.sending_addresses_options_paste).setEnabled(getAddressFromPrimaryClip() != null);
+    @Override
+    public void onCreateOptionsMenu(final Menu menu, final MenuInflater inflater) {
+        inflater.inflate(R.menu.sending_addresses_fragment_options, menu);
 
-		super.onPrepareOptionsMenu(menu);
-	}
+        final PackageManager pm = activity.getPackageManager();
+        menu.findItem(R.id.sending_addresses_options_scan).setVisible(pm.hasSystemFeature(PackageManager.FEATURE_CAMERA)
+                || pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT));
 
-	@Override
-	public boolean onOptionsItemSelected(final MenuItem item)
-	{
-		switch (item.getItemId())
-		{
-			case R.id.sending_addresses_options_paste:
-				handlePasteClipboard();
-				return true;
+        super.onCreateOptionsMenu(menu, inflater);
+    }
 
-			case R.id.sending_addresses_options_scan:
-				handleScan();
-				return true;
-		}
+    @Override
+    public void onPrepareOptionsMenu(final Menu menu) {
+        menu.findItem(R.id.sending_addresses_options_paste).setEnabled(getAddressFromPrimaryClip() != null);
 
-		return super.onOptionsItemSelected(item);
-	}
+        super.onPrepareOptionsMenu(menu);
+    }
 
-	private void handlePasteClipboard()
-	{
-		final Address address = getAddressFromPrimaryClip();
-		if (address == null)
-		{
-			final DialogBuilder dialog = new DialogBuilder(activity);
-			dialog.setTitle(R.string.address_book_options_paste_from_clipboard_title);
-			dialog.setMessage(R.string.address_book_options_paste_from_clipboard_invalid);
-			dialog.singleDismissButton(null);
-			dialog.show();
-		}
-		else if (!wallet.isPubKeyHashMine(address.getHash160()))
-		{
-			EditAddressBookEntryFragment.edit(getFragmentManager(), address);
-		}
-		else
-		{
-			final DialogBuilder dialog = new DialogBuilder(activity);
-			dialog.setTitle(R.string.address_book_options_paste_from_clipboard_title);
-			dialog.setMessage(R.string.address_book_options_paste_from_clipboard_own_address);
-			dialog.singleDismissButton(null);
-			dialog.show();
-		}
-	}
+    @Override
+    public boolean onOptionsItemSelected(final MenuItem item) {
+        switch (item.getItemId()) {
+        case R.id.sending_addresses_options_paste:
+            handlePasteClipboard();
+            return true;
 
-	private void handleScan()
-	{
-		startActivityForResult(new Intent(activity, ScanActivity.class), REQUEST_CODE_SCAN);
-	}
+        case R.id.sending_addresses_options_scan:
+            handleScan();
+            return true;
+        }
 
-	@Override
-	public void onListItemClick(final ListView l, final View v, final int position, final long id)
-	{
-		activity.startActionMode(new ActionMode.Callback()
-		{
-			@Override
-			public boolean onCreateActionMode(final ActionMode mode, final Menu menu)
-			{
-				final MenuInflater inflater = mode.getMenuInflater();
-				inflater.inflate(R.menu.sending_addresses_context, menu);
+        return super.onOptionsItemSelected(item);
+    }
 
-				return true;
-			}
+    private void handlePasteClipboard() {
+        final Address address = getAddressFromPrimaryClip();
+        if (address == null) {
+            final DialogBuilder dialog = new DialogBuilder(activity);
+            dialog.setTitle(R.string.address_book_options_paste_from_clipboard_title);
+            dialog.setMessage(R.string.address_book_options_paste_from_clipboard_invalid);
+            dialog.singleDismissButton(null);
+            dialog.show();
+        } else if (!wallet.isPubKeyHashMine(address.getHash160())) {
+            EditAddressBookEntryFragment.edit(getFragmentManager(), address);
+        } else {
+            final DialogBuilder dialog = new DialogBuilder(activity);
+            dialog.setTitle(R.string.address_book_options_paste_from_clipboard_title);
+            dialog.setMessage(R.string.address_book_options_paste_from_clipboard_own_address);
+            dialog.singleDismissButton(null);
+            dialog.show();
+        }
+    }
 
-			@Override
-			public boolean onPrepareActionMode(final ActionMode mode, final Menu menu)
-			{
-				final String label = getLabel(position);
-				mode.setTitle(label);
+    private void handleScan() {
+        startActivityForResult(new Intent(activity, ScanActivity.class), REQUEST_CODE_SCAN);
+    }
 
-				return true;
-			}
+    @Override
+    public void onListItemClick(final ListView l, final View v, final int position, final long id) {
+        activity.startActionMode(new ActionMode.Callback() {
+            @Override
+            public boolean onCreateActionMode(final ActionMode mode, final Menu menu) {
+                final MenuInflater inflater = mode.getMenuInflater();
+                inflater.inflate(R.menu.sending_addresses_context, menu);
 
-			@Override
-			public boolean onActionItemClicked(final ActionMode mode, final MenuItem item)
-			{
-				switch (item.getItemId())
-				{
-					case R.id.sending_addresses_context_send:
-						handleSend(getAddress(position));
+                return true;
+            }
 
-						mode.finish();
-						return true;
+            @Override
+            public boolean onPrepareActionMode(final ActionMode mode, final Menu menu) {
+                final String label = getLabel(position);
+                mode.setTitle(label);
 
-					case R.id.sending_addresses_context_edit:
-						EditAddressBookEntryFragment.edit(getFragmentManager(), getAddress(position));
+                return true;
+            }
 
-						mode.finish();
-						return true;
+            @Override
+            public boolean onActionItemClicked(final ActionMode mode, final MenuItem item) {
+                switch (item.getItemId()) {
+                case R.id.sending_addresses_context_send:
+                    handleSend(getAddress(position));
 
-					case R.id.sending_addresses_context_remove:
-						handleRemove(getAddress(position));
+                    mode.finish();
+                    return true;
 
-						mode.finish();
-						return true;
+                case R.id.sending_addresses_context_edit:
+                    EditAddressBookEntryFragment.edit(getFragmentManager(), getAddress(position));
 
-					case R.id.sending_addresses_context_show_qr:
-						handleShowQr(getAddress(position), getLabel(position));
+                    mode.finish();
+                    return true;
 
-						mode.finish();
-						return true;
+                case R.id.sending_addresses_context_remove:
+                    handleRemove(getAddress(position));
 
-					case R.id.sending_addresses_context_copy_to_clipboard:
-						handleCopyToClipboard(getAddress(position));
+                    mode.finish();
+                    return true;
 
-						mode.finish();
-						return true;
-				}
+                case R.id.sending_addresses_context_show_qr:
+                    handleShowQr(getAddress(position), getLabel(position));
 
-				return false;
-			}
+                    mode.finish();
+                    return true;
 
-			@Override
-			public void onDestroyActionMode(final ActionMode mode)
-			{
-			}
+                case R.id.sending_addresses_context_copy_to_clipboard:
+                    handleCopyToClipboard(getAddress(position));
 
-			private String getAddress(final int position)
-			{
-				final Cursor cursor = (Cursor) adapter.getItem(position);
-				return cursor.getString(cursor.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS));
-			}
+                    mode.finish();
+                    return true;
+                }
 
-			private String getLabel(final int position)
-			{
-				final Cursor cursor = (Cursor) adapter.getItem(position);
-				return cursor.getString(cursor.getColumnIndexOrThrow(AddressBookProvider.KEY_LABEL));
-			}
-		});
-	}
+                return false;
+            }
 
-	private void handleSend(final String address)
-	{
-		SendCoinsActivity.start(activity, PaymentIntent.fromAddress(address, null));
-	}
+            @Override
+            public void onDestroyActionMode(final ActionMode mode) {
+            }
 
-	private void handleRemove(final String address)
-	{
-		final Uri uri = AddressBookProvider.contentUri(activity.getPackageName()).buildUpon().appendPath(address).build();
-		activity.getContentResolver().delete(uri, null, null);
-	}
+            private String getAddress(final int position) {
+                final Cursor cursor = (Cursor) adapter.getItem(position);
+                return cursor.getString(cursor.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS));
+            }
 
-	private void handleShowQr(final String address, final String label)
-	{
-		final String uri = BitcoinURI.convertToBitcoinURI(Constants.NETWORK_PARAMETERS, address, null, label, null);
-		final int size = getResources().getDimensionPixelSize(R.dimen.bitmap_dialog_qr_size);
-		BitmapFragment.show(getFragmentManager(), Qr.bitmap(uri, size));
-	}
+            private String getLabel(final int position) {
+                final Cursor cursor = (Cursor) adapter.getItem(position);
+                return cursor.getString(cursor.getColumnIndexOrThrow(AddressBookProvider.KEY_LABEL));
+            }
+        });
+    }
 
-	private void handleCopyToClipboard(final String address)
-	{
-		clipboardManager.setPrimaryClip(ClipData.newPlainText("Bitcoin address", address));
-		log.info("sending address copied to clipboard: {}", address.toString());
-		new Toast(activity).toast(R.string.wallet_address_fragment_clipboard_msg);
-	}
+    private void handleSend(final String address) {
+        SendCoinsActivity.start(activity, PaymentIntent.fromAddress(address, null));
+    }
 
-	@Override
-	public Loader<Cursor> onCreateLoader(final int id, final Bundle args)
-	{
-		final Uri uri = AddressBookProvider.contentUri(activity.getPackageName());
-		return new CursorLoader(activity, uri, null, AddressBookProvider.SELECTION_NOTIN,
-				new String[] { walletAddressesSelection != null ? walletAddressesSelection : "" }, AddressBookProvider.KEY_LABEL
-						+ " COLLATE LOCALIZED ASC");
-	}
+    private void handleRemove(final String address) {
+        final Uri uri = AddressBookProvider.contentUri(activity.getPackageName()).buildUpon().appendPath(address)
+                .build();
+        activity.getContentResolver().delete(uri, null, null);
+    }
 
-	@Override
-	public void onLoadFinished(final Loader<Cursor> loader, final Cursor data)
-	{
-		adapter.swapCursor(data);
+    private void handleShowQr(final String address, final String label) {
+        final String uri = BitcoinURI.convertToBitcoinURI(Constants.NETWORK_PARAMETERS, address, null, label, null);
+        final int size = getResources().getDimensionPixelSize(R.dimen.bitmap_dialog_qr_size);
+        BitmapFragment.show(getFragmentManager(), Qr.bitmap(uri, size));
+    }
 
-		setEmptyText(WholeStringBuilder.bold(getString(R.string.address_book_empty_text)));
-	}
+    private void handleCopyToClipboard(final String address) {
+        clipboardManager.setPrimaryClip(ClipData.newPlainText("Bitcoin address", address));
+        log.info("sending address copied to clipboard: {}", address.toString());
+        new Toast(activity).toast(R.string.wallet_address_fragment_clipboard_msg);
+    }
 
-	@Override
-	public void onLoaderReset(final Loader<Cursor> loader)
-	{
-		adapter.swapCursor(null);
-	}
+    @Override
+    public Loader<Cursor> onCreateLoader(final int id, final Bundle args) {
+        final Uri uri = AddressBookProvider.contentUri(activity.getPackageName());
+        return new CursorLoader(activity, uri, null, AddressBookProvider.SELECTION_NOTIN,
+                new String[] { walletAddressesSelection != null ? walletAddressesSelection : "" },
+                AddressBookProvider.KEY_LABEL + " COLLATE LOCALIZED ASC");
+    }
 
-	public void setWalletAddresses(@Nonnull final ArrayList<Address> addresses)
-	{
-		final StringBuilder builder = new StringBuilder();
-		for (final Address address : addresses)
-			builder.append(address.toBase58()).append(",");
-		if (addresses.size() > 0)
-			builder.setLength(builder.length() - 1);
+    @Override
+    public void onLoadFinished(final Loader<Cursor> loader, final Cursor data) {
+        adapter.swapCursor(data);
 
-		walletAddressesSelection = builder.toString();
-	}
+        setEmptyText(WholeStringBuilder.bold(getString(R.string.address_book_empty_text)));
+    }
 
-	private Address getAddressFromPrimaryClip()
-	{
-		if (!clipboardManager.hasPrimaryClip())
-			return null;
+    @Override
+    public void onLoaderReset(final Loader<Cursor> loader) {
+        adapter.swapCursor(null);
+    }
 
-		final ClipData clip = clipboardManager.getPrimaryClip();
-		final ClipDescription clipDescription = clip.getDescription();
+    public void setWalletAddresses(@Nonnull final ArrayList<Address> addresses) {
+        final StringBuilder builder = new StringBuilder();
+        for (final Address address : addresses)
+            builder.append(address.toBase58()).append(",");
+        if (addresses.size() > 0)
+            builder.setLength(builder.length() - 1);
 
-		if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN))
-		{
-			final CharSequence clipText = clip.getItemAt(0).getText();
-			if (clipText == null)
-				return null;
+        walletAddressesSelection = builder.toString();
+    }
 
-			try
-			{
-				return Address.fromBase58(Constants.NETWORK_PARAMETERS, clipText.toString().trim());
-			}
-			catch (final AddressFormatException x)
-			{
-				return null;
-			}
-		}
-		else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST))
-		{
-			final Uri clipUri = clip.getItemAt(0).getUri();
-			if (clipUri == null)
-				return null;
-			try
-			{
-				return new BitcoinURI(clipUri.toString()).getAddress();
-			}
-			catch (final BitcoinURIParseException x)
-			{
-				return null;
-			}
-		}
-		else
-		{
-			return null;
-		}
-	}
+    private Address getAddressFromPrimaryClip() {
+        if (!clipboardManager.hasPrimaryClip())
+            return null;
 
-	@Override
-	public void onPrimaryClipChanged()
-	{
-		activity.invalidateOptionsMenu();
-	}
+        final ClipData clip = clipboardManager.getPrimaryClip();
+        final ClipDescription clipDescription = clip.getDescription();
+
+        if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
+            final CharSequence clipText = clip.getItemAt(0).getText();
+            if (clipText == null)
+                return null;
+
+            try {
+                return Address.fromBase58(Constants.NETWORK_PARAMETERS, clipText.toString().trim());
+            } catch (final AddressFormatException x) {
+                return null;
+            }
+        } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST)) {
+            final Uri clipUri = clip.getItemAt(0).getUri();
+            if (clipUri == null)
+                return null;
+            try {
+                return new BitcoinURI(clipUri.toString()).getAddress();
+            } catch (final BitcoinURIParseException x) {
+                return null;
+            }
+        } else {
+            return null;
+        }
+    }
+
+    @Override
+    public void onPrimaryClipChanged() {
+        activity.invalidateOptionsMenu();
+    }
 }

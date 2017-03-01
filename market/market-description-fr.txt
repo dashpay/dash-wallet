@@ -1,7 +1,6 @@
 <b>Vos Dash toujours avec vous, dans la poche !</b> Payez en scannant simplement un QR-code. Si vous êtes marchand, recevez vos paiements de manière sûre et instantanée. Dash Wallet est la première application Dash mobile, et sans doute la plus sécurisée !
 
 
-
 <b>CARACTÉRISTIQUES</b>
 
 • Pas d'enregistrement, de service web ou de réseau centralisé ! Ce portefeuille est décentralisé et entièrement pair-à-pair.
@@ -30,7 +29,6 @@ https://www.transifex.com/dash/dash-wallet/
 <b>TÉMOIGNAGES</b>
 
 • Portefeuille mobile recommandé par https://dash.org
-
 
 
 <i>L'utilisation est à vos risques et périls !</i>

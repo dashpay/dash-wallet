@@ -21,7 +21,6 @@
   <string name="exchange_rates_fragment_balance">stanje</string>
   <string name="exchange_rates_fragment_source">Vir cene: %s</string>
   <string name="exchange_rates_options_search">Poišči menjalni tečaj</string>
-  <string name="exchange_rates_context_set_as_default_title">Nastavi kot privzeto tujo valuto</string>
   <string name="wallet_transactions_fragment_empty_text_received">Prejeli niste še nobenih novcev.</string>
   <string name="wallet_transactions_fragment_empty_text_sent">Poslali niste še nobenih novcev.</string>
   <string name="wallet_transactions_fragment_empty_text_howto">Kako dobim Dashe?\n\nLahko jih kupite,\nprodate kaj za Dash\nali pa zaslužite z delom.</string>
@@ -162,7 +161,6 @@
   <string name="preferences_data_usage_title">Poraba podatkov</string>
   <string name="preferences_data_usage_summary">Prikaži možnosti za omejitev porabe podatkov prek mobilnih omrežij.</string>
   <string name="preferences_report_issue_title">Prijavi težavo</string>
-  <string name="preferences_report_issue_summary">Opišite težavo in jo sporočite po elektronski pošti razvijalcem aplikacije.</string>
   <string name="preferences_initiate_reset_title">Ponastavi nakazila</string>
   <string name="preferences_initiate_reset_summary">Ponovno prenesi nakazila in preračunaj stanje. To bo vzelo nekaj časa.</string>
   <string name="preferences_initiate_reset_dialog_message">Želite ponovno prenesti in preračunati nakazila?\n\nZačasno ne boste mogli videti svojega stanja in transakcij ter izvajati plačil. Ti podatki se bodo spet prikazali tekom ponovnega usklajevanja.</string>
@@ -183,9 +181,9 @@
   <string name="about_version_title">Verzija</string>
   <string name="about_copyright_title">Avtorske pravice</string>
   <string name="about_license_title">Licenca</string>
-  <string name="about_credits_bitcoinj_title">Ta aplikacija uporablja dashj %s</string>
-  <string name="about_credits_zxing_title">Ta aplikacija uporablja zxing</string>
-  <string name="about_credits_icon_title">Ta apl. uporablja ikono avtorja bitboy</string>
+  <string name="about_category_credits">Ta aplikacija uporablja…</string>
+  <string name="about_credits_bitcoinj_title">bitcoinj %s</string>
+  <string name="about_credits_zxing_title">ZXing</string>
   <string name="about_community_googleplus_title">Skupnost na Google+</string>
   <string name="about_community_googleplus_summary">Razprave o aplikaciji</string>
   <string name="about_market_app_title">Stran na Google Play</string>

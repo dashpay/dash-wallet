@@ -1,0 +1,4 @@
+tcp:electrum.darkcointalk.org
+tcp:drk1.electrum-servers.us
+tcp:electrum.dash.siampm.com
+tcp:electrum-drk.club

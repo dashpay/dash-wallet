@@ -17,133 +17,67 @@
 
 package de.schildbach.wallet.util;
 
-import javax.annotation.Nullable;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
 import android.app.Dialog;
-import android.content.Intent;
+import android.app.DialogFragment;
+import android.app.FragmentManager;
 import android.graphics.Bitmap;
 import android.os.Bundle;
-import android.support.v4.app.DialogFragment;
-import android.support.v4.app.FragmentManager;
-import android.text.Html;
-import android.text.Spanned;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.Window;
 import android.widget.ImageView;
-import android.widget.TextView;
-import hashengineering.darkcoin.wallet.R;
 
 /**
  * @author Andreas Schildbach
  */
-public class BitmapFragment extends DialogFragment
-{
-	private static final String FRAGMENT_TAG = BitmapFragment.class.getName();
+public class BitmapFragment extends DialogFragment {
+    private static final String FRAGMENT_TAG = BitmapFragment.class.getName();
+    private static final String KEY_BITMAP = "bitmap";
 
-	private static final String KEY_BITMAP = "bitmap";
-	private static final String KEY_ADDRESS = "address";
-	private static final String KEY_LABEL = "label";
+    public static void show(final FragmentManager fm, final Bitmap bitmap) {
+        instance(bitmap).show(fm, FRAGMENT_TAG);
+    }
 
-	private static final Logger log = LoggerFactory.getLogger(BitmapFragment.class);
+    private static BitmapFragment instance(final Bitmap bitmap) {
+        final BitmapFragment fragment = new BitmapFragment();
 
-	public static void show(final FragmentManager fm, final Bitmap bitmap)
-	{
-		instance(bitmap, null, null).show(fm, FRAGMENT_TAG);
-	}
+        final Bundle args = new Bundle();
+        args.putParcelable(KEY_BITMAP, bitmap);
+        fragment.setArguments(args);
 
-	public static void show(final FragmentManager fm, final Bitmap bitmap, final Spanned label, @Nullable final CharSequence address)
-	{
-		instance(bitmap, label, address).show(fm, FRAGMENT_TAG);
-	}
+        return fragment;
+    }
 
-	private static BitmapFragment instance(final Bitmap bitmap, @Nullable final Spanned label, @Nullable final CharSequence address)
-	{
-		final BitmapFragment fragment = new BitmapFragment();
+    private Activity activity;
 
-		final Bundle args = new Bundle();
-		args.putParcelable(KEY_BITMAP, bitmap);
-		if (label != null)
-			args.putCharSequence(KEY_LABEL, Html.toHtml(label));
-		if (address != null)
-			args.putCharSequence(KEY_ADDRESS, address);
-		fragment.setArguments(args);
+    @Override
+    public void onAttach(final Activity activity) {
+        super.onAttach(activity);
 
-		return fragment;
-	}
+        this.activity = activity;
+    }
 
-	private Activity activity;
+    @Override
+    public Dialog onCreateDialog(final Bundle savedInstanceState) {
+        final Bundle args = getArguments();
+        final Bitmap bitmap = (Bitmap) args.getParcelable(KEY_BITMAP);
 
-	@Override
-	public void onAttach(final Activity activity)
-	{
-		super.onAttach(activity);
+        final Dialog dialog = new Dialog(activity);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.bitmap_dialog);
+        dialog.setCanceledOnTouchOutside(true);
 
-		this.activity = activity;
-	}
+        final ImageView imageView = (ImageView) dialog.findViewById(R.id.bitmap_dialog_image);
+        imageView.setImageBitmap(bitmap);
+        imageView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(final View v) {
+                dismiss();
+            }
+        });
 
-	@Override
-	public Dialog onCreateDialog(final Bundle savedInstanceState)
-	{
-		final Bundle args = getArguments();
-		final Bitmap bitmap = (Bitmap) args.getParcelable(KEY_BITMAP);
-		final CharSequence label = args.getCharSequence(KEY_LABEL);
-		final CharSequence address = args.getCharSequence(KEY_ADDRESS);
-
-		final Dialog dialog = new Dialog(activity);
-		dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-		dialog.setContentView(R.layout.bitmap_dialog);
-		dialog.setCanceledOnTouchOutside(true);
-
-		final ImageView imageView = (ImageView) dialog.findViewById(R.id.bitmap_dialog_image);
-		imageView.setImageBitmap(bitmap);
-
-		final View labelButtonView = dialog.findViewById(R.id.bitmap_dialog_label_button);
-		final TextView labelView = (TextView) dialog.findViewById(R.id.bitmap_dialog_label);
-		if (getResources().getBoolean(R.bool.show_bitmap_dialog_label) && label != null)
-		{
-			labelView.setText(Html.fromHtml(Formats.maybeRemoveOuterHtmlParagraph(label)));
-			labelButtonView.setVisibility(View.VISIBLE);
-
-			if (address != null)
-			{
-				labelButtonView.setOnClickListener(new OnClickListener()
-				{
-					@Override
-					public void onClick(final View v)
-					{
-						final Intent intent = new Intent(Intent.ACTION_SEND);
-						intent.setType("text/plain");
-						intent.putExtra(Intent.EXTRA_TEXT, address);
-						startActivity(Intent.createChooser(intent, getString(R.string.bitmap_fragment_share)));
-						log.info("address shared via intent: {}", address);
-					}
-				});
-			}
-			else
-			{
-				labelButtonView.setEnabled(false);
-			}
-		}
-		else
-		{
-			labelButtonView.setVisibility(View.GONE);
-		}
-
-		final View dialogView = dialog.findViewById(R.id.bitmap_dialog_group);
-		dialogView.setOnClickListener(new View.OnClickListener()
-		{
-			@Override
-			public void onClick(final View v)
-			{
-				dismiss();
-			}
-		});
-
-		return dialog;
-	}
+        return dialog;
+    }
 }

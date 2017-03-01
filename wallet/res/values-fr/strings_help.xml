@@ -3,6 +3,7 @@
 
 	<string name="help_wallet">
 <![CDATA[
+<<<<<<< HEAD
 ⇥⇥<p>
 ⇥⇥⇥En haut à gauche de l\'écran s\'affiche votre solde en Dash et l\'équivalent en monnaie nationale.
 ⇥⇥⇥Touchez pour afficher une liste de monnaies nationales, et tapez sur l\'une d\'elles pour la sélectionner par défaut.
@@ -34,10 +35,11 @@
 			Ensuite, l\'autre personne peut numériser le code QR généré.
 			Vous pouvez aussi envoyer votre demande à une personne éloignée avec le bouton Partager de la barre de menu.
 			L\'autre personne devra cliquer sur l\'URL Dash.
+
 		</p>
 		<p>
-			Dans les deux cas, l\'autre personne obtiendra une zone de dialogue préremplie pour envoyer les pièces.
-			Si elle accepte, elle n\'aura qu\'à envoyer le paiement.
+			Dans les deux cas, une fenêtre d\'envoi de pièces sera présentée préremplie au payeur.
+			Si le payeur accepte, il ou elle pourra facilement envoyer le paiement.
 		</p>
 	]]>
 	</string>
@@ -57,7 +59,7 @@
 			Tout écart avec le solde de l\'écran principal n\'est pas encore confirmé et ne peut donc pas être dépensé.
 		</p>
 		<p>
-			Enfin, saisir le montant à payer.
+			Enfin, le NIP de dépense devra être saisi s\'il a été défini au préalable.
 		</p>
 		<p>
 			Vous pouvez saisir un paiement hors-ligne.
@@ -67,7 +69,7 @@
 		<p>
 			Note :
 			Les paiements sont irréversibles !
-			Toujours vérifier l\'adresse de destination.
+			Vérifiez toujours l\'adresse de destination.
 		</p>
 	]]>
 	</string>
@@ -81,9 +83,9 @@
 			<b>Si vous le perdez, vous perdez vos Dash.</b>
 		</p>
 		<p>
-			Cela signifie que vous devez <b>sauvegarder votre portefeuille</b> !
+			Cela signifie que vous devez <b>sauvegarder votre porte-monnaie</b> !
 			Utilisez la fonction de sauvegarde de l\'appli plutôt qu\'une appli de sauvegarde tierce.
-			Gardez votre sauvegarde en sûreté et souvenez-vous de votre mot de passe.
+			Conservez votre sauvegarde en lieu sûr et souvenez-vous du mot de passe.
 		</p>
 		<p>
 			<b>Avant de désinstaller Dash Wallet</b> (ou d\'effacer les données de l\'appli/effacer les données de votre appareil), <b>transférez vos Dash vers un autre portefeuille</b>.
@@ -95,13 +97,13 @@
 		</p>
 		<p>
 			<b>Assurez la sécurité de votre appareil mobile !</b>
-			Ne rootez pas votre appareil.
+			Ne prenez pas le contrôle de la racine (root) de votre appareil.
 			N\'installez que des applications de confiance.
-			Des applications malveillantes pourraient essayer de voler votre portefeuille.
+			Des applications malveillantes pourraient essayer de voler votre porte-monnaie.
 		</p>
 		<p>
 			Minimisez les risques !
-			<b>N\'utilisez que pour des petits montants,</b> pour un usage quotidien.
+			<b>Ne gardez qu\'un montant raisonnable,</b> pour la journée.
 		</p>
 	]]>
 	</string>

@@ -1,6 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
 	<string name="toast_wallet_reset">Din plånbok är nollställd!\nDet tar en stund för att återställa.</string>
 	<string name="wallet_disclaimer_fragment_remind_safety">Använd på egen risk. Läs &lt;u&gt;säkerhetsråden&lt;/u&gt;.</string>
 	<string name="wallet_disclaimer_fragment_remind_backup">Du behöver &lt;u&gt;säkerhetskopiera din plånbok&lt;/u&gt;!</string>

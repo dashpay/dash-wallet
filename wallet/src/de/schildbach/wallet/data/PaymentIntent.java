@@ -39,57 +39,49 @@ import org.bitcoinj.wallet.SendRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import android.os.Parcel;
-import android.os.Parcelable;
-
 import com.google.common.io.BaseEncoding;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.util.Bluetooth;
 import de.schildbach.wallet.util.GenericUtils;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 /**
  * @author Andreas Schildbach
  */
-public final class PaymentIntent implements Parcelable
-{
-	public enum Standard
-	{
+public final class PaymentIntent implements Parcelable {
+	public enum Standard {
 		BIP21, BIP70
 	}
 
-	public final static class Output implements Parcelable
-	{
+	public final static class Output implements Parcelable {
 		public final Coin amount;
 		public final Script script;
 
-		public Output(final Coin amount, final Script script)
-		{
+		public Output(final Coin amount, final Script script) {
 			this.amount = amount;
 			this.script = script;
 		}
 
-		public static Output valueOf(final PaymentProtocol.Output output) throws PaymentProtocolException.InvalidOutputs
-		{
-			try
-			{
+		public static Output valueOf(final PaymentProtocol.Output output)
+				throws PaymentProtocolException.InvalidOutputs {
+			try {
 				final Script script = new Script(output.scriptData);
 				return new PaymentIntent.Output(output.amount, script);
-			}
-			catch (final ScriptException x)
-			{
-				throw new PaymentProtocolException.InvalidOutputs("unparseable script in output: " + Constants.HEX.encode(output.scriptData));
+			} catch (final ScriptException x) {
+				throw new PaymentProtocolException.InvalidOutputs(
+						"unparseable script in output: " + Constants.HEX.encode(output.scriptData));
 			}
 		}
 
-		public boolean hasAmount()
-		{
+		public boolean hasAmount() {
 			return amount != null && amount.signum() != 0;
 		}
 
 		@Override
-		public String toString()
-		{
+		public String toString() {
 			final StringBuilder builder = new StringBuilder();
 
 			builder.append(getClass().getSimpleName());
@@ -110,14 +102,12 @@ public final class PaymentIntent implements Parcelable
 		}
 
 		@Override
-		public int describeContents()
-		{
+		public int describeContents() {
 			return 0;
 		}
 
 		@Override
-		public void writeToParcel(final Parcel dest, final int flags)
-		{
+		public void writeToParcel(final Parcel dest, final int flags) {
 			dest.writeSerializable(amount);
 
 			final byte[] program = script.getProgram();
@@ -125,23 +115,19 @@ public final class PaymentIntent implements Parcelable
 			dest.writeByteArray(program);
 		}
 
-		public static final Parcelable.Creator<Output> CREATOR = new Parcelable.Creator<Output>()
-		{
+		public static final Parcelable.Creator<Output> CREATOR = new Parcelable.Creator<Output>() {
 			@Override
-			public Output createFromParcel(final Parcel in)
-			{
+			public Output createFromParcel(final Parcel in) {
 				return new Output(in);
 			}
 
 			@Override
-			public Output[] newArray(final int size)
-			{
+			public Output[] newArray(final int size) {
 				return new Output[size];
 			}
 		};
 
-		private Output(final Parcel in)
-		{
+		private Output(final Parcel in) {
 			amount = (Coin) in.readSerializable();
 
 			final int programLength = in.readInt();
@@ -183,10 +169,10 @@ public final class PaymentIntent implements Parcelable
 
 	private static final Logger log = LoggerFactory.getLogger(PaymentIntent.class);
 
-	public PaymentIntent(@Nullable final Standard standard, @Nullable final String payeeName, @Nullable final String payeeVerifiedBy,
-			@Nullable final Output[] outputs, @Nullable final String memo, @Nullable final String paymentUrl, @Nullable final byte[] payeeData,
-			@Nullable final String paymentRequestUrl, @Nullable final byte[] paymentRequestHash)
-	{
+	public PaymentIntent(@Nullable final Standard standard, @Nullable final String payeeName,
+						 @Nullable final String payeeVerifiedBy, @Nullable final Output[] outputs, @Nullable final String memo,
+						 @Nullable final String paymentUrl, @Nullable final byte[] payeeData,
+						 @Nullable final String paymentRequestUrl, @Nullable final byte[] paymentRequestHash) {
 		this.standard = standard;
 		this.payeeName = payeeName;
 		this.payeeVerifiedBy = payeeVerifiedBy;
@@ -211,31 +197,27 @@ public final class PaymentIntent implements Parcelable
 		this(null, null, null, buildSimplePayTo(Coin.ZERO, address), addressLabel, null, null, null, null);
 	}
 
-	public static PaymentIntent blank()
-	{
+	public static PaymentIntent blank() {
 		return new PaymentIntent(null, null, null, null, null, null, null, null, null);
 	}
 
-	public static PaymentIntent fromAddress(final Address address, @Nullable final String addressLabel)
-	{
+	public static PaymentIntent fromAddress(final Address address, @Nullable final String addressLabel) {
 		return new PaymentIntent(address, addressLabel);
 	}
 
 	public static PaymentIntent fromAddress(final String address, @Nullable final String addressLabel)
-			throws WrongNetworkException, AddressFormatException
-	{
+			throws WrongNetworkException, AddressFormatException {
 		return new PaymentIntent(Address.fromBase58(Constants.NETWORK_PARAMETERS, address), addressLabel);
 	}
 
-	public static PaymentIntent from(final String address, @Nullable final String addressLabel, @Nullable final Coin amount)
-			throws WrongNetworkException, AddressFormatException
-	{
-		return new PaymentIntent(null, null, null, buildSimplePayTo(amount, Address.fromBase58(Constants.NETWORK_PARAMETERS, address)), addressLabel,
-				null, null, null, null);
+	public static PaymentIntent from(final String address, @Nullable final String addressLabel,
+									 @Nullable final Coin amount) throws WrongNetworkException, AddressFormatException {
+		return new PaymentIntent(null, null, null,
+				buildSimplePayTo(amount, Address.fromBase58(Constants.NETWORK_PARAMETERS, address)), addressLabel, null,
+				null, null, null);
 	}
 
-	public static PaymentIntent fromBitcoinUri(final BitcoinURI bitcoinUri)
-	{
+	public static PaymentIntent fromBitcoinUri(final BitcoinURI bitcoinUri) {
 		final Address address = bitcoinUri.getAddress();
 		final Output[] outputs = address != null ? buildSimplePayTo(bitcoinUri.getAmount(), address) : null;
 		final String bluetoothMac = (String) bitcoinUri.getParameterByName(Bluetooth.MAC_URI_PARAM);
@@ -249,40 +231,30 @@ public final class PaymentIntent implements Parcelable
 
 	private static final BaseEncoding BASE64URL = BaseEncoding.base64Url().omitPadding();
 
-	private static byte[] base64UrlDecode(final String encoded)
-	{
-		try
-		{
+	private static byte[] base64UrlDecode(final String encoded) {
+		try {
 			return BASE64URL.decode(encoded);
-		}
-		catch (final IllegalArgumentException x)
-		{
+		} catch (final IllegalArgumentException x) {
 			log.info("cannot base64url-decode: " + encoded);
 			return null;
 		}
 	}
 
-	public PaymentIntent mergeWithEditedValues(@Nullable final Coin editedAmount, @Nullable final Address editedAddress)
-	{
+	public PaymentIntent mergeWithEditedValues(@Nullable final Coin editedAmount,
+											   @Nullable final Address editedAddress) {
 		final Output[] outputs;
 
-		if (hasOutputs())
-		{
-			if (mayEditAmount())
-			{
+		if (hasOutputs()) {
+			if (mayEditAmount()) {
 				checkArgument(editedAmount != null);
 
 				// put all coins on first output, skip the others
 				outputs = new Output[] { new Output(editedAmount, this.outputs[0].script) };
-			}
-			else
-			{
+			} else {
 				// exact copy of outputs
 				outputs = this.outputs;
 			}
-		}
-		else
-		{
+		} else {
 			checkArgument(editedAmount != null);
 			checkArgument(editedAddress != null);
 
@@ -301,23 +273,19 @@ public final class PaymentIntent implements Parcelable
 		return SendRequest.forTx(transaction);
 	}
 
-	private static Output[] buildSimplePayTo(final Coin amount, final Address address)
-	{
+	private static Output[] buildSimplePayTo(final Coin amount, final Address address) {
 		return new Output[] { new Output(amount, ScriptBuilder.createOutputScript(address)) };
 	}
 
-	public boolean hasPayee()
-	{
+	public boolean hasPayee() {
 		return payeeName != null;
 	}
 
-	public boolean hasOutputs()
-	{
+	public boolean hasOutputs() {
 		return outputs != null && outputs.length > 0;
 	}
 
-	public boolean hasAddress()
-	{
+	public boolean hasAddress() {
 		if (outputs == null || outputs.length != 1)
 			return false;
 
@@ -325,8 +293,7 @@ public final class PaymentIntent implements Parcelable
 		return script.isSentToAddress() || script.isPayToScriptHash() || script.isSentToRawPubKey();
 	}
 
-	public Address getAddress()
-	{
+	public Address getAddress() {
 		if (!hasAddress())
 			throw new IllegalStateException();
 
@@ -334,13 +301,11 @@ public final class PaymentIntent implements Parcelable
 		return script.getToAddress(Constants.NETWORK_PARAMETERS, true);
 	}
 
-	public boolean mayEditAddress()
-	{
+	public boolean mayEditAddress() {
 		return standard == null;
 	}
 
-	public boolean hasAmount()
-	{
+	public boolean hasAmount() {
 		if (hasOutputs())
 			for (final Output output : outputs)
 				if (output.hasAmount())
@@ -349,8 +314,7 @@ public final class PaymentIntent implements Parcelable
 		return false;
 	}
 
-	public Coin getAmount()
-	{
+	public Coin getAmount() {
 		Coin amount = Coin.ZERO;
 
 		if (hasOutputs())
@@ -364,65 +328,55 @@ public final class PaymentIntent implements Parcelable
 			return null;
 	}
 
-	public boolean mayEditAmount()
-	{
+	public boolean mayEditAmount() {
 		return !(standard == Standard.BIP70 && hasAmount());
 	}
 
-	public boolean hasPaymentUrl()
-	{
+	public boolean hasPaymentUrl() {
 		return paymentUrl != null;
 	}
 
-	public boolean isSupportedPaymentUrl()
-	{
+	public boolean isSupportedPaymentUrl() {
 		return isHttpPaymentUrl() || isBluetoothPaymentUrl();
 	}
 
-	public boolean isHttpPaymentUrl()
-	{
-		return paymentUrl != null
-				&& (GenericUtils.startsWithIgnoreCase(paymentUrl, "http:") || GenericUtils.startsWithIgnoreCase(paymentUrl, "https:"));
+	public boolean isHttpPaymentUrl() {
+		return paymentUrl != null && (GenericUtils.startsWithIgnoreCase(paymentUrl, "http:")
+				|| GenericUtils.startsWithIgnoreCase(paymentUrl, "https:"));
 	}
 
-	public boolean isBluetoothPaymentUrl()
-	{
+	public boolean isBluetoothPaymentUrl() {
 		return Bluetooth.isBluetoothUrl(paymentUrl);
 	}
 
-	public boolean hasPaymentRequestUrl()
-	{
+	public boolean hasPaymentRequestUrl() {
 		return paymentRequestUrl != null;
 	}
 
-	public boolean isSupportedPaymentRequestUrl()
-	{
+	public boolean isSupportedPaymentRequestUrl() {
 		return isHttpPaymentRequestUrl() || isBluetoothPaymentRequestUrl();
 	}
 
-	public boolean isHttpPaymentRequestUrl()
-	{
-		return paymentRequestUrl != null
-				&& (GenericUtils.startsWithIgnoreCase(paymentRequestUrl, "http:") || GenericUtils.startsWithIgnoreCase(paymentRequestUrl, "https:"));
+	public boolean isHttpPaymentRequestUrl() {
+		return paymentRequestUrl != null && (GenericUtils.startsWithIgnoreCase(paymentRequestUrl, "http:")
+				|| GenericUtils.startsWithIgnoreCase(paymentRequestUrl, "https:"));
 	}
 
-	public boolean isBluetoothPaymentRequestUrl()
-	{
+	public boolean isBluetoothPaymentRequestUrl() {
 		return Bluetooth.isBluetoothUrl(paymentRequestUrl);
 	}
 
 	/**
-	 * Check if given payment intent is only extending on <i>this</i> one, that is it does not alter any of the fields.
-	 * Address and amount fields must be equal, respectively (non-existence included).
-	 * 
+	 * Check if given payment intent is only extending on <i>this</i> one, that is it does not alter any of
+	 * the fields. Address and amount fields must be equal, respectively (non-existence included).
+	 *
 	 * Alternatively, a BIP21+BIP72 request can provide a hash of the BIP70 request.
-	 * 
+	 *
 	 * @param other
 	 *            payment intent that is checked if it extends this one
 	 * @return true if it extends
 	 */
-	public boolean isExtendedBy(final PaymentIntent other)
-	{
+	public boolean isExtendedBy(final PaymentIntent other) {
 		// shortcut via hash
 		if (standard == Standard.BIP21 && other.standard == Standard.BIP70)
 			if (paymentRequestHash != null && Arrays.equals(paymentRequestHash, other.paymentRequestHash))
@@ -432,8 +386,7 @@ public final class PaymentIntent implements Parcelable
 		return equalsAmount(other) && equalsAddress(other);
 	}
 
-	public boolean equalsAmount(final PaymentIntent other)
-	{
+	public boolean equalsAmount(final PaymentIntent other) {
 		final boolean hasAmount = hasAmount();
 		if (hasAmount != other.hasAmount())
 			return false;
@@ -442,8 +395,7 @@ public final class PaymentIntent implements Parcelable
 		return true;
 	}
 
-	public boolean equalsAddress(final PaymentIntent other)
-	{
+	public boolean equalsAddress(final PaymentIntent other) {
 		final boolean hasAddress = hasAddress();
 		if (hasAddress != other.hasAddress())
 			return false;
@@ -453,16 +405,14 @@ public final class PaymentIntent implements Parcelable
 	}
 
 	@Override
-	public String toString()
-	{
+	public String toString() {
 		final StringBuilder builder = new StringBuilder();
 
 		builder.append(getClass().getSimpleName());
 		builder.append('[');
 		builder.append(standard);
 		builder.append(',');
-		if (hasPayee())
-		{
+		if (hasPayee()) {
 			builder.append(payeeName);
 			if (payeeVerifiedBy != null)
 				builder.append("/").append(payeeVerifiedBy);
@@ -471,18 +421,15 @@ public final class PaymentIntent implements Parcelable
 		builder.append(hasOutputs() ? Arrays.toString(outputs) : "null");
 		builder.append(',');
 		builder.append(paymentUrl);
-		if (payeeData != null)
-		{
+		if (payeeData != null) {
 			builder.append(",payeeData=");
 			builder.append(Constants.HEX.encode(payeeData));
 		}
-		if (paymentRequestUrl != null)
-		{
+		if (paymentRequestUrl != null) {
 			builder.append(",paymentRequestUrl=");
 			builder.append(paymentRequestUrl);
 		}
-		if (paymentRequestHash != null)
-		{
+		if (paymentRequestHash != null) {
 			builder.append(",paymentRequestHash=");
 			builder.append(Constants.HEX.encode(paymentRequestHash));
 		}
@@ -492,26 +439,21 @@ public final class PaymentIntent implements Parcelable
 	}
 
 	@Override
-	public int describeContents()
-	{
+	public int describeContents() {
 		return 0;
 	}
 
 	@Override
-	public void writeToParcel(final Parcel dest, final int flags)
-	{
+	public void writeToParcel(final Parcel dest, final int flags) {
 		dest.writeSerializable(standard);
 
 		dest.writeString(payeeName);
 		dest.writeString(payeeVerifiedBy);
 
-		if (outputs != null)
-		{
+		if (outputs != null) {
 			dest.writeInt(outputs.length);
 			dest.writeTypedArray(outputs, 0);
-		}
-		else
-		{
+		} else {
 			dest.writeInt(0);
 		}
 
@@ -519,60 +461,47 @@ public final class PaymentIntent implements Parcelable
 
 		dest.writeString(paymentUrl);
 
-		if (payeeData != null)
-		{
+		if (payeeData != null) {
 			dest.writeInt(payeeData.length);
 			dest.writeByteArray(payeeData);
-		}
-		else
-		{
+		} else {
 			dest.writeInt(0);
 		}
 
 		dest.writeString(paymentRequestUrl);
 
-		if (paymentRequestHash != null)
-		{
+		if (paymentRequestHash != null) {
 			dest.writeInt(paymentRequestHash.length);
 			dest.writeByteArray(paymentRequestHash);
-		}
-		else
-		{
+		} else {
 			dest.writeInt(0);
 		}
 		dest.writeByte(useInstantX ? (byte)1 : (byte)0);
 	}
 
-	public static final Parcelable.Creator<PaymentIntent> CREATOR = new Parcelable.Creator<PaymentIntent>()
-	{
+	public static final Parcelable.Creator<PaymentIntent> CREATOR = new Parcelable.Creator<PaymentIntent>() {
 		@Override
-		public PaymentIntent createFromParcel(final Parcel in)
-		{
+		public PaymentIntent createFromParcel(final Parcel in) {
 			return new PaymentIntent(in);
 		}
 
 		@Override
-		public PaymentIntent[] newArray(final int size)
-		{
+		public PaymentIntent[] newArray(final int size) {
 			return new PaymentIntent[size];
 		}
 	};
 
-	private PaymentIntent(final Parcel in)
-	{
+	private PaymentIntent(final Parcel in) {
 		standard = (Standard) in.readSerializable();
 
 		payeeName = in.readString();
 		payeeVerifiedBy = in.readString();
 
 		final int outputsLength = in.readInt();
-		if (outputsLength > 0)
-		{
+		if (outputsLength > 0) {
 			outputs = new Output[outputsLength];
 			in.readTypedArray(outputs, Output.CREATOR);
-		}
-		else
-		{
+		} else {
 			outputs = null;
 		}
 
@@ -581,26 +510,20 @@ public final class PaymentIntent implements Parcelable
 		paymentUrl = in.readString();
 
 		final int payeeDataLength = in.readInt();
-		if (payeeDataLength > 0)
-		{
+		if (payeeDataLength > 0) {
 			payeeData = new byte[payeeDataLength];
 			in.readByteArray(payeeData);
-		}
-		else
-		{
+		} else {
 			payeeData = null;
 		}
 
 		paymentRequestUrl = in.readString();
 
 		final int paymentRequestHashLength = in.readInt();
-		if (paymentRequestHashLength > 0)
-		{
+		if (paymentRequestHashLength > 0) {
 			paymentRequestHash = new byte[paymentRequestHashLength];
 			in.readByteArray(paymentRequestHash);
-		}
-		else
-		{
+		} else {
 			paymentRequestHash = null;
 		}
 		useInstantX = in.readByte() == 1;

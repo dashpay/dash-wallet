@@ -4,7 +4,6 @@ Your wallet contains your private keys and various transaction related metadata.
 storage:
 
 	Mainnet: /data/data/hashengineering.darkcoin.wallet/files/wallet-protobuf (MODE_PRIVATE)
-
 	Testnet: /data/data/hashengineering.darkcoin.wallet_test/files/wallet-protobuf-testnet (MODE_WORLD_READABLE | MODE_WORLD_WRITEABLE)
 
 The wallet file format is not compatible to wallet.dat (Satoshi client). Rather, it uses a custom protobuf format
@@ -13,17 +12,21 @@ which should be compatible between clients using darkcoinj.
 Certain actions cause automatic rolling backups of your wallet to app-private storage:
 
 	Mainnet: /data/data/hashengineering.darkcoin.wallet/files/key-backup-protobuf (MODE_PRIVATE)
-
 	Testnet: /data/data/hashengineering.darkcoin.wallet_test/files/key-backup-protobuf-testnet (MODE_PRIVATE)
 
 Your wallet can be manually backed up to and restored from external storage:
 
 	Mainnet: /sdcard/Download/dash-wallet-backup-<yyyy-MM-dd>
-
 	Testnet: /sdcard/Download/dash-wallet-backup-testnet-<yyyy-MM-dd>
 
 If you want to recover coins from manual backups and for whatever reason you cannot use the app
 itself to restore from the backup, see the separate README.recover guide.
+
+The current fee rate for each of the fee categories (economic, normal, priority) is cached in
+app-private storage:
+
+    Mainnet: /data/data/de.schildbach.wallet/files/fees.txt
+    Testnet: /data/data/de.schildbach.wallet_test/files/fees-testnet.txt
 
 
 DEBUGGING
@@ -34,7 +37,7 @@ Wallet file for Testnet can be pulled from an (even un-rooted) device using
 
 Log messages can be viewed by
 
-	adb logcat
+    adb logcat
 
 The app can send extensive debug information. Use Options > Settings > Report Issue and follow the dialog.
 In the generated e-mail, replace the support address with yours.
@@ -50,23 +53,26 @@ You can probably skip some steps, especially if you built Android apps before.
 You'll need git, a Java SDK 6 (or later) and Gradle 2.10 (or later) for this. I'll assume Ubuntu Xenial Linux
 for the package installs, which comes with slightly more recent versions.
 
-	# first time only
-	sudo apt install git gradle openjdk-8-jdk libstdc++6:i386 zlib1g:i386
+    # first time only
+    sudo apt install git gradle openjdk-8-jdk libstdc++6:i386 zlib1g:i386
 
 Get the Android SDK (Tools only) from
 
-	http://developer.android.com/sdk/
+    http://developer.android.com/sdk/
 
-and unpack it to your workspace directory. Point your ANDROID_HOME variable to that Android SDK directory
+and unpack it to your workspace directory. Point your ANDROID_HOME variable to the unpacked Android SDK directory
 and switch to it. Use
 
-	# make sure tools are at the newest version
-	tools/android update sdk --no-ui --force --filter tools
+    tools/android update sdk --no-ui --force --all --filter tool,platform-tool,build-tools-25.0.2,android-15,android-25,extra-android-m2repository
 
-	# fetch required android dependencies
-	tools/android update sdk --no-ui --force --filter build-tools-24,android-15,android-23,extra-android-m2repository
+to download and install the required Android dependencies.
 
-to download the necessary API level.
+Get the Android NDK from
+
+    https://developer.android.com/ndk
+
+and unpack it to your workspace directory. Point your ANDROID_NDK_HOME variable to the unpacked Android NDK
+directory.
 
 Finally, you can build Dash Wallet and sign it with your development key. Again in your workspace,
 use
@@ -77,12 +83,12 @@ use
 	# each time
 	cd dash-wallet
 	git pull
-	gradle clean test build
+    gradle clean :native-scrypt:copy test build
 
 To install the app on your Android device, use
 
-	# first time only
-	sudo apt install android-tools-adb
+    # first time only
+    sudo apt install android-tools-adb
 
 	# each time
 	adb install wallet/build/outputs/apk/dash-wallet-debug.apk
@@ -105,7 +111,7 @@ separate 'prod' branch that gets rebased against master with each released versi
 	cd dash-wallet
 	git fetch origin
 	git checkout origin/prod
-	gradle clean test build
+    gradle clean :native-scrypt:copy test build
 
 
 SETTING UP FOR DEVELOPMENT
@@ -123,20 +129,20 @@ The english resources are pushed to Transifex. Changes are pulled and committed 
 repository from time to time. It can be done by manually downloading the files, but using the "tx"
 command line client is more convenient:
 
-	# first time only
-	sudo apt install transifex-client
+    # first time only
+    sudo apt install transifex-client
 
 If strings resources are added or changed, the source language files need to be pushed to
 Transifex. This step will probably only be executed by the maintainer of the project, as special
 permission is needed:
 
-	# push source files to Transifex
-	tx push -s
+    # push source files to Transifex
+    tx push -s
 
 As soon as a translation is ready, it can be pulled:
 
-	# pull translation from Transifex
-	tx pull -f -l <language code>
+    # pull translation from Transifex
+    tx pull -f -l <language code>
 
 Note that after pulling, any bugs introduced by either translators or Transifex itself need to be
 corrected manually.
@@ -180,15 +186,10 @@ EXCHANGE RATES
 
 Dash Wallet reads this feed from "BitcoinAverage" for getting exchange rates:
 
-	https://api.bitcoinaverage.com/custom/abw
+    https://apiv2.bitcoinaverage.com/indices/global/ticker/short?crypto=BTC
 
 I chose this feed because it is not dependent on a single exchange. However, you should keep in
-mind it's always a 24h average (falling back to 7d or even 30d if no trade occurred for a long
-time).
-
-If the above feed is not available, the feed from "Blockchain.info" is fetched instead:
-
-	https://blockchain.info/ticker
+mind it's always a 24h average.
 
 
 SWEEPING WALLETS
@@ -197,3 +198,6 @@ For sweeping wallets, Dash Wallet uses an API by chainz to query for unspent tra
 outputs:
 
 	https://chainz.cryptoid.info/dash/api.dws?q=unspent
+
+When sweeping wallets, Bitcoin Wallet uses a set of Electrum servers to query for unspent transaction
+outputs (UTXOs).

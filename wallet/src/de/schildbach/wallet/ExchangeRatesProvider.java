@@ -64,9 +64,9 @@ import org.json.JSONException;
 /**
  * @author Andreas Schildbach
  */
-public class ExchangeRatesProvider extends ContentProvider
+public class ExchangeRatesProvider //extends ContentProvider
 {
-	public static class ExchangeRate
+	/*public static class ExchangeRate
 	{
 		public ExchangeRate(final org.bitcoinj.utils.ExchangeRate rate, final String source)
 		{
@@ -401,7 +401,7 @@ public class ExchangeRatesProvider extends ContentProvider
                 final JSONObject head = new JSONObject(contentCryptsy.toString());
                 JSONObject returnObject = head.getJSONObject("return");
                 JSONObject markets = returnObject.getJSONObject("markets");
-                JSONObject coinInfo = markets.getJSONObject("DRK"/*CoinDefinition.coinTicker*/);
+                JSONObject coinInfo = markets.getJSONObject("DRK");
 
 
 
@@ -649,4 +649,5 @@ public class ExchangeRatesProvider extends ContentProvider
 
 		return null;
 	}
+		*/
 }

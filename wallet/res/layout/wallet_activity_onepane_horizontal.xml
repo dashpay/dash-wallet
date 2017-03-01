@@ -75,7 +75,6 @@
                 </LinearLayout>
             </FrameLayout>
         </LinearLayout>
-
         <include layout="@layout/wallet_activity_bottom_include" />
 
     </LinearLayout>

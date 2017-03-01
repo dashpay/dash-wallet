@@ -223,4 +223,5 @@
 
 	<include layout="@layout/send_coins_buttons_include" />
 
+
 </LinearLayout>

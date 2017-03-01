@@ -7,11 +7,7 @@
             android:id="@+id/nav_home"
             android:icon="@drawable/ic_menu_home"
             android:title="Home" />
-        <item
-        android:id="@+id/nav_disconnect"
-        android:icon="@drawable/ic_menu_disconnect"
-        android:title="@string/wallet_options_disconnect"
-        />
+
         <item
             android:id="@+id/nav_address_book"
             android:icon="@drawable/ic_menu_address_book"
@@ -24,6 +20,11 @@
             android:id="@+id/nav_paper_wallet"
             android:icon="@drawable/ic_menu_paper_wallet"
             android:title="@string/sweep_wallet_activity_title" />
+    <item
+        android:id="@+id/nav_report_issue"
+        android:icon="@drawable/ic_menu_address_book"
+        android:title="@string/preferences_report_issue_title"
+        />
     <!--</group>-->
 
     <item android:title="Configuration">
@@ -42,5 +43,10 @@
                 android:title="@string/preferences_activity_title" />
         </menu>
     </item>
+    <item
+        android:id="@+id/nav_disconnect"
+        android:icon="@drawable/ic_menu_disconnect"
+        android:title="@string/wallet_options_disconnect"
+        />
 
 </menu>

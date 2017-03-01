@@ -92,7 +92,115 @@ v1.00
 * Forked bitcoin-wallet v3.23 for digitalcoin V1.00 (http://digitalcoin.co)
 
 Bitcoin Wallet
--------------------
+=======
+v5.14
+
+* Update translations from Transifex.
+* Bugfix.
+
+v5.13
+
+* Add option to report issue with selected payment.
+* Add blockchain.info to block explorers.
+* Minor bugfix.
+
+v5.12
+
+* Query a set of Electrum servers to swipe paper wallets. Biteasy can't be used any more,
+  because they are closing down.
+
+v5.11
+
+* Update translations from Transifex.
+* Remove biteasy from block explorers because they are closing down.
+* Minor bugfixes.
+
+v5.10
+
+* Minor bugfix.
+
+v5.09
+
+* Material design for Android 5.0 (Lollipop) and above!
+
+v5.08
+
+* Minor bugfix.
+
+v5.07
+
+* For Android 7.1 (Nougat) and above, support the new app shortcuts.
+
+v5.06
+
+* Minor bugfix.
+
+v5.05
+
+* For Android 6.0 (Marshmellow) and above, bring back the ability to receive payments via
+  Bluetooth. This means your customers can pay without being connected to the internet!
+* Nicely animated appearance of main screen on phones.
+
+v5.04
+
+* Switch exchange rates feed to BitcoinAverage API v2.
+* Update translations from Transifex.
+* Minor bugfix.
+
+v5.03
+
+* Work around broken exchange rate.
+
+v5.02
+
+* Dynamic network fee. This will help dealing with an overloaded Bitcoin network.
+
+v5.01
+
+* Fix background color in recent tasks list.
+* The testnet version doesn't make files world readable any more.
+* Adjust the normal fee category.
+
+v5.0
+
+* The app now requires Android 4.1 (Jelly Bean) or higher. This makes UI development easier
+  in future.
+* Fix detection of network state. This needs the ACCESS_NETWORK_STATE permission.
+
+v4.72
+
+* Minor bugfix.
+
+v4.71
+
+* Update translations from Transifex.
+* Minor bugfixes.
+
+v4.70
+
+* Supports HTTP/2 and ALPN on all HTTP calls (e.g. payment protocol).
+* Slightly more robust scanning of QR codes.
+* Minor bugfixes.
+
+v4.69
+
+* Strengthen security of spending PIN for all existing wallets, too.
+
+v4.68
+
+* Regression fix.
+
+v4.67
+
+* Speed up wallet decryption when using a spending PIN.
+* Minor bugfix.
+
+v4.66
+
+* Strengthen security of spending PIN.
+* Update translations from Transifex.
+
+>>>>>>> upstream/master
 v4.65
 
 * Fix for layout in landscape orientation.

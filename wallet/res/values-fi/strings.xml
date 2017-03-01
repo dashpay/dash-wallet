@@ -1,6 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
 	<string name="toast_wallet_reset">Lompakkosi nollattiin!\nPalautuminen kestää hetken.</string>
 	<string name="wallet_disclaimer_fragment_remind_safety">Käytä omalla vastuullasi. Lue &lt;u&gt;turvallisuusohjeet&lt;/u&gt;.</string>
 	<string name="wallet_disclaimer_fragment_remind_backup">Sinun on &lt;u&gt;varmuuskopioitava lompakkosi&lt;/u&gt;!</string>

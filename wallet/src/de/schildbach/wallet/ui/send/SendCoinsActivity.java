@@ -17,16 +17,6 @@
 
 package de.schildbach.wallet.ui.send;
 
-import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.os.Bundle;
-
-import android.support.design.widget.FloatingActionButton;
-import android.support.v7.widget.Toolbar;
-import android.view.Menu;
-import android.view.MenuItem;
-
 import javax.annotation.Nullable;
 
 import org.bitcoinj.core.Coin;
@@ -35,18 +25,23 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.HelpDialogFragment;
-import hashengineering.darkcoin.wallet.R;
+import de.schildbach.wallet_test.R;
+
+import android.content.Context;
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 
 /**
  * @author Andreas Schildbach
  */
-public final class SendCoinsActivity extends AbstractBindServiceActivity
-{
+public final class SendCoinsActivity extends AbstractBindServiceActivity {
 	public static final String INTENT_EXTRA_PAYMENT_INTENT = "payment_intent";
 	public static final String INTENT_EXTRA_FEE_CATEGORY = "fee_category";
 
-	public static void start(final Context context, final PaymentIntent paymentIntent, final @Nullable FeeCategory feeCategory, final int intentFlags)
-	{
+	public static void start(final Context context, final PaymentIntent paymentIntent,
+							 final @Nullable FeeCategory feeCategory, final int intentFlags) {
 		final Intent intent = new Intent(context, SendCoinsActivity.class);
 		intent.putExtra(INTENT_EXTRA_PAYMENT_INTENT, paymentIntent);
 		if (feeCategory != null)
@@ -56,20 +51,18 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity
 		context.startActivity(intent);
 	}
 
-	public static void start(final Context context, final PaymentIntent paymentIntent)
-	{
+	public static void start(final Context context, final PaymentIntent paymentIntent) {
 		start(context, paymentIntent, null, 0);
 	}
 
-	public static void startDonate(final Context context, final Coin amount, final @Nullable FeeCategory feeCategory, final int intentFlags)
-	{
-		start(context, PaymentIntent.from(Constants.DONATION_ADDRESS, context.getString(R.string.wallet_donate_address_label), amount), feeCategory,
-				intentFlags);
+	public static void startDonate(final Context context, final Coin amount, final @Nullable FeeCategory feeCategory,
+								   final int intentFlags) {
+		start(context, PaymentIntent.from(Constants.DONATION_ADDRESS,
+				context.getString(R.string.wallet_donate_address_label), amount), feeCategory, intentFlags);
 	}
 
 	@Override
-	protected void onCreate(final Bundle savedInstanceState)
-	{
+	protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
 		setContentView(R.layout.send_coins_content);
@@ -78,24 +71,21 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity
 	}
 
 	@Override
-	public boolean onCreateOptionsMenu(final Menu menu)
-	{
+	public boolean onCreateOptionsMenu(final Menu menu) {
 		getMenuInflater().inflate(R.menu.send_coins_activity_options, menu);
 
 		return super.onCreateOptionsMenu(menu);
 	}
 
 	@Override
-	public boolean onOptionsItemSelected(final MenuItem item)
-	{
-		switch (item.getItemId())
-		{
+	public boolean onOptionsItemSelected(final MenuItem item) {
+		switch (item.getItemId()) {
 			case android.R.id.home:
 				finish();
 				return true;
 
 			case R.id.send_coins_options_help:
-				HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_send_coins);
+				HelpDialogFragment.page(getFragmentManager(), R.string.help_send_coins);
 				return true;
 		}
 

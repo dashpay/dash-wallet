@@ -27,7 +27,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet.util.Qr;
-import hashengineering.darkcoin.wallet.R;
+import de.schildbach.wallet_test.R;
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -53,315 +53,232 @@ import org.bitcoinj.uri.BitcoinURIParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.regex.Pattern;
+import com.google.common.hash.Hashing;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.UninitializedMessageException;
 
+
+import android.content.Context;
+import android.content.DialogInterface.OnClickListener;
 
 /**
  * @author Andreas Schildbach
  */
-public abstract class InputParser
-{
+public abstract class InputParser {
 	private static final Logger log = LoggerFactory.getLogger(InputParser.class);
 
-	public abstract static class StringInputParser extends InputParser
-	{
+	public abstract static class StringInputParser extends InputParser {
 		private final String input;
 
-		public StringInputParser(final String input)
-		{
+		public StringInputParser(final String input) {
 			this.input = input;
 		}
 
 		@Override
-		public void parse()
-		{
-			if (input.startsWith(CoinDefinition.coinURIScheme.toUpperCase()+ ":-"))       //TODO:  Not sure what this is for?
-			{
-				try
-				{
+		public void parse() {
+			if (input.startsWith("DASH:-")) {
+				try {
 					final byte[] serializedPaymentRequest = Qr.decodeBinary(input.substring(9));
 
 					parseAndHandlePaymentRequest(serializedPaymentRequest);
-				}
-				catch (final IOException x)
-				{
+				} catch (final IOException x) {
 					log.info("i/o error while fetching payment request", x);
 
 					error(R.string.input_parser_io_error, x.getMessage());
-				}
-				catch (final PaymentProtocolException.PkiVerificationException x)
-				{
+				} catch (final PaymentProtocolException.PkiVerificationException x) {
 					log.info("got unverifyable payment request", x);
 
 					error(R.string.input_parser_unverifyable_paymentrequest, x.getMessage());
-				}
-				catch (final PaymentProtocolException x)
-				{
+				} catch (final PaymentProtocolException x) {
 					log.info("got invalid payment request", x);
 
 					error(R.string.input_parser_invalid_paymentrequest, x.getMessage());
 				}
-			}
-			else if (input.startsWith(CoinDefinition.coinURIScheme +":"))
-			{
-				try
-				{
+			} else if (input.startsWith("dash:")) {
+				try {
 					final BitcoinURI bitcoinUri = new BitcoinURI(null, input);
 					final Address address = bitcoinUri.getAddress();
 					if (address != null && !Constants.NETWORK_PARAMETERS.equals(address.getParameters()))
 						throw new BitcoinURIParseException("mismatched network");
 
 					handlePaymentIntent(PaymentIntent.fromBitcoinUri(bitcoinUri));
-				}
-				catch (final BitcoinURIParseException x)
-				{
+				} catch (final BitcoinURIParseException x) {
 					log.info("got invalid bitcoin uri: '" + input + "'", x);
 
 					error(R.string.input_parser_invalid_bitcoin_uri, input);
 				}
-			}
-			else if (PATTERN_BITCOIN_ADDRESS.matcher(input).matches())
-			{
-				try
-				{
+			} else if (PATTERN_BITCOIN_ADDRESS.matcher(input).matches()) {
+				try {
 					final Address address = Address.fromBase58(Constants.NETWORK_PARAMETERS, input);
 
 					handlePaymentIntent(PaymentIntent.fromAddress(address, null));
-				}
-				catch (final AddressFormatException x)
-				{
+				} catch (final AddressFormatException x) {
 					log.info("got invalid address", x);
 
 					error(R.string.input_parser_invalid_address);
 				}
-			}
-			else if (PATTERN_DUMPED_PRIVATE_KEY_UNCOMPRESSED.matcher(input).matches()
-					|| PATTERN_DUMPED_PRIVATE_KEY_COMPRESSED.matcher(input).matches())
-			{
-				try
-				{
-					final VersionedChecksummedBytes key = DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS, input);
+			} else if (PATTERN_DUMPED_PRIVATE_KEY_UNCOMPRESSED.matcher(input).matches()
+					|| PATTERN_DUMPED_PRIVATE_KEY_COMPRESSED.matcher(input).matches()) {
+				try {
+					final VersionedChecksummedBytes key = DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS,
+							input);
 
 					handlePrivateKey(key);
-				}
-				catch (final AddressFormatException x)
-				{
+				} catch (final AddressFormatException x) {
 					log.info("got invalid address", x);
 
 					error(R.string.input_parser_invalid_address);
 				}
-			}
-			else if (PATTERN_BIP38_PRIVATE_KEY.matcher(input).matches())
-			{
-				try
-				{
-					final VersionedChecksummedBytes key = BIP38PrivateKey.fromBase58(Constants.NETWORK_PARAMETERS, input);
+			} else if (PATTERN_BIP38_PRIVATE_KEY.matcher(input).matches()) {
+				try {
+					final VersionedChecksummedBytes key = BIP38PrivateKey.fromBase58(Constants.NETWORK_PARAMETERS,
+							input);
 
 					handlePrivateKey(key);
-				}
-				catch (final AddressFormatException x)
-				{
+				} catch (final AddressFormatException x) {
 					log.info("got invalid address", x);
 
 					error(R.string.input_parser_invalid_address);
 				}
-			}
-			else if (PATTERN_TRANSACTION.matcher(input).matches())
-			{
-				try
-				{
-					final Transaction tx = new Transaction(Constants.NETWORK_PARAMETERS, Qr.decodeDecompressBinary(input));
+			} else if (PATTERN_TRANSACTION.matcher(input).matches()) {
+				try {
+					final Transaction tx = new Transaction(Constants.NETWORK_PARAMETERS,
+							Qr.decodeDecompressBinary(input));
 
 					handleDirectTransaction(tx);
-				}
-				catch (final IOException x)
-				{
+				} catch (final IOException x) {
 					log.info("i/o error while fetching transaction", x);
 
 					error(R.string.input_parser_invalid_transaction, x.getMessage());
-				}
-				catch (final ProtocolException x)
-				{
+				} catch (final ProtocolException x) {
 					log.info("got invalid transaction", x);
 
 					error(R.string.input_parser_invalid_transaction, x.getMessage());
 				}
-			}
-			else
-			{
+			} else {
 				cannotClassify(input);
 			}
 		}
 
-		protected void handlePrivateKey(final VersionedChecksummedBytes key)
-		{
-			final Address address = new Address(Constants.NETWORK_PARAMETERS, ((DumpedPrivateKey) key).getKey().getPubKeyHash());
+		protected void handlePrivateKey(final VersionedChecksummedBytes key) {
+			final Address address = new Address(Constants.NETWORK_PARAMETERS,
+					((DumpedPrivateKey) key).getKey().getPubKeyHash());
 
 			handlePaymentIntent(PaymentIntent.fromAddress(address, null));
 		}
 	}
 
-	public abstract static class BinaryInputParser extends InputParser
-	{
+	public abstract static class BinaryInputParser extends InputParser {
 		private final String inputType;
 		private final byte[] input;
 
-		public BinaryInputParser(final String inputType, final byte[] input)
-		{
+		public BinaryInputParser(final String inputType, final byte[] input) {
 			this.inputType = inputType;
 			this.input = input;
 		}
 
 		@Override
-		public void parse()
-		{
-			if (Constants.MIMETYPE_TRANSACTION.equals(inputType))
-			{
-				try
-				{
+		public void parse() {
+			if (Constants.MIMETYPE_TRANSACTION.equals(inputType)) {
+				try {
 					final Transaction tx = new Transaction(Constants.NETWORK_PARAMETERS, input);
 
 					handleDirectTransaction(tx);
-				}
-				catch (final VerificationException x)
-				{
+				} catch (final VerificationException x) {
 					log.info("got invalid transaction", x);
 
 					error(R.string.input_parser_invalid_transaction, x.getMessage());
 				}
-			}
-			else if (PaymentProtocol.MIMETYPE_PAYMENTREQUEST.equals(inputType))
-			{
-				try
-				{
+			} else if (PaymentProtocol.MIMETYPE_PAYMENTREQUEST.equals(inputType)) {
+				try {
 					parseAndHandlePaymentRequest(input);
-				}
-				catch (final PaymentProtocolException.PkiVerificationException x)
-				{
+				} catch (final PaymentProtocolException.PkiVerificationException x) {
 					log.info("got unverifyable payment request", x);
 
 					error(R.string.input_parser_unverifyable_paymentrequest, x.getMessage());
-				}
-				catch (final PaymentProtocolException x)
-				{
+				} catch (final PaymentProtocolException x) {
 					log.info("got invalid payment request", x);
 
 					error(R.string.input_parser_invalid_paymentrequest, x.getMessage());
 				}
-			}
-			else
-			{
+			} else {
 				cannotClassify(inputType);
 			}
 		}
 
 		@Override
-		protected final void handleDirectTransaction(final Transaction transaction) throws VerificationException
-		{
+		protected final void handleDirectTransaction(final Transaction transaction) throws VerificationException {
 			throw new UnsupportedOperationException();
 		}
 	}
 
-	public abstract static class StreamInputParser extends InputParser
-	{
+	public abstract static class StreamInputParser extends InputParser {
 		private final String inputType;
 		private final InputStream is;
 
-		public StreamInputParser(final String inputType, final InputStream is)
-		{
+		public StreamInputParser(final String inputType, final InputStream is) {
 			this.inputType = inputType;
 			this.is = is;
 		}
 
 		@Override
-		public void parse()
-		{
-			if (PaymentProtocol.MIMETYPE_PAYMENTREQUEST.equals(inputType))
-			{
+		public void parse() {
+			if (PaymentProtocol.MIMETYPE_PAYMENTREQUEST.equals(inputType)) {
 				ByteArrayOutputStream baos = null;
 
-				try
-				{
+				try {
 					baos = new ByteArrayOutputStream();
 					Io.copy(is, baos);
 					parseAndHandlePaymentRequest(baos.toByteArray());
-				}
-				catch (final IOException x)
-				{
+				} catch (final IOException x) {
 					log.info("i/o error while fetching payment request", x);
 
 					error(R.string.input_parser_io_error, x.getMessage());
-				}
-				catch (final PaymentProtocolException.PkiVerificationException x)
-				{
+				} catch (final PaymentProtocolException.PkiVerificationException x) {
 					log.info("got unverifyable payment request", x);
 
 					error(R.string.input_parser_unverifyable_paymentrequest, x.getMessage());
-				}
-				catch (final PaymentProtocolException x)
-				{
+				} catch (final PaymentProtocolException x) {
 					log.info("got invalid payment request", x);
 
 					error(R.string.input_parser_invalid_paymentrequest, x.getMessage());
-				}
-				finally
-				{
-					try
-					{
+				} finally {
+					try {
 						if (baos != null)
 							baos.close();
-					}
-					catch (IOException x)
-					{
+					} catch (IOException x) {
 						x.printStackTrace();
 					}
 
-					try
-					{
+					try {
 						is.close();
-					}
-					catch (IOException x)
-					{
+					} catch (IOException x) {
 						x.printStackTrace();
 					}
 				}
-			}
-			else
-			{
+			} else {
 				cannotClassify(inputType);
 			}
 		}
 
 		@Override
-		protected final void handleDirectTransaction(final Transaction transaction) throws VerificationException
-		{
+		protected final void handleDirectTransaction(final Transaction transaction) throws VerificationException {
 			throw new UnsupportedOperationException();
 		}
 	}
 
 	public abstract void parse();
 
-	protected final void parseAndHandlePaymentRequest(final byte[] serializedPaymentRequest) throws PaymentProtocolException
-	{
+	protected final void parseAndHandlePaymentRequest(final byte[] serializedPaymentRequest)
+			throws PaymentProtocolException {
 		final PaymentIntent paymentIntent = parsePaymentRequest(serializedPaymentRequest);
 
 		handlePaymentIntent(paymentIntent);
 	}
 
-	public static PaymentIntent parsePaymentRequest(final byte[] serializedPaymentRequest) throws PaymentProtocolException
-	{
-		try
-		{
+	public static PaymentIntent parsePaymentRequest(final byte[] serializedPaymentRequest)
+			throws PaymentProtocolException {
+		try {
 			if (serializedPaymentRequest.length > 50000)
 				throw new PaymentProtocolException("payment request too big: " + serializedPaymentRequest.length);
 
@@ -369,15 +286,13 @@ public abstract class InputParser
 
 			final String pkiName;
 			final String pkiCaName;
-			if (!"none".equals(paymentRequest.getPkiType()))
-			{
+			if (!"none".equals(paymentRequest.getPkiType())) {
 				final KeyStore keystore = new TrustStoreLoader.DefaultTrustStoreLoader().getKeyStore();
-				final PkiVerificationData verificationData = PaymentProtocol.verifyPaymentRequestPki(paymentRequest, keystore);
+				final PkiVerificationData verificationData = PaymentProtocol.verifyPaymentRequestPki(paymentRequest,
+						keystore);
 				pkiName = verificationData.displayName;
 				pkiCaName = verificationData.rootAuthorityName;
-			}
-			else
-			{
+			} else {
 				pkiName = null;
 				pkiCaName = null;
 			}
@@ -385,11 +300,12 @@ public abstract class InputParser
 			final PaymentSession paymentSession = PaymentProtocol.parsePaymentRequest(paymentRequest);
 
 			if (paymentSession.isExpired())
-				throw new PaymentProtocolException.Expired("payment details expired: current time " + new Date() + " after expiry time "
-						+ paymentSession.getExpires());
+				throw new PaymentProtocolException.Expired("payment details expired: current time " + new Date()
+						+ " after expiry time " + paymentSession.getExpires());
 
 			if (!paymentSession.getNetworkParameters().equals(Constants.NETWORK_PARAMETERS))
-				throw new PaymentProtocolException.InvalidNetwork("cannot handle payment request network: " + paymentSession.getNetworkParameters());
+				throw new PaymentProtocolException.InvalidNetwork(
+						"cannot handle payment request network: " + paymentSession.getNetworkParameters());
 
 			final ArrayList<PaymentIntent.Output> outputs = new ArrayList<PaymentIntent.Output>(1);
 			for (final PaymentProtocol.Output output : paymentSession.getOutputs())
@@ -404,27 +320,21 @@ public abstract class InputParser
 			final byte[] paymentRequestHash = Hashing.sha256().hashBytes(serializedPaymentRequest).asBytes();
 
 			final PaymentIntent paymentIntent = new PaymentIntent(PaymentIntent.Standard.BIP70, pkiName, pkiCaName,
-					outputs.toArray(new PaymentIntent.Output[0]), memo, paymentUrl, merchantData, null, paymentRequestHash);
+					outputs.toArray(new PaymentIntent.Output[0]), memo, paymentUrl, merchantData, null,
+					paymentRequestHash);
 
 			if (paymentIntent.hasPaymentUrl() && !paymentIntent.isSupportedPaymentUrl())
-				throw new PaymentProtocolException.InvalidPaymentURL("cannot handle payment url: " + paymentIntent.paymentUrl);
+				throw new PaymentProtocolException.InvalidPaymentURL(
+						"cannot handle payment url: " + paymentIntent.paymentUrl);
 
 			return paymentIntent;
-		}
-		catch (final InvalidProtocolBufferException x)
-		{
+		} catch (final InvalidProtocolBufferException x) {
 			throw new PaymentProtocolException(x);
-		}
-		catch (final UninitializedMessageException x)
-		{
+		} catch (final UninitializedMessageException x) {
 			throw new PaymentProtocolException(x);
-		}
-		catch (final FileNotFoundException x)
-		{
+		} catch (final FileNotFoundException x) {
 			throw new RuntimeException(x);
-		}
-		catch (final KeyStoreException x)
-		{
+		} catch (final KeyStoreException x) {
 			throw new RuntimeException(x);
 		}
 	}
@@ -435,16 +345,14 @@ public abstract class InputParser
 
 	protected abstract void error(int messageResId, Object... messageArgs);
 
-	protected void cannotClassify(final String input)
-	{
+	protected void cannotClassify(final String input) {
 		log.info("cannot classify: '{}'", input);
 
 		error(R.string.input_parser_cannot_classify, input);
 	}
 
-	protected void dialog(final Context context, @Nullable final OnClickListener dismissListener, final int titleResId, final int messageResId,
-			final Object... messageArgs)
-	{
+	protected void dialog(final Context context, @Nullable final OnClickListener dismissListener, final int titleResId,
+						  final int messageResId, final Object... messageArgs) {
 		final DialogBuilder dialog = new DialogBuilder(context);
 		if (titleResId != 0)
 			dialog.setTitle(titleResId);
@@ -464,4 +372,5 @@ public abstract class InputParser
 	private static final Pattern PATTERN_BIP38_PRIVATE_KEY = Pattern.compile("6P" + "[" + new String(Base58.ALPHABET) + "]{56}");
 
 	private static final Pattern PATTERN_TRANSACTION = Pattern.compile("[0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$\\*\\+\\-\\.\\/\\:]{100,}");
+
 }

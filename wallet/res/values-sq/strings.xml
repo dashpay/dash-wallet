@@ -1,6 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
 	<string name="toast_wallet_reset">Kuleta juaj është resetuar!\nDo të duhet pak kohë derisa të rikthehet.</string>
 	<string name="wallet_disclaimer_fragment_remind_safety">Përdoreni me përgjegjësinë tuaj, Lexoni &lt;u&gt;safety notes&lt;/u&gt;.</string>
 	<string name="wallet_disclaimer_fragment_remind_backup">Ju duhet të &lt;u&gt;back kuletën tuaj&lt;/u&gt;!</string>
@@ -296,4 +295,4 @@
 	<string name="error_http">HTTP gabim %1$s:\n%2$s</string>
 	<string name="error_bluetooth">Gabim me Bluetooth: %1$s</string>
 
-	</resources>
+</resources>

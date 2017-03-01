@@ -5,34 +5,37 @@ repositories {
     maven { url localMavenRepo }
 }
 dependencies {
-    compile 'com.android.support:design:23.2.0'
-    compile 'com.android.support:appcompat-v7:23.2.0'
-    compile 'com.android.support:support-annotations:23.2.0'
-    compile 'com.android.support:support-v4:23.2.0'
-    compile 'com.android.support:support-v13:23.2.0'
-    compile 'com.android.support:recyclerview-v7:23.2.0'
-    compile 'com.android.support:cardview-v7:23.2.0'
+    compile 'com.android.support:design:25.1.1'
+    compile 'com.android.support:appcompat-v7:25.1.1'
+    compile 'com.android.support:support-v4:25.1.1'
     compile(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
     }
-    compile 'com.android.support:support-annotations:23.4.0'
-    compile 'com.android.support:support-v4:23.4.0'
-    compile 'com.android.support:support-v13:23.4.0'
-    compile 'com.android.support:recyclerview-v7:23.4.0'
-    compile 'com.android.support:cardview-v7:23.4.0'
-    compile 'org.dashj:dashj-core:0.14.3-12.1'
-
+    compile 'com.android.support:support-annotations:25.1.1'
+    compile 'com.android.support:support-compat:25.1.1'
+    compile('com.android.support:support-v13:25.1.1') {
+        exclude(group: 'com.android.support', module: 'support-fragment')
+        exclude(group: 'com.android.support', module: 'support-media-compat')
+    }
+    compile 'com.android.support:support-core-utils:25.1.1'
+    compile 'com.android.support:recyclerview-v7:25.1.1'
+    compile 'com.android.support:cardview-v7:25.1.1'
+    compile 'org.dashj:dashj-core:0.14.4-12.1'
     compile 'com.google.protobuf:protobuf-java:2.6.1'
-    compile 'com.google.guava:guava:18.0'
-    compile 'com.google.zxing:core:3.2.1'
+    compile 'com.google.guava:guava:20.0'
+    compile 'com.google.zxing:core:3.3.0'
+    compile 'com.squareup.okhttp:okhttp:2.7.5'
+    compile 'com.squareup.okhttp:logging-interceptor:2.7.5'
+    compile 'com.squareup.moshi:moshi:1.3.1'
+    //compile 'com.netki:wallet-name-resolver:0.1.3'
     compile 'com.hashengineering:dash-wallet-name-resolver:0.1.4-12.1'
-    compile 'org.slf4j:slf4j-api:1.7.20'
-    compile('com.github.tony19:logback-android-classic:1.1.1-5') {
+    compile 'org.slf4j:slf4j-api:1.7.22'
+    compile('com.github.tony19:logback-android-classic:1.1.1-6') {
         exclude(group: 'com.google.android', module: 'android')
     }
-    compile 'com.github.tony19:logback-android-core:1.1.1-5'
+    compile 'com.github.tony19:logback-android-core:1.1.1-6'
     compile 'com.google.code.findbugs:jsr305:2.0.3'
-    testCompile 'junit:junit:4.11'
+    testCompile 'junit:junit:4.12'
 }
 
 ext {
@@ -40,12 +43,15 @@ ext {
 }
 
 android {
-    compileSdkVersion 'android-23'
-    buildToolsVersion '24'
+    compileSdkVersion 'android-25'
+    buildToolsVersion '25.0.2'
 
             lintOptions {
                 abortOnError false
                 disable 'MissingTranslation'
+            }
+            defaultConfig {
+                generatedDensities = ['hdpi', 'xhdpi']
             }
 
             buildTypes {
@@ -89,6 +95,7 @@ android {
                 }
             }
 
+
     packagingOptions {
         exclude 'lib/x86_64/darwin/libscrypt.dylib'
         exclude 'lib/x86_64/freebsd/libscrypt.so'
@@ -99,7 +106,16 @@ android {
         exclude 'org/bitcoinj/crypto/cacerts'
         exclude 'org.bitcoin.production.checkpoints.txt'
         exclude 'org.bitcoin.test.checkpoints.txt'
+        exclude 'messages.properties'
+        exclude 'META-INF/services/sun.net.spi.nameservice.NameServiceDescriptor'
     }
 }
 
 
+/*task svgToPngMipmap(type: fr.avianey.androidsvgdrawable.gradle.SvgDrawableTask) {
+    from = files('graphics/mipmap')
+    to = file('res')
+    targetedDensities = ['hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']
+    outputFormat = 'PNG'
+    outputType = 'mipmap'
+}*/

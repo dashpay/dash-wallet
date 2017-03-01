@@ -53,7 +53,7 @@
 		<p>
 			Potom můžete protistraně nabídnout vygenerovaný QR kód k oskenování,
 			nebo můžete požadavek zaslat pomocí tlačítka sdílet v rychlé nabídce.
-			Druhá strana potom klikne na získanou adresu.
+			Druhá strana potom klikne na Bitcoin URL.
 		</p>
 		<p>
 			V obou případech odesílatel uvidí dialog na zasílání Dashů s předvyplněnými údaji.
@@ -69,8 +69,8 @@
 		</p>
 		<p>
 			Nejprve zadejte adresu, na kterou chcete provést platbu.
-			Adresa se bude automaticky doplňovat (našeptávač), pokud již existuje ve vašem adresáři.
-			Můžete také naskenovat QR kód s adresou peněženky nebo požadavek na zaplacení stisknutím tlačítka s QR kódem.
+			Adresa se bude automaticky doplňovat podle údajů dostupných ve vašem adresáři.
+			Můžete také naskenovat QR kód s adresou nebo požadavkem na zaplacení, stisknutím tlačítka s ikonou QR kódu.
 		</p>
 		<p>
 			V dalším kroku uvidíte, kolik Dashů můžete momentálně utratit.
@@ -86,8 +86,8 @@
 		</p>
 		<p>
 			Poznámka:
-			Transakce nemohou být zrušeny!
-			Vždy zkontrolujte adresu příjemce.
+			Převody nelze vzít zpět!
+			Vždy pečlivě zkontrolujte adresu příjemce.
 		</p>
 	]]>
 	</string>
@@ -110,7 +110,12 @@
 			Pokud pošlete Dashy někam neznámo kam, neexistuje možnost, jak je získat zpět, jedině byste znali příjemce a on měl zrovna náladu je poctivě vrátit.
 		</p>
 		<p>
-			<b>Udržujte Váš Android v bezpečí!</b>
+			<b>Provedené platby jsou nezvratné</b>.
+			Pokud pošlete Bitcoiny na špatnou adresu, možnost jejich získání zpět téměř neexistuje.
+		</p>
+		<p>
+			<b>Udržujte svůj mobilní přístroj v bezpečí!</b>
+			Nepřivlastňujte si práva root svého přístoje.
 			Instalujte pouze aplikace, kterým plně důvěřujete.
 			Existují škodlivé aplikace, které vás mohou o vaše Dashy připravit.
 		</p>

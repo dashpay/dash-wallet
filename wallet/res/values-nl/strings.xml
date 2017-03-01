@@ -23,11 +23,10 @@
   <string name="exchange_rates_fragment_balance">saldo</string>
   <string name="exchange_rates_fragment_source">Prijs van %s</string>
   <string name="exchange_rates_options_search">Zoek wisselkoers</string>
-  <string name="exchange_rates_context_set_as_default_title">Stel in als standaard valuta</string>
-  <string name="wallet_transactions_fragment_empty_text_received">Nog geen Dash ontvangen</string>
-  <string name="wallet_transactions_fragment_empty_text_sent">Nog geen Dash verzonden</string>
-  <string name="wallet_transactions_fragment_empty_text_howto">Hoe verkrijg je Dash?\n\nVerhandel voor traditioneel geld,\nverkoop goederen of diensten of\nverdien ze met uw werk.</string>
-  <string name="wallet_transactions_row_warning_backup">Gefeliciteerd, u heeft uw eerste betaling ontvangen! Heeft u al een&lt;u&gt;back-up gemaakt van uw portemonnee&lt;/u&gt;, om verlies tegen te gaan?</string>
+  <string name="wallet_transactions_fragment_empty_text_received">Nog geen Bitcoins ontvangen</string>
+  <string name="wallet_transactions_fragment_empty_text_sent">Nog geen Bitcoins verzonden</string>
+  <string name="wallet_transactions_fragment_empty_text_howto">Hoe verkrijg je bitcoins?\n\nVerhandel voor traditioneel geld,\nverkoop goederen of diensten of\nverdien ze met uw werk.</string>
+  <string name="wallet_transactions_row_warning_backup">Gefeliciteerd, u heeft uw eerste betaling ontvangen! Heeft u al een &lt;u&gt;back-up gemaakt van uw portemonnee&lt;/u&gt;, om verlies tegen te gaan?</string>
   <string name="wallet_transactions_row_warning_storage_encryption">Tip: om de veiligheid van je portemonnee te vergroten, kun je &lt;u&gt;je apparaat versleutelen&lt;/u&gt;. Dit beschermt ook de gegevens van andere apps.</string>
   <string name="wallet_transactions_fragment_coinbase">gemijnd</string>
   <string name="wallet_transactions_fragment_internal">intern</string>
@@ -66,7 +65,7 @@
   <string name="send_coins_fragment_receiving_address_complex">complex\nadres</string>
   <string name="send_coins_fragment_pending">(%s wachten op bevestiging)</string>
   <string name="send_coins_fragment_amount_label">Te betalen bedrag</string>
-  <string name="send_coins_fragment_hint_fee">Netwerkkosten van %s zullen worden betaald.</string>
+  <string name="send_coins_fragment_hint_fee">%s aan netwerkkosten zullen worden betaald.</string>
   <string name="send_coins_fragment_hint_dusty_send">Het bedrag is te laag om te verzenden.</string>
   <string name="send_coins_fragment_hint_insufficient_money">Onvoldoende coins beschikbaar. U mist %s.</string>
   <string name="send_coins_fragment_hint_empty_wallet_failed">Het totaal van kleine betalingen in uw portemonnee is bij elkaar niet genoeg om te kunnen verzenden.</string>
@@ -93,7 +92,9 @@
   <string name="send_coins_options_fee_category_priority">Prioriteit</string>
   <string name="send_coins_options_empty">Portemonnee legen</string>
   <string name="raise_fee_dialog_title">Verhoog netwerk kosten</string>
-  <string name="raise_fee_dialog_message">Wil je de kosten van deze transactie verhogen met %s? Het zal de betaling sneller laten bevestigen.</string>
+  <string name="raise_fee_dialog_message">Wil je de netwerk kosten voor deze transactie verhogen met %s? De betaling zal hierdoor sneller worden bevestigd.</string>
+  <string name="raise_fee_dialog_determining_fee">Bepalen van netwerk kosten…</string>
+  <string name="raise_fee_dialog_cant_raise">De netwerk kosten voor deze transactie kunnen niet worden verhoogd.</string>
   <string name="raise_fee_dialog_state_decrypting">Decoderen…</string>
   <string name="raise_fee_dialog_state_done">Klaar.</string>
   <string name="raise_fee_dialog_button_raise">Verhoog</string>
@@ -156,6 +157,7 @@
   <string name="transaction_row_message_purpose_raise_fee">Deze transactie verhoogt de transactiekosten van een eerder verstuurde betaling.</string>
   <string name="transaction_row_message_own_unbroadcasted">Deze betaling is nog niet verzonden.</string>
   <string name="transaction_row_message_received_direct">Deze betaling is direct ontvangen. Het risico bestaat dat het nooit uitgegeven kan worden.</string>
+  <string name="transaction_row_message_received_unconfirmed_delayed">De bevestiging van deze transactie is vertraagd, waarschijnlijk door een overbelasting van het Bitcoin netwerk.</string>
   <string name="transaction_row_message_received_unconfirmed_unlocked">Deze betaling wordt besteedbaar in een paar minuten.</string>
   <string name="transaction_row_message_received_in_conflict">Deze transactie heeft het risico om teruggedraaid te worden door de verzender! Wacht indien mogelijk op bevestiging.</string>
   <string name="transaction_row_message_received_dead">Deze betaling is omgekeerd door de verzender.</string>
@@ -165,6 +167,8 @@
   <string name="network_monitor_activity_title">Netwerkmonitor</string>
   <string name="network_monitor_peer_list_title">Peers</string>
   <string name="network_monitor_block_list_title">Blokken</string>
+  <string name="block_row_mining_difficulty_adjustment">Moeilijkheidsgraad aanpassing</string>
+  <string name="block_row_mining_reward_adjustment">Halvering van mining inkomsten</string>
   <string name="block_row_now">alleen nu</string>
   <string name="peer_list_fragment_empty">Geen connecties</string>
   <string name="peer_list_row_ping_time">⇆ %d&#x2009;ms</string>
@@ -255,10 +259,9 @@
   <string name="preferences_remind_balance_title">Saldo herinnering</string>
   <string name="preferences_remind_balance_summary">Als de app een paar weken niet gebruikt is zal de wallet laten merken dat er nog steeds coins aanwezig.</string>
   <string name="preferences_report_issue_title">Meld probleem</string>
-  <string name="preferences_report_issue_summary">Vergaar informatie aangaande uw probleem en verstuur via e-mail een melding aan de ontwikkelaars</string>
   <string name="preferences_initiate_reset_title">Reset blockchain</string>
-  <string name="preferences_initiate_reset_summary">Reset blok keten, transacties en portemonnee saldo. Herladen zal even duren.</string>
-  <string name="preferences_initiate_reset_dialog_message">Wil je de blockchain resetten en herladen?\n\nTijdelijk zal dit de inhoud van je portemonnee en transacties verbergen. Beide zullen terugkomen tijdens het synchroniseren van de blockchain.</string>
+  <string name="preferences_initiate_reset_summary">Reset block-chain, transacties en wallet inhoud. Herstel kan enige tijd duren dus doe dit alleen als je weet waarom.</string>
+  <string name="preferences_initiate_reset_dialog_message">Wil je de blockchain resetten en opnieuw laden?\n\nDit zal tijdelijk de wallet inhoud en transacties laten verbergen. Beiden zullen terugkomen tijdens het synchronisatieproces. Zorg dat je een betrouwbare verbinding hebt met het internet.</string>
   <string name="preferences_initiate_reset_dialog_positive">Reset</string>
   <string name="preferences_extended_public_key_title">Toon xpub</string>
   <string name="preferences_extended_public_key_summary">Toon de uitgebreide public key van je portemonnee zodat het geïmporteerd kan worden in andere apps en services. Wees voorzichtig: hiermee geef je je monetaire privacy prijs aan die app.</string>
@@ -267,7 +270,7 @@
   <string name="extended_public_key_fragment_share">Deel xpub…</string>
   <string name="report_issue_dialog_title_issue">Meld probleem</string>
   <string name="report_issue_dialog_title_crash">Vorige crash gedetecteerd</string>
-  <string name="report_issue_dialog_message_issue">Omschrijf het probleem nauwkeurig zodat het reproduceerbaar is.</string>
+  <string name="report_issue_dialog_message_issue">Omschrijf het probleem nauwkeurig zodat het reproduceerbaar is. Gebruik Engelse taal indien mogelijk.</string>
   <string name="report_issue_dialog_message_crash">Wilt u een crash rapport sturen om ons te helpen dit probleem op te lossen in de toekomst?</string>
   <string name="report_issue_dialog_description">probleem beschrijving</string>
   <string name="report_issue_dialog_report">Verslag</string>
@@ -282,13 +285,16 @@
   <string name="about_copyright_title">Auteursrecht</string>
   <string name="about_license_title">Licentie</string>
   <string name="about_source_title">Broncode</string>
-  <string name="about_credits_bitcoinj_title">Deze app gebruikt dashj %s</string>
-  <string name="about_credits_zxing_title">Deze app gebruikt \'zxing\'</string>
-  <string name="about_credits_icon_title">Deze app gebruikt een icoon van \'bitboy\'</string>
-  <string name="about_community_googleplus_title">Google+ community</string>
-  <string name="about_community_googleplus_summary">Discussies over de app</string>
+  <string name="about_category_credits">Deze app gebruikt…</string>
+  <string name="about_credits_bitcoinj_title">bitcoinj %s, een Bitcoin protocol implementatie</string>
+  <string name="about_credits_zxing_title">ZXing, een QR-code processing bibliotheek</string>
+  <string name="about_credits_scrypt_title">Scrypt, geïmplementeerd door Will Glozer en Colin Percival</string>
   <string name="about_market_app_title">Google Play Pagina</string>
   <string name="about_market_app_summary">Beoordeel app</string>
+  <string name="about_faq_title">FAQ</string>
+  <string name="about_faq_summary">Vaakgestelde vragen over de app</string>
+  <string name="about_community_googleplus_title">Google+ community</string>
+  <string name="about_community_googleplus_summary">Discussieer over de app</string>
   <string name="notification_coins_received_msg">Ontvangen %s</string>
   <string name="notification_peers_connected_msg">%d actieve verbindingen</string>
   <string name="notification_inactivity_title">Je hebt nog steeds Dash op dit apparaat!</string>
@@ -296,6 +302,7 @@
   <string name="notification_inactivity_message_donate">Als je geen waarde hecht aan je coins zou je deze ook kunnen doneren aan het Dash Wallet project</string>
   <string name="notification_inactivity_action_dismiss">Opnieuw vragen</string>
   <string name="notification_inactivity_action_dismiss_forever">Niet herinneren</string>
+  <string name="appwidget_wallet_balance_title">Bitcoin saldo</string>
   <!--generic buttons-->
   <string name="button_ok">OK</string>
   <string name="button_dismiss">Annuleren</string>
@@ -311,9 +318,9 @@
   <string name="button_paste">Plakken</string>
   <string name="button_share">Delen</string>
   <string name="button_set_as_default">Kies als standaard</string>
-  <string name="button_request_coins">Verzoek Dash</string>
-  <string name="button_send_coins">Verzend Dash</string>
-  <string name="button_scan">Zoeken</string>
+  <string name="button_request_coins">Verzoek Bitcoins</string>
+  <string name="button_send_coins">Verzend Bitcoins</string>
+  <string name="button_scan">Scan QR</string>
   <string name="button_settings">Instellingen</string>
   <string name="action_show_qr">Toon QR-code</string>
   <string name="action_browse">Bladeren</string>
