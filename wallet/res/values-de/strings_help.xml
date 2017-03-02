@@ -8,11 +8,7 @@
 			Mit einem Tap darauf gelangst du in die Liste der verfügbaren Währungen, ein weiterer Tap auf eine der Währungen setzt sie als Standardwährung.
 		</p>
 		<p>
-<<<<<<< HEAD
-			Der QR-Code auf dem oberen rechten Teil des Displays enthält ebenfalls Deine Dash-Adresse und kann von einem anderen Teilnehmer eingescannt werden.
-=======
-			Der QR-Code oben rechts enthält deine aktuelle Bitcoin-Adresse und kann von einem Zahlungssender eingescannt werden.
->>>>>>> upstream/master
+			Der QR-Code oben rechts enthält deine aktuelle Dash-Adresse und kann von einem Zahlungssender eingescannt werden.
 			Mit einem Tap auf den QR-Code wird dieser vergrößert.
 		</p>
 		<p>
@@ -29,12 +25,8 @@
     <string name="help_request_coins">
 <![CDATA[
 		<p>
-<<<<<<< HEAD
-			In diesem Dialogfeld kann eine Zahlung von einem anderen Teilnehmer angefordert werden, der dafür Dash Wallet auf seinem Gerät installiert haben sollte.
-=======
 			In diesem Dialogfeld kann eine Zahlung von einem Zahlungssender angefordert werden.
-			Der Sender sollte dafür bereits ein Bitcoin wallet auf seinem Gerät installiert haben.
->>>>>>> upstream/master
+			Der Sender sollte dafür bereits ein Dash wallet auf seinem Gerät installiert haben.
 		</p>
 		<p>
 			Zunächst kann der angeforderte Betrag eingegeben werden.
@@ -54,26 +46,16 @@
 <![CDATA[
 		<p>
 			Dieses Dialogfeld wird geöffnet, wenn der Zahlungsprozess initiiert wurde.
-<<<<<<< HEAD
 			Dies geschieht entweder durch einen Tap auf "Zahlung senden" auf der Startseite oder einen Tap auf eine Dash-URL im mobilen Browser.
-=======
->>>>>>> upstream/master
 		</p>
 		<p>
 			Im ersten Feld muss die Empfängeradresse eingegeben werden.
 			Wenn eine Adresse im Adressbuch gespeichert wurde, wird diese automatisch vervollständigt.
-<<<<<<< HEAD
 			Es kann ebenfalls ein QR-Code mit Dash-Adressen oder Zahlungsanforderungen eingescannt werden, indem man den QR-Button in der Aktionsleiste tappt.
 		</p>
 		<p>
 			Im nächsten Feld wird das verschickbare Dash-Guthaben angezeigt.
 			Falls dieses Guthaben vom angezeigten Guthaben auf der Hauptseite abweicht, sind noch nicht alle Transaktionen bestätigt.
-=======
-			Es kann auch ein vom Zahlungsempfänger gezeigter QR-Code eingescannt werden, indem man den Kamera-Button betätigt.
-		</p>
-		<p>
-			Anschließend kann der zu versendende Betrag eingegeben werden.
->>>>>>> upstream/master
 		</p>
 		<p>
 			Schliesslich muss die Ausgabe-PIN eingegeben werden, wenn vorher zur Sicherheit eine festgelegt wurde.

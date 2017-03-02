@@ -32,45 +32,25 @@ Mais opções estão disponíveis no menu de opções.</string>
 	<string name="help_send_coins">
 <![CDATA[
 		<p>
-<<<<<<< HEAD
-			Você iniciou o processo de envio de moedas.
-			Você veio aqui, quer através da tela principal ou clicando em uma URL Dash no seu nabegador mobile.
+			Você iniciou o processo de envio de Dash.
+			Você veio aqui através da tela principal ou após clicar em um endereço Dash no seu navegador móvel.
 		</p>
 		<p>
-			Primeiro insira o endereço Dash para o qual quer realizar o pagamento.
-			O endereço será completado automaticamente através de entradas conhecidas em seu catálogo de endereços.
-			Você também pode escanear QR codes com endereços Dash ou requisitar pressionando o botão QR na barra de ações.
-		</p>
-		<p>
-			Em seguida, você pode ver quantas Dash você pode gasta no momento.
-			Qualquer diferença para o saldo da tela principal ainda não está confirmado e pode ainda não ser gasto.
-=======
-			Você iniciou o processo de envio de bitcoins.
-			Você veio aqui através da tela principal ou após clicar em um endereço Bitcoin no seu navegador móvel.
-		</p>
-		<p>
-			Primeiro insira o endereço Bitcoin para o qual você quer realizar o pagamento.
+			Primeiro insira o endereço Dash para o qual você quer realizar o pagamento.
 			O endereço será completado automaticamente através de entradas conhecidas em seu catálogo de endereços.
 			Ao usar o botão QR na barra de ações, você pode escanear códigos QR que contenham solicitações de pagamento.
 		</p>
 		<p>
-			Em seguida, você pode ver quantos Bitcoins você tem disponíveis para serem gastos no momento.
+			Em seguida, você pode ver quantos Dash você tem disponíveis para serem gastos no momento.
 			Se houver uma diferença entre o valor disponível para ser gasto e o saldo da tela principal, é devido a transações ainda não confirmadas.
->>>>>>> upstream/master
 		</p>
 		<p>
 			Por último, digite a quantia a pagar.
 		</p>
 		<p>
-<<<<<<< HEAD
-			Você pode inserir um pagamento estando offline.
-			Ele será enviado na próxima reinicialização do Dash Wallet.
-			Se você quer que um pagamento seja processado o mais rápido possível, certifique-se que você está bem conectado (i.e. em uma WLAN).
-=======
 			É possível inserir um pagamento mesmo estando offline.
-			Ele será enviado na próxima reinicialização da Bitcoin Wallet.
+			Ele será enviado na próxima reinicialização da Dash Wallet.
 			Se você quer que um pagamento seja processado o mais rápido possível, certifique-se de que você está usando uma boa conexão (i.e. uma rede Wi-Fi).
->>>>>>> upstream/master
 		</p>
 		<p>
 			Nota:
@@ -85,13 +65,8 @@ Mais opções estão disponíveis no menu de opções.</string>
 			<b>Notas importantes sobre segurança:</b>
 		</p>
 		<p>
-<<<<<<< HEAD
-			Dash são armazenadas no dispositivo.
-			<b>Se você o perder, também perde suas Dash.</b>
-=======
-			As chaves para os seus Bitcoins são armazenadas no seu dispositivo.
-			<b>Se você o perder, você perderá suas chaves e, consequentemente, também perderá todos os seus Bitcoins.</b>
->>>>>>> upstream/master
+			As chaves para os seus Dash são armazenadas no seu dispositivo.
+			<b>Se você o perder, você perderá suas chaves e, consequentemente, também perderá todos os seus Dash.</b>
 		</p>
 		<p>
 			Isso significa que você tem que fazer um <b>backup (cópia de segurança) da sua carteira</b>!
@@ -99,21 +74,12 @@ Mais opções estão disponíveis no menu de opções.</string>
 			Mantenha o seu backup seguro e lembre a senha.
 		</p>
 		<p>
-<<<<<<< HEAD
-			<b>Antes de Instalar</b> (ou limpar as informações do app ou realizar um reset em seu dispositivo), <b>transfira seus Dash para outra carteira</b>.
-			Dash restantes serão perdidas.
-		</p>
-		<p>
-			<b>Pagamentos são irreversíveis</b>.
-			Se você enviar seus Dash no vazio, não há quase nenhuma maneira de obtê-los de volta.
-=======
-			<b>Antes de instalar</b>, limpar as informações do aplicativo ou realizar um reset de seu dispositivo, <b>transfira seus Bitcoins para uma outra carteira</b>.
-			Os Bitcoins remanescentes serão perdidos.
+			<b>Antes de instalar</b>, limpar as informações do aplicativo ou realizar um reset de seu dispositivo, <b>transfira seus Dash para uma outra carteira</b>.
+			Os Dash remanescentes serão perdidos.
 		</p>
 		<p>
 			<b>Os pagamentos são irreversíveis</b>.
-			Se você enviar seus Bitcoins para um endereço desconhecido, não há quase nenhuma maneira de obtê-los de volta.
->>>>>>> upstream/master
+			Se você enviar seus Dash para um endereço desconhecido, não há quase nenhuma maneira de obtê-los de volta.
 		</p>
 		<p>
 			<b>Mantenha o seu dispositivo móvel seguro!</b>
@@ -123,7 +89,7 @@ Mais opções estão disponíveis no menu de opções.</string>
 		</p>
 		<p>
 			Não se arrisque.
-			<b>Não carregue em sua carteira Bitcoin valores maiores do que você carregaria em uma carteira de bolso comum</b>.
+			<b>Não carregue em sua carteira Dash valores maiores do que você carregaria em uma carteira de bolso comum</b>.
 		</p>
 	]]>
 	</string>

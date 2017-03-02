@@ -23,8 +23,8 @@
   <string name="exchange_rates_fragment_balance">баланс</string>
   <string name="exchange_rates_fragment_source">Цена получена с %s</string>
   <string name="exchange_rates_options_search">Поиск обменного курса</string>
-  <string name="wallet_transactions_fragment_empty_text_received">Ещё не получено Bitcoin-монет</string>
-  <string name="wallet_transactions_fragment_empty_text_sent">Ещё не отправлено Bitcoin-монет</string>
+  <string name="wallet_transactions_fragment_empty_text_received">Ещё не получено Dash-монет</string>
+  <string name="wallet_transactions_fragment_empty_text_sent">Ещё не отправлено Dash-монет</string>
   <string name="wallet_transactions_fragment_empty_text_howto">Как получить монеты?\n\nОбменяйте обычные деньги,\nпродайте товары и услуги или\nзаработайте.</string>
   <string name="wallet_transactions_row_warning_backup">Поздравляем, вы получили первый платёж! Вы уже &lt;u&gt;сделали резервную копию кошелька&lt;/u&gt;, чтобы обезопаситься от потерь?</string>
   <string name="wallet_transactions_row_warning_storage_encryption">Подсказка: для улучшения безопасности вашего кошелька вы можете &lt;u&gt;зашифровать ваше устройство&lt;/u&gt;. Это также защитит данные других приложений.</string>
@@ -155,7 +155,7 @@
   <string name="transaction_row_message_purpose_raise_fee">Эта транзакция увеличит комиссию за предыдущий платёж.</string>
   <string name="transaction_row_message_own_unbroadcasted">Этот платёж ещё не был передан в сеть.</string>
   <string name="transaction_row_message_received_direct">Этот платеж был проведен напрямую. Существует риск того, что вы никогда не сможете потратить полученные средства.</string>
-  <string name="transaction_row_message_received_unconfirmed_delayed">Подтверждение этого платежа задерживается, возможно, из-за перегрузки сети Bitcoin.</string>
+  <string name="transaction_row_message_received_unconfirmed_delayed">Подтверждение этого платежа задерживается, возможно, из-за перегрузки сети Dash.</string>
   <string name="transaction_row_message_received_unconfirmed_unlocked">Этот платёж должен стать доступным через несколько минут.</string>
   <string name="transaction_row_message_received_in_conflict">Этот платёж с высокой вероятностью может быть отменён отправителем! Если можете, подождите подтверждения.</string>
   <string name="transaction_row_message_received_dead">Этот платёж был отменён отправителем.</string>
@@ -284,7 +284,7 @@
   <string name="about_license_title">Лицензия</string>
   <string name="about_source_title">Исходный код</string>
   <string name="about_category_credits">Это приложение использует…</string>
-  <string name="about_credits_bitcoinj_title">bitcoinj %s, реализация протокола Bitcoin</string>
+  <string name="about_credits_bitcoinj_title">bitcoinj %s, реализация протокола Dash</string>
   <string name="about_credits_zxing_title">ZXing, библиотека обработки QR-кодов</string>
   <string name="about_credits_scrypt_title">Scrypt, реализованный Will Glozer и Colin Percival</string>
   <string name="about_community_googleplus_title">Сообщество Google+</string>
@@ -294,8 +294,8 @@
   <string name="notification_coins_received_msg">Получено %s</string>
   <string name="notification_peers_connected_msg">подключено %d участников</string>
   <string name="notification_inactivity_title">У вас всё ещё есть биткоины на этом устройстве!</string>
-  <string name="notification_inactivity_message">Внимание, ваш баланс %s будет потерян, если вы удалите Bitcoin Wallet до того, как перешлёте ваши средства.</string>
-  <string name="notification_inactivity_message_donate">Если вам не нужны монеты, вы можете пожертвовать их проекту Bitcoin Wallet.</string>
+  <string name="notification_inactivity_message">Внимание, ваш баланс %s будет потерян, если вы удалите Dash Wallet до того, как перешлёте ваши средства.</string>
+  <string name="notification_inactivity_message_donate">Если вам не нужны монеты, вы можете пожертвовать их проекту Dash Wallet.</string>
   <string name="notification_inactivity_action_dismiss">Напомнить позже</string>
   <string name="notification_inactivity_action_dismiss_forever">Не напоминать</string>
   <string name="appwidget_wallet_balance_title">Баланс биткоинов</string>

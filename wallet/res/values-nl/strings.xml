@@ -23,9 +23,9 @@
   <string name="exchange_rates_fragment_balance">saldo</string>
   <string name="exchange_rates_fragment_source">Prijs van %s</string>
   <string name="exchange_rates_options_search">Zoek wisselkoers</string>
-  <string name="wallet_transactions_fragment_empty_text_received">Nog geen Bitcoins ontvangen</string>
-  <string name="wallet_transactions_fragment_empty_text_sent">Nog geen Bitcoins verzonden</string>
-  <string name="wallet_transactions_fragment_empty_text_howto">Hoe verkrijg je bitcoins?\n\nVerhandel voor traditioneel geld,\nverkoop goederen of diensten of\nverdien ze met uw werk.</string>
+  <string name="wallet_transactions_fragment_empty_text_received">Nog geen Dash ontvangen</string>
+  <string name="wallet_transactions_fragment_empty_text_sent">Nog geen Dash verzonden</string>
+  <string name="wallet_transactions_fragment_empty_text_howto">Hoe verkrijg je Dash?\n\nVerhandel voor traditioneel geld,\nverkoop goederen of diensten of\nverdien ze met uw werk.</string>
   <string name="wallet_transactions_row_warning_backup">Gefeliciteerd, u heeft uw eerste betaling ontvangen! Heeft u al een &lt;u&gt;back-up gemaakt van uw portemonnee&lt;/u&gt;, om verlies tegen te gaan?</string>
   <string name="wallet_transactions_row_warning_storage_encryption">Tip: om de veiligheid van je portemonnee te vergroten, kun je &lt;u&gt;je apparaat versleutelen&lt;/u&gt;. Dit beschermt ook de gegevens van andere apps.</string>
   <string name="wallet_transactions_fragment_coinbase">gemijnd</string>
@@ -157,7 +157,7 @@
   <string name="transaction_row_message_purpose_raise_fee">Deze transactie verhoogt de transactiekosten van een eerder verstuurde betaling.</string>
   <string name="transaction_row_message_own_unbroadcasted">Deze betaling is nog niet verzonden.</string>
   <string name="transaction_row_message_received_direct">Deze betaling is direct ontvangen. Het risico bestaat dat het nooit uitgegeven kan worden.</string>
-  <string name="transaction_row_message_received_unconfirmed_delayed">De bevestiging van deze transactie is vertraagd, waarschijnlijk door een overbelasting van het Bitcoin netwerk.</string>
+  <string name="transaction_row_message_received_unconfirmed_delayed">De bevestiging van deze transactie is vertraagd, waarschijnlijk door een overbelasting van het Dash netwerk.</string>
   <string name="transaction_row_message_received_unconfirmed_unlocked">Deze betaling wordt besteedbaar in een paar minuten.</string>
   <string name="transaction_row_message_received_in_conflict">Deze transactie heeft het risico om teruggedraaid te worden door de verzender! Wacht indien mogelijk op bevestiging.</string>
   <string name="transaction_row_message_received_dead">Deze betaling is omgekeerd door de verzender.</string>
@@ -286,7 +286,7 @@
   <string name="about_license_title">Licentie</string>
   <string name="about_source_title">Broncode</string>
   <string name="about_category_credits">Deze app gebruikt…</string>
-  <string name="about_credits_bitcoinj_title">bitcoinj %s, een Bitcoin protocol implementatie</string>
+  <string name="about_credits_bitcoinj_title">bitcoinj %s, een Dash protocol implementatie</string>
   <string name="about_credits_zxing_title">ZXing, een QR-code processing bibliotheek</string>
   <string name="about_credits_scrypt_title">Scrypt, geïmplementeerd door Will Glozer en Colin Percival</string>
   <string name="about_market_app_title">Google Play Pagina</string>
@@ -302,7 +302,7 @@
   <string name="notification_inactivity_message_donate">Als je geen waarde hecht aan je coins zou je deze ook kunnen doneren aan het Dash Wallet project</string>
   <string name="notification_inactivity_action_dismiss">Opnieuw vragen</string>
   <string name="notification_inactivity_action_dismiss_forever">Niet herinneren</string>
-  <string name="appwidget_wallet_balance_title">Bitcoin saldo</string>
+  <string name="appwidget_wallet_balance_title">Dash saldo</string>
   <!--generic buttons-->
   <string name="button_ok">OK</string>
   <string name="button_dismiss">Annuleren</string>
@@ -318,8 +318,8 @@
   <string name="button_paste">Plakken</string>
   <string name="button_share">Delen</string>
   <string name="button_set_as_default">Kies als standaard</string>
-  <string name="button_request_coins">Verzoek Bitcoins</string>
-  <string name="button_send_coins">Verzend Bitcoins</string>
+  <string name="button_request_coins">Verzoek Dash</string>
+  <string name="button_send_coins">Verzend Dash</string>
   <string name="button_scan">Scan QR</string>
   <string name="button_settings">Instellingen</string>
   <string name="action_show_qr">Toon QR-code</string>
