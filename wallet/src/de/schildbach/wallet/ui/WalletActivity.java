@@ -566,7 +566,8 @@ public final class WalletActivity extends AbstractWalletActivity implements Acti
 		final List<File> files = new LinkedList<File>();
 
 		// external storage
-		if (Constants.Files.EXTERNAL_WALLET_BACKUP_DIR.exists() && Constants.Files.EXTERNAL_WALLET_BACKUP_DIR.isDirectory())
+		final File[] externalFiles = Constants.Files.EXTERNAL_WALLET_BACKUP_DIR.listFiles();
+		if (externalFiles != null)
 			for (final File file : Constants.Files.EXTERNAL_WALLET_BACKUP_DIR.listFiles())
 				if (Crypto.OPENSSL_FILE_FILTER.accept(file))
 					files.add(file);
@@ -1016,7 +1017,7 @@ public final class WalletActivity extends AbstractWalletActivity implements Acti
 				return true;
 
 			case R.id.wallet_options_restore_wallet:
-				showDialog(DIALOG_RESTORE_WALLET);
+				handleRestoreWallet();
 				return true;
 
 			case R.id.wallet_options_encrypt_keys:
