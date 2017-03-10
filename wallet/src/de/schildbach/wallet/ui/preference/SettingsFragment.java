@@ -28,6 +28,7 @@ import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.Preference.OnPreferenceChangeListener;
 import android.preference.PreferenceFragment;
+import android.preference.PreferenceScreen;
 
 import java.net.InetAddress;
 import java.util.List;
@@ -111,7 +112,9 @@ public final class SettingsFragment extends PreferenceFragment implements OnPref
 		allowInstantXPreference = findPreference(Configuration.PREFS_KEY_INSTANTX_ENABLED);
 		allowInstantXPreference.setOnPreferenceChangeListener(this);
 		liteModePreference = findPreference(Configuration.PREFS_KEY_LITE_MODE);
-		liteModePreference.setOnPreferenceChangeListener(this);
+		if(liteModePreference != null)
+			liteModePreference.setOnPreferenceChangeListener(this);
+
 		updateTrustedPeer();
 	}
 
@@ -154,7 +157,7 @@ public final class SettingsFragment extends PreferenceFragment implements OnPref
 					application.updateDashMode();
 					application.stopBlockchainService();
 				}
-				else if(preference.equals(liteModePreference))
+				else if(liteModePreference != null && preference.equals(liteModePreference))
 				{
 					application.updateDashMode();
 					application.stopBlockchainService();

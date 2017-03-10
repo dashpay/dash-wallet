@@ -243,7 +243,7 @@ public final class WalletBalanceToolbarFragment extends Fragment
 				viewBalanceBtc.setVisibility(View.INVISIBLE);
 			}
 
-            if(masternodeSyncStatus != MasternodeSync.MASTERNODE_SYNC_FINISHED)
+            if(masternodeSyncStatus != MasternodeSync.MASTERNODE_SYNC_FINISHED && wallet.getContext().allowInstantXinLiteMode())
             {
                 progressView.setVisibility(View.VISIBLE);
                 viewBalance.setVisibility(View.INVISIBLE);
