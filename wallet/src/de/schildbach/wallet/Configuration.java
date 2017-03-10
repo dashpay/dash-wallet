@@ -335,6 +335,6 @@ public class Configuration
 	}
 	public boolean getLiteMode()
 	{
-		return prefs.getBoolean(PREFS_KEY_LITE_MODE, true);
+		return true; //return prefs.getBoolean(PREFS_KEY_LITE_MODE, true);
 	}
 }

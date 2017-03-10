@@ -68,11 +68,11 @@
 			android:key="labs_instantx_enabled"
 			android:summary="Allow InstantSend to be used to send and receive coins."
 			android:title="Enable InstantSend" />
-		<CheckBoxPreference
+		<!--CheckBoxPreference
 			android:defaultValue="true"
 			android:key="labs_lite_mode"
 			android:summary="Reduce bandwidth usage."
-			android:title="Enable Lite Mode" />
+			android:title="Enable Lite Mode" /-->
 		<CheckBoxPreference
 			android:defaultValue="true"
 			android:key="disclaimer"
