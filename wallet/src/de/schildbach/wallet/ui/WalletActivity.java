@@ -963,7 +963,7 @@ public final class WalletActivity extends AbstractWalletActivity implements Acti
 				return true;
 
 			case R.id.wallet_options_restore_wallet:
-				showDialog(DIALOG_RESTORE_WALLET);
+				handleRestoreWallet();
 				return true;
 
 			case R.id.wallet_options_encrypt_keys:
