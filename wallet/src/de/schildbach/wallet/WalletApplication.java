@@ -167,7 +167,18 @@ public class WalletApplication extends Application
 		wallet.autosaveToFile(walletFile, 10, TimeUnit.SECONDS, new WalletAutosaveEventListener());
 
 		// clean up spam
-		wallet.cleanup();
+		try {
+			wallet.cleanup();
+            //throw new IllegalStateException("Inconsistent spent tx:  77");
+		}
+		catch(IllegalStateException x) {
+			if(x.getMessage().contains("Inconsistent spent tx:"))
+			{
+				File blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
+				blockChainFile.delete();
+			}
+			else throw x;
+		}
 
 		migrateBackup();
 	}

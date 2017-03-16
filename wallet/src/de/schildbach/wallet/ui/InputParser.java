@@ -79,7 +79,7 @@ public abstract class InputParser
 
 		public StringInputParser(final String input)
 		{
-			this.input = input;
+			this.input = input.trim();
 		}
 
 		@Override
