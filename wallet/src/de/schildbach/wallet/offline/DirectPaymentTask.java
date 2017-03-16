@@ -39,13 +39,13 @@ import com.squareup.okhttp.Response;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.util.Bluetooth;
+import de.schildbach.wallet_test.R;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
 import android.os.Looper;
-import de.schildbach.wallet_test.R;
 import okio.BufferedSink;
 
 /**

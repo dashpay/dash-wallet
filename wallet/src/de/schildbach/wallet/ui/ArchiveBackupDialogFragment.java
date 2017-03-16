@@ -36,7 +36,6 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.Html;
-import de.schildbach.wallet_test.R;
 
 /**
  * @author Andreas Schildbach

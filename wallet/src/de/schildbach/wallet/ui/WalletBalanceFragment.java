@@ -20,7 +20,6 @@ package de.schildbach.wallet.ui;
 import javax.annotation.Nullable;
 
 import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.wallet.Wallet;
 
@@ -32,16 +31,18 @@ import de.schildbach.wallet.data.ExchangeRatesLoader;
 import de.schildbach.wallet.data.ExchangeRatesProvider;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
+import de.schildbach.wallet.ui.send.FeeCategory;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
-import android.content.Intent;
-import android.database.Cursor;
-import android.os.Bundle;
 import android.app.Fragment;
 import android.app.LoaderManager;
+import android.app.LoaderManager.LoaderCallbacks;
+import android.content.Intent;
 import android.content.Loader;
+import android.database.Cursor;
+import android.os.Bundle;
 import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -51,7 +52,6 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import de.schildbach.wallet_test.R;
 
 /**
  * @author Andreas Schildbach
@@ -285,7 +285,7 @@ public final class WalletBalanceFragment extends Fragment {
         }
     };
 
-    private final LoaderManager.LoaderCallbacks<Coin> balanceLoaderCallbacks = new LoaderManager.LoaderCallbacks<Coin>() {
+    private final LoaderCallbacks<Coin> balanceLoaderCallbacks = new LoaderManager.LoaderCallbacks<Coin>() {
         @Override
         public Loader<Coin> onCreateLoader(final int id, final Bundle args) {
             return new WalletBalanceLoader(activity, wallet);
@@ -304,7 +304,7 @@ public final class WalletBalanceFragment extends Fragment {
         }
     };
 
-    private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>() {
+    private final LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>() {
         @Override
         public Loader<Cursor> onCreateLoader(final int id, final Bundle args) {
             return new ExchangeRatesLoader(activity, config);

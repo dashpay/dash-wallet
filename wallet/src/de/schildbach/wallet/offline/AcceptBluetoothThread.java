@@ -22,10 +22,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-
-import javax.annotation.Nonnull;
-
-import org.bitcoinj.core.CoinDefinition;
 import org.bitcoin.protocols.payments.Protos;
 import org.bitcoin.protocols.payments.Protos.PaymentACK;
 import org.bitcoinj.core.ProtocolException;
@@ -45,7 +41,6 @@ import android.bluetooth.BluetoothSocket;
  * @author Shahar Livne
  * @author Andreas Schildbach
  */
-
 public abstract class AcceptBluetoothThread extends Thread {
     protected final BluetoothServerSocket listeningSocket;
     protected final AtomicBoolean running = new AtomicBoolean(true);

@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui;
 import java.io.File;
 import java.util.List;
 
+import de.schildbach.wallet_test.R;
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -27,7 +28,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
-import de.schildbach.wallet_test.R;
 
 /**
  * @author Andreas Schildbach
