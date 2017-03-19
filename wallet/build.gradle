@@ -2,7 +2,8 @@ apply plugin: 'com.android.application'
 
 def localMavenRepo = 'file://' + new File(System.getProperty('user.home'), '.m2/repository').absolutePath
 repositories {
-    maven { url localMavenRepo }
+    //maven { url localMavenRepo }
+    mavenLocal();
 }
 dependencies {
     compile 'com.android.support:design:23.2.0'
