@@ -347,7 +347,7 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
 
     private void handleCopy() {
         final Uri request = Uri.parse(determineBitcoinRequestStr(false));
-        clipboardManager.setPrimaryClip(ClipData.newRawUri("Bitcoin payment request", request));
+        clipboardManager.setPrimaryClip(ClipData.newRawUri("Dash payment request", request));
         log.info("payment request copied to clipboard: {}", request);
         new Toast(activity).toast(R.string.request_coins_clipboard_msg);
     }
@@ -392,7 +392,7 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
         final int size = getResources().getDimensionPixelSize(R.dimen.bitmap_dialog_qr_size);
         final String qrContent;
         if (config.getQrPaymentRequestEnabled())
-            qrContent = "BITCOIN:-" + Qr.encodeBinary(paymentRequest);
+            qrContent = CoinDefinition.coinURIScheme.toUpperCase() + ":-" + Qr.encodeBinary(paymentRequest);
         else
             qrContent = bitcoinRequest;
         qrCodeBitmap = Qr.bitmap(qrContent, size);

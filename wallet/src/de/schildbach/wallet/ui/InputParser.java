@@ -79,7 +79,7 @@ public abstract class InputParser {
 
         @Override
         public void parse() {
-            if (input.startsWith("DASH:-")) {
+            if (input.startsWith(CoinDefinition.coinURIScheme.toUpperCase()+ ":-")) {
                 try {
                     final byte[] serializedPaymentRequest = Qr.decodeBinary(input.substring(9));
 
@@ -97,7 +97,7 @@ public abstract class InputParser {
 
                     error(R.string.input_parser_invalid_paymentrequest, x.getMessage());
                 }
-            } else if (input.startsWith("dash:")) {
+            } else if (input.startsWith(CoinDefinition.coinURIScheme +":")) {
                 try {
                     final BitcoinURI bitcoinUri = new BitcoinURI(null, input);
                     final Address address = bitcoinUri.getAddress();
