@@ -38,7 +38,6 @@ import java.util.TimeZone;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.BuildConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,6 +58,7 @@ import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.os.Build;
 import android.support.v4.app.ActivityManagerCompat;
+import de.schildbach.wallet_test.BuildConfig;
 
 /**
  * @author Andreas Schildbach
@@ -199,7 +199,10 @@ public class CrashReporter {
 
         report.append("Version: " + pi.versionName + " (" + pi.versionCode + ")\n");
         report.append("Package: " + pi.packageName + "\n");
-        report.append("Test/Prod: " + BuildConfig.FLAVOR + "\n");
+        String installer = application.getPackageManager().getInstallerPackageName(pi.packageName);
+        report.append("Installer: " + (installer != null ? installer : "manual") + "\n");
+        report.append("Test/Prod: " + (Constants.IS_PROD_BUILD ? "prod" : "test") + "\n");
+        report.append("Flavor: " + BuildConfig.FLAVOR + "\n");
         report.append("Timezone: " + TimeZone.getDefault().getID() + "\n");
         calendar.setTimeInMillis(System.currentTimeMillis());
         report.append("Time: " + String.format(Locale.US, "%tF %tT %tZ", calendar, calendar, calendar) + "\n");
