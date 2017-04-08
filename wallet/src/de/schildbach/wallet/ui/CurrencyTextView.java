@@ -27,6 +27,7 @@ import de.schildbach.wallet_test.R;
 import android.content.Context;
 import android.graphics.Paint;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.widget.AppCompatTextView;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.ScaleXSpan;
@@ -36,7 +37,7 @@ import android.widget.TextView;
 /**
  * @author Andreas Schildbach
  */
-public class CurrencyTextView extends TextView {
+public class CurrencyTextView extends AppCompatTextView {
     private Monetary amount = null;
     private MonetaryFormat format = null;
     private boolean alwaysSigned = false;

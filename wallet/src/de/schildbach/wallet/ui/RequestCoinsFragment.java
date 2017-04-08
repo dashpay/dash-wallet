@@ -48,6 +48,9 @@ import de.schildbach.wallet.util.Toast;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
+import android.app.Fragment;
+import android.app.LoaderManager;
+import android.app.LoaderManager.LoaderCallbacks;
 import android.bluetooth.BluetoothAdapter;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
@@ -55,6 +58,7 @@ import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.Loader;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -65,10 +69,6 @@ import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
 import android.nfc.NfcEvent;
 import android.os.Bundle;
-import android.app.Fragment;
-import android.app.LoaderManager;
-import android.content.Loader;
-import android.app.LoaderManager.LoaderCallbacks;
 import android.support.v7.widget.CardView;
 import android.text.SpannableStringBuilder;
 import android.view.LayoutInflater;
@@ -347,7 +347,7 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
 
     private void handleCopy() {
         final Uri request = Uri.parse(determineBitcoinRequestStr(false));
-        clipboardManager.setPrimaryClip(ClipData.newRawUri("Bitcoin payment request", request));
+        clipboardManager.setPrimaryClip(ClipData.newRawUri("Dash payment request", request));
         log.info("payment request copied to clipboard: {}", request);
         new Toast(activity).toast(R.string.request_coins_clipboard_msg);
     }
@@ -392,7 +392,7 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
         final int size = getResources().getDimensionPixelSize(R.dimen.bitmap_dialog_qr_size);
         final String qrContent;
         if (config.getQrPaymentRequestEnabled())
-            qrContent = "BITCOIN:-" + Qr.encodeBinary(paymentRequest);
+            qrContent = CoinDefinition.coinURIScheme.toUpperCase() + ":-" + Qr.encodeBinary(paymentRequest);
         else
             qrContent = bitcoinRequest;
         qrCodeBitmap = Qr.bitmap(qrContent, size);

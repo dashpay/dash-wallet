@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.concurrent.TimeUnit;
 
+import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionMessage;
@@ -117,7 +118,7 @@ public class WalletApplication extends Application {
         Threading.uncaughtExceptionHandler = new Thread.UncaughtExceptionHandler() {
             @Override
             public void uncaughtException(final Thread thread, final Throwable throwable) {
-                log.info("bitcoinj uncaught exception", throwable);
+                log.info(CoinDefinition.coinName + "j uncaught exception", throwable);
                 CrashReporter.saveBackgroundTrace(throwable, packageInfo);
             }
         };
@@ -166,7 +167,7 @@ public class WalletApplication extends Application {
     }
 
     private void initLogging() {
-        final File logDir = getDir("log", MODE_PRIVATE);
+        final File logDir = getDir("log", Constants.TEST ? Context.MODE_WORLD_READABLE : MODE_PRIVATE);
         final File logFile = new File(logDir, "wallet.log");
 
         final LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();

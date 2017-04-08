@@ -49,7 +49,6 @@ import android.view.View;
 import android.widget.CheckBox;
 import android.widget.EditText;
 
-
 /**
  * @author Andreas Schildbach
  */

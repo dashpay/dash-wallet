@@ -34,7 +34,6 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
 import android.preference.EditTextPreference;
-import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.Preference.OnPreferenceChangeListener;
 import android.preference.PreferenceFragment;

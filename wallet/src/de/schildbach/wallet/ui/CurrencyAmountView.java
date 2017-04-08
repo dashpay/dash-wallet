@@ -46,7 +46,6 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
-
 /**
  * @author Andreas Schildbach
  */

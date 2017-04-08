@@ -50,7 +50,6 @@ public class BlockchainStateLoader extends AsyncTaskLoader<BlockchainState> {
     @Override
     protected void onStartLoading() {
         super.onStartLoading();
-
         broadcastManager.registerReceiver(broadcastReceiver,
                 new IntentFilter(BlockchainService.ACTION_BLOCKCHAIN_STATE));
 
@@ -62,7 +61,6 @@ public class BlockchainStateLoader extends AsyncTaskLoader<BlockchainState> {
     @Override
     protected void onStopLoading() {
         broadcastManager.unregisterReceiver(broadcastReceiver);
-
         super.onStopLoading();
     }
 
