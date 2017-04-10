@@ -64,7 +64,7 @@ public final class AddressBookActivity extends AbstractWalletActivity {
 
 		setContentView(R.layout.address_book_content);
 
-		final FragmentManager fragmentManager = getSupportFragmentManager();
+		final FragmentManager fragmentManager = getFragmentManager();
 
 		walletAddressesFragment = (WalletAddressesFragment) fragmentManager.findFragmentByTag(TAG_LEFT);
 		sendingAddressesFragment = (SendingAddressesFragment) fragmentManager.findFragmentByTag(TAG_RIGHT);
