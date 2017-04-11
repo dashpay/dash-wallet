@@ -97,6 +97,24 @@ public final class Constants {
     /** Maximum size of backups. Files larger will be rejected. */
     public static final long BACKUP_MAX_CHARS = 10000000;
 
+    private static final String EXPLORE_BASE_URL_PROD = CoinDefinition.BLOCKEXPLORER_BASE_URL_PROD;
+    private static final String EXPLORE_BASE_URL_TEST = CoinDefinition.BLOCKEXPLORER_BASE_URL_TEST;
+
+    /** Base URL for browsing transactions, blocks or addresses. */
+    public static final String EXPLORE_BASE_URL = NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET) ? EXPLORE_BASE_URL_PROD
+            : EXPLORE_BASE_URL_TEST;
+    public static final String EXPLORE_ADDRESS_PATH  = CoinDefinition.BLOCKEXPLORER_ADDRESS_PATH;
+    public static final String EXPLORE_TRANSACTION_PATH  = CoinDefinition.BLOCKEXPLORER_TRANSACTION_PATH;
+    public static final String EXPLORE_BLOCK_PATH  = CoinDefinition.BLOCKEXPLORER_BLOCK_PATH;
+
+    public static final String MIMETYPE_BACKUP_PRIVATE_KEYS = "x-"+CoinDefinition.coinName.toLowerCase()+"/private-keys";
+
+    private static final String BITEASY_API_URL_PROD = CoinDefinition.UNSPENT_API_URL;//"https://api.biteasy.com/blockchain/v1/";
+    private static final String BITEASY_API_URL_TEST = "https://api.biteasy.com/testnet/v1/";
+    /** Base URL for blockchain API. */
+    public static final String BITEASY_API_URL = NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET) ? BITEASY_API_URL_PROD
+            : BITEASY_API_URL_TEST;
+
     /** Currency code for the wallet name resolver. */
     public static final String WALLET_NAME_CURRENCY_CODE = NETWORK_PARAMETERS.getId()
             .equals(NetworkParameters.ID_MAINNET) ? "dash" : "tdash";

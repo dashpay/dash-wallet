@@ -96,11 +96,11 @@ public final class WalletBalanceToolbarFragment extends Fragment
     }
 
 	@Override
-	public void onAttach(final Context context)
+	public void onAttach(final Activity activity)
 	{
-		super.onAttach(context);
+		super.onAttach(activity);
 
-		this.activity = (Activity) context;
+		this.activity = activity;
 		this.application = (WalletApplication) activity.getApplication();
 		this.config = application.getConfiguration();
 		this.wallet = application.getWallet();
@@ -283,12 +283,12 @@ public final class WalletBalanceToolbarFragment extends Fragment
     }
 
     private void showAppBarMessage(CharSequence message) {
-        if (message != null) {
-            appBarMessageView.setVisibility(View.VISIBLE);
-            appBarMessageView.setText(message);
-        } else {
-            appBarMessageView.setVisibility(View.GONE);
-        }
+//        if (message != null) {
+//            appBarMessageView.setVisibility(View.VISIBLE);
+//            appBarMessageView.setText(message);
+//        } else {
+//            appBarMessageView.setVisibility(View.GONE);
+//        }
     }
 
     private void updateBalanceTooMuchWarning() {
