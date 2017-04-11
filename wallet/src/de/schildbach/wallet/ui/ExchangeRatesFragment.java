@@ -213,9 +213,9 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
                     recyclerView.scrollToPosition(positionToScrollTo);
                 if (activity instanceof ExchangeRatesActivity) {
                     data.moveToPosition(0);
-                    //final String source = ExchangeRatesProvider.getExchangeRate(data).source;
-                    //activity.getActionBar().setSubtitle(
-                    //         source != null ? getString(R.string.exchange_rates_fragment_source, source) : null);
+//                    final String source = ExchangeRatesProvider.getExchangeRate(data).source;
+//                    activity.getActionBar().setSubtitle(
+//                            source != null ? getString(R.string.exchange_rates_fragment_source, source) : null);
                 }
             }
         }

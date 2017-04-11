@@ -17,30 +17,25 @@
 
 package de.schildbach.wallet.ui;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import android.graphics.Color;
-import android.os.Bundle;
 import android.support.annotation.LayoutRes;
 import android.support.v7.app.ActionBar;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet_test.R;
 
-import android.app.Activity;
+import android.support.v7.app.AppCompatActivity;
 import android.app.ActivityManager.TaskDescription;
 import android.os.Build;
 import android.os.Bundle;
 
-
 /**
  * @author Andreas Schildbach
  */
-public abstract class AbstractWalletActivity extends AppCompatActivity
-{
+public abstract class AbstractWalletActivity extends AppCompatActivity {
     private WalletApplication application;
 
     protected static final Logger log = LoggerFactory.getLogger(AbstractWalletActivity.class);
@@ -55,31 +50,26 @@ public abstract class AbstractWalletActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
     }
 
-	@Override
-	public void setContentView(@LayoutRes int layoutResID)
-	{
-		super.setContentView(layoutResID);
+    @Override
+    public void setContentView(@LayoutRes int layoutResID) {
+        super.setContentView(layoutResID);
 
-		initToolbar();
-	}
+        initToolbar();
+    }
 
-	private void initToolbar()
-	{
-		Toolbar toolbarView = (Toolbar) findViewById(R.id.toolbar);
-		if (toolbarView != null)
-		{
-			setSupportActionBar(toolbarView);
-			ActionBar actionBar = getSupportActionBar();
-			if (actionBar != null)
-			{
-				actionBar.setDisplayHomeAsUpEnabled(true);
-				actionBar.setDisplayShowHomeEnabled(true);
-			}
-		}
-	}
+    private void initToolbar() {
+        Toolbar toolbarView = (Toolbar) findViewById(R.id.toolbar);
+        if (toolbarView != null) {
+            setSupportActionBar(toolbarView);
+            ActionBar actionBar = getSupportActionBar();
+            if (actionBar != null) {
+                actionBar.setDisplayHomeAsUpEnabled(true);
+                actionBar.setDisplayShowHomeEnabled(true);
+            }
+        }
+    }
 
-	protected WalletApplication getWalletApplication()
-	{
-		return application;
-	}
+    protected WalletApplication getWalletApplication() {
+        return application;
+    }
 }

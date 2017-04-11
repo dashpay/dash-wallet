@@ -17,20 +17,15 @@
 
 package de.schildbach.wallet;
 
-import android.os.Build;
-import android.os.Environment;
-import android.text.format.DateUtils;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
-import de.schildbach.wallet_test.BuildConfig;
 import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.MonetaryFormat;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +34,7 @@ import com.squareup.okhttp.HttpUrl;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.logging.HttpLoggingInterceptor;
 
-import java.io.File;
+import de.schildbach.wallet_test.BuildConfig;
 
 import android.os.Build;
 import android.os.Environment;
@@ -48,9 +43,8 @@ import android.text.format.DateUtils;
 /**
  * @author Andreas Schildbach
  */
-public final class Constants
-{
-	public static final boolean TEST = BuildConfig.APPLICATION_ID.contains("_test");
+public final class Constants {
+    public static final boolean TEST = BuildConfig.APPLICATION_ID.contains("_test");
 
     /** Network this wallet is on (e.g. testnet or mainnet). */
     public static final NetworkParameters NETWORK_PARAMETERS = TEST ? TestNet3Params.get() : MainNetParams.get();
@@ -82,10 +76,10 @@ public final class Constants
                 .getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
 
         /** Filename of the manual key backup (old format, can only be read). */
-        public static final String EXTERNAL_WALLET_KEY_BACKUP = "dash-wallet-keys" + FILENAME_NETWORK_SUFFIX;
+        public static final String EXTERNAL_WALLET_KEY_BACKUP = CoinDefinition.coinName.toLowerCase()+"-wallet-keys" + FILENAME_NETWORK_SUFFIX;
 
         /** Filename of the manual wallet backup. */
-        public static final String EXTERNAL_WALLET_BACKUP = "dash-wallet-backup" + FILENAME_NETWORK_SUFFIX;
+        public static final String EXTERNAL_WALLET_BACKUP = CoinDefinition.coinName +"-wallet-backup" + FILENAME_NETWORK_SUFFIX;
 
         /** Filename of the block store for storing the chain. */
         public static final String BLOCKCHAIN_FILENAME = "blockchain" + FILENAME_NETWORK_SUFFIX;
@@ -113,16 +107,16 @@ public final class Constants
     public static final HttpUrl DYNAMIC_FEES_URL = HttpUrl.parse("https://wallet.schildbach.de/fees");
 
     /** MIME type used for transmitting single transactions. */
-    public static final String MIMETYPE_TRANSACTION = "application/x-dashtx";
+    public static final String MIMETYPE_TRANSACTION = "application/x-" + CoinDefinition.coinTicker.toLowerCase() + "tx";
 
     /** MIME type used for transmitting wallet backups. */
-    public static final String MIMETYPE_WALLET_BACKUP = "application/x-dash-wallet-backup";
+    public static final String MIMETYPE_WALLET_BACKUP = "application/x-"+CoinDefinition.coinName.toLowerCase()+"-wallet-backup";
 
     /** Number of confirmations until a transaction is fully confirmed. */
     public static final int MAX_NUM_CONFIRMATIONS = 6;
 
     /** User-agent to use for network access. */
-    public static final String USER_AGENT = "Dash Wallet";
+    public static final String USER_AGENT = CoinDefinition.coinName +" Wallet";
 
     /** Default currency to use if all default mechanisms fail. */
     public static final String DEFAULT_EXCHANGE_CURRENCY = "USD";
@@ -154,9 +148,8 @@ public final class Constants
 
     public static final BaseEncoding HEX = BaseEncoding.base16().lowerCase();
 
-
     public static final String SOURCE_URL = "https://github.com/HashEngineering/" + CoinDefinition.coinName.toLowerCase() + "-wallet";
-    public static final String BINARY_URL = "https://github.com/HashEngineering/"+ CoinDefinition.coinName.toLowerCase() +"-wallet/releases";
+    public static final String BINARY_URL = "https://github.com/HashEngineering/" + CoinDefinition.coinName.toLowerCase() + "-wallet/releases";
     public static final String MARKET_APP_URL = "market://details?id=%s";
     public static final String WEBMARKET_APP_URL = "https://play.google.com/store/apps/details?id=%s";
 

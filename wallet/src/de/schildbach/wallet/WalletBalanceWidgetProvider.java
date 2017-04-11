@@ -54,7 +54,6 @@ import android.widget.RemoteViews;
 /**
  * @author Andreas Schildbach
  */
-
 public class WalletBalanceWidgetProvider extends AppWidgetProvider {
     private static final Logger log = LoggerFactory.getLogger(WalletBalanceWidgetProvider.class);
 

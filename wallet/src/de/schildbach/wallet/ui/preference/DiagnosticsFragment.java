@@ -40,65 +40,65 @@ import android.preference.PreferenceScreen;
  * @author Andreas Schildbach
  */
 public final class DiagnosticsFragment extends PreferenceFragment {
-    private Activity activity;
-    private WalletApplication application;
+	private Activity activity;
+	private WalletApplication application;
 
-    private static final String PREFS_KEY_INITIATE_RESET = "initiate_reset";
-    private static final String PREFS_KEY_EXTENDED_PUBLIC_KEY = "extended_public_key";
+	private static final String PREFS_KEY_INITIATE_RESET = "initiate_reset";
+	private static final String PREFS_KEY_EXTENDED_PUBLIC_KEY = "extended_public_key";
 
-    private static final Logger log = LoggerFactory.getLogger(DiagnosticsFragment.class);
+	private static final Logger log = LoggerFactory.getLogger(DiagnosticsFragment.class);
 
-    @Override
+	@Override
     public void onAttach(final Activity activity) {
-        super.onAttach(activity);
+		super.onAttach(activity);
 
-        this.activity = activity;
-        this.application = (WalletApplication) activity.getApplication();
-    }
+		this.activity = activity;
+		this.application = (WalletApplication) activity.getApplication();
+	}
 
-    @Override
+	@Override
     public void onCreate(final Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+		super.onCreate(savedInstanceState);
 
-        addPreferencesFromResource(R.xml.preference_diagnostics);
-    }
+		addPreferencesFromResource(R.xml.preference_diagnostics);
+	}
 
-    @Override
+	@Override
     public boolean onPreferenceTreeClick(final PreferenceScreen preferenceScreen, final Preference preference) {
-        final String key = preference.getKey();
+		final String key = preference.getKey();
 
         if (PREFS_KEY_INITIATE_RESET.equals(key)) {
-            handleInitiateReset();
-            return true;
+			handleInitiateReset();
+			return true;
         } else if (PREFS_KEY_EXTENDED_PUBLIC_KEY.equals(key)) {
-            handleExtendedPublicKey();
-            return true;
-        }
+			handleExtendedPublicKey();
+			return true;
+		}
 
-        return false;
-    }
+		return false;
+	}
 
     private void handleInitiateReset() {
-        final DialogBuilder dialog = new DialogBuilder(activity);
-        dialog.setTitle(R.string.preferences_initiate_reset_title);
-        dialog.setMessage(R.string.preferences_initiate_reset_dialog_message);
+		final DialogBuilder dialog = new DialogBuilder(activity);
+		dialog.setTitle(R.string.preferences_initiate_reset_title);
+		dialog.setMessage(R.string.preferences_initiate_reset_dialog_message);
         dialog.setPositiveButton(R.string.preferences_initiate_reset_dialog_positive, new OnClickListener() {
-            @Override
+			@Override
             public void onClick(final DialogInterface dialog, final int which) {
-                log.info("manually initiated blockchain reset");
+				log.info("manually initiated blockchain reset");
 
-                application.resetBlockchain();
-                activity.finish(); // TODO doesn't fully finish prefs on single pane layouts
-            }
-        });
-        dialog.setNegativeButton(R.string.button_dismiss, null);
-        dialog.show();
-    }
+				application.resetBlockchain();
+				activity.finish(); // TODO doesn't fully finish prefs on single pane layouts
+			}
+		});
+		dialog.setNegativeButton(R.string.button_dismiss, null);
+		dialog.show();
+	}
 
     private void handleExtendedPublicKey() {
-        final DeterministicKey extendedKey = application.getWallet().getWatchingKey();
+		final DeterministicKey extendedKey = application.getWallet().getWatchingKey();
         final String xpub = String.format(Locale.US, "%s?c=%d&h=bip32",
                 extendedKey.serializePubB58(Constants.NETWORK_PARAMETERS), extendedKey.getCreationTimeSeconds());
-        ExtendedPublicKeyFragment.show(getFragmentManager(), (CharSequence) xpub);
-    }
+		ExtendedPublicKeyFragment.show(getFragmentManager(), (CharSequence) xpub);
+	}
 }

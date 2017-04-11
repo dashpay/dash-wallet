@@ -19,11 +19,10 @@ package de.schildbach.wallet.ui;
 
 import android.app.Activity;
 import android.app.Dialog;
-import android.os.Bundle;
 import android.app.DialogFragment;
 import android.app.FragmentManager;
+import android.os.Bundle;
 import android.text.Html;
-
 
 /**
  * @author Andreas Schildbach
