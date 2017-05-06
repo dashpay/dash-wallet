@@ -24,6 +24,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
@@ -32,6 +34,8 @@ import java.util.List;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.crypto.MnemonicCode;
+import org.bitcoinj.crypto.MnemonicException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 
@@ -104,6 +108,7 @@ public final class WalletActivity extends AbstractWalletActivity implements Acti
     private static final int DIALOG_TIMESKEW_ALERT = 3;
     private static final int DIALOG_VERSION_ALERT = 4;
     private static final int DIALOG_LOW_STORAGE_ALERT = 5;
+    private static final int DIALOG_RESTORE_WALLET_FROM_SEED = 12;
 
     private WalletApplication application;
     private Configuration config;
@@ -400,6 +405,18 @@ public final class WalletActivity extends AbstractWalletActivity implements Acti
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
                     REQUEST_CODE_RESTORE_WALLET);
     }
+    public void handleBackupWalletToSeed() {
+        //if (ContextCompat.checkSelfPermission(this,
+        //        Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
+            BackupWalletToSeedDialogFragment.show(getFragmentManager());
+        //else
+        //    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+        //            REQUEST_CODE_BACKUP_WALLET);
+    }
+
+    public void handleRestoreWalletFromSeed() {
+            showDialog(DIALOG_RESTORE_WALLET_FROM_SEED);
+    }
 
     public void handleEncryptKeys() {
         EncryptKeysDialogFragment.show(getFragmentManager());
@@ -449,6 +466,8 @@ public final class WalletActivity extends AbstractWalletActivity implements Acti
             return createVersionAlertDialog();
         else if (id == DIALOG_LOW_STORAGE_ALERT)
             return createLowStorageAlertDialog();
+        else if (id == DIALOG_RESTORE_WALLET_FROM_SEED)
+            return createRestoreWalletFromSeedDialog();
         else
             throw new IllegalArgumentException();
     }
@@ -457,6 +476,8 @@ public final class WalletActivity extends AbstractWalletActivity implements Acti
     protected void onPrepareDialog(final int id, final Dialog dialog) {
         if (id == DIALOG_RESTORE_WALLET)
             prepareRestoreWalletDialog(dialog);
+        else if(id == DIALOG_RESTORE_WALLET_FROM_SEED)
+            prepareRestoreWalletFromSeedDialog(dialog);
     }
 
     private Dialog createBackupWalletPermissionDialog() {
@@ -615,7 +636,114 @@ public final class WalletActivity extends AbstractWalletActivity implements Acti
         final CheckBox showView = (CheckBox) alertDialog.findViewById(R.id.import_keys_from_storage_show);
         showView.setOnCheckedChangeListener(new ShowPasswordCheckListener(passwordView));
     }
+    private Dialog createRestoreWalletFromSeedDialog() {
+        final View view = getLayoutInflater().inflate(R.layout.restore_wallet_from_seed_dialog, null);
+        final TextView messageView = (TextView) view.findViewById(R.id.restore_wallet_dialog_message);
+        //final Spinner fileView = (Spinner) view.findViewById(R.id.import_keys_from_storage_file);
+        final EditText passwordView = (EditText) view.findViewById(R.id.import_seed_recovery_phrase);
 
+        final DialogBuilder dialog = new DialogBuilder(this);
+        dialog.setTitle(R.string.import_keys_dialog_title_from_seed);
+        dialog.setView(view);
+        dialog.setPositiveButton(R.string.import_keys_dialog_button_import, new OnClickListener() {
+            @Override
+            public void onClick(final DialogInterface dialog, final int which) {
+                //final File file = (File) fileView.getSelectedItem();
+                final String password = passwordView.getText().toString().trim();
+                List<String> words = new ArrayList<String>(Arrays.asList(password.split(" ")));
+
+                passwordView.setText(null); // get rid of it asap
+
+                //if (WalletUtils.BACKUP_FILE_FILTER.accept(file))
+                //    restoreWalletFromProtobuf(file);
+                //else if (WalletUtils.KEYS_FILE_FILTER.accept(file))
+                //    restorePrivateKeysFromBase58(file);
+                //else if (Crypto.OPENSSL_FILE_FILTER.accept(file))
+                //    restoreWalletFromEncrypted(file, password);
+                restoreWalletFromSeed(words);
+
+            }
+        });
+        dialog.setNegativeButton(R.string.button_cancel, new OnClickListener() {
+            @Override
+            public void onClick(final DialogInterface dialog, final int which) {
+                passwordView.setText(null); // get rid of it asap
+            }
+        });
+        dialog.setOnCancelListener(new OnCancelListener() {
+            @Override
+            public void onCancel(final DialogInterface dialog) {
+                passwordView.setText(null); // get rid of it asap
+            }
+        });
+
+        /*final String path;
+        final String backupPath = Constants.Files.EXTERNAL_WALLET_BACKUP_DIR.getAbsolutePath();
+        final String storagePath = Constants.Files.EXTERNAL_STORAGE_DIR.getAbsolutePath();
+        if (backupPath.startsWith(storagePath))
+            path = backupPath.substring(storagePath.length());
+        else
+            path = backupPath;
+            */
+        messageView.setText(getString(R.string.import_keys_from_seed_dialog_message));
+
+        //fileView.setAdapter(adapter);
+
+        return dialog.create();
+    }
+
+    private void prepareRestoreWalletFromSeedDialog(final Dialog dialog) {
+        final AlertDialog alertDialog = (AlertDialog) dialog;
+
+        final List<File> files = new LinkedList<File>();
+
+        // external storage
+        final File[] externalFiles = Constants.Files.EXTERNAL_WALLET_BACKUP_DIR.listFiles();
+        if (externalFiles != null)
+            for (final File file : externalFiles)
+                if (Crypto.OPENSSL_FILE_FILTER.accept(file))
+                    files.add(file);
+
+        // internal storage
+        for (final String filename : fileList())
+            if (filename.startsWith(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF + '.'))
+                files.add(new File(getFilesDir(), filename));
+
+        // sort
+        Collections.sort(files, new Comparator<File>() {
+            @Override
+            public int compare(final File lhs, final File rhs) {
+                return lhs.getName().compareToIgnoreCase(rhs.getName());
+            }
+        });
+
+        final View replaceWarningView = alertDialog
+                .findViewById(R.id.restore_wallet_from_storage_dialog_replace_warning);
+        final boolean hasCoins = wallet.getBalance(BalanceType.ESTIMATED).signum() > 0;
+        replaceWarningView.setVisibility(hasCoins ? View.VISIBLE : View.GONE);
+
+        final EditText passwordView = (EditText) alertDialog.findViewById(R.id.import_seed_recovery_phrase);
+        passwordView.setText(null);
+
+        final ImportDialogButtonEnablerListener dialogButtonEnabler = new ImportDialogButtonEnablerListener(
+                passwordView, alertDialog) {
+
+            @Override
+            protected boolean hasFile()
+            {
+                return true;
+            }
+            @Override
+            protected boolean needsPassword() {
+                return true;
+            }
+        };
+        passwordView.addTextChangedListener(dialogButtonEnabler);
+        //fileView.setOnItemSelectedListener(dialogButtonEnabler);
+
+        //final CheckBox showView = (CheckBox) alertDialog.findViewById(R.id.import_keys_from_storage_show);
+        //showView.setOnCheckedChangeListener(new ShowPasswordCheckListener(passwordView));
+    }
     private void checkLowStorageAlert() {
         final Intent stickyIntent = registerReceiver(null, new IntentFilter(Intent.ACTION_DEVICE_STORAGE_LOW));
         if (stickyIntent != null)
@@ -870,6 +998,51 @@ public final class WalletActivity extends AbstractWalletActivity implements Acti
         }
     }
 
+    private void restoreWalletFromSeed(final List<String> words) {
+        FileInputStream is = null;
+        try {
+            //is = new FileInputStream(file);
+            MnemonicCode.INSTANCE.check(words);
+            restoreWallet(WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS));
+
+            log.info("successfully restored wallet from seed: {}", words.size());
+        } catch (final IOException x) {
+            final DialogBuilder dialog = DialogBuilder.warn(this, R.string.import_export_keys_dialog_failure_title);
+            dialog.setMessage(getString(R.string.import_keys_dialog_failure, x.getMessage()));
+            dialog.setPositiveButton(R.string.button_dismiss, null);
+            dialog.setNegativeButton(R.string.button_retry, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(final DialogInterface dialog, final int id) {
+                    showDialog(DIALOG_RESTORE_WALLET);
+                }
+            });
+            dialog.show();
+
+            log.info("problem restoring wallet from seed: ", x);
+        } catch (MnemonicException x) {
+            final DialogBuilder dialog = DialogBuilder.warn(this, R.string.import_export_keys_dialog_failure_title);
+            dialog.setMessage(getString(R.string.import_keys_dialog_failure, x.getMessage()));
+            dialog.setPositiveButton(R.string.button_dismiss, null);
+            dialog.setNegativeButton(R.string.button_retry, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(final DialogInterface dialog, final int id) {
+                    showDialog(DIALOG_RESTORE_WALLET);
+                }
+            });
+            dialog.show();
+
+            log.info("problem restoring wallet from seed: ", x);
+        } finally {
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (final IOException x2) {
+                    // swallow
+                }
+            }
+        }
+    }
+
     private void restorePrivateKeysFromBase58(final File file) {
         FileInputStream is = null;
         try {
@@ -956,6 +1129,13 @@ public final class WalletActivity extends AbstractWalletActivity implements Acti
 
             case R.id.wallet_options_encrypt_keys:
                 handleEncryptKeys();
+                return true;
+            case R.id.wallet_options_backup_wallet_to_seed:
+                handleBackupWalletToSeed();
+                return true;
+
+            case R.id.wallet_options_restore_wallet_from_seed:
+                handleRestoreWalletFromSeed();
                 return true;
         }
 

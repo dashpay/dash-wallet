@@ -46,7 +46,10 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.crypto.MnemonicCode;
+import org.bitcoinj.crypto.MnemonicException;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
@@ -187,6 +190,30 @@ public class WalletUtils {
         } catch (final UnreadableWalletException x) {
             throw new IOException("unreadable wallet", x);
         }
+    }
+
+    public static Wallet restoreWalletFromSeed(final List<String> words,
+                                                   final NetworkParameters expectedNetworkParameters) throws IOException {
+        try {
+            final Wallet wallet = new Wallet(Constants.NETWORK_PARAMETERS, new KeyChainGroup(Constants.NETWORK_PARAMETERS, new DeterministicSeed(words, null,"", 1474771804)));//new WalletProtobufSerializer().readWallet(is, true, null);
+
+            if (!wallet.getParams().equals(expectedNetworkParameters))
+                throw new IOException("bad wallet backup network parameters: " + wallet.getParams().getId());
+            if (!wallet.isConsistent())
+                throw new IOException("inconsistent wallet backup");
+
+            return wallet;
+        } /*catch (final MnemonicException.MnemonicLengthException x) {
+            throw new IOException("Mnemonic Seed has the incorrect number of words", x);
+        } catch (final MnemonicException.MnemonicChecksumException x) {
+            throw new IOException("Mnemonic Seed has the incorrect checksum", x);
+        } catch (final MnemonicException.MnemonicWordException x) {
+            throw new IOException("Mnemonic Seed has an invalid word", x);
+        }*/
+        finally {
+
+        }
+
     }
 
     public static Wallet restorePrivateKeysFromBase58(final InputStream is,
