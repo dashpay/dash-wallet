@@ -20,6 +20,8 @@
 	<string name="backup_wallet_to_seed_dialog_warning">DO NOT let anyone see your recovery phrase or they can spend your Dash.  This phrase is not compatible with other Dash Software.</string>
     <string name="import_keys_from_seed_dialog_message">Enter your recovery phrase here.</string>
 	<string name="import_export_keys_dialog_password_phrase">Recovery phrase goes here.</string>
+	<string name="preferences_report_issue_summary">Collect information about your issue and email your report to the developers.</string>
+
 
 
 </resources>

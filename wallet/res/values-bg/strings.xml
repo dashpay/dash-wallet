@@ -292,12 +292,8 @@
 	<string name="about_version_title">Версията</string>
 	<string name="about_copyright_title">Запазени права</string>
 	<string name="about_license_title">Лиценз</string>
-    <string name="about_credits_website_title">Dash уебсайт</string>
-    <string name="about_credits_forum_title">Dash форум</string>
 	<string name="about_source_title">Програмен код</string>
 	<string name="about_credits_bitcoinj_title">Това приложение използва dashj %s</string>
-	<string name="about_credits_zxing_title">Това приложение използва \'zxing\'</string>
-	<string name="about_credits_icon_title">Това приложение използва икона от \'bitboy\'</string>
 	<string name="about_community_googleplus_title">Google+ общност</string>
 	<string name="about_community_googleplus_summary">Дискусии за приложението</string>
 	<string name="about_market_app_title">Google Play страница</string>

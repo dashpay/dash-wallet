@@ -292,8 +292,6 @@
 	<string name="about_version_title">版本</string>
 	<string name="about_copyright_title">Copyright</string>
 	<string name="about_license_title">许可协议</string>
-    <string name="about_credits_website_title">达世币网站</string>
-    <string name="about_credits_forum_title">达世币论坛</string>
 	<string name="about_source_title">源代码</string>
 	<string name="about_credits_bitcoinj_title">本程序正在使用dashj %s</string>
 	<string name="about_credits_zxing_title">本程序使用 \'zxing\'</string>
