@@ -135,11 +135,7 @@ of this one-time recovery.
 The easiest way to recover this backup is probably installing MultiBit v0.5.x from
 https://multibit.org/ and restore from inside that application.
 
-Another option is importing each individual key into Electrum or dash-qt/dashd. You can
-install Electrum with
-
-    sudo apt install electrum-dash
-    https://electrum.dash.org/#download
+Another option is importing each individual key into one of Electrum Dash (https://electrum.dash.org/#download) or dash-qt/dashd.
 
 As soon as you see your whole balance again, empty your entire wallet to the desired destination
 wallet. Please do not continue to use the imported wallet. Remember you just operated on
