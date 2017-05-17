@@ -111,6 +111,12 @@ android {
     }
 }
 
+task buildNativeScrypt(type: GradleBuild) {
+    buildFile = '../native-scrypt/build.gradle'
+    tasks = ['copy']
+}
+
+preBuild.dependsOn 'buildNativeScrypt'
 
 /*task svgToPngMipmap(type: fr.avianey.androidsvgdrawable.gradle.SvgDrawableTask) {
     from = files('graphics/mipmap')
