@@ -1,5 +1,34 @@
 
 Dash Wallet
+
+v4.65.12.1N
+* Updated Translations
+v4.65.12.1M
+* Updated for Dash Core 12.1
+
+v4.65.12E
+* Partial Support for QR Codes requesting InstantSend
+
+v4.65.12D
+* Fix for continuous crashing
+
+v4.65.12A
+* Several bug fixes (scanning BIP38 encrypted wallets)
+* Updated languages
+
+v4.40.12L
+* New UI
+* Added full InstantSend Support (send/receive with status)
+
+v4.40.12g.ix
+*fixed bug that prevented mined coins from being spent
+
+v4.40.12f.ix
+* added disconnect
+
+v4.40.12d.ix
+* fixed bug with Reporting Issues
+
 4.40
 
 4.33

@@ -84,42 +84,47 @@ public final class DiagnosticsFragment extends PreferenceFragment {
 
 		return false;
 	}
-
-	private void handleReportIssue() {
+	private void handleReportIssue()
+	{
 		final ReportIssueDialogBuilder dialog = new ReportIssueDialogBuilder(activity, R.string.report_issue_dialog_title_issue,
-				R.string.report_issue_dialog_message_issue) {
+				R.string.report_issue_dialog_message_issue)
+		{
 			@Override
-			protected CharSequence subject() {
+			protected CharSequence subject()
+			{
 				return Constants.REPORT_SUBJECT_ISSUE + " " + application.packageInfo().versionName;
 			}
 
 			@Override
-			protected CharSequence collectApplicationInfo() throws IOException {
+			protected CharSequence collectApplicationInfo() throws IOException
+			{
 				final StringBuilder applicationInfo = new StringBuilder();
 				CrashReporter.appendApplicationInfo(applicationInfo, application);
 				return applicationInfo;
 			}
 
 			@Override
-			protected CharSequence collectStackTrace() {
+			protected CharSequence collectStackTrace()
+			{
 				return null;
 			}
 
 			@Override
-			protected CharSequence collectDeviceInfo() throws IOException {
+			protected CharSequence collectDeviceInfo() throws IOException
+			{
 				final StringBuilder deviceInfo = new StringBuilder();
 				CrashReporter.appendDeviceInfo(deviceInfo, activity);
 				return deviceInfo;
 			}
 
 			@Override
-			protected CharSequence collectWalletDump() {
+			protected CharSequence collectWalletDump()
+			{
 				return application.getWallet().toString(false, true, true, null);
 			}
 		};
 		dialog.show();
 	}
-
     private void handleInitiateReset() {
 		final DialogBuilder dialog = new DialogBuilder(activity);
 		dialog.setTitle(R.string.preferences_initiate_reset_title);

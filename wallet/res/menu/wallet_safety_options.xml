@@ -14,6 +14,14 @@
         android:title="@string/import_keys_dialog_title"
         app:showAsAction="never" />
     <item
+        android:id="@+id/wallet_options_backup_wallet_to_seed"
+        android:title="@string/export_keys_dialog_title_to_seed"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/wallet_options_restore_wallet_from_seed"
+        android:title="@string/import_keys_dialog_title_from_seed"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/wallet_options_encrypt_keys"
         android:title="@string/encrypt_keys_dialog_title"
         app:showAsAction="never" />

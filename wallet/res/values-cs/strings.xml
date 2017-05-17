@@ -291,8 +291,6 @@
 	<string name="about_version_title">Verze</string>
 	<string name="about_copyright_title">Copyright</string>
 	<string name="about_license_title">Licence</string>
-    <string name="about_credits_website_title">Webové stránky Dash</string>
-    <string name="about_credits_forum_title">Dash fórum</string>
 	<string name="about_source_title">Zdrojový kód</string>
 	<string name="about_credits_bitcoinj_title">Aplikace používá dashj %s</string>
 	<string name="about_credits_zxing_title">Aplikace používá \'zxing\'</string>

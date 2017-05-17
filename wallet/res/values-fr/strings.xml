@@ -291,8 +291,6 @@
 	<string name="about_version_title">Version</string>
 	<string name="about_copyright_title">Tous droits réservés</string>
 	<string name="about_license_title">Licence</string>
-    <string name="about_credits_website_title">Site web de Dash</string>
-    <string name="about_credits_forum_title">Forum Dash</string>
 	<string name="about_source_title">Code source</string>
 	<string name="about_credits_bitcoinj_title">Cette application utilise dashj %s</string>
 	<string name="about_credits_zxing_title">Cette appli utilise zxing</string>

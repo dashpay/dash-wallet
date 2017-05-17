@@ -882,11 +882,11 @@ public final class SendCoinsFragment extends Fragment {
 
 	@Override
 	public void onPrepareOptionsMenu(final Menu menu) {
-		final MenuItem scanAction = menu.findItem(R.id.send_coins_options_scan);
-		final PackageManager pm = activity.getPackageManager();
-		scanAction.setVisible(pm.hasSystemFeature(PackageManager.FEATURE_CAMERA)
-				|| pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT));
-		scanAction.setEnabled(state == State.INPUT);
+		//final MenuItem scanAction = menu.findItem(R.id.send_coins_options_scan);
+		//final PackageManager pm = activity.getPackageManager();
+		//scanAction.setVisible(pm.hasSystemFeature(PackageManager.FEATURE_CAMERA)
+		//		|| pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT));
+		//scanAction.setEnabled(state == State.INPUT);
 
 		final MenuItem emptyAction = menu.findItem(R.id.send_coins_options_empty);
 		emptyAction.setEnabled(state == State.INPUT && paymentIntent.mayEditAmount());
@@ -906,9 +906,10 @@ public final class SendCoinsFragment extends Fragment {
 	@Override
 	public boolean onOptionsItemSelected(final MenuItem item) {
 		switch (item.getItemId()) {
-			case R.id.send_coins_options_scan:
-				handleScan();
-				return true;
+			//case R.id.send_coins_options_scan:
+			//	handleScan();
+		//		return true;
+
 			case R.id.send_coins_options_fee_category_economic:
 				handleFeeCategory(FeeCategory.ECONOMIC);
 				return true;

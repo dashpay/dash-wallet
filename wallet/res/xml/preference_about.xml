@@ -52,6 +52,7 @@
 				android:action="android.intent.action.VIEW"
 				android:data="https://github.com/HashEngineering/dashj" />
 		</Preference>
+        <!--
         <Preference
             android:key="about_credits_zxing"
             android:summary="https://github.com/zxing/zxing"
@@ -60,6 +61,7 @@
                 android:action="android.intent.action.VIEW"
                 android:data="https://github.com/zxing/zxing" />
         </Preference>
+        -->
         <Preference
             android:key="about_credits_scrypt"
             android:summary="https://github.com/wg/scrypt"
