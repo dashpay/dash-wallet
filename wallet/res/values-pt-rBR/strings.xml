@@ -291,8 +291,6 @@
 	<string name="about_version_title">Versão</string>
 	<string name="about_copyright_title">Copyright</string>
 	<string name="about_license_title">Licença</string>
-    <string name="about_credits_website_title">Dash Website</string>
-    <string name="about_credits_forum_title">Dash Forum</string>
 	<string name="about_source_title">Código fonte</string>
 	<string name="about_credits_bitcoinj_title">Este aplicativo utiliza %s</string>
 	<string name="about_credits_zxing_title">Este aplicativo utiliza \'zxing\'</string>

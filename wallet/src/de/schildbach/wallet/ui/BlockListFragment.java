@@ -176,7 +176,7 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
                 switch (item.getItemId()) {
 					case R.id.blocks_context_browse:
                     startActivity(new Intent(Intent.ACTION_VIEW, Uri.withAppendedPath(config.getBlockExplorer(),
-                             Constants.EXPLORE_BLOCK_PATH + block.getHeader().getHashAsString())));
+                            "block/" + block.getHeader().getHashAsString())));
 						return true;
 				}
 				return false;

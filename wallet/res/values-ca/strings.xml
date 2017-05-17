@@ -249,7 +249,6 @@
 	<string name="about_license_title">Llicència</string>
     <string name="about_source_title">Codi font</string>
 	<string name="about_credits_zxing_title">Aquesta aplicació utilitza \'zxing\'</string>
-	<string name="about_credits_icon_title">Aquesta aplicació utilitza una icona de \'bitboy\'</string>
 	<string name="about_community_googleplus_title">Comunitat Google+</string>
 	<string name="about_community_googleplus_summary">Debats sobre l\'aplicació</string>
 	<string name="about_market_app_title">Pàgina de Google Play</string>

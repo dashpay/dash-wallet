@@ -269,8 +269,6 @@
 	<string name="about_version_title">版本</string>
 	<string name="about_copyright_title">著作權</string>
 	<string name="about_license_title">授權</string>
-    <string name="about_credits_website_title">達世幣網站</string>
-    <string name="about_credits_forum_title">達世幣論壇</string>
 	<string name="about_source_title">原始碼</string>
 	<string name="about_credits_zxing_title">本 app 使用 \'zxing\'</string>
 	<string name="about_credits_icon_title">本 app 使用圖標來自\'bitboy\'</string>

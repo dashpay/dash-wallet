@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:scrollbars="none" >
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/list_entry_padding_horizontal_lax"
+        android:layout_marginRight="@dimen/list_entry_padding_horizontal_lax"
+        android:orientation="vertical" >
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/list_entry_padding_vertical"
+            android:layout_marginTop="@dimen/list_entry_padding_vertical"
+            android:text="@string/backup_to_seed_wallet_dialog_message" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/list_entry_padding_vertical"
+            android:divider="@drawable/divider_field"
+            android:orientation="horizontal"
+            android:showDividers="middle" >
+
+            <TextView
+                android:id="@+id/backup_wallet_dialog_seed"
+                android:layout_width="0px"
+                android:layout_height="wrap_content"
+                android:layout_weight="3" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:divider="@drawable/divider_field"
+            android:orientation="horizontal"
+            android:showDividers="middle" >
+
+            <TextView
+                android:id="@+id/backup_wallet_dialog_password_mismatch"
+                android:layout_width="0px"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:text="@string/backup_wallet_dialog_password_mismatch"
+                android:textColor="@color/fg_error"
+                android:textStyle="bold"
+                android:visibility="invisible" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/list_entry_padding_vertical_lax"
+            android:layout_marginTop="@dimen/list_entry_padding_vertical_lax"
+            android:text="@string/backup_wallet_to_seed_dialog_warning"
+            android:textColor="@color/fg_less_significant"
+            android:textSize="@dimen/font_size_small" />
+
+        <TextView
+            android:id="@+id/backup_wallet_dialog_warning_encrypted"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/list_entry_padding_vertical_lax"
+            android:layout_marginTop="@dimen/list_entry_padding_vertical_lax"
+            android:text="@string/backup_wallet_dialog_warning_encrypted"
+            android:textColor="@color/fg_less_significant"
+            android:textSize="@dimen/font_size_small" />
+    </LinearLayout>
+
+
+</ScrollView>

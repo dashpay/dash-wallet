@@ -283,12 +283,12 @@ public final class WalletBalanceToolbarFragment extends Fragment
     }
 
     private void showAppBarMessage(CharSequence message) {
-//        if (message != null) {
-//            appBarMessageView.setVisibility(View.VISIBLE);
-//            appBarMessageView.setText(message);
-//        } else {
-//            appBarMessageView.setVisibility(View.GONE);
-//        }
+        if (message != null) {
+            appBarMessageView.setVisibility(View.VISIBLE);
+            appBarMessageView.setText(message);
+        } else {
+            appBarMessageView.setVisibility(View.GONE);
+        }
     }
 
     private void updateBalanceTooMuchWarning() {
