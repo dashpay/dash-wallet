@@ -32,7 +32,7 @@
 		<item>BitinfoCharts</item>
 	</string-array>
 	<string-array name="preferences_block_explorer_values_testnet">
-		<item>http://test.explorer.dash.org/chain/Dash/</item>
+		<item>http://test.explorer.dash.org/</item>
 		<item>http://test.explorer.dashninja.pl/</item>
 	</string-array>
 	<string-array name="preferences_block_explorer_labels_testnet">
