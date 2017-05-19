@@ -25,5 +25,5 @@ model {
 task(copy, type: Copy) {
     dependsOn assemble // trigger build
     from 'build/outputs/native/release/lib'
-    into '../wallet/libs/'
+    into '../wallet/src/main/jniLibs/'
 }
