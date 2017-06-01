@@ -8,6 +8,7 @@ model {
             moduleName 'x11'
             abiFilters.addAll(['armeabi', 'armeabi-v7a', 'x86', 'mips', 'arm64-v8a', 'mips64', 'x86_64'])
             CFlags.add('-DHAVE_CONFIG_H')
+            stl = "c++_static"
         }
 
         sources {
@@ -25,5 +26,5 @@ model {
 task(copy, type: Copy) {
     dependsOn assemble // trigger build
     from 'build/outputs/native/release/lib'
-    into '../wallet/libs/'
+    into '../wallet/src/main/jniLibs/'
 }

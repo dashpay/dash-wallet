@@ -16,7 +16,7 @@ typedef long long  int64;
 typedef unsigned long long  uint64;
 
 
-inline int Testuint256AdHoc(std::vector<std::string> vArg);
+//inline int Testuint256AdHoc(std::vector<std::string> vArg);
 
 
 
