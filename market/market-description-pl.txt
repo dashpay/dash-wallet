@@ -1,6 +1,6 @@
+﻿Use at your own risk! (Requires Android 4 or higher)
+
 <b>Miej swoje Dash zawsze przy sobie, w portfelu!</b> Płacisz błyskawicznie skanując kody QR. Jako sprzedawca odbierzesz Dash szybko i bezpiecznie. Dash Wallet jest pierwszą mobilną aplikacją i prawdopodobnie również najbardziej bezpieczną!
-
-
 
 <b>FUNKCJE</b>
 
@@ -26,11 +26,11 @@ https://github.com/HashEngineering/dash-wallet
 Do zarządzania tłumaczeniami wykorzystano portal Transifex:
 https://www.transifex.com/dash/dash-wallet/
 
+You can find more about Dash at
+https://www.dash.org/
 
 <b>REFERENCJE</b>
 
-• Portfel rekomendowany przez https://dash.org
-
-
+• A recommended mobile wallet by https://www.dash.org
 
 <i>Używasz na własne ryzyko!<i>

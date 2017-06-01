@@ -1,34 +1,36 @@
-<b>Draag je Bitcoins altijd bij je, in je broekzak!</b> Je kunt vlot betalen door een QR-code te scannen. Als winkelier ontvang je je betalingen betrouwbaar en onmiddelijk. Bitcoin Wallet is de eerste mobiele Bitcoin-app, en misschien wel de veiligste!
+﻿Use at your own risk! (Requires Android 4 or higher)
 
-<b>EIGENSCHAPPEN</b>
+<b>Heb uw Dash altijd in uw zakt!</b> U kunt betalen door simpelweg een QR code te scannen. En als verkoper kunt u betalingen betrouwbaar en razendsnel ontvangen. Dash portemonnee is de eerste mobiele Dash app, en misschien wel de meest veilige!
 
-• Geen registratie, webservice of cloud vereist! Deze portemonnee is decentraal en peer-to-peer.
-• Toon Bitcoin bedrag in DASH, mDASH en µDASH.
-• Conversie van en naar nationale valuta.
-* Verzend en ontvang Bitcoin via NFC, QR-codes of Bitcoin-URL's
-• Adresboek voor regelmatig gebruikte Bitcoin-adressen.
-• Offline kun je nog steeds betalen via Bluetooth.
-• Systeemmelding wanneer je Bitcoins ontvangt
-• Opname van papieren portemonnee (b.v. voor cold storage).
-• App widget voor Bitcoin saldo.
+<b>KENMERKEN</b>
+
+• Er is geen registratie, webservice of clouddienst benodigd. Deze portemonnee werkt decentraal en peer to peer. 
+• Toon de hoeveelheid Dash in DASH, mDASH of µDASH.
+• Conversie van en naar nationale munteenheden.
+• Verzenden en ontvangen van Dash via NFC, QR codes of Dash URL's.
+• Adresboek voor vaak gebruike Dash adressen.
+• Als je offline bent, kan je via Bluetooth nog steeds betalen.
+• Notificaties bij het ontvangen van coins.
+• Importeren van papieren portemonnees (die gebruikt worden voor koude opslag).
+• Widget met uw Dash saldo.
 
 
-<b>HELP MEE</b>
+<b>DRAAG BIJ</b>
 
-Dash Wallet is <b>open source</b> en <b>free software</b>. Licentie: GPLv3
+Dash portemonnee is <b>open source</b> en <b>gratis software</b>. GPLv3 licentie
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
-Onze broncode is beschikbaar op GitHub:
-https://github.com/HashEngineering/darkcoin-wallet
+De broncode is beschikbaar op GitHub:
+https://github.com/HashEngineering/dash-wallet
 
-Alle vertalingen worden geregeld via Transifex:
+Alle vertalingen worden gemanaged via Transifex:
 https://www.transifex.com/dash/dash-wallet/
+
+You can find more about Dash at
+https://www.dash.org/
 
 <b>TESTIMONIALS</b>
 
-* Veel mobiele portemonnees baseren hun code op Bitcoin Wallet. Voorbeelden: blockchain.info en DASHX.
-* Aanbevolen mobiele portemonnee op https://dash.org
-* Aangeraden door BitPay.
-
+• A recommended mobile wallet by https://www.dash.org
 
 <i>Gebruik op eigen risico!</i>

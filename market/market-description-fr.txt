@@ -1,17 +1,18 @@
-<b>Vos Dash toujours avec vous, dans la poche !</b> Payez en scannant simplement un QR-code. Si vous êtes marchand, recevez vos paiements de manière sûre et instantanée. Dash Wallet est la première application Dash mobile, et sans doute la plus sécurisée !
+Utilisation à vos risques et périls ! (Nécessite Android 4 ou ultérieur)
 
+<b>Vos dashs toujours avec vous, dans votre poche !</b> Payez en scannant simplement un QR-code. Si vous êtes un vendeur, recevez vos paiements de manière sûre et instantanée. Le portefeuille Dash est la première application Dash mobile, et sans doute la mieux sécurisée !
 
 <b>CARACTÉRISTIQUES</b>
 
-• Pas d'enregistrement, de service web ou de réseau centralisé ! Ce portefeuille est décentralisé et entièrement pair-à-pair.
+• Pas d'enregistrement, de service web ni de réseau centralisé ! Ce portefeuille est décentralisé et entièrement pair-à-pair.
 • Affichage des sommes en DASH, mDASH ou µDASH.
 • Conversion depuis et vers les monnaies nationales.
-• Envoi et réception de Dash par NFC, QR-codes ou adresses URL Dash.
+• Envoi et réception de dashs par NFC, QR-codes ou adresses URL Dash.
 • Carnet d'adresses pour conserver les adresses Dash les plus utilisées.
 • Si vous n'êtes pas en ligne, vous pouvez quand même payer via Bluetooth.
-• Notification système en cas de réception de pièces.
+• Notification système en cas de réception d'argent.
 • Récupération de portefeuilles papier (<i>paper wallets</i>, utilisés pour le stockage sécurisé).
-• Widget pour connaître le solde Dash.
+• Widget pour connaître votre solde Dash.
 
 
 <b>CONTRIBUEZ !</b>
@@ -25,10 +26,11 @@ https://github.com/HashEngineering/dash-wallet
 Les traductions sont gérées par Transifex :
 https://www.transifex.com/dash/dash-wallet/
 
+Plus d'informations sur Dash sur le site
+https://www.dash.org/
 
 <b>TÉMOIGNAGES</b>
 
-• Portefeuille mobile recommandé par https://dash.org
+• Portefeuille mobile recommandé par https://www.dash.org
 
-
-<i>L'utilisation est à vos risques et périls !</i>
+<i>Utilisation à vos risques et périls !</i>
