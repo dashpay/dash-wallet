@@ -275,7 +275,7 @@ public final class WalletBalanceToolbarFragment extends Fragment
                 @Override
                 public void onClick(View v)
                 {
-                    Toast.makeText(getContext(), progressMessage, Toast.LENGTH_LONG).show();
+                    Toast.makeText(application, progressMessage, Toast.LENGTH_LONG).show();
                 }
             });
             viewBalance.setVisibility(View.INVISIBLE);
@@ -304,7 +304,7 @@ public final class WalletBalanceToolbarFragment extends Fragment
                 @Override
                 public void onClick(View v)
                 {
-                    Toast.makeText(getContext(), getString(R.string.wallet_balance_fragment_too_much), Toast.LENGTH_LONG).show();
+                    Toast.makeText(application, getString(R.string.wallet_balance_fragment_too_much), Toast.LENGTH_LONG).show();
                 }
             });
         }
