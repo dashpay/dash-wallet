@@ -1,25 +1,25 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-    <string name="help_wallet">⇥⇥<p>
-⇥⇥⇥O canto superior esquerdo da tela exibe seu saldo em Dash e uma moeda nacional selecionada.
-⇥⇥⇥Toque para ir para a lista de moedas nacionais e toque em uma das moedas para selecioná-la como padrão.
-⇥⇥</p>
-⇥⇥<p>
-⇥⇥⇥O código QR que contém o seu endereço Dash é acessado a partir do menu de navegação (canto superior esquerdo) e pode ser usado para digitalização por outra parte.
-⇥⇥⇥Toque no código QR para obter uma versão maior dele.
-⇥⇥</p>
-⇥⇥<p>
-⇥⇥⇥A parte inferior da tela é coberta pela sua lista de transações, que está vazia no início.
-⇥⇥⇥As transações pendentes estão acinzentadas até serem confirmadas
-⇥⇥⇥Toque em uma entrada para ver detalhes ou adicione o endereço de remetentes ou destinatários ao catálogo de endereços..
-⇥⇥⇥A agenda de endereços é acessada no menu de navegação (canto superior esquerdo) .
-⇥⇥</p>
-⇥⇥<p>
-⇥⇥⇥Pode enviar ou solicitar moedas tocando nos botões da barra de ação.
-⇥⇥⇥Mais opções estão disponíveis nos menus de navegação (canto superior esquerdo) e opções.
-⇥⇥</p>
-⇥]]></string>
+    <string name="help_wallet"><![CDATA[ <p>
+    O canto superior esquerdo da tela exibe seu saldo em Dash e uma moeda nacional selecionada.
+Toque para ir para a lista de moedas nacionais e toque em uma das moedas para selecioná-la como padrão.
+</p>
+<p>
+O código QR que contém o seu endereço Dash é acessado a partir do menu de navegação (canto superior esquerdo) e pode ser usado para digitalização por outra parte.
+Toque no código QR para obter uma versão maior dele.
+</p>
+<p>
+A parte inferior da tela é coberta pela sua lista de transações, que está vazia no início.
+As transações pendentes estão acinzentadas até serem confirmadas
+Toque em uma entrada para ver detalhes ou adicione o endereço de remetentes ou destinatários ao catálogo de endereços..
+A agenda de endereços é acessada no menu de navegação (canto superior esquerdo) .
+</p>
+<p>
+Pode enviar ou solicitar moedas tocando nos botões da barra de ação.
+Mais opções estão disponíveis nos menus de navegação (canto superior esquerdo) e opções.
+</p>
+]]></string>
     <string name="help_request_coins"><![CDATA[ <p> Usando essa tela, você consegue solicitar Dash para outra pessoa (que também já tenha instalado uma carteira Dash). </p> 
 <p> Primeiro, você pode opcionalmente inserir uma quantidade de Dash a ser solicitada. </p> 
 <p> Um código QR será gerado e ele deve ser escaneado pela outra pessoa. Você também pode enviar sua solicitação para uma pessoa remotamente, usando o botão compartilhar na barra de ações. A outra pessoa deverá clicar na Dash URL. </p>
@@ -41,22 +41,22 @@ Pode introduzir um pagamento enquanto estiver offline.
 ⇥⇥⇥Sempre verifique o endereço de recepção.
 </string>
     <string name="help_safety">
-⇥⇥⇥ <b> Notas importantes de segurança: </ b> 
+⇥⇥⇥ <b> Notas importantes de segurança: </b>
 ⇥⇥⇥Dash são armazenados no dispositivo.
-⇥⇥⇥ <b> Se o perder, perderá o Dash. </ B> 
-⇥⇥⇥ Isso significa que você precisa <b> fazer backup da sua carteira </ b>! 
+⇥⇥⇥ <b> Se o perder, perderá o Dash. </b>
+⇥⇥⇥ Isso significa que você precisa <b> fazer backup da sua carteira </b>!
 ⇥⇥⇥Use o recurso de backup no aplicativo para isso, em vez de um aplicativo de backup de terceiros.
 Manter o backup seguro e lembrar-se da senha.
 ⇥⇥⇥ Esta é uma carteira HD. Somente um backup é necessário.
-⇥⇥⇥ <b> Antes de desinstalar </ b> (ou limpar dados da aplicação / limpar o dispositivo), <b> transferir o Dash para outra carteira </ b> .
+⇥⇥⇥ <b> Antes de desinstalar </b> (ou limpar dados da aplicação / limpar o dispositivo), <b> transferir o Dash para outra carteira </b> .
 ⇥⇥⇥Rashing do Dash será perdido.
-⇥⇥⇥ <b> Pagamentos irreversíveis </ b> .
+⇥⇥⇥ <b> Pagamentos irreversíveis </b> .
 ⇥⇥⇥Se você enviar seu Dash para o vazio, não há quase nenhuma maneira de recuperá-los.
-⇥⇥⇥ <b> Mantenha o seu dispositivo móvel seguro! </ B> 
+⇥⇥⇥ <b> Mantenha o seu dispositivo móvel seguro! </b>
 ⇥⇥⇥Não root seu dispositivo
 ⇥⇥⇥Só instale aplicações em que confia totalmente.
 ⇥⇥⇥Os aplicativos maliciosos podem estar tentando roubar sua carteira.
 Mantenha o risco baixo
-⇥⇥⇥ <b> Armazene apenas uma quantidade razoável </ b> para uso diário.</string>
+⇥⇥⇥ <b> Armazene apenas uma quantidade razoável </b> para uso diário.</string>
 
 </resources>
