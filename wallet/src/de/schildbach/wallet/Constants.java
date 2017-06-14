@@ -147,7 +147,7 @@ public final class Constants {
     public static final String REPORT_EMAIL = "hashengineeringsolutions@gmail.com";
 
     /** Subject line for manually reported issues. */
-    public static final String REPORT_SUBJECT_ISSUE = "Reported issue";
+    public static final String REPORT_SUBJECT_ISSUE = "Dash Wallet: Reported issue";
 
     /** Subject line for crash reports. */
     public static final String REPORT_SUBJECT_CRASH = "Crash report";
