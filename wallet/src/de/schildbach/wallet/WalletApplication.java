@@ -43,6 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
+import com.squareup.leakcanary.LeakCanary;
 
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
@@ -99,6 +100,13 @@ public class WalletApplication extends Application {
 
     @Override
     public void onCreate() {
+        //Memory Leak Detection
+        if (LeakCanary.isInAnalyzerProcess(this)) {
+            // This process is dedicated to LeakCanary for heap analysis.
+            // You should not init your app in this process.
+            return;
+        }
+        LeakCanary.install(this);
         new LinuxSecureRandom(); // init proper random number generator
 
         initLogging();
@@ -171,7 +179,7 @@ public class WalletApplication extends Application {
     }
 
     private void initLogging() {
-        final File logDir = getDir("log", Constants.TEST ? Context.MODE_WORLD_READABLE : MODE_PRIVATE);
+        final File logDir = getDir("log", MODE_PRIVATE);
         final File logFile = new File(logDir, "wallet.log");
 
         final LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
