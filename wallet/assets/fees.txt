@@ -1,3 +1,5 @@
+# fee rates in satoshis/duffs per 1000 bytes of tx data
 ZERO=0
 ECONOMIC=1000
 PRIORITY=2000
+
