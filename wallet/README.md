@@ -1,4 +1,4 @@
-FILES
+### FILES
 
 Your wallet contains your private keys and various transaction related metadata. It is stored in app-private
 storage:
@@ -22,7 +22,7 @@ Your wallet can be manually backed up to and restored from external storage:
 Your wallet can be manually backed up and restored using a recovery phrase (12 word mnemonic).
 
 If you want to recover coins from manual backups and for whatever reason you cannot use the app
-itself to restore from the backup, see the separate README.recover guide.
+itself to restore from the backup, see the separate [README.recover.md](README.recover.md) guide.
 
 The current fee rate for each of the fee categories (economic, normal, priority) is cached in
 app-private storage:
@@ -31,7 +31,7 @@ app-private storage:
     Testnet: /data/data/hashengineering.darkcoin.wallet_test/files/fees-testnet.txt
 
 
-DEBUGGING
+### DEBUGGING
 
 Wallet file for Testnet can be pulled from an (even un-rooted) device using
 
@@ -45,7 +45,7 @@ The app can send extensive debug information. Use Options > Settings > Report Is
 In the generated e-mail, replace the support address with yours.
 
 
-BUILDING THE DEVELOPMENT VERSION
+### BUILDING THE DEVELOPMENT VERSION
 
 It's important to know that the development version uses Testnet, is debuggable and the wallet file
 is world readable/writeable. The goal is to be able to debug easily.
@@ -60,21 +60,15 @@ for the package installs, which comes with slightly more recent versions.
     # first time only
     sudo apt install git gradle openjdk-8-jdk libstdc++6:i386 zlib1g:i386
 
-Get the Android SDK (Tools only) from
-
-    https://developer.android.com/sdk/
-
-and unpack it to your workspace directory. Point your ANDROID_HOME variable to the unpacked Android SDK directory
+Get the [Android SDK Tools](https://developer.android.com/studio/index.html#command-tools)
+and unpack it to your workspace directory. Point your `ANDROID_HOME` variable to the unpacked Android SDK directory
 and switch to it. Use
 
     tools/android update sdk --no-ui --force --all --filter tool,platform-tool,build-tools-25.0.2,android-15,android-25,extra-android-m2repository
 
 to download and install the required Android dependencies.
 
-Get the Android NDK from
-
-    https://developer.android.com/ndk
-
+Get the [Android NDK](https://developer.android.com/ndk)
 and unpack it to your workspace directory. Point your ANDROID_NDK_HOME variable to the unpacked Android NDK
 directory.
 
@@ -101,7 +95,8 @@ If installing fails, make sure "Developer options" and "USB debugging" are enabl
 connection is established.
 
 
-BUILDING THE PRODUCTION VERSION
+
+### BUILDING THE PRODUCTION VERSION
 
 At this point I'd like to remind that you continue on your own risk. According to the license,
 there is basically no warranty and liability. It's your responsibility to audit the source code
@@ -128,19 +123,17 @@ BUILDING ALL FLAVORS
 All flavors (debug and release) will be at:  wallet/build/outputs/apk
 
 
-SETTING UP FOR DEVELOPMENT
+### SETTING UP FOR DEVELOPMENT
 
 You should be able to import the project into Android Studio, as it uses Gradle for building.
 
 
-TRANSLATIONS
+### TRANSLATIONS
 
-The source language is English. Translations for all languages except German happen on Transifex:
-
-	https://www.transifex.com/dash/dash-wallet/
+The source language is English. Translations for all other languages [happen on Transifex](https://www.transifex.com/dash/dash-wallet/).
 
 The english resources are pushed to Transifex. Changes are pulled and committed to the git
-repository from time to time. It can be done by manually downloading the files, but using the "tx"
+repository from time to time. It can be done by manually downloading the files, but using the `tx`
 command line client is more convenient:
 
     # first time only
@@ -162,7 +155,7 @@ Note that after pulling, any bugs introduced by either translators or Transifex 
 corrected manually.
 
 
-NFC (Near field communication)
+### NFC (Near field communication)
 
 Dash Wallet supports reading Dash requests via NFC, either from a passive NFC tag or from
 another NFC capable Android device that is requesting coins.
@@ -172,15 +165,14 @@ the "Request coins" dialog open). The "Send coins" dialog will open with fields 
 
 Instructions for preparing an NFC tag with your address:
 
-- We have successfully tested this NFC tag writer:
-  https://play.google.com/store/apps/details?id=com.nxp.nfc.tagwriter
+- We have successfully tested [this NFC tag writer](https://play.google.com/store/apps/details?id=com.nxp.nfc.tagwriter).
   Other writers should work as well, let us know if you succeed.
 
 - Some tags have less than 50 bytes capacity, those won't work. 1 KB tags recommended.
 
 - The tag needs to contain a Dash URI. You can construct one with the "Request coins" dialog,
   then share with messaging or email. You can also construct the URI manually. Example for Mainnet:
-  dash:XywwpkwZYAypoW2cCmdczh4kFcvWWb9ZZW
+  `dash:XywwpkwZYAypoW2cCmdczh4kFcvWWb9ZZW`
 
 - The type of the message needs to be URI or URL (not Text).
 
@@ -188,15 +180,13 @@ Instructions for preparing an NFC tag with your address:
   could overwrite the tag with his own Dash address.
 
 
-DASHJ
+<<<<<<< HEAD
+### DASHJ
 
-Dash Wallet uses dashj for Dash specific logic:
-
-    (dashj) https://github.com/HashEngineering/dashj
-	forked from (bitcoinj)  https://bitcoinj.github.io/
+Dash Wallet uses dashj for Dash specific logic.  This project is forked from [bitcoinj] https://bitcoinj.github.io/
 
 
-EXCHANGE RATES
+### EXCHANGE RATES
 
 Dash Wallet reads this feed from "BitcoinAverage" for getting exchange rates:
 
@@ -207,7 +197,7 @@ mind it's always the last price.  Previously the 24h average price had a lag and
 accurate compared to other services and apps.
 
 
-SWEEPING WALLETS
+### SWEEPING WALLETS
 
-When sweeping wallets, Dash Wallet uses a set of Electrum servers to query for unspent transaction
-outputs (UTXOs).
+When sweeping wallets, Dash Wallet uses a set of Electrum servers and block explorers to query for
+unspent transaction outputs (UTXOs).

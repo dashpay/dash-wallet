@@ -1,4 +1,4 @@
-PROLOGUE
+## PROLOGUE
 
 This document describes how you can use a backup file on a standard PC to recover your Dash.
 Normally, this shouldn't be needed. It is much preferred to just use Options > Safety > Restore
@@ -22,14 +22,14 @@ refrain from sending your coins to a temporary wallet created in that environmen
 lost e.g. on a power outage or computer failure. Your desired destination wallet should already be
 set up and you should have one of its receiving addresses or a QR code at hand.
 
-You should be at least a bit familiar with the Linux shell. Commands indented in this document
+You should be at least a bit familiar with the Linux shell. Commands `in fixed-width font like this`
 are meant to be executed as a shell command. Before you execute each command by pressing return,
 make sure to understand what it does. You will need to adjust some file or directory names.
-Commands starting with "sudo apt" will ask for your permission to install software by
+Commands starting with `sudo apt` will ask for your permission to install software by
 requiring your Ubuntu user password.
 
 
-PREPARATION
+## PREPARATION
 
 On your PC, install the following Ubuntu packages:
 
@@ -40,7 +40,7 @@ recent devices you need to go to Settings > About first and tap on "Build number
 until you see the "You are now a developer" message.
 
 
-LOCATING THE BACKUP FILES
+## LOCATING THE BACKUP FILES
 
 If you followed the apps guidance your backup files will be located both on-device and off-device.
 Let's look at off-device first. When backing up, the app instructed you to archive your backup to
@@ -63,7 +63,7 @@ to copy the file to your PC.
 Note:  Older versions of this wallet saved the files as darkcoin-wallet-*, etc.
 
 
-DECRYPTING
+## DECRYPTING
 
 You now have your backup file on your PC. Wallet backups are encrypted. Let's decrypt it using:
 
@@ -81,7 +81,7 @@ If it prints "org.darkcoin.production", you got the right password and the backu
 darkcoinj protobuf format. This backup format was introduced in v3.47 (May 2014). Skip to
 RECOVERING FROM PROTOBUF WALLET FORMAT.
 
-If it prints just a hash sign (#), you got the right password and the backup file uses the old
+If it prints just a hash sign (`#`), you got the right password and the backup file uses the old
 text based private key format. Skip to RECOVERING FROM BASE58 KEY FORMAT.
 
 If it prints something else or nothing, you likely didn't get the password right. Passwords are
@@ -89,7 +89,7 @@ case sensitive, and make sure you didn't accidentally type a space character in 
 password.
 
 
-RECOVERING FROM PROTOBUF WALLET FORMAT
+## RECOVERING FROM PROTOBUF WALLET FORMAT
 
 We need wallet-tool from dashj. First, in a working directory, let's get dashj:
 
@@ -116,13 +116,13 @@ your entire wallet to the desired destination wallet:
 	./wallet-tool send --wallet=/tmp/dash-wallet-decrypted-backup --output=<receiving address of destination wallet>:ALL
 
 If your wallet was protected by a spending PIN, you need to supply that PIN using the
---password=<PIN> option. Be extra careful with this command to get all parameters right. If it
+`--password=<PIN>` option. Be extra careful with this command to get all parameters right. If it
 succeeds, it will print the transaction hash of the created transaction. You can use that on
 a block explorer to watch, or just open the destination wallet and watch from there. If your coins
 are confirmed, you're done and you can skip the next paragraph to EPILOGUE.
 
 
-RECOVERING FROM BASE58 KEY FORMAT
+## RECOVERING FROM BASE58 KEY FORMAT
 
 Have a deeper look at the backup file (these files were produced by Darkcoin Wallet):
 
@@ -135,8 +135,9 @@ of this one-time recovery.
 The easiest way to recover this backup is probably installing MultiBit v0.5.x from
 https://multibit.org/ and restore from inside that application.
 
-Another option is importing each individual key into one of Electrum Dash (https://electrum.dash.org/#download)
-or Dash Core (https://www.dash.org/downloads/).
+Another option is importing each individual key into one of [Electrum Dash] (https://electrum.dash.org/#download)
+or [Dash Core] (https://www.dash.org/downloads/).
+=======
 
 As soon as you see your whole balance again, empty your entire wallet to the desired destination
 wallet. Please do not continue to use the imported wallet. Remember you just operated on
@@ -144,6 +145,6 @@ unencrypted keys which can be dangerous, so it's good practice to handle them as
 compromised even if they in fact aren't.
 
 
-EPILOGUE
+## EPILOGUE
 
 Let us know if this document helped you with recovering your coins!
