@@ -1,6 +1,6 @@
+Používanie na vlastné riziko! (Vyžaduje Android 4 alebo novší
+
 <b>Majte Dash neustále pri sebe vo svojom vrecku!</b> Naskenujte QR kód a rýchlo zaplaťte. Ako obchodník obdržíte platby takmer okamžite a spoľahlivo. Elektronická peňaženka Dash je prvá mobilná Dash aplikácia a pravdepodobne tiež tou najnebezpečnejšou.
-
-
 
 <b>VLASTNOSTI</b>
 
@@ -26,11 +26,11 @@ https://github.com/HashEngineering/dash-wallet
 Všetky preklady prebiehajú cez Transifex:
 https://www.transifex.com/dash/dash-wallet/
 
+O Dash sa môžete dozvedieť viac na
+https://www.dash.org/
 
 <b>DOPORUČENIA</b>
 
-• Doporučená mobilná peňaženka od https://bitcoin.org
-
-
+Mobilná peňaženka doporučená https://www.dash.org
 
 <i>Používajte na vlastní riziko.</i>

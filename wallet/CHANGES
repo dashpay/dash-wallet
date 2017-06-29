@@ -1,5 +1,8 @@
 
 Dash Wallet
+v5.14
+* Updated to Bitcoin Wallet 5.14
+* Added Recovery Seed Support
 
 v4.65.12.1N
 * Updated Translations
@@ -229,7 +232,6 @@ v4.66
 * Strengthen security of spending PIN.
 * Update translations from Transifex.
 
->>>>>>> upstream/master
 v4.65
 
 * Fix for layout in landscape orientation.

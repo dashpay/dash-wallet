@@ -1,6 +1,6 @@
+Hãy sử dụng và tự chấp nhận rủi ro (Cần Android 4 hoặc cao hơn)
+
 <b>Có Dash luôn luôn bên bạn, ngay trong túi bạn!</b> Bạn thanh toán bằng cách quét mã QR một cách nhanh chóng. Cũng như một thương nhân bạn có thể nhận thanh toán một cách tin cậy và tức thời. Ví Dash là ứng dụng di động đầu tiên của Dash, và được cho là an toàn nhất!
-
-
 
 <b>CÁC TÍNH NĂNG</b>
 
@@ -26,11 +26,11 @@ https://github.com/HashEngineering/dash-wallet
 Tất cả các bản dịch được thực hiện thông qua Transifex:
 https://www.transifex.com/dash/dash-wallet/
 
+Bạn có thể tìm thêm thông tin về Dash tại
+https://www.dash.org/
 
 <b>NHỮNG LỜI CHỨNG</b>
 
-• Ví di động được giới thiệu bởi https://bitcoin.org
-
-
+• Ví di động được gợi ý bởi https://www.dash.org
 
 <i>Hãy dùng và tự chịu rủi ro!</i>

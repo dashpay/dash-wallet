@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources>
+
+
+	<string name="send_coins_fragment_instantx_enable">Использовать InstantSend</string>
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">Этот платёж InstantSend пока ещё не выполнен.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">Этот платёж InstantSend ожидает проверки сетью Dash.</string>
+	<string name="transaction_row_message_own_instantx_locked">Транзакция InstantSend отправлена (защищена).</string>
+	<string name="transaction_row_message_received_instantx_lock_request">Этот платёж InstantSend ожидает проверки сетью Dash.</string>
+	<string name="transaction_row_message_received_instantx_locked">Этот платёж InstantSend проверен сетью Dash.</string>
+	<string name="transaction_row_message_received_unconfirmed_instantx">Неподтверждённый InstantSend</string>
+	<string name="transaction_row_message_received_instantx_locked2">Защищённый InstantSend</string>
+
+	<string name="wallet_options_disconnect">Отключить</string>
+
+	<string name="network_monitor_masternodes_title">Мастерноды</string>
+</resources>

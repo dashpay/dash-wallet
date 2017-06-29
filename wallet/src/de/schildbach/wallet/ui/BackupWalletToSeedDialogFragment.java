@@ -23,9 +23,10 @@ import android.app.Dialog;
 import android.app.DialogFragment;
 import android.app.FragmentManager;
 import android.content.DialogInterface;
-import android.content.DialogInterface.OnShowListener;
-import android.graphics.Typeface;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Process;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
@@ -36,37 +37,24 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import com.google.common.base.Charsets;
-
-import org.bitcoinj.crypto.MnemonicCode;
-import org.bitcoinj.crypto.MnemonicException;
+import org.bitcoinj.wallet.DeterministicKeyChain;
+import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.spongycastle.crypto.params.KeyParameter;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.text.DateFormat;
-import java.util.Date;
 import java.util.List;
-import java.util.TimeZone;
 
 import javax.annotation.Nullable;
 
-import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.util.Crypto;
-import de.schildbach.wallet.util.Iso8601Format;
+import de.schildbach.wallet.ui.send.DecryptSeedTask;
+import de.schildbach.wallet.ui.send.DeriveKeyTask;
 import de.schildbach.wallet_test.R;
 
 import static com.google.common.base.Preconditions.checkState;
-import static de.schildbach.wallet.Constants.HEX;
 
 /**
  * @author Andreas Schildbach
@@ -87,8 +75,14 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment {
     private AlertDialog dialog;
 
     private TextView seedView;
+    private View privateKeyPasswordViewGroup;
+    private EditText privateKeyPasswordView;
+    private View privateKeyBadPasswordView;
+    private View seedViewGroup;
+    private Handler backgroundHandler;
+    private HandlerThread backgroundThread;
     private CheckBox showView;
-    private Button positiveButton;
+    private Button showMnemonicSeedButton;
 
     private static final Logger log = LoggerFactory.getLogger(BackupWalletToSeedDialogFragment.class);
 
@@ -106,19 +100,36 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment {
         final View view = LayoutInflater.from(activity).inflate(R.layout.backup_wallet_to_seed_dialog, null);
 
         seedView = (TextView) view.findViewById(R.id.backup_wallet_dialog_seed);
-        List<String> code = wallet.getKeyChainSeed().getMnemonicCode();
+        privateKeyPasswordViewGroup = view.findViewById(R.id.backup_wallet_seed_private_key_password_group);
+        privateKeyPasswordView = (EditText) view.findViewById(R.id.backup_wallet_seed_private_key_password);
+        privateKeyBadPasswordView = view.findViewById(R.id.backup_wallet_seed_private_key_bad_password);
+        showMnemonicSeedButton = (Button) view.findViewById(R.id.backup_wallet_seed_private_key_enter);
 
-            StringBuilder wordlist1 = new StringBuilder(255);
-            for (String word : code)
-            {
-                wordlist1.append(word + " ");
+        seedViewGroup = view.findViewById(R.id.backup_wallet_seed_group);
+
+        privateKeyPasswordViewGroup.setVisibility(wallet.isEncrypted() ? View.VISIBLE : View.GONE);
+
+
+        privateKeyPasswordView.addTextChangedListener(privateKeyPasswordListener);
+        showMnemonicSeedButton.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                handleDecryptPIN();
             }
+        });
+        if(wallet.isEncrypted()) {
+            privateKeyPasswordView.requestFocus();
+            backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);
+            backgroundThread.start();
+            backgroundHandler = new Handler(backgroundThread.getLooper());
+            seedViewGroup.setVisibility(View.INVISIBLE);
+        }
+        else showMnemonicSeed(wallet.getActiveKeyChain().getSeed());
 
 
-        seedView.setText(wordlist1);
 
-        final TextView warningView = (TextView) view.findViewById(R.id.backup_wallet_dialog_warning_encrypted);
-        warningView.setVisibility(wallet.isEncrypted() ? View.VISIBLE : View.GONE);
+        //final TextView warningView = (TextView) view.findViewById(R.id.backup_wallet_dialog_warning_encrypted);
+        //warningView.setVisibility(wallet.isEncrypted() ? View.VISIBLE : View.GONE);
 
         final DialogBuilder builder = new DialogBuilder(activity);
         builder.setTitle(R.string.export_keys_dialog_title);
@@ -135,6 +146,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment {
     @Override
     public void onDismiss(final DialogInterface dialog) {
         this.dialog = null;
+        privateKeyPasswordView.removeTextChangedListener(privateKeyPasswordListener);
 
         super.onDismiss(dialog);
     }
@@ -155,6 +167,87 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment {
         } else {
             passwordMismatchView.setVisibility(View.VISIBLE);
         }*/
+    }
+    private boolean isPasswordPlausible() {
+        if (!wallet.isEncrypted())
+            return true;
+
+        return !privateKeyPasswordView.getText().toString().trim().isEmpty();
+    }
+
+    private final TextWatcher privateKeyPasswordListener = new TextWatcher() {
+        @Override
+        public void onTextChanged(final CharSequence s, final int start, final int before, final int count) {
+            privateKeyBadPasswordView.setVisibility(View.INVISIBLE);
+            showMnemonicSeedButton.setEnabled(true);
+        }
+
+        @Override
+        public void beforeTextChanged(final CharSequence s, final int start, final int count, final int after) {
+        }
+
+        @Override
+        public void afterTextChanged(final Editable s) {
+        }
+    };
+
+    private void updateView()
+    {
+        //if(isPasswordPlausible()) {
+            //handleDecrypt();
+        //}
+    }
+
+    private void showMnemonicSeed(final DeterministicSeed seed)
+    {
+        StringBuilder wordlist = new StringBuilder(255);
+
+        List<String> code = seed.getMnemonicCode();
+
+
+            for (String word : code) {
+                wordlist.append(word + " ");
+            }
+                seedView.setText(wordlist);
+    }
+
+    private void handleDecryptPIN() {
+
+
+        if (wallet.isEncrypted()) {
+            showMnemonicSeedButton.setEnabled(false);
+            new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
+                @Override
+                protected void onSuccess(final KeyParameter encryptionKey, final boolean wasChanged) {
+                    privateKeyBadPasswordView.setVisibility(View.INVISIBLE);
+                    handleDecryptSeed(encryptionKey);
+                }
+            }.deriveKey(wallet, privateKeyPasswordView.getText().toString().trim());
+
+        } else {
+
+        }
+    }
+    private void handleDecryptSeed(final KeyParameter encryptionKey) {
+
+
+        if (wallet.isEncrypted()) {
+            showMnemonicSeedButton.setEnabled(false);
+            new DecryptSeedTask(backgroundHandler) {
+                @Override
+                protected void onSuccess(final DeterministicSeed seed) {
+                    seedViewGroup.setVisibility(View.VISIBLE);
+                    showMnemonicSeed(seed);
+                }
+                protected void onBadPassphrase() {
+                    privateKeyBadPasswordView.setVisibility(View.VISIBLE);
+                    privateKeyPasswordView.requestFocus();
+                }
+            }.decryptSeed(wallet.getActiveKeyChain().getSeed(), wallet.getKeyCrypter(), encryptionKey);
+
+        } else {
+
+        }
     }
 
 

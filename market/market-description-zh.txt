@@ -1,6 +1,6 @@
+风险自负! (需要高于安卓4.0版本)
+
 <b>达世币伴您左右，由您掌控！</b> 您可以通过扫QR码轻松支付。 作为商户，您能够即时接收可靠的每笔交易。达世币手机钱包是达世币第一款移动app，十分安全！
-
-
 
 <b>特性</b>
 
@@ -26,11 +26,11 @@ https://github.com/HashEngineering/dash-wallet
 所有翻译经由Transifex管理注入：
 https://www.transifex.com/dash/dash-wallet/
 
+你可以在这里找到更多达世币信息
+https://www.dash.org/
 
 <b>客户评价</b>
 
-• 由 https://dash.org 推荐使用的移动钱包
-
-
+由 https://www.dash.org 推荐使用的移动钱包
 
 <i>妥善使用，风险自负</i>

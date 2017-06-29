@@ -1,10 +1,12 @@
+Use por sua conta e risco! (Requer o Android 4 ou superior)
+
 <b>Ter seu Dash sempre com você, no seu bolso!</b> Você paga rapidamente apenas verificação um QR code. Como um comerciante, você recebe pagamentos confiável e instantaneamente. Carteira do traço é o primeiro app móvel do traço e sem dúvida também o mais seguro!
 
 <b>CARACTERÍSTICAS</b>
 
 • Nenhum registo, serviço web ou nuvem necessários! Esta carteira é descentralizada e peer to peer.
 • Display da quantidade de Dash em mDASH e µDASH.
-• Conversão para outras moedas nacionais.
+• Conversão de e para outras moedas nacionais.
 • Envio e recebimento de Dash através de NFC, códigos QR ou URLs de Dash.
 • Livro de endereços Dash usados regularmente.
 • Quando estiver offline, você pode pagar via Bluetooth.
@@ -15,7 +17,7 @@
 
 <b>CONTRIBUIR</b>
 
-Carteira Dash e <b>open source</b> e <b>software livre</b>. Licença: GPLv3
+Carteira Dash é <b>open source</b> e um <b>software livre</b>. Licença: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Nosso código fonte está disponível no GitHub:
@@ -24,11 +26,11 @@ https://github.com/HashEngineering/dash-wallet
 Todas as traduções são gerenciadas por meio do Transifex:
 https://www.transifex.com/dash/dash-wallet/
 
+Você pode encontrar mais sobre Dash em
+https://www.dash.org/
 
 <b>DEPOIMENTOS</b>
 
-• Carteira mobile recomendada https://dash.org
-
-
+Uma carteira móvel recomendada por https://www.dash.org
 
 <i>Use por sua conta em risco!</i>

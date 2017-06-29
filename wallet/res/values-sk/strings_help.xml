@@ -1,67 +1,69 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-	<string name="help_wallet">
+    <string name="help_wallet">
 <![CDATA[
 		<p>
-			Na levej hornej časti displeja sa zobrazuje vaša bilancia v Dash a jedna vo zvolenej národnej mene.
+			Na levej hornej časti displeja sa zobrazuje vaša bilancia v Dash a jednej zvolenej národnej mene.
 			Poklepte na zoznam národných mien a zvolte jednu ako predvolenú.
 		</p>
 		<p>
-			QR kód napravo obsahuje vašu Dash adresu, ktorú si môžete oskenovať iný užívateľ.
-			Ak chcete väčší QR kód, poklepte naň.
+			QR kód, ktorý obsahuje Vašu Dash adresu je dostupný z navigačneho menu (v ľavo hore) a môže byť použitý pre načítanie inou osobou.
+			Poklepaním na QR kód, dostanete väčšiu verziu.
 		</p>
 		<p>
-			V spodní časti obrazovky sa nachádza zoznam vašich transakcií, ktorý bude zo začiatku prázdny.
-			Transakcie čakajúce na potvrdenie sú vyznačené šedo až pokým sa nepotvrdia.
-			Ak si chcete do adresára pridať adresy odosielateľov alebo príjemcov, poklepte na jednu z položiek.
+			Na spodnej časti obrazovky nájdete Váš zoznam transakcií, ktorý je na začiatku prázdny.
+			Čakajúce transakcie sú zašednuté pokiaľ nie sú potvrdené.
+			Poklepaním na záznam uvidíte detaily, alebo pridáte odosielateľov alebo prijímateľov do adresára.
+			Adresár je dostupný z navigačného menu (vľavo hore).
 		</p>
 		<p>
-			Zaslať mince alebo si ich vyžiadať môžete poklepaním na tlačítka v panelu akcií.
-			Ďaľšie možností nájdete v menu možností.
-		</p>
-	]]>
-	</string>
-	<string name="help_request_coins">
-<![CDATA[
-		<p>
-			Na tejto obrazovke môžete vyžiadať Dashy od niekoho iného (kto má nainštalovanú aplikáciu Dash Wallet).
-		</p>
-		<p>
-			Najprv zadajte sumu Dashov, ktoré chcete vyžiadať.
-		</p>
-		<p>
-			Potom dajte druhej strane naskenovať vygenerovaný QR kód
-			alebo môžte svoju žiadosť poslať použitím tlačidla zdieľať.
-			Druhá strana potom klikne na Dash URL.
-		</p>
-		<p>
-			V oboch prípadoch druhá strana uvidí predvyplnenú obrazovku na odosielanie Dashov.
-			Ak s transakciou súhlasí, tak ju iba potvrdí.
+			Poslať alebo vyžiadať platbu môžete poklepaním na tlačítka v spodnej časti.
+			Viac možností je dostupných v navigačnom  menu (vľavo hore) a menu nastavení.
 		</p>
 	]]>
-	</string>
-	<string name="help_send_coins">
+    </string>
+    <string name="help_request_coins">
 <![CDATA[
 		<p>
-			Práve ste začali proces odosielania Dashov.
-			Dostali ste sa sem z hlavnej obrazovky alebo kliknutím na Dash adresu v prehliadači.
+			Na tejto obrazovke môžete vyžiadať Dash od niekoho iného (kto má nainštalovanú aplikáciu Dash peńaženka). 
+		</p>
+		<p>
+			Najskôr zadajte sumu Dash, ktorú chcete vyžiadať.
+		</p>
+		<p>
+			Potom dajte druhej strane naskenovať vygenerovaný QR kód.
+			Alebo môžete svoju žiadosť poslať použitím tlačidla zdieľať.
+			Ak majú oba telefóny spustenú funkciu NFC, stačí ich proložiť k sebe.
+		</p>
+		<p>
+			V oboch prípadoch druhá strana uvidí pred-vyplnenú obrazovku na odosielanie Dash.
+			Ak s transakciou súhlasí, tak ju iba jednoducho potvrdí.
+		</p>
+	]]>
+    </string>
+    <string name="help_send_coins">
+<![CDATA[
+		<p>
+			Práve ste začali proces odosielania Dash.
+			YDostali ste sa sem z hlavnej obrazovky alebo kliknutím na Dash adresu v prehliadači.
 		</p>
 		<p>
 			Najprv zadajte adresu, na ktorú chcete odoslať platbu.
 			Ak sa adresa nachádza v adresári, tak sa automaticky doplní.
-			Kliknutím na ikonu fotoaparátu môžete naskenovať QR kód s Dash adresou alebo požiadavkou na zaplatenie.
+			Môžete naskenovať QR kód s Dash adresou alebo požiadavkou na zaplatenie stlačením QR tračítka.
 		</p>
 		<p>
-			Ďalej vidíte koľko Dashov môžete aktuálne minúť.
-			Rozdiel medzi zostatkom na hlavnej obrazovke a počtom Dashov, ktoré môžete minúť tvoria nepotvrdené transakcie.
+			Ďalej vidíte koľko Dash môžete aktuálne minúť.
+			Rozdiel medzi zostatkom na hlavnej obrazovke a počtom Dash, ktoré môžete minúť tvoria nepotvrdené transakcie..
 		</p>
 		<p>
-			Nakoniec zadajte sumu platby.
+			Poklepte InstantSend ak chce urobíť okamžitú platbu. Poplatok bude väčší (> 0.001 DASH).
+			Nakoniec zadajte sumu platby a PIN na míňanie ak ste si ho predtým nastavili.
 		</p>
 		<p>
-			Môžete zadať platbu aj keď ste v offline režime.
-			Platba bude odoslaná pri ďalšom spustení aplikácie.
+			Zadať platbu môžete aj keď ste bez pripojenia.
+			Platba bude odoslaná pri ďalšom spustení Dash peňaženky.
 			Ak chcete, aby platba bola spracovaná v čo najkratšom čase, uistite sa že máte rýchle pripojenie (napríklad WiFi).
 		</p>
 		<p>
@@ -70,40 +72,41 @@
 			Vždy skontrolujte adresu príjemcu.
 		</p>
 	]]>
-	</string>
-	<string name="help_safety">
+    </string>
+    <string name="help_safety">
 <![CDATA[
 		<p>
 			<b>Dôležité informácie o bezpečnosti:</b>
 		</p>
 		<p>
-			Dashy sú uložené na Vašom zariadení.
-			<b>Ak zariadenie stratíte, prídete o všetky svoje Dashy.</b>
+			Dash sú uložené na Vašom zariadení.
+			<b>Ak zariadenie stratíte, prídete o všetky svoje Dash.</b>
 		</p>
 		<p>
 			To znamená, že by ste mali <b>zálohovať svoju peňaženku</b>!
 			Využite funkciu zálohovania v tejto aplikácii, neodporúča sa na zálohovanie použiť aplikácie tretích strán.
 			Svoju zálohu bezpečne uchovajte a nezabudnite heslo.
+			Toto je HD peňaženka Stačí iba jedna záloha.
 		</p>
 		<p>
-			<b>Pred odinštalovaním</b> (alebo vymazaním dát/obnovením továrenských nastavení), <b>odošlite svoje Dashy do inej peňaženky</b>.
-			Inak o svoje Dashy prídete.
+			<b>Pred odinštalovaním</b> (alebo vymazaním dát/obnovením továrenských nastavení), <b>odošlite svoje Dash do inej peňaženky</b>.
+			Zvyšné Dash budú stratené.
 		</p>
 		<p>
-			<b>Platby sa nedajú stornovať</b>.
-			Ak pošlete svoje Dashy na nesprávnu adresu, je takmer nemožné získať ich späť.
+			<b>Platby sú nevratné</b>.
+			Ak pošlete svoje Dash na nesprávnu adresu, je takmer nemožné získať ich späť.
 		</p>
 		<p>
 			<b>Chráňte si svoje zariadenie!</b>
 			Nepoužívajte rootnuté zariadenie.
-			Inštalujte len aplikácie, ktorým dôverujete.
+			Inštalujte len aplikácie, ktorým plne dôverujete.
 			Škodlivé aplikácie sa môžu pokúsiť ukradnúť Vašu peňaženku.
 		</p>
 		<p>
 			Znížte riziko na minimum!
-			<b>Aplikáciu používajte len na malé sumy.</b>
+			<b>Ukladajte len na malé sumy</b> pre denné použitie.
 		</p>
 	]]>
-	</string>
+    </string>
 
 </resources>

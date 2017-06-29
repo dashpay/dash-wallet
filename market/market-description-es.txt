@@ -1,6 +1,6 @@
+Úselo bajo su propio riesgo!(Requiere Android 4 o superior)
+
 <b>Ten tus Dash siempre contigo, en tu cartera!</b> Puedes pagar rápidamente escaneando tu código QR. Como un proveedor, puedes recibir págos eficientemente y de forma instantanea. Dash wallet es la primer app móvil de Dash, y la más segura!
-
-
 
 <b>CARACTERISTICAS</b>
 
@@ -26,11 +26,11 @@ https://github.com/HashEngineering/dash-wallet
 Toda las traudcciones estan gestionadas por Transifex:
 https://www.transifex.com/dash/dash-wallet/
 
+Puedes encontrar mas información sobre Dash en
+https://www.dash.org/
 
 <b>TESTIMONIOS</b>
 
-• Carteras mobiles recomendada por https://dash.org
-
-
+Una cartera para móvil recomendada por https://www.dash.org
 
 <i>Uselo a su propio riesgo!</i>

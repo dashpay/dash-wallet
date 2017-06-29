@@ -14,13 +14,15 @@
 	<string name="wallet_options_disconnect">Disconnect</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
-	<string name="export_keys_dialog_title_to_seed">View Wallet Seed</string>
-	<string name="import_keys_dialog_title_from_seed">Restore Wallet from Seed</string>
+	<string name="export_keys_dialog_title_to_seed">View recovery phrase</string>
+	<string name="import_keys_dialog_title_from_seed">Restore wallet from recovery phrase</string>
 	<string name="backup_to_seed_wallet_dialog_message">This is your recovery phrase.  Please write it down.</string>
 	<string name="backup_wallet_to_seed_dialog_warning">DO NOT let anyone see your recovery phrase or they can spend your Dash.  This phrase is not compatible with other Dash Software.</string>
+	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Your wallet is protected by a spending PIN.  Enter your PIN and press Show to view your recovery phrase.</string>
     <string name="import_keys_from_seed_dialog_message">Enter your recovery phrase here.</string>
 	<string name="import_export_keys_dialog_password_phrase">Recovery phrase goes here.</string>
 	<string name="preferences_report_issue_summary">Collect information about your issue and email your report to the developers.</string>
+	<string name="navigation_configuration">Configuration</string>
 
 
 

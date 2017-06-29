@@ -263,6 +263,6 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
     }
 
     public final boolean isDifficultyTransitionPoint(final StoredBlock storedPrev) {
-        return ((storedPrev.getHeight() + 1) % Constants.NETWORK_PARAMETERS.getInterval()) == 0;
+        return (storedPrev.getHeight() +1) < 15200 ? ((storedPrev.getHeight() + 1) % Constants.NETWORK_PARAMETERS.getInterval()) == 0 : false;
     }
 }
