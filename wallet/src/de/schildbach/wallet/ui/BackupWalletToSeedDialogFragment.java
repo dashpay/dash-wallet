@@ -22,6 +22,7 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.app.FragmentManager;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.os.Handler;
@@ -32,14 +33,14 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
-import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,12 +55,11 @@ import de.schildbach.wallet.ui.send.DecryptSeedTask;
 import de.schildbach.wallet.ui.send.DeriveKeyTask;
 import de.schildbach.wallet_test.R;
 
-import static com.google.common.base.Preconditions.checkState;
-
 /**
  * @author Andreas Schildbach
  */
 public class BackupWalletToSeedDialogFragment extends DialogFragment {
+
     private static final String FRAGMENT_TAG = BackupWalletToSeedDialogFragment.class.getName();
 
     public static void show(final FragmentManager fm) {
@@ -117,30 +117,25 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment {
                 handleDecryptPIN();
             }
         });
-        if(wallet.isEncrypted()) {
-            privateKeyPasswordView.requestFocus();
+        if (wallet.isEncrypted()) {
             backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);
             backgroundThread.start();
             backgroundHandler = new Handler(backgroundThread.getLooper());
-            seedViewGroup.setVisibility(View.INVISIBLE);
-        }
-        else showMnemonicSeed(wallet.getActiveKeyChain().getSeed());
+            showPasswordViewGroup(true);
+        } else showMnemonicSeed(wallet.getActiveKeyChain().getSeed());
 
-
+        TextView titleView = (TextView) view.findViewById(R.id.title_view);
+        titleView.setText(R.string.export_keys_dialog_title);
 
         //final TextView warningView = (TextView) view.findViewById(R.id.backup_wallet_dialog_warning_encrypted);
         //warningView.setVisibility(wallet.isEncrypted() ? View.VISIBLE : View.GONE);
 
-        final DialogBuilder builder = new DialogBuilder(activity);
-        builder.setTitle(R.string.export_keys_dialog_title);
+        final AlertDialog.Builder builder = new AlertDialog.Builder(activity, R.style.NewDialogTheme);
         builder.setView(view);
-        //builder.setPositiveButton(R.string.button_ok, null); // dummy, just to make it show
-        builder.setNegativeButton(R.string.button_ok, null);
+        builder.setPositiveButton(R.string.button_ok, null);
         builder.setCancelable(false);
 
-        final AlertDialog dialog = builder.create();
-
-        return dialog;
+        return builder.create();
     }
 
     @Override
@@ -236,7 +231,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment {
             new DecryptSeedTask(backgroundHandler) {
                 @Override
                 protected void onSuccess(final DeterministicSeed seed) {
-                    seedViewGroup.setVisibility(View.VISIBLE);
+                    showPasswordViewGroup(false);
                     showMnemonicSeed(seed);
                 }
                 protected void onBadPassphrase() {
@@ -250,5 +245,38 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment {
         }
     }
 
+    private void showPasswordViewGroup(boolean show) {
+        if (show) {
+            seedViewGroup.setVisibility(View.GONE);
+            privateKeyPasswordView.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (isAdded()) {
+                        showSoftKeyboard(privateKeyPasswordView);
+                    }
+                }
+            });
+        } else {
+            seedViewGroup.setVisibility(View.VISIBLE);
+            privateKeyPasswordViewGroup.setVisibility(View.GONE);
+            hideKeyboard();
+        }
+    }
 
+    public void showSoftKeyboard(View view) {
+        if (view.requestFocus()) {
+            InputMethodManager imm = (InputMethodManager)
+                    getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+            boolean isShowing = imm.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT);
+            if (!isShowing)
+                getActivity().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+        }
+    }
+
+    public void hideKeyboard() {
+        if (privateKeyPasswordView != null) {
+            InputMethodManager keyboard = (InputMethodManager) getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+            keyboard.hideSoftInputFromWindow(privateKeyPasswordView.getWindowToken(), 0);
+        }
+    }
 }
