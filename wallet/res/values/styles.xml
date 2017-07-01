@@ -19,6 +19,12 @@
 
 	</style>
 
+    <style name="NewDialogTheme" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="colorAccent">@color/strong_blue_bis</item>
+        <item name="android:textColorPrimary">@color/strong_blue_bis</item>
+        <item name="android:windowBackground">@color/white</item>
+    </style>
+
 	<!--style name="My.Theme.ChildActivity" parent="@style/My.Theme">
 		<item name="android:actionBarStyle">@style/My.Widget.ActionBar.ChildActivity</item>
 		<item name="android:homeAsUpIndicator">@drawable/action_bar_up_indicator</item>
