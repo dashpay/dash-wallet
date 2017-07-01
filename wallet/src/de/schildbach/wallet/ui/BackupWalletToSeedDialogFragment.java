@@ -22,7 +22,6 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.app.FragmentManager;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.os.Handler;
@@ -30,12 +29,9 @@ import android.os.HandlerThread;
 import android.os.Process;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.WindowManager;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -126,13 +122,11 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment {
             showPasswordViewGroup(true);
         } else showMnemonicSeed(wallet.getActiveKeyChain().getSeed());
 
-        TextView titleView = (TextView) view.findViewById(R.id.title_view);
-        titleView.setText(R.string.export_keys_dialog_title);
-
         //final TextView warningView = (TextView) view.findViewById(R.id.backup_wallet_dialog_warning_encrypted);
         //warningView.setVisibility(wallet.isEncrypted() ? View.VISIBLE : View.GONE);
 
-        final AlertDialog.Builder builder = new AlertDialog.Builder(new ContextThemeWrapper(activity, R.style.NewDialogTheme));
+        final DialogBuilder builder = new DialogBuilder(activity);
+        builder.setTitle(R.string.export_keys_dialog_title);
         builder.setView(view);
         builder.setPositiveButton(R.string.button_ok, null);
         builder.setCancelable(false);
@@ -189,8 +183,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment {
         }
     };
 
-    private void updateView()
-    {
+    private void updateView() {
         //if(isPasswordPlausible()) {
         //handleDecrypt();
         //}
