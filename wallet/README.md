@@ -1,3 +1,6 @@
+Technical details
+=================
+
 ### FILES
 
 Your wallet contains your private keys and various transaction related metadata. It is stored in app-private
@@ -33,15 +36,15 @@ app-private storage:
 
 ### DEBUGGING
 
-Wallet file for Testnet can be pulled from an (even un-rooted) device using
+Wallet file for Testnet can be pulled from an (even un-rooted) device using:
 
 	adb pull /data/data/hashengineering.darkcoin.wallet/files/wallet-protobuf-testnet
 
-Log messages can be viewed by
+Log messages can be viewed by:
 
     adb logcat
 
-The app can send extensive debug information. Use Options > Settings > Report Issue and follow the dialog.
+The app can send extensive debug information. Use **Options > Settings > Report Issue** and follow the dialog.
 In the generated e-mail, replace the support address with yours.
 
 
@@ -60,20 +63,27 @@ for the package installs, which comes with slightly more recent versions.
     # first time only
     sudo apt install git gradle openjdk-8-jdk libstdc++6:i386 zlib1g:i386
 
-Get the [Android SDK Tools](https://developer.android.com/studio/index.html#command-tools)
-and unpack it to your workspace directory. Point your `ANDROID_HOME` variable to the unpacked Android SDK directory
-and switch to it. Use
+Download the [Android SDK Tools](https://developer.android.com/studio/index.html#command-tools)
+and unpack to your workspace directory. Point your `ANDROID_HOME` variable to the unpacked Android SDK directory
+and switch to it.
 
+<<<<<<< HEAD
     tools/android update sdk --no-ui --force --all --filter tool,platform-tool,build-tools-25.0.2,android-15,android-25,extra-android-m2repository
+=======
+Download and install the required Android dependencies:
+>>>>>>> 6cef7815... Improve wallet README files (words & punctuation).
 
-to download and install the required Android dependencies.
+    tools/android update sdk --no-ui --force --all --filter tool,platform-tool,build-tools-26,android-15,android-25
 
-Get the [Android NDK](https://developer.android.com/ndk)
-and unpack it to your workspace directory. Point your ANDROID_NDK_HOME variable to the unpacked Android NDK
-directory.
+Download the [Android NDK](https://developer.android.com/ndk), then unpack it to your workspace directory. Point your `ANDROID_NDK_HOME` variable to the unpacked Android NDK directory.
 
+<<<<<<< HEAD
 Finally, you can build Dash Wallet and sign it with your development key. Again in your workspace,
 use
+=======
+Finally, you can build Bitcoin Wallet and sign it with your development key. Again in your workspace,
+use:
+>>>>>>> 6cef7815... Improve wallet README files (words & punctuation).
 
 	# first time only
 	git clone -b master https://github.com/HashEngineering/dash-wallet.git dash-wallet
@@ -83,7 +93,7 @@ use
 	git pull
     gradle clean assemble_testNet3Debug -x test
 
-To install the app on your Android device, use
+To install the app on your Android device, use:
 
     # first time only
     sudo apt install android-tools-adb
@@ -91,7 +101,7 @@ To install the app on your Android device, use
 	# each time
 	adb install wallet/build/outputs/apk/dash-wallet-_testNet3-debug.apk
 
-If installing fails, make sure "Developer options" and "USB debugging" are enabled on your Android device, and an ADB
+If installation fails, make sure "Developer options" and "USB debugging" are enabled on your Android device, and an ADB
 connection is established.
 
 
@@ -103,6 +113,7 @@ there is basically no warranty and liability. It's your responsibility to audit 
 for security issues and build, install and run the application in a secure way.
 
 The production version uses Mainnet, is built non-debuggable, space-optimized with ProGuard and the
+<<<<<<< HEAD
 wallet file is protected against access from non-root users. In the code repository, it is build with
 the 'prod' flavor.
 
@@ -110,6 +121,10 @@ the 'prod' flavor.
 	cd dash-wallet
 	git pull
     gradle clean build assembleProdRelease -x test
+=======
+wallet file is protected against access from non-root users. In the code repository, it lives in a
+separate 'prod' branch that gets rebased against master with each released version.
+>>>>>>> 6cef7815... Improve wallet README files (words & punctuation).
 
 The resulting production release version will be at:  wallet/build/outputs/apk/dash-wallet-prod-release-unsigned.apk
 
@@ -132,7 +147,7 @@ You should be able to import the project into Android Studio, as it uses Gradle 
 
 The source language is English. Translations for all other languages [happen on Transifex](https://www.transifex.com/dash/dash-wallet/).
 
-The english resources are pushed to Transifex. Changes are pulled and committed to the git
+The English resources are pushed to Transifex. Changes are pulled and committed to the git
 repository from time to time. It can be done by manually downloading the files, but using the `tx`
 command line client is more convenient:
 
@@ -171,7 +186,7 @@ Instructions for preparing an NFC tag with your address:
 - Some tags have less than 50 bytes capacity, those won't work. 1 KB tags recommended.
 
 - The tag needs to contain a Dash URI. You can construct one with the "Request coins" dialog,
-  then share with messaging or email. You can also construct the URI manually. Example for Mainnet:
+  then share with messaging or email. You can also construct the URI manually. Mainnet example:
   `dash:XywwpkwZYAypoW2cCmdczh4kFcvWWb9ZZW`
 
 - The type of the message needs to be URI or URL (not Text).
@@ -180,7 +195,6 @@ Instructions for preparing an NFC tag with your address:
   could overwrite the tag with his own Dash address.
 
 
-<<<<<<< HEAD
 ### DASHJ
 
 Dash Wallet uses dashj for Dash specific logic.  This project is forked from [bitcoinj] https://bitcoinj.github.io/
