@@ -54,6 +54,7 @@ import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.Io;
+import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -87,6 +88,7 @@ import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.widget.Toolbar;
 import android.text.format.DateUtils;
 import android.view.ContextMenu;
+import android.view.ContextThemeWrapper;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -638,12 +640,19 @@ public final class WalletActivity extends AbstractWalletActivity implements Acti
     }
     private Dialog createRestoreWalletFromSeedDialog() {
         final View view = getLayoutInflater().inflate(R.layout.restore_wallet_from_seed_dialog, null);
+        final TextView titleView = (TextView) view.findViewById(R.id.title_view);
+        titleView.setText(R.string.import_keys_dialog_title_from_seed);
         final TextView messageView = (TextView) view.findViewById(R.id.restore_wallet_dialog_message);
         //final Spinner fileView = (Spinner) view.findViewById(R.id.import_keys_from_storage_file);
         final EditText passwordView = (EditText) view.findViewById(R.id.import_seed_recovery_phrase);
+        passwordView.post(new Runnable() {
+            @Override
+            public void run() {
+                KeyboardUtil.showSoftKeyboard(WalletActivity.this, passwordView);
+            }
+        });
 
-        final DialogBuilder dialog = new DialogBuilder(this);
-        dialog.setTitle(R.string.import_keys_dialog_title_from_seed);
+        final AlertDialog.Builder dialog = new AlertDialog.Builder(new ContextThemeWrapper(this, R.style.NewDialogTheme));
         dialog.setView(view);
         dialog.setPositiveButton(R.string.import_keys_dialog_button_import, new OnClickListener() {
             @Override

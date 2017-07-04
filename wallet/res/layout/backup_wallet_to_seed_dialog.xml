@@ -1,33 +1,135 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:scrollbars="none" >
+    android:orientation="vertical">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="@dimen/list_entry_padding_horizontal_lax"
-        android:layout_marginRight="@dimen/list_entry_padding_horizontal_lax"
-        android:orientation="vertical" >
+        android:layout_marginBottom="8dp"
+        android:orientation="vertical">
 
-        <LinearLayout
-            android:id="@+id/backup_wallet_seed_private_key_password_group"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/list_entry_padding_vertical"
-            android:divider="@drawable/divider_field"
-            android:orientation="vertical"
-            android:showDividers="middle"
-            android:visibility="invisible">
+            android:background="#295290">
+
+            <TextView
+                android:id="@+id/title_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:text="Title"
+                android:textColor="@color/white"
+                android:textStyle="bold" />
+
+        </FrameLayout>
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/dialog_header"
+            tools:ignore="ContentDescription" />
+
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="@dimen/list_entry_padding_horizontal_lax"
+            android:layout_marginRight="@dimen/list_entry_padding_horizontal_lax"
+            android:orientation="vertical">
 
             <LinearLayout
+                android:id="@+id/backup_wallet_seed_private_key_password_group"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/list_entry_padding_vertical"
+                android:layout_marginBottom="@dimen/list_entry_padding_vertical"
                 android:divider="@drawable/divider_field"
-                android:orientation="horizontal"
+                android:orientation="vertical"
+                android:showDividers="middle"
+                android:visibility="invisible">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/list_entry_padding_vertical"
+                    android:divider="@drawable/divider_field"
+                    android:orientation="horizontal"
+                    android:showDividers="middle">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/list_entry_padding_vertical"
+                        android:layout_marginTop="@dimen/list_entry_padding_vertical"
+                        android:layout_weight="2"
+                        android:text="@string/backup_to_seed_wallet_dialog_enter_pin_message" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="wrap_content"
+                    android:layout_height="0dp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true">
+
+                    <requestFocus />
+
+                </View>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/list_entry_padding_vertical"
+                    android:divider="@drawable/divider_field"
+                    android:orientation="horizontal"
+                    android:showDividers="middle">
+
+                    <EditText
+                        android:id="@+id/backup_wallet_seed_private_key_password"
+                        android:layout_width="0px"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="@string/private_key_password"
+                        android:imeOptions="flagNoExtractUi"
+                        android:inputType="numberPassword"
+                        android:singleLine="true" />
+
+                    <Button
+                        android:id="@+id/backup_wallet_seed_private_key_enter"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Show" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/backup_wallet_seed_private_key_bad_password"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/private_key_bad_password"
+                    android:textColor="@color/fg_error"
+                    android:textStyle="bold"
+                    android:visibility="invisible" />
+
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/backup_wallet_seed_group"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/list_entry_padding_vertical"
+                android:divider="@drawable/divider_field"
+                android:orientation="vertical"
                 android:showDividers="middle">
 
                 <TextView
@@ -35,118 +137,66 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="@dimen/list_entry_padding_vertical"
                     android:layout_marginTop="@dimen/list_entry_padding_vertical"
-                    android:layout_weight="2"
-                    android:text="@string/backup_to_seed_wallet_dialog_enter_pin_message" />
-            </LinearLayout>
+                    android:text="@string/backup_to_seed_wallet_dialog_message" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/list_entry_padding_vertical"
-                android:divider="@drawable/divider_field"
-                android:orientation="horizontal"
-                android:showDividers="middle">
-
-                <EditText
-                    android:id="@+id/backup_wallet_seed_private_key_password"
-                    android:layout_width="0px"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:hint="@string/private_key_password"
-                    android:imeOptions="flagNoExtractUi"
-                    android:inputType="numberPassword"
-                    android:singleLine="true" />
+                    android:layout_marginTop="@dimen/list_entry_padding_vertical"
+                    android:divider="@drawable/divider_field"
+                    android:orientation="horizontal"
+                    android:showDividers="middle">
 
-                <Button
-                    android:id="@+id/backup_wallet_seed_private_key_enter"
-                    android:layout_width="0dp"
+                    <TextView
+                        android:id="@+id/backup_wallet_dialog_seed"
+                        android:layout_width="0px"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="3"
+                        android:textColor="#295290"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Show" />
+                    android:divider="@drawable/divider_field"
+                    android:orientation="horizontal"
+                    android:showDividers="middle">
+
+                    <TextView
+                        android:id="@+id/backup_wallet_dialog_password_mismatch"
+                        android:layout_width="0px"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="2"
+                        android:text="@string/backup_wallet_dialog_password_mismatch"
+                        android:textColor="@color/fg_error"
+                        android:textStyle="bold"
+                        android:visibility="invisible" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/list_entry_padding_vertical_lax"
+                    android:layout_marginTop="@dimen/list_entry_padding_vertical_lax"
+                    android:text="@string/backup_wallet_to_seed_dialog_warning"
+                    android:textColor="@color/fg_less_significant"
+                    android:textSize="@dimen/font_size_small" />
+
+                <!--TextView
+                    android:id="@+id/backup_wallet_dialog_warning_encrypted"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/list_entry_padding_vertical_lax"
+                    android:layout_marginTop="@dimen/list_entry_padding_vertical_lax"
+                    android:text="@string/backup_wallet_dialog_warning_encrypted"
+                    android:textColor="@color/fg_less_significant"
+                    android:textSize="@dimen/font_size_small" /-->
             </LinearLayout>
-
-            <TextView
-                android:id="@+id/backup_wallet_seed_private_key_bad_password"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/private_key_bad_password"
-                android:textColor="@color/fg_error"
-                android:textStyle="bold"
-                android:visibility="invisible" />
-
-
         </LinearLayout>
 
-    <LinearLayout
-        android:id="@+id/backup_wallet_seed_group"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="@dimen/list_entry_padding_vertical"
-        android:divider="@drawable/divider_field"
-        android:orientation="vertical"
-        android:showDividers="middle">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/list_entry_padding_vertical"
-            android:layout_marginTop="@dimen/list_entry_padding_vertical"
-            android:text="@string/backup_to_seed_wallet_dialog_message" />
+    </ScrollView>
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/list_entry_padding_vertical"
-            android:divider="@drawable/divider_field"
-            android:orientation="horizontal"
-            android:showDividers="middle" >
-
-            <TextView
-                android:id="@+id/backup_wallet_dialog_seed"
-                android:layout_width="0px"
-                android:layout_height="wrap_content"
-                android:layout_weight="3" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:divider="@drawable/divider_field"
-            android:orientation="horizontal"
-            android:showDividers="middle" >
-
-            <TextView
-                android:id="@+id/backup_wallet_dialog_password_mismatch"
-                android:layout_width="0px"
-                android:layout_height="wrap_content"
-                android:layout_weight="2"
-                android:text="@string/backup_wallet_dialog_password_mismatch"
-                android:textColor="@color/fg_error"
-                android:textStyle="bold"
-                android:visibility="invisible" />
-        </LinearLayout>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/list_entry_padding_vertical_lax"
-            android:layout_marginTop="@dimen/list_entry_padding_vertical_lax"
-            android:text="@string/backup_wallet_to_seed_dialog_warning"
-            android:textColor="@color/fg_less_significant"
-            android:textSize="@dimen/font_size_small" />
-
-        <!--TextView
-            android:id="@+id/backup_wallet_dialog_warning_encrypted"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/list_entry_padding_vertical_lax"
-            android:layout_marginTop="@dimen/list_entry_padding_vertical_lax"
-            android:text="@string/backup_wallet_dialog_warning_encrypted"
-            android:textColor="@color/fg_less_significant"
-            android:textSize="@dimen/font_size_small" /-->
-        </LinearLayout>
-    </LinearLayout>
-
-
-</ScrollView>
+</LinearLayout>
