@@ -25,8 +25,8 @@ itself to restore from the backup, see the separate README.recover guide.
 The current fee rate for each of the fee categories (economic, normal, priority) is cached in
 app-private storage:
 
-    Mainnet: /data/data/de.schildbach.wallet/files/fees.txt
-    Testnet: /data/data/de.schildbach.wallet_test/files/fees-testnet.txt
+    Mainnet: /data/data/hashengineering.darkcoin.wallet/files/fees.txt
+    Testnet: /data/data/hashengineering.darkcoin.wallet_test/files/fees-testnet.txt
 
 
 DEBUGGING
@@ -179,7 +179,7 @@ DASHJ
 Dash Wallet uses dashj for Dash specific logic:
 
     (dashj) https://github.com/HashEngineering/dashj
-	(bitcoinj)  https://bitcoinj.github.io/
+	forked from (bitcoinj)  https://bitcoinj.github.io/
 
 
 EXCHANGE RATES
@@ -199,5 +199,5 @@ outputs:
 
 	https://chainz.cryptoid.info/dash/api.dws?q=unspent
 
-When sweeping wallets, Bitcoin Wallet uses a set of Electrum servers to query for unspent transaction
+When sweeping wallets, Dash Wallet uses a set of Electrum servers to query for unspent transaction
 outputs (UTXOs).
