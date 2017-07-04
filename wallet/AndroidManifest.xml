@@ -79,9 +79,8 @@
 			</intent-filter>
 			<intent-filter>
 				<action android:name="android.nfc.action.NDEF_DISCOVERED" />
-
 				<data android:mimeType="application/x-drktx" />
-
+				<data android:mimeType="application/x-dashtx" />
 				<category android:name="android.intent.category.DEFAULT" />
 			</intent-filter>
 
@@ -174,6 +173,7 @@
 				<category android:name="android.intent.category.DEFAULT" />
 
 				<data android:mimeType="application/x-darkcoin-wallet-backup" />
+				<data android:mimeType="application/x-dash-wallet-backup" />
 			</intent-filter>
 		</activity>
 		<activity
