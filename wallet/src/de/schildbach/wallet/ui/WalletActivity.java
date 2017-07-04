@@ -365,11 +365,11 @@ public final class WalletActivity extends AbstractWalletActivity implements Acti
 			case R.id.wallet_options_safety:
 				HelpDialogFragment.page(getFragmentManager(), R.string.help_safety);
 				return true;
-
+*/
         case R.id.wallet_options_report_issue:
             handleReportIssue();
             return true;
-*/
+
             case R.id.wallet_options_help:
                 HelpDialogFragment.page(getFragmentManager(), R.string.help_wallet);
                 return true;
@@ -1022,7 +1022,7 @@ public final class WalletActivity extends AbstractWalletActivity implements Acti
             dialog.setNegativeButton(R.string.button_retry, new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(final DialogInterface dialog, final int id) {
-                    showDialog(DIALOG_RESTORE_WALLET);
+                    showDialog(DIALOG_RESTORE_WALLET_FROM_SEED);
                 }
             });
             dialog.show();
