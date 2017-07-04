@@ -195,7 +195,7 @@ public class WalletUtils {
     public static Wallet restoreWalletFromSeed(final List<String> words,
                                                    final NetworkParameters expectedNetworkParameters) throws IOException {
         try {
-            final Wallet wallet = new Wallet(Constants.NETWORK_PARAMETERS, new KeyChainGroup(Constants.NETWORK_PARAMETERS, new DeterministicSeed(words, null,"", 1474771804)));//new WalletProtobufSerializer().readWallet(is, true, null);
+            final Wallet wallet = new Wallet(Constants.NETWORK_PARAMETERS, new KeyChainGroup(Constants.NETWORK_PARAMETERS, new DeterministicSeed(words, null,"", Constants.EARLIEST_HD_SEED_CREATION_TIME)));//new WalletProtobufSerializer().readWallet(is, true, null);
 
             if (!wallet.getParams().equals(expectedNetworkParameters))
                 throw new IOException("bad wallet backup network parameters: " + wallet.getParams().getId());

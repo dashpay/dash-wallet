@@ -222,4 +222,7 @@ public final class Constants {
     }
 
     private static final Logger log = LoggerFactory.getLogger(Constants.class);
+
+    //Dash Specific
+    public static long EARLIEST_HD_SEED_CREATION_TIME = 1427610960l;
 }
