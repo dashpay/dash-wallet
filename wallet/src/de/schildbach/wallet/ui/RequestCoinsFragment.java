@@ -28,6 +28,7 @@ import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.uri.BitcoinURI;
+import org.bitcoinj.uri.BitcoinURIParseException;
 import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -333,6 +334,9 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
             handleCopy();
             return true;
 
+        case R.id.request_coins_options_copy_address:
+                handleCopyAddress();
+                return true;
         case R.id.request_coins_options_share:
             handleShare();
             return true;
@@ -350,6 +354,19 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
         clipboardManager.setPrimaryClip(ClipData.newRawUri("Dash payment request", request));
         log.info("payment request copied to clipboard: {}", request);
         new Toast(activity).toast(R.string.request_coins_clipboard_msg);
+    }
+    //Dash Specific
+    private void handleCopyAddress() {
+        try {
+            final Uri request = Uri.parse(determineBitcoinRequestStr(false));
+            clipboardManager.setPrimaryClip(ClipData.newPlainText("Dash address", new BitcoinURI(request.toString()).getAddress().toString()));
+            log.info("address copied to clipboard: {}", request);
+            new Toast(activity).toast(R.string.request_coins_clipboard_address_msg);
+        }
+        catch (BitcoinURIParseException x)
+        {
+            //should not happen
+        }
     }
 
     private void handleShare() {
