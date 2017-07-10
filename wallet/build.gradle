@@ -33,6 +33,11 @@ dependencies {
     }
     compile 'com.github.tony19:logback-android-core:1.1.1-5'
     compile 'com.google.code.findbugs:jsr305:2.0.3'
+
+    compile 'com.squareup.retrofit2:retrofit:2.0.2'
+    compile 'com.squareup.retrofit2:converter-gson:2.0.2'
+    compile 'com.squareup.okhttp3:logging-interceptor:3.3.1'
+
     testCompile 'junit:junit:4.11'
 }
 
