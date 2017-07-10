@@ -352,5 +352,6 @@
 
 	<string name="dash_slogan">Instant - Private - Secure</string>
 	<string name="dash_wallet">Wallet</string>
+    <string name="sell_desh_for_cash">Sell Desh for Cash</string>
 
 </resources>
