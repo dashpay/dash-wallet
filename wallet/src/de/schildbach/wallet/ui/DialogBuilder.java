@@ -26,6 +26,7 @@ import android.content.Context;
 import android.content.DialogInterface.OnClickListener;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
+import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
@@ -41,14 +42,13 @@ public class DialogBuilder extends AlertDialog.Builder {
 
     public static DialogBuilder warn(final Context context, final int titleResId) {
         final DialogBuilder builder = new DialogBuilder(context);
-        builder.setIcon(R.drawable.ic_warning_grey600_24dp);
+        builder.setIcon(R.drawable.ic_warning);
         builder.setTitle(titleResId);
         return builder;
     }
 
     public DialogBuilder(final Context context) {
-        super(context, Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP ? AlertDialog.THEME_HOLO_LIGHT
-                : AlertDialog.THEME_DEVICE_DEFAULT_LIGHT);
+        super(new ContextThemeWrapper(context, R.style.NewDialogTheme));
 
         this.customTitle = LayoutInflater.from(context).inflate(R.layout.dialog_title, null);
         this.iconView = (ImageView) customTitle.findViewById(android.R.id.icon);
