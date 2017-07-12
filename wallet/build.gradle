@@ -1,8 +1,10 @@
 apply plugin: 'com.android.application'
+apply plugin: 'io.fabric'
 
 def localMavenRepo = 'file://' + new File(System.getProperty('user.home'), '.m2/repository').absolutePath
 repositories {
     maven { url localMavenRepo }
+    maven { url 'https://maven.fabric.io/public' }
 }
 dependencies {
     compile 'com.android.support:design:25.1.1'
@@ -41,6 +43,10 @@ dependencies {
     debugCompile 'com.squareup.leakcanary:leakcanary-android:1.5.1'
     releaseCompile 'com.squareup.leakcanary:leakcanary-android-no-op:1.5.1'
     testCompile 'com.squareup.leakcanary:leakcanary-android-no-op:1.5.1'
+
+    compile('com.crashlytics.sdk.android:crashlytics:2.6.8@aar') {
+        transitive = true;
+    }
 }
 
 ext {

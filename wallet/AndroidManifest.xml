@@ -243,6 +243,11 @@
 		<meta-data
 			android:name="android.nfc.disable_beam_default"
 			android:value="true" />
+
+		<meta-data
+			android:name="io.fabric.ApiKey"
+			android:value="f7e7300f57581ec11aad3d2247c71b38bad716a1" />
+
 	</application>
 
 </manifest>
