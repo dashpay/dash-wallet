@@ -24,7 +24,6 @@ import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.concurrent.RejectedExecutionException;
 
 import javax.annotation.Nullable;
 
@@ -43,7 +42,6 @@ import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
-import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
@@ -65,14 +63,6 @@ import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.params.KeyParameter;
 
 import com.google.common.base.Strings;
-import com.netki.WalletNameResolver;
-import com.netki.dns.DNSBootstrapService;
-import com.netki.dnssec.DNSSECResolver;
-import com.netki.exceptions.WalletNameCurrencyUnavailableException;
-import com.netki.exceptions.WalletNameLookupException;
-import com.netki.tlsa.CACertService;
-import com.netki.tlsa.CertChainValidator;
-import com.netki.tlsa.TLSAValidator;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
@@ -119,7 +109,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.ContentObserver;
 import android.database.Cursor;
-import android.database.MatrixCursor;
 import android.database.MergeCursor;
 import android.media.RingtoneManager;
 import android.net.Uri;
@@ -136,7 +125,6 @@ import android.support.v4.content.ContextCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.LoaderManager;
-import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.content.res.ResourcesCompat;
@@ -236,7 +224,6 @@ public final class SendCoinsFragment extends Fragment {
     private static final int ID_DYNAMIC_FEES_LOADER = 0;
     private static final int ID_BLOCKCHAIN_STATE_LOADER = 1;
     private static final int ID_RECEIVING_ADDRESS_BOOK_LOADER = 2;
-    private static final int ID_RECEIVING_ADDRESS_NAME_LOADER = 3;
 
     private static final int REQUEST_CODE_SCAN = 0;
     private static final int REQUEST_CODE_ENABLE_BLUETOOTH_FOR_PAYMENT_REQUEST = 1;
@@ -273,8 +260,6 @@ public final class SendCoinsFragment extends Fragment {
             args.putString(ReceivingAddressLoaderCallbacks.ARG_CONSTRAINT, s.toString());
 
             loaderManager.restartLoader(ID_RECEIVING_ADDRESS_BOOK_LOADER, args, receivingAddressLoaderCallbacks);
-            if (config.getLookUpWalletNames())
-                loaderManager.restartLoader(ID_RECEIVING_ADDRESS_NAME_LOADER, args, receivingAddressLoaderCallbacks);
         }
 
         @Override
@@ -446,8 +431,6 @@ public final class SendCoinsFragment extends Fragment {
             if (id == ID_RECEIVING_ADDRESS_BOOK_LOADER)
                 return new CursorLoader(context, AddressBookProvider.contentUri(context.getPackageName()), null,
                         AddressBookProvider.SELECTION_QUERY, new String[] { constraint }, null);
-            else if (id == ID_RECEIVING_ADDRESS_NAME_LOADER)
-                return new ReceivingAddressNameLoader(context, constraint);
             else
                 throw new IllegalArgumentException();
         }
@@ -482,64 +465,6 @@ public final class SendCoinsFragment extends Fragment {
             else
                 targetAdapter.swapCursor(
                         new MergeCursor(new Cursor[] { receivingAddressBookCursor, receivingAddressNameCursor }));
-        }
-    }
-
-    private static class ReceivingAddressNameLoader extends AsyncTaskLoader<Cursor> {
-        private String constraint;
-
-        public ReceivingAddressNameLoader(final Context context, final String constraint) {
-            super(context);
-            this.constraint = constraint;
-        }
-
-        @Override
-        protected void onStartLoading() {
-            super.onStartLoading();
-            safeForceLoad();
-        }
-
-        @Override
-        public Cursor loadInBackground() {
-            final MatrixCursor cursor = new MatrixCursor(new String[] { AddressBookProvider.KEY_ROWID,
-                    AddressBookProvider.KEY_LABEL, AddressBookProvider.KEY_ADDRESS }, 1);
-
-            if (constraint.indexOf('.') >= 0 || constraint.indexOf('@') >= 0) {
-                try {
-                    final WalletNameResolver resolver = new WalletNameResolver(
-                            new DNSSECResolver(new DNSBootstrapService()),
-                            new TLSAValidator(new DNSSECResolver(new DNSBootstrapService()),
-                                    CACertService.getInstance(), new CertChainValidator()));
-                    final BitcoinURI resolvedUri = resolver.resolve(constraint, Constants.WALLET_NAME_CURRENCY_CODE,
-                            true);
-                    if (resolvedUri != null) {
-                        final Address resolvedAddress = resolvedUri.getAddress();
-                        if (resolvedAddress != null
-                                && resolvedAddress.getParameters().equals(Constants.NETWORK_PARAMETERS)) {
-                            final String resolvedLabel = Strings.emptyToNull(resolvedUri.getLabel());
-                            cursor.addRow(new Object[] { -1, resolvedLabel != null ? resolvedLabel : constraint,
-                                    resolvedAddress.toString() });
-                            log.info("looked up wallet name: " + resolvedUri);
-                        }
-                    }
-                } catch (final WalletNameCurrencyUnavailableException x) {
-                    // swallow
-                } catch (final WalletNameLookupException x) {
-                    log.info("error looking up wallet name '" + constraint + "': " + x.getMessage());
-                } catch (final Throwable x) {
-                    log.info("error looking up wallet name", x);
-                }
-            }
-
-            return cursor;
-        }
-
-        private void safeForceLoad() {
-            try {
-                forceLoad();
-            } catch (final RejectedExecutionException x) {
-                log.info("rejected execution: " + ReceivingAddressNameLoader.this.toString());
-            }
         }
     }
 
@@ -796,7 +721,6 @@ public final class SendCoinsFragment extends Fragment {
         loaderManager.initLoader(ID_DYNAMIC_FEES_LOADER, null, dynamicFeesLoaderCallbacks);
         loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
         loaderManager.initLoader(ID_RECEIVING_ADDRESS_BOOK_LOADER, null, receivingAddressLoaderCallbacks);
-        loaderManager.initLoader(ID_RECEIVING_ADDRESS_NAME_LOADER, null, receivingAddressLoaderCallbacks);
 
         updateView();
         handler.post(dryrunRunnable);
@@ -808,7 +732,6 @@ public final class SendCoinsFragment extends Fragment {
 
     @Override
     public void onPause() {
-        loaderManager.destroyLoader(ID_RECEIVING_ADDRESS_NAME_LOADER);
         loaderManager.destroyLoader(ID_RECEIVING_ADDRESS_BOOK_LOADER);
         loaderManager.destroyLoader(ID_BLOCKCHAIN_STATE_LOADER);
         loaderManager.destroyLoader(ID_DYNAMIC_FEES_LOADER);
