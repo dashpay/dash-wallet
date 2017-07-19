@@ -15,7 +15,7 @@
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
 	<string name="export_keys_dialog_title_to_seed">View recovery phrase</string>
-	<string name="import_keys_dialog_title_from_seed">Restore wallet from recovery phrase</string>
+	<string name="import_keys_dialog_title_from_seed">Restore from recovery phrase</string>
 	<string name="backup_to_seed_wallet_dialog_message">This is your recovery phrase.  Please write it down.</string>
 	<string name="backup_wallet_to_seed_dialog_warning">DO NOT let anyone see your recovery phrase or they can spend your Dash.  This phrase is not compatible with other Dash Software.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Your wallet is protected by a spending PIN.  Enter your PIN and press Show to view your recovery phrase.</string>
@@ -25,6 +25,8 @@
 	<string name="navigation_configuration">Configuration</string>
     <string name="button_copy_address">Copy address</string>
 	<string name="request_coins_clipboard_address_msg">Dash address copied to clipboard</string>
+	<string name="backup_wallet_to_seed_show_recovery_phrase">Show</string>
+	<string name="restore_wallet_from_invalid_seed_warning_message">%s is an invalid word.</string>
 
 
 
