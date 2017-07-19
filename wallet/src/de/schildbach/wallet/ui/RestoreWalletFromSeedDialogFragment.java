@@ -70,6 +70,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
 
     private View replaceWarningView;
     private EditText passwordView;
+    private TextView invalidWordView;
 
 
     private WalletActivity activity;
@@ -119,6 +120,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
         //final Spinner fileView = (Spinner) view.findViewById(R.id.import_keys_from_storage_file);
         passwordView = (EditText) view.findViewById(R.id.import_seed_recovery_phrase);
         setupPasswordView();
+        invalidWordView = (TextView)view.findViewById(R.id.restore_wallet_from_invalid_seed_warning);
 
         builder.setPositiveButton(R.string.import_keys_dialog_button_import, new DialogInterface.OnClickListener() {
             @Override
@@ -256,7 +258,13 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
         AlertDialog dialog = (AlertDialog) getDialog();
         if (dialog != null && passwordView != null) {
             int numOfWords = numOfWordsInPasswordView();
-            boolean restoreButtonEnabled = (numOfWords == NUMBER_OF_WORDS_IN_SEED);
+            String firstBadWord = firstInvalidWord();
+            boolean restoreButtonEnabled = (numOfWords == NUMBER_OF_WORDS_IN_SEED) && firstBadWord == null;
+            if(firstBadWord != null) {
+                invalidWordView.setText(getString(R.string.restore_wallet_from_invalid_seed_warning_message, firstBadWord));
+                invalidWordView.setVisibility(View.VISIBLE);
+            }
+            else invalidWordView.setVisibility(View.INVISIBLE);
             final Button button = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
             button.setEnabled(restoreButtonEnabled);
             String restoreButtonTitle = getString(R.string.import_keys_dialog_button_import);
@@ -273,6 +281,22 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
             return 0;
         } else {
             return password.split(" ").length;
+        }
+    }
+
+    private String firstInvalidWord() {
+        final String password = passwordView.getText().toString().trim();
+        if (password.isEmpty()) {
+            return null;
+        } else {
+            String [] words = password.split(" ");
+            List<String> wordList = MnemonicCode.INSTANCE.getWordList();
+
+            for(int i = 0; i < words.length; ++i)
+                if(!wordList.contains(words[i]))
+                    return words[i];
+
+            return null;
         }
     }
 }
