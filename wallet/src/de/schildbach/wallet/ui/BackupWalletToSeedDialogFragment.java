@@ -206,6 +206,8 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment {
 
         if (wallet.isEncrypted()) {
             showMnemonicSeedButton.setEnabled(false);
+            showMnemonicSeedButton.setText(getText(R.string.encrypt_keys_dialog_state_decrypting));
+            privateKeyPasswordView.setEnabled(false);
             new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
                 @Override
                 protected void onSuccess(final KeyParameter encryptionKey, final boolean wasChanged) {
@@ -233,7 +235,9 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment {
 
                 protected void onBadPassphrase() {
                     privateKeyBadPasswordView.setVisibility(View.VISIBLE);
+                    privateKeyPasswordView.setEnabled(true);
                     privateKeyPasswordView.requestFocus();
+                    showMnemonicSeedButton.setText(getText(R.string.backup_wallet_to_seed_show_recovery_phrase));
                 }
             }.decryptSeed(wallet.getActiveKeyChain().getSeed(), wallet.getKeyCrypter(), encryptionKey);
 
