@@ -1,7 +1,14 @@
 package de.schildbach.wallet.service;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 import java.util.concurrent.TimeUnit;
 
+import de.schildbach.wallet.response.GetReceivingOptionsResp;
+import de.schildbach.wallet.response.GetReceivingOptionsResp.PayFieldsBeanX;
+import de.schildbach.wallet.response.PayFieldsDeserializer;
+import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
@@ -11,14 +18,22 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class ServiceGenerator {
 
     private static final String TAG = "ServiceGenerator";
-    private static final String API_BASE_URL = "http://woc.reference.genitrust.com/";
 
-    public static RestApi createService() {
-        return getClient()
+    // TODO need to change url for production
+    private static final String API_BASE_URL = "http://woc.reference.genitrust.com/";
+//    private static final String API_BASE_URL = "https://wallofcoins.com/";
+
+    public static RestApi createService(Interceptor interceptor) {
+        return getClient(interceptor)
                 .create(RestApi.class);
     }
 
-    private static Retrofit getClient() {
+    public static RestApi createService() {
+        return getClient(null)
+                .create(RestApi.class);
+    }
+
+    private static Retrofit getClient(Interceptor interceptor) {
 
         OkHttpClient.Builder httpClient = new OkHttpClient.Builder();
 
@@ -31,10 +46,16 @@ public class ServiceGenerator {
         logging.setLevel(HttpLoggingInterceptor.Level.BODY);
         // add logging as last interceptor
         httpClient.addInterceptor(logging);  // <-- this is the important line!
+        if (null != interceptor)
+            httpClient.addInterceptor(interceptor);
+
+        Gson gson = new GsonBuilder()
+                .registerTypeAdapter(PayFieldsBeanX.class, new PayFieldsDeserializer())
+                .create();
 
         return new Retrofit.Builder()
                 .baseUrl(API_BASE_URL).client(httpClient.build())
-                .addConverterFactory(GsonConverterFactory.create()).build();
+                .addConverterFactory(GsonConverterFactory.create(gson)).build();
     }
 
 }

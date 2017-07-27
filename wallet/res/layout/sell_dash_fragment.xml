@@ -1,50 +1,206 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:padding="@dimen/card_padding_horizontal">
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <ProgressBar
-        android:id="@+id/sell_dash_progress"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:visibility="gone" />
-
-    <LinearLayout
-        android:id="@+id/layout_create_auth"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:layout_height="match_parent">
 
-        <EditText
-            android:id="@+id/edit_sell_dash_phone"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:ems="10"
-            android:hint="Phone"
-            android:inputType="phone" />
+            android:padding="@dimen/card_padding_horizontal">
 
-        <EditText
-            android:id="@+id/edit_sell_dash_email"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ems="10"
-            android:hint="Email"
-            android:inputType="textEmailAddress" />
+            <ProgressBar
+                android:id="@+id/sell_dash_progress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:visibility="gone" />
 
-        <EditText
-            android:id="@+id/edit_sell_dash_pass"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ems="10"
-            android:hint="Password"
-            android:inputType="textPassword" />
+            <!--Step 1 create auth here-->
+            <LinearLayout
+                android:id="@+id/layout_create_auth"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="visible">
 
-        <Button
-            android:id="@+id/button_sell_dash_create_auth"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Create Auth" />
-    </LinearLayout>
+                <EditText
+                    android:id="@+id/edit_sell_dash_phone"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ems="10"
+                    android:hint="@string/hint_phone"
+                    android:inputType="phone"
+                    android:lines="1" />
 
-</FrameLayout>
+                <EditText
+                    android:id="@+id/edit_sell_dash_email"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ems="10"
+                    android:hint="@string/hint_email"
+                    android:inputType="textEmailAddress"
+                    android:lines="1" />
+
+                <EditText
+                    android:id="@+id/edit_sell_dash_pass"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ems="10"
+                    android:hint="@string/hint_password"
+                    android:inputType="textPassword"
+                    android:lines="1" />
+
+                <Button
+                    android:id="@+id/button_sell_dash_create_auth"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/text_create_auth" />
+
+            </LinearLayout>
+
+            <!--Step 2 receive and send payment options here-->
+            <LinearLayout
+                android:id="@+id/layout_create_bank_opts"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <android.support.v7.widget.AppCompatSpinner
+                    android:id="@+id/sp_payment_options"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/dimen_8dp"></android.support.v7.widget.AppCompatSpinner>
+
+                <LinearLayout
+                    android:id="@+id/ll_receiving_pricing_options"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/dimen_12dp" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginBottom="@dimen/dimen_8dp"
+                    android:layout_marginTop="@dimen/dimen_8dp"
+                    android:background="@android:color/darker_gray" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/select_pricing_option"
+                    android:textSize="18sp" />
+
+                <android.support.v7.widget.AppCompatCheckBox
+                    android:id="@+id/cb_is_dynamic_pricing"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/dimen_8dp"
+                    android:text="@string/use_dynamic_pricing" />
+
+                <EditText
+                    android:id="@+id/et_static_price"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="@dimen/dimen_12dp"
+                    android:hint="@string/static_price"
+                    android:lines="1" />
+
+                <LinearLayout
+                    android:id="@+id/ll_select_pricing_opt"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginTop="@dimen/dimen_8dp"
+                    android:orientation="vertical"
+                    android:padding="@dimen/dimen_12dp"
+                    android:visibility="gone">
+
+                    <android.support.v7.widget.AppCompatSpinner
+                        android:id="@+id/sp_primary_market"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <android.support.v7.widget.AppCompatSpinner
+                        android:id="@+id/sp_secondary_market"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <EditText
+                        android:id="@+id/et_min_payment"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/minimum_payment"
+                        android:inputType="number"
+                        android:lines="1" />
+
+                    <EditText
+                        android:id="@+id/et_max_payment"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/maximum_payment"
+                        android:inputType="number"
+                        android:lines="1" />
+
+                    <EditText
+                        android:id="@+id/et_seller_fee"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/seller_fee"
+                        android:inputType="number"
+                        android:lines="1" />
+                </LinearLayout>
+
+
+                <Button
+                    android:id="@+id/button_sell_dash_create_add"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/text_create_ad" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/layout_verify_otp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/text_otp"
+                    android:textSize="18sp" />
+
+                <EditText
+                    android:id="@+id/et_otp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ems="10"
+                    android:inputType="textPersonName"
+                    android:lines="1"
+                    android:text="@string/enter_otp"
+                    android:visibility="gone" />
+
+                <Button
+                    android:id="@+id/button_verify_ad"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/text_create_ad" />
+
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/iv_funding_address_qr"
+                android:layout_width="240dp"
+                android:layout_height="240dp"
+                android:layout_gravity="top|center"
+                android:visibility="gone" />
+        </FrameLayout>
+
+    </ScrollView>
+</layout>
+
