@@ -247,7 +247,7 @@ public final class WalletBalanceToolbarFragment extends Fragment
             if(masternodeSyncStatus != MasternodeSync.MASTERNODE_SYNC_FINISHED)
             {
                 progressView.setVisibility(View.VISIBLE);
-                viewBalance.setVisibility(View.INVISIBLE);
+                viewBalance.setVisibility(View.VISIBLE);
                 String syncStatus = wallet.getContext().masternodeSync.getSyncStatus();
                 showAppBarMessage(syncStatus);
             } else {
