@@ -42,6 +42,7 @@ import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.crashlytics.android.Crashlytics;
 import com.google.common.base.Stopwatch;
 import com.squareup.leakcanary.LeakCanary;
 
@@ -71,6 +72,7 @@ import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
+import io.fabric.sdk.android.Fabric;
 
 import static de.schildbach.wallet.Constants.HEX;
 
@@ -165,6 +167,7 @@ public class WalletApplication extends Application {
         afterLoadWallet();
 
         cleanupFiles();
+        Fabric.with(this, new Crashlytics());
     }
 
     private void afterLoadWallet() {

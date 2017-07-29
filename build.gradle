@@ -1,6 +1,7 @@
 buildscript {
     repositories {
         jcenter()
+        maven { url 'https://maven.fabric.io/public' }
     }
 
     dependencies {
@@ -9,6 +10,7 @@ buildscript {
         classpath('fr.avianey.androidsvgdrawable:gradle-plugin:3.0.0') {
             exclude group: 'xerces'
         }
+        classpath 'io.fabric.tools:gradle:1.+'
     }
 }
 
