@@ -352,7 +352,7 @@
 
     <string name="dash_slogan">Instant - Private - Secure</string>
     <string name="dash_wallet">Wallet</string>
-    <string name="sell_dash_for_cash">Sell Dash for Cash</string>
+    <string name="sell_dash_for_cash">Sell Dash For Cash</string>
     <string name="hint_phone">Phone</string>
     <string name="hint_email">Email</string>
     <string name="hint_password">Password</string>
@@ -366,5 +366,13 @@
     <string name="static_price">You can say how much you want per dash</string>
     <string name="text_otp">You will receive OTP on registered mobile.</string>
     <string name="enter_otp">Enter OTP</string>
+    <string name="resend_otp">Resend OTP</string>
+    <string name="country_flag">Country Flag</string>
+    <string name="all_field_required">All Fields Are Required!</string>
+    <string name="error_primary_secondry_same">Primary And Secondary Market Can Not Be Same.</string>
+    <string name="secondary_empty">Please Select Secondary Market</string>
+    <string name="primary_empty">Please Select Primary Market</string>
+    <string name="receivnig_option_empty">Please Select Your Cash Account</string>
+    <string name="buy_dash_with_cash">Buy Dash With Cash</string>
 
 </resources>

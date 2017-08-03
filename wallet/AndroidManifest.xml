@@ -155,6 +155,12 @@
             android:screenOrientation="behind"
             android:theme="@style/My.Theme.ChildActivity" />
         <activity
+            android:name="de.schildbach.wallet.ui.BuyDashActivity"
+            android:configChanges="keyboard|keyboardHidden"
+            android:label="@string/buy_dash_with_cash"
+            android:screenOrientation="behind"
+            android:theme="@style/My.Theme.ChildActivity" />
+        <activity
             android:name="de.schildbach.wallet.ui.NetworkMonitorActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:label="@string/network_monitor_activity_title"

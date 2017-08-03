@@ -1,0 +1,130 @@
+{
+  "countries": [
+    {
+      "name": "United States",
+      "code": "+1",
+      "currency": "USD",
+      "short": "us"
+    },
+    {
+      "name": "United Kingdom",
+      "code": "+44",
+      "currency": "USD",
+      "short": "uk"
+    },
+    {
+      "name": "Argentina",
+      "code": "+54",
+      "currency": "USD",
+      "short": "ar"
+    },
+    {
+      "name": "Australia",
+      "code": "+61",
+      "currency": "USD",
+      "short": "au"
+    },
+    {
+      "name": "Brazil",
+      "code": "+55",
+      "currency": "USD",
+      "short": "br"
+    },
+    {
+      "name": "Canada",
+      "code": "+1",
+      "currency": "USD",
+      "short": "ca"
+    },
+    {
+      "name": "China",
+      "code": "+86",
+      "currency": "USD",
+      "short": "cn"
+    },
+    {
+      "name": "Germany",
+      "code": "+49",
+      "currency": "USD",
+      "short": "de"
+    },
+    {
+      "name": "Ghana",
+      "code": "+233",
+      "currency": "USD",
+      "short": "gh"
+    },
+    {
+      "name": "Hong Kong",
+      "code": "+852",
+      "currency": "USD",
+      "short": "hk"
+    },
+    {
+      "name": "Latvia",
+      "code": "+371",
+      "currency": "USD",
+      "short": "lv"
+    },
+    {
+      "name": "Malaysia",
+      "code": "+60",
+      "currency": "USD",
+      "short": "my"
+    },
+    {
+      "name": "Mexico",
+      "code": "+52",
+      "currency": "USD",
+      "short": "mx"
+    },
+    {
+      "name": "Nigeria",
+      "code": "+234",
+      "currency": "USD",
+      "short": "ng"
+    },
+    {
+      "name": "Philippines",
+      "code": "+63",
+      "currency": "USD",
+      "short": "ph"
+    },
+    {
+      "name": "Poland",
+      "code": "+48",
+      "currency": "USD",
+      "short": "pl"
+    },
+    {
+      "name": "Portugal",
+      "code": "+351",
+      "currency": "USD",
+      "short": "pt"
+    },
+    {
+      "name": "Romania",
+      "code": "+40",
+      "currency": "USD",
+      "short": "ro"
+    },
+    {
+      "name": "Russia",
+      "code": "+7",
+      "currency": "USD",
+      "short": "ru"
+    },
+    {
+      "name": "Singapore",
+      "code": "+65",
+      "currency": "USD",
+      "short": "sg"
+    },
+    {
+      "name": "Spain",
+      "code": "+34",
+      "currency": "USD",
+      "short": "es"
+    }
+  ]
+}

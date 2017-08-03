@@ -12,7 +12,7 @@
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
 		android:layout_marginTop="8dp"
-		android:orientation="vertical" >
+		android:orientation="vertical">
 
 		<TextView
 			android:layout_width="match_parent"
@@ -61,7 +61,7 @@
 			android:layout_marginRight="@dimen/list_entry_padding_horizontal_lax"
 			android:layout_marginTop="6dp"
 			android:orientation="horizontal"
-			android:visibility="gone" >
+			android:visibility="gone">
 
 			<TextView
 				android:id="@+id/send_coins_receiving_static_label"
