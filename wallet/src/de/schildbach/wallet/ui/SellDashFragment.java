@@ -231,6 +231,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
         }
 
         if (null != sellDashPref.getCreateAuthReq() && null != sellDashPref.getCreateAuthReq().password) {
+            createAuthReq = sellDashPref.getCreateAuthReq();
             getAuthTokenCall();
         }
 
@@ -506,7 +507,10 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
                     binding.llReceivingPricingOptions.setVisibility(View.GONE);
                     binding.layoutVerifyOtp.setVisibility(View.VISIBLE);
 
+
                     sendVerificationResp = response.body();
+
+                    binding.etOtp.setText(sendVerificationResp.__CASH_CODE);
                 }
             }
 
