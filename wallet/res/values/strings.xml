@@ -359,7 +359,7 @@
     <string name="text_create_auth">Create Auth</string>
     <string name="text_create_ad">Create Ad</string>
     <string name="maximum_payment">Maximum payment</string>
-    <string name="seller_fee">Seller fee</string>
+    <string name="seller_fee">Seller fee (%)</string>
     <string name="minimum_payment">Minimum payment</string>
     <string name="use_dynamic_pricing">Use Dynamic Pricing?</string>
     <string name="select_pricing_option">SELECT PRICING OPTIONS</string>

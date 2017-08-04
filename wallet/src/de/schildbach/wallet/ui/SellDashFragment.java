@@ -9,6 +9,7 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
@@ -25,6 +26,7 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
@@ -58,6 +60,7 @@ import de.schildbach.wallet.response.CreateAdResp;
 import de.schildbach.wallet.response.CreateAuthErrorResp;
 import de.schildbach.wallet.response.CreateAuthResp;
 import de.schildbach.wallet.response.GetAuthTokenResp;
+import de.schildbach.wallet.response.GetCurrencyResp;
 import de.schildbach.wallet.response.GetPricingOptionsResp;
 import de.schildbach.wallet.response.GetReceivingOptionsResp;
 import de.schildbach.wallet.response.SendVerificationResp;
@@ -222,7 +225,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 
         // do something for a debug build
         if (BuildConfig.DEBUG) {
-            binding.editSellDashPhone.setText("2154070737");
+            binding.editSellDashPhone.setText("2154078737");
             binding.editSellDashEmail.setText("viral@viralsonawala.com");
             binding.editSellDashPass.setText("1234qwer");
             binding.etMaxPayment.setText("1000");
@@ -233,6 +236,8 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
         if (null != sellDashPref.getCreateAuthReq() && null != sellDashPref.getCreateAuthReq().password) {
             createAuthReq = sellDashPref.getCreateAuthReq();
             getAuthTokenCall();
+        } else {
+            binding.layoutCreateAuth.setVisibility(View.VISIBLE);
         }
 
         binding.buttonSellDashCreateAuth.setOnClickListener(new OnClickListener() {
@@ -269,11 +274,11 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
                     getDynamicPricingOpt();
-                    binding.etStaticPrice.setVisibility(View.GONE);
+                    binding.layStaticPrice.setVisibility(View.GONE);
                     binding.llSelectPricingOpt.setVisibility(View.VISIBLE);
                 } else {
                     binding.llSelectPricingOpt.setVisibility(View.GONE);
-                    binding.etStaticPrice.setVisibility(View.VISIBLE);
+                    binding.layStaticPrice.setVisibility(View.VISIBLE);
                 }
             }
         });
@@ -423,8 +428,6 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
         createAdReq.put("currentPrice", binding.etStaticPrice.getText().toString());
 
 
-//        reqMap.put("usePayFields", receivingOptionsResp.payFields.payFieldsB != null);
-
         if (receivingOptionsResp.payFields.payFieldsB == null) {
             int count = binding.llReceivingPricingOptions.getChildCount() - 1;
             Log.e(TAG, "sendAdData: " + count);
@@ -539,38 +542,40 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 
         binding.sellDashProgress.setVisibility(View.VISIBLE);
 
-        sellDashPref.setCreateAuthReq(createAuthReq);
-
         ServiceGenerator.createService().createAuth(createAuthReq).enqueue(new Callback<CreateAuthResp>() {
             @Override
             public void onResponse(Call<CreateAuthResp> call, Response<CreateAuthResp> response) {
 
 
                 try {
-                    Log.e(TAG, "onResponse: " + response.message());
-                    Log.e(TAG, "onResponse: " + response.errorBody().string());
+                    if (response.code() >= 400) {
 
-                    CreateAuthErrorResp errorResp = new Gson().fromJson(response.errorBody().string(), CreateAuthErrorResp.class);
+                        String errorMessage = response.errorBody().string();
 
-                    if (errorResp.phone.get(0).equals("This phone is already registered. Try to authorize it first.")) {
+                        if (errorMessage != null) {
+
+                            CreateAuthErrorResp errorResp = new Gson().fromJson(errorMessage, CreateAuthErrorResp.class);
+                            if (errorResp.phone.get(0).equals("This phone is already registered. Try to authorize it first.")) {
+                                sellDashPref.setCreateAuthReq(createAuthReq);
+                                getAuthTokenCall();
+                                return;
+                            }
+                        } else {
+                            Toast.makeText(getContext(), "Something went wrong, Try Again!", Toast.LENGTH_LONG).show();
+                        }
+
+                    } else if (response.code() >= 200 && null != response.body()) {
                         sellDashPref.setCreateAuthReq(createAuthReq);
                         getAuthTokenCall();
-                        return;
+                    } else {
+                        Toast.makeText(getContext(), "Something went wrong, Try Again!", Toast.LENGTH_LONG).show();
                     }
+
 
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-
-                if (response.code() == 200) {
-                    sellDashPref.setCreateAuthReq(createAuthReq);
-                }
-                if (null == response.body() || null == sellDashPref.getCreateAuthReq().password) {
-                    binding.sellDashProgress.setVisibility(View.GONE);
-                    return;
-                }
-
-                getAuthTokenCall();
+                binding.sellDashProgress.setVisibility(View.GONE);
 
             }
 
@@ -598,9 +603,9 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
                     public void onResponse(Call<List<GetReceivingOptionsResp>> call, Response<List<GetReceivingOptionsResp>> response) {
                         Log.e(TAG, "onResponse: " + response.body().size());
                         binding.sellDashProgress.setVisibility(View.GONE);
+                        binding.layoutCreateAuth.setVisibility(View.GONE);
 
                         receivingOptionsResps = response.body();
-                        binding.layoutCreateAuth.setVisibility(View.GONE);
                         binding.layoutCreateBankOpts.setVisibility(View.VISIBLE);
                         //set data in drop down list
                         setPaymentOptNames(receivingOptionsResps);
@@ -613,6 +618,88 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
                     }
                 });
 
+                ServiceGenerator.createService().getCurrency().enqueue(new Callback<List<GetCurrencyResp>>() {
+                    @Override
+                    public void onResponse(Call<List<GetCurrencyResp>> call, Response<List<GetCurrencyResp>> response) {
+
+                        final List<GetCurrencyResp> getCurrencyResps = response.body();
+
+                        for (GetCurrencyResp getCurrencyResp : getCurrencyResps) {
+                            getCurrencyResp.toString();
+                        }
+
+                        ArrayAdapter<GetCurrencyResp> adapter = new ArrayAdapter<GetCurrencyResp>(activity, android.R.layout.simple_spinner_dropdown_item, getCurrencyResps) {
+                            @NonNull
+                            @Override
+                            public View getView(int position, @android.support.annotation.Nullable View convertView, @NonNull ViewGroup parent) {
+
+                                View v;
+
+                                if (null == convertView) {
+                                    LayoutInflater vi = (LayoutInflater) parent.getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+                                    v = vi.inflate(android.R.layout.simple_spinner_dropdown_item, null);
+                                } else {
+                                    v = convertView;
+                                }
+
+                                final TextView t = (TextView) v.findViewById(android.R.id.text1);
+                                t.setText(getCurrencyResps.get(position).symbol);
+                                return v;
+                            }
+
+                            @Override
+                            public View getDropDownView(int position, @android.support.annotation.Nullable View convertView, @NonNull ViewGroup parent) {
+
+                                View v;
+
+                                if (null == convertView) {
+                                    LayoutInflater vi = (LayoutInflater) parent.getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+                                    v = vi.inflate(android.R.layout.simple_spinner_dropdown_item, null);
+                                } else {
+                                    v = convertView;
+                                }
+
+                                final TextView t = (TextView) v.findViewById(android.R.id.text1);
+                                t.setText(getCurrencyResps.get(position).name + " (" + getCurrencyResps.get(position).symbol + ")");
+                                return v;
+                            }
+                        };
+
+                        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                        binding.spStaticPrice.setAdapter(adapter);
+                        binding.spMinCurrency.setAdapter(adapter);
+                        binding.spMaxCurrency.setAdapter(adapter);
+
+                        AdapterView.OnItemSelectedListener currencySelectedListener = new AdapterView.OnItemSelectedListener() {
+                            @Override
+                            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                                if (binding.spStaticPrice.getSelectedItemPosition() != position) {
+                                    binding.spStaticPrice.setSelection(position);
+                                }
+                                if (binding.spMinCurrency.getSelectedItemPosition() != position) {
+                                    binding.spMinCurrency.setSelection(position);
+                                }
+                                if (binding.spMaxCurrency.getSelectedItemPosition() != position) {
+                                    binding.spMaxCurrency.setSelection(position);
+                                }
+                            }
+
+                            @Override
+                            public void onNothingSelected(AdapterView<?> parent) {
+
+                            }
+                        };
+
+                        binding.spStaticPrice.setOnItemSelectedListener(currencySelectedListener);
+                        binding.spMinCurrency.setOnItemSelectedListener(currencySelectedListener);
+                        binding.spMaxCurrency.setOnItemSelectedListener(currencySelectedListener);
+                    }
+
+                    @Override
+                    public void onFailure(Call<List<GetCurrencyResp>> call, Throwable t) {
+
+                    }
+                });
 
             }
 

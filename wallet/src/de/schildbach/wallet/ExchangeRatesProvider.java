@@ -66,7 +66,12 @@ import org.json.JSONException;
  */
 public class ExchangeRatesProvider extends ContentProvider
 {
-	public static class ExchangeRate
+	public static class
+
+
+
+
+	ExchangeRate
 	{
 		public ExchangeRate(final org.bitcoinj.utils.ExchangeRate rate, final String source)
 		{

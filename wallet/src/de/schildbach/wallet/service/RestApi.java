@@ -12,6 +12,7 @@ import de.schildbach.wallet.request.VerifyAdReq;
 import de.schildbach.wallet.response.CreateAdResp;
 import de.schildbach.wallet.response.CreateAuthResp;
 import de.schildbach.wallet.response.GetAuthTokenResp;
+import de.schildbach.wallet.response.GetCurrencyResp;
 import de.schildbach.wallet.response.GetPricingOptionsResp;
 import de.schildbach.wallet.response.GetReceivingOptionsResp;
 import de.schildbach.wallet.response.SendVerificationResp;
@@ -43,6 +44,9 @@ public interface RestApi {
 
     @GET("api/v1/markets/{crypto}/{currency}/")
     Call<List<GetPricingOptionsResp>> getPricingOptions(@Path("crypto") String crypto, @Path("currency") String currency);
+
+    @GET("api/v1/currency/")
+    Call<List<GetCurrencyResp>> getCurrency();
 
     @FormUrlEncoded
     @POST("api/adcreate/")
