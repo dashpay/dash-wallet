@@ -8,7 +8,7 @@ model {
             moduleName 'x11'
             abiFilters.addAll(['armeabi', 'armeabi-v7a', 'x86', 'mips', 'arm64-v8a', 'mips64', 'x86_64'])
             CFlags.add('-DHAVE_CONFIG_H')
-            stl = "c++_static"
+            stl = "stlport_static"
         }
 
         sources {
