@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+
+        <variable
+            name="item"
+            type="de.schildbach.wallet.response.GetOffersResp.SingleDepositBean" />
+    </data>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="@dimen/dimen_8dp"
+        android:weightSum="100">
+
+        <ImageView
+            android:id="@+id/iv_offer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="@dimen/dimen_8dp"
+            android:layout_weight="22"
+            android:scaleType="fitCenter"
+            android:src="@{item.bankLogo}"
+            tools:src="@drawable/ic_account_balance_black_24dp" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="56"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tv_itrm_offer_1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:lines="1"
+                android:text="@{item.amount.DASH}"
+                android:textSize="20dp"
+                android:textStyle="bold"
+                tools:text="TextView" />
+
+            <TextView
+                android:id="@+id/tv_itrm_offer_2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:lines="1"
+                android:text="@{item.amount.dots}"
+                android:textSize="12dp"
+                tools:text="TextView" />
+
+            <TextView
+                android:id="@+id/tv_itrm_offer_3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:lines="1"
+                android:text="@{item.bankName}"
+                android:textSize="16dp"
+                android:textStyle="bold"
+                tools:text="TextView" />
+
+            <TextView
+                android:id="@+id/tv_itrm_offer_4"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:lines="1"
+                android:text="@{item.address}"
+                android:textSize="12dp"
+                tools:text="TextView" />
+
+            <TextView
+                android:id="@+id/tv_itrm_offer_5"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:lines="1"
+                android:text='@{String.format("%.1f",item.distance)+" miles - "+item.city+","+item.state}'
+                android:textSize="12dp"
+                tools:text="TextView" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="22"
+            android:backgroundTint="#5cb85c"
+            android:text="Order"
+            android:textColor="@color/white" />
+
+    </LinearLayout>
+</layout>

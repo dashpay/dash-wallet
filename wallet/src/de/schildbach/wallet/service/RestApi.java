@@ -11,8 +11,10 @@ import de.schildbach.wallet.request.GetAuthTokenReq;
 import de.schildbach.wallet.request.VerifyAdReq;
 import de.schildbach.wallet.response.CreateAdResp;
 import de.schildbach.wallet.response.CreateAuthResp;
+import de.schildbach.wallet.response.DiscoveryInputsResp;
 import de.schildbach.wallet.response.GetAuthTokenResp;
 import de.schildbach.wallet.response.GetCurrencyResp;
+import de.schildbach.wallet.response.GetOffersResp;
 import de.schildbach.wallet.response.GetPricingOptionsResp;
 import de.schildbach.wallet.response.GetReceivingOptionsResp;
 import de.schildbach.wallet.response.SendVerificationResp;
@@ -59,5 +61,14 @@ public interface RestApi {
     @FormUrlEncoded
     @POST("api/verifyAd/")
     Call<VerifyAdResp> verifyAd(@FieldMap Map<String, String> partMap);
+
+
+    @FormUrlEncoded
+    @POST("api/v1/discoveryInputs/")
+    Call<DiscoveryInputsResp> discoveryInputs(@FieldMap Map<String, String> partMap);
+
+    @GET("api/v1/discoveryInputs/{discoveryId}/offers/")
+    Call<GetOffersResp> getOffers(@Path("discoveryId") String discoveryId);
+
 }
 

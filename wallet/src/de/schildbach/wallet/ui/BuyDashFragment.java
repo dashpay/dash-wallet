@@ -1,75 +1,61 @@
 package de.schildbach.wallet.ui;
 
-import android.content.ContentValues;
+import android.support.v4.content.AsyncTaskLoader;
+import android.support.v4.content.LocalBroadcastManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.database.Cursor;
 import android.databinding.DataBindingUtil;
-import android.net.Uri;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
+import android.support.v7.widget.LinearLayoutManager;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
-import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.CoinDefinition;
+import org.bitcoinj.uri.BitcoinURI;
+import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.RejectedExecutionException;
 
 import javax.annotation.Nullable;
 
-import de.schildbach.wallet.AddressBookProvider;
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.ExchangeRatesProvider;
-import de.schildbach.wallet.SellDashPref;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.request.CreateAuthReq;
-import de.schildbach.wallet.request.GetAuthTokenReq;
 import de.schildbach.wallet.response.CountryData;
-import de.schildbach.wallet.response.CreateAdResp;
-import de.schildbach.wallet.response.CreateAuthErrorResp;
-import de.schildbach.wallet.response.CreateAuthResp;
-import de.schildbach.wallet.response.GetAuthTokenResp;
-import de.schildbach.wallet.response.GetPricingOptionsResp;
-import de.schildbach.wallet.response.GetReceivingOptionsResp;
-import de.schildbach.wallet.response.SendVerificationResp;
-import de.schildbach.wallet.response.VerifyAdResp;
+import de.schildbach.wallet.response.DiscoveryInputsResp;
+import de.schildbach.wallet.response.GetOffersResp;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet.service.ServiceGenerator;
-import de.schildbach.wallet.ui.send.SendCoinsActivity;
-import hashengineering.darkcoin.wallet.BuildConfig;
+import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import hashengineering.darkcoin.wallet.R;
 import hashengineering.darkcoin.wallet.databinding.BuyDashFragmentBinding;
-import hashengineering.darkcoin.wallet.databinding.SellDashFragmentBinding;
 import okhttp3.Interceptor;
 import okhttp3.Request;
 import retrofit2.Call;
@@ -82,6 +68,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private static final int ID_BALANCE_LOADER = 0;
     private static final int ID_RATE_LOADER = 1;
     private static final int ID_BLOCKCHAIN_STATE_LOADER = 2;
+    private static final int ID_ADDRESS_LOADER = 4;
     private AbstractWalletActivity activity;
     private WalletApplication application;
     private Configuration config;
@@ -89,7 +76,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private LoaderManager loaderManager;
     private Coin balance = null;
     private CurrencyCalculatorLink amountCalculatorLink;
-
+    private AddressAndLabel currentAddressQrAddress = null;
 
     private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>() {
         @Override
@@ -151,6 +138,118 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         }
     };
 
+    private final LoaderManager.LoaderCallbacks<Address> addressLoaderCallbacks = new LoaderManager.LoaderCallbacks<Address>() {
+        @Override
+        public Loader<Address> onCreateLoader(final int id, final Bundle args) {
+            return new CurrentAddressLoader(activity, application.getWallet(), config);
+        }
+
+        @Override
+        public void onLoadFinished(Loader<Address> loader, Address currentAddress) {
+            if (!currentAddress.equals(currentAddressQrAddress)) {
+
+                currentAddressQrAddress = new AddressAndLabel(currentAddress, config.getOwnName());
+
+                addressStr = BitcoinURI.convertToBitcoinURI(currentAddressQrAddress.address, null, currentAddressQrAddress.label, null);
+            }
+        }
+
+        @Override
+        public void onLoaderReset(Loader<Address> loader) {
+
+        }
+    };
+
+    public static class CurrentAddressLoader extends AsyncTaskLoader<Address> {
+        private LocalBroadcastManager broadcastManager;
+        private final Wallet wallet;
+        private Configuration config;
+
+        private static final Logger log = LoggerFactory.getLogger(WalletBalanceLoader.class);
+
+        public CurrentAddressLoader(final Context context, final Wallet wallet, final Configuration config) {
+            super(context);
+
+            this.broadcastManager = LocalBroadcastManager.getInstance(context.getApplicationContext());
+            this.wallet = wallet;
+            this.config = config;
+        }
+
+        @Override
+        protected void onStartLoading() {
+            super.onStartLoading();
+
+            wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, walletChangeListener);
+            wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletChangeListener);
+            wallet.addChangeEventListener(Threading.SAME_THREAD, walletChangeListener);
+            broadcastManager.registerReceiver(walletChangeReceiver, new IntentFilter(WalletApplication.ACTION_WALLET_REFERENCE_CHANGED));
+            config.registerOnSharedPreferenceChangeListener(preferenceChangeListener);
+
+            safeForceLoad();
+        }
+
+        @Override
+        protected void onStopLoading() {
+            config.unregisterOnSharedPreferenceChangeListener(preferenceChangeListener);
+            broadcastManager.unregisterReceiver(walletChangeReceiver);
+            wallet.removeChangeEventListener(walletChangeListener);
+            wallet.removeCoinsSentEventListener(walletChangeListener);
+            wallet.removeCoinsReceivedEventListener(walletChangeListener);
+            walletChangeListener.removeCallbacks();
+
+            super.onStopLoading();
+        }
+
+        @Override
+        protected void onReset() {
+            config.unregisterOnSharedPreferenceChangeListener(preferenceChangeListener);
+            broadcastManager.unregisterReceiver(walletChangeReceiver);
+            wallet.removeChangeEventListener(walletChangeListener);
+            wallet.removeCoinsSentEventListener(walletChangeListener);
+            wallet.removeCoinsReceivedEventListener(walletChangeListener);
+            walletChangeListener.removeCallbacks();
+
+            super.onReset();
+        }
+
+        @Override
+        public Address loadInBackground() {
+            org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+
+            return wallet.currentReceiveAddress();
+        }
+
+        private final ThrottlingWalletChangeListener walletChangeListener = new ThrottlingWalletChangeListener() {
+            @Override
+            public void onThrottledWalletChanged() {
+                safeForceLoad();
+            }
+        };
+
+        private final BroadcastReceiver walletChangeReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(final Context context, final Intent intent) {
+                safeForceLoad();
+            }
+        };
+
+        private final OnSharedPreferenceChangeListener preferenceChangeListener = new OnSharedPreferenceChangeListener() {
+            @Override
+            public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences, final String key) {
+                if (Configuration.PREFS_KEY_OWN_NAME.equals(key))
+                    safeForceLoad();
+            }
+        };
+
+        private void safeForceLoad() {
+            try {
+                forceLoad();
+            } catch (final RejectedExecutionException x) {
+                log.info("rejected execution: " + BuyDashFragment.CurrentAddressLoader.this.toString());
+            }
+        }
+    }
+
     @Nullable
     private String defaultCurrency = null;
     private BuyDashFragmentBinding binding;
@@ -172,6 +271,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     };
 
     private CountryData countryData;
+    private String addressStr = "";
 
     @Override
     public void onAttach(final Context context) {
@@ -240,13 +340,27 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         binding.requestCoinsAmountLocal.setHintFormat(Constants.LOCAL_FORMAT);
         amountCalculatorLink = new CurrencyCalculatorLink(binding.requestCoinsAmountBtc, binding.requestCoinsAmountLocal);
 
+        binding.rvOffers.setLayoutManager(new LinearLayoutManager(activity));
+
+        binding.buttonBuyDashGetOffers.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                if (TextUtils.isEmpty(binding.buyDashZip.getText().toString().trim())) {
+                    Toast.makeText(activity, "Please Enter Zip Code!", Toast.LENGTH_LONG).show();
+                    return;
+                }
+
+                callDiscoveryInputs();
+            }
+        });
+
 
         return binding.getRoot();
     }
 
     @Override
-    public void onViewCreated(final View view, final Bundle savedInstanceState)
-    {
+    public void onViewCreated(final View view, final Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
         amountCalculatorLink.setExchangeDirection(config.getLastExchangeDirection());
@@ -257,31 +371,31 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     public void onResume() {
         super.onResume();
 
-        amountCalculatorLink.setListener(new CurrencyAmountView.Listener()
-        {
+        amountCalculatorLink.setListener(new CurrencyAmountView.Listener() {
             @Override
-            public void changed()
-            {
+            public void changed() {
                 updateView();
             }
 
             @Override
-            public void focusChanged(final boolean hasFocus)
-            {
+            public void focusChanged(final boolean hasFocus) {
             }
         });
         loaderManager.initLoader(ID_RATE_LOADER, null, rateLoaderCallbacks);
 
         loaderManager.initLoader(ID_BALANCE_LOADER, null, balanceLoaderCallbacks);
         loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
+        loaderManager.initLoader(ID_ADDRESS_LOADER, null, addressLoaderCallbacks);
 
         updateView();
     }
 
     @Override
     public void onPause() {
+
         loaderManager.destroyLoader(ID_BALANCE_LOADER);
         loaderManager.destroyLoader(ID_BLOCKCHAIN_STATE_LOADER);
+        loaderManager.destroyLoader(ID_ADDRESS_LOADER);
 
         amountCalculatorLink.setListener(null);
 
@@ -309,5 +423,63 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
     private void updateView() {
         balance = application.getWallet().getBalance(BalanceType.ESTIMATED);
+    }
+
+    private void callDiscoveryInputs() {
+
+        HashMap<String, String> discoveryInputsReq = new HashMap<String, String>();
+
+        discoveryInputsReq.put("publisherId", addressStr);
+        try {
+            discoveryInputsReq.put("usdAmount", "" + amountCalculatorLink.getAmount().toPlainString());
+        } catch (Exception e) {
+            discoveryInputsReq.put("usdAmount", "0");
+            e.printStackTrace();
+        }
+
+        discoveryInputsReq.put("crypto", "DASH");
+        discoveryInputsReq.put("bank", "");
+        discoveryInputsReq.put("zipCode", binding.buyDashZip.getText().toString());
+
+        ServiceGenerator.createService().discoveryInputs(discoveryInputsReq).enqueue(new Callback<DiscoveryInputsResp>() {
+            @Override
+            public void onResponse(Call<DiscoveryInputsResp> call, Response<DiscoveryInputsResp> response) {
+
+                if (null != response && null != response.body()) {
+
+                    if (null != response.body().id) {
+                        ServiceGenerator.createService().getOffers(response.body().id).enqueue(new Callback<GetOffersResp>() {
+                            @Override
+                            public void onResponse(Call<GetOffersResp> call, Response<GetOffersResp> response) {
+
+                                if (null != response && null != response.body()) {
+                                    if (null != response.body().singleDeposit && !response.body().singleDeposit.isEmpty()) {
+                                        BuyDashOffersAdapter buyDashOffersAdapter = new BuyDashOffersAdapter(activity, response.body().singleDeposit);
+                                        binding.rvOffers.setAdapter(buyDashOffersAdapter);
+                                    }
+                                } else {
+                                    Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                                }
+                            }
+
+                            @Override
+                            public void onFailure(Call<GetOffersResp> call, Throwable t) {
+                                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                            }
+                        });
+                    } else {
+                        Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                    }
+                } else {
+                    Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<DiscoveryInputsResp> call, Throwable t) {
+                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+            }
+        });
+
     }
 }

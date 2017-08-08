@@ -324,7 +324,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
                             activity.finish();
 
                         } else {
-                            Toast.makeText(getContext(), "Something went wrong, Try Again!", Toast.LENGTH_LONG).show();
+                            Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
                         }
                     }
                 }
@@ -561,14 +561,14 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
                                 return;
                             }
                         } else {
-                            Toast.makeText(getContext(), "Something went wrong, Try Again!", Toast.LENGTH_LONG).show();
+                            Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
                         }
 
                     } else if (response.code() >= 200 && null != response.body()) {
                         sellDashPref.setCreateAuthReq(createAuthReq);
                         getAuthTokenCall();
                     } else {
-                        Toast.makeText(getContext(), "Something went wrong, Try Again!", Toast.LENGTH_LONG).show();
+                        Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
                     }
 
 

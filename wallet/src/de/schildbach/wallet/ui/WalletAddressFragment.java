@@ -278,7 +278,6 @@ public final class WalletAddressFragment extends Fragment implements NfcAdapter.
 				currentAddressQrAddress = new AddressAndLabel(currentAddress, config.getOwnName());
 
 				final String addressStr = BitcoinURI.convertToBitcoinURI(currentAddressQrAddress.address, null, currentAddressQrAddress.label, null);
-				Log.e(TAG, "onLoadFinished: "+addressStr);
 				final int size = getResources().getDimensionPixelSize(R.dimen.bitmap_dialog_qr_size);
 				currentAddressQrBitmap = Qr.bitmap(addressStr, size);
 
