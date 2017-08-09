@@ -377,5 +377,6 @@
     <string name="get_offers">Get Offers</string>
     <string name="try_again">Something went wrong, Try Again!</string>
     <string name="zip_code">Zip Code</string>
+    <string name="date_format">%1$td/%1$tm/%1$tY</string>
 
 </resources>

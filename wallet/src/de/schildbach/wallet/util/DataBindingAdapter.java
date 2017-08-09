@@ -4,9 +4,14 @@ import android.databinding.BindingAdapter;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import hashengineering.darkcoin.wallet.R;
 
@@ -35,5 +40,19 @@ public class DataBindingAdapter {
     @BindingAdapter("android:src")
     public static void setImageResource(ImageView imageView, int resource) {
         imageView.setImageResource(resource);
+    }
+
+    @BindingAdapter("android:text")
+    public static void getDateFormatted(TextView tv, String date) {
+        try {
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+            SimpleDateFormat input =
+                    new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+            String dateString = formatter.format(input.parse(date));
+            tv.setText(dateString);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        tv.setText(date);
     }
 }

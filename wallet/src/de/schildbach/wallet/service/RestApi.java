@@ -1,16 +1,16 @@
 package de.schildbach.wallet.service;
 
-import com.google.gson.JsonObject;
-import com.squareup.okhttp.RequestBody;
-
 import java.util.List;
 import java.util.Map;
 
 import de.schildbach.wallet.request.CreateAuthReq;
 import de.schildbach.wallet.request.GetAuthTokenReq;
-import de.schildbach.wallet.request.VerifyAdReq;
+import de.schildbach.wallet.response.CaptureHoldResp;
+import de.schildbach.wallet.response.ConfirmDepositResp;
 import de.schildbach.wallet.response.CreateAdResp;
 import de.schildbach.wallet.response.CreateAuthResp;
+import de.schildbach.wallet.response.CreateHoldResp;
+import de.schildbach.wallet.response.CurrentAuthResp;
 import de.schildbach.wallet.response.DiscoveryInputsResp;
 import de.schildbach.wallet.response.GetAuthTokenResp;
 import de.schildbach.wallet.response.GetCurrencyResp;
@@ -21,18 +21,19 @@ import de.schildbach.wallet.response.SendVerificationResp;
 import de.schildbach.wallet.response.VerifyAdResp;
 import retrofit2.Call;
 import retrofit2.http.Body;
+import retrofit2.http.Field;
 import retrofit2.http.FieldMap;
 import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.GET;
-import retrofit2.http.Multipart;
 import retrofit2.http.POST;
-import retrofit2.http.Part;
-import retrofit2.http.PartMap;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
 
 
 public interface RestApi {
+
+    @GET("api/v1/auth/current/")
+    Call<CurrentAuthResp> getCurrentAuth();
 
     @POST("api/v1/auth/")
     Call<CreateAuthResp> createAuth(@Body CreateAuthReq createAuthReq);
@@ -69,6 +70,18 @@ public interface RestApi {
 
     @GET("api/v1/discoveryInputs/{discoveryId}/offers/")
     Call<GetOffersResp> getOffers(@Path("discoveryId") String discoveryId);
+
+    @FormUrlEncoded
+    @POST("api/v1/holds/")
+    Call<CreateHoldResp> createHold(@FieldMap Map<String, String> partMap);
+
+    @FormUrlEncoded
+    @POST("api/v1/holds/{id}/capture/")
+    Call<List<CaptureHoldResp>> captureHold(@Path("id") String id, @FieldMap Map<String, String> partMap);
+
+    @FormUrlEncoded
+    @POST("api/v1/orders/{holdId}/confirmDeposit/")
+    Call<ConfirmDepositResp> confirmDeposit(@Path("holdId") String holdId,@Field("your_field") String yourField);
 
 }
 

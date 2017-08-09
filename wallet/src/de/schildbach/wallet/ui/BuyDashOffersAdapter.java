@@ -5,7 +5,9 @@ import android.content.Context;
 import android.databinding.DataBindingUtil;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 
 import java.util.List;
 
@@ -17,10 +19,12 @@ class BuyDashOffersAdapter extends RecyclerView.Adapter<BuyDashOffersAdapter.VHo
 
     private Context context;
     private List<GetOffersResp.SingleDepositBean> singleDepositBeenList;
+    private AdapterView.OnItemSelectedListener onItemSelectedListener;
 
-    public BuyDashOffersAdapter(Context context, List<GetOffersResp.SingleDepositBean> singleDepositBeenList) {
+    public BuyDashOffersAdapter(Context context, List<GetOffersResp.SingleDepositBean> singleDepositBeenList, AdapterView.OnItemSelectedListener onItemSelectedListener) {
         this.context = context;
         this.singleDepositBeenList = singleDepositBeenList;
+        this.onItemSelectedListener = onItemSelectedListener;
     }
 
     @Override
@@ -31,11 +35,17 @@ class BuyDashOffersAdapter extends RecyclerView.Adapter<BuyDashOffersAdapter.VHo
     }
 
     @Override
-    public void onBindViewHolder(VHolder holder, int i) {
+    public void onBindViewHolder(final VHolder holder, final int i) {
         final GetOffersResp.SingleDepositBean bean = singleDepositBeenList.get(i);
 
         holder.binding.setItem(bean);
 
+        holder.binding.buttonBuyDashItemOrder.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                onItemSelectedListener.onItemSelected(null, holder.binding.getRoot(), i, 0);
+            }
+        });
     }
 
     @Override

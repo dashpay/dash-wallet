@@ -2,87 +2,221 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <ScrollView
+    <data>
+
+        <variable
+            name="confiremedData"
+            type="de.schildbach.wallet.response.ConfirmDepositResp" />
+    </data>
+
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <LinearLayout
+        <ScrollView
             android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <LinearLayout
+                    android:id="@+id/layout_create_hold"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="@dimen/list_entry_padding_horizontal"
+                    android:layout_marginRight="@dimen/list_entry_padding_horizontal"
+                    android:orientation="vertical"
+                    android:visibility="visible">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="4dp"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/request_coins_fragment_amount_label"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:divider="@drawable/divider_currency"
+                        android:orientation="horizontal"
+                        android:showDividers="middle">
+
+                        <de.schildbach.wallet.ui.CurrencyAmountView
+                            android:id="@+id/request_coins_amount_btc"
+                            android:layout_width="0px"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1">
+
+                            <EditText
+                                android:id="@+id/request_coins_amount_btc_edittext"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:imeOptions="flagNoExtractUi"
+                                android:textSize="@dimen/font_size_large"
+                                tools:ignore="TextFields" />
+                        </de.schildbach.wallet.ui.CurrencyAmountView>
+
+                        <de.schildbach.wallet.ui.CurrencyAmountView
+                            android:id="@+id/request_coins_amount_local"
+                            android:layout_width="0px"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1">
+
+                            <EditText
+                                android:id="@+id/request_coins_amount_local_edittext"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:imeOptions="flagNoExtractUi"
+                                android:textSize="@dimen/font_size_large"
+                                tools:ignore="TextFields" />
+                        </de.schildbach.wallet.ui.CurrencyAmountView>
+                    </LinearLayout>
+
+                    <EditText
+                        android:id="@+id/buy_dash_zip"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/zip_code"
+                        android:imeOptions="flagNoExtractUi"
+                        android:textSize="@dimen/font_size_normal"
+                        tools:ignore="TextFields" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="bottom"
+                        android:orientation="horizontal">
+
+
+                        <Spinner
+                            android:id="@+id/sp_country"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="5dp"
+                            android:layout_weight="1" />
+
+                        <EditText
+                            android:id="@+id/edit_buy_dash_phone"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="bottom"
+                            android:layout_weight="1"
+                            android:ems="10"
+                            android:hint="@string/hint_phone"
+                            android:inputType="phone"
+                            android:lines="1"
+                            android:textSize="@dimen/font_size_normal" />
+
+                    </LinearLayout>
+
+                    <Button
+                        android:id="@+id/button_buy_dash_get_offers"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/get_offers"
+                        android:textStyle="bold" />
+
+                    <android.support.v7.widget.RecyclerView
+                        android:id="@+id/rv_offers"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:nestedScrollingEnabled="false" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/layout_verify_otp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="5dp"
+                        android:text="@string/text_otp"
+                        android:textSize="18sp" />
+
+                    <EditText
+                        android:id="@+id/et_otp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="5dp"
+                        android:ems="10"
+                        android:hint="@string/enter_otp"
+                        android:inputType="textPersonName"
+                        android:lines="1" />
+
+
+                    <Button
+                        android:id="@+id/button_verify_otp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Confirm OTP" />
+
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/layout_completion_detail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="@dimen/dimen_8dp"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginRight="@dimen/dimen_8dp"
+                        android:layout_weight="1"
+                        android:adjustViewBounds="true"
+                        android:scaleType="fitCenter"
+                        android:src="@{confiremedData.bankLogo}" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="4"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="4dp"
+                            android:text="@{confiremedData.bankName}"
+                            android:textSize="20dp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="4dp"
+                            android:text='@{"$ "+ confiremedData.payment}'
+                            android:textSize="16dp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="4dp"
+                            android:text='@{confiremedData.paymentDue.substring(0,16).replace("T"," ")}'
+                            android:textSize="16dp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </FrameLayout>
+        </ScrollView>
+
+        <ProgressBar
+            android:id="@+id/buy_dash_progress"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="@dimen/list_entry_padding_horizontal"
-            android:layout_marginRight="@dimen/list_entry_padding_horizontal"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
-                android:layout_marginTop="8dp"
-                android:text="@string/request_coins_fragment_amount_label"
-                android:textStyle="bold" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:divider="@drawable/divider_currency"
-                android:orientation="horizontal"
-                android:showDividers="middle">
-
-                <de.schildbach.wallet.ui.CurrencyAmountView
-                    android:id="@+id/request_coins_amount_btc"
-                    android:layout_width="0px"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1">
-
-                    <EditText
-                        android:id="@+id/request_coins_amount_btc_edittext"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:imeOptions="flagNoExtractUi"
-                        android:textSize="@dimen/font_size_large"
-                        tools:ignore="TextFields" />
-                </de.schildbach.wallet.ui.CurrencyAmountView>
-
-                <de.schildbach.wallet.ui.CurrencyAmountView
-                    android:id="@+id/request_coins_amount_local"
-                    android:layout_width="0px"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1">
-
-                    <EditText
-                        android:id="@+id/request_coins_amount_local_edittext"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:imeOptions="flagNoExtractUi"
-                        android:textSize="@dimen/font_size_large"
-                        tools:ignore="TextFields" />
-                </de.schildbach.wallet.ui.CurrencyAmountView>
-            </LinearLayout>
-
-            <EditText
-                android:id="@+id/buy_dash_zip"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/zip_code"
-                android:imeOptions="flagNoExtractUi"
-                android:textSize="@dimen/font_size_large"
-                tools:ignore="TextFields" />
-
-            <Button
-                android:id="@+id/button_buy_dash_get_offers"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/get_offers"
-                android:textStyle="bold" />
-
-            <android.support.v7.widget.RecyclerView
-                android:id="@+id/rv_offers"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:nestedScrollingEnabled="false" />
-
-        </LinearLayout>
-
-    </ScrollView>
+            android:layout_gravity="center"
+            android:visibility="gone" />
+    </FrameLayout>
 </layout>
 

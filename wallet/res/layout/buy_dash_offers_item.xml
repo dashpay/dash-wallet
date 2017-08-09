@@ -92,7 +92,7 @@
         </LinearLayout>
 
         <Button
-            android:id="@+id/button"
+            android:id="@+id/button_buy_dash_item_order"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="22"
