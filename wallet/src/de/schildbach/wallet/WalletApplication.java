@@ -44,6 +44,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
 import com.squareup.leakcanary.LeakCanary;
+import com.squareup.leakcanary.RefWatcher;
 
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
@@ -98,6 +99,13 @@ public class WalletApplication extends Application {
 
     private static final Logger log = LoggerFactory.getLogger(WalletApplication.class);
 
+    private RefWatcher refWatcher;
+
+    public static RefWatcher getRefWatcher(Context context) {
+        WalletApplication application = (WalletApplication) context.getApplicationContext();
+        return application.refWatcher;
+    }
+
     @Override
     public void onCreate() {
         //Memory Leak Detection
@@ -106,7 +114,8 @@ public class WalletApplication extends Application {
             // You should not init your app in this process.
             return;
         }
-        LeakCanary.install(this);
+        refWatcher = LeakCanary.install(this);
+
         new LinuxSecureRandom(); // init proper random number generator
 
         initLogging();
@@ -171,7 +180,20 @@ public class WalletApplication extends Application {
         wallet.autosaveToFile(walletFile, Constants.Files.WALLET_AUTOSAVE_DELAY_MS, TimeUnit.MILLISECONDS, null);
 
         // clean up spam
-        wallet.cleanup();
+        try {
+            wallet.cleanup();
+        }
+        catch(IllegalStateException x) {
+            //Catch an inconsistent exception here and reset the blockchain.  This is for loading older wallets that had
+            //txes with fees that were too low or dust that were stuck and could not be sent.  In a later version
+            //the fees were fixed, then those stuck transactions became inconsistant and the exception is thrown.
+        	if(x.getMessage().contains("Inconsistent spent tx:"))
+            {
+             	File blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
+            	blockChainFile.delete();
+            }
+            else throw x;
+        }
 
         // make sure there is at least one recent backup
         if (!getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF).exists())
