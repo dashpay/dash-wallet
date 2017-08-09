@@ -160,6 +160,11 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
         this.direction = null;
     }
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        recyclerView.setAdapter(null);
+    }
 
     @Override
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
