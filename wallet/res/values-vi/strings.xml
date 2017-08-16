@@ -238,11 +238,11 @@
     <string name="preferences_category_labs">Thí nghiệm</string>
     <string name="preferences_precision_title">Mệnh giá và độ chính xác</string>
     <string name="preferences_precision_summary">Đơn vị hiển thị số tiền. Điều này không ảnh hưởng đến việc tính toán.</string>
-    <string name="preferences_precision_labels_8">BTC, 8 số sau dấu thập phân</string>
-    <string name="preferences_precision_labels_6">BTC, 6 số sau dấu thập phân</string>
-    <string name="preferences_precision_labels_4">BTC, 4 số sau dấu thập phân</string>
-    <string name="preferences_precision_labels_2_3">mBTC, 2 số sau dấu thập phân</string>
-    <string name="preferences_precision_labels_0_6">µBTC, không có dấu thập phân</string>
+    <string name="preferences_precision_labels_8">DASH, 8 số sau dấu thập phân</string>
+    <string name="preferences_precision_labels_6">DASH, 6 số sau dấu thập phân</string>
+    <string name="preferences_precision_labels_4">DASH, 4 số sau dấu thập phân</string>
+    <string name="preferences_precision_labels_2_3">mDASH, 2 số sau dấu thập phân</string>
+    <string name="preferences_precision_labels_0_6">µDASH, không có dấu thập phân</string>
     <string name="preferences_own_name_title">Tên bạn</string>
     <string name="preferences_own_name_summary">Tên của bạn, để đưa vào thông tin yêu cầu thanh toán. Hãy giữ tên ngắn gọn.</string>
     <string name="preferences_send_coins_autoclose_title">Tự động đóng hộp hội thoại gửi tiền</string>

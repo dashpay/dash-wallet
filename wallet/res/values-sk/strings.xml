@@ -239,11 +239,11 @@
     <string name="preferences_category_labs">Labs</string>
     <string name="preferences_precision_title">Jednotka a presnosť</string>
     <string name="preferences_precision_summary">Jednotka pre zobrazenie sumy. Neovplyvňuje výpočty.</string>
-    <string name="preferences_precision_labels_8">BTC, 8 desatinných miest</string>
-    <string name="preferences_precision_labels_6">BTC, 6 desatinných miest</string>
-    <string name="preferences_precision_labels_4">BTC, 4 desatinné miesta</string>
-    <string name="preferences_precision_labels_2_3">mBTC, 2 desatinné miesta</string>
-    <string name="preferences_precision_labels_0_6">µBTC, bez desatinných miest</string>
+    <string name="preferences_precision_labels_8">DASH, 8 desatinných miest</string>
+    <string name="preferences_precision_labels_6">DASH, 6 desatinných miest</string>
+    <string name="preferences_precision_labels_4">DASH, 4 desatinné miesta</string>
+    <string name="preferences_precision_labels_2_3">mDASH, 2 desatinné miesta</string>
+    <string name="preferences_precision_labels_0_6">µDASH, bez desatinných miest</string>
     <string name="preferences_own_name_title">Vlastné meno</string>
     <string name="preferences_own_name_summary">Vaše meno, ktoré sa pridá ku žiadosti o platbu. Snažte sa byť stručný.</string>
     <string name="preferences_send_coins_autoclose_title">Automaticky zatvoriť dialógové okno odosielania mincí</string>
