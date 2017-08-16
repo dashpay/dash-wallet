@@ -144,7 +144,11 @@ public final class CurrencyCalculatorLink {
                 final Coin btcAmount = (Coin) btcAmountView.getAmount();
                 if (btcAmount != null) {
                     localAmountView.setAmount(null, false);
-                    localAmountView.setHint(exchangeRate.coinToFiat(btcAmount));
+                    try {
+                        localAmountView.setHint(exchangeRate.coinToFiat(btcAmount));
+                    } catch (ArithmeticException x) {
+                        localAmountView.setHint(null);
+                    }
                     btcAmountView.setHint(null);
                 }
             } else {
