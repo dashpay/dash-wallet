@@ -11,7 +11,7 @@
 	<string name="transaction_row_message_received_unconfirmed_instantx">Non confermato InstantSend</string>
 	<string name="transaction_row_message_received_instantx_locked2">Bloccato InstantSend</string>
 
-	<string name="wallet_options_disconnect">Disconnetto</string>
+	<string name="wallet_options_disconnect">Disconnetti</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
 </resources>

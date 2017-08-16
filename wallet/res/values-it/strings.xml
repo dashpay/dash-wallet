@@ -321,7 +321,7 @@
 	<string name="navigation_drawer_open">cassetto navigazione aperto</string>
 	<string name="navigation_drawer_close">cassetto navigazione chiuso</string>
 
-	<string name="dash_slogan">Immediata - Privato - Sicuro</string>
+	<string name="dash_slogan">Immediato - Privato - Sicuro</string>
 	<string name="dash_wallet">Portafoglio</string>
 
 </resources>
