@@ -58,7 +58,7 @@ import de.schildbach.wallet.response.DiscoveryInputsResp;
 import de.schildbach.wallet.response.GetOffersResp;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
-import de.schildbach.wallet.service.ServiceGenerator;
+import de.schildbach.wallet.service.WallofCoins;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import hashengineering.darkcoin.wallet.R;
 import hashengineering.darkcoin.wallet.databinding.BuyDashFragmentBinding;
@@ -379,11 +379,11 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 captureHoldReq.put("verificationCode", createHoldResp.__PURCHASE_CODE);
 
                 binding.buyDashProgress.setVisibility(View.VISIBLE);
-                ServiceGenerator.createService(interceptor).captureHold(createHoldResp.id, captureHoldReq).enqueue(new Callback<List<CaptureHoldResp>>() {
+                WallofCoins.createService(interceptor).captureHold(createHoldResp.id, captureHoldReq).enqueue(new Callback<List<CaptureHoldResp>>() {
                     @Override
                     public void onResponse(Call<List<CaptureHoldResp>> call, Response<List<CaptureHoldResp>> response) {
                         if (null != response && null != response.body() && !response.body().isEmpty()) {
-                            ServiceGenerator.createService(interceptor).confirmDeposit("" + response.body().get(0).id, "").enqueue(new Callback<ConfirmDepositResp>() {
+                            WallofCoins.createService(interceptor).confirmDeposit("" + response.body().get(0).id, "").enqueue(new Callback<ConfirmDepositResp>() {
                                 @Override
                                 public void onResponse(Call<ConfirmDepositResp> call, Response<ConfirmDepositResp> response) {
 
@@ -528,14 +528,14 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
         binding.buyDashProgress.setVisibility(View.VISIBLE);
 
-        ServiceGenerator.createService().discoveryInputs(discoveryInputsReq).enqueue(new Callback<DiscoveryInputsResp>() {
+        WallofCoins.createService().discoveryInputs(discoveryInputsReq).enqueue(new Callback<DiscoveryInputsResp>() {
             @Override
             public void onResponse(Call<DiscoveryInputsResp> call, Response<DiscoveryInputsResp> response) {
 
                 if (null != response && null != response.body()) {
 
                     if (null != response.body().id) {
-                        ServiceGenerator.createService().getOffers(response.body().id).enqueue(new Callback<GetOffersResp>() {
+                        WallofCoins.createService().getOffers(response.body().id).enqueue(new Callback<GetOffersResp>() {
                             @Override
                             public void onResponse(Call<GetOffersResp> call, final Response<GetOffersResp> response) {
 
@@ -567,7 +567,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 //
 //                                                }
 
-                                                ServiceGenerator.createService().createHold(createHoldReq).enqueue(new Callback<CreateHoldResp>() {
+                                                WallofCoins.createService().createHold(createHoldReq).enqueue(new Callback<CreateHoldResp>() {
                                                     @Override
                                                     public void onResponse(Call<CreateHoldResp> call, Response<CreateHoldResp> response) {
 

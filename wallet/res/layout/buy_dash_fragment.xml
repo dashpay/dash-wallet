@@ -204,7 +204,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="4dp"
-                            android:text='@{confiremedData.paymentDue.substring(0,16).replace("T"," ")}'
+                            android:text='@{"Due on " + confiremedData.paymentDue.substring(0,16).replace("T"," ")}'
                             android:textSize="16dp" />
                     </LinearLayout>
                 </LinearLayout>

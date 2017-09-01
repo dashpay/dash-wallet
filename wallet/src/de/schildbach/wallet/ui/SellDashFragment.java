@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.databinding.DataBindingUtil;
-import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -13,7 +12,6 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
-import android.telephony.PhoneNumberUtils;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -67,9 +65,8 @@ import de.schildbach.wallet.response.SendVerificationResp;
 import de.schildbach.wallet.response.VerifyAdResp;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
-import de.schildbach.wallet.service.ServiceGenerator;
+import de.schildbach.wallet.service.WallofCoins;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
-import de.schildbach.wallet.util.Qr;
 import hashengineering.darkcoin.wallet.BuildConfig;
 import hashengineering.darkcoin.wallet.R;
 import hashengineering.darkcoin.wallet.databinding.SellDashFragmentBinding;
@@ -298,7 +295,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
             verifyAdReq.put("phone", createAuthReq.phone);
 
 
-            ServiceGenerator.createService(interceptor).verifyAd(verifyAdReq).enqueue(new Callback<VerifyAdResp>() {
+            WallofCoins.createService(interceptor).verifyAd(verifyAdReq).enqueue(new Callback<VerifyAdResp>() {
                 @Override
                 public void onResponse(Call<VerifyAdResp> call, Response<VerifyAdResp> response) {
                     if (null != response && null != response.body()) {
@@ -340,7 +337,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
     }
 
     private void getDynamicPricingOpt() {
-        ServiceGenerator.createService().getPricingOptions(CoinDefinition.cryptsyMarketCurrency, defaultCurrency).enqueue(new Callback<List<GetPricingOptionsResp>>() {
+        WallofCoins.createService().getPricingOptions(CoinDefinition.cryptsyMarketCurrency, defaultCurrency).enqueue(new Callback<List<GetPricingOptionsResp>>() {
             @Override
             public void onResponse(Call<List<GetPricingOptionsResp>> call, Response<List<GetPricingOptionsResp>> response) {
                 optionsRespList = response.body();
@@ -473,7 +470,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 //        HashMap<String, Object> map = new Gson().fromJson(asJsonObject, new TypeToken<HashMap<String, Object>>() {
 //        }.getType());
 
-        ServiceGenerator.createService(interceptor).createAd(createAdReq).enqueue(new Callback<CreateAdResp>() {
+        WallofCoins.createService(interceptor).createAd(createAdReq).enqueue(new Callback<CreateAdResp>() {
             @Override
             public void onResponse(Call<CreateAdResp> call, Response<CreateAdResp> response) {
 
@@ -499,7 +496,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 
         binding.sellDashProgress.setVisibility(View.VISIBLE);
 
-        ServiceGenerator.createService(interceptor).sendVerification(reqMap).enqueue(new Callback<SendVerificationResp>() {
+        WallofCoins.createService(interceptor).sendVerification(reqMap).enqueue(new Callback<SendVerificationResp>() {
             @Override
             public void onResponse(Call<SendVerificationResp> call, Response<SendVerificationResp> response) {
 
@@ -542,7 +539,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 
         binding.sellDashProgress.setVisibility(View.VISIBLE);
 
-        ServiceGenerator.createService().createAuth(createAuthReq).enqueue(new Callback<CreateAuthResp>() {
+        WallofCoins.createService().createAuth(createAuthReq).enqueue(new Callback<CreateAuthResp>() {
             @Override
             public void onResponse(Call<CreateAuthResp> call, Response<CreateAuthResp> response) {
 
@@ -591,14 +588,14 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
         GetAuthTokenReq getAuthTokenReq = new GetAuthTokenReq();
         getAuthTokenReq.password = sellDashPref.getCreateAuthReq().password;
         binding.sellDashProgress.setVisibility(View.VISIBLE);
-        ServiceGenerator.createService().getAuthToken(sellDashPref.getCreateAuthReq().phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
+        WallofCoins.createService().getAuthToken(sellDashPref.getCreateAuthReq().phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
             @Override
             public void onResponse(Call<GetAuthTokenResp> call, Response<GetAuthTokenResp> response) {
                 getAuthTokenResp = response.body();
                 String locale;
                 locale = getResources().getConfiguration().locale.getCountry();
 
-                ServiceGenerator.createService().getReceivingOptions(locale.toLowerCase()).enqueue(new Callback<List<GetReceivingOptionsResp>>() {
+                WallofCoins.createService().getReceivingOptions(locale.toLowerCase()).enqueue(new Callback<List<GetReceivingOptionsResp>>() {
                     @Override
                     public void onResponse(Call<List<GetReceivingOptionsResp>> call, Response<List<GetReceivingOptionsResp>> response) {
                         Log.e(TAG, "onResponse: " + response.body().size());
@@ -618,7 +615,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
                     }
                 });
 
-                ServiceGenerator.createService().getCurrency().enqueue(new Callback<List<GetCurrencyResp>>() {
+                WallofCoins.createService().getCurrency().enqueue(new Callback<List<GetCurrencyResp>>() {
                     @Override
                     public void onResponse(Call<List<GetCurrencyResp>> call, Response<List<GetCurrencyResp>> response) {
 

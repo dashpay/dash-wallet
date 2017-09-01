@@ -17,9 +17,9 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 
-public class ServiceGenerator {
+public class WallofCoins {
 
-    private static final String TAG = "ServiceGenerator";
+    private static final String TAG = "WallofCoins";
 
     // TODO need to change url for production
     private static final String API_BASE_URL = "http://woc.reference.genitrust.com/";
