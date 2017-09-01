@@ -25,8 +25,6 @@ import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.schildbach.wallet.request.CreateAuthReq;
-import de.schildbach.wallet.response.CreateAuthResp;
 import de.schildbach.wallet.response.CreateHoldResp;
 
 /**
@@ -39,13 +37,21 @@ public class BuyDashPref {
 
 
     private static final String CREATE_HOLD_RESP = "create_hold_resp";
-
+    private static final String AUTH_TOKEN = "auth_token";
 
     private static final Logger log = LoggerFactory.getLogger(BuyDashPref.class);
 
     public BuyDashPref(final SharedPreferences prefs) {
         this.prefs = prefs;
         gson = new Gson();
+    }
+
+    public String getAuthToken() {
+        return prefs.getString(AUTH_TOKEN, "");
+    }
+
+    public void setAuthToken(String authToken) {
+        prefs.edit().putString(AUTH_TOKEN, authToken).apply();
     }
 
     public CreateHoldResp getCreateHoldResp() {

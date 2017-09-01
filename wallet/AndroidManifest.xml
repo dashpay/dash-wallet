@@ -149,13 +149,13 @@
             android:screenOrientation="behind"
             android:theme="@style/My.Theme.ChildActivity" />
         <activity
-            android:name="de.schildbach.wallet.ui.SellDashActivity"
+            android:name="de.schildbach.wallet.wallofcoins.SellDashActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:label="@string/sell_dash_for_cash"
             android:screenOrientation="behind"
             android:theme="@style/My.Theme.ChildActivity" />
         <activity
-            android:name="de.schildbach.wallet.ui.BuyDashActivity"
+            android:name="de.schildbach.wallet.wallofcoins.BuyDashActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:label="@string/buy_dash_with_cash"
             android:screenOrientation="behind"

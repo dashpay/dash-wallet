@@ -11,7 +11,7 @@
 
     <fragment
         android:id="@+id/sell_dash_fragment"
-        android:name="de.schildbach.wallet.ui.SellDashFragment"
+        android:name="de.schildbach.wallet.wallofcoins.SellDashFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 

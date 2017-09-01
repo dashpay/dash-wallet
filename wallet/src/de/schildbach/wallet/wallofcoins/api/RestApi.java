@@ -1,11 +1,11 @@
-package de.schildbach.wallet.service;
+package de.schildbach.wallet.wallofcoins.api;
 
 import java.util.List;
 import java.util.Map;
 
 import de.schildbach.wallet.request.CreateAuthReq;
 import de.schildbach.wallet.request.GetAuthTokenReq;
-import de.schildbach.wallet.response.CaptureHoldResp;
+import de.schildbach.wallet.wallofcoins.response.CaptureHoldResp;
 import de.schildbach.wallet.response.ConfirmDepositResp;
 import de.schildbach.wallet.response.CreateAdResp;
 import de.schildbach.wallet.response.CreateAuthResp;

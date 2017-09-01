@@ -85,6 +85,8 @@ import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.preference.PreferenceActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
+import de.schildbach.wallet.wallofcoins.BuyDashActivity;
+import de.schildbach.wallet.wallofcoins.SellDashActivity;
 import hashengineering.darkcoin.wallet.R;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Crypto;

@@ -1,17 +1,17 @@
-package de.schildbach.wallet.service;
+package de.schildbach.wallet.wallofcoins.api;
+
+import android.content.Context;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import de.schildbach.wallet.response.GetReceivingOptionsResp.PayFieldsBeanX;
 import de.schildbach.wallet.response.PayFieldsDeserializer;
+import hashengineering.darkcoin.wallet.R;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -20,17 +20,21 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class WallofCoins {
 
     private static final String TAG = "WallofCoins";
-
     // TODO need to change url for production
-    private static final String API_BASE_URL = "http://woc.reference.genitrust.com/";
+    private static String API_BASE_URL;
+    private static Context context;
 //    private static final String API_BASE_URL = "https://wallofcoins.com/";
 
-    public static RestApi createService(Interceptor interceptor) {
+    public static RestApi createService(Interceptor interceptor, Context context) {
+        WallofCoins.context = context;
+        API_BASE_URL = WallofCoins.context.getString(R.string.WOC_PUBLISHER_ID);
         return getClient(interceptor)
                 .create(RestApi.class);
     }
 
-    public static RestApi createService() {
+    public static RestApi createService(Context context) {
+        WallofCoins.context = context;
+        API_BASE_URL = WallofCoins.context.getString(R.string.WOC_PUBLISHER_ID);
         return getClient(null)
                 .create(RestApi.class);
     }

@@ -1,4 +1,4 @@
-package de.schildbach.wallet.ui;
+package de.schildbach.wallet.wallofcoins;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -46,6 +46,7 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 import de.schildbach.wallet.AddressBookProvider;
+import de.schildbach.wallet.BuyDashPref;
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.SellDashPref;
@@ -65,7 +66,9 @@ import de.schildbach.wallet.response.SendVerificationResp;
 import de.schildbach.wallet.response.VerifyAdResp;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
-import de.schildbach.wallet.service.WallofCoins;
+import de.schildbach.wallet.wallofcoins.api.WallofCoins;
+import de.schildbach.wallet.ui.AbstractWalletActivity;
+import de.schildbach.wallet.ui.WalletBalanceLoader;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import hashengineering.darkcoin.wallet.BuildConfig;
 import hashengineering.darkcoin.wallet.R;
@@ -86,6 +89,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
     private WalletApplication application;
     private Configuration config;
     private SellDashPref sellDashPref;
+    private BuyDashPref buyDashPref;
     private Wallet wallet;
     private LoaderManager loaderManager;
     private Coin balance = null;
@@ -176,6 +180,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
         super.onCreate(savedInstanceState);
 
         this.sellDashPref = new SellDashPref(PreferenceManager.getDefaultSharedPreferences(activity.getApplicationContext()));
+        this.buyDashPref = new BuyDashPref(PreferenceManager.getDefaultSharedPreferences(activity.getApplicationContext()));
 
         setRetainInstance(true);
         setHasOptionsMenu(true);
@@ -295,7 +300,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
             verifyAdReq.put("phone", createAuthReq.phone);
 
 
-            WallofCoins.createService(interceptor).verifyAd(verifyAdReq).enqueue(new Callback<VerifyAdResp>() {
+            WallofCoins.createService(interceptor, getActivity()).verifyAd(verifyAdReq).enqueue(new Callback<VerifyAdResp>() {
                 @Override
                 public void onResponse(Call<VerifyAdResp> call, Response<VerifyAdResp> response) {
                     if (null != response && null != response.body()) {
@@ -337,7 +342,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
     }
 
     private void getDynamicPricingOpt() {
-        WallofCoins.createService().getPricingOptions(CoinDefinition.cryptsyMarketCurrency, defaultCurrency).enqueue(new Callback<List<GetPricingOptionsResp>>() {
+        WallofCoins.createService(getActivity()).getPricingOptions(CoinDefinition.cryptsyMarketCurrency, defaultCurrency).enqueue(new Callback<List<GetPricingOptionsResp>>() {
             @Override
             public void onResponse(Call<List<GetPricingOptionsResp>> call, Response<List<GetPricingOptionsResp>> response) {
                 optionsRespList = response.body();
@@ -470,7 +475,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 //        HashMap<String, Object> map = new Gson().fromJson(asJsonObject, new TypeToken<HashMap<String, Object>>() {
 //        }.getType());
 
-        WallofCoins.createService(interceptor).createAd(createAdReq).enqueue(new Callback<CreateAdResp>() {
+        WallofCoins.createService(interceptor, getActivity()).createAd(createAdReq).enqueue(new Callback<CreateAdResp>() {
             @Override
             public void onResponse(Call<CreateAdResp> call, Response<CreateAdResp> response) {
 
@@ -496,7 +501,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 
         binding.sellDashProgress.setVisibility(View.VISIBLE);
 
-        WallofCoins.createService(interceptor).sendVerification(reqMap).enqueue(new Callback<SendVerificationResp>() {
+        WallofCoins.createService(interceptor, getActivity()).sendVerification(reqMap).enqueue(new Callback<SendVerificationResp>() {
             @Override
             public void onResponse(Call<SendVerificationResp> call, Response<SendVerificationResp> response) {
 
@@ -539,7 +544,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 
         binding.sellDashProgress.setVisibility(View.VISIBLE);
 
-        WallofCoins.createService().createAuth(createAuthReq).enqueue(new Callback<CreateAuthResp>() {
+        WallofCoins.createService(getActivity()).createAuth(createAuthReq).enqueue(new Callback<CreateAuthResp>() {
             @Override
             public void onResponse(Call<CreateAuthResp> call, Response<CreateAuthResp> response) {
 
@@ -585,17 +590,18 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 
     private void getAuthTokenCall() {
 
-        GetAuthTokenReq getAuthTokenReq = new GetAuthTokenReq();
+        final GetAuthTokenReq getAuthTokenReq = new GetAuthTokenReq();
         getAuthTokenReq.password = sellDashPref.getCreateAuthReq().password;
         binding.sellDashProgress.setVisibility(View.VISIBLE);
-        WallofCoins.createService().getAuthToken(sellDashPref.getCreateAuthReq().phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
+        WallofCoins.createService(getActivity()).getAuthToken(sellDashPref.getCreateAuthReq().phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
             @Override
             public void onResponse(Call<GetAuthTokenResp> call, Response<GetAuthTokenResp> response) {
                 getAuthTokenResp = response.body();
+                buyDashPref.setAuthToken(getAuthTokenResp.token);
                 String locale;
                 locale = getResources().getConfiguration().locale.getCountry();
 
-                WallofCoins.createService().getReceivingOptions(locale.toLowerCase()).enqueue(new Callback<List<GetReceivingOptionsResp>>() {
+                WallofCoins.createService(getActivity()).getReceivingOptions(locale.toLowerCase()).enqueue(new Callback<List<GetReceivingOptionsResp>>() {
                     @Override
                     public void onResponse(Call<List<GetReceivingOptionsResp>> call, Response<List<GetReceivingOptionsResp>> response) {
                         Log.e(TAG, "onResponse: " + response.body().size());
@@ -615,7 +621,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
                     }
                 });
 
-                WallofCoins.createService().getCurrency().enqueue(new Callback<List<GetCurrencyResp>>() {
+                WallofCoins.createService(getActivity()).getCurrency().enqueue(new Callback<List<GetCurrencyResp>>() {
                     @Override
                     public void onResponse(Call<List<GetCurrencyResp>> call, Response<List<GetCurrencyResp>> response) {
 

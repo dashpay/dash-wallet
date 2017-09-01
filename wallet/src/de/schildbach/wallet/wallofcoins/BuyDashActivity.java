@@ -1,8 +1,9 @@
-package de.schildbach.wallet.ui;
+package de.schildbach.wallet.wallofcoins;
 
 import android.os.Bundle;
 import android.view.MenuItem;
 
+import de.schildbach.wallet.ui.AbstractWalletActivity;
 import hashengineering.darkcoin.wallet.R;
 
 public final class BuyDashActivity extends AbstractWalletActivity {

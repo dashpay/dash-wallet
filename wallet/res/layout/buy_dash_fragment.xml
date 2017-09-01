@@ -85,34 +85,6 @@
                         android:textSize="@dimen/font_size_normal"
                         tools:ignore="TextFields" />
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="bottom"
-                        android:orientation="horizontal">
-
-
-                        <Spinner
-                            android:id="@+id/sp_country"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginBottom="5dp"
-                            android:layout_weight="1" />
-
-                        <EditText
-                            android:id="@+id/edit_buy_dash_phone"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_gravity="bottom"
-                            android:layout_weight="1"
-                            android:ems="10"
-                            android:hint="@string/hint_phone"
-                            android:inputType="phone"
-                            android:lines="1"
-                            android:textSize="@dimen/font_size_normal" />
-
-                    </LinearLayout>
-
                     <Button
                         android:id="@+id/button_buy_dash_get_offers"
                         android:layout_width="match_parent"
@@ -126,6 +98,56 @@
                         android:layout_height="match_parent"
                         android:nestedScrollingEnabled="false" />
 
+                    <LinearLayout
+                        android:id="@+id/linear_phone_password"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <LinearLayout
+                            android:id="@+id/linear_phone"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="bottom"
+                            android:orientation="horizontal">
+
+                            <Spinner
+                                android:id="@+id/sp_country"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="5dp"
+                                android:layout_weight="1" />
+
+                            <EditText
+                                android:id="@+id/edit_buy_dash_phone"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="bottom"
+                                android:layout_weight="1"
+                                android:ems="10"
+                                android:hint="@string/hint_phone"
+                                android:inputType="phone"
+                                android:lines="1"
+                                android:textSize="@dimen/font_size_normal" />
+                        </LinearLayout>
+
+                        <EditText
+                            android:id="@+id/et_password"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Password"
+                            android:inputType="textPassword" />
+
+                        <Button
+                            android:id="@+id/btn_next"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:layout_marginTop="8dp"
+                            android:text="Next"
+                            android:textStyle="bold" />
+                    </LinearLayout>
                 </LinearLayout>
 
                 <LinearLayout

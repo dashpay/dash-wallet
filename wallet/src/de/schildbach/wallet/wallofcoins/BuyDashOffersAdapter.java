@@ -1,4 +1,4 @@
-package de.schildbach.wallet.ui;
+package de.schildbach.wallet.wallofcoins;
 
 
 import android.content.Context;

@@ -1,8 +1,5 @@
-package de.schildbach.wallet.ui;
+package de.schildbach.wallet.wallofcoins;
 
-import android.preference.PreferenceManager;
-import android.support.v4.content.AsyncTaskLoader;
-import android.support.v4.content.LocalBroadcastManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -12,9 +9,12 @@ import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.database.Cursor;
 import android.databinding.DataBindingUtil;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
+import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -49,17 +49,25 @@ import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.ExchangeRatesProvider;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.response.BuyDashErrorResp;
-import de.schildbach.wallet.response.CaptureHoldResp;
+import de.schildbach.wallet.request.GetAuthTokenReq;
 import de.schildbach.wallet.response.ConfirmDepositResp;
 import de.schildbach.wallet.response.CountryData;
 import de.schildbach.wallet.response.CreateHoldResp;
 import de.schildbach.wallet.response.DiscoveryInputsResp;
+import de.schildbach.wallet.response.GetAuthTokenResp;
 import de.schildbach.wallet.response.GetOffersResp;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
-import de.schildbach.wallet.service.WallofCoins;
+import de.schildbach.wallet.ui.AbstractWalletActivity;
+import de.schildbach.wallet.ui.AddressAndLabel;
+import de.schildbach.wallet.ui.CurrencyAmountView;
+import de.schildbach.wallet.ui.CurrencyCalculatorLink;
+import de.schildbach.wallet.ui.ExchangeRateLoader;
+import de.schildbach.wallet.ui.WalletBalanceLoader;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
+import de.schildbach.wallet.wallofcoins.api.WallofCoins;
+import de.schildbach.wallet.wallofcoins.response.BuyDashErrorResp;
+import de.schildbach.wallet.wallofcoins.response.CaptureHoldResp;
 import hashengineering.darkcoin.wallet.R;
 import hashengineering.darkcoin.wallet.databinding.BuyDashFragmentBinding;
 import okhttp3.Interceptor;
@@ -167,6 +175,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         }
     };
     private CreateHoldResp createHoldResp;
+    private String offerId;
 
     public static class CurrentAddressLoader extends AsyncTaskLoader<Address> {
         private LocalBroadcastManager broadcastManager;
@@ -270,7 +279,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
             // Request customization: add request headers
             Request.Builder requestBuilder = original.newBuilder()
-                    .addHeader("X-Coins-Api-Token", createHoldResp.token);
+                    .addHeader("X-Coins-Api-Token", buyDashPref.getAuthToken());
 
             Request request = requestBuilder.build();
             return chain.proceed(request);
@@ -325,21 +334,18 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             return null;
         }
 
-        if (null != json) {
+        countryData = new Gson().fromJson(json, CountryData.class);
 
-            countryData = new Gson().fromJson(json, CountryData.class);
+        List<String> stringList = new ArrayList<>();
 
-            List<String> stringList = new ArrayList<>();
-
-            for (CountryData.CountriesBean bean : countryData.countries) {
-                stringList.add(bean.name + " (" + bean.code + ")");
-            }
-
-            ArrayAdapter<String> countryAdapter = new ArrayAdapter<String>(activity,
-                    android.R.layout.simple_spinner_dropdown_item, stringList);
-            countryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            binding.spCountry.setAdapter(countryAdapter);
+        for (CountryData.CountriesBean bean : countryData.countries) {
+            stringList.add(bean.name + " (" + bean.code + ")");
         }
+
+        ArrayAdapter<String> countryAdapter = new ArrayAdapter<String>(activity,
+                android.R.layout.simple_spinner_dropdown_item, stringList);
+        countryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        binding.spCountry.setAdapter(countryAdapter);
 
         binding.requestCoinsAmountBtc.setCurrencySymbol(config.getFormat().code());
         binding.requestCoinsAmountBtc.setInputFormat(config.getMaxPrecisionFormat());
@@ -359,12 +365,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     Toast.makeText(activity, "Please Enter Zip Code!", Toast.LENGTH_LONG).show();
                     return;
                 }
-
-                if (TextUtils.isEmpty(binding.editBuyDashPhone.getText().toString().trim())) {
-                    Toast.makeText(activity, "Please Enter Phone Number!", Toast.LENGTH_LONG).show();
-                    return;
-                }
-
                 callDiscoveryInputs();
             }
         });
@@ -379,11 +379,11 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 captureHoldReq.put("verificationCode", createHoldResp.__PURCHASE_CODE);
 
                 binding.buyDashProgress.setVisibility(View.VISIBLE);
-                WallofCoins.createService(interceptor).captureHold(createHoldResp.id, captureHoldReq).enqueue(new Callback<List<CaptureHoldResp>>() {
+                WallofCoins.createService(interceptor, getActivity()).captureHold(createHoldResp.id, captureHoldReq).enqueue(new Callback<List<CaptureHoldResp>>() {
                     @Override
                     public void onResponse(Call<List<CaptureHoldResp>> call, Response<List<CaptureHoldResp>> response) {
                         if (null != response && null != response.body() && !response.body().isEmpty()) {
-                            WallofCoins.createService(interceptor).confirmDeposit("" + response.body().get(0).id, "").enqueue(new Callback<ConfirmDepositResp>() {
+                            WallofCoins.createService(interceptor, getActivity()).confirmDeposit("" + response.body().get(0).id, "").enqueue(new Callback<ConfirmDepositResp>() {
                                 @Override
                                 public void onResponse(Call<ConfirmDepositResp> call, Response<ConfirmDepositResp> response) {
 
@@ -528,14 +528,14 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
         binding.buyDashProgress.setVisibility(View.VISIBLE);
 
-        WallofCoins.createService().discoveryInputs(discoveryInputsReq).enqueue(new Callback<DiscoveryInputsResp>() {
+        WallofCoins.createService(getActivity()).discoveryInputs(discoveryInputsReq).enqueue(new Callback<DiscoveryInputsResp>() {
             @Override
             public void onResponse(Call<DiscoveryInputsResp> call, Response<DiscoveryInputsResp> response) {
 
                 if (null != response && null != response.body()) {
 
                     if (null != response.body().id) {
-                        WallofCoins.createService().getOffers(response.body().id).enqueue(new Callback<GetOffersResp>() {
+                        WallofCoins.createService(getActivity()).getOffers(response.body().id).enqueue(new Callback<GetOffersResp>() {
                             @Override
                             public void onResponse(Call<GetOffersResp> call, final Response<GetOffersResp> response) {
 
@@ -544,62 +544,12 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                     binding.buyDashProgress.setVisibility(View.GONE);
 
                                     if (null != response.body().singleDeposit && !response.body().singleDeposit.isEmpty()) {
+                                        binding.buttonBuyDashGetOffers.setVisibility(View.GONE);
                                         BuyDashOffersAdapter buyDashOffersAdapter = new BuyDashOffersAdapter(activity, response.body().singleDeposit, new AdapterView.OnItemSelectedListener() {
                                             @Override
                                             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-
-                                                final HashMap<String, String> createHoldReq = new HashMap<String, String>();
-
-                                                int selCountry = binding.spCountry.getSelectedItemPosition();
-
-                                                createHoldReq.put("publisherId", addressStr);
-                                                createHoldReq.put("offer", response.body().singleDeposit.get(position).id);
-                                                createHoldReq.put("phone", countryData.countries.get(selCountry).code + binding.editBuyDashPhone.getText().toString());
-                                                createHoldReq.put("deviceName", android.os.Build.MODEL);
-                                                createHoldReq.put("deviceCode", binding.editBuyDashPhone.getText().toString()
-                                                        + binding.editBuyDashPhone.getText().toString()
-                                                        + binding.editBuyDashPhone.getText().toString()
-                                                        + binding.editBuyDashPhone.getText().toString()
-                                                        + binding.editBuyDashPhone.getText().toString());
-
-
-//                                                if (null != buyDashPref.getCreateHoldResp() && null != buyDashPref.getCreateHoldResp().token) {
-//
-//                                                }
-
-                                                WallofCoins.createService().createHold(createHoldReq).enqueue(new Callback<CreateHoldResp>() {
-                                                    @Override
-                                                    public void onResponse(Call<CreateHoldResp> call, Response<CreateHoldResp> response) {
-
-                                                        binding.buyDashProgress.setVisibility(View.GONE);
-
-                                                        if (null != response && null != response.body()) {
-                                                            createHoldResp = response.body();
-                                                            buyDashPref.setCreateHoldResp(createHoldResp);
-                                                            binding.layoutCreateHold.setVisibility(View.GONE);
-                                                            binding.layoutVerifyOtp.setVisibility(View.VISIBLE);
-                                                            binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
-                                                        } else if (null != response && null != response.errorBody()) {
-
-                                                            try {
-                                                                BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
-                                                                Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
-                                                            } catch (Exception e) {
-                                                                e.printStackTrace();
-                                                                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
-                                                            }
-
-                                                        } else {
-                                                            Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
-                                                        }
-                                                    }
-
-                                                    @Override
-                                                    public void onFailure(Call<CreateHoldResp> call, Throwable t) {
-                                                        binding.buyDashProgress.setVisibility(View.GONE);
-                                                        Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
-                                                    }
-                                                });
+                                                offerId = response.body().singleDeposit.get(position).id;
+                                                createHold();
                                             }
 
                                             @Override
@@ -662,5 +612,93 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             }
         });
 
+    }
+
+    private void getAuthTokenCall() {
+        String countryCode = countryData.countries.get(binding.spCountry.getSelectedItemPosition()).code;
+        String phone = countryCode + binding.editBuyDashPhone.getText().toString().trim();
+        String password = binding.etPassword.getText().toString().trim();
+
+        if (!TextUtils.isEmpty(phone) && !TextUtils.isEmpty(password)) {
+            final GetAuthTokenReq getAuthTokenReq = new GetAuthTokenReq();
+            getAuthTokenReq.password = password;
+            binding.buyDashProgress.setVisibility(View.VISIBLE);
+            WallofCoins.createService(getActivity()).getAuthToken(phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
+                @Override
+                public void onResponse(Call<GetAuthTokenResp> call, Response<GetAuthTokenResp> response) {
+                    buyDashPref.setAuthToken(response.body().token);
+                    // call create hold
+                    createHold();
+                }
+
+                @Override
+                public void onFailure(Call<GetAuthTokenResp> call, Throwable t) {
+                    binding.buyDashProgress.setVisibility(View.GONE);
+                }
+            });
+
+        } else {
+            Toast.makeText(activity, "Phone and Password is required", Toast.LENGTH_SHORT).show();
+        }
+
+    }
+
+    private void createHold() {
+        if (buyDashPref.getAuthToken() != null && !TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+            final HashMap<String, String> createHoldReq = new HashMap<String, String>();
+            createHoldReq.put("offer", offerId);
+            createHoldReq.put("X-Coins-Api-Token", buyDashPref.getAuthToken());
+            binding.buyDashProgress.setVisibility(View.VISIBLE);
+            WallofCoins.createService(interceptor, getActivity()).createHold(createHoldReq).enqueue(new Callback<CreateHoldResp>() {
+                @Override
+                public void onResponse(Call<CreateHoldResp> call, Response<CreateHoldResp> response) {
+                    binding.buyDashProgress.setVisibility(View.GONE);
+
+                    if (response.code() == 403) {
+                        binding.rvOffers.setVisibility(View.GONE);
+                        binding.linearPhonePassword.setVisibility(View.VISIBLE);
+                        binding.btnNext.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                getAuthTokenCall();
+                            }
+                        });
+                        return;
+                    }
+                    if (null != response.body()) {
+                        createHoldResp = response.body();
+                        buyDashPref.setCreateHoldResp(createHoldResp);
+                        binding.layoutCreateHold.setVisibility(View.GONE);
+                        binding.layoutVerifyOtp.setVisibility(View.VISIBLE);
+                        binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
+                    } else if (null != response.errorBody()) {
+                        try {
+                            BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
+                            Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                        }
+                    } else {
+                        Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<CreateHoldResp> call, Throwable t) {
+                    binding.buyDashProgress.setVisibility(View.GONE);
+                    Toast.makeText(activity, R.string.try_again, Toast.LENGTH_SHORT).show();
+                }
+            });
+        } else {
+            binding.rvOffers.setVisibility(View.GONE);
+            binding.linearPhonePassword.setVisibility(View.VISIBLE);
+            binding.btnNext.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    getAuthTokenCall();
+                }
+            });
+        }
     }
 }
