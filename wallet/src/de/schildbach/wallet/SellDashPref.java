@@ -39,9 +39,18 @@ public class SellDashPref {
 
     private static final String CREATE_AUTH_RESP = "create_auth_resp";
     private static final String CREATE_AUTH_REQ = "create_auth_req";
+    private static final String AUTH_TOKEN = "auth_token";
 
 
     private static final Logger log = LoggerFactory.getLogger(SellDashPref.class);
+
+    public String getAuthToken() {
+        return prefs.getString(AUTH_TOKEN, "");
+    }
+
+    public void setAuthToken(String authToken) {
+        prefs.edit().putString(AUTH_TOKEN, authToken).apply();
+    }
 
     public SellDashPref(final SharedPreferences prefs) {
         this.prefs = prefs;

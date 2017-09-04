@@ -150,7 +150,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 
             // Request customization: add request headers
             Request.Builder requestBuilder = original.newBuilder()
-                    .addHeader("X-Coins-Api-Token", getAuthTokenResp.token)
+                    .addHeader("X-Coins-Api-Token", sellDashPref.getAuthToken())
                     .addHeader("Content-Type", "multipart/form-data");
 
             Request request = requestBuilder.build();
@@ -597,7 +597,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
             @Override
             public void onResponse(Call<GetAuthTokenResp> call, Response<GetAuthTokenResp> response) {
                 getAuthTokenResp = response.body();
-                buyDashPref.setAuthToken(getAuthTokenResp.token);
+                sellDashPref.setAuthToken(getAuthTokenResp.token);
                 String locale;
                 locale = getResources().getConfiguration().locale.getCountry();
 

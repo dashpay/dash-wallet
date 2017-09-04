@@ -626,6 +626,21 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             WallofCoins.createService(getActivity()).getAuthToken(phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
                 @Override
                 public void onResponse(Call<GetAuthTokenResp> call, Response<GetAuthTokenResp> response) {
+
+                    int code = response.code();
+
+                    if (code >= 400 && response.body() == null) {
+                        try {
+                            BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
+                            Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                        }
+                        binding.buyDashProgress.setVisibility(View.GONE);
+                        return;
+                    }
+
                     buyDashPref.setAuthToken(response.body().token);
                     // call create hold
                     createHold();
