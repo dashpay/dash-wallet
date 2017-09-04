@@ -19,6 +19,7 @@ import de.schildbach.wallet.response.GetPricingOptionsResp;
 import de.schildbach.wallet.response.GetReceivingOptionsResp;
 import de.schildbach.wallet.response.SendVerificationResp;
 import de.schildbach.wallet.response.VerifyAdResp;
+import de.schildbach.wallet.wallofcoins.response.CheckAuthResp;
 import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.Field;
@@ -37,6 +38,9 @@ public interface RestApi {
 
     @POST("api/v1/auth/")
     Call<CreateAuthResp> createAuth(@Body CreateAuthReq createAuthReq);
+
+    @GET("api/v1/auth/{phone}/")
+    Call<CheckAuthResp> checkAuth(@Path("phone") String username);
 
     @POST("api/v1/auth/{phone}/authorize/")
     Call<GetAuthTokenResp> getAuthToken(@Path("phone") String username, @Body GetAuthTokenReq createAuthReq);
@@ -81,7 +85,7 @@ public interface RestApi {
 
     @FormUrlEncoded
     @POST("api/v1/orders/{holdId}/confirmDeposit/")
-    Call<ConfirmDepositResp> confirmDeposit(@Path("holdId") String holdId,@Field("your_field") String yourField);
+    Call<ConfirmDepositResp> confirmDeposit(@Path("holdId") String holdId, @Field("your_field") String yourField);
 
 }
 

@@ -364,8 +364,8 @@
     <string name="use_dynamic_pricing">Use Dynamic Pricing?</string>
     <string name="select_pricing_option">SELECT PRICING OPTIONS</string>
     <string name="static_price">You can say how much you want per dash</string>
-    <string name="text_otp">You will receive OTP on registered mobile.</string>
-    <string name="enter_otp">Enter OTP</string>
+    <string name="text_otp">You will receive Purchase Code on registered mobile.</string>
+    <string name="enter_purchase_code">Enter Purchase Code</string>
     <string name="resend_otp">Resend OTP</string>
     <string name="country_flag">Country Flag</string>
     <string name="all_field_required">All Fields Are Required!</string>

@@ -17,6 +17,7 @@ import android.support.v4.content.Loader;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -68,6 +69,7 @@ import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet.wallofcoins.api.WallofCoins;
 import de.schildbach.wallet.wallofcoins.response.BuyDashErrorResp;
 import de.schildbach.wallet.wallofcoins.response.CaptureHoldResp;
+import de.schildbach.wallet.wallofcoins.response.CheckAuthResp;
 import hashengineering.darkcoin.wallet.R;
 import hashengineering.darkcoin.wallet.databinding.BuyDashFragmentBinding;
 import okhttp3.Interceptor;
@@ -372,76 +374,86 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         binding.buttonVerifyOtp.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 HashMap<String, String> captureHoldReq = new HashMap<String, String>();
-
+                String otp = binding.etOtp.getText().toString().trim();
+                if (TextUtils.isEmpty(otp)) {
+                    Toast.makeText(activity, "Please Enter The OTP!", Toast.LENGTH_LONG).show();
+                    return;
+                }
                 captureHoldReq.put("publisherId", addressStr);
-                captureHoldReq.put("verificationCode", createHoldResp.__PURCHASE_CODE);
+                captureHoldReq.put("verificationCode", otp);
 
                 binding.buyDashProgress.setVisibility(View.VISIBLE);
-                WallofCoins.createService(interceptor, getActivity()).captureHold(createHoldResp.id, captureHoldReq).enqueue(new Callback<List<CaptureHoldResp>>() {
-                    @Override
-                    public void onResponse(Call<List<CaptureHoldResp>> call, Response<List<CaptureHoldResp>> response) {
-                        if (null != response && null != response.body() && !response.body().isEmpty()) {
-                            WallofCoins.createService(interceptor, getActivity()).confirmDeposit("" + response.body().get(0).id, "").enqueue(new Callback<ConfirmDepositResp>() {
-                                @Override
-                                public void onResponse(Call<ConfirmDepositResp> call, Response<ConfirmDepositResp> response) {
+                WallofCoins.createService(interceptor, getActivity()).captureHold(createHoldResp.id, captureHoldReq)
+                        .enqueue(new Callback<List<CaptureHoldResp>>() {
+                            @Override
+                            public void onResponse(Call<List<CaptureHoldResp>> call, Response<List<CaptureHoldResp>> response) {
+                                if (null != response && null != response.body() && !response.body().isEmpty()) {
 
+                                    confirmDeposit(response);
+
+                                } else if (null != response && null != response.errorBody()) {
                                     binding.buyDashProgress.setVisibility(View.GONE);
-
-                                    if (null != response && null != response.body()) {
-
-                                        binding.setConfiremedData(response.body());
-                                        binding.layoutVerifyOtp.setVisibility(View.GONE);
-                                        binding.layoutCompletionDetail.setVisibility(View.VISIBLE);
-
-                                    } else if (null != response && null != response.errorBody()) {
-
-                                        try {
-                                            BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
-                                            Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
-                                        } catch (Exception e) {
-                                            e.printStackTrace();
-                                            Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
-                                        }
-
-                                    } else {
+                                    try {
+                                        BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
+                                        Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
                                         Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
                                     }
-                                }
-
-                                @Override
-                                public void onFailure(Call<ConfirmDepositResp> call, Throwable t) {
+                                } else {
+                                    Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
                                     binding.buyDashProgress.setVisibility(View.GONE);
                                 }
-                            });
-
-                        } else if (null != response && null != response.errorBody()) {
-                            binding.buyDashProgress.setVisibility(View.GONE);
-
-                            try {
-                                BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
-                                Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
                             }
-                        } else {
-                            Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
-                            binding.buyDashProgress.setVisibility(View.GONE);
-                        }
-                    }
 
-                    @Override
-                    public void onFailure(Call<List<CaptureHoldResp>> call, Throwable t) {
-                        binding.buyDashProgress.setVisibility(View.GONE);
-                    }
-                });
+                            @Override
+                            public void onFailure(Call<List<CaptureHoldResp>> call, Throwable t) {
+                                binding.buyDashProgress.setVisibility(View.GONE);
+                                Log.e(TAG, "onFailure: ", t);
+                            }
+                        });
             }
         });
 
 
         return binding.getRoot();
+    }
+
+    private void confirmDeposit(Response<List<CaptureHoldResp>> response) {
+        WallofCoins.createService(interceptor, getActivity()).confirmDeposit("" + response.body().get(0).id, "").enqueue(new Callback<ConfirmDepositResp>() {
+            @Override
+            public void onResponse(Call<ConfirmDepositResp> call, Response<ConfirmDepositResp> response) {
+
+                binding.buyDashProgress.setVisibility(View.GONE);
+
+                if (null != response && null != response.body()) {
+
+                    binding.setConfiremedData(response.body());
+                    binding.layoutVerifyOtp.setVisibility(View.GONE);
+                    binding.layoutCompletionDetail.setVisibility(View.VISIBLE);
+
+                } else if (null != response && null != response.errorBody()) {
+
+                    try {
+                        BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
+                        Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                    }
+
+                } else {
+                    Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ConfirmDepositResp> call, Throwable t) {
+                binding.buyDashProgress.setVisibility(View.GONE);
+                Log.e(TAG, "onFailure: ", t);
+            }
+        });
     }
 
     @Override
@@ -521,7 +533,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             discoveryInputsReq.put("usdAmount", "0");
             e.printStackTrace();
         }
-
         discoveryInputsReq.put("crypto", "DASH");
         discoveryInputsReq.put("bank", "");
         discoveryInputsReq.put("zipCode", binding.buyDashZip.getText().toString());
@@ -545,6 +556,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
                                     if (null != response.body().singleDeposit && !response.body().singleDeposit.isEmpty()) {
                                         binding.buttonBuyDashGetOffers.setVisibility(View.GONE);
+                                        binding.buyDashZip.setVisibility(View.GONE);
+                                        binding.linearCurrency.setVisibility(View.GONE);
                                         BuyDashOffersAdapter buyDashOffersAdapter = new BuyDashOffersAdapter(activity, response.body().singleDeposit, new AdapterView.OnItemSelectedListener() {
                                             @Override
                                             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -671,11 +684,11 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
                     if (response.code() == 403) {
                         binding.rvOffers.setVisibility(View.GONE);
-                        binding.linearPhonePassword.setVisibility(View.VISIBLE);
-                        binding.btnNext.setOnClickListener(new View.OnClickListener() {
+                        binding.linearPhone.setVisibility(View.VISIBLE);
+                        binding.btnNextPhone.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
-                                getAuthTokenCall();
+                                checkAuth();
                             }
                         });
                         return;
@@ -685,7 +698,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         buyDashPref.setCreateHoldResp(createHoldResp);
                         binding.layoutCreateHold.setVisibility(View.GONE);
                         binding.layoutVerifyOtp.setVisibility(View.VISIBLE);
-                        binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
+//                        binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
+//                        Log.d(TAG, "onResponse: purchase code==>>" + createHoldResp.__PURCHASE_CODE);
                     } else if (null != response.errorBody()) {
                         try {
                             BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
@@ -707,13 +721,123 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             });
         } else {
             binding.rvOffers.setVisibility(View.GONE);
-            binding.linearPhonePassword.setVisibility(View.VISIBLE);
-            binding.btnNext.setOnClickListener(new View.OnClickListener() {
+            binding.linearPhone.setVisibility(View.VISIBLE);
+            binding.btnNextPhone.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    getAuthTokenCall();
+                    checkAuth();
                 }
             });
+        }
+    }
+
+    public void createHoldWithPassword() {
+        String countryCode = countryData.countries.get(binding.spCountry.getSelectedItemPosition()).code;
+        String phone = countryCode + binding.editBuyDashPhone.getText().toString().trim();
+        String password = binding.etPassword.getText().toString().trim();
+
+        if (!TextUtils.isEmpty(phone) && !TextUtils.isEmpty(password)) {
+            final HashMap<String, String> createHoldPassReq = new HashMap<String, String>();
+            createHoldPassReq.put("offer", offerId);
+            createHoldPassReq.put("phone", phone);
+            createHoldPassReq.put("password", password);
+            binding.buyDashProgress.setVisibility(View.VISIBLE);
+
+            WallofCoins.createService(interceptor, getActivity()).createHold(createHoldPassReq).enqueue(new Callback<CreateHoldResp>() {
+                @Override
+                public void onResponse(Call<CreateHoldResp> call, Response<CreateHoldResp> response) {
+                    binding.buyDashProgress.setVisibility(View.GONE);
+
+                    if (response.code() == 403) {
+                        binding.rvOffers.setVisibility(View.GONE);
+                        binding.linearPhone.setVisibility(View.VISIBLE);
+                        binding.btnNextPhone.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                checkAuth();
+                            }
+                        });
+                        return;
+                    }
+                    if (null != response.body()) {
+                        createHoldResp = response.body();
+                        buyDashPref.setCreateHoldResp(createHoldResp);
+                        binding.layoutCreateHold.setVisibility(View.GONE);
+                        binding.layoutVerifyOtp.setVisibility(View.VISIBLE);
+//                        Log.d(TAG, "onResponse: purchase code==>>" + createHoldResp.__PURCHASE_CODE);
+//                        binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
+                    } else if (null != response.errorBody()) {
+                        try {
+                            BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
+                            Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                        }
+                    } else {
+                        Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<CreateHoldResp> call, Throwable t) {
+                    binding.buyDashProgress.setVisibility(View.GONE);
+                    Toast.makeText(activity, R.string.try_again, Toast.LENGTH_SHORT).show();
+                }
+            });
+        } else {
+            Toast.makeText(activity, "Create Password", Toast.LENGTH_SHORT).show();
+        }
+
+    }
+
+    public void checkAuth() {
+        String countryCode = countryData.countries.get(binding.spCountry.getSelectedItemPosition()).code;
+        String phone = countryCode + binding.editBuyDashPhone.getText().toString().trim();
+        if (!TextUtils.isEmpty(phone)) {
+            binding.buyDashProgress.setVisibility(View.VISIBLE);
+
+            WallofCoins.createService(activity).checkAuth(phone).enqueue(new Callback<CheckAuthResp>() {
+                @Override
+                public void onResponse(Call<CheckAuthResp> call, Response<CheckAuthResp> response) {
+                    Log.d(TAG, "onResponse: response code==>>" + response.code());
+                    binding.buyDashProgress.setVisibility(View.GONE);
+                    if (response.code() == 200) {
+                        if (response.body() != null && response.body().getAvailableAuthSources() != null && response.body().getAvailableAuthSources().size() > 0) {
+                            if (response.body().getAvailableAuthSources().get(0).equals("password")) {
+                                binding.linearPhone.setVisibility(View.GONE);
+                                binding.etPassword.setHint("Enter Password");
+                                binding.linearPassword.setVisibility(View.VISIBLE);
+
+                                binding.btnNextPassword.setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        getAuthTokenCall();
+                                    }
+                                });
+                            }
+                        }
+                    } else if (response.code() == 404) {
+                        binding.linearPhone.setVisibility(View.GONE);
+                        binding.etPassword.setHint("Create Password");
+                        binding.linearPassword.setVisibility(View.VISIBLE);
+                        binding.btnNextPassword.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                createHoldWithPassword();
+                            }
+                        });
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<CheckAuthResp> call, Throwable t) {
+                    binding.buyDashProgress.setVisibility(View.GONE);
+                    Toast.makeText(activity, R.string.try_again, Toast.LENGTH_SHORT).show();
+                }
+            });
+        } else {
+            Toast.makeText(activity, "Enter phone number", Toast.LENGTH_SHORT).show();
         }
     }
 }
