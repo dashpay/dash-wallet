@@ -22,7 +22,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginRight="@dimen/dimen_8dp"
-            android:layout_weight="22"
+            android:layout_weight="20"
             android:scaleType="fitCenter"
             android:src="@{item.bankLogo}"
             tools:src="@drawable/ic_account_balance_black_24dp" />
@@ -30,7 +30,7 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="56"
+            android:layout_weight="55"
             android:orientation="vertical">
 
             <TextView
@@ -95,10 +95,11 @@
             android:id="@+id/button_buy_dash_item_order"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="22"
+            android:layout_weight="25"
             android:backgroundTint="#5cb85c"
             android:text="Order"
-            android:textColor="@color/white" />
+            android:textColor="@color/white"
+            android:textSize="14sp" />
 
     </LinearLayout>
 </layout>

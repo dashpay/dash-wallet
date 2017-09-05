@@ -242,7 +242,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="5dp"
                         android:ems="10"
-                        android:hint="@string/enter_otp"
+                        android:hint="@string/enter_purchase_code"
                         android:inputType="textPersonName"
                         android:lines="1" />
 

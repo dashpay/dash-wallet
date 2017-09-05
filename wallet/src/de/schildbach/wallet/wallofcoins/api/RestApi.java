@@ -20,8 +20,10 @@ import de.schildbach.wallet.response.GetReceivingOptionsResp;
 import de.schildbach.wallet.response.SendVerificationResp;
 import de.schildbach.wallet.response.VerifyAdResp;
 import de.schildbach.wallet.wallofcoins.response.CheckAuthResp;
+import de.schildbach.wallet.wallofcoins.response.OrderListResp;
 import retrofit2.Call;
 import retrofit2.http.Body;
+import retrofit2.http.DELETE;
 import retrofit2.http.Field;
 import retrofit2.http.FieldMap;
 import retrofit2.http.FormUrlEncoded;
@@ -39,8 +41,14 @@ public interface RestApi {
     @POST("api/v1/auth/")
     Call<CreateAuthResp> createAuth(@Body CreateAuthReq createAuthReq);
 
+    @GET("api/v1/orders/")
+    Call<List<OrderListResp>> getOrders();
+
     @GET("api/v1/auth/{phone}/")
     Call<CheckAuthResp> checkAuth(@Path("phone") String username);
+
+    @DELETE("api/v1/orders/{orderId}/")
+    Call<Void> cancelOrder(@Path("orderId") String orderId);
 
     @POST("api/v1/auth/{phone}/authorize/")
     Call<GetAuthTokenResp> getAuthToken(@Path("phone") String username, @Body GetAuthTokenReq createAuthReq);

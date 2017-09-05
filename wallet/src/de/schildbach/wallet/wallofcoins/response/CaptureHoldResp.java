@@ -46,7 +46,7 @@ public class CaptureHoldResp {
         public String city;
         public String state;
         public String name;
-        public Object phone;
+        public String phone;
         public String address;
     }
 }
