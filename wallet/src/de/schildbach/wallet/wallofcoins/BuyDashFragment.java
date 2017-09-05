@@ -663,7 +663,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                             @Override
                             public void onFailure(Call<GetOffersResp> call, Throwable t) {
                                 binding.linearProgress.setVisibility(View.GONE);
-                                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                                Toast.makeText(activity, R.string.try_again, Toast.LENGTH_LONG).show();
                             }
                         });
                     } else {
