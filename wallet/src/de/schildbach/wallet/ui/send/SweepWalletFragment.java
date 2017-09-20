@@ -631,6 +631,9 @@ public class SweepWalletFragment extends Fragment {
 			viewGo.setText(R.string.sweep_wallet_fragment_button_sweep);
 			viewGo.setEnabled(walletToSweep != null && walletToSweep.getBalance(BalanceType.ESTIMATED).signum() > 0
 					&& fees != null);
+			log.info("State:  Confirm Sweep:  walletToSweep: " + (walletToSweep==null ? "valid" : "invalid") +
+					"wallet balance > 0: " + (walletToSweep.getBalance(BalanceType.ESTIMATED).signum() > 0 ? "true" : "false") +
+					"fees: " + (fees == null ? "null" : fees.toString()));
 		} else if (state == State.PREPARATION) {
 			viewCancel.setText(R.string.button_cancel);
 			viewGo.setText(R.string.send_coins_preparation_msg);
