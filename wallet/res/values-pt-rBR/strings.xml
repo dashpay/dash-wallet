@@ -239,11 +239,11 @@
     <string name="preferences_category_labs">Labs</string>
     <string name="preferences_precision_title">Denominação e precisão</string>
     <string name="preferences_precision_summary">Unidade para mostrar valores. Isso não afeta os cálculos.</string>
-    <string name="preferences_precision_labels_8">DASH, 8 casas decimais</string>
-    <string name="preferences_precision_labels_6">DASH, 6 casas decimais</string>
-    <string name="preferences_precision_labels_4">DASH, 4 casas decimais</string>
-    <string name="preferences_precision_labels_2_3">mDASH, 2 casas decimais</string>
-    <string name="preferences_precision_labels_0_6">µDASH, sem casas decimais</string>
+    <string name="preferences_precision_labels_8">BTC, 8 casas decimais</string>
+    <string name="preferences_precision_labels_6">BTC, 6 casas decimais</string>
+    <string name="preferences_precision_labels_4">BTC, 4 casas decimais</string>
+    <string name="preferences_precision_labels_2_3">mBTC, 2 casas decimais</string>
+    <string name="preferences_precision_labels_0_6">µBTC, sem casas decimais</string>
     <string name="preferences_own_name_title">Nome proprio</string>
     <string name="preferences_own_name_summary">Seu nome proprio, para ser adicionado nos pedidos de pagamento. Tente mantê-lo curto.</string>
     <string name="preferences_send_coins_autoclose_title">Fechar automaticamente enviar diálogo de moedas</string>
@@ -293,6 +293,7 @@
     <string name="about_category_credits">Este aplicativo está usando ...</string>
     <string name="about_credits_bitcoinj_title">dashj %s, uma implementação do protocolo Dash</string>
     <string name="about_credits_zxing_title">ZXing, uma biblioteca de processamento de QR-code</string>
+    <string name="about_credits_icon_title">Este aplicativo está usando um ícone por \'bitboy\'</string>
     <string name="about_credits_scrypt_title">Scrypt, implementado por Will Glozer e Colin Percival</string>
     <string name="about_market_app_title">Página no Google Play</string>
     <string name="about_market_app_summary">Comente ou classifique o aplicativo</string>

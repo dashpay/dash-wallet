@@ -4,15 +4,15 @@
     <string name="help_wallet">
 <![CDATA[
 		<p>
-			Na levej hornej časti displeja sa zobrazuje vaša bilancia v Dash a jednej zvolenej národnej mene.
-			Poklepte na zoznam národných mien a zvolte jednu ako predvolenú.
+			V ľavej hornej časti displeja sa zobrazuje Vaša bilancia v Dash a jednej zvolenej národnej mene.
+			Poklepte na zoznam národných mien a zvoľte jednu ako predvolenú.
 		</p>
 		<p>
-			QR kód, ktorý obsahuje Vašu Dash adresu je dostupný z navigačneho menu (v ľavo hore) a môže byť použitý pre načítanie inou osobou.
-			Poklepaním na QR kód, dostanete väčšiu verziu.
+			QR kód, ktorý obsahuje Vašu Dash adresu je dostupný z navigačného menu (v ľavo hore) a môže byť použitý pre načítanie inou osobou.
+			Poklepaním na QR kód, získate väčšiu verziu.
 		</p>
 		<p>
-			Na spodnej časti obrazovky nájdete Váš zoznam transakcií, ktorý je na začiatku prázdny.
+			V spodnej časti obrazovky nájdete zoznam Vašich transakcií, ktorý je na začiatku prázdny.
 			Čakajúce transakcie sú zašednuté pokiaľ nie sú potvrdené.
 			Poklepaním na záznam uvidíte detaily, alebo pridáte odosielateľov alebo prijímateľov do adresára.
 			Adresár je dostupný z navigačného menu (vľavo hore).
@@ -26,7 +26,7 @@
     <string name="help_request_coins">
 <![CDATA[
 		<p>
-			Na tejto obrazovke môžete vyžiadať Dash od niekoho iného (kto má nainštalovanú aplikáciu Dash peńaženka). 
+			Na tejto obrazovke môžete vyžiadať Dash od niekoho iného (kto má nainštalovanú aplikáciu Dash peňaženka). 
 		</p>
 		<p>
 			Najskôr zadajte sumu Dash, ktorú chcete vyžiadať.
@@ -37,7 +37,7 @@
 			Ak majú oba telefóny spustenú funkciu NFC, stačí ich proložiť k sebe.
 		</p>
 		<p>
-			V oboch prípadoch druhá strana uvidí pred-vyplnenú obrazovku na odosielanie Dash.
+			V oboch prípadoch druhá strana uvidí predvyplnenú obrazovku na odosielanie Dash.
 			Ak s transakciou súhlasí, tak ju iba jednoducho potvrdí.
 		</p>
 	]]>
@@ -46,16 +46,16 @@
 <![CDATA[
 		<p>
 			Práve ste začali proces odosielania Dash.
-			YDostali ste sa sem z hlavnej obrazovky alebo kliknutím na Dash adresu v prehliadači.
+			Dostali ste sa sem z hlavnej obrazovky alebo kliknutím na Dash adresu v prehliadači.
 		</p>
 		<p>
 			Najprv zadajte adresu, na ktorú chcete odoslať platbu.
 			Ak sa adresa nachádza v adresári, tak sa automaticky doplní.
-			Môžete naskenovať QR kód s Dash adresou alebo požiadavkou na zaplatenie stlačením QR tračítka.
+			Môžete naskenovať QR kód s Dash adresou alebo požiadavkou na zaplatenie stlačením QR tlačítka.
 		</p>
 		<p>
 			Ďalej vidíte koľko Dash môžete aktuálne minúť.
-			Rozdiel medzi zostatkom na hlavnej obrazovke a počtom Dash, ktoré môžete minúť tvoria nepotvrdené transakcie..
+			Rozdiel medzi zostatkom na hlavnej obrazovke a počtom Dash, ktoré môžete minúť tvoria nepotvrdené transakcie.
 		</p>
 		<p>
 			Poklepte InstantSend ak chce urobíť okamžitú platbu. Poplatok bude väčší (> 0.001 DASH).
@@ -86,7 +86,7 @@
 			To znamená, že by ste mali <b>zálohovať svoju peňaženku</b>!
 			Využite funkciu zálohovania v tejto aplikácii, neodporúča sa na zálohovanie použiť aplikácie tretích strán.
 			Svoju zálohu bezpečne uchovajte a nezabudnite heslo.
-			Toto je HD peňaženka Stačí iba jedna záloha.
+			Toto je HD peňaženka. Stačí iba jedna záloha.
 		</p>
 		<p>
 			<b>Pred odinštalovaním</b> (alebo vymazaním dát/obnovením továrenských nastavení), <b>odošlite svoje Dash do inej peňaženky</b>.

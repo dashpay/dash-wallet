@@ -2,6 +2,34 @@
 <resources>
 
 
+	<string name="send_coins_fragment_instantx_enable">InstantSend verwenden</string>
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">InstantSend-Zahlung wurde bisher nicht übermittelt.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">InstantSend-Zahlung wartet auf eine Bestätigung durch das Dash-Netzwerk.</string>
+	<string name="transaction_row_message_own_instantx_locked">InstantSend-Transaktion versenden (Bindend)</string>
+	<string name="transaction_row_message_received_instantx_lock_request">InstantSend-Zahlung wartet auf eine Bestätigung durch das Dash-Netzwerk.</string>
+	<string name="transaction_row_message_received_instantx_locked">InstantSend-Zahlung wurde durch das Dash-Netzwerk bestätigt.</string>
+	<string name="transaction_row_message_received_unconfirmed_instantx">Unbestätigter InstantSend</string>
+	<string name="transaction_row_message_received_instantx_locked2">InstantSend verbindlich festgesetzt</string>
+
 	<string name="wallet_options_disconnect">Verbindungen trennen</string>
 
-	</resources>
+	<string name="network_monitor_masternodes_title">Masternodes</string>
+	<string name="export_keys_dialog_title_to_seed">Wiederherstellungsphrase ansehen</string>
+	<string name="import_keys_dialog_title_from_seed">Mithilfe der Phrase wiederherstellen</string>
+	<string name="backup_to_seed_wallet_dialog_message">Hierbei handelt es sich um Deine Wiederherstellungsphrase. Bitte schreibe diese nieder.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">Lasse niemanden Deine Wiederherstellungsphrase sehen, sonst könnten Deine Dash gestohlen werden. Diese Phrase ist nicht mit anderer Dash-Software kompatibel. </string>
+	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Deine Wallet wird durch einen Zahlungs-PIN gesichert. Gib Deinen PIN ein um Deine Wiederherstellungsphrase zu sehen.</string>
+    <string name="import_keys_from_seed_dialog_message">Gib hier deine Wiederherstellungsphrase ein.</string>
+	<string name="import_export_keys_dialog_password_phrase">Hier bitte die Wiederherstellungsphrase eingeben.</string>
+	<string name="preferences_report_issue_summary">Informationen über das Problem sammeln und an die Entwickler weiterleiten.</string>
+	<string name="navigation_configuration">Konfiguration</string>
+    <string name="button_copy_address">Adresse kopieren</string>
+	<string name="request_coins_clipboard_address_msg">Dash-Adresse in die Zwischenablage kopiert</string>
+	<string name="backup_wallet_to_seed_show_recovery_phrase">Zeigen</string>
+	<string name="restore_wallet_from_invalid_seed_warning_message">Bei%s handelt es sich um ein ungültiges Wort.</string>
+
+
+
+
+
+</resources>

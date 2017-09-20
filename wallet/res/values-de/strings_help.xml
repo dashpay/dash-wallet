@@ -4,49 +4,49 @@
     <string name="help_wallet">
 <![CDATA[
 		<p>
-			Im linken oberen Teil des Bildschirms wird dein aktuelles Guthaben in Dash und einer ausgewählten Währung angezeigt.
-			Mit einem Tap darauf gelangst du in die Liste der verfügbaren Währungen, ein weiterer Tap auf eine der Währungen setzt sie als Standardwährung.
+			Im linken oberen Teil des Bildschirms wird Dein aktuelles Guthaben in Dash und einer ausgewählten Währung angezeigt.
+			Mit einem Tap darauf gelangst Du in die Liste der verfügbaren Währungen, ein weiterer Tap auf eine dieser Währungen setzt sie als Standardwährung fest.
 		</p>
 		<p>
-			Der QR-Code oben rechts enthält deine aktuelle Dash-Adresse und kann von einem Zahlungssender eingescannt werden.
+			Der QR-Code, der deine Dash-Adresse beinhaltet, wird über das Navigationsmenü (oben links) angewählt und kann von anderen Personen eingescannt werden.
 			Mit einem Tap auf den QR-Code wird dieser vergrößert.
 		</p>
 		<p>
-			Im unteren Teil des Bildschirms wird die Transaktionsliste angezeigt.
-			Sie ist anfangs leer, und wird sich mit empfangenen und gesendeten Zahlungen füllen.
-			Empfangene Zahlungen werden grün markiert und gesendete rot.
+			Im unteren Teil des Bildschirms wird die Transaktionsliste angezeigt, die anfangs leer ist.
+			Unbestätigte Transaktionen werden grau angezeigt, bis sie bestätigt sind.
+			Mit einem Tap auf einen Eintrag kann man die Sender- oder Empfängeradresse zum Adressbuch hinzufügen.
+			Das Adressbuch kann im Navigationsmenü (oben links) angewählt werden
 		</p>
 		<p>
 			In der Titelzeile finden sich Knöpfe zum Anfordern oder Versenden von Zahlungen.
-			Im Optionsmenü sind weitere Aktionen verfügbar.
+			Mehr Optionen sind im Navigations-Menü (oben links) und den Options-Menüs verfügbar
 		</p>
 	]]>
-    </string>
+	</string>
     <string name="help_request_coins">
 <![CDATA[
 		<p>
-			In diesem Dialogfeld kann eine Zahlung von einem Zahlungssender angefordert werden.
-			Der Sender sollte dafür bereits ein Dash wallet auf seinem Gerät installiert haben.
+			In diesem Dialogfeld kann eine Zahlung von einem anderen Teilnehmer angefordert werden (der dafür Dash Wallet auf seinem Gerät installiert haben sollte).
 		</p>
 		<p>
-			Zunächst kann der angeforderte Betrag eingegeben werden.
+			Zuerst muss der angeforderte Betrag eingegeben werden.
 		</p>
 		<p>
-			Der anschließend generierte QR-Code kann vom Sender eingescannt werden.
-			Alternativ kann die Zahlungsanforderung über die Aktionsleiste mit dem Teilen-Button verschickt werden.
-			Falls beide Geräte NFC aktiviert haben, können sie auch zusammengehalten werden.
+			Anschließend kann der generierte QR-Code vom Sender eingescannt werden.
+			Alternativ kann die Zahlungsanforderung über die Schaltfläche „Teilen“ aus der Aktionsleiste verschickt werden.
+			Wenn beide Geräte NFC aktiviert haben können diese auch gegeneinander gehalten werden.
 		</p>
 		<p>
-			In jedem Fall wird beim Sender ein Zahlungsdialog geöffnet, bei dem sämtliche Felder bereits ausgefüllt sind.
-			Wenn der Sender einverstanden ist, kann die Zahlung durch eine einfache Bestätigung ausgeführt werden.
+			Bei beiden Varianten wird bei dem anderen Teilnehmer ein Zahlungsdialog geöffnet, bei dem sämtliche Felder bereits ausgefüllt sind.
+			Wenn alle Angaben korrekt sind, kann die Zahlung durch eine einfache Bestätigung ausgeführt werden.
 		</p>
 	]]>
-    </string>
+	</string>
     <string name="help_send_coins">
 <![CDATA[
 		<p>
 			Dieses Dialogfeld wird geöffnet, wenn der Zahlungsprozess initiiert wurde.
-			Dies geschieht entweder durch einen Tap auf "Zahlung senden" auf der Startseite oder einen Tap auf eine Dash-URL im mobilen Browser.
+			Dies geschieht entweder durch einen Tap auf \"Zahlung senden\" auf der Startseite oder einen Tap auf eine Dash-URL im mobilen Browser.
 		</p>
 		<p>
 			Im ersten Feld muss die Empfängeradresse eingegeben werden.
@@ -54,16 +54,17 @@
 			Es kann ebenfalls ein QR-Code mit Dash-Adressen oder Zahlungsanforderungen eingescannt werden, indem man den QR-Button in der Aktionsleiste tappt.
 		</p>
 		<p>
-			Im nächsten Feld wird das verschickbare Dash-Guthaben angezeigt.
+			Im nächsten Feld wird das verwendbare Dash-Guthaben angezeigt.
 			Falls dieses Guthaben vom angezeigten Guthaben auf der Hauptseite abweicht, sind noch nicht alle Transaktionen bestätigt.
 		</p>
 		<p>
-			Schliesslich muss die Ausgabe-PIN eingegeben werden, wenn vorher zur Sicherheit eine festgelegt wurde.
+			Wenn InstantSend ausgewählt wurde wird die Bezahlung ohne Bearbeitungszeit ausgeführt. Die Gebühr dafür ist höher (> 0.001 DASH).
+			Zuletzt muss die Zahlungsmenge sowie der Zahlungs-PIN eingegeben werden, falls einer eingestellt worden war.
 		</p>
 		<p>
 			Eine Zahlung kann auch offline eingegeben werden.
-			Sie wird bei einem Neustart von Dash Wallet ausgeführt.
-			Wenn eine Zahlung so schnell wie möglich bestätigt werden soll, ist eine gute Verbindung (z.B. über WLAN) vonnöten.
+			Beim nächsten Start von Dash Wallet wird diese durchgeführt.
+			Wenn eine Zahlung so schnell wie möglich bestätigt werden soll, ist eine gute Verbindung (z.B. über WLAN) zu empfehlen.
 		</p>
 		<p>
 			Achtung:
@@ -71,7 +72,7 @@
 			Die Empfängeradresse sollte deswegen vor Bestätigung der Zahlung unbedingt auf Richtigkeit überprüft werden.
 		</p>
 	]]>
-    </string>
+	</string>
     <string name="help_safety">
 <![CDATA[
 		<p>
@@ -82,9 +83,9 @@
 			<b>Wenn das Gerät verloren geht, gehen alle Dash verloren.</b>
 		</p>
 		<p>
-			Das bedeutet, <b>du musst deine Wallet sichern</b>!
+			Das bedeutet, <b>dass Du Deine Wallet sichern musst</b>!
 			Nutze dafür die Sicherungs-Funktion in der App anstatt einer externen Backup-App.
-			Hebe deine Sicherung gut auf und vergiß das Passwort nicht.
+			Hebe Dein Backup gut auf und vergiss das Passwort bitte nicht.
 		</p>
 		<p>
 			<b>Vor der Deinstallation</b> (oder dem Löschen der App-Daten/Formatierung des Geräts), <b>müssen alle Dash auf eine andere Wallet übertragen werden</b>.
@@ -92,19 +93,19 @@
 		</p>
 		<p>
 			<b>Zahlungen können nicht rückgängig gemacht werden</b>.
-			Wenn Dash ins Unbekannte geschickt werden, gibt es kaum Möglichkeit, sie zurückzuholen.
+			Wenn Dash ins Unbekannte geschickt wurden, gibt es kaum eine Möglichkeit, sie zurückzuerhalten.
 		</p>
 		<p>
-			<b>Halte dein Mobilgerät sicher!</b>
-			Roote dein Gerät nicht.
-			Installiere nur Apps, denen du vollkommen vertraust.
+			<b>Halte Dein Mobilgerät bitte sicher!</b>
+			Bitte roote Dein Ihr Gerät nicht.
+			Bitte installiere nur Apps, denen Du vollkommen vertraust.
 			Bösartige Apps könnten versuchen, die in der Wallet gespeicherten Dash zu stehlen.
 		</p>
 		<p>
-			Minimiere das Risiko!
-			<b>Speichere nur einen angemessenen Betrag</b> für den täglichen Gebrauch.
+			Minimiere Dein Risiko!
+			Speichere nur <b>Beträge, die für den täglichen Gebrauch nötig sind</b>.
 		</p>
 	]]>
-    </string>
+	</string>
 
 </resources>

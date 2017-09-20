@@ -14,4 +14,22 @@
 	<string name="wallet_options_disconnect">Отключить</string>
 
 	<string name="network_monitor_masternodes_title">Мастерноды</string>
+	<string name="export_keys_dialog_title_to_seed">Посмотреть фразу восстановления</string>
+	<string name="import_keys_dialog_title_from_seed">Восстановить из фразы восстановления</string>
+	<string name="backup_to_seed_wallet_dialog_message">Это ваша фраза восстановления. Пожалуйста, запишите и сохраните её.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">НЕ ПОЗВОЛЯЙТЕ никому увидеть вашу фразу восстановления, так как это позволит им заполучить ваши Dash. Эта фраза не совместима с другим ПО Dash.</string>
+	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Ваш кошелёк защищён ПИН-кодом. Введите свой ПИН и нажмите Показать для просмотра фразы восстановления.</string>
+    <string name="import_keys_from_seed_dialog_message">Введите свою фразу восстановления.</string>
+	<string name="import_export_keys_dialog_password_phrase">Вот ваша фраза восстановления.</string>
+	<string name="preferences_report_issue_summary">Соберите подробности о вашей проблеме и отправьте их на E-mail разработчиков.</string>
+	<string name="navigation_configuration">Конфигурация</string>
+    <string name="button_copy_address">Скопировать адрес</string>
+	<string name="request_coins_clipboard_address_msg">Адрес скопирован в буфер обмена</string>
+	<string name="backup_wallet_to_seed_show_recovery_phrase">Показать</string>
+	<string name="restore_wallet_from_invalid_seed_warning_message">%s - это неправильное слово.</string>
+
+
+
+
+
 </resources>

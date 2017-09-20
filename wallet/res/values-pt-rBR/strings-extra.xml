@@ -14,4 +14,22 @@
 	<string name="wallet_options_disconnect">Desconectado</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
+	<string name="export_keys_dialog_title_to_seed">Ver frase de recuperação</string>
+	<string name="import_keys_dialog_title_from_seed">Restaurar a partir da frase de recuperação</string>
+	<string name="backup_to_seed_wallet_dialog_message">Esta é a sua frase de recuperação. Por favor, anote isso.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">NÃO deixe ninguém ver sua frase de recuperação ou ela podera gastar seu Dash. Esta frase não é compatível com outros  Software Dash.</string>
+	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Sua carteira é protegida por um PIN. Digite seu PIN e pressione Mostrar para ver sua frase de recuperação.</string>
+    <string name="import_keys_from_seed_dialog_message">Digite sua frase de recuperação aqui.</string>
+	<string name="import_export_keys_dialog_password_phrase">A frase de recuperação está aqui.</string>
+	<string name="preferences_report_issue_summary">Colete informações sobre seu problema e enviar seu relatório por e-mail para os desenvolvedores.</string>
+	<string name="navigation_configuration">Configuração</string>
+    <string name="button_copy_address">Copiar endereço</string>
+	<string name="request_coins_clipboard_address_msg">Endereço Dash copiado para a área de transferência</string>
+	<string name="backup_wallet_to_seed_show_recovery_phrase">Mostrar</string>
+	<string name="restore_wallet_from_invalid_seed_warning_message">%sé uma palavra inválida.</string>
+
+
+
+
+
 </resources>
