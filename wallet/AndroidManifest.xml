@@ -3,8 +3,8 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	package="de.schildbach.wallet_test"
 	android:installLocation="internalOnly"
-	android:versionCode="51420"
-	android:versionName="5.14.2" >
+	android:versionCode="51430"
+	android:versionName="5.14.3" >
 	<uses-sdk
 		android:minSdkVersion="16"
 		android:targetSdkVersion="25"
@@ -56,7 +56,7 @@
 		android:smallScreens="true"
 		android:xlargeScreens="true" />
 
-	<application
+	<application tools:replace="android:allowBackup"
 		android:name="de.schildbach.wallet.WalletApplication"
 		android:allowBackup="false"
 		android:icon="@mipmap/ic_app_color"
