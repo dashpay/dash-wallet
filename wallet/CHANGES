@@ -1,5 +1,12 @@
 
 Dash Wallet
+v5.14.4
+* Fix multiple screen rotations after scanning when using the generic scan button. Pulled from Bitcoin Wallet 5.32.
+* Updated Translations - 4 languages
+
+v5.14.3
+* Fixed bug that was related to retrieving Bitcoin fees.  Disabled as is unnecessary.
+
 v5.14.2
 
 v5.14.1
