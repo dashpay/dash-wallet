@@ -1,5 +1,6 @@
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -11,24 +12,29 @@
 
             <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:padding="@dimen/card_padding_horizontal">
 
 
-                <!--Step 1 create auth here-->
                 <LinearLayout
-                    android:id="@+id/layout_create_auth"
+                    android:id="@+id/linear_phone"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:orientation="vertical"
                     android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/dimen_8dp"
+                        android:text="@string/text_above_phone"
+                        android:textSize="16dp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="bottom"
                         android:orientation="horizontal">
-
 
                         <Spinner
                             android:id="@+id/sp_country"
@@ -38,7 +44,7 @@
                             android:layout_weight="1" />
 
                         <EditText
-                            android:id="@+id/edit_sell_dash_phone"
+                            android:id="@+id/et_phone"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_gravity="bottom"
@@ -46,12 +52,37 @@
                             android:ems="10"
                             android:hint="@string/hint_phone"
                             android:inputType="phone"
-                            android:lines="1" />
-
+                            android:lines="1"
+                            android:textSize="@dimen/font_size_normal" />
                     </LinearLayout>
 
+                    <Button
+                        android:id="@+id/btn_next_phone"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_marginTop="16dp"
+                        android:text="Next"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/linear_password"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/text_pass_above"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/dimen_8dp"
+                        android:textSize="16dp"
+                        tools:text="Existing Acount Login" />
+
                     <EditText
-                        android:id="@+id/edit_sell_dash_email"
+                        android:id="@+id/et_email"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:ems="10"
@@ -60,21 +91,82 @@
                         android:lines="1" />
 
                     <EditText
-                        android:id="@+id/edit_sell_dash_pass"
+                        android:id="@+id/et_password"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:ems="10"
-                        android:hint="@string/hint_password"
-                        android:inputType="textPassword"
-                        android:lines="1" />
+                        android:hint="Password"
+                        android:inputType="textPassword" />
 
                     <Button
-                        android:id="@+id/button_sell_dash_create_auth"
-                        android:layout_width="match_parent"
+                        android:id="@+id/btn_next_password"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/text_create_auth" />
-
+                        android:layout_gravity="center"
+                        android:layout_marginTop="16dp"
+                        android:text="Next"
+                        android:textStyle="bold" />
                 </LinearLayout>
+
+                <!--Step 1 create auth here-->
+                <!--<LinearLayout-->
+                <!--android:id="@+id/layout_create_auth"-->
+                <!--android:layout_width="match_parent"-->
+                <!--android:layout_height="wrap_content"-->
+                <!--android:orientation="vertical"-->
+                <!--android:visibility="gone">-->
+
+                <!--<LinearLayout-->
+                <!--android:layout_width="match_parent"-->
+                <!--android:layout_height="wrap_content"-->
+                <!--android:gravity="bottom"-->
+                <!--android:orientation="horizontal">-->
+
+
+                <!--<Spinner-->
+                <!--android:id="@+id/sp_country"-->
+                <!--android:layout_width="match_parent"-->
+                <!--android:layout_height="wrap_content"-->
+                <!--android:layout_marginBottom="5dp"-->
+                <!--android:layout_weight="1" />-->
+
+                <!--<EditText-->
+                <!--android:id="@+id/edit_sell_dash_phone"-->
+                <!--android:layout_width="match_parent"-->
+                <!--android:layout_height="wrap_content"-->
+                <!--android:layout_gravity="bottom"-->
+                <!--android:layout_weight="1"-->
+                <!--android:ems="10"-->
+                <!--android:hint="@string/hint_phone"-->
+                <!--android:inputType="phone"-->
+                <!--android:lines="1" />-->
+
+                <!--</LinearLayout>-->
+
+                <!--<EditText-->
+                <!--android:id="@+id/edit_sell_dash_email"-->
+                <!--android:layout_width="match_parent"-->
+                <!--android:layout_height="wrap_content"-->
+                <!--android:ems="10"-->
+                <!--android:hint="@string/hint_email"-->
+                <!--android:inputType="textEmailAddress"-->
+                <!--android:lines="1" />-->
+
+                <!--<EditText-->
+                <!--android:id="@+id/edit_sell_dash_pass"-->
+                <!--android:layout_width="match_parent"-->
+                <!--android:layout_height="wrap_content"-->
+                <!--android:ems="10"-->
+                <!--android:hint="@string/hint_password"-->
+                <!--android:inputType="textPassword"-->
+                <!--android:lines="1" />-->
+
+                <!--<Button-->
+                <!--android:id="@+id/button_sell_dash_create_auth"-->
+                <!--android:layout_width="match_parent"-->
+                <!--android:layout_height="wrap_content"-->
+                <!--android:text="@string/text_create_auth" />-->
+
+                <!--</LinearLayout>-->
 
                 <!--Step 2 receive and send payment options here-->
                 <LinearLayout

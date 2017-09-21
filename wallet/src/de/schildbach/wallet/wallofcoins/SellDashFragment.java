@@ -18,6 +18,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
@@ -54,6 +55,8 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.request.CreateAuthReq;
 import de.schildbach.wallet.request.GetAuthTokenReq;
+import de.schildbach.wallet.wallofcoins.response.BuyDashErrorResp;
+import de.schildbach.wallet.wallofcoins.response.CheckAuthResp;
 import de.schildbach.wallet.wallofcoins.response.CountryData;
 import de.schildbach.wallet.wallofcoins.response.CreateAdResp;
 import de.schildbach.wallet.wallofcoins.response.CreateAuthErrorResp;
@@ -227,51 +230,69 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 
         // do something for a debug build
         if (BuildConfig.DEBUG) {
-            binding.editSellDashPhone.setText("2154078737");
-            binding.editSellDashEmail.setText("viral@viralsonawala.com");
-            binding.editSellDashPass.setText("1234qwer");
+            binding.etPhone.setText("2154078737");
+            binding.etEmail.setText("viral@viralsonawala.com");
+            binding.etPassword.setText("1234qwer");
             binding.etMaxPayment.setText("1000");
             binding.etMinPayment.setText("10");
             binding.etSellerFee.setText("0");
         }
 
-        if (null != sellDashPref.getCreateAuthReq() && null != sellDashPref.getCreateAuthReq().password) {
-            createAuthReq = sellDashPref.getCreateAuthReq();
-            getAuthTokenCall();
+        if (null != sellDashPref.getAuthToken() && !TextUtils.isEmpty(sellDashPref.getAuthToken())) {
+            getReceivingOptions();
+            getCurrency();
         } else {
-            binding.layoutCreateAuth.setVisibility(View.VISIBLE);
+            binding.linearPhone.setVisibility(View.VISIBLE);
         }
 
-        binding.buttonSellDashCreateAuth.setOnClickListener(new OnClickListener() {
+        binding.btnNextPhone.setOnClickListener(new View.OnClickListener()
+
+        {
             @Override
             public void onClick(View v) {
-                sendCreateAuth();
+                hideKeyBoard();
+                checkAuth();
             }
         });
 
+//        binding.buttonSellDashCreateAuth.setOnClickListener(new OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                sendCreateAuth();
+//            }
+//        });
 
-        binding.buttonSellDashCreateAdd.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                sendAdData();
-            }
-        });
 
-        binding.buttonVerifyAd.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                verifyAd();
-            }
-        });
+        binding.buttonSellDashCreateAdd.setOnClickListener(new
 
-        binding.buttonResendOtp.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                setSendVerificationCall();
-            }
-        });
+                                                                   OnClickListener() {
+                                                                       @Override
+                                                                       public void onClick(View v) {
+                                                                           sendAdData();
+                                                                       }
+                                                                   });
 
-        binding.cbIsDynamicPricing.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        binding.buttonVerifyAd.setOnClickListener(new
+
+                                                          OnClickListener() {
+                                                              @Override
+                                                              public void onClick(View v) {
+                                                                  verifyAd();
+                                                              }
+                                                          });
+
+        binding.buttonResendOtp.setOnClickListener(new
+
+                                                           OnClickListener() {
+                                                               @Override
+                                                               public void onClick(View v) {
+                                                                   setSendVerificationCall();
+                                                               }
+                                                           });
+
+        binding.cbIsDynamicPricing.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener()
+
+        {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
@@ -286,6 +307,74 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
         });
 
         return binding.getRoot();
+    }
+
+    public void hideKeyBoard() {
+        View view = activity.getCurrentFocus();
+        if (view != null) {
+            InputMethodManager imm = (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
+    }
+
+
+    public void checkAuth() {
+        String countryCode = countryData.countries.get(binding.spCountry.getSelectedItemPosition()).code;
+        String phone = countryCode + binding.etPhone.getText().toString().trim();
+        if (!TextUtils.isEmpty(phone)) {
+            binding.sellDashProgress.setVisibility(View.VISIBLE);
+
+            WallofCoins.createService(activity).checkAuth(phone).enqueue(new Callback<CheckAuthResp>() {
+                @Override
+                public void onResponse(Call<CheckAuthResp> call, Response<CheckAuthResp> response) {
+                    Log.d(TAG, "onResponse: response code==>>" + response.code());
+                    binding.sellDashProgress.setVisibility(View.GONE);
+                    if (response.code() == 200) {
+                        if (response.body() != null && response.body().getAvailableAuthSources() != null && response.body().getAvailableAuthSources().size() > 0) {
+                            if (response.body().getAvailableAuthSources().get(0).equals("password")) {
+                                binding.layoutCreateBankOpts.setVisibility(View.GONE);
+                                binding.linearPhone.setVisibility(View.GONE);
+                                binding.linearPassword.setVisibility(View.VISIBLE);
+                                binding.layoutVerifyOtp.setVisibility(View.GONE);
+                                binding.textPassAbove.setText("Existing Account Login");
+                                binding.etPassword.setHint("Password");
+
+                                binding.btnNextPassword.setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        hideKeyBoard();
+                                        getAuthTokenCall();
+                                    }
+                                });
+                            }
+                        }
+                    } else if (response.code() == 404) {
+                        binding.layoutCreateBankOpts.setVisibility(View.GONE);
+                        binding.linearPhone.setVisibility(View.GONE);
+                        binding.linearPassword.setVisibility(View.VISIBLE);
+                        binding.layoutVerifyOtp.setVisibility(View.GONE);
+
+                        binding.textPassAbove.setText("Register New Account");
+                        binding.etPassword.setHint("Password");
+                        binding.btnNextPassword.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                hideKeyBoard();
+                                sendCreateAuth();
+                            }
+                        });
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<CheckAuthResp> call, Throwable t) {
+                    binding.sellDashProgress.setVisibility(View.GONE);
+                    Toast.makeText(activity, R.string.try_again, Toast.LENGTH_SHORT).show();
+                }
+            });
+        } else {
+            Toast.makeText(activity, "Enter phone number", Toast.LENGTH_SHORT).show();
+        }
     }
 
 
@@ -530,7 +619,8 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
     //send first request to get payment options
     private void sendCreateAuth() {
 
-        if (TextUtils.isEmpty(binding.editSellDashEmail.getText()) || TextUtils.isEmpty(binding.editSellDashPhone.getText()) || TextUtils.isEmpty(binding.editSellDashPass.getText())) {
+        if (TextUtils.isEmpty(binding.etEmail.getText()) || TextUtils.isEmpty(binding.etPhone.getText()) ||
+                TextUtils.isEmpty(binding.etPassword.getText())) {
             Toast.makeText(getContext(), "All Fields are required!", Toast.LENGTH_LONG).show();
             return;
         }
@@ -538,9 +628,9 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
         int selCountry = binding.spCountry.getSelectedItemPosition();
 
         createAuthReq = new CreateAuthReq();
-        createAuthReq.email = binding.editSellDashEmail.getText().toString();
-        createAuthReq.password = binding.editSellDashPass.getText().toString();
-        createAuthReq.phone = countryData.countries.get(selCountry).code + binding.editSellDashPhone.getText().toString();
+        createAuthReq.email = binding.etEmail.getText().toString();
+        createAuthReq.password = binding.etPassword.getText().toString();
+        createAuthReq.phone = countryData.countries.get(selCountry).code + binding.etPhone.getText().toString();
 
         binding.sellDashProgress.setVisibility(View.VISIBLE);
 
@@ -589,126 +679,188 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
     }
 
     private void getAuthTokenCall() {
+        String countryCode = countryData.countries.get(binding.spCountry.getSelectedItemPosition()).code;
+        String phone = countryCode + binding.etPhone.getText().toString().trim();
+        String password = binding.etPassword.getText().toString().trim();
 
-        final GetAuthTokenReq getAuthTokenReq = new GetAuthTokenReq();
-        getAuthTokenReq.password = sellDashPref.getCreateAuthReq().password;
+        if (!TextUtils.isEmpty(phone) && !TextUtils.isEmpty(password)) {
+            final GetAuthTokenReq getAuthTokenReq = new GetAuthTokenReq();
+            getAuthTokenReq.password = password;
+            binding.sellDashProgress.setVisibility(View.VISIBLE);
+            WallofCoins.createService(getActivity()).getAuthToken(phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
+                @Override
+                public void onResponse(Call<GetAuthTokenResp> call, Response<GetAuthTokenResp> response) {
+                    binding.sellDashProgress.setVisibility(View.GONE);
+                    int code = response.code();
+
+                    if (code >= 400 && response.body() == null) {
+                        try {
+                            BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
+                            Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                        }
+                        return;
+                    }
+
+                    getAuthTokenResp = response.body();
+                    sellDashPref.setAuthToken(getAuthTokenResp.token);
+
+                    getReceivingOptions();
+
+                    getCurrency();
+
+                }
+
+                @Override
+                public void onFailure(Call<GetAuthTokenResp> call, Throwable t) {
+                    Toast.makeText(activity, R.string.try_again, Toast.LENGTH_SHORT).show();
+                    binding.sellDashProgress.setVisibility(View.GONE);
+                    binding.linearPhone.setVisibility(View.GONE);
+                    binding.linearPassword.setVisibility(View.GONE);
+                }
+            });
+
+        } else {
+            Toast.makeText(activity, "Phone and Password is required", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+
+//    private void getAuthTokenCall() {
+//        final GetAuthTokenReq getAuthTokenReq = new GetAuthTokenReq();
+//        getAuthTokenReq.password = sellDashPref.getCreateAuthReq().password;
+//        binding.sellDashProgress.setVisibility(View.VISIBLE);
+//        WallofCoins.createService(getActivity()).getAuthToken(sellDashPref.getCreateAuthReq().phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
+//            @Override
+//            public void onResponse(Call<GetAuthTokenResp> call, Response<GetAuthTokenResp> response) {
+//                getAuthTokenResp = response.body();
+//                sellDashPref.setAuthToken(getAuthTokenResp.token);
+//
+//                getReceivingOptions();
+//
+//                getCurrency();
+//
+//            }
+//
+//            @Override
+//            public void onFailure(Call<GetAuthTokenResp> call, Throwable t) {
+//                binding.sellDashProgress.setVisibility(View.GONE);
+//            }
+//        });
+//    }
+
+    private void getCurrency() {
         binding.sellDashProgress.setVisibility(View.VISIBLE);
-        WallofCoins.createService(getActivity()).getAuthToken(sellDashPref.getCreateAuthReq().phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
+        WallofCoins.createService(getActivity()).getCurrency().enqueue(new Callback<List<GetCurrencyResp>>() {
             @Override
-            public void onResponse(Call<GetAuthTokenResp> call, Response<GetAuthTokenResp> response) {
-                getAuthTokenResp = response.body();
-                sellDashPref.setAuthToken(getAuthTokenResp.token);
-                String locale;
-                locale = getResources().getConfiguration().locale.getCountry();
+            public void onResponse(Call<List<GetCurrencyResp>> call, Response<List<GetCurrencyResp>> response) {
+                binding.sellDashProgress.setVisibility(View.GONE);
+                final List<GetCurrencyResp> getCurrencyResps = response.body();
 
-                WallofCoins.createService(getActivity()).getReceivingOptions(locale.toLowerCase()).enqueue(new Callback<List<GetReceivingOptionsResp>>() {
+                for (GetCurrencyResp getCurrencyResp : getCurrencyResps) {
+                    getCurrencyResp.toString();
+                }
+
+                ArrayAdapter<GetCurrencyResp> adapter = new ArrayAdapter<GetCurrencyResp>(activity, android.R.layout.simple_spinner_dropdown_item, getCurrencyResps) {
+                    @NonNull
                     @Override
-                    public void onResponse(Call<List<GetReceivingOptionsResp>> call, Response<List<GetReceivingOptionsResp>> response) {
-                        Log.e(TAG, "onResponse: " + response.body().size());
-                        binding.sellDashProgress.setVisibility(View.GONE);
-                        binding.layoutCreateAuth.setVisibility(View.GONE);
+                    public View getView(int position, @android.support.annotation.Nullable View convertView, @NonNull ViewGroup parent) {
 
-                        receivingOptionsResps = response.body();
-                        binding.layoutCreateBankOpts.setVisibility(View.VISIBLE);
-                        //set data in drop down list
-                        setPaymentOptNames(receivingOptionsResps);
-                    }
+                        View v;
 
-                    @Override
-                    public void onFailure(Call<List<GetReceivingOptionsResp>> call, Throwable t) {
-                        binding.sellDashProgress.setVisibility(View.GONE);
-                        t.printStackTrace();
-                    }
-                });
-
-                WallofCoins.createService(getActivity()).getCurrency().enqueue(new Callback<List<GetCurrencyResp>>() {
-                    @Override
-                    public void onResponse(Call<List<GetCurrencyResp>> call, Response<List<GetCurrencyResp>> response) {
-
-                        final List<GetCurrencyResp> getCurrencyResps = response.body();
-
-                        for (GetCurrencyResp getCurrencyResp : getCurrencyResps) {
-                            getCurrencyResp.toString();
+                        if (null == convertView) {
+                            LayoutInflater vi = (LayoutInflater) parent.getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+                            v = vi.inflate(android.R.layout.simple_spinner_dropdown_item, null);
+                        } else {
+                            v = convertView;
                         }
 
-                        ArrayAdapter<GetCurrencyResp> adapter = new ArrayAdapter<GetCurrencyResp>(activity, android.R.layout.simple_spinner_dropdown_item, getCurrencyResps) {
-                            @NonNull
-                            @Override
-                            public View getView(int position, @android.support.annotation.Nullable View convertView, @NonNull ViewGroup parent) {
-
-                                View v;
-
-                                if (null == convertView) {
-                                    LayoutInflater vi = (LayoutInflater) parent.getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-                                    v = vi.inflate(android.R.layout.simple_spinner_dropdown_item, null);
-                                } else {
-                                    v = convertView;
-                                }
-
-                                final TextView t = (TextView) v.findViewById(android.R.id.text1);
-                                t.setText(getCurrencyResps.get(position).symbol);
-                                return v;
-                            }
-
-                            @Override
-                            public View getDropDownView(int position, @android.support.annotation.Nullable View convertView, @NonNull ViewGroup parent) {
-
-                                View v;
-
-                                if (null == convertView) {
-                                    LayoutInflater vi = (LayoutInflater) parent.getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-                                    v = vi.inflate(android.R.layout.simple_spinner_dropdown_item, null);
-                                } else {
-                                    v = convertView;
-                                }
-
-                                final TextView t = (TextView) v.findViewById(android.R.id.text1);
-                                t.setText(getCurrencyResps.get(position).name + " (" + getCurrencyResps.get(position).symbol + ")");
-                                return v;
-                            }
-                        };
-
-                        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                        binding.spStaticPrice.setAdapter(adapter);
-                        binding.spMinCurrency.setAdapter(adapter);
-                        binding.spMaxCurrency.setAdapter(adapter);
-
-                        AdapterView.OnItemSelectedListener currencySelectedListener = new AdapterView.OnItemSelectedListener() {
-                            @Override
-                            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                                if (binding.spStaticPrice.getSelectedItemPosition() != position) {
-                                    binding.spStaticPrice.setSelection(position);
-                                }
-                                if (binding.spMinCurrency.getSelectedItemPosition() != position) {
-                                    binding.spMinCurrency.setSelection(position);
-                                }
-                                if (binding.spMaxCurrency.getSelectedItemPosition() != position) {
-                                    binding.spMaxCurrency.setSelection(position);
-                                }
-                            }
-
-                            @Override
-                            public void onNothingSelected(AdapterView<?> parent) {
-
-                            }
-                        };
-
-                        binding.spStaticPrice.setOnItemSelectedListener(currencySelectedListener);
-                        binding.spMinCurrency.setOnItemSelectedListener(currencySelectedListener);
-                        binding.spMaxCurrency.setOnItemSelectedListener(currencySelectedListener);
+                        final TextView t = (TextView) v.findViewById(android.R.id.text1);
+                        t.setText(getCurrencyResps.get(position).symbol);
+                        return v;
                     }
 
                     @Override
-                    public void onFailure(Call<List<GetCurrencyResp>> call, Throwable t) {
+                    public View getDropDownView(int position, @android.support.annotation.Nullable View convertView, @NonNull ViewGroup parent) {
+
+                        View v;
+
+                        if (null == convertView) {
+                            LayoutInflater vi = (LayoutInflater) parent.getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+                            v = vi.inflate(android.R.layout.simple_spinner_dropdown_item, null);
+                        } else {
+                            v = convertView;
+                        }
+
+                        final TextView t = (TextView) v.findViewById(android.R.id.text1);
+                        t.setText(getCurrencyResps.get(position).name + " (" + getCurrencyResps.get(position).symbol + ")");
+                        return v;
+                    }
+                };
+
+                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                binding.spStaticPrice.setAdapter(adapter);
+                binding.spMinCurrency.setAdapter(adapter);
+                binding.spMaxCurrency.setAdapter(adapter);
+
+                AdapterView.OnItemSelectedListener currencySelectedListener = new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                        if (binding.spStaticPrice.getSelectedItemPosition() != position) {
+                            binding.spStaticPrice.setSelection(position);
+                        }
+                        if (binding.spMinCurrency.getSelectedItemPosition() != position) {
+                            binding.spMinCurrency.setSelection(position);
+                        }
+                        if (binding.spMaxCurrency.getSelectedItemPosition() != position) {
+                            binding.spMaxCurrency.setSelection(position);
+                        }
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> parent) {
 
                     }
-                });
+                };
 
+                binding.spStaticPrice.setOnItemSelectedListener(currencySelectedListener);
+                binding.spMinCurrency.setOnItemSelectedListener(currencySelectedListener);
+                binding.spMaxCurrency.setOnItemSelectedListener(currencySelectedListener);
             }
 
             @Override
-            public void onFailure(Call<GetAuthTokenResp> call, Throwable t) {
+            public void onFailure(Call<List<GetCurrencyResp>> call, Throwable t) {
                 binding.sellDashProgress.setVisibility(View.GONE);
+            }
+        });
+    }
+
+    private void getReceivingOptions() {
+        String locale;
+        locale = getResources().getConfiguration().locale.getCountry();
+        binding.sellDashProgress.setVisibility(View.VISIBLE);
+
+        WallofCoins.createService(getActivity()).getReceivingOptions(locale.toLowerCase()).enqueue(new Callback<List<GetReceivingOptionsResp>>() {
+            @Override
+            public void onResponse(Call<List<GetReceivingOptionsResp>> call, Response<List<GetReceivingOptionsResp>> response) {
+                Log.e(TAG, "onResponse: " + response.body().size());
+                binding.sellDashProgress.setVisibility(View.GONE);
+
+                receivingOptionsResps = response.body();
+                binding.layoutCreateBankOpts.setVisibility(View.VISIBLE);
+                binding.linearPhone.setVisibility(View.GONE);
+                binding.linearPassword.setVisibility(View.GONE);
+                binding.layoutVerifyOtp.setVisibility(View.GONE);
+                //set data in drop down list
+                setPaymentOptNames(receivingOptionsResps);
+            }
+
+            @Override
+            public void onFailure(Call<List<GetReceivingOptionsResp>> call, Throwable t) {
+                binding.sellDashProgress.setVisibility(View.GONE);
+                t.printStackTrace();
             }
         });
     }
