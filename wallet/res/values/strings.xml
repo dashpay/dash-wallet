@@ -124,6 +124,7 @@
     <string name="maintenance_dialog_button_move">Move</string>
     <string name="request_coins_activity_title">Request Dash</string>
     <string name="request_coins_fragment_amount_label">Requested amount (optional)</string>
+    <string name="buy_dash_coins_amount_lable">I\'m looking for</string>
     <string name="request_coins_fragment_accept_bluetooth_payment">Accept payment via Bluetooth for more reliable processing</string>
     <string name="request_coins_fragment_initiate_request_qr">Have this code scanned by the sender.</string>
     <string name="request_coins_fragment_initiate_request_nfc">Or tap an NFC enabled device.</string>
@@ -364,7 +365,7 @@
     <string name="use_dynamic_pricing">Use Dynamic Pricing?</string>
     <string name="select_pricing_option">SELECT PRICING OPTIONS</string>
     <string name="static_price">You can say how much you want per dash</string>
-    <string name="text_otp">You will receive Purchase Code on registered mobile.</string>
+    <string name="text_otp">Your Purchase Code has been sent via text message. Enter the code in the field below.</string>
     <string name="enter_purchase_code">Enter Purchase Code</string>
     <string name="resend_otp">Resend OTP</string>
     <string name="country_flag">Country Flag</string>
@@ -378,5 +379,6 @@
     <string name="try_again">Something went wrong, Try Again!</string>
     <string name="zip_code">Zip Code</string>
     <string name="date_format">%1$td/%1$tm/%1$tY</string>
+    <string name="text_above_phone">A mobile phone that can receive text messages is required for order verification.</string>
 
 </resources>

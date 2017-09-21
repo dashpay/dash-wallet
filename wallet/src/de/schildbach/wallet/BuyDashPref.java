@@ -25,7 +25,7 @@ import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.schildbach.wallet.response.CreateHoldResp;
+import de.schildbach.wallet.wallofcoins.response.CreateHoldResp;
 
 /**
  * @author Andreas Schildbach

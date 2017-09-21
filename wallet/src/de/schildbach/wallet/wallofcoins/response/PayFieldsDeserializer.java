@@ -1,4 +1,4 @@
-package de.schildbach.wallet.response;
+package de.schildbach.wallet.wallofcoins.response;
 
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
@@ -7,8 +7,8 @@ import com.google.gson.JsonParseException;
 
 import java.lang.reflect.Type;
 
-import de.schildbach.wallet.response.GetReceivingOptionsResp.PayFieldsBeanX;
-import de.schildbach.wallet.response.GetReceivingOptionsResp.JsonPayFieldsBeanX;
+import de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp.PayFieldsBeanX;
+import de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp.JsonPayFieldsBeanX;
 
 public class PayFieldsDeserializer implements JsonDeserializer<PayFieldsBeanX> {
 

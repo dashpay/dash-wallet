@@ -1,6 +1,4 @@
-package de.schildbach.wallet.response;
-
-import android.util.Log;
+package de.schildbach.wallet.wallofcoins.response;
 
 public class GetCurrencyResp {
 

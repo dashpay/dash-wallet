@@ -26,7 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.schildbach.wallet.request.CreateAuthReq;
-import de.schildbach.wallet.response.CreateAuthResp;
+import de.schildbach.wallet.wallofcoins.response.CreateAuthResp;
 
 /**
  * @author Andreas Schildbach

@@ -7,7 +7,7 @@
 
         <variable
             name="item"
-            type="de.schildbach.wallet.response.GetOffersResp.SingleDepositBean" />
+            type="de.schildbach.wallet.wallofcoins.response.GetOffersResp.SingleDepositBean" />
     </data>
 
     <LinearLayout

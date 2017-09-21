@@ -106,13 +106,13 @@
                 android:id="@+id/btn_deposit_finished"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Deposit Finished?" />
+                android:text="Deposit Finished" />
 
             <Button
                 android:id="@+id/btn_cancel_order"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Cancel Order?" />
+                android:text="Cancel Order" />
         </LinearLayout>
     </android.support.v7.widget.CardView>
 </layout>

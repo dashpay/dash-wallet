@@ -6,7 +6,7 @@
 
         <variable
             name="data"
-            type="de.schildbach.wallet.response.GetReceivingOptionsResp" />
+            type="de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp" />
     </data>
 
     <LinearLayout

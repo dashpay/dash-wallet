@@ -11,7 +11,7 @@ import android.widget.AdapterView;
 
 import java.util.List;
 
-import de.schildbach.wallet.response.GetOffersResp;
+import de.schildbach.wallet.wallofcoins.response.GetOffersResp;
 import hashengineering.darkcoin.wallet.R;
 import hashengineering.darkcoin.wallet.databinding.BuyDashOffersItemBinding;
 

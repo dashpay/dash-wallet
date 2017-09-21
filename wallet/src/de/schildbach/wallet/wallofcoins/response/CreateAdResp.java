@@ -1,4 +1,4 @@
-package de.schildbach.wallet.response;
+package de.schildbach.wallet.wallofcoins.response;
 
 public class CreateAdResp {
 

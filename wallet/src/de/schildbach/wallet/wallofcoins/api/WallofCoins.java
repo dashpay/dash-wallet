@@ -7,8 +7,8 @@ import com.google.gson.GsonBuilder;
 
 import java.util.concurrent.TimeUnit;
 
-import de.schildbach.wallet.response.GetReceivingOptionsResp.PayFieldsBeanX;
-import de.schildbach.wallet.response.PayFieldsDeserializer;
+import de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp.PayFieldsBeanX;
+import de.schildbach.wallet.wallofcoins.response.PayFieldsDeserializer;
 import hashengineering.darkcoin.wallet.R;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;

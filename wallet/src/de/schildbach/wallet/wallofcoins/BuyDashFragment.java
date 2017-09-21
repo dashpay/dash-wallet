@@ -45,6 +45,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.RejectedExecutionException;
 
 import javax.annotation.Nullable;
@@ -55,12 +56,12 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.ExchangeRatesProvider;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.request.GetAuthTokenReq;
-import de.schildbach.wallet.response.ConfirmDepositResp;
-import de.schildbach.wallet.response.CountryData;
-import de.schildbach.wallet.response.CreateHoldResp;
-import de.schildbach.wallet.response.DiscoveryInputsResp;
-import de.schildbach.wallet.response.GetAuthTokenResp;
-import de.schildbach.wallet.response.GetOffersResp;
+import de.schildbach.wallet.wallofcoins.response.ConfirmDepositResp;
+import de.schildbach.wallet.wallofcoins.response.CountryData;
+import de.schildbach.wallet.wallofcoins.response.CreateHoldResp;
+import de.schildbach.wallet.wallofcoins.response.DiscoveryInputsResp;
+import de.schildbach.wallet.wallofcoins.response.GetAuthTokenResp;
+import de.schildbach.wallet.wallofcoins.response.GetOffersResp;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet.ui.AbstractWalletActivity;
@@ -369,10 +370,10 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             @Override
             public void onClick(View v) {
                 hideKeyBoard();
-                if (TextUtils.isEmpty(binding.buyDashZip.getText().toString().trim())) {
-                    Toast.makeText(activity, "Please Enter Zip Code!", Toast.LENGTH_LONG).show();
-                    return;
-                }
+//                if (TextUtils.isEmpty(binding.buyDashZip.getText().toString().trim())) {
+//                    Toast.makeText(activity, "Please Enter Zip Code!", Toast.LENGTH_LONG).show();
+//                    return;
+//                }
                 callDiscoveryInputs();
             }
         });
@@ -397,6 +398,14 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                             public void onResponse(Call<List<CaptureHoldResp>> call, final Response<List<CaptureHoldResp>> response) {
                                 binding.linearProgress.setVisibility(View.GONE);
                                 if (null != response && null != response.body() && !response.body().isEmpty()) {
+
+
+                                    String payment = response.body().get(0).payment;
+                                    if (payment != null && !TextUtils.isEmpty(payment)) {
+                                        payment = String.format(Locale.getDefault(), "%.2f", Double.parseDouble(payment));
+                                        response.body().get(0).payment = payment;
+                                    }
+
                                     binding.setConfiremedData(response.body().get(0));
                                     binding.layoutVerifyOtp.setVisibility(View.GONE);
                                     binding.layoutCompletionDetail.setVisibility(View.VISIBLE);
@@ -944,7 +953,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                 binding.rvOrderList.setVisibility(View.GONE);
                                 binding.layoutVerifyOtp.setVisibility(View.GONE);
                                 binding.rvOffers.setVisibility(View.GONE);
-                                binding.etPassword.setHint("Enter Password");
+                                binding.textPassAbove.setText("Existing Account Login");
+                                binding.etPassword.setHint("Password");
 
                                 binding.btnNextPassword.setOnClickListener(new View.OnClickListener() {
                                     @Override
@@ -964,7 +974,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         binding.layoutVerifyOtp.setVisibility(View.GONE);
                         binding.rvOffers.setVisibility(View.GONE);
 
-                        binding.etPassword.setHint("Create Password");
+                        binding.textPassAbove.setText("Register New Account");
+                        binding.etPassword.setHint("Password");
                         binding.btnNextPassword.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
