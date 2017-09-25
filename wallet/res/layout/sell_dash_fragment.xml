@@ -1,6 +1,6 @@
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools">
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools">
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -28,7 +28,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="@dimen/dimen_8dp"
                         android:text="@string/text_above_phone"
-                        android:textSize="16dp" />
+                        android:textSize="16dp"/>
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -41,7 +41,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="5dp"
-                            android:layout_weight="1" />
+                            android:layout_weight="1"/>
 
                         <EditText
                             android:id="@+id/et_phone"
@@ -53,7 +53,7 @@
                             android:hint="@string/hint_phone"
                             android:inputType="phone"
                             android:lines="1"
-                            android:textSize="@dimen/font_size_normal" />
+                            android:textSize="@dimen/font_size_normal"/>
                     </LinearLayout>
 
                     <Button
@@ -63,7 +63,7 @@
                         android:layout_gravity="center"
                         android:layout_marginTop="16dp"
                         android:text="Next"
-                        android:textStyle="bold" />
+                        android:textStyle="bold"/>
                 </LinearLayout>
 
                 <LinearLayout
@@ -79,7 +79,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="@dimen/dimen_8dp"
                         android:textSize="16dp"
-                        tools:text="Existing Acount Login" />
+                        tools:text="Existing Acount Login"/>
 
                     <EditText
                         android:id="@+id/et_email"
@@ -88,14 +88,14 @@
                         android:ems="10"
                         android:hint="@string/hint_email"
                         android:inputType="textEmailAddress"
-                        android:lines="1" />
+                        android:lines="1"/>
 
                     <EditText
                         android:id="@+id/et_password"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="Password"
-                        android:inputType="textPassword" />
+                        android:inputType="textPassword"/>
 
                     <Button
                         android:id="@+id/btn_next_password"
@@ -104,69 +104,9 @@
                         android:layout_gravity="center"
                         android:layout_marginTop="16dp"
                         android:text="Next"
-                        android:textStyle="bold" />
+                        android:textStyle="bold"/>
                 </LinearLayout>
 
-                <!--Step 1 create auth here-->
-                <!--<LinearLayout-->
-                <!--android:id="@+id/layout_create_auth"-->
-                <!--android:layout_width="match_parent"-->
-                <!--android:layout_height="wrap_content"-->
-                <!--android:orientation="vertical"-->
-                <!--android:visibility="gone">-->
-
-                <!--<LinearLayout-->
-                <!--android:layout_width="match_parent"-->
-                <!--android:layout_height="wrap_content"-->
-                <!--android:gravity="bottom"-->
-                <!--android:orientation="horizontal">-->
-
-
-                <!--<Spinner-->
-                <!--android:id="@+id/sp_country"-->
-                <!--android:layout_width="match_parent"-->
-                <!--android:layout_height="wrap_content"-->
-                <!--android:layout_marginBottom="5dp"-->
-                <!--android:layout_weight="1" />-->
-
-                <!--<EditText-->
-                <!--android:id="@+id/edit_sell_dash_phone"-->
-                <!--android:layout_width="match_parent"-->
-                <!--android:layout_height="wrap_content"-->
-                <!--android:layout_gravity="bottom"-->
-                <!--android:layout_weight="1"-->
-                <!--android:ems="10"-->
-                <!--android:hint="@string/hint_phone"-->
-                <!--android:inputType="phone"-->
-                <!--android:lines="1" />-->
-
-                <!--</LinearLayout>-->
-
-                <!--<EditText-->
-                <!--android:id="@+id/edit_sell_dash_email"-->
-                <!--android:layout_width="match_parent"-->
-                <!--android:layout_height="wrap_content"-->
-                <!--android:ems="10"-->
-                <!--android:hint="@string/hint_email"-->
-                <!--android:inputType="textEmailAddress"-->
-                <!--android:lines="1" />-->
-
-                <!--<EditText-->
-                <!--android:id="@+id/edit_sell_dash_pass"-->
-                <!--android:layout_width="match_parent"-->
-                <!--android:layout_height="wrap_content"-->
-                <!--android:ems="10"-->
-                <!--android:hint="@string/hint_password"-->
-                <!--android:inputType="textPassword"-->
-                <!--android:lines="1" />-->
-
-                <!--<Button-->
-                <!--android:id="@+id/button_sell_dash_create_auth"-->
-                <!--android:layout_width="match_parent"-->
-                <!--android:layout_height="wrap_content"-->
-                <!--android:text="@string/text_create_auth" />-->
-
-                <!--</LinearLayout>-->
 
                 <!--Step 2 receive and send payment options here-->
                 <LinearLayout
@@ -180,34 +120,34 @@
                         android:id="@+id/sp_payment_options"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="@dimen/dimen_8dp" />
+                        android:layout_marginBottom="@dimen/dimen_8dp"/>
 
                     <LinearLayout
                         android:id="@+id/ll_receiving_pricing_options"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="@dimen/dimen_12dp" />
+                        android:padding="@dimen/dimen_12dp"/>
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
                         android:layout_marginBottom="@dimen/dimen_8dp"
                         android:layout_marginTop="@dimen/dimen_8dp"
-                        android:background="@android:color/darker_gray" />
+                        android:background="@android:color/darker_gray"/>
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/select_pricing_option"
-                        android:textSize="18sp" />
+                        android:textSize="18sp"/>
 
                     <android.support.v7.widget.AppCompatCheckBox
                         android:id="@+id/cb_is_dynamic_pricing"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/dimen_8dp"
-                        android:text="@string/use_dynamic_pricing" />
+                        android:text="@string/use_dynamic_pricing"/>
 
                     <LinearLayout
                         android:id="@+id/lay_static_price"
@@ -220,7 +160,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="5dp"
-                            android:layout_weight="1" />
+                            android:layout_weight="1"/>
 
                         <EditText
                             android:id="@+id/et_static_price"
@@ -230,7 +170,7 @@
                             android:layout_weight="4"
                             android:hint="@string/static_price"
                             android:lines="1"
-                            android:maxLines="1" />
+                            android:maxLines="1"/>
                     </LinearLayout>
 
                     <LinearLayout
@@ -245,12 +185,12 @@
                         <android.support.v7.widget.AppCompatSpinner
                             android:id="@+id/sp_primary_market"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content" />
+                            android:layout_height="wrap_content"/>
 
                         <android.support.v7.widget.AppCompatSpinner
                             android:id="@+id/sp_secondary_market"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content" />
+                            android:layout_height="wrap_content"/>
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -262,7 +202,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_marginBottom="5dp"
-                                android:layout_weight="1" />
+                                android:layout_weight="1"/>
 
                             <EditText
                                 android:id="@+id/et_min_payment"
@@ -271,7 +211,7 @@
                                 android:layout_weight="4"
                                 android:hint="@string/minimum_payment"
                                 android:inputType="number"
-                                android:lines="1" />
+                                android:lines="1"/>
                         </LinearLayout>
 
                         <LinearLayout
@@ -284,7 +224,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_marginBottom="5dp"
-                                android:layout_weight="1" />
+                                android:layout_weight="1"/>
 
                             <EditText
                                 android:id="@+id/et_max_payment"
@@ -293,7 +233,7 @@
                                 android:layout_weight="4"
                                 android:hint="@string/maximum_payment"
                                 android:inputType="number"
-                                android:lines="1" />
+                                android:lines="1"/>
                         </LinearLayout>
 
                         <EditText
@@ -302,7 +242,7 @@
                             android:layout_height="wrap_content"
                             android:hint="@string/seller_fee"
                             android:inputType="number"
-                            android:lines="1" />
+                            android:lines="1"/>
                     </LinearLayout>
 
 
@@ -310,7 +250,7 @@
                         android:id="@+id/button_sell_dash_create_add"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/text_create_ad" />
+                        android:text="@string/text_create_ad"/>
 
                 </LinearLayout>
 
@@ -326,7 +266,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="5dp"
                         android:text="@string/text_otp"
-                        android:textSize="18sp" />
+                        android:textSize="18sp"/>
 
                     <EditText
                         android:id="@+id/et_otp"
@@ -336,7 +276,7 @@
                         android:ems="10"
                         android:hint="@string/enter_purchase_code"
                         android:inputType="textPersonName"
-                        android:lines="1" />
+                        android:lines="1"/>
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -348,14 +288,14 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/text_create_ad" />
+                            android:text="@string/text_create_ad"/>
 
                         <Button
                             android:id="@+id/button_resend_otp"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/resend_otp" />
+                            android:text="@string/resend_otp"/>
                     </LinearLayout>
                 </LinearLayout>
 
@@ -364,7 +304,38 @@
                     android:layout_width="240dp"
                     android:layout_height="240dp"
                     android:layout_gravity="top|center"
-                    android:visibility="gone" />
+                    android:visibility="gone"/>
+
+
+                <!--Ads listing layout-->
+                <LinearLayout
+                    android:id="@+id/ll_frag_sell_dash_ad_listing"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <android.support.v7.widget.RecyclerView
+                        android:id="@+id/rv_frag_sell_dash_ads_list"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/dimen_8dp"/>
+
+                    <Button
+                        android:id="@+id/bt_frag_sell_dash_create_ad"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end"
+                        android:background="@color/colorPrimary"
+                        android:paddingLeft="@dimen/size_5dp"
+                        android:paddingRight="@dimen/size_5dp"
+                        android:text="@string/create_an_ad"
+                        android:textAllCaps="false"
+                        android:textColor="@color/white"/>
+
+                </LinearLayout>
+
+
             </FrameLayout>
 
         </ScrollView>
@@ -374,7 +345,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:visibility="gone" />
+            android:visibility="gone"/>
     </FrameLayout>
 </layout>
 

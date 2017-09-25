@@ -12,6 +12,8 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -55,6 +57,13 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.request.CreateAuthReq;
 import de.schildbach.wallet.request.GetAuthTokenReq;
+import de.schildbach.wallet.service.BlockchainState;
+import de.schildbach.wallet.service.BlockchainStateLoader;
+import de.schildbach.wallet.ui.AbstractWalletActivity;
+import de.schildbach.wallet.ui.WalletBalanceLoader;
+import de.schildbach.wallet.ui.send.SendCoinsActivity;
+import de.schildbach.wallet.wallofcoins.api.WallofCoins;
+import de.schildbach.wallet.wallofcoins.response.AdsListActivityResp;
 import de.schildbach.wallet.wallofcoins.response.BuyDashErrorResp;
 import de.schildbach.wallet.wallofcoins.response.CheckAuthResp;
 import de.schildbach.wallet.wallofcoins.response.CountryData;
@@ -67,14 +76,9 @@ import de.schildbach.wallet.wallofcoins.response.GetPricingOptionsResp;
 import de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp;
 import de.schildbach.wallet.wallofcoins.response.SendVerificationResp;
 import de.schildbach.wallet.wallofcoins.response.VerifyAdResp;
-import de.schildbach.wallet.service.BlockchainState;
-import de.schildbach.wallet.service.BlockchainStateLoader;
-import de.schildbach.wallet.wallofcoins.api.WallofCoins;
-import de.schildbach.wallet.ui.AbstractWalletActivity;
-import de.schildbach.wallet.ui.WalletBalanceLoader;
-import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import hashengineering.darkcoin.wallet.BuildConfig;
 import hashengineering.darkcoin.wallet.R;
+import hashengineering.darkcoin.wallet.databinding.ItemAdsListingBinding;
 import hashengineering.darkcoin.wallet.databinding.SellDashFragmentBinding;
 import okhttp3.Interceptor;
 import okhttp3.Request;
@@ -165,6 +169,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
     private VerifyAdResp verifyAdResp;
     private CreateAuthReq createAuthReq;
     private CountryData countryData;
+    private List<AdsListActivityResp> adsListingResps;
 
     @Override
     public void onAttach(final Context context) {
@@ -239,7 +244,9 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
         }
 
         if (null != sellDashPref.getAuthToken() && !TextUtils.isEmpty(sellDashPref.getAuthToken())) {
-            getReceivingOptions();
+
+            callAdList();
+            //getReceivingOptions();
             getCurrency();
         } else {
             binding.linearPhone.setVisibility(View.VISIBLE);
@@ -327,15 +334,14 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
             WallofCoins.createService(activity).checkAuth(phone).enqueue(new Callback<CheckAuthResp>() {
                 @Override
                 public void onResponse(Call<CheckAuthResp> call, Response<CheckAuthResp> response) {
-                    Log.d(TAG, "onResponse: response code==>>" + response.code());
                     binding.sellDashProgress.setVisibility(View.GONE);
                     if (response.code() == 200) {
                         if (response.body() != null && response.body().getAvailableAuthSources() != null && response.body().getAvailableAuthSources().size() > 0) {
                             if (response.body().getAvailableAuthSources().get(0).equals("password")) {
                                 binding.layoutCreateBankOpts.setVisibility(View.GONE);
                                 binding.linearPhone.setVisibility(View.GONE);
-                                binding.linearPassword.setVisibility(View.VISIBLE);
                                 binding.layoutVerifyOtp.setVisibility(View.GONE);
+                                binding.linearPassword.setVisibility(View.VISIBLE);
                                 binding.textPassAbove.setText("Existing Account Login");
                                 binding.etPassword.setHint("Password");
 
@@ -707,8 +713,8 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
                     getAuthTokenResp = response.body();
                     sellDashPref.setAuthToken(getAuthTokenResp.token);
 
-                    getReceivingOptions();
-
+//                    getReceivingOptions();
+                    callAdList();
                     getCurrency();
 
                 }
@@ -837,6 +843,53 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
         });
     }
 
+    private void callAdList() {
+        //here show the listing of ads first and if empty then redirect back to create Ads screen @getReceivingOptions
+        binding.sellDashProgress.setVisibility(View.VISIBLE);
+        WallofCoins.createService(interceptor, getActivity()).getAdsListing().enqueue(new Callback<List<AdsListActivityResp>>() {
+            @Override
+            public void onResponse(Call<List<AdsListActivityResp>> call, Response<List<AdsListActivityResp>> response) {
+
+                if (response.code() == 200) {
+                    binding.sellDashProgress.setVisibility(View.GONE);
+
+                    if (response.body() != null && response.body().size() > 0) {
+                        //here show the list
+                        adsListingResps = response.body();
+                        binding.linearPhone.setVisibility(View.GONE);
+                        binding.linearPassword.setVisibility(View.GONE);
+                        binding.layoutVerifyOtp.setVisibility(View.GONE);
+                        binding.layoutCreateBankOpts.setVisibility(View.GONE);
+                        binding.llFragSellDashAdListing.setVisibility(View.VISIBLE);
+                        binding.rvFragSellDashAdsList.setLayoutManager(new LinearLayoutManager(getActivity()));
+                        binding.rvFragSellDashAdsList.setAdapter(new AdListingAdapter(response.body()));
+
+                        binding.btFragSellDashCreateAd.setOnClickListener(new OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                getReceivingOptions();
+                            }
+                        });
+                    } else {
+                        binding.llFragSellDashAdListing.setVisibility(View.GONE);
+                        Toast.makeText(getActivity(), "No Ads created", Toast.LENGTH_SHORT).show();
+                        getReceivingOptions();
+                    }
+                } else {
+                    getReceivingOptions();
+                }
+
+            }
+
+            @Override
+            public void onFailure(Call<List<AdsListActivityResp>> call, Throwable t) {
+                binding.sellDashProgress.setVisibility(View.GONE);
+                t.printStackTrace();
+            }
+        });
+
+    }
+
     private void getReceivingOptions() {
         String locale;
         locale = getResources().getConfiguration().locale.getCountry();
@@ -847,12 +900,13 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
             public void onResponse(Call<List<GetReceivingOptionsResp>> call, Response<List<GetReceivingOptionsResp>> response) {
                 Log.e(TAG, "onResponse: " + response.body().size());
                 binding.sellDashProgress.setVisibility(View.GONE);
-
                 receivingOptionsResps = response.body();
-                binding.layoutCreateBankOpts.setVisibility(View.VISIBLE);
                 binding.linearPhone.setVisibility(View.GONE);
                 binding.linearPassword.setVisibility(View.GONE);
                 binding.layoutVerifyOtp.setVisibility(View.GONE);
+                binding.llFragSellDashAdListing.setVisibility(View.GONE);
+                binding.layoutCreateBankOpts.setVisibility(View.VISIBLE);
+
                 //set data in drop down list
                 setPaymentOptNames(receivingOptionsResps);
             }
@@ -1097,5 +1151,41 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 
     private void updateView() {
         balance = application.getWallet().getBalance(BalanceType.ESTIMATED);
+    }
+
+
+    class AdListingAdapter extends RecyclerView.Adapter<AdListingAdapter.VHListing> {
+
+
+        private List<AdsListActivityResp> body;
+        LayoutInflater inflater;
+        ItemAdsListingBinding itemAdsListingBinding;
+
+        public AdListingAdapter(List<AdsListActivityResp> body) {
+            this.body = body;
+        }
+
+        @Override
+        public VHListing onCreateViewHolder(ViewGroup parent, int viewType) {
+            inflater = LayoutInflater.from(parent.getContext());
+            itemAdsListingBinding = DataBindingUtil.inflate(inflater, R.layout.item_ads_listing, parent, false);
+            return new VHListing(itemAdsListingBinding.getRoot());
+        }
+
+        @Override
+        public void onBindViewHolder(VHListing holder, int position) {
+            itemAdsListingBinding.tvItemAdListCurrPrice.setText(body.get(position).getCurrentPrice());
+        }
+
+        @Override
+        public int getItemCount() {
+            return body.size();
+        }
+
+        class VHListing extends RecyclerView.ViewHolder {
+            VHListing(View itemView) {
+                super(itemView);
+            }
+        }
     }
 }

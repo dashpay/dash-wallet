@@ -380,5 +380,7 @@
     <string name="zip_code">Zip Code</string>
     <string name="date_format">%1$td/%1$tm/%1$tY</string>
     <string name="text_above_phone">A mobile phone that can receive text messages is required for order verification.</string>
+    <string name="create_an_ad">Create an Ad</string>
+    <string name="price">Price:</string>
 
 </resources>

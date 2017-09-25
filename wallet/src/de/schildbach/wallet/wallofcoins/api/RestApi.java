@@ -5,6 +5,7 @@ import java.util.Map;
 
 import de.schildbach.wallet.request.CreateAuthReq;
 import de.schildbach.wallet.request.GetAuthTokenReq;
+import de.schildbach.wallet.wallofcoins.response.AdsListActivityResp;
 import de.schildbach.wallet.wallofcoins.response.CaptureHoldResp;
 import de.schildbach.wallet.wallofcoins.response.ConfirmDepositResp;
 import de.schildbach.wallet.wallofcoins.response.CreateAdResp;
@@ -55,6 +56,9 @@ public interface RestApi {
 
     @GET("api/v1/banks")
     Call<List<GetReceivingOptionsResp>> getReceivingOptions(@Query("country") String country);
+
+    @GET("api/v1/ad")
+    Call<List<AdsListActivityResp>> getAdsListing();
 
 
     @GET("api/v1/markets/{crypto}/{currency}/")
