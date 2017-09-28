@@ -21,9 +21,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nullable;
 
-
-
-import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
@@ -62,14 +59,15 @@ import android.content.Intent;
 import android.content.Loader;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
 import android.nfc.NfcEvent;
 import android.os.Bundle;
+import android.support.v4.app.ShareCompat;
 import android.support.v7.widget.CardView;
 import android.text.SpannableStringBuilder;
 import android.view.LayoutInflater;
@@ -101,7 +99,7 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
     private NfcAdapter nfcAdapter;
 
     private ImageView qrView;
-    private Bitmap qrCodeBitmap;
+    private BitmapDrawable qrCodeBitmap;
     private CheckBox acceptBluetoothPaymentView;
     private TextView initiateRequestView;
 
@@ -186,7 +184,7 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
         qrCardView.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(final View v) {
-                BitmapFragment.show(getFragmentManager(), qrCodeBitmap);
+                BitmapFragment.show(getFragmentManager(), qrCodeBitmap.getBitmap());
             }
         });
 
@@ -406,14 +404,9 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
         final byte[] paymentRequest = determinePaymentRequest(true);
 
         // update qr-code
-        final int size = getResources().getDimensionPixelSize(R.dimen.bitmap_dialog_qr_size);
-        final String qrContent;
-        if (config.getQrPaymentRequestEnabled())
-            qrContent = CoinDefinition.coinURIScheme.toUpperCase() + ":-" + Qr.encodeBinary(paymentRequest);
-        else
-            qrContent = bitcoinRequest;
-        qrCodeBitmap = Qr.bitmap(qrContent, size);
-        qrView.setImageBitmap(qrCodeBitmap);
+        qrCodeBitmap = new BitmapDrawable(getResources(), Qr.bitmap(bitcoinRequest));
+        qrCodeBitmap.setFilterBitmap(false);
+        qrView.setImageDrawable(qrCodeBitmap);
 
         // update initiate request message
         final SpannableStringBuilder initiateText = new SpannableStringBuilder(

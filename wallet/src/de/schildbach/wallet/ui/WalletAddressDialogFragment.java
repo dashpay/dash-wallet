@@ -34,6 +34,7 @@ import android.app.Dialog;
 import android.app.DialogFragment;
 import android.app.FragmentManager;
 import android.content.Intent;
+import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -88,10 +89,11 @@ public class WalletAddressDialogFragment extends DialogFragment {
         dialog.setContentView(R.layout.wallet_address_dialog);
         dialog.setCanceledOnTouchOutside(true);
 
-        final ImageView imageView = (ImageView) dialog.findViewById(R.id.wallet_address_dialog_image);
-        final int size = getResources().getDimensionPixelSize(R.dimen.bitmap_dialog_qr_size);
         final String uri = BitcoinURI.convertToBitcoinURI(address, null, addressLabel, null);
-        imageView.setImageBitmap(Qr.bitmap(uri, size));
+        final BitmapDrawable bitmap = new BitmapDrawable(getResources(), Qr.bitmap(uri));
+        bitmap.setFilterBitmap(false);
+        final ImageView imageView = (ImageView) dialog.findViewById(R.id.wallet_address_dialog_image);
+        imageView.setImageDrawable(bitmap);
 
         final View labelButtonView = dialog.findViewById(R.id.wallet_address_dialog_label_button);
         final TextView labelView = (TextView) dialog.findViewById(R.id.wallet_address_dialog_label);
