@@ -458,6 +458,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                             @Override
                             public void onFailure(Call<List<CaptureHoldResp>> call, Throwable t) {
                                 binding.linearProgress.setVisibility(View.GONE);
+                                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
                                 Log.e(TAG, "onFailure: ", t);
                             }
                         });
@@ -519,6 +520,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             public void onFailure(Call<ConfirmDepositResp> call, Throwable t) {
                 binding.linearProgress.setVisibility(View.GONE);
                 Log.e(TAG, "onFailure: ", t);
+                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
             }
         });
     }

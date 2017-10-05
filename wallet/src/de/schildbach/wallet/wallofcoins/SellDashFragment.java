@@ -4,6 +4,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
+import android.content.res.Resources;
 import android.databinding.DataBindingUtil;
 import android.net.Uri;
 import android.os.Bundle;
@@ -37,6 +38,7 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
+import org.json.JSONArray;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -236,7 +238,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
         // do something for a debug build
         if (BuildConfig.DEBUG) {
             binding.etPhone.setText("2154078737");
-            binding.etEmail.setText("viral@viralsonawala.com");
+//            binding.etEmail.setText("viral@viralsonawala.com");
             binding.etPassword.setText("1234qwer");
             binding.etMaxPayment.setText("1000");
             binding.etMinPayment.setText("10");
@@ -341,6 +343,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
                                 binding.layoutCreateBankOpts.setVisibility(View.GONE);
                                 binding.linearPhone.setVisibility(View.GONE);
                                 binding.layoutVerifyOtp.setVisibility(View.GONE);
+//                                binding.etEmail.setVisibility(View.GONE);
                                 binding.linearPassword.setVisibility(View.VISIBLE);
                                 binding.textPassAbove.setText("Existing Account Login");
                                 binding.etPassword.setHint("Password");
@@ -429,6 +432,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
                 @Override
                 public void onFailure(Call<VerifyAdResp> call, Throwable t) {
                     Log.e(TAG, "onFailure: ", t);
+                    Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
                 }
             });
         } else {
@@ -463,7 +467,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 
             @Override
             public void onFailure(Call<List<GetPricingOptionsResp>> call, Throwable t) {
-
+                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -584,7 +588,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 
             @Override
             public void onFailure(Call<CreateAdResp> call, Throwable t) {
-
+                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -617,6 +621,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
             @Override
             public void onFailure(Call<SendVerificationResp> call, Throwable t) {
                 binding.sellDashProgress.setVisibility(View.GONE);
+                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
                 Log.e(TAG, "onFailure: ", t);
             }
         });
@@ -625,7 +630,9 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
     //send first request to get payment options
     private void sendCreateAuth() {
 
-        if (TextUtils.isEmpty(binding.etEmail.getText()) || TextUtils.isEmpty(binding.etPhone.getText()) ||
+        if (
+//                TextUtils.isEmpty(binding.etEmail.getText()) ||
+                TextUtils.isEmpty(binding.etPhone.getText()) ||
                 TextUtils.isEmpty(binding.etPassword.getText())) {
             Toast.makeText(getContext(), "All Fields are required!", Toast.LENGTH_LONG).show();
             return;
@@ -634,7 +641,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
         int selCountry = binding.spCountry.getSelectedItemPosition();
 
         createAuthReq = new CreateAuthReq();
-        createAuthReq.email = binding.etEmail.getText().toString();
+//        createAuthReq.email = binding.etEmail.getText().toString();
         createAuthReq.password = binding.etPassword.getText().toString();
         createAuthReq.phone = countryData.countries.get(selCountry).code + binding.etPhone.getText().toString();
 
@@ -672,6 +679,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 
                 } catch (Exception e) {
                     e.printStackTrace();
+                    Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
                 }
                 binding.sellDashProgress.setVisibility(View.GONE);
 
@@ -680,6 +688,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
             @Override
             public void onFailure(Call<CreateAuthResp> call, Throwable t) {
                 binding.sellDashProgress.setVisibility(View.GONE);
+                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -696,27 +705,32 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
             WallofCoins.createService(getActivity()).getAuthToken(phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
                 @Override
                 public void onResponse(Call<GetAuthTokenResp> call, Response<GetAuthTokenResp> response) {
-                    binding.sellDashProgress.setVisibility(View.GONE);
-                    int code = response.code();
+                    try {
+                        binding.sellDashProgress.setVisibility(View.GONE);
+                        int code = response.code();
 
-                    if (code >= 400 && response.body() == null) {
-                        try {
-                            BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
-                            Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                        if (code >= 400 && response.body() == null) {
+                            try {
+                                BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
+                                Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                            }
+
+                            return;
                         }
-                        return;
-                    }
 
-                    getAuthTokenResp = response.body();
-                    sellDashPref.setAuthToken(getAuthTokenResp.token);
+                        getAuthTokenResp = response.body();
+                        sellDashPref.setAuthToken(getAuthTokenResp.token);
 
 //                    getReceivingOptions();
-                    callAdList();
-                    getCurrency();
-
+                        callAdList();
+                        getCurrency();
+                    } catch (Resources.NotFoundException e) {
+                        e.printStackTrace();
+                        Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                    }
                 }
 
                 @Override
@@ -839,6 +853,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
             @Override
             public void onFailure(Call<List<GetCurrencyResp>> call, Throwable t) {
                 binding.sellDashProgress.setVisibility(View.GONE);
+                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -884,6 +899,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
             @Override
             public void onFailure(Call<List<AdsListActivityResp>> call, Throwable t) {
                 binding.sellDashProgress.setVisibility(View.GONE);
+                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
                 t.printStackTrace();
             }
         });
@@ -914,6 +930,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
             @Override
             public void onFailure(Call<List<GetReceivingOptionsResp>> call, Throwable t) {
                 binding.sellDashProgress.setVisibility(View.GONE);
+                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
                 t.printStackTrace();
             }
         });

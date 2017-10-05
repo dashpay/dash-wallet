@@ -81,14 +81,14 @@
                         android:textSize="16dp"
                         tools:text="Existing Acount Login"/>
 
-                    <EditText
-                        android:id="@+id/et_email"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:ems="10"
-                        android:hint="@string/hint_email"
-                        android:inputType="textEmailAddress"
-                        android:lines="1"/>
+                    <!--<EditText-->
+                        <!--android:id="@+id/et_email"-->
+                        <!--android:layout_width="match_parent"-->
+                        <!--android:layout_height="wrap_content"-->
+                        <!--android:ems="10"-->
+                        <!--android:hint="@string/hint_email"-->
+                        <!--android:inputType="textEmailAddress"-->
+                        <!--android:lines="1"/>-->
 
                     <EditText
                         android:id="@+id/et_password"
