@@ -366,14 +366,11 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
         binding.rvOffers.setLayoutManager(new LinearLayoutManager(activity));
 
+        getOrderList();
         binding.buttonBuyDashGetOffers.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 hideKeyBoard();
-//                if (TextUtils.isEmpty(binding.buyDashZip.getText().toString().trim())) {
-//                    Toast.makeText(activity, "Please Enter Zip Code!", Toast.LENGTH_LONG).show();
-//                    return;
-//                }
                 callDiscoveryInputs();
             }
         });
@@ -917,10 +914,17 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     binding.layoutVerifyOtp.setVisibility(View.GONE);
                     binding.rvOffers.setVisibility(View.GONE);
                     List<OrderListResp> orderList = response.body();
+                    for (OrderListResp orderListResp : orderList) {
+                        if (orderListResp.account == null) {
+                            orderList.remove(orderListResp);
+                        }
+                    }
                     if (orderList != null && orderList.size() > 0) {
                         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(activity);
                         binding.rvOrderList.setLayoutManager(linearLayoutManager);
                         binding.rvOrderList.setAdapter(new OrderListAdapter(activity, orderList));
+                    } else {
+                        binding.layoutCreateHold.setVisibility(View.VISIBLE);
                     }
                 }
             }
