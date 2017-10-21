@@ -30,7 +30,7 @@ import android.view.MenuItem;
 /**
  * @author Andreas Schildbach
  */
-public final class NetworkMonitorActivity extends AbstractWalletActivity {
+public final class NetworkMonitorActivity extends AbstractBindServiceActivity {
     private PeerListFragment peerListFragment;
     private BlockListFragment blockListFragment;
 

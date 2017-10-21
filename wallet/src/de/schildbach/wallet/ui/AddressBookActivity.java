@@ -47,7 +47,7 @@ import android.view.ViewGroup;
 /**
  * @author Andreas Schildbach
  */
-public final class AddressBookActivity extends AbstractWalletActivity {
+public final class AddressBookActivity extends AbstractBindServiceActivity {
     public static void start(final Context context) {
 		context.startActivity(new Intent(context, AddressBookActivity.class));
 	}
