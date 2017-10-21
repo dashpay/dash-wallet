@@ -175,7 +175,7 @@ public final class SendCoinsFragment extends Fragment {
     private View amountGroup;
     private CurrencyCalculatorLink amountCalculatorLink;
     private CheckBox directPaymentEnableView;
-	private CheckBox instantXenable;
+    private CheckBox instantXenable;
 
     private TextView hintView;
     private TextView directPaymentMessageView;
@@ -187,7 +187,7 @@ public final class SendCoinsFragment extends Fragment {
     private View privateKeyBadPasswordView;
     private Button viewGo;
     private Button viewCancel;
-	private FloatingActionButton viewFabScanQr;
+    private FloatingActionButton viewFabScanQr;
 
     @Nullable
     private State state = null;
@@ -218,7 +218,7 @@ public final class SendCoinsFragment extends Fragment {
 
     private static final Logger log = LoggerFactory.getLogger(SendCoinsFragment.class);
 
-	InstantXCoinSelector ixCoinSelector = new InstantXCoinSelector();
+    InstantXCoinSelector ixCoinSelector = new InstantXCoinSelector();
 
     private enum State {
         REQUEST_PAYMENT_REQUEST, //
@@ -314,7 +314,7 @@ public final class SendCoinsFragment extends Fragment {
     private final TransactionConfidence.Listener sentTransactionConfidenceListener = new TransactionConfidence.Listener() {
         @Override
         public void onConfidenceChanged(final TransactionConfidence confidence,
-                final TransactionConfidence.Listener.ChangeReason reason) {
+                                        final TransactionConfidence.Listener.ChangeReason reason) {
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -583,25 +583,25 @@ public final class SendCoinsFragment extends Fragment {
         this.fragmentManager = getFragmentManager();
     }
 
-	@Override
-	public void onActivityCreated(@android.support.annotation.Nullable Bundle savedInstanceState) {
-		super.onActivityCreated(savedInstanceState);
-		initFloatingButton();
-	}
+    @Override
+    public void onActivityCreated(@android.support.annotation.Nullable Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        initFloatingButton();
+    }
 
-	private void initFloatingButton()
-	{
-		viewFabScanQr = (FloatingActionButton) this.activity.findViewById(R.id.fab_scan_qr);
-		final PackageManager pm = this.activity.getPackageManager();
-		boolean hasCamera = pm.hasSystemFeature(PackageManager.FEATURE_CAMERA) || pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT);
-		viewFabScanQr.setVisibility(hasCamera ? View.VISIBLE : View.GONE);
-		viewFabScanQr.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View view) {
-				handleScan();
-			}
-		});
-	}
+    private void initFloatingButton()
+    {
+        viewFabScanQr = (FloatingActionButton) this.activity.findViewById(R.id.fab_scan_qr);
+        final PackageManager pm = this.activity.getPackageManager();
+        boolean hasCamera = pm.hasSystemFeature(PackageManager.FEATURE_CAMERA) || pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT);
+        viewFabScanQr.setVisibility(hasCamera ? View.VISIBLE : View.GONE);
+        viewFabScanQr.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                handleScan();
+            }
+        });
+    }
 
     @Override
     public void onCreate(final Bundle savedInstanceState) {
@@ -655,7 +655,7 @@ public final class SendCoinsFragment extends Fragment {
 
     @Override
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
-            final Bundle savedInstanceState) {
+                             final Bundle savedInstanceState) {
         final View view = inflater.inflate(R.layout.send_coins_fragment, container);
 
         payeeGroup = view.findViewById(R.id.send_coins_payee_group);
@@ -700,17 +700,17 @@ public final class SendCoinsFragment extends Fragment {
             }
         });
 
-		instantXenable = (CheckBox) view.findViewById(R.id.send_coins_instantx_enable);
-		instantXenable.setVisibility(config.getInstantXEnabled() == true && wallet.getContext().sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED) ? View.VISIBLE : View.INVISIBLE);
-		instantXenable.setOnCheckedChangeListener(new OnCheckedChangeListener()
-		{
-			@Override
-			public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked)
-			{
-				updateView();
-				handler.post(dryrunRunnable);
-			}
-		});
+        instantXenable = (CheckBox) view.findViewById(R.id.send_coins_instantx_enable);
+        instantXenable.setVisibility(config.getInstantXEnabled() == true && wallet.getContext().sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED) ? View.VISIBLE : View.INVISIBLE);
+        instantXenable.setOnCheckedChangeListener(new OnCheckedChangeListener()
+        {
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked)
+            {
+                updateView();
+                handler.post(dryrunRunnable);
+            }
+        });
 
         hintView = (TextView) view.findViewById(R.id.send_coins_hint);
 
@@ -902,11 +902,11 @@ public final class SendCoinsFragment extends Fragment {
 
     @Override
     public void onPrepareOptionsMenu(final Menu menu) {
-        final MenuItem scanAction = menu.findItem(R.id.send_coins_options_scan);
-        final PackageManager pm = activity.getPackageManager();
-        scanAction.setVisible(pm.hasSystemFeature(PackageManager.FEATURE_CAMERA)
-                || pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT));
-        scanAction.setEnabled(state == State.INPUT);
+        //final MenuItem scanAction = menu.findItem(R.id.send_coins_options_scan);
+        //final PackageManager pm = activity.getPackageManager();
+        //scanAction.setVisible(pm.hasSystemFeature(PackageManager.FEATURE_CAMERA)
+        //		|| pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT));
+        //scanAction.setEnabled(state == State.INPUT);
 
         final MenuItem emptyAction = menu.findItem(R.id.send_coins_options_empty);
         emptyAction.setEnabled(state == State.INPUT && paymentIntent.mayEditAmount());
@@ -926,23 +926,23 @@ public final class SendCoinsFragment extends Fragment {
     @Override
     public boolean onOptionsItemSelected(final MenuItem item) {
         switch (item.getItemId()) {
-        case R.id.send_coins_options_scan:
-            handleScan();
-            return true;
+            //case R.id.send_coins_options_scan:
+            //	handleScan();
+        //		return true;
 
-        case R.id.send_coins_options_fee_category_economic:
-            handleFeeCategory(FeeCategory.ECONOMIC);
-            return true;
-        case R.id.send_coins_options_fee_category_normal:
-            handleFeeCategory(FeeCategory.NORMAL);
-            return true;
-        case R.id.send_coins_options_fee_category_priority:
-            handleFeeCategory(FeeCategory.PRIORITY);
-            return true;
+            case R.id.send_coins_options_fee_category_economic:
+                handleFeeCategory(FeeCategory.ECONOMIC);
+                return true;
+            case R.id.send_coins_options_fee_category_normal:
+                handleFeeCategory(FeeCategory.NORMAL);
+                return true;
+            case R.id.send_coins_options_fee_category_priority:
+                handleFeeCategory(FeeCategory.PRIORITY);
+                return true;
 
-        case R.id.send_coins_options_empty:
-            handleEmpty();
-            return true;
+            case R.id.send_coins_options_empty:
+                handleEmpty();
+                return true;
         }
 
         return super.onOptionsItemSelected(item);
@@ -1039,15 +1039,16 @@ public final class SendCoinsFragment extends Fragment {
                 validatedAddress != null ? validatedAddress.address : null);
         final Coin finalAmount = finalPaymentIntent.getAmount();
 
-		boolean usingInstantSend = instantXenable.isChecked();
+        boolean usingInstantSend = instantXenable.isChecked();
 
         // prepare send request
-		finalPaymentIntent.setInstantX(usingInstantSend);
+        finalPaymentIntent.setInstantX(usingInstantSend);
         final SendRequest sendRequest = finalPaymentIntent.toSendRequest();
+        sendRequest.useInstantSend = usingInstantSend;
         sendRequest.emptyWallet = paymentIntent.mayEditAmount()
                 && finalAmount.equals(wallet.getBalance(BalanceType.AVAILABLE));
         sendRequest.feePerKb = fees.get(feeCategory);
-		sendRequest.feePerKb = sendRequest.useInstantSend ? TransactionLockRequest.MIN_FEE: sendRequest.feePerKb;
+        sendRequest.feePerKb = sendRequest.useInstantSend ? TransactionLockRequest.MIN_FEE: sendRequest.feePerKb;
         sendRequest.memo = paymentIntent.memo;
         sendRequest.exchangeRate = amountCalculatorLink.getExchangeRate();
         sendRequest.aesKey = encryptionKey;
@@ -1225,16 +1226,16 @@ public final class SendCoinsFragment extends Fragment {
             if (amount != null && fees != null) {
                 try {
                     final Address dummy = wallet.currentReceiveAddress(); // won't be used, tx is never
-                                                                          // committed
+                    // committed
                     final SendRequest sendRequest = paymentIntent.mergeWithEditedValues(amount, dummy).toSendRequest();
-					sendRequest.useInstantSend = (instantXenable.isChecked());
-					ixCoinSelector.setUsingInstantX(sendRequest.useInstantSend);
-					sendRequest.coinSelector = ixCoinSelector;
+                    sendRequest.useInstantSend = (instantXenable.isChecked());
+                    ixCoinSelector.setUsingInstantX(sendRequest.useInstantSend);
+                    sendRequest.coinSelector = ixCoinSelector;
                     sendRequest.signInputs = false;
                     sendRequest.emptyWallet = paymentIntent.mayEditAmount()
                             && amount.equals(wallet.getBalance(BalanceType.AVAILABLE));
                     sendRequest.feePerKb = fees.get(feeCategory);
-					sendRequest.feePerKb = sendRequest.useInstantSend ? TransactionLockRequest.MIN_FEE: sendRequest.feePerKb;
+                    sendRequest.feePerKb = sendRequest.useInstantSend ? TransactionLockRequest.MIN_FEE: sendRequest.feePerKb;
 
                     wallet.completeTx(sendRequest);
                     dryrunTransaction = sendRequest.tx;
@@ -1547,7 +1548,7 @@ public final class SendCoinsFragment extends Fragment {
                     else if (paymentIntent.isHttpPaymentUrl())
                         directPaymentEnableView.setChecked(!Constants.BUG_OPENSSL_HEARTBLEED);
 
-					instantXenable.setChecked(paymentIntent.getUseInstantSend());
+                    instantXenable.setChecked(paymentIntent.getUseInstantSend());
 
                     requestFocusFirst();
                     updateView();
