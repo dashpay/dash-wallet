@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-	xmlns:tools="http://schemas.android.com/tools"
-	package="de.schildbach.wallet_test"
-	android:installLocation="internalOnly"
-	android:versionCode="51700"
-	android:versionName="5.17" >
+    xmlns:tools="http://schemas.android.com/tools"
+    package="de.schildbach.wallet_test"
+    android:installLocation="internalOnly"
+    android:versionCode="51700"
+    android:versionName="5.17" >
 
     <uses-sdk
         android:minSdkVersion="16"
@@ -60,15 +60,16 @@
     <application
         android:name="de.schildbach.wallet.WalletApplication"
         android:allowBackup="false"
-        android:icon="@mipmap/ic_app_color_48dp"
-        android:label="@string/app_name" >
+        android:icon="@mipmap/ic_app_color"
+        android:label="@string/app_name"
+        android:largeHeap="true">
         <activity
             android:name="de.schildbach.wallet.ui.WalletActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:exported="true"
             android:label="@string/app_name_short"
             android:launchMode="singleTask"
-            android:theme="@style/My.Theme" />
+            android:theme="@style/My.Theme.NoStatusBar" />
 
         <activity-alias
             android:name="de.schildbach.wallet.WalletActivity"
@@ -80,9 +81,8 @@
             </intent-filter>
             <intent-filter>
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
-
-                <data android:mimeType="application/x-btctx" />
-
+                <data android:mimeType="application/x-drktx" />
+                <data android:mimeType="application/x-dashtx" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
@@ -101,6 +101,7 @@
                 <action android:name="android.intent.action.VIEW" />
 
                 <data android:scheme="dash" />
+                <data android:scheme="darkcoin" />
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -109,6 +110,7 @@
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
 
                 <data android:scheme="dash" />
+                <data android:scheme="darkcoin" />
 
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
@@ -166,8 +168,8 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
 
-				<data android:mimeType="application/x-darkcoin-wallet-backup" />
-				<data android:mimeType="application/x-dash-wallet-backup" />
+                <data android:mimeType="application/x-darkcoin-wallet-backup" />
+                <data android:mimeType="application/x-dash-wallet-backup" />
             </intent-filter>
         </activity>
         <activity
@@ -186,15 +188,15 @@
 
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"
-            android:authorities="{applicationId}.address_book"
+            android:authorities="${applicationId}.address_book"
             android:exported="false" />
         <provider
             android:name="de.schildbach.wallet.data.ExchangeRatesProvider"
-            android:authorities="{applicationId}.exchange_rates"
+            android:authorities="${applicationId}.exchange_rates"
             android:exported="false" />
         <provider
             android:name="de.schildbach.wallet.util.FileAttachmentProvider"
-            android:authorities="{applicationId}.file_attachment"
+            android:authorities="${applicationId}.file_attachment"
             android:exported="false"
             android:grantUriPermissions="true" />
 
@@ -239,4 +241,3 @@
     </application>
 
 </manifest>
-
