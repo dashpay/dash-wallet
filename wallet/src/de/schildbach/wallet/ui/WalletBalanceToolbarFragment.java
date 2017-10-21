@@ -55,7 +55,7 @@ import de.schildbach.wallet_test.R;
 public final class WalletBalanceToolbarFragment extends Fragment
 {
 	private WalletApplication application;
-	private Activity activity;
+	private AbstractBindServiceActivity activity;
 	private Configuration config;
 	private Wallet wallet;
 	private LoaderManager loaderManager;
@@ -86,7 +86,7 @@ public final class WalletBalanceToolbarFragment extends Fragment
     private static final int ID_MASTERNODE_SYNC_LOADER = 3;
 
 	private static final long BLOCKCHAIN_UPTODATE_THRESHOLD_MS = DateUtils.HOUR_IN_MILLIS;
-	private static final Coin TOO_MUCH_BALANCE_THRESHOLD = Coin.COIN.multiply(350);
+	private static final Coin TOO_MUCH_BALANCE_THRESHOLD = Coin.COIN.multiply(30);
 
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -100,7 +100,7 @@ public final class WalletBalanceToolbarFragment extends Fragment
 	{
 		super.onAttach(activity);
 
-		this.activity = activity;
+		this.activity = (AbstractBindServiceActivity)activity;
 		this.application = (WalletApplication) activity.getApplication();
 		this.config = application.getConfiguration();
 		this.wallet = application.getWallet();
@@ -149,7 +149,7 @@ public final class WalletBalanceToolbarFragment extends Fragment
 		loaderManager.initLoader(ID_BALANCE_LOADER, null, balanceLoaderCallbacks);
 		loaderManager.initLoader(ID_RATE_LOADER, null, rateLoaderCallbacks);
 		loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
-        loaderManager.initLoader(ID_MASTERNODE_SYNC_LOADER, null, masternodeSyncLoaderCallbacks);
+        //loaderManager.initLoader(ID_MASTERNODE_SYNC_LOADER, null, masternodeSyncLoaderCallbacks);
 
 		updateView();
 	}
@@ -160,7 +160,7 @@ public final class WalletBalanceToolbarFragment extends Fragment
 		loaderManager.destroyLoader(ID_BLOCKCHAIN_STATE_LOADER);
 		loaderManager.destroyLoader(ID_RATE_LOADER);
 		loaderManager.destroyLoader(ID_BALANCE_LOADER);
-		loaderManager.destroyLoader(ID_MASTERNODE_SYNC_LOADER);
+		//loaderManager.destroyLoader(ID_MASTERNODE_SYNC_LOADER);
 
 		super.onPause();
 	}
@@ -244,13 +244,13 @@ public final class WalletBalanceToolbarFragment extends Fragment
 				viewBalanceBtc.setVisibility(View.INVISIBLE);
 			}
 
-            if(masternodeSyncStatus != MasternodeSync.MASTERNODE_SYNC_FINISHED)
-            {
-                progressView.setVisibility(View.VISIBLE);
+            //if(masternodeSyncStatus != MasternodeSync.MASTERNODE_SYNC_FINISHED)
+            //{
+//                progressView.setVisibility(View.VISIBLE);
                 viewBalance.setVisibility(View.VISIBLE);
-                String syncStatus = wallet.getContext().masternodeSync.getSyncStatus();
-                showAppBarMessage(syncStatus);
-            } else {
+    //            String syncStatus = wallet.getContext().masternodeSync.getSyncStatus();
+      //          showAppBarMessage(syncStatus);
+        //    } else {
 				//Show sync status of Masternodes
 				//int masternodesLoaded = wallet.getContext().masternodeSync.mapSeenSyncMNB.size();
 				//int totalMasternodes = wallet.getContext().masternodeSync.masterNodeCountFromNetwork();
@@ -264,7 +264,7 @@ public final class WalletBalanceToolbarFragment extends Fragment
 					//showAppBarMessage("Masternodes Loaded: " + masternodesLoaded *100 /totalMasternodes +"%");
 				//	showAppBarMessage("Masternodes Loaded: " + masternodesLoaded +" of "+ totalMasternodes);
 				//}
-            }
+            //}
         }
 		else
 		{
@@ -378,7 +378,7 @@ public final class WalletBalanceToolbarFragment extends Fragment
 		{
 		}
 	};
-	private final LoaderManager.LoaderCallbacks<Integer> masternodeSyncLoaderCallbacks = new LoaderManager.LoaderCallbacks<Integer>()
+	/*private final LoaderManager.LoaderCallbacks<Integer> masternodeSyncLoaderCallbacks = new LoaderManager.LoaderCallbacks<Integer>()
 	{
 		@Override
 		public Loader<Integer> onCreateLoader(final int id, final Bundle args)
@@ -399,5 +399,5 @@ public final class WalletBalanceToolbarFragment extends Fragment
 		public void onLoaderReset(final Loader<Integer> loader)
 		{
 		}
-	};
+	};*/
 }

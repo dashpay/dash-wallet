@@ -58,7 +58,7 @@ import android.widget.TextView;
  */
 public final class WalletBalanceFragment extends Fragment {
     private WalletApplication application;
-    private AbstractWalletActivity activity;
+    private AbstractBindServiceActivity activity;
     private Configuration config;
     private Wallet wallet;
     private LoaderManager loaderManager;
@@ -85,13 +85,13 @@ public final class WalletBalanceFragment extends Fragment {
 
     private static final long BLOCKCHAIN_UPTODATE_THRESHOLD_MS = DateUtils.HOUR_IN_MILLIS;
     private static final Coin SOME_BALANCE_THRESHOLD = Coin.COIN.divide(20);
-    private static final Coin TOO_MUCH_BALANCE_THRESHOLD = Coin.COIN.multiply(4);
+    private static final Coin TOO_MUCH_BALANCE_THRESHOLD = Coin.COIN.multiply(2);
 
     @Override
     public void onAttach(final Activity activity) {
         super.onAttach(activity);
 
-        this.activity = (AbstractWalletActivity) activity;
+        this.activity = (AbstractBindServiceActivity) activity;
         this.application = (WalletApplication) activity.getApplication();
         this.config = application.getConfiguration();
         this.wallet = application.getWallet();
@@ -193,7 +193,7 @@ public final class WalletBalanceFragment extends Fragment {
     }
 
     private void handleDonate() {
-        SendCoinsActivity.startDonate(activity, null, null, 0);
+        SendCoinsActivity.startDonate(activity, null, FeeCategory.ECONOMIC, 0);
     }
 
     private void updateView() {

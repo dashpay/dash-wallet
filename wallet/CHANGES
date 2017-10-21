@@ -1,5 +1,7 @@
-
 Dash Wallet
+v5.15.5
+* Fix the crash when viewing a QR code and pressing home.
+
 v5.14.4
 * Fix multiple screen rotations after scanning when using the generic scan button. Pulled from Bitcoin Wallet 5.32.
 * Updated Translations - 4 languages
@@ -137,6 +139,20 @@ v1.00
 
 Bitcoin Wallet
 =======
+v5.17
+
+* Bugfix.
+
+v5.16
+
+* Improve app startup time.
+* Fix 'raise fee' was raising the fee too much.
+
+v5.15
+
+* Block sending payments while blockchain replay is in progress.
+
+>>>>>>> v5.17
 v5.14
 
 * Update translations from Transifex.
