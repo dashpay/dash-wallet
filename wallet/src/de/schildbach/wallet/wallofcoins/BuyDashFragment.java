@@ -387,7 +387,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 }
                 captureHoldReq.put("publisherId", addressStr);
                 captureHoldReq.put("verificationCode", otp);
-
+                Log.d(TAG, "onClick: authToken==>>" + buyDashPref.getAuthToken());
                 binding.linearProgress.setVisibility(View.VISIBLE);
                 WallofCoins.createService(interceptor, getActivity()).captureHold(createHoldResp.id, captureHoldReq)
                         .enqueue(new Callback<List<CaptureHoldResp>>() {
@@ -732,8 +732,10 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     }
 
                     buyDashPref.setAuthToken(response.body().token);
-                    // call create hold
-                    createHold();
+                    binding.linearPassword.setVisibility(View.GONE);
+                    binding.layoutVerifyOtp.setVisibility(View.VISIBLE);
+//                    // call create hold
+//                    createHold();
                 }
 
                 @Override
@@ -861,13 +863,14 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     if (null != response.body()) {
                         createHoldResp = response.body();
                         buyDashPref.setCreateHoldResp(createHoldResp);
-
+                        buyDashPref.setAuthToken(createHoldResp.token);
+                        getAuthTokenCall();
                         binding.layoutCreateHold.setVisibility(View.GONE);
                         binding.linearPhone.setVisibility(View.GONE);
                         binding.linearPassword.setVisibility(View.GONE);
                         binding.layoutCompletionDetail.setVisibility(View.GONE);
                         binding.rvOrderList.setVisibility(View.GONE);
-                        binding.layoutVerifyOtp.setVisibility(View.VISIBLE);
+                        binding.layoutVerifyOtp.setVisibility(View.GONE);
                         binding.rvOffers.setVisibility(View.GONE);
 
 //                        Log.d(TAG, "onResponse: purchase code==>>" + createHoldResp.__PURCHASE_CODE);
@@ -920,12 +923,30 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         }
                     }
                     if (orderList != null && orderList.size() > 0) {
+                        for (OrderListResp orderListResp : orderList) {
+                            if (orderListResp.status.equals("WD")) {
+                                binding.btnBuyMore.setVisibility(View.GONE);
+                                break;
+                            } else {
+                                binding.btnBuyMore.setVisibility(View.VISIBLE);
+                            }
+                        }
+                        binding.btnBuyMore.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                binding.rvOrderList.setVisibility(View.GONE);
+                                binding.btnBuyMore.setVisibility(View.GONE);
+                                binding.layoutCreateHold.setVisibility(View.VISIBLE);
+                            }
+                        });
                         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(activity);
                         binding.rvOrderList.setLayoutManager(linearLayoutManager);
                         binding.rvOrderList.setAdapter(new OrderListAdapter(activity, orderList));
                     } else {
                         binding.layoutCreateHold.setVisibility(View.VISIBLE);
                     }
+                } else if (response.code() == 403) {
+                    binding.layoutCreateHold.setVisibility(View.VISIBLE);
                 }
             }
 

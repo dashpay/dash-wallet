@@ -11,10 +11,19 @@
             type="de.schildbach.wallet.wallofcoins.response.CaptureHoldResp" />
     </data>
 
-    <FrameLayout
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:padding="8dp">
+
+        <Button
+            android:id="@+id/btn_buy_more"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="Buy More Bitcoin!"
+            android:textSize="16sp"
+            android:visibility="gone" />
 
         <android.support.v7.widget.RecyclerView
             android:id="@+id/rv_offers"
@@ -248,6 +257,7 @@
             android:id="@+id/rv_order_list"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:layout_below="@+id/btn_buy_more"
             android:visibility="gone" />
 
         <LinearLayout
@@ -349,6 +359,6 @@
                 android:text="@string/get_offers"
                 android:textStyle="bold" />
         </LinearLayout>
-    </FrameLayout>
+    </RelativeLayout>
 </layout>
 
