@@ -5,7 +5,23 @@ import android.content.Context;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import java.io.IOException;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 
 import de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp.PayFieldsBeanX;
 import de.schildbach.wallet.wallofcoins.response.PayFieldsDeserializer;
@@ -24,6 +40,24 @@ public class WallofCoins {
     private static String API_BASE_URL;
     private static Context context;
 //    private static final String API_BASE_URL = "https://wallofcoins.com/";
+
+    static final TrustManager[] trustAllCerts = new TrustManager[]{
+            new X509TrustManager() {
+                @Override
+                public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) throws CertificateException {
+                }
+
+                @Override
+                public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType) throws CertificateException {
+
+                }
+
+                @Override
+                public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                    return new java.security.cert.X509Certificate[]{};
+                }
+            }
+    };
 
     public static RestApi createService(Interceptor interceptor, Context context) {
         WallofCoins.context = context;
@@ -46,6 +80,29 @@ public class WallofCoins {
         // add your other interceptors …
         httpClient.connectTimeout(60, TimeUnit.SECONDS);
         httpClient.readTimeout(60, TimeUnit.SECONDS);
+
+
+        try {
+            KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+            keyStore.load(null, null);
+
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+
+            TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            trustManagerFactory.init(keyStore);
+            KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            keyManagerFactory.init(keyStore, "keystore_pass".toCharArray());
+            sslContext.init(null, trustAllCerts, new SecureRandom());
+            httpClient.sslSocketFactory(sslContext.getSocketFactory())
+                    .hostnameVerifier(new HostnameVerifier() {
+                        @Override
+                        public boolean verify(String hostname, SSLSession session) {
+                            return true;
+                        }
+                    });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
         // set your desired log level
