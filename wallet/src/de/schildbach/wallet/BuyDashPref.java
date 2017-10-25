@@ -38,6 +38,7 @@ public class BuyDashPref {
 
     private static final String CREATE_HOLD_RESP = "create_hold_resp";
     private static final String AUTH_TOKEN = "auth_token";
+    private static final String HOLD_ID = "hold_id";
 
     private static final Logger log = LoggerFactory.getLogger(BuyDashPref.class);
 
@@ -52,6 +53,14 @@ public class BuyDashPref {
 
     public void setAuthToken(String authToken) {
         prefs.edit().putString(AUTH_TOKEN, authToken).apply();
+    }
+
+    public String getHoldId() {
+        return prefs.getString(HOLD_ID, "");
+    }
+
+    public void setHoldId(String holdId) {
+        prefs.edit().putString(HOLD_ID, holdId).apply();
     }
 
     public CreateHoldResp getCreateHoldResp() {

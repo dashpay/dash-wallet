@@ -48,6 +48,7 @@
                     android:orientation="vertical">
 
                     <TextView
+                        android:id="@+id/text_bank_name"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="4dp"
@@ -58,6 +59,7 @@
 
 
                     <TextView
+                        android:id="@+id/text_phone"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="4dp"
@@ -86,6 +88,7 @@
                 tools:text="Deposit Due: Today 12:00 PM" />
 
             <TextView
+                android:id="@+id/text_cash_to_deposite"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
@@ -94,10 +97,11 @@
                 tools:text="$ 16447878" />
 
             <TextView
+                android:id="@+id/text_deposite_due"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
-                android:text='@{TextUtils.isEmpty(item.paymentDue)?"":"Deposit Due: - "+ "Deposit Due: " + item.paymentDue.substring(0,16).replace("T"," ")}'
+                android:text='@{TextUtils.isEmpty(item.paymentDue)?"": "Deposit Due: " + item.paymentDue.substring(0,16).replace("T"," ")}'
                 android:textSize="16dp"
                 tools:text="Deposit Due: Today 12:00 PM" />
 

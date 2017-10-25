@@ -38,7 +38,6 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
-import org.json.JSONArray;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -633,7 +632,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
         if (
 //                TextUtils.isEmpty(binding.etEmail.getText()) ||
                 TextUtils.isEmpty(binding.etPhone.getText()) ||
-                TextUtils.isEmpty(binding.etPassword.getText())) {
+                        TextUtils.isEmpty(binding.etPassword.getText())) {
             Toast.makeText(getContext(), "All Fields are required!", Toast.LENGTH_LONG).show();
             return;
         }
@@ -887,7 +886,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
                         });
                     } else {
                         binding.llFragSellDashAdListing.setVisibility(View.GONE);
-                        Toast.makeText(getActivity(), "No Ads created", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), "No Ads created", Toast.LENGTH_SHORT).show();
                         getReceivingOptions();
                     }
                 } else {
