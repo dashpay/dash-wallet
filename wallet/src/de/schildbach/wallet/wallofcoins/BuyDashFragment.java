@@ -795,10 +795,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     }
 
     private void getAuthTokenCall(final boolean isCreateHold) {
-        Log.d(TAG, "getAuthTokenCall: " + buyDashPref.getAuthToken());
-        if (buyDashPref.getAuthToken() != null && !TextUtils.isEmpty(buyDashPref.getAuthToken())) {
-            return;
-        }
         String countryCode = countryData.countries.get(binding.spCountry.getSelectedItemPosition()).code;
         String phone = countryCode + binding.editBuyDashPhone.getText().toString().trim();
         String password = binding.etPassword.getText().toString().trim();
