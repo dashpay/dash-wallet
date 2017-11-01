@@ -18,7 +18,13 @@
 package de.schildbach.wallet.util;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.util.UUID;
+
+import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import android.bluetooth.BluetoothAdapter;
 import android.os.Build;
@@ -40,6 +46,8 @@ public class Bluetooth {
     /** Android 6 uses this MAC address instead of the real one. */
     private static final String MARSHMELLOW_FAKE_MAC = "02:00:00:00:00:00";
 
+    private static final Logger log = LoggerFactory.getLogger(Bluetooth.class);
+
     public static boolean canListen(final BluetoothAdapter adapter) {
         if (adapter == null)
             return false;
@@ -49,7 +57,7 @@ public class Bluetooth {
         return true;
     }
 
-    public static String getAddress(final BluetoothAdapter adapter) {
+    public static @Nullable String getAddress(final BluetoothAdapter adapter) {
         if (adapter == null)
             return null;
 
@@ -65,6 +73,9 @@ public class Bluetooth {
             if (mService == null)
                 return null;
             return (String) mService.getClass().getMethod("getAddress").invoke(mService);
+        } catch (final InvocationTargetException x) {
+           log.info("Problem determining Bluetooth MAC via reflection", x);
+           return null;
         } catch (final Exception x) {
             throw new RuntimeException(x);
         }
