@@ -110,6 +110,17 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private BuyDashPref buyDashPref;
     private AddressAndLabel currentAddressQrAddress = null;
 
+
+    public final int LAYOUT_CREATE_HOLD = 1;
+    public final int LAYOUT_ORDER_LIST = 2;
+    public final int LAYOUT_OFFERS = 3;
+    public final int LAYOUT_VERIFY_OTP = 4;
+    public final int LAYOUT_COMPLETION_DETAIL = 5;
+    public final int LAYOUT_PHONE = 6;
+    public final int LAYOUT_PASSWORD = 7;
+
+    public ArrayList<Integer> backManageViews = new ArrayList<Integer>();
+
     private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>() {
         @Override
         public Loader<Cursor> onCreateLoader(final int id, final Bundle args) {
@@ -193,6 +204,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     };
     private CreateHoldResp createHoldResp;
     private String offerId;
+    private boolean isBuyMoreVisible;
 
     public static class CurrentAddressLoader extends AsyncTaskLoader<Address> {
         private LocalBroadcastManager broadcastManager;
@@ -491,6 +503,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                     }
                                     binding.layoutVerifyOtp.setVisibility(View.GONE);
                                     binding.layoutCompletionDetail.setVisibility(View.VISIBLE);
+                                    backManageViews.add(LAYOUT_COMPLETION_DETAIL);
 
                                     binding.textNearByCenter.setOnClickListener(new View.OnClickListener() {
                                         @Override
@@ -735,6 +748,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                         binding.rvOrderList.setVisibility(View.GONE);
                                         binding.layoutVerifyOtp.setVisibility(View.GONE);
                                         binding.rvOffers.setVisibility(View.VISIBLE);
+                                        backManageViews.add(LAYOUT_OFFERS);
                                         BuyDashOffersAdapter buyDashOffersAdapter = new BuyDashOffersAdapter(activity, response.body().singleDeposit, new AdapterView.OnItemSelectedListener() {
                                             @Override
                                             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -842,12 +856,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         createHold();
                     } else {
                         binding.layoutVerifyOtp.setVisibility(View.VISIBLE);
-//                        binding.buttonResendOtp.setOnClickListener(new View.OnClickListener() {
-//                            @Override
-//                            public void onClick(View v) {
-//                                getAuthTokenCall(true);
-//                            }
-//                        });
+                        backManageViews.add(LAYOUT_VERIFY_OTP);
                     }
                 }
 
@@ -878,6 +887,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     if (response.code() == 403) {
                         binding.layoutCreateHold.setVisibility(View.GONE);
                         binding.linearPhone.setVisibility(View.VISIBLE);
+                        backManageViews.add(LAYOUT_PHONE);
                         binding.linearPassword.setVisibility(View.GONE);
                         binding.layoutCompletionDetail.setVisibility(View.GONE);
                         binding.rvOrderList.setVisibility(View.GONE);
@@ -902,12 +912,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         binding.layoutCompletionDetail.setVisibility(View.GONE);
                         binding.rvOrderList.setVisibility(View.GONE);
                         binding.layoutVerifyOtp.setVisibility(View.VISIBLE);
-//                        binding.buttonResendOtp.setOnClickListener(new View.OnClickListener() {
-//                            @Override
-//                            public void onClick(View v) {
-//                                createHold();
-//                            }
-//                        });
+                        backManageViews.add(LAYOUT_VERIFY_OTP);
                         binding.rvOffers.setVisibility(View.GONE);
 //                        binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
 //                        Log.d(TAG, "onResponse: purchase code==>>" + createHoldResp.__PURCHASE_CODE);
@@ -935,6 +940,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         } else {
             binding.rvOffers.setVisibility(View.GONE);
             binding.linearPhone.setVisibility(View.VISIBLE);
+            backManageViews.add(LAYOUT_PHONE);
             binding.btnNextPhone.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -965,6 +971,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     if (response.code() == 403) {
                         binding.layoutCreateHold.setVisibility(View.GONE);
                         binding.linearPhone.setVisibility(View.VISIBLE);
+                        backManageViews.add(LAYOUT_PHONE);
                         binding.linearPassword.setVisibility(View.GONE);
                         binding.layoutCompletionDetail.setVisibility(View.GONE);
                         binding.rvOrderList.setVisibility(View.GONE);
@@ -1042,19 +1049,13 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                     break;
                                 } else {
                                     Log.d(TAG, "onResponse: status2==>" + orderListResp.status);
-//                                    getAuthTokenCall(true);
                                     binding.layoutCreateHold.setVisibility(View.GONE);
                                     binding.linearPhone.setVisibility(View.GONE);
                                     binding.linearPassword.setVisibility(View.GONE);
                                     binding.layoutCompletionDetail.setVisibility(View.GONE);
                                     binding.rvOrderList.setVisibility(View.GONE);
                                     binding.layoutVerifyOtp.setVisibility(View.VISIBLE);
-//                                    binding.buttonResendOtp.setOnClickListener(new View.OnClickListener() {
-//                                        @Override
-//                                        public void onClick(View v) {
-//                                            createHold();
-//                                        }
-//                                    });
+                                    backManageViews.add(LAYOUT_VERIFY_OTP);
                                     binding.rvOffers.setVisibility(View.GONE);
                                 }
                             }
@@ -1065,12 +1066,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                             binding.layoutCompletionDetail.setVisibility(View.GONE);
                             binding.rvOrderList.setVisibility(View.GONE);
                             binding.layoutVerifyOtp.setVisibility(View.VISIBLE);
-//                            binding.buttonResendOtp.setOnClickListener(new View.OnClickListener() {
-//                                @Override
-//                                public void onClick(View v) {
-//                                    createHold();
-//                                }
-//                            });
+                            backManageViews.add(LAYOUT_VERIFY_OTP);
                             binding.rvOffers.setVisibility(View.GONE);
                         }
                     } else {
@@ -1078,6 +1074,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     }
                 } else if (response.code() == 403) {
                     binding.layoutCreateHold.setVisibility(View.VISIBLE);
+                    backManageViews.add(LAYOUT_CREATE_HOLD);
                     binding.linearPhone.setVisibility(View.GONE);
                     binding.linearPassword.setVisibility(View.GONE);
                     binding.layoutCompletionDetail.setVisibility(View.GONE);
@@ -1097,24 +1094,28 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     }
 
     private void manageOrderList(Response<List<OrderListResp>> response) {
-        binding.layoutCreateHold.setVisibility(View.GONE);
-        binding.linearPhone.setVisibility(View.GONE);
-        binding.linearPassword.setVisibility(View.GONE);
-        binding.layoutCompletionDetail.setVisibility(View.GONE);
-        binding.rvOrderList.setVisibility(View.VISIBLE);
-        binding.layoutVerifyOtp.setVisibility(View.GONE);
-        binding.rvOffers.setVisibility(View.GONE);
+        Log.d(TAG, "manageOrderList: list-==" + backManageViews.toString());
         List<OrderListResp> orderList = response.body();
         List<OrderListResp> orderListTemp = new ArrayList<OrderListResp>();
         orderListTemp.addAll(orderList);
 
         if (orderList != null && orderList.size() > 0) {
+            binding.layoutCreateHold.setVisibility(View.GONE);
+            binding.linearPhone.setVisibility(View.GONE);
+            binding.linearPassword.setVisibility(View.GONE);
+            binding.layoutCompletionDetail.setVisibility(View.GONE);
+            binding.rvOrderList.setVisibility(View.VISIBLE);
+            backManageViews.add(LAYOUT_ORDER_LIST);
+            binding.layoutVerifyOtp.setVisibility(View.GONE);
+            binding.rvOffers.setVisibility(View.GONE);
             for (OrderListResp orderListResp : orderList) {
                 if (orderListResp.status.equals("WD")) {
                     binding.btnBuyMore.setVisibility(View.GONE);
+                    isBuyMoreVisible = false;
                     break;
                 } else {
                     binding.btnBuyMore.setVisibility(View.VISIBLE);
+                    isBuyMoreVisible = true;
                 }
             }
             binding.btnBuyMore.setOnClickListener(new View.OnClickListener() {
@@ -1126,6 +1127,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     binding.requestCoinsAmountLocalEdittext.setText("");
                     binding.buyDashZip.setText("");
                     binding.layoutCreateHold.setVisibility(View.VISIBLE);
+                    backManageViews.add(LAYOUT_CREATE_HOLD);
                 }
             });
             LinearLayoutManager linearLayoutManager = new LinearLayoutManager(activity);
@@ -1133,6 +1135,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             binding.rvOrderList.setAdapter(new OrderListAdapter(activity, orderList));
         } else {
             binding.layoutCreateHold.setVisibility(View.VISIBLE);
+            backManageViews.add(LAYOUT_CREATE_HOLD);
         }
     }
 
@@ -1153,6 +1156,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                 binding.layoutCreateHold.setVisibility(View.GONE);
                                 binding.linearPhone.setVisibility(View.GONE);
                                 binding.linearPassword.setVisibility(View.VISIBLE);
+                                backManageViews.add(LAYOUT_PASSWORD);
                                 binding.layoutCompletionDetail.setVisibility(View.GONE);
                                 binding.rvOrderList.setVisibility(View.GONE);
                                 binding.layoutVerifyOtp.setVisibility(View.GONE);
@@ -1173,6 +1177,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         binding.layoutCreateHold.setVisibility(View.GONE);
                         binding.linearPhone.setVisibility(View.GONE);
                         binding.linearPassword.setVisibility(View.VISIBLE);
+                        backManageViews.add(LAYOUT_PASSWORD);
                         binding.layoutCompletionDetail.setVisibility(View.GONE);
                         binding.rvOrderList.setVisibility(View.GONE);
                         binding.layoutVerifyOtp.setVisibility(View.GONE);
@@ -1438,5 +1443,39 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         public void setLabel(String label) {
             this.label = label;
         }
+    }
+
+    public void hideViewManageBack(int viewType) {
+        binding.layoutCreateHold.setVisibility(View.GONE);
+        binding.layoutCompletionDetail.setVisibility(View.GONE);
+        binding.rvOffers.setVisibility(View.GONE);
+        binding.rvOrderList.setVisibility(View.GONE);
+        binding.linearPhone.setVisibility(View.GONE);
+        binding.linearPassword.setVisibility(View.GONE);
+        binding.layoutVerifyOtp.setVisibility(View.GONE);
+        Log.d(TAG, "hideViewManageBack: " + viewType);
+        switch (viewType) {
+            case LAYOUT_COMPLETION_DETAIL:
+                binding.layoutCompletionDetail.setVisibility(View.VISIBLE);
+                break;
+            case LAYOUT_CREATE_HOLD:
+                binding.layoutCreateHold.setVisibility(View.VISIBLE);
+                break;
+            case LAYOUT_OFFERS:
+                binding.rvOffers.setVisibility(View.VISIBLE);
+                break;
+            case LAYOUT_ORDER_LIST:
+                if (isBuyMoreVisible) {
+                    binding.btnBuyMore.setVisibility(View.VISIBLE);
+                } else {
+                    binding.btnBuyMore.setVisibility(View.GONE);
+                }
+                binding.rvOrderList.setVisibility(View.VISIBLE);
+                break;
+            case LAYOUT_VERIFY_OTP:
+                binding.layoutVerifyOtp.setVisibility(View.VISIBLE);
+                break;
+        }
+        hideKeyBoard();
     }
 }

@@ -10,7 +10,7 @@
         android:layout_height="wrap_content" />
 
     <fragment
-        android:id="@+id/sell_dash_fragment"
+        android:id="@+id/buy_dash_fragment"
         android:name="de.schildbach.wallet.wallofcoins.BuyDashFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
