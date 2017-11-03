@@ -31,6 +31,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -52,7 +53,6 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.RejectedExecutionException;
 
 import javax.annotation.Nullable;
@@ -85,6 +85,7 @@ import de.schildbach.wallet.wallofcoins.response.GetOffersResp;
 import de.schildbach.wallet.wallofcoins.response.OrderListResp;
 import hashengineering.darkcoin.wallet.R;
 import hashengineering.darkcoin.wallet.databinding.BuyDashFragmentBinding;
+import hashengineering.darkcoin.wallet.databinding.ItemBankDetailBinding;
 import hashengineering.darkcoin.wallet.databinding.ItemOrderListBinding;
 import okhttp3.Interceptor;
 import okhttp3.Request;
@@ -411,29 +412,41 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                             public void onResponse(Call<List<CaptureHoldResp>> call, final Response<List<CaptureHoldResp>> response) {
                                 binding.linearProgress.setVisibility(View.GONE);
                                 if (null != response && null != response.body() && !response.body().isEmpty()) {
-
-
-                                    String payment = response.body().get(0).payment;
-                                    if (payment != null && !TextUtils.isEmpty(payment)) {
-                                        payment = String.format(Locale.getDefault(), "%.2f", Double.parseDouble(payment));
-                                        response.body().get(0).payment = payment;
-                                    }
-                                    if (response.body().get(0).bankName != null && !TextUtils.isEmpty(response.body().get(0).bankName)) {
-                                        binding.textBankName.setText(response.body().get(0).bankName);
-                                    } else {
-                                        binding.textBankName.setText("Bank Name: - ");
-                                    }
-                                    if (response.body().get(0).nearestBranch.phone != null && !TextUtils.isEmpty(response.body().get(0).nearestBranch.phone)) {
-                                        binding.textPhone.setText("Phone: " + response.body().get(0).nearestBranch.phone);
-                                    } else {
-                                        binding.textPhone.setText("Phone: - ");
-                                    }
                                     if (response.body().get(0).account != null && !TextUtils.isEmpty(response.body().get(0).account)) {
                                         if (isJSONValid(response.body().get(0).account)) {
+                                            ItemBankDetailBinding itemBankBinding = DataBindingUtil.inflate(LayoutInflater.from(activity), R.layout.item_bank_detail, null, false);
+                                            Glide.with(activity).load(response.body().get(0).bankLogo).into(itemBankBinding.imageBank);
+                                            if (response.body().get(0).bankName != null && !TextUtils.isEmpty(response.body().get(0).bankName)) {
+                                                itemBankBinding.textBankName.setText(response.body().get(0).bankName);
+                                            } else {
+                                                itemBankBinding.textBankName.setText("Bank Name: - ");
+                                            }
+                                            if (response.body().get(0).nearestBranch.phone != null && !TextUtils.isEmpty(response.body().get(0).nearestBranch.phone)) {
+                                                itemBankBinding.textPhone.setText("Phone: " + response.body().get(0).nearestBranch.phone);
+                                            } else {
+                                                itemBankBinding.textPhone.setText("Phone: - ");
+                                            }
+
+                                            if (response.body().get(0).nameOnAccount != null && !TextUtils.isEmpty(response.body().get(0).nameOnAccount)) {
+                                                itemBankBinding.textNameAccount.setText("Name on Account: " + response.body().get(0).nameOnAccount);
+                                            } else {
+                                                itemBankBinding.textNameAccount.setText("Name on Account: - ");
+                                            }
+
+                                            if (response.body().get(0).payment != null && !TextUtils.isEmpty(response.body().get(0).payment)) {
+                                                itemBankBinding.textCashToDeposite.setText("Cash to Deposit: " + response.body().get(0).payment);
+                                            } else {
+                                                itemBankBinding.textCashToDeposite.setText("Cash to Deposit: - ");
+                                            }
+
+                                            if (response.body().get(0).paymentDue != null && !TextUtils.isEmpty(response.body().get(0).paymentDue)) {
+                                                itemBankBinding.textDepositeDue.setText("Deposit Due: " + response.body().get(0).paymentDue.substring(0, 16).replace("T", " "));
+                                            } else {
+                                                itemBankBinding.textDepositeDue.setText("Deposit Due: - ");
+                                            }
                                             Type listType = new TypeToken<ArrayList<AccountJson>>() {
                                             }.getType();
                                             ArrayList<AccountJson> accountList = new Gson().fromJson(response.body().get(0).account, listType);
-
                                             for (int i = 0; i < accountList.size(); i++) {
                                                 TextView textView = new TextView(getActivity());
                                                 textView.setTextSize(16);
@@ -441,33 +454,35 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                                 layoutParams.topMargin = 8;
                                                 textView.setLayoutParams(layoutParams);
                                                 textView.setText(accountList.get(i).getLabel() + ": " + accountList.get(i).getValue());
-                                                binding.layoutCompletionDetail.addView(textView, i + 1);
+                                                itemBankBinding.linearAccountDetail.addView(textView);
+                                            }
+                                            binding.layoutCompletionDetail.removeAllViews();
+                                            binding.layoutCompletionDetail.addView(itemBankBinding.getRoot());
+
+                                            if (response.body().get(0).status.equals("WD")) {
+                                                itemBankBinding.btnCancelOrder.setVisibility(View.VISIBLE);
+                                                itemBankBinding.btnDepositFinished.setVisibility(View.VISIBLE);
+                                            } else {
+                                                itemBankBinding.btnCancelOrder.setVisibility(View.GONE);
+                                                itemBankBinding.btnDepositFinished.setVisibility(View.GONE);
                                             }
 
-                                            TextView textView1 = new TextView(getActivity());
-                                            textView1.setTextSize(16);
-                                            LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-                                            layoutParams.topMargin = 8;
-                                            textView1.setLayoutParams(layoutParams);
-                                            if (response.body().get(0).payment != null && !TextUtils.isEmpty(response.body().get(0).payment)) {
-                                                textView1.setText("Cash to Deposit: " + response.body().get(0).payment);
-                                                binding.layoutCompletionDetail.addView(textView1, accountList.size());
-                                            } else {
-                                                textView1.setText("Cash to Deposit: - ");
-                                                binding.layoutCompletionDetail.addView(textView1, accountList.size());
-                                            }
-                                            TextView textView2 = new TextView(getActivity());
-                                            textView2.setTextSize(16);
-                                            LinearLayout.LayoutParams layoutParams1 = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-                                            layoutParams1.topMargin = 8;
-                                            textView2.setLayoutParams(layoutParams);
-                                            if (response.body().get(0).paymentDue != null && !TextUtils.isEmpty(response.body().get(0).paymentDue)) {
-                                                textView2.setText("Deposit Due: " + response.body().get(0).paymentDue.substring(0, 16).replace("T", " "));
-                                                binding.layoutCompletionDetail.addView(textView2, accountList.size() + 1);
-                                            } else {
-                                                textView2.setText("Deposit Due: - ");
-                                                binding.layoutCompletionDetail.addView(textView2, accountList.size() + 1);
-                                            }
+                                            itemBankBinding.btnDepositFinished.setOnClickListener(new View.OnClickListener() {
+                                                @Override
+                                                public void onClick(View v) {
+                                                    hideKeyBoard();
+                                                    confirmDeposit(response.body().get(0));
+                                                }
+                                            });
+
+                                            itemBankBinding.btnCancelOrder.setOnClickListener(new View.OnClickListener() {
+                                                @Override
+                                                public void onClick(View v) {
+                                                    hideKeyBoard();
+                                                    // call cancel order
+                                                    cancelOrder("" + response.body().get(0).id);
+                                                }
+                                            });
                                         } else {
                                             binding.setConfiremedData(response.body().get(0));
                                         }
@@ -1214,18 +1229,38 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         @Override
         public void onBindViewHolder(OrderListAdapter.VHolder holder, int position) {
             final OrderListResp orderListResp = orderList.get(position);
-            if (orderListResp.bankName != null && !TextUtils.isEmpty(orderListResp.bankName)) {
-                holder.itemBinding.textBankName.setText(orderListResp.bankName);
-            } else {
-                holder.itemBinding.textBankName.setText("Bank Name: - ");
-            }
-            if (orderListResp.nearestBranch.phone != null && !TextUtils.isEmpty(orderListResp.nearestBranch.phone)) {
-                holder.itemBinding.textPhone.setText("Phone: " + orderListResp.nearestBranch.phone);
-            } else {
-                holder.itemBinding.textPhone.setText("Phone: - ");
-            }
             if (orderListResp.account != null && !TextUtils.isEmpty(orderListResp.account)) {
                 if (isJSONValid(orderListResp.account)) {
+                    ItemBankDetailBinding itemBankBinding = DataBindingUtil.inflate(LayoutInflater.from(activity), R.layout.item_bank_detail, null, false);
+                    Glide.with(activity).load(orderListResp.bankLogo).into(itemBankBinding.imageBank);
+                    if (orderListResp.bankName != null && !TextUtils.isEmpty(orderListResp.bankName)) {
+                        itemBankBinding.textBankName.setText(orderListResp.bankName);
+                    } else {
+                        itemBankBinding.textBankName.setText("Bank Name: - ");
+                    }
+                    if (orderListResp.nearestBranch.phone != null && !TextUtils.isEmpty(orderListResp.nearestBranch.phone)) {
+                        itemBankBinding.textPhone.setText("Phone: " + orderListResp.nearestBranch.phone);
+                    } else {
+                        itemBankBinding.textPhone.setText("Phone: - ");
+                    }
+
+                    if (orderListResp.nameOnAccount != null && !TextUtils.isEmpty(orderListResp.nameOnAccount)) {
+                        itemBankBinding.textNameAccount.setText("Name on Account: " + orderListResp.nameOnAccount);
+                    } else {
+                        itemBankBinding.textNameAccount.setText("Name on Account: - ");
+                    }
+
+                    if (orderListResp.payment != null && !TextUtils.isEmpty(orderListResp.payment)) {
+                        itemBankBinding.textCashToDeposite.setText("Cash to Deposit: " + orderListResp.payment);
+                    } else {
+                        itemBankBinding.textCashToDeposite.setText("Cash to Deposit: - ");
+                    }
+
+                    if (orderListResp.paymentDue != null && !TextUtils.isEmpty(orderListResp.paymentDue)) {
+                        itemBankBinding.textDepositeDue.setText("Deposit Due: " + orderListResp.paymentDue.substring(0, 16).replace("T", " "));
+                    } else {
+                        itemBankBinding.textDepositeDue.setText("Deposit Due: - ");
+                    }
                     Type listType = new TypeToken<ArrayList<AccountJson>>() {
                     }.getType();
                     ArrayList<AccountJson> accountList = new Gson().fromJson(orderListResp.account, listType);
@@ -1236,33 +1271,57 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         layoutParams.topMargin = 8;
                         textView.setLayoutParams(layoutParams);
                         textView.setText(accountList.get(i).getLabel() + ": " + accountList.get(i).getValue());
-                        holder.itemBinding.layoutCompletionDetail.addView(textView, i + 1);
+                        itemBankBinding.linearAccountDetail.addView(textView);
+                    }
+                    holder.itemBinding.layoutCompletionDetail.removeAllViews();
+                    holder.itemBinding.layoutCompletionDetail.addView(itemBankBinding.getRoot());
+
+                    if (orderListResp.status.equals("WD")) {
+                        itemBankBinding.btnCancelOrder.setVisibility(View.VISIBLE);
+                        itemBankBinding.btnDepositFinished.setVisibility(View.VISIBLE);
+                    } else {
+                        itemBankBinding.btnCancelOrder.setVisibility(View.GONE);
+                        itemBankBinding.btnDepositFinished.setVisibility(View.GONE);
                     }
 
-                    TextView textView1 = new TextView(getActivity());
-                    textView1.setTextSize(16);
-                    LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-                    layoutParams.topMargin = 8;
-                    textView1.setLayoutParams(layoutParams);
-                    if (orderListResp.payment != null && !TextUtils.isEmpty(orderListResp.payment)) {
-                        textView1.setText("Cash to Deposit: " + orderListResp.payment);
-                        holder.itemBinding.layoutCompletionDetail.addView(textView1, accountList.size());
-                    } else {
-                        textView1.setText("Cash to Deposit: - ");
-                        holder.itemBinding.layoutCompletionDetail.addView(textView1, accountList.size());
-                    }
-                    TextView textView2 = new TextView(getActivity());
-                    textView2.setTextSize(16);
-                    LinearLayout.LayoutParams layoutParams1 = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-                    layoutParams1.topMargin = 8;
-                    textView2.setLayoutParams(layoutParams);
-                    if (orderListResp.paymentDue != null && !TextUtils.isEmpty(orderListResp.paymentDue)) {
-                        textView2.setText("Deposit Due: " + orderListResp.paymentDue.substring(0, 16).replace("T", " "));
-                        holder.itemBinding.layoutCompletionDetail.addView(textView2, accountList.size() + 1);
-                    } else {
-                        textView2.setText("Deposit Due: - ");
-                        holder.itemBinding.layoutCompletionDetail.addView(textView2, accountList.size() + 1);
-                    }
+                    itemBankBinding.btnDepositFinished.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            hideKeyBoard();
+                            CaptureHoldResp response = new CaptureHoldResp();
+                            response.id = orderListResp.id;
+                            response.total = orderListResp.total;
+                            response.payment = orderListResp.payment;
+                            response.paymentDue = orderListResp.paymentDue;
+                            response.bankName = orderListResp.bankName;
+                            response.nameOnAccount = orderListResp.nameOnAccount;
+                            response.account = orderListResp.account;
+                            response.status = orderListResp.status;
+                            CaptureHoldResp.NearestBranchBean nearestBranchBean = new CaptureHoldResp.NearestBranchBean();
+                            nearestBranchBean.name = orderListResp.nearestBranch.name;
+                            nearestBranchBean.city = orderListResp.nearestBranch.city;
+                            nearestBranchBean.state = orderListResp.nearestBranch.state;
+                            nearestBranchBean.phone = orderListResp.nearestBranch.phone;
+                            nearestBranchBean.address = orderListResp.nearestBranch.address;
+                            response.nearestBranch = nearestBranchBean;
+                            response.bankUrl = orderListResp.account;
+                            response.bankLogo = orderListResp.account;
+                            response.bankIcon = orderListResp.account;
+                            response.bankIconHq = orderListResp.account;
+                            response.privateId = orderListResp.account;
+
+                            confirmDeposit(response);
+                        }
+                    });
+
+                    itemBankBinding.btnCancelOrder.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            hideKeyBoard();
+                            // call cancel order
+                            cancelOrder("" + orderListResp.id);
+                        }
+                    });
                 } else {
                     holder.itemBinding.setItem(orderListResp);
                 }

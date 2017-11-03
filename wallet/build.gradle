@@ -53,7 +53,7 @@ android {
         }
     }
     compileSdkVersion 'android-23'
-    buildToolsVersion '25.0.0'
+    buildToolsVersion '26.0.2'
     lintOptions {
         abortOnError false
         disable 'MissingTranslation'
@@ -117,6 +117,7 @@ android {
     defaultConfig {
         signingConfig signingConfigs.config
     }
+    flavorDimensions "default"
 }
 
 
