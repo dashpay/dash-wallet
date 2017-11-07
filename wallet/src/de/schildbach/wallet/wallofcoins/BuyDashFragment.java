@@ -376,6 +376,11 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         countryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         binding.spCountry.setAdapter(countryAdapter);
 
+        if (config.getFormat().code().equals("DASH")) {
+            binding.btnBuyMore.setText("Buy More Dash!");
+        } else {
+            binding.btnBuyMore.setText("Buy More Bitcoin!");
+        }
         binding.requestCoinsAmountBtc.setCurrencySymbol(config.getFormat().code());
         binding.requestCoinsAmountBtc.setInputFormat(config.getMaxPrecisionFormat());
         binding.requestCoinsAmountBtc.setHintFormat(config.getFormat());
