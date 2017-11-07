@@ -78,6 +78,8 @@ public class ExchangeRatesProvider extends ContentProvider {
 
     private static final HttpUrl BITCOINAVERAGE_URL = HttpUrl
             .parse("https://apiv2.bitcoinaverage.com/indices/global/ticker/short?crypto=BTC");
+    private static final HttpUrl BITCOINAVERAGE_DASHBTC_URL = HttpUrl
+            .parse("https://apiv2.bitcoinaverage.com/indices/crypto/ticker/DASHBTC");
     private static final String BITCOINAVERAGE_SOURCE = "BitcoinAverage.com";
 
     private static final HttpUrl POLONIEX_URL = HttpUrl.parse("https://poloniex.com/public?command=returnTradeHistory&currencyPair="+CoinDefinition.cryptsyMarketCurrency +"_" + CoinDefinition.coinTicker);
@@ -226,8 +228,13 @@ public class ExchangeRatesProvider extends ContentProvider {
         throw new UnsupportedOperationException();
     }
 
-    private Map<String, ExchangeRate> requestExchangeRates() {
-        Double dashPerBTC = requestExchangeRatesForDash();
+     private Map<String, ExchangeRate> requestExchangeRates() {
+        Double dashPerBTC = requestExchangeRateOfDashInBTC_poloniex();
+
+        if(dashPerBTC == null) {
+            Map<String, ExchangeRate> dashRates = requestExchangeRatesForDashInBTC();
+            dashPerBTC = Double.parseDouble(dashRates.get("DASH").rate.fiat.toString()) / Double.parseDouble(dashRates.get("DASH").rate.coin.toString());
+        }
 
         final Stopwatch watch = Stopwatch.createStarted();
 
@@ -281,7 +288,7 @@ public class ExchangeRatesProvider extends ContentProvider {
         return null;
     }
 
-    private Double requestExchangeRatesForDash() {
+    private Double requestExchangeRateOfDashInBTC_poloniex() {
         final Stopwatch watch = Stopwatch.createStarted();
 
         final Request.Builder request = new Request.Builder();
@@ -321,6 +328,47 @@ public class ExchangeRatesProvider extends ContentProvider {
             }
         } catch (final Exception x) {
             log.warn("problem fetching exchange rates from " + POLONIEX_SOURCE, x);
+        }
+
+        return null;
+    }
+
+    private Map<String, ExchangeRate> requestExchangeRatesForDashInBTC() {
+        final Stopwatch watch = Stopwatch.createStarted();
+
+        final Request.Builder request = new Request.Builder();
+        request.url(BITCOINAVERAGE_DASHBTC_URL);
+        request.header("User-Agent", userAgent);
+
+        final Call call = Constants.HTTP_CLIENT.newCall(request.build());
+        try {
+            final Response response = call.execute();
+            if (response.isSuccessful()) {
+                final String content = response.body().string();
+                final JSONObject head = new JSONObject(content);
+                final Map<String, ExchangeRate> rates = new TreeMap<String, ExchangeRate>();
+
+                final JSONObject averages = head.getJSONObject("averages");
+                try {
+                    final Fiat rate = parseFiatInexact("DASH",  averages.getString("day"));
+                    if (rate.signum() > 0)
+                        rates.put("DASH", new ExchangeRate(
+                                new org.bitcoinj.utils.ExchangeRate(rate), BITCOINAVERAGE_SOURCE));
+                } catch (final IllegalArgumentException x) {
+                    log.warn("problem fetching {} exchange rate from {}: {}", "DASH",
+                            BITCOINAVERAGE_DASHBTC_URL, x.getMessage());
+                }
+
+                watch.stop();
+                log.info("fetched exchange rates from {}, {} chars, took {}", BITCOINAVERAGE_DASHBTC_URL, content.length(),
+                        watch);
+
+                return rates;
+            } else {
+                log.warn("http status {} when fetching exchange rates from {}", response.code(), BITCOINAVERAGE_DASHBTC_URL);
+            }
+        } catch (final Exception x) {
+            log.warn("problem fetching exchange rates from " + BITCOINAVERAGE_DASHBTC_URL, x);
         }
 
         return null;
