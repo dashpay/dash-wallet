@@ -88,6 +88,8 @@ public final class WalletBalanceToolbarFragment extends Fragment
 	private static final long BLOCKCHAIN_UPTODATE_THRESHOLD_MS = DateUtils.HOUR_IN_MILLIS;
 	private static final Coin TOO_MUCH_BALANCE_THRESHOLD = Coin.COIN.multiply(30);
 
+	private boolean initComplete = false;
+
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
@@ -148,8 +150,11 @@ public final class WalletBalanceToolbarFragment extends Fragment
 
 		loaderManager.initLoader(ID_BALANCE_LOADER, null, balanceLoaderCallbacks);
 		loaderManager.initLoader(ID_RATE_LOADER, null, rateLoaderCallbacks);
-		loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
-        //loaderManager.initLoader(ID_MASTERNODE_SYNC_LOADER, null, masternodeSyncLoaderCallbacks);
+		if(!initComplete) {
+			loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
+			initComplete = true;
+		}
+		else loaderManager.restartLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
 
 		updateView();
 	}
