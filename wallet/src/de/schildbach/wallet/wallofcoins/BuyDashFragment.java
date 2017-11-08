@@ -510,6 +510,50 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                     binding.layoutCompletionDetail.setVisibility(View.VISIBLE);
                                     backManageViews.add(LAYOUT_COMPLETION_DETAIL);
 
+                                    switch (response.body().get(0).status) {
+                                        case "WD":
+                                            binding.orderStatus.setText("Status: Waiting Deposit");
+                                            break;
+                                        case "WDV":
+                                            binding.orderStatus.setText("Status: Waiting Deposit Verification");
+                                            break;
+                                        case "RERR":
+                                            binding.orderStatus.setText("Status: Issue w/ Receipt, Contacted Buyer");
+                                            break;
+                                        case "DERR":
+                                            binding.orderStatus.setText("Status: Issue with Deposit, Needs Follow-up");
+                                            break;
+                                        case "RSD":
+                                            binding.orderStatus.setText("Status: Reserved for Seller Deposit");
+                                            break;
+                                        case "RMIT":
+                                            binding.orderStatus.setText("Status: Remit Address Missing");
+                                            break;
+                                        case "UCRV":
+                                            binding.orderStatus.setText("Status: Under Compliance Review");
+                                            break;
+                                        case "PAYP":
+                                            binding.orderStatus.setText("Status: Done - Pending Delivery");
+                                            break;
+                                        case "SENT":
+                                            binding.orderStatus.setText("Status: Done - Units Delivered");
+                                            break;
+                                        case "CANC":
+                                            binding.orderStatus.setText("Status: Buyer Canceled");
+                                            break;
+                                        case "ACAN":
+                                            binding.orderStatus.setText("Status: Staff Canceled");
+                                            break;
+                                        case "EXP":
+                                            binding.orderStatus.setText("Status: Deposit Time Expired");
+                                            break;
+                                        case "ML":
+                                            binding.orderStatus.setText("Status: Meat Locker");
+                                            break;
+                                        case "MLR":
+                                            binding.orderStatus.setText("Status: Meat Locker Returned");
+                                            break;
+                                    }
                                     binding.textNearByCenter.setOnClickListener(new View.OnClickListener() {
                                         @Override
                                         public void onClick(View v) {
@@ -556,7 +600,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                             }
 
                             @Override
-                            public void onFailure(Call<List<CaptureHoldResp>> call, Throwable t) {
+                            public void onFailure
+                                    (Call<List<CaptureHoldResp>> call, Throwable t) {
                                 binding.linearProgress.setVisibility(View.GONE);
                                 Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
                                 Log.e(TAG, "onFailure: ", t);
@@ -1339,6 +1384,50 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 holder.itemBinding.setItem(orderListResp);
             }
 
+            switch (orderListResp.status) {
+                case "WD":
+                    holder.itemBinding.orderStatus.setText("Status: Waiting Deposit");
+                    break;
+                case "WDV":
+                    holder.itemBinding.orderStatus.setText("Status: Waiting Deposit Verification");
+                    break;
+                case "RERR":
+                    holder.itemBinding.orderStatus.setText("Status: Issue w/ Receipt, Contacted Buyer");
+                    break;
+                case "DERR":
+                    holder.itemBinding.orderStatus.setText("Status: Issue with Deposit, Needs Follow-up");
+                    break;
+                case "RSD":
+                    holder.itemBinding.orderStatus.setText("Status: Reserved for Seller Deposit");
+                    break;
+                case "RMIT":
+                    holder.itemBinding.orderStatus.setText("Status: Remit Address Missing");
+                    break;
+                case "UCRV":
+                    holder.itemBinding.orderStatus.setText("Status: Under Compliance Review");
+                    break;
+                case "PAYP":
+                    holder.itemBinding.orderStatus.setText("Status: Done - Pending Delivery");
+                    break;
+                case "SENT":
+                    holder.itemBinding.orderStatus.setText("Status: Done - Units Delivered");
+                    break;
+                case "CANC":
+                    holder.itemBinding.orderStatus.setText("Status: Buyer Canceled");
+                    break;
+                case "ACAN":
+                    holder.itemBinding.orderStatus.setText("Status: Staff Canceled");
+                    break;
+                case "EXP":
+                    holder.itemBinding.orderStatus.setText("Status: Deposit Time Expired");
+                    break;
+                case "ML":
+                    holder.itemBinding.orderStatus.setText("Status: Meat Locker");
+                    break;
+                case "MLR":
+                    holder.itemBinding.orderStatus.setText("Status: Meat Locker Returned");
+                    break;
+            }
             if (orderListResp.status.equals("WD")) {
                 holder.itemBinding.btnCancelOrder.setVisibility(View.VISIBLE);
                 holder.itemBinding.btnDepositFinished.setVisibility(View.VISIBLE);

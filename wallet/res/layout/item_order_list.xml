@@ -71,10 +71,19 @@
             </LinearLayout>
 
             <TextView
+                android:id="@+id/order_status"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
                 android:layout_marginTop="@dimen/dimen_8dp"
+                android:textSize="16dp"
+                tools:text="Status: Pending" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
+
                 android:text='@{TextUtils.isEmpty(item.nameOnAccount)?"Name on Account: - ":"Name on Account: " + item.nameOnAccount}'
                 android:textSize="16dp"
                 tools:text="Deposit Due: Today 12:00 PM" />
