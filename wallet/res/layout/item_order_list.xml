@@ -5,6 +5,8 @@
 
     <data>
 
+        <import type="android.view.View" />
+
         <import type="android.text.TextUtils" />
 
         <variable
@@ -53,6 +55,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="4dp"
                         android:text='@{TextUtils.isEmpty(item.bankName)?"Bank Name: - ":item.bankName}'
+                        android:visibility='@{TextUtils.isEmpty(item.bankName)?View.GONE:View.VISIBLE}'
                         android:textSize="20dp"
                         android:textStyle="bold"
                         tools:text="Bank Name" />
@@ -64,6 +67,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="4dp"
                         android:text='@{TextUtils.isEmpty(item.nearestBranch.phone)?"Phone: - ":"Phone: " + item.nearestBranch.phone}'
+                        android:visibility='@{TextUtils.isEmpty(item.nearestBranch.phone)?View.GONE:View.VISIBLE}'
                         android:textSize="16dp"
                         tools:text="Deposit Due: Today 12:00 PM" />
 
@@ -83,7 +87,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
-
+                android:visibility='@{TextUtils.isEmpty(item.nameOnAccount)?View.GONE:View.VISIBLE}'
                 android:text='@{TextUtils.isEmpty(item.nameOnAccount)?"Name on Account: - ":"Name on Account: " + item.nameOnAccount}'
                 android:textSize="16dp"
                 tools:text="Deposit Due: Today 12:00 PM" />
@@ -93,6 +97,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
                 android:text='@{TextUtils.isEmpty(item.account)?"Account #: - ":"Account #: " + item.account}'
+                android:visibility='@{TextUtils.isEmpty(item.account)?View.GONE:View.VISIBLE}'
                 android:textSize="16dp"
                 tools:text="Deposit Due: Today 12:00 PM" />
 
@@ -102,6 +107,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
                 android:text='@{TextUtils.isEmpty(item.payment)?"Cash to Deposit: - ":"Cash to Deposit: $"+ item.payment}'
+                android:visibility='@{TextUtils.isEmpty(item.payment)?View.GONE:View.VISIBLE}'
                 android:textSize="16dp"
                 tools:text="$ 16447878" />
 
@@ -111,6 +117,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
                 android:text='@{TextUtils.isEmpty(item.paymentDue)?"": "Deposit Due: " + item.paymentDue.substring(0,16).replace("T"," ")}'
+                android:visibility='@{TextUtils.isEmpty(item.paymentDue)?View.GONE:View.VISIBLE}'
                 android:textSize="16dp"
                 tools:text="Deposit Due: Today 12:00 PM" />
 

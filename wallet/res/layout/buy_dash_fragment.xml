@@ -4,6 +4,8 @@
 
     <data>
 
+        <import type="android.view.View" />
+
         <import type="android.text.TextUtils" />
 
         <variable
@@ -190,6 +192,7 @@
                         android:text='@{TextUtils.isEmpty(confiremedData.bankName)?"Bank Name: - ":confiremedData.bankName}'
                         android:textSize="20dp"
                         android:textStyle="bold"
+                        android:visibility='@{TextUtils.isEmpty(confiremedData.bankName)?View.GONE:View.VISIBLE}'
                         tools:text="Bank Name" />
 
                     <TextView
@@ -209,6 +212,7 @@
                         android:layout_marginBottom="4dp"
                         android:text='@{TextUtils.isEmpty(confiremedData.nearestBranch.phone)?"Phone: - ":"Phone: " + confiremedData.nearestBranch.phone}'
                         android:textSize="16dp"
+                        android:visibility='@{TextUtils.isEmpty(confiremedData.nearestBranch.phone)?View.GONE:View.VISIBLE}'
                         tools:text="Deposit Due: Today 12:00 PM" />
 
                 </LinearLayout>
@@ -230,6 +234,7 @@
                 android:layout_marginBottom="4dp"
                 android:text='@{TextUtils.isEmpty(confiremedData.nameOnAccount)?"Name on Account: - ":"Name on Account: " + confiremedData.nameOnAccount}'
                 android:textSize="16dp"
+                android:visibility='@{TextUtils.isEmpty(confiremedData.nameOnAccount)?View.GONE:View.VISIBLE}'
                 tools:text="Deposit Due: Today 12:00 PM" />
 
             <TextView
@@ -239,6 +244,7 @@
                 android:layout_marginBottom="4dp"
                 android:text='@{TextUtils.isEmpty(confiremedData.account)?"Account #: - ":"Account #: " + confiremedData.account}'
                 android:textSize="16dp"
+                android:visibility='@{TextUtils.isEmpty(confiremedData.account)?View.GONE:View.VISIBLE}'
                 tools:text="Deposit Due: Today 12:00 PM" />
 
             <TextView
@@ -248,6 +254,7 @@
                 android:layout_marginBottom="4dp"
                 android:text='@{TextUtils.isEmpty(confiremedData.payment)?"Cash to Deposit: - ":"Cash to Deposit: $"+ confiremedData.payment}'
                 android:textSize="16dp"
+                android:visibility='@{TextUtils.isEmpty(confiremedData.payment)?View.GONE:View.VISIBLE}'
                 tools:text="$ 16447878" />
 
             <TextView
@@ -257,6 +264,7 @@
                 android:layout_marginBottom="4dp"
                 android:text='@{TextUtils.isEmpty(confiremedData.paymentDue)?"Deposit Due: - ":"Deposit Due: " + confiremedData.paymentDue.substring(0,16).replace("T"," ")}'
                 android:textSize="16dp"
+                android:visibility='@{TextUtils.isEmpty(confiremedData.paymentDue)?View.GONE:View.VISIBLE}'
                 tools:text="Deposit Due: Today 12:00 PM" />
 
 
