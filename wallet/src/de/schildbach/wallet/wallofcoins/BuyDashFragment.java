@@ -436,30 +436,30 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                             if (response.body().get(0).bankName != null && !TextUtils.isEmpty(response.body().get(0).bankName)) {
                                                 itemBankBinding.textBankName.setText(response.body().get(0).bankName);
                                             } else {
-                                                itemBankBinding.textBankName.setText("Bank Name: - ");
+                                                itemBankBinding.textBankName.setVisibility(View.GONE);
                                             }
                                             if (response.body().get(0).nearestBranch.phone != null && !TextUtils.isEmpty(response.body().get(0).nearestBranch.phone)) {
                                                 itemBankBinding.textPhone.setText("Phone: " + response.body().get(0).nearestBranch.phone);
                                             } else {
-                                                itemBankBinding.textPhone.setText("Phone: - ");
+                                                itemBankBinding.textPhone.setVisibility(View.GONE);
                                             }
 
                                             if (response.body().get(0).nameOnAccount != null && !TextUtils.isEmpty(response.body().get(0).nameOnAccount)) {
                                                 itemBankBinding.textNameAccount.setText("Name on Account: " + response.body().get(0).nameOnAccount);
                                             } else {
-                                                itemBankBinding.textNameAccount.setText("Name on Account: - ");
+                                                itemBankBinding.textNameAccount.setVisibility(View.GONE);
                                             }
 
                                             if (response.body().get(0).payment != null && !TextUtils.isEmpty(response.body().get(0).payment)) {
                                                 itemBankBinding.textCashToDeposite.setText("Cash to Deposit: " + response.body().get(0).payment);
                                             } else {
-                                                itemBankBinding.textCashToDeposite.setText("Cash to Deposit: - ");
+                                                itemBankBinding.textCashToDeposite.setVisibility(View.GONE);
                                             }
 
                                             if (response.body().get(0).paymentDue != null && !TextUtils.isEmpty(response.body().get(0).paymentDue)) {
                                                 itemBankBinding.textDepositeDue.setText("Deposit Due: " + response.body().get(0).paymentDue.substring(0, 16).replace("T", " "));
                                             } else {
-                                                itemBankBinding.textDepositeDue.setText("Deposit Due: - ");
+                                                itemBankBinding.textDepositeDue.setVisibility(View.GONE);
                                             }
                                             Type listType = new TypeToken<ArrayList<AccountJson>>() {
                                             }.getType();
@@ -1291,30 +1291,30 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     if (orderListResp.bankName != null && !TextUtils.isEmpty(orderListResp.bankName)) {
                         itemBankBinding.textBankName.setText(orderListResp.bankName);
                     } else {
-                        itemBankBinding.textBankName.setText("Bank Name: - ");
+                        itemBankBinding.textBankName.setVisibility(View.GONE);
                     }
                     if (orderListResp.nearestBranch.phone != null && !TextUtils.isEmpty(orderListResp.nearestBranch.phone)) {
                         itemBankBinding.textPhone.setText("Phone: " + orderListResp.nearestBranch.phone);
                     } else {
-                        itemBankBinding.textPhone.setText("Phone: - ");
+                        itemBankBinding.textPhone.setVisibility(View.GONE);
                     }
 
                     if (orderListResp.nameOnAccount != null && !TextUtils.isEmpty(orderListResp.nameOnAccount)) {
                         itemBankBinding.textNameAccount.setText("Name on Account: " + orderListResp.nameOnAccount);
                     } else {
-                        itemBankBinding.textNameAccount.setText("Name on Account: - ");
+                        itemBankBinding.textNameAccount.setVisibility(View.GONE);
                     }
 
                     if (orderListResp.payment != null && !TextUtils.isEmpty(orderListResp.payment)) {
                         itemBankBinding.textCashToDeposite.setText("Cash to Deposit: " + orderListResp.payment);
                     } else {
-                        itemBankBinding.textCashToDeposite.setText("Cash to Deposit: - ");
+                        itemBankBinding.textCashToDeposite.setVisibility(View.GONE);
                     }
 
                     if (orderListResp.paymentDue != null && !TextUtils.isEmpty(orderListResp.paymentDue)) {
                         itemBankBinding.textDepositeDue.setText("Deposit Due: " + orderListResp.paymentDue.substring(0, 16).replace("T", " "));
                     } else {
-                        itemBankBinding.textDepositeDue.setText("Deposit Due: - ");
+                        itemBankBinding.textDepositeDue.setVisibility(View.GONE);
                     }
                     Type listType = new TypeToken<ArrayList<AccountJson>>() {
                     }.getType();
