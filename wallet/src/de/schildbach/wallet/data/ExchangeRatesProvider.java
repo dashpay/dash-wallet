@@ -229,12 +229,20 @@ public class ExchangeRatesProvider extends ContentProvider {
     }
 
      private Map<String, ExchangeRate> requestExchangeRates() {
-        Double dashPerBTC = requestExchangeRateOfDashInBTC_poloniex();
+         Double dashPerBTC = 0.0;
+         try {
+             dashPerBTC = requestExchangeRateOfDashInBTC_poloniex();
 
-        if(dashPerBTC == null) {
-            Map<String, ExchangeRate> dashRates = requestExchangeRatesForDashInBTC();
-            dashPerBTC = Double.parseDouble(dashRates.get("DASH").rate.fiat.toString()) / Double.parseDouble(dashRates.get("DASH").rate.coin.toString());
-        }
+             if (dashPerBTC == null) {
+                 Map<String, ExchangeRate> dashRates = requestExchangeRatesForDashInBTC();
+                 dashPerBTC = Double.parseDouble(dashRates.get("DASH").rate.fiat.toString()) / Double.parseDouble(dashRates.get("DASH").rate.coin.toString());
+             }
+         }
+         catch(Exception x)
+         {
+             log.warn("problem fetching exchange rates from " + BITCOINAVERAGE_DASHBTC_URL, x);
+             return null;
+         }
 
         final Stopwatch watch = Stopwatch.createStarted();
 
