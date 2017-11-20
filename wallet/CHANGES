@@ -1,4 +1,7 @@
 Dash Wallet
+v5.17.1
+* Dash Core 12.2 support
+
 v5.15.5
 * Fix the crash when viewing a QR code and pressing home.
 
