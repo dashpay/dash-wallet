@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources>
+
+
+	<string name="send_coins_fragment_instantx_enable">AnındaGönder\'i Kullan</string>
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">Bu AnındaGönder ödemesi henüz aktarılmadı.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">Bu AnındaGönder ödemesi Dash Ağından onay bekliyor.</string>
+	<string name="transaction_row_message_own_instantx_locked">AnındaGönder işlemi gönderildi (kilitli)</string>
+	<string name="transaction_row_message_received_instantx_lock_request">Bu AnındaGönder ödemesi Dash Ağından onay bekliyor.</string>
+	<string name="transaction_row_message_received_instantx_locked">Bu AnındaGönder ödemesi Dash Ağı tarafından onaylandı.</string>
+	<string name="transaction_row_message_received_unconfirmed_instantx">Onaylanmamış AnındaGönder</string>
+	<string name="transaction_row_message_received_instantx_locked2">Kilitli AnındaGönder</string>
+
+	<string name="wallet_options_disconnect">Bağlantıyı Kes</string>
+
+	<string name="network_monitor_masternodes_title">TemelAğlar</string>
+	<string name="export_keys_dialog_title_to_seed">Kurtarma Sözcük Grubunu Göster</string>
+	<string name="import_keys_dialog_title_from_seed">Kurtarma sözcük grubundan geri yükle</string>
+	<string name="backup_to_seed_wallet_dialog_message">Bu sizin kurtarma sözcük grubunuzdur. Lütfen bir yere yazınız.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">Kurtarma sözcük grubunuzu kimselere ASLA göstermeyin, yoksa Dash\'lerinizi harcayabilirler. Bu sözcük grubu başka Dash yazılımları ile uyumlu değildir.</string>
+	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Cüzdanınız bir harcama PİN\'i ile korunur. PİN\'inizi girin ve Göster\'e tıklayarak kurtarma sözcük grubunuzu görüntüleyin.</string>
+    <string name="import_keys_from_seed_dialog_message">Kurtarma sözcük grubunuzu girin.</string>
+	<string name="import_export_keys_dialog_password_phrase">Kurtarma sözcük grubunuz buraya.</string>
+	<string name="preferences_report_issue_summary">Sorununuz ile ilgili bilgi toplayın ve raporunuzu geliştiricilere e-posta yolu ile gönderin.</string>
+	<string name="navigation_configuration">Yapılandırma</string>
+    <string name="button_copy_address">Adresi Kopyala</string>
+	<string name="request_coins_clipboard_address_msg">Dash adresi panoya kopyalandı</string>
+	<string name="backup_wallet_to_seed_show_recovery_phrase">Göster</string>
+	<string name="restore_wallet_from_invalid_seed_warning_message">%s geçersiz bir sözcüktür.</string>
+
+
+
+
+
+</resources>

@@ -1,23 +1,23 @@
 Úselo bajo su propio riesgo!(Requiere Android 4 o superior)
 
-<b>Ten tus Dash siempre contigo, en tu cartera!</b> Puedes pagar rápidamente escaneando tu código QR. Como un proveedor, puedes recibir págos eficientemente y de forma instantanea. Dash wallet es la primer app móvil de Dash, y la más segura!
+<b>Ten tus Dash siempre contigo, en tu bolsillo!</b> Puedes pagar rápidamente escaneando tu código QR. Como un proveedor, puedes recibir págos eficientemente y de forma instantanea. Dash wallet es la primer app móvil de Dash, y la más segura!
 
 <b>CARACTERISTICAS</b>
 
 • Sin necesidad de registro, servicio web o cuenta en la nube! Esta cartera es decentralizada y operada entre pares (P2P).
 • Muestra cantidades en DASH, mDASH y µDASH.
-• Conversiones hacia y desde diversas divisas nacionales.
+• Conversiones hacia y desde divisas nacionales.
 • Enviar y recibir Dash vía NFC, códigos QR o URLs Dash.
 • Registro para direcciones de uso regular en Dash.
 • Cuando estas desconectado, aun puedes pagar vía Bluetooth.
 • Sistema de notificación para monedas recibidas.
-• Barrido de carteras de papel(e.g. las usadas para almacenamiento en frio).
+• Barrido de billeteras de papel (Ej: las usadas para almacenamiento en frio).
 • Widget con el balance de Dash.
 
 
 <b>CONTRIBUIR</b>
 
-La cartera Dash es <b>software libre</b> y <b>código abierto</b>. Licenciada bajo la GPLv3
+La cartera Dash es <b>código abierto</b> y <b>software libre</b>. Licencia: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Nuestro código fuente esta disponible en GitHub:
@@ -31,6 +31,6 @@ https://www.dash.org/
 
 <b>TESTIMONIOS</b>
 
-Una cartera para móvil recomendada por https://www.dash.org
+• Una billetera móvil recomendada por https://www.dash.org
 
-<i>Uselo a su propio riesgo!</i>
+¡Usar bajo tu propio riesgo!</i>

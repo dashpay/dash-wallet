@@ -14,4 +14,22 @@
 	<string name="wallet_options_disconnect">Déconnecter</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
+	<string name="export_keys_dialog_title_to_seed">Voir la phase de récupération</string>
+	<string name="import_keys_dialog_title_from_seed">Restaurer de la phrase de récupération</string>
+	<string name="backup_to_seed_wallet_dialog_message">Ceci est votre phrase de récupération. S\'il vous plaît écrivez-le.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">Ne laissez personne voir votre phrase de récupération parce que ils peuvent dépenser votre Dash. Cette phrase n\'est pas compatible avec d\'autres logiciels Dash.</string>
+	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Votre portefeuille est protégé par un code PIN de dépenses. Entrez votre code PIN et appuyez sur Afficher pour afficher votre phrase de récupération.</string>
+    <string name="import_keys_from_seed_dialog_message">Entrez votre phrase de récupération ici.</string>
+	<string name="import_export_keys_dialog_password_phrase">La phrase de récupération va ici.</string>
+	<string name="preferences_report_issue_summary">Collectez informations de votre problème et email aux développeurs.</string>
+	<string name="navigation_configuration">Configuration</string>
+    <string name="button_copy_address">Copiez addrese</string>
+	<string name="request_coins_clipboard_address_msg">Adresse Dash copiée dans le presse-papiers</string>
+	<string name="backup_wallet_to_seed_show_recovery_phrase">Afficher </string>
+	<string name="restore_wallet_from_invalid_seed_warning_message">%s est un mot invalide.</string>
+
+
+
+
+
 </resources>

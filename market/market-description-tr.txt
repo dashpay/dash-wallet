@@ -1,36 +1,36 @@
-<b>Dash'leriniz daima cebinizde sizinle olsun!</b> Herhangi bir QR kodunu okuyarak çabuk ödeme yapabilirsiniz. Bir tüccar olarak ödemeleri güvenilir ve anında alabilirsiniz. Dash Wallet ilk mobil Dash uygulamasıdır ve muhtemelen en güvenli Dash uygulamasıdır!
+Riskin size ait olduğunu bilerek kullanın! (Android 4 veya üstünü gerektirir)
 
+<b>Dash'iniz hep sizinle olsun, cebinizde!</b> QR kodunu tarayarak hızlıca ödeme yapabilir. Tacir olarak, ödemelerinizi anında ve güvenilir bir şekilde alabilirsiniz. Dash Wallet ilk mobil Dash uygulamasıdır, ve muhtemelen en güvenilir olanıdır!
 
 <b>ÖZELLİKLER</b>
 
-• Hiçbir oturuma, web ya da bulut hizmetine gerek yoktur. Bu cüzdan merkezsiz ve eşten eşedir.
-• Dash meblağlarını DASH, mDASH ve µDASH olarak göster.
-• Ulusal para birimlerine ve bu para birimlerinden dönüştürme.
-• QR kodları, Dash bağlantıları ve yakın alan iletişimi ile Dash alımı ve gönderilmesi.
-• Sık kullanılan Dash adresleri için adres defteri içerir.
-• Çevrimdışı olduğunuzda Bluetooth vasıtasıyla ödemeler.
-• Alınan bitcoin'ler için sistem bildirimleri.
-• Kağıt cüzdanların taranması (mesela soğuk depolama için kullanılanlar).
-• Dash bakiyesini görüntüleyen widget.
+• Kayıt, web hizmeti, veya bulut gerektirmez! Bu cüzdan eşler arası ve merkezi olmayan bir cüzdandır.
+• Dash miktarını DASH, mDASH ve µDASH olarak görüntüle.
+• Ulusal para birimlerine ve ulusal para birimlerinden dönüştürme.
+• NFC, QR kodları veya Dash URL'leri vasıtasıyla Dash gönderimi ve alımı.
+• Sürekli kullanılan Dash adresleri için adres rehberi.
+• Çevrimdışıyken bile, Bluetooth vasıtasıyla ödeme yapabilirsiniz.
+• Gelen paralar için sistem bildirimleri.
+• Kağıt cüzdanların taranması (örn. soğuk depolama için kullanılan)
+• Dash bakiyesi için uygulama widget'i.
 
 
-<b>İŞTİRAK EDİN</b>
+<b>KATKIDA BULUN</b>
 
-Dash Wallet <b>açık kaynak</b> ve <b>özgür yazılımdır</b>. Lisans: GPLv3
+Dash Wallet <b>açık kaynak kodlu</b> <b>ücretsiz bir yazılımdır</b>. Lisans: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Kaynak kodumuz GitHub'da mevcuttur:
 https://github.com/HashEngineering/dash-wallet
 
-Tüm tercümeler Transifex üzerinde yönetilir:
+Tüm çeviriler Transifex aracılığıyla yönetilmektedir:
 https://www.transifex.com/dash/dash-wallet/
 
+Dash hakkında daha fazlası için
+https://www.dash.org/
 
 <b>REFERANSLAR</b>
 
+• https://www.dash.org tarafından tavsiye edilen bir mobil cüzdan
 
-• https://dash.org tarafından tavsiye edilen mobil cüzdan.
-
-
-<i>Tüm riski siz üstlenmiş olursunuz!</i>
-
+<i>Riskin size ait olduğunu bilerek kullanın!</i>

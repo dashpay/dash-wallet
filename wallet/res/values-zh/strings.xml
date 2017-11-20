@@ -264,6 +264,8 @@
     <string name="preferences_remind_balance_summary">若钱包中依然存有达世币，几周都未曾使用，app将发送通知提醒用户。</string>
     <string name="preferences_report_issue_title">报告问题</string>
     <string name="preferences_initiate_reset_title">重置区块链 (blockchain)</string>
+    <string name="preferences_initiate_reset_summary">重置区块链，交易，以及钱包余额。此步骤需要等待一段时间，使用前请务必了解此功能用途。</string>
+    <string name="preferences_initiate_reset_dialog_message">你是否想重置区块链？/n/n这样做会暂时隐藏你的钱包余额和交易记录。区块链同步完成后会恢复。请确保你已联入了可靠的网络。</string>
     <string name="preferences_initiate_reset_dialog_positive">重置</string>
     <string name="preferences_extended_public_key_title">显示xpub</string>
     <string name="preferences_extended_public_key_summary">浏览您钱包的公钥，这样可以将其导入其他程序或服务中。请注意：如此做会对其他程序暴露您的财政隐私。</string>
@@ -291,6 +293,7 @@
     <string name="about_category_credits">此应用正在使用...</string>
     <string name="about_credits_bitcoinj_title">dashj %s, 达世币实现协议</string>
     <string name="about_credits_zxing_title">ZXing, 二维码处理函数库</string>
+    <string name="about_credits_icon_title">此app使用的是‘bitboy’的图标</string>
     <string name="about_credits_scrypt_title">脚本, 由Will Glozer 和 Colin Percival制作</string>
     <string name="about_market_app_title">Google Play 页面</string>
     <string name="about_market_app_summary">评价这个应用</string>
