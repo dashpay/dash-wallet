@@ -65,7 +65,7 @@ public final class WalletActionsFragment extends Fragment {
         });
 
         final View sendQrButton = view.findViewById(R.id.wallet_actions_send_qr);
-        sendQrButton.setVisibility(View.INVISIBLE);
+        sendQrButton.setVisibility(View.GONE);
         sendQrButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(final View v) {
