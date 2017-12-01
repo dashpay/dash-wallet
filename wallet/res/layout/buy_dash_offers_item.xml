@@ -40,7 +40,7 @@
                 android:layout_weight="1"
                 android:ellipsize="end"
                 android:lines="1"
-                android:text="@{item.amount.DASH}"
+                android:text="@{item.amount.DASH + ` ĐASH`}"
                 android:textSize="20dp"
                 android:textStyle="bold"
                 tools:text="TextView" />
@@ -52,7 +52,7 @@
                 android:layout_weight="1"
                 android:ellipsize="end"
                 android:lines="1"
-                android:text="@{item.amount.dots}"
+                android:text="@{item.amount.dots+` đots`}"
                 android:textSize="12dp"
                 tools:text="TextView" />
 

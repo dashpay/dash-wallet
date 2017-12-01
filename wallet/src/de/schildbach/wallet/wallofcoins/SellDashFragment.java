@@ -215,7 +215,6 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
             json = new String(buffer, "UTF-8");
         } catch (IOException ex) {
             ex.printStackTrace();
-            return null;
         }
 
         if (null != json) {
@@ -235,14 +234,14 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
         }
 
         // do something for a debug build
-        if (BuildConfig.DEBUG) {
-            binding.etPhone.setText("2154078737");
-//            binding.etEmail.setText("viral@viralsonawala.com");
-            binding.etPassword.setText("1234qwer");
-            binding.etMaxPayment.setText("1000");
-            binding.etMinPayment.setText("10");
-            binding.etSellerFee.setText("0");
-        }
+//        if (BuildConfig.DEBUG) {
+//            binding.etPhone.setText("2154078737");
+////            binding.etEmail.setText("viral@viralsonawala.com");
+//            binding.etPassword.setText("1234qwer");
+//            binding.etMaxPayment.setText("1000");
+//            binding.etMinPayment.setText("10");
+//            binding.etSellerFee.setText("0");
+//        }
 
         if (null != sellDashPref.getAuthToken() && !TextUtils.isEmpty(sellDashPref.getAuthToken())) {
 

@@ -1131,6 +1131,10 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     binding.rvOrderList.setVisibility(View.GONE);
                     binding.layoutVerifyOtp.setVisibility(View.GONE);
                     binding.rvOffers.setVisibility(View.GONE);
+
+                    binding.requestCoinsAmountBtcEdittext.requestFocus();
+                    InputMethodManager imm = (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
+                    imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, InputMethodManager.HIDE_IMPLICIT_ONLY);
                 }
             }
 
@@ -1328,6 +1332,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         textView.setText(accountList.get(i).getLabel() + ": " + accountList.get(i).getValue());
                         itemBankBinding.linearAccountDetail.addView(textView);
                     }
+
                     holder.itemBinding.layoutCompletionDetail.removeAllViews();
                     holder.itemBinding.layoutCompletionDetail.addView(itemBankBinding.getRoot());
 
