@@ -21,6 +21,7 @@ package de.schildbach.wallet.ui.send;
  * @author Andreas Schildbach
  */
 public enum FeeCategory {
+    ZERO,
     /**
      * We don't care when it confirms, but it should confirm at some time. Can be days or weeks.
      */

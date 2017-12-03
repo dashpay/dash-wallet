@@ -29,6 +29,8 @@
 	<string name="restore_wallet_from_invalid_seed_warning_message">%s is an invalid word.</string>
 
 
+	<string name="send_coins_options_fee_category_zero">No Fee</string>
+	<string name="send_coins_fragment_hint_fee_zero">No fee of will be paid. Use \'no fee\' only if you don\'t care about confirmation time.</string>
 
 
 

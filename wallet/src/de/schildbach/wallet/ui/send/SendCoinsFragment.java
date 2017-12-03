@@ -929,7 +929,9 @@ public final class SendCoinsFragment extends Fragment {
             //case R.id.send_coins_options_scan:
             //	handleScan();
         //		return true;
-
+            case R.id.send_coins_options_fee_category_zero:
+                handleFeeCategory(FeeCategory.ZERO);
+                return true;
             case R.id.send_coins_options_fee_category_economic:
                 handleFeeCategory(FeeCategory.ECONOMIC);
                 return true;
@@ -1052,6 +1054,12 @@ public final class SendCoinsFragment extends Fragment {
         sendRequest.memo = paymentIntent.memo;
         sendRequest.exchangeRate = amountCalculatorLink.getExchangeRate();
         sendRequest.aesKey = encryptionKey;
+
+        if(usingInstantSend)
+            sendRequest.ensureMinRequiredFee = true;
+        else if(feeCategory == FeeCategory.ECONOMIC || feeCategory == FeeCategory.ZERO)
+            sendRequest.ensureMinRequiredFee = false;  //Allow for below the reference fee transactions
+        else sendRequest.ensureMinRequiredFee = true;
 
         new SendCoinsOfflineTask(wallet, backgroundHandler) {
             @Override
@@ -1237,6 +1245,12 @@ public final class SendCoinsFragment extends Fragment {
                     sendRequest.feePerKb = fees.get(feeCategory);
                     sendRequest.feePerKb = sendRequest.useInstantSend ? TransactionLockRequest.MIN_FEE: sendRequest.feePerKb;
 
+                    if(sendRequest.useInstantSend)
+                        sendRequest.ensureMinRequiredFee = true;
+                    else if(feeCategory == FeeCategory.ECONOMIC || feeCategory == FeeCategory.ZERO)
+                        sendRequest.ensureMinRequiredFee = false;  //Allow for below the reference fee transactions
+                    else sendRequest.ensureMinRequiredFee = true;
+
                     wallet.completeTx(sendRequest);
                     dryrunTransaction = sendRequest.tx;
                 } catch (final Exception x) {
@@ -1361,10 +1375,12 @@ public final class SendCoinsFragment extends Fragment {
                     hintView.setTextColor(getResources().getColor(R.color.fg_insignificant));
                     hintView.setVisibility(View.VISIBLE);
                     final int hintResId;
-                    if (feeCategory == FeeCategory.ECONOMIC)
+                    if (feeCategory == FeeCategory.ECONOMIC && !instantXenable.isChecked())
                         hintResId = R.string.send_coins_fragment_hint_fee_economic;
-                    else if (feeCategory == FeeCategory.PRIORITY)
+                    else if (feeCategory == FeeCategory.PRIORITY && !instantXenable.isChecked())
                         hintResId = R.string.send_coins_fragment_hint_fee_priority;
+                    else if (feeCategory == FeeCategory.ZERO && !instantXenable.isChecked())
+                        hintResId = R.string.send_coins_fragment_hint_fee_zero;
                     else
                         hintResId = R.string.send_coins_fragment_hint_fee;
                     hintView.setText(getString(hintResId, btcFormat.format(dryrunTransaction.getFee())));

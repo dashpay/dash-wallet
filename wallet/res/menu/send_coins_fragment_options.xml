@@ -13,6 +13,9 @@
         <menu>
             <group android:checkableBehavior="single" >
                 <item
+                    android:id="@+id/send_coins_options_fee_category_zero"
+                    android:title="@string/send_coins_options_fee_category_zero"/>
+                <item
                     android:id="@+id/send_coins_options_fee_category_economic"
                     android:title="@string/send_coins_options_fee_category_economic"/>
                 <item
