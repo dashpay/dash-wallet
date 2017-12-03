@@ -1,5 +1,9 @@
 Dash Wallet
 v5.17.1
+* Updated translations
+* DIP0001 support
+
+v5.17.1
 * Dash Core 12.2 support
 
 v5.15.5
@@ -11,11 +15,22 @@ v5.14.4
 
 v5.14.3
 * Fixed bug that was related to retrieving Bitcoin fees.  Disabled as is unnecessary.
+* Add log information on sweep wallet.
 
 v5.14.2
+* Fix crashing from recycle view
+* Fix crash on showing keyboard on Restore from recovery seed
+* Replace BTC with DASH on leftovers from last merge.
+* Fix Italian translation
+* Prevent another crash with numbers entered
 
 v5.14.1
+* update electrum servers
+* More memory leak support for debug versions
+* Memory Leak fix
 
+v5.14.0
+* Fixes for compiling
 
 v5.14
 * Updated to Bitcoin Wallet 5.14
