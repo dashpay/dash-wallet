@@ -756,6 +756,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         HashMap<String, String> discoveryInputsReq = new HashMap<String, String>();
 
         discoveryInputsReq.put("publisherId", addressStr);
+        discoveryInputsReq.put("publisherId", "47");
         try {
 
             if (Float.valueOf(binding.requestCoinsAmountLocal.getTextView().getHint().toString()) > 0f) {

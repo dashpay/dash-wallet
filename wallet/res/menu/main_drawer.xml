@@ -24,10 +24,10 @@
         android:icon="@drawable/ic_menu_paper_wallet"
         android:title="@string/sweep_wallet_activity_title" />
 
-    <item
-        android:id="@+id/nav_sell_dash_for_cash"
-        android:icon="@drawable/ic_menu_sell_dash"
-        android:title="@string/sell_dash_for_cash" />
+    <!--<item-->
+        <!--android:id="@+id/nav_sell_dash_for_cash"-->
+        <!--android:icon="@drawable/ic_menu_sell_dash"-->
+        <!--android:title="@string/sell_dash_for_cash" />-->
 
     <item
         android:id="@+id/nav_buy_dash_with_cash"

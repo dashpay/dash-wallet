@@ -8,6 +8,8 @@
         <variable
             name="item"
             type="de.schildbach.wallet.wallofcoins.response.GetOffersResp.SingleDepositBean" />
+
+        <import type="android.text.Html" />
     </data>
 
     <LinearLayout
@@ -40,10 +42,10 @@
                 android:layout_weight="1"
                 android:ellipsize="end"
                 android:lines="1"
-                android:text="@{item.amount.DASH + ` ĐASH`}"
+                android:text='@{@string/dashUnicode(item.amount.DASH)}'
                 android:textSize="20dp"
                 android:textStyle="bold"
-                tools:text="TextView" />
+                tools:text="\u0110ASH" />
 
             <TextView
                 android:id="@+id/tv_itrm_offer_2"
@@ -52,9 +54,9 @@
                 android:layout_weight="1"
                 android:ellipsize="end"
                 android:lines="1"
-                android:text="@{item.amount.dots+` đots`}"
+                android:text="@{@string/dotUnicode(item.amount.dots)}"
                 android:textSize="12dp"
-                tools:text="TextView" />
+                tools:text="0.5458  \u0111ots" />
 
             <TextView
                 android:id="@+id/tv_itrm_offer_3"

@@ -383,4 +383,7 @@
     <string name="create_an_ad">Create an Ad</string>
     <string name="price">Price:</string>
 
+    <string name="dashUnicode">%s \u0110ASH</string>
+    <string name="dotUnicode">%s \u0110ASH</string>
+
 </resources>
