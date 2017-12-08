@@ -210,7 +210,7 @@ It need X-Coins-Api-Token as a header parameter which is five time mobile number
   "offer": "eyJ1c2QiOiAiNTA...",
   "phone": "+19411101467",
   "deviceName": "Ref Client",
-  "deviceCode": "94111014679411101467941110146794111014679411101467"
+  "password": "94111014679411101467941110146794111014679411101467"
 }
 ```
 

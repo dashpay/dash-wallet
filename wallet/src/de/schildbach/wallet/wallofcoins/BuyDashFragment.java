@@ -10,8 +10,10 @@ import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.database.Cursor;
 import android.databinding.DataBindingUtil;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
@@ -205,6 +207,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private CreateHoldResp createHoldResp;
     private String offerId;
     private boolean isBuyMoreVisible;
+    private String password;
 
     public static class CurrentAddressLoader extends AsyncTaskLoader<Address> {
         private LocalBroadcastManager broadcastManager;
@@ -339,6 +342,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         setRetainInstance(true);
         setHasOptionsMenu(true);
 
+        password = Settings.Secure.getString(getContext().getContentResolver(), Settings.Secure.ANDROID_ID);
 
         defaultCurrency = config.getExchangeCurrencyCode();
         config.registerOnSharedPreferenceChangeListener(this);
@@ -770,7 +774,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             discoveryInputsReq.put("usdAmount", "0");
             e.printStackTrace();
         }
-        discoveryInputsReq.put("crypto", "DASH");
+        discoveryInputsReq.put("crypto", config.getFormat().code());
         discoveryInputsReq.put("bank", "");
         discoveryInputsReq.put("zipCode", binding.buyDashZip.getText().toString());
 
@@ -871,17 +875,23 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
             }
         });
-
     }
 
-    private void getAuthTokenCall(final boolean isCreateHold) {
+    private void getAuthTokenCall() {
         String countryCode = countryData.countries.get(binding.spCountry.getSelectedItemPosition()).code;
         String phone = countryCode + binding.editBuyDashPhone.getText().toString().trim();
-        String password = binding.etPassword.getText().toString().trim();
+//        String deviceCode = binding.etPassword.getText().toString().trim();
 
         if (!TextUtils.isEmpty(phone) && !TextUtils.isEmpty(password)) {
             final GetAuthTokenReq getAuthTokenReq = new GetAuthTokenReq();
-            getAuthTokenReq.password = password;
+            getAuthTokenReq.deviceCode = binding.editBuyDashPhone.getText().toString().trim()
+                    + binding.editBuyDashPhone.getText().toString().trim()
+                    + binding.editBuyDashPhone.getText().toString().trim()
+                    + binding.editBuyDashPhone.getText().toString().trim()
+                    + binding.editBuyDashPhone.getText().toString().trim();
+
+//            getAuthTokenReq.deviceCode = password;
+
             binding.linearProgress.setVisibility(View.VISIBLE);
             WallofCoins.createService(getActivity()).getAuthToken(phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
                 @Override
@@ -903,12 +913,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     buyDashPref.setAuthToken(response.body().token);
                     binding.linearPassword.setVisibility(View.GONE);
                     // call create hold
-                    if (isCreateHold) {
-                        createHold();
-                    } else {
-                        binding.layoutVerifyOtp.setVisibility(View.VISIBLE);
-                        backManageViews.add(LAYOUT_VERIFY_OTP);
-                    }
+
+                    createHold();
                 }
 
                 @Override
@@ -1005,15 +1011,20 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     public void createHoldWithPassword() {
         String countryCode = countryData.countries.get(binding.spCountry.getSelectedItemPosition()).code;
         String phone = countryCode + binding.editBuyDashPhone.getText().toString().trim();
-        String password = binding.etPassword.getText().toString().trim();
+//        String deviceCode = binding.etPassword.getText().toString().trim();
 
         if (!TextUtils.isEmpty(phone) && !TextUtils.isEmpty(password)) {
             final HashMap<String, String> createHoldPassReq = new HashMap<String, String>();
             createHoldPassReq.put("offer", offerId);
             createHoldPassReq.put("phone", phone);
-            createHoldPassReq.put("password", password);
+            createHoldPassReq.put("deviceName", "Dash Wallet (Android)");
+            createHoldPassReq.put("deviceCode", binding.editBuyDashPhone.getText().toString().trim()
+                    + binding.editBuyDashPhone.getText().toString().trim()
+                    + binding.editBuyDashPhone.getText().toString().trim()
+                    + binding.editBuyDashPhone.getText().toString().trim()
+                    + binding.editBuyDashPhone.getText().toString().trim());
+//            createHoldPassReq.put("deviceCode", password);
             binding.linearProgress.setVisibility(View.VISIBLE);
-            Log.d(TAG, "createHoldWithPassword: " + createHoldPassReq.toString());
             WallofCoins.createService(interceptor, getActivity()).createHold(createHoldPassReq).enqueue(new Callback<CreateHoldResp>() {
                 @Override
                 public void onResponse(Call<CreateHoldResp> call, Response<CreateHoldResp> response) {
@@ -1043,7 +1054,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         buyDashPref.setHoldId(createHoldResp.id);
                         buyDashPref.setCreateHoldResp(createHoldResp);
                         buyDashPref.setAuthToken(createHoldResp.token);
-                        getAuthTokenCall(false);
+//                        getAuthTokenCall(false);
                         binding.layoutCreateHold.setVisibility(View.GONE);
                         binding.linearPhone.setVisibility(View.GONE);
                         binding.linearPassword.setVisibility(View.GONE);
@@ -1051,6 +1062,13 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         binding.rvOrderList.setVisibility(View.GONE);
                         binding.layoutVerifyOtp.setVisibility(View.GONE);
                         binding.rvOffers.setVisibility(View.GONE);
+
+                        buyDashPref.setAuthToken(response.body().token);
+                        // call create hold
+
+                        binding.layoutVerifyOtp.setVisibility(View.VISIBLE);
+                        backManageViews.add(LAYOUT_VERIFY_OTP);
+
 
 //                        Log.d(TAG, "onResponse: purchase code==>>" + createHoldResp.__PURCHASE_CODE);
 //                        binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
@@ -1207,46 +1225,46 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     binding.linearProgress.setVisibility(View.GONE);
                     if (response.code() == 200) {
                         if (response.body() != null && response.body().getAvailableAuthSources() != null && response.body().getAvailableAuthSources().size() > 0) {
-                            if (response.body().getAvailableAuthSources().get(0).equals("password")) {
-                                binding.layoutCreateHold.setVisibility(View.GONE);
-                                binding.linearPhone.setVisibility(View.GONE);
-                                binding.linearPassword.setVisibility(View.VISIBLE);
-                                backManageViews.add(LAYOUT_PASSWORD);
-                                binding.layoutCompletionDetail.setVisibility(View.GONE);
-                                binding.rvOrderList.setVisibility(View.GONE);
-                                binding.layoutVerifyOtp.setVisibility(View.GONE);
-                                binding.rvOffers.setVisibility(View.GONE);
-                                binding.textPassAbove.setText("Existing Account Login");
-                                binding.etPassword.setHint("Password");
+                            if (response.body().getAvailableAuthSources().get(0).equals("device")) {
+//                                binding.layoutCreateHold.setVisibility(View.GONE);
+//                                binding.linearPhone.setVisibility(View.GONE);
+////                                binding.linearPassword.setVisibility(View.VISIBLE)
+//                                backManageViews.add(LAYOUT_PASSWORD);
+//                                binding.layoutCompletionDetail.setVisibility(View.GONE);
+//                                binding.rvOrderList.setVisibility(View.GONE);
+//                                binding.layoutVerifyOtp.setVisibility(View.GONE);
+//                                binding.rvOffers.setVisibility(View.GONE);
+//                                binding.textPassAbove.setText("Existing Account Login");
+//                                binding.etPassword.setHint("Password");
 
-                                binding.btnNextPassword.setOnClickListener(new View.OnClickListener() {
-                                    @Override
-                                    public void onClick(View v) {
-                                        hideKeyBoard();
-                                        getAuthTokenCall(true);
-                                    }
-                                });
+//                                binding.btnNextPassword.setOnClickListener(new View.OnClickListener() {
+//                                    @Override
+//                                    public void onClick(View v) {
+                                hideKeyBoard();
+                                getAuthTokenCall();
+//                                    }
+//                                });
                             }
                         }
                     } else if (response.code() == 404) {
-                        binding.layoutCreateHold.setVisibility(View.GONE);
-                        binding.linearPhone.setVisibility(View.GONE);
-                        binding.linearPassword.setVisibility(View.VISIBLE);
-                        backManageViews.add(LAYOUT_PASSWORD);
-                        binding.layoutCompletionDetail.setVisibility(View.GONE);
-                        binding.rvOrderList.setVisibility(View.GONE);
-                        binding.layoutVerifyOtp.setVisibility(View.GONE);
-                        binding.rvOffers.setVisibility(View.GONE);
-
-                        binding.textPassAbove.setText("Register New Account");
-                        binding.etPassword.setHint("Password");
-                        binding.btnNextPassword.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                hideKeyBoard();
-                                createHoldWithPassword();
-                            }
-                        });
+//                        binding.layoutCreateHold.setVisibility(View.GONE);
+//                        binding.linearPhone.setVisibility(View.GONE);
+////                        binding.linearPassword.setVisibility(View.VISIBLE)
+//                        backManageViews.add(LAYOUT_PASSWORD);
+//                        binding.layoutCompletionDetail.setVisibility(View.GONE);
+//                        binding.rvOrderList.setVisibility(View.GONE);
+//                        binding.layoutVerifyOtp.setVisibility(View.GONE);
+//                        binding.rvOffers.setVisibility(View.GONE);
+//
+//                        binding.textPassAbove.setText("Register New Account");
+//                        binding.etPassword.setHint("Password");
+//                        binding.btnNextPassword.setOnClickListener(new View.OnClickListener() {
+//                            @Override
+//                            public void onClick(View v) {
+                        hideKeyBoard();
+                        createHoldWithPassword();
+//                            }
+//                        });
                     }
                 }
 

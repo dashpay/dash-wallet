@@ -77,7 +77,6 @@ import de.schildbach.wallet.wallofcoins.response.GetPricingOptionsResp;
 import de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp;
 import de.schildbach.wallet.wallofcoins.response.SendVerificationResp;
 import de.schildbach.wallet.wallofcoins.response.VerifyAdResp;
-import hashengineering.darkcoin.wallet.BuildConfig;
 import hashengineering.darkcoin.wallet.R;
 import hashengineering.darkcoin.wallet.databinding.ItemAdsListingBinding;
 import hashengineering.darkcoin.wallet.databinding.SellDashFragmentBinding;
@@ -337,7 +336,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
                     binding.sellDashProgress.setVisibility(View.GONE);
                     if (response.code() == 200) {
                         if (response.body() != null && response.body().getAvailableAuthSources() != null && response.body().getAvailableAuthSources().size() > 0) {
-                            if (response.body().getAvailableAuthSources().get(0).equals("password")) {
+                            if (response.body().getAvailableAuthSources().get(0).equals("deviceCode")) {
                                 binding.layoutCreateBankOpts.setVisibility(View.GONE);
                                 binding.linearPhone.setVisibility(View.GONE);
                                 binding.layoutVerifyOtp.setVisibility(View.GONE);
@@ -698,7 +697,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 
         if (!TextUtils.isEmpty(phone) && !TextUtils.isEmpty(password)) {
             final GetAuthTokenReq getAuthTokenReq = new GetAuthTokenReq();
-            getAuthTokenReq.password = password;
+            getAuthTokenReq.deviceCode = password;
             binding.sellDashProgress.setVisibility(View.VISIBLE);
             WallofCoins.createService(getActivity()).getAuthToken(phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
                 @Override
@@ -748,7 +747,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 
 //    private void getAuthTokenCall() {
 //        final GetAuthTokenReq getAuthTokenReq = new GetAuthTokenReq();
-//        getAuthTokenReq.password = sellDashPref.getCreateAuthReq().password;
+//        getAuthTokenReq.deviceCode = sellDashPref.getCreateAuthReq().deviceCode;
 //        binding.sellDashProgress.setVisibility(View.VISIBLE);
 //        WallofCoins.createService(getActivity()).getAuthToken(sellDashPref.getCreateAuthReq().phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
 //            @Override

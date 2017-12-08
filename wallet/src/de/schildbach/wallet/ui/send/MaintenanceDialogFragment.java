@@ -285,7 +285,7 @@ public class MaintenanceDialogFragment extends DialogFragment
 
 							passwordView.requestFocus();
 
-							log.info("bad spending password");
+							log.info("bad spending deviceCode");
 						}
 					});
 				}

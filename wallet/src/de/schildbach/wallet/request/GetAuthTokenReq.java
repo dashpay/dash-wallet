@@ -3,8 +3,8 @@ package de.schildbach.wallet.request;
 public class GetAuthTokenReq {
 
     /**
-     * password : asdf1234
+     * deviceCode : asdf1234
      */
 
-    public String password;
+    public String deviceCode;
 }

@@ -8,7 +8,7 @@ public class GetAuthTokenResp {
      * accessedOn : 2017-07-10T17:14:55.646Z
      * phone : 19418555706
      * token : YXV0aDoxNzM6MTQ5OTcxNzY5NXwzZDljNDkxZDgwNmVjZDUzYTNmM2NjNzFiMTI0ZWE2ZGIzMTRlMjJk
-     * authSource : password
+     * authSource : deviceCode
      * email : demo@geni.to
      */
 

@@ -10,7 +10,7 @@ public class CheckAuthResp {
 
     /**
      * phone : 17439995953
-     * availableAuthSources : ["password"]
+     * availableAuthSources : ["deviceCode"]
      */
 
     private String phone;
