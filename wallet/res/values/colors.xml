@@ -1,47 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-	<color name="colorPrimary">@color/strong_blue_new</color>
-	<color name="colorPrimaryDark">#1961a0</color>
-	<color name="colorAccent">#666666</color>
+    <color name="colorPrimary">@color/strong_blue_new</color>
+    <color name="colorPrimaryDark">#1961a0</color>
+    <color name="colorAccent">#666666</color>
 
-	<color name="strong_blue_new">#367bbe</color>
-	<color name="strong_blue">#1c75bc</color>
-	<color name="dark_blue">#1e487c</color>
-	<color name="vivid_red">#ec2227</color>
-	<color name="white">#ffffff</color>
+    <color name="strong_blue_new">#367bbe</color>
+    <color name="strong_blue">#1c75bc</color>
+    <color name="dark_blue">#1e487c</color>
+    <color name="vivid_red">#ec2227</color>
+    <color name="white">#ffffff</color>
+    <color name="woc_yellow">#fdc341</color>
 
-	<color name="ripple_light">#40ffffff</color>
+    <color name="ripple_light">#40ffffff</color>
 
-	<!-- foreground -->
-	<color name="fg_significant">#ff000000</color>
-	<color name="fg_less_significant">#ff666666</color>
-	<color name="fg_insignificant">#ffbbbbbb</color>
-	<color name="fg_value_positive">#ff008000</color>
-	<color name="fg_value_negative">#ff990000</color>
-	<color name="fg_error">#ffff0000</color>
-	<color name="fg_network_significant">#ffffffff</color>
-	<color name="fg_network_insignificant">#ffa0a0a0</color>
+    <!-- foreground -->
+    <color name="fg_significant">#ff000000</color>
+    <color name="fg_less_significant">#ff666666</color>
+    <color name="fg_insignificant">#ffbbbbbb</color>
+    <color name="fg_value_positive">#ff008000</color>
+    <color name="fg_value_negative">#ff990000</color>
+    <color name="fg_error">#ffff0000</color>
+    <color name="fg_network_significant">#ffffffff</color>
+    <color name="fg_network_insignificant">#ffa0a0a0</color>
 
-	<!-- background -->
-	<color name="bg_bright">#ffffffff</color>
-	<color name="bg_less_bright">#ffe8e8f0</color>
-	<color name="bg_panel">#fff2f2f8</color>
-	<color name="bg_form">@android:color/white</color>
-	<color name="bg_list">#40ffffff</color>
-	<color name="bg_list_selected">#40808090</color>
-	<color name="bg_dialog_title">@android:color/transparent</color>
+    <!-- background -->
+    <color name="bg_bright">#ffffffff</color>
+    <color name="bg_less_bright">#ffe8e8f0</color>
+    <color name="bg_panel">#fff2f2f8</color>
+    <color name="bg_form">@android:color/white</color>
+    <color name="bg_list">#40ffffff</color>
+    <color name="bg_list_selected">#40808090</color>
+    <color name="bg_dialog_title">@android:color/transparent</color>
 
-	<!-- password strength -->
-	<color name="fg_password_strength_weak">#ff0000</color>
-	<color name="fg_password_strength_fair">#c06000</color>
-	<color name="fg_password_strength_strong">#00a000</color>
+    <!-- password strength -->
+    <color name="fg_password_strength_weak">#ff0000</color>
+    <color name="fg_password_strength_fair">#c06000</color>
+    <color name="fg_password_strength_strong">#00a000</color>
 
-	<!-- scanner -->
-	<color name="scan_mask">#60000000</color>
-	<color name="scan_laser">#cc0000</color>
-	<color name="scan_dot">#ff6600</color>
-	<color name="scan_result_view">#b0000000</color>
-	<color name="scan_result_dots">#c099cc00</color>
+    <!-- scanner -->
+    <color name="scan_mask">#60000000</color>
+    <color name="scan_laser">#cc0000</color>
+    <color name="scan_dot">#ff6600</color>
+    <color name="scan_result_view">#b0000000</color>
+    <color name="scan_result_dots">#c099cc00</color>
 
 </resources>
