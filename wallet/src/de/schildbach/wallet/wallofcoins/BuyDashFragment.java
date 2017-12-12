@@ -10,7 +10,6 @@ import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.database.Cursor;
 import android.databinding.DataBindingUtil;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
@@ -1226,24 +1225,27 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     if (response.code() == 200) {
                         if (response.body() != null && response.body().getAvailableAuthSources() != null && response.body().getAvailableAuthSources().size() > 0) {
                             if (response.body().getAvailableAuthSources().get(0).equals("device")) {
-//                                binding.layoutCreateHold.setVisibility(View.GONE);
-//                                binding.linearPhone.setVisibility(View.GONE);
-////                                binding.linearPassword.setVisibility(View.VISIBLE)
-//                                backManageViews.add(LAYOUT_PASSWORD);
-//                                binding.layoutCompletionDetail.setVisibility(View.GONE);
-//                                binding.rvOrderList.setVisibility(View.GONE);
-//                                binding.layoutVerifyOtp.setVisibility(View.GONE);
-//                                binding.rvOffers.setVisibility(View.GONE);
-//                                binding.textPassAbove.setText("Existing Account Login");
-//                                binding.etPassword.setHint("Password");
-
-//                                binding.btnNextPassword.setOnClickListener(new View.OnClickListener() {
-//                                    @Override
-//                                    public void onClick(View v) {
                                 hideKeyBoard();
                                 getAuthTokenCall();
-//                                    }
-//                                });
+                            } else if (response.body().getAvailableAuthSources().get(0).equals("password")) {
+                                binding.layoutCreateHold.setVisibility(View.GONE);
+                                binding.linearPhone.setVisibility(View.GONE);
+                                binding.linearPassword.setVisibility(View.VISIBLE);
+                                backManageViews.add(LAYOUT_PASSWORD);
+                                binding.layoutCompletionDetail.setVisibility(View.GONE);
+                                binding.rvOrderList.setVisibility(View.GONE);
+                                binding.layoutVerifyOtp.setVisibility(View.GONE);
+                                binding.rvOffers.setVisibility(View.GONE);
+                                binding.textPassAbove.setText("Existing Account Login");
+                                binding.etPassword.setHint("Password");
+
+                                binding.btnNextPassword.setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        hideKeyBoard();
+                                        getAuthTokenCall();
+                                    }
+                                });
                             }
                         }
                     } else if (response.code() == 404) {

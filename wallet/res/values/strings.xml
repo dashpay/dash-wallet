@@ -384,7 +384,7 @@
     <string name="create_an_ad">Create an Ad</string>
     <string name="price">Price:</string>
 
-    <string name="dashUnicode">%s \u0110ASH</string>
-    <string name="dotUnicode">%s \u0110ASH</string>
+    <string name="dashUnicode">\u0110 %s</string>
+    <string name="dotUnicode">(\u0111 %s) (at %s%s/\u0110)</string>
 
 </resources>
