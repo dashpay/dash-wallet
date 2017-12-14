@@ -385,6 +385,12 @@
     <string name="price">Price:</string>
 
     <string name="dashUnicode">\u0110 %s</string>
-    <string name="dotUnicode">(\u0111 %s) (at %s%s/\u0110)</string>
+    <string name="dotUnicode">(\u0111 %s)\n(at %s%s/\u0110)</string>
+    <string name="location_rationale">Your location is used to find nearest payment centers.</string>
+    <string name="find_my_location">Find My Location</string>
+    <string name="no_thanks">No Thanks</string>
+    <string name="str_zip_code_blank">Leave Zip Codeblank to see all available bank deposit destinations.</string>
+    <string name="select_payment_center">Select a nearby payment center...</string>
+    <string name="text_above_email">For your records, we can email you a receipt along with buying instructions.</string>
 
 </resources>

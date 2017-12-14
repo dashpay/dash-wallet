@@ -74,8 +74,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:ellipsize="end"
-                            android:lines="1"
+                            android:maxLines="2"
                             android:text="@{@string/dotUnicode(item.amount.dots,item.deposit.currency,item.deposit.amount)}"
                             android:textSize="10dp"
                             tools:text="0.5458  \u0111ots" />

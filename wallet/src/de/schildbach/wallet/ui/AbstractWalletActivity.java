@@ -17,15 +17,18 @@
 
 package de.schildbach.wallet.ui;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.LayoutRes;
+import android.support.annotation.NonNull;
+import android.support.v4.app.Fragment;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 import de.schildbach.wallet.WalletApplication;
 import hashengineering.darkcoin.wallet.R;
@@ -34,45 +37,49 @@ import hashengineering.darkcoin.wallet.R;
 /**
  * @author Andreas Schildbach
  */
-public abstract class AbstractWalletActivity extends AppCompatActivity
-{
-	private WalletApplication application;
+public abstract class AbstractWalletActivity extends AppCompatActivity {
+    private WalletApplication application;
 
-	protected static final Logger log = LoggerFactory.getLogger(AbstractWalletActivity.class);
+    protected static final Logger log = LoggerFactory.getLogger(AbstractWalletActivity.class);
 
-	@Override
-	protected void onCreate(final Bundle savedInstanceState)
-	{
-		application = (WalletApplication) getApplication();
+    @Override
+    protected void onCreate(final Bundle savedInstanceState) {
+        application = (WalletApplication) getApplication();
 
-		super.onCreate(savedInstanceState);
-	}
+        super.onCreate(savedInstanceState);
+    }
 
-	@Override
-	public void setContentView(@LayoutRes int layoutResID)
-	{
-		super.setContentView(layoutResID);
+    @Override
+    public void setContentView(@LayoutRes int layoutResID) {
+        super.setContentView(layoutResID);
 
-		initToolbar();
-	}
+        initToolbar();
+    }
 
-	private void initToolbar()
-	{
-		Toolbar toolbarView = (Toolbar) findViewById(R.id.toolbar);
-		if (toolbarView != null)
-		{
-			setSupportActionBar(toolbarView);
-			ActionBar actionBar = getSupportActionBar();
-			if (actionBar != null)
-			{
-				actionBar.setDisplayHomeAsUpEnabled(true);
-				actionBar.setDisplayShowHomeEnabled(true);
-			}
-		}
-	}
+    private void initToolbar() {
+        Toolbar toolbarView = (Toolbar) findViewById(R.id.toolbar);
+        if (toolbarView != null) {
+            setSupportActionBar(toolbarView);
+            ActionBar actionBar = getSupportActionBar();
+            if (actionBar != null) {
+                actionBar.setDisplayHomeAsUpEnabled(true);
+                actionBar.setDisplayShowHomeEnabled(true);
+            }
+        }
+    }
 
-	protected WalletApplication getWalletApplication()
-	{
-		return application;
-	}
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        List<Fragment> fragments = getSupportFragmentManager().getFragments();
+        if (fragments != null) {
+            for (Fragment fragment : fragments) {
+                fragment.onRequestPermissionsResult(requestCode, permissions, grantResults);
+            }
+        }
+    }
+
+    protected WalletApplication getWalletApplication() {
+        return application;
+    }
 }

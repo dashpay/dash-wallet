@@ -13,14 +13,11 @@ dependencies {
     compile 'com.android.support:support-v13:23.2.0'
     compile 'com.android.support:recyclerview-v7:23.2.0'
     compile 'com.android.support:cardview-v7:23.2.0'
+    compile 'com.android.support:support-v4:23.4.0'
+    compile 'com.android.support:support-v13:23.4.0'
     compile(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
     }
-    compile 'com.android.support:support-annotations:23.4.0'
-    compile 'com.android.support:support-v4:23.4.0'
-    compile 'com.android.support:support-v13:23.4.0'
-    compile 'com.android.support:recyclerview-v7:23.4.0'
-    compile 'com.android.support:cardview-v7:23.4.0'
     compile 'org.dashj:dashj-core:0.14.3-12.1'
     compile 'com.google.protobuf:protobuf-java:2.6.1'
     compile 'com.google.guava:guava:18.0'
@@ -36,11 +33,14 @@ dependencies {
     compile 'com.squareup.retrofit2:converter-gson:2.0.2'
     compile 'com.squareup.okhttp3:logging-interceptor:3.3.1'
     compile 'com.github.bumptech.glide:glide:3.8.0'
+
+//    compile 'com.github.nisrulz:easydeviceinfo-base:2.4.0'
+//    compile 'pub.devrel:easypermissions:1.1.0'
     testCompile 'junit:junit:4.11'
 }
 
 ext {
-     archivesBaseName = 'dash-wallet'
+    archivesBaseName = 'dash-wallet'
 }
 
 android {

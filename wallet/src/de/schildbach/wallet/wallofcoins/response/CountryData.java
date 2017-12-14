@@ -22,6 +22,8 @@ public class CountryData {
         public String currency;
         @SerializedName("short")
         public String shortX;
+        public int top;
+        public int left;
 
         @Override
         public String toString() {

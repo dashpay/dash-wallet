@@ -1,6 +1,9 @@
 package de.schildbach.wallet.wallofcoins.response;
 
+import java.text.NumberFormat;
+import java.text.ParseException;
 import java.util.List;
+import java.util.Locale;
 
 public class GetOffersResp {
 
@@ -137,6 +140,20 @@ public class GetOffersResp {
             public String bankIconHq;
             public String bankLocationUrl;
             public String city;
+        }
+
+        public String sumAmounts(String... args) {
+
+            double amount = 0;
+
+            for (String s : args) {
+                try {
+                    amount += NumberFormat.getNumberInstance(Locale.getDefault()).parse(s).doubleValue();
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                }
+            }
+            return NumberFormat.getNumberInstance(Locale.getDefault()).format(amount);
         }
     }
 
