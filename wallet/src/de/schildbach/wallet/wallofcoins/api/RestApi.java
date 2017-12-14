@@ -4,9 +4,9 @@ import java.util.List;
 import java.util.Map;
 
 import de.schildbach.wallet.request.CreateAuthReq;
-import de.schildbach.wallet.request.GetAuthTokenReq;
 import de.schildbach.wallet.wallofcoins.response.AdsListActivityResp;
 import de.schildbach.wallet.wallofcoins.response.CaptureHoldResp;
+import de.schildbach.wallet.wallofcoins.response.CheckAuthResp;
 import de.schildbach.wallet.wallofcoins.response.ConfirmDepositResp;
 import de.schildbach.wallet.wallofcoins.response.CreateAdResp;
 import de.schildbach.wallet.wallofcoins.response.CreateAuthResp;
@@ -18,10 +18,9 @@ import de.schildbach.wallet.wallofcoins.response.GetCurrencyResp;
 import de.schildbach.wallet.wallofcoins.response.GetOffersResp;
 import de.schildbach.wallet.wallofcoins.response.GetPricingOptionsResp;
 import de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp;
+import de.schildbach.wallet.wallofcoins.response.OrderListResp;
 import de.schildbach.wallet.wallofcoins.response.SendVerificationResp;
 import de.schildbach.wallet.wallofcoins.response.VerifyAdResp;
-import de.schildbach.wallet.wallofcoins.response.CheckAuthResp;
-import de.schildbach.wallet.wallofcoins.response.OrderListResp;
 import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
@@ -51,8 +50,9 @@ public interface RestApi {
     @DELETE("api/v1/orders/{orderId}/")
     Call<Void> cancelOrder(@Path("orderId") String orderId);
 
+    @FormUrlEncoded
     @POST("api/v1/auth/{phone}/authorize/")
-    Call<GetAuthTokenResp> getAuthToken(@Path("phone") String username, @Body GetAuthTokenReq createAuthReq);
+    Call<GetAuthTokenResp> getAuthToken(@Path("phone") String username, @FieldMap Map<String, String> partMap);
 
     @GET("api/v1/banks")
     Call<List<GetReceivingOptionsResp>> getReceivingOptions(@Query("country") String country);

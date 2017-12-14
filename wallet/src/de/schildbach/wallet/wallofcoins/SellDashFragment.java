@@ -57,7 +57,6 @@ import de.schildbach.wallet.SellDashPref;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.request.CreateAuthReq;
-import de.schildbach.wallet.request.GetAuthTokenReq;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet.ui.AbstractWalletActivity;
@@ -336,7 +335,11 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
                     binding.sellDashProgress.setVisibility(View.GONE);
                     if (response.code() == 200) {
                         if (response.body() != null && response.body().getAvailableAuthSources() != null && response.body().getAvailableAuthSources().size() > 0) {
-                            if (response.body().getAvailableAuthSources().get(0).equals("deviceCode")) {
+                            if (response.body().getAvailableAuthSources().get(0).equals("device")) {
+                                hideKeyBoard();
+                                getAuthTokenCall(false);
+                                Log.d(TAG, "onResponse: device");
+                            } else if (response.body().getAvailableAuthSources().get(0).equals("password")) {
                                 binding.layoutCreateBankOpts.setVisibility(View.GONE);
                                 binding.linearPhone.setVisibility(View.GONE);
                                 binding.layoutVerifyOtp.setVisibility(View.GONE);
@@ -349,7 +352,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
                                     @Override
                                     public void onClick(View v) {
                                         hideKeyBoard();
-                                        getAuthTokenCall();
+                                        getAuthTokenCall(false);
                                     }
                                 });
                             }
@@ -659,7 +662,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
                             CreateAuthErrorResp errorResp = new Gson().fromJson(errorMessage, CreateAuthErrorResp.class);
                             if (errorResp.phone.get(0).equals("This phone is already registered. Try to authorize it first.")) {
                                 sellDashPref.setCreateAuthReq(createAuthReq);
-                                getAuthTokenCall();
+                                getAuthTokenCall(false);
                                 return;
                             }
                         } else {
@@ -668,7 +671,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 
                     } else if (response.code() >= 200 && null != response.body()) {
                         sellDashPref.setCreateAuthReq(createAuthReq);
-                        getAuthTokenCall();
+                        getAuthTokenCall(false);
                     } else {
                         Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
                     }
@@ -690,14 +693,14 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
         });
     }
 
-    private void getAuthTokenCall() {
+    private void getAuthTokenCall(boolean isPass) {
         String countryCode = countryData.countries.get(binding.spCountry.getSelectedItemPosition()).code;
         String phone = countryCode + binding.etPhone.getText().toString().trim();
         String password = binding.etPassword.getText().toString().trim();
 
         if (!TextUtils.isEmpty(phone) && !TextUtils.isEmpty(password)) {
-            final GetAuthTokenReq getAuthTokenReq = new GetAuthTokenReq();
-            getAuthTokenReq.deviceCode = password;
+            HashMap<String, String> getAuthTokenReq = new HashMap<String, String>();
+            getAuthTokenReq.put(isPass ? "password" : "deviceCode", password);
             binding.sellDashProgress.setVisibility(View.VISIBLE);
             WallofCoins.createService(getActivity()).getAuthToken(phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
                 @Override

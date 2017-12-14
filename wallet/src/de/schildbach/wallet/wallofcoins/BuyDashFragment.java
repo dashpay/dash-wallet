@@ -71,7 +71,6 @@ import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.ExchangeRatesProvider;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.request.GetAuthTokenReq;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet.ui.AbstractWalletActivity;
@@ -1099,14 +1098,17 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         });
     }
 
-    private void getAuthTokenCall() {
+    private void getAuthTokenCall(boolean isPass) {
         String countryCode = countryData.countries.get(binding.spCountry.getSelectedItemPosition()).code;
         String phone = countryCode + binding.editBuyDashPhone.getText().toString().trim();
 //        String deviceCode = binding.etPassword.getText().toString().trim();
 
         if (!TextUtils.isEmpty(phone)) {
-            final GetAuthTokenReq getAuthTokenReq = new GetAuthTokenReq();
-            getAuthTokenReq.deviceCode = password;
+//            final GetAuthTokenReq getAuthTokenReq = new GetAuthTokenReq();
+
+            HashMap<String, String> getAuthTokenReq = new HashMap<String, String>();
+            getAuthTokenReq.put(isPass?"password":"deviceCode", password);
+
 
 //            getAuthTokenReq.deviceCode = password;
 
@@ -1444,7 +1446,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         if (response.body() != null && response.body().getAvailableAuthSources() != null && response.body().getAvailableAuthSources().size() > 0) {
                             if (response.body().getAvailableAuthSources().get(0).equals("device")) {
                                 hideKeyBoard();
-                                getAuthTokenCall();
+                                getAuthTokenCall(false);
+                                Log.d(TAG, "onResponse: device");
                             } else if (response.body().getAvailableAuthSources().get(0).equals("password")) {
                                 binding.layoutCreateHold.setVisibility(View.GONE);
                                 binding.linearPhone.setVisibility(View.GONE);
@@ -1457,13 +1460,14 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                 binding.rvOffers.setVisibility(View.GONE);
                                 binding.textPassAbove.setText("Existing Account Login");
                                 binding.etPassword.setHint("Password");
-
+                                Log.d(TAG, "onResponse: password");
                                 binding.btnNextPassword.setOnClickListener(new View.OnClickListener() {
                                     @Override
                                     public void onClick(View v) {
                                         hideKeyBoard();
                                         password = binding.etPassword.getText().toString();
-                                        getAuthTokenCall();
+                                        Log.d(TAG, "onResponse: pass : " + password);
+                                        getAuthTokenCall(true);
                                     }
                                 });
                             }
