@@ -75,7 +75,7 @@ Download and install the required Android dependencies:
 
     tools/android update sdk --no-ui --force --all --filter tool,platform-tool,build-tools-26,android-15,android-25
 
-Download the [Android NDK](https://developer.android.com/ndk), then unpack it to your workspace directory. Point your `ANDROID_NDK_HOME` variable to the unpacked Android NDK directory.
+Download the [Android NDK](https://developer.android.com/ndk/downloads/), then unpack it to your workspace directory. Point your `ANDROID_NDK_HOME` variable to the unpacked Android NDK directory.
 
 <<<<<<< HEAD
 Finally, you can build Dash Wallet and sign it with your development key. Again in your workspace,
