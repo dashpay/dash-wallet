@@ -241,11 +241,11 @@
     <string name="preferences_category_labs">Labor</string>
     <string name="preferences_precision_title">Stückelung und Genauigkeit</string>
     <string name="preferences_precision_summary">Maßeinheit für die Anzeige von Werten. Dies beeinflußt keine Berechnungen.</string>
-    <string name="preferences_precision_labels_8">BTC, 8 Dezimalstellen</string>
-    <string name="preferences_precision_labels_6">BTC, 6 Dezimalstellen</string>
-    <string name="preferences_precision_labels_4">BTC, 4 Dezimalstellen</string>
-    <string name="preferences_precision_labels_2_3">mBTC, 2 Dezimalstellen</string>
-    <string name="preferences_precision_labels_0_6">µBTC, keine Dezimalstellen</string>
+    <string name="preferences_precision_labels_8">DASH, 8 Dezimalstellen</string>
+    <string name="preferences_precision_labels_6">DASH, 6 Dezimalstellen</string>
+    <string name="preferences_precision_labels_4">DASH, 4 Dezimalstellen</string>
+    <string name="preferences_precision_labels_2_3">mDASH, 2 Dezimalstellen</string>
+    <string name="preferences_precision_labels_0_6">µDASH, keine Dezimalstellen</string>
     <string name="preferences_own_name_title">Eigener Name</string>
     <string name="preferences_own_name_summary">Dein eigener Name, der zu Zahlungsanforderungen hinzugefügt wird. Versuche ihn kurz zu halten.</string>
     <string name="preferences_send_coins_autoclose_title">Coin-Versandformular automatisch beenden</string>

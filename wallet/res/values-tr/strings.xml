@@ -239,11 +239,11 @@
     <string name="preferences_category_labs">Laboratuvarlar</string>
     <string name="preferences_precision_title">İsimlendirme ve hassasiyet</string>
     <string name="preferences_precision_summary">Miktarların gösterileceği birim. Bu hesaplamaları etkilemez.</string>
-    <string name="preferences_precision_labels_8">BTC, ondalık basamak sayısı 8</string>
-    <string name="preferences_precision_labels_6">BTC, ondalık basamak sayısı 6</string>
-    <string name="preferences_precision_labels_4">BTC, ondalık basamak sayısı 4</string>
-    <string name="preferences_precision_labels_2_3">mBTC, ondalık basamak sayısı 2</string>
-    <string name="preferences_precision_labels_0_6">µBTC, ondalık basamak sayısı yoktur</string>
+    <string name="preferences_precision_labels_8">DASH, ondalık basamak sayısı 8</string>
+    <string name="preferences_precision_labels_6">DASH, ondalık basamak sayısı 6</string>
+    <string name="preferences_precision_labels_4">DASH, ondalık basamak sayısı 4</string>
+    <string name="preferences_precision_labels_2_3">mDASH, ondalık basamak sayısı 2</string>
+    <string name="preferences_precision_labels_0_6">µDASH, ondalık basamak sayısı yoktur</string>
     <string name="preferences_own_name_title">Kendi isminiz</string>
     <string name="preferences_own_name_summary">Ödeme taleplerine eklenecek isminiz. Kısa tutmaya çalışın.</string>
     <string name="preferences_send_coins_autoclose_title">Dash gönderme diyaloğunu otomatik-kapa</string>
