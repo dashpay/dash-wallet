@@ -1,6 +1,7 @@
 package de.schildbach.wallet.wallofcoins;
 
 import android.Manifest;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -15,6 +16,7 @@ import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
@@ -28,6 +30,7 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
+import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -40,6 +43,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
+import com.google.common.base.Charsets;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -86,6 +90,7 @@ import de.schildbach.wallet.wallofcoins.response.CaptureHoldResp;
 import de.schildbach.wallet.wallofcoins.response.CheckAuthResp;
 import de.schildbach.wallet.wallofcoins.response.ConfirmDepositResp;
 import de.schildbach.wallet.wallofcoins.response.CountryData;
+import de.schildbach.wallet.wallofcoins.response.CreateDeviceResp;
 import de.schildbach.wallet.wallofcoins.response.CreateHoldResp;
 import de.schildbach.wallet.wallofcoins.response.DiscoveryInputsResp;
 import de.schildbach.wallet.wallofcoins.response.GetAuthTokenResp;
@@ -219,7 +224,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private boolean isBuyMoreVisible;
     private String password;
     private List<GetReceivingOptionsResp> receivingOptionsResps;
-    private String email;
+    private String email = "";
 
     public static class CurrentAddressLoader extends AsyncTaskLoader<Address> {
         private LocalBroadcastManager broadcastManager;
@@ -346,6 +351,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
     }
 
+    @TargetApi(Build.VERSION_CODES.KITKAT)
     @Override
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -355,11 +361,16 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         setRetainInstance(true);
         setHasOptionsMenu(true);
 
-        String deviceID = Settings.Secure.getString(getContext().getContentResolver(), Settings.Secure.ANDROID_ID);
-        password = deviceID + deviceID + deviceID + deviceID + deviceID + deviceID + deviceID + deviceID + deviceID;
+        password = getDeviceId(getContext());
         defaultCurrency = config.getExchangeCurrencyCode();
         config.registerOnSharedPreferenceChangeListener(this);
         buyDashPref.registerOnSharedPreferenceChangeListener(this);
+    }
+
+    String getDeviceId(Context context) {
+        String deviceID = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
+        byte[] data = (deviceID + deviceID + deviceID).getBytes(Charsets.UTF_8);
+        return Base64.encodeToString(data, Base64.DEFAULT).substring(0, 39);
     }
 
     @Override
@@ -1107,7 +1118,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 //            final GetAuthTokenReq getAuthTokenReq = new GetAuthTokenReq();
 
             HashMap<String, String> getAuthTokenReq = new HashMap<String, String>();
-            getAuthTokenReq.put(isPass?"password":"deviceCode", password);
+            getAuthTokenReq.put(isPass ? "password" : "deviceCode", password);
 
 
 //            getAuthTokenReq.deviceCode = password;
@@ -1131,10 +1142,12 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     }
 
                     buyDashPref.setAuthToken(response.body().token);
+                    buyDashPref.setPhone(response.body().phone);
+                    buyDashPref.setEmail(response.body().email);
                     binding.linearPassword.setVisibility(View.GONE);
                     // call create hold
 
-                    createHold();
+                    creteDevice();
                 }
 
                 @Override
@@ -1147,74 +1160,99 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         } else {
             Toast.makeText(getContext(), "Phone and Password is required", Toast.LENGTH_SHORT).show();
         }
+    }
 
+    private void creteDevice() {
+        password = getDeviceId(getContext());
+        final HashMap<String, String> createDeviceReq = new HashMap<String, String>();
+        createDeviceReq.put("name", "Dash Wallet (Android)");
+        createDeviceReq.put("code", password);
+        binding.linearProgress.setVisibility(View.VISIBLE);
+        WallofCoins.createService(interceptor, getActivity()).createDevice(createDeviceReq).enqueue(new Callback<CreateDeviceResp>() {
+            @Override
+            public void onResponse(Call<CreateDeviceResp> call, Response<CreateDeviceResp> response) {
+                if (response.code() < 299) {
+                    createHoldNewUser();
+                } else {
+                    Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<CreateDeviceResp> call, Throwable t) {
+                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     private void createHold() {
         if (buyDashPref.getAuthToken() != null && !TextUtils.isEmpty(buyDashPref.getAuthToken())) {
-            final HashMap<String, String> createHoldReq = new HashMap<String, String>();
-            createHoldReq.put("offer", offerId);
-            createHoldReq.put("X-Coins-Api-Token", buyDashPref.getAuthToken());
-            binding.linearProgress.setVisibility(View.VISIBLE);
-            WallofCoins.createService(interceptor, getActivity()).createHold(createHoldReq).enqueue(new Callback<CreateHoldResp>() {
-                @Override
-                public void onResponse(Call<CreateHoldResp> call, Response<CreateHoldResp> response) {
-                    binding.linearProgress.setVisibility(View.GONE);
-
-                    if (response.code() == 403) {
-                        binding.layoutCreateHold.setVisibility(View.GONE);
-                        binding.linearEmail.setVisibility(View.VISIBLE);
-                        backManageViews.add(LAYOUT_PHONE);
-                        binding.linearPassword.setVisibility(View.GONE);
-                        binding.layoutCompletionDetail.setVisibility(View.GONE);
-                        binding.rvOrderList.setVisibility(View.GONE);
-                        binding.layoutVerifyOtp.setVisibility(View.GONE);
-                        binding.rvOffers.setVisibility(View.GONE);
-                        binding.btnNextPhone.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                hideKeyBoard();
-                                checkAuth();
-                            }
-                        });
-                        return;
-                    }
-                    if (null != response.body()) {
-                        createHoldResp = response.body();
-                        buyDashPref.setCreateHoldResp(createHoldResp);
-                        buyDashPref.setHoldId(createHoldResp.id);
-                        binding.layoutCreateHold.setVisibility(View.GONE);
-                        binding.linearPhone.setVisibility(View.GONE);
-                        binding.linearEmail.setVisibility(View.GONE);
-                        binding.linearPassword.setVisibility(View.GONE);
-                        binding.layoutCompletionDetail.setVisibility(View.GONE);
-                        binding.rvOrderList.setVisibility(View.GONE);
-                        binding.layoutVerifyOtp.setVisibility(View.VISIBLE);
-                        backManageViews.add(LAYOUT_VERIFY_OTP);
-                        binding.rvOffers.setVisibility(View.GONE);
-//                        binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
-//                        Log.d(TAG, "onResponse: purchase code==>>" + createHoldResp.__PURCHASE_CODE);
-                    } else if (null != response.errorBody()) {
-                        try {
-                            BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
-                            Log.d(TAG, "onResponse: message==>> " + buyDashErrorResp.detail);
-                            getOrderList(true);
-                            Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
-                        }
-                    } else {
-                        Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
-                    }
-                }
-
-                @Override
-                public void onFailure(Call<CreateHoldResp> call, Throwable t) {
-                    binding.linearProgress.setVisibility(View.GONE);
-                    Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_SHORT).show();
-                }
-            });
+            binding.editBuyDashPhone.setText(buyDashPref.getPhone());
+            binding.editBuyDashEmail.setText(buyDashPref.getPhone());
+            createHoldNewUser();
+//            final HashMap<String, String> createHoldReq = new HashMap<String, String>();
+//            createHoldReq.put("offer", offerId);
+//            createHoldReq.put("X-Coins-Api-Token", buyDashPref.getAuthToken());
+//            binding.linearProgress.setVisibility(View.VISIBLE);
+//            WallofCoins.createService(interceptor, getActivity()).createHold(createHoldReq).enqueue(new Callback<CreateHoldResp>() {
+//                @Override
+//                public void onResponse(Call<CreateHoldResp> call, Response<CreateHoldResp> response) {
+//                    binding.linearProgress.setVisibility(View.GONE);
+//
+//                    if (response.code() == 403) {
+//                        binding.layoutCreateHold.setVisibility(View.GONE);
+//                        binding.linearEmail.setVisibility(View.VISIBLE);
+//                        backManageViews.add(LAYOUT_PHONE);
+//                        binding.linearPassword.setVisibility(View.GONE);
+//                        binding.layoutCompletionDetail.setVisibility(View.GONE);
+//                        binding.rvOrderList.setVisibility(View.GONE);
+//                        binding.layoutVerifyOtp.setVisibility(View.GONE);
+//                        binding.rvOffers.setVisibility(View.GONE);
+//                        binding.btnNextPhone.setOnClickListener(new View.OnClickListener() {
+//                            @Override
+//                            public void onClick(View v) {
+//                                hideKeyBoard();
+//                                checkAuth();
+//                            }
+//                        });
+//                        return;
+//                    }
+//                    if (null != response.body()) {
+//                        createHoldResp = response.body();
+//                        buyDashPref.setCreateHoldResp(createHoldResp);
+//                        buyDashPref.setHoldId(createHoldResp.id);
+//                        binding.layoutCreateHold.setVisibility(View.GONE);
+//                        binding.linearPhone.setVisibility(View.GONE);
+//                        binding.linearEmail.setVisibility(View.GONE);
+//                        binding.linearPassword.setVisibility(View.GONE);
+//                        binding.layoutCompletionDetail.setVisibility(View.GONE);
+//                        binding.rvOrderList.setVisibility(View.GONE);
+//                        binding.layoutVerifyOtp.setVisibility(View.VISIBLE);
+//                        backManageViews.add(LAYOUT_VERIFY_OTP);
+//                        binding.rvOffers.setVisibility(View.GONE);
+////                        binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
+////                        Log.d(TAG, "onResponse: purchase code==>>" + createHoldResp.__PURCHASE_CODE);
+//                    } else if (null != response.errorBody()) {
+//                        try {
+//                            BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
+//                            Log.d(TAG, "onResponse: message==>> " + buyDashErrorResp.detail);
+//                            getOrderList(true);
+//                            Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
+//                        } catch (Exception e) {
+//                            e.printStackTrace();
+//                            Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+//                        }
+//                    } else {
+//                        Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+//                    }
+//                }
+//
+//                @Override
+//                public void onFailure(Call<CreateHoldResp> call, Throwable t) {
+//                    binding.linearProgress.setVisibility(View.GONE);
+//                    Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_SHORT).show();
+//                }
+//            });
         } else {
             binding.rvOffers.setVisibility(View.GONE);
             binding.linearEmail.setVisibility(View.VISIBLE);
@@ -1290,7 +1328,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
 
 //                        Log.d(TAG, "onResponse: purchase code==>>" + createHoldResp.__PURCHASE_CODE);
-//                        binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
+                        binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
                     } else if (null != response.errorBody()) {
                         try {
                             BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
@@ -1321,7 +1359,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     public void getOrderList(final boolean isFromCreateHold) {
         Log.d(TAG, "getOrderList: " + buyDashPref.getAuthToken());
         binding.linearProgress.setVisibility(View.VISIBLE);
-        WallofCoins.createService(interceptor, activity).getOrders().enqueue(new Callback<List<OrderListResp>>() {
+        WallofCoins.createService(interceptor, activity).getHolds().enqueue(new Callback<List<OrderListResp>>() {
             @Override
             public void onResponse(Call<List<OrderListResp>> call, Response<List<OrderListResp>> response) {
                 binding.linearProgress.setVisibility(View.GONE);
@@ -1444,7 +1482,10 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     binding.linearProgress.setVisibility(View.GONE);
                     if (response.code() == 200) {
                         if (response.body() != null && response.body().getAvailableAuthSources() != null && response.body().getAvailableAuthSources().size() > 0) {
-                            if (response.body().getAvailableAuthSources().get(0).equals("device")) {
+                            if (response.body().getAvailableAuthSources().size() >= 2 && response.body().getAvailableAuthSources().get(1).equals("device")) {
+                                hideKeyBoard();
+                                getAuthTokenCall(false);
+                            } else if (response.body().getAvailableAuthSources().get(0).equals("device")) {
                                 hideKeyBoard();
                                 getAuthTokenCall(false);
                                 Log.d(TAG, "onResponse: device");

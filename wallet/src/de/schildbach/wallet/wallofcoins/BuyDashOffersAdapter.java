@@ -119,7 +119,11 @@ class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
 
         } else {
             TextView more = (TextView) holder.itemView;
-            more.setText("Best Value Options : More Dash for " + singleDepositBeenList.get(0).deposit.amount + " Cash");
+            if (position == 0 && singleDepositBeenList.size() > 0) {
+                more.setText("Below are offers for $" + singleDepositBeenList.get(0).deposit.amount + ". You must click the ORDER button before you receive instructions to pay at the Cash Payment center.");
+            } else {
+                more.setText("Best Value Options : More Dash for $" + singleDepositBeenList.get(0).deposit.amount + " Cash");
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 more.setTextColor(context.getResources().getColor(R.color.colorPrimary, context.getTheme()));
             } else {
@@ -136,6 +140,10 @@ class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
 
         int count = singleDepositBeenList.size();
 
+        if (singleDepositBeenList.size() > 0) {
+            count++;
+        }
+
         if (doubleDeposit.size() > 0) {
             count += doubleDeposit.size();
             count++;
@@ -146,7 +154,9 @@ class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
 
     @Override
     public int getItemViewType(int position) {
-        if (position > singleDepositBeenList.size()) {
+        if (position == 0 && singleDepositBeenList.size() > 0) {
+            return 1;
+        } else if (position > singleDepositBeenList.size()) {
             if (doubleDeposit.get(position - singleDepositBeenList.size() - 1).secondOffer == null) {
                 return 3;
             } else {

@@ -10,6 +10,7 @@ import de.schildbach.wallet.wallofcoins.response.CheckAuthResp;
 import de.schildbach.wallet.wallofcoins.response.ConfirmDepositResp;
 import de.schildbach.wallet.wallofcoins.response.CreateAdResp;
 import de.schildbach.wallet.wallofcoins.response.CreateAuthResp;
+import de.schildbach.wallet.wallofcoins.response.CreateDeviceResp;
 import de.schildbach.wallet.wallofcoins.response.CreateHoldResp;
 import de.schildbach.wallet.wallofcoins.response.CurrentAuthResp;
 import de.schildbach.wallet.wallofcoins.response.DiscoveryInputsResp;
@@ -43,6 +44,9 @@ public interface RestApi {
 
     @GET("api/v1/orders/")
     Call<List<OrderListResp>> getOrders();
+
+    @GET("api/v1/holds/")
+    Call<List<OrderListResp>> getHolds();
 
     @GET("api/v1/auth/{phone}/")
     Call<CheckAuthResp> checkAuth(@Path("phone") String username);
@@ -98,6 +102,10 @@ public interface RestApi {
     @FormUrlEncoded
     @POST("api/v1/orders/{holdId}/confirmDeposit/")
     Call<ConfirmDepositResp> confirmDeposit(@Path("holdId") String holdId, @Field("your_field") String yourField);
+
+    @FormUrlEncoded
+    @POST("api/v1/devices/")
+    Call<CreateDeviceResp> createDevice(@FieldMap Map<String, String> partMap);
 
 }
 

@@ -3,12 +3,13 @@ package de.schildbach.wallet.wallofcoins;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.Resources;
+import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -64,11 +65,28 @@ public class CustomAdapter extends ArrayAdapter<CountryData.CountriesBean> {
         label.setText(bean.name + " (" + bean.code + ")");
         ivCountry.setImageResource(R.drawable.flags);
         ivCountry.setScaleType(ImageView.ScaleType.MATRIX);
-        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) ivCountry.getLayoutParams();
-        layoutParams.leftMargin = convertDpToPixel(bean.left);
-        layoutParams.topMargin = convertDpToPixel(bean.top);
-        ivCountry.setLayoutParams(layoutParams);
-        ivCountry.requestLayout();
+
+        Drawable drawable = activity.getResources().getDrawable(R.drawable.flags);
+
+        int height = drawable.getIntrinsicHeight();
+        int width = drawable.getIntrinsicWidth();
+
+        int left = (bean.left * width) / 288;
+        int top = (bean.top * height) / 266;
+        int right = ((bean.left + 20) * width) / 288;
+        int bottom = ((bean.top + 11) * height) / 266;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            ivCountry.drawableHotspotChanged(left, top);
+        }
+
+//        ivCountry.setImageDrawable();
+
+//        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) ivCountry.getLayoutParams();
+//        layoutParams.leftMargin = convertDpToPixel(bean.left);
+//        layoutParams.topMargin = convertDpToPixel(bean.top);
+//        ivCountry.setLayoutParams(layoutParams);
+//        ivCountry.requestLayout();
 
         return row;
     }
