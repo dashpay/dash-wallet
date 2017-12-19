@@ -1036,10 +1036,10 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                             @Override
                                             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                                                 hideKeyBoard();
-                                                if (position < response.body().singleDeposit.size()) {
-                                                    offerId = response.body().singleDeposit.get(position).id;
+                                                if (position < response.body().singleDeposit.size() + 1) {
+                                                    offerId = response.body().singleDeposit.get(position - 1).id;
                                                 } else {
-                                                    offerId = response.body().doubleDeposit.get(position - response.body().singleDeposit.size() - 1).id;
+                                                    offerId = response.body().doubleDeposit.get(position - response.body().singleDeposit.size() - 2).id;
                                                 }
                                                 createHold();
                                             }

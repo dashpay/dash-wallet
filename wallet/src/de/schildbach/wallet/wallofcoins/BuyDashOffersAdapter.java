@@ -59,7 +59,7 @@ class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     public void onBindViewHolder(RecyclerView.ViewHolder holder, final int position) {
 
         if (holder instanceof VHolderSingle) {
-            final GetOffersResp.SingleDepositBean bean = singleDepositBeenList.get(position);
+            final GetOffersResp.SingleDepositBean bean = singleDepositBeenList.get(position - 1);
             final VHolderSingle vholder = (VHolderSingle) holder;
             vholder.binding.setItem(bean);
 
@@ -79,12 +79,24 @@ class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                 }
             });
         } else if (holder instanceof VHolderDouble1) {
-            GetOffersResp.DoubleDepositBean beanTemp = doubleDeposit.get(position - singleDepositBeenList.size() - 1);
+            GetOffersResp.DoubleDepositBean beanTemp = doubleDeposit.get(position - singleDepositBeenList.size() - 2);
             final GetOffersResp.SingleDepositBean bean = new GetOffersResp.SingleDepositBean();
-            bean.amount.BTC = beanTemp.firstOffer.amount.BTC;
-            bean.amount.bits = beanTemp.firstOffer.amount.bits;
-            bean.amount.DASH = beanTemp.firstOffer.amount.DASH;
-            bean.amount.dots = beanTemp.firstOffer.amount.dots;
+            bean.deposit=new GetOffersResp.DepositBean();
+            bean.amount=new GetOffersResp.AmountBean();
+            if (beanTemp.secondOffer != null) {
+                bean.amount.BTC = beanTemp.sumAmounts(beanTemp.firstOffer.amount.BTC, beanTemp.secondOffer.amount.BTC);
+                bean.amount.bits = beanTemp.sumAmounts(beanTemp.firstOffer.amount.bits, beanTemp.secondOffer.amount.bits);
+                bean.amount.DASH = beanTemp.sumAmounts(beanTemp.firstOffer.amount.DASH, beanTemp.secondOffer.amount.DASH);
+                bean.amount.dots = beanTemp.sumAmounts(beanTemp.firstOffer.amount.dots, beanTemp.secondOffer.amount.dots);
+                bean.deposit.amount = beanTemp.sumAmounts(beanTemp.firstOffer.deposit.amount, beanTemp.secondOffer.deposit.amount);
+            } else {
+                bean.amount.BTC = beanTemp.firstOffer.amount.BTC;
+                bean.amount.bits = beanTemp.firstOffer.amount.bits;
+                bean.amount.DASH = beanTemp.firstOffer.amount.DASH;
+                bean.amount.dots = beanTemp.firstOffer.amount.dots;
+                bean.deposit.amount = beanTemp.firstOffer.deposit.amount;
+            }
+
             bean.bankName = beanTemp.firstOffer.bankName;
             bean.bankLogo = beanTemp.firstOffer.bankLogo;
             bean.address = beanTemp.firstOffer.address;
@@ -92,8 +104,8 @@ class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             bean.city = beanTemp.firstOffer.city;
             bean.state = beanTemp.firstOffer.state;
             bean.bankLocationUrl = beanTemp.firstOffer.bankLocationUrl;
-            bean.deposit.amount = beanTemp.firstOffer.deposit.amount;
             bean.deposit.currency = beanTemp.firstOffer.deposit.currency;
+
 
             final VHolderDouble1 vholder = (VHolderDouble1) holder;
             vholder.binding.setItem(bean);
@@ -106,7 +118,7 @@ class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             });
 
         } else if (holder instanceof VHolderDouble2) {
-            final GetOffersResp.DoubleDepositBean bean = doubleDeposit.get(position - singleDepositBeenList.size() - 1);
+            final GetOffersResp.DoubleDepositBean bean = doubleDeposit.get(position - singleDepositBeenList.size() - 2);
             final VHolderDouble2 vholder = (VHolderDouble2) holder;
             vholder.binding.setItem(bean);
 
@@ -154,16 +166,17 @@ class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
 
     @Override
     public int getItemViewType(int position) {
-        if (position == 0 && singleDepositBeenList.size() > 0) {
+        if ((position == 0 && singleDepositBeenList.size() > 0) || (singleDepositBeenList.size() + 1 == position)) {
             return 1;
-        } else if (position > singleDepositBeenList.size()) {
-            if (doubleDeposit.get(position - singleDepositBeenList.size() - 1).secondOffer == null) {
+        }
+        if (position > singleDepositBeenList.size() + 1) {
+            if (doubleDeposit.get(position - singleDepositBeenList.size() - 2).secondOffer == null
+                    || doubleDeposit.get(position - singleDepositBeenList.size() - 2).secondOffer.bankName.equals(doubleDeposit.get(position - singleDepositBeenList.size() - 2).firstOffer.bankName)) {
                 return 3;
             } else {
                 return 2;
             }
         }
-        if (singleDepositBeenList.size() == position) return 1;
         return 0;
     }
 
