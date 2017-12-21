@@ -329,7 +329,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
         if (!TextUtils.isEmpty(phone)) {
             binding.sellDashProgress.setVisibility(View.VISIBLE);
 
-            WallofCoins.createService(activity).checkAuth(phone).enqueue(new Callback<CheckAuthResp>() {
+            WallofCoins.createService(activity).checkAuth(phone, "").enqueue(new Callback<CheckAuthResp>() {
                 @Override
                 public void onResponse(Call<CheckAuthResp> call, Response<CheckAuthResp> response) {
                     binding.sellDashProgress.setVisibility(View.GONE);
@@ -911,7 +911,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
         locale = getResources().getConfiguration().locale.getCountry();
         binding.sellDashProgress.setVisibility(View.VISIBLE);
 
-        WallofCoins.createService(getActivity()).getReceivingOptions(locale.toLowerCase()).enqueue(new Callback<List<GetReceivingOptionsResp>>() {
+        WallofCoins.createService(getActivity()).getReceivingOptions(locale.toLowerCase(), "").enqueue(new Callback<List<GetReceivingOptionsResp>>() {
             @Override
             public void onResponse(Call<List<GetReceivingOptionsResp>> call, Response<List<GetReceivingOptionsResp>> response) {
                 Log.e(TAG, "onResponse: " + response.body().size());
@@ -1065,6 +1065,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
                                         }
                                     }
                                 }
+
                                 List<String> ids = new ArrayList<>();
                                 for (GetReceivingOptionsResp.PayFieldsBeanX.PayFieldsBean fieldsBean : fieldsBeanList) {
                                     EditText etField = new EditText(activity);

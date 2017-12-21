@@ -21,7 +21,7 @@ import hashengineering.darkcoin.wallet.R;
 import hashengineering.darkcoin.wallet.databinding.BuyDashOffersItemBinding;
 import hashengineering.darkcoin.wallet.databinding.BuyDashOffersItemDoubleBinding;
 
-class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     private Context context;
     private List<GetOffersResp.SingleDepositBean> singleDepositBeenList;

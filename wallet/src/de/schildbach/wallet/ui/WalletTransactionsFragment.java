@@ -84,7 +84,7 @@ import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.Qr;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet.util.WalletUtils;
-import de.schildbach.wallet.wallofcoins.BuyDashActivity;
+import de.schildbach.wallet.wallofcoins.buydash.BuyDashActivity;
 import hashengineering.darkcoin.wallet.R;
 
 /**

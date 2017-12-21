@@ -43,23 +43,23 @@ public interface RestApi {
     Call<CreateAuthResp> createAuth(@Body CreateAuthReq createAuthReq);
 
     @GET("api/v1/orders/")
-    Call<List<OrderListResp>> getOrders();
+    Call<List<OrderListResp>> getOrders(@Query("publisherId") String addressStr);
 
     @GET("api/v1/holds/")
     Call<List<OrderListResp>> getHolds();
 
     @GET("api/v1/auth/{phone}/")
-    Call<CheckAuthResp> checkAuth(@Path("phone") String username);
+    Call<CheckAuthResp> checkAuth(@Path("phone") String username, @Query("publisherId") String addressStr);
 
     @DELETE("api/v1/orders/{orderId}/")
-    Call<Void> cancelOrder(@Path("orderId") String orderId);
+    Call<Void> cancelOrder(@Path("orderId") String orderId, @Query("publisherId") String addressStr);
 
     @FormUrlEncoded
     @POST("api/v1/auth/{phone}/authorize/")
     Call<GetAuthTokenResp> getAuthToken(@Path("phone") String username, @FieldMap Map<String, String> partMap);
 
     @GET("api/v1/banks")
-    Call<List<GetReceivingOptionsResp>> getReceivingOptions(@Query("country") String country);
+    Call<List<GetReceivingOptionsResp>> getReceivingOptions(@Query("country") String country, @Query("publisherId") String addressStr);
 
     @GET("api/v1/ad")
     Call<List<AdsListActivityResp>> getAdsListing();
@@ -89,7 +89,7 @@ public interface RestApi {
     Call<DiscoveryInputsResp> discoveryInputs(@FieldMap Map<String, String> partMap);
 
     @GET("api/v1/discoveryInputs/{discoveryId}/offers/")
-    Call<GetOffersResp> getOffers(@Path("discoveryId") String discoveryId);
+    Call<GetOffersResp> getOffers(@Path("discoveryId") String discoveryId, @Query("publisherId") String addressStr);
 
     @FormUrlEncoded
     @POST("api/v1/holds/")
@@ -101,7 +101,7 @@ public interface RestApi {
 
     @FormUrlEncoded
     @POST("api/v1/orders/{holdId}/confirmDeposit/")
-    Call<ConfirmDepositResp> confirmDeposit(@Path("holdId") String holdId, @Field("your_field") String yourField);
+    Call<ConfirmDepositResp> confirmDeposit(@Path("holdId") String holdId, @Field("your_field") String yourField, @Query("publisherId") String addressStr);
 
     @FormUrlEncoded
     @POST("api/v1/devices/")
