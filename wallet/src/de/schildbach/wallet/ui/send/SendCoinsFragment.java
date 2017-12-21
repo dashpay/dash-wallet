@@ -121,6 +121,7 @@ import android.os.Process;
 import android.support.design.widget.FloatingActionButton;
 import android.app.Fragment;
 import android.app.FragmentManager;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -1017,20 +1018,34 @@ public final class SendCoinsFragment extends Fragment {
     private void handleGo() {
         privateKeyBadPasswordView.setVisibility(View.INVISIBLE);
 
-        if (wallet.isEncrypted()) {
-            new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
-                @Override
-                protected void onSuccess(final KeyParameter encryptionKey, final boolean wasChanged) {
-                    if (wasChanged)
-                        application.backupWallet();
-                    signAndSendPayment(encryptionKey);
-                }
-            }.deriveKey(wallet, privateKeyPasswordView.getText().toString().trim());
+        String message = getString(R.string.dialog_send_dash_confirmation,
+                amountCalculatorLink.getAmount().toFriendlyString(),
+                amountCalculatorLink.getExchangeRate().fiat.toFriendlyString(),
+                validatedAddress.address);
+        DialogInterface.OnClickListener listener = new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                if (wallet.isEncrypted()) {
+                    new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
+                        @Override
+                        protected void onSuccess(final KeyParameter encryptionKey, final boolean wasChanged) {
+                            if (wasChanged)
+                                application.backupWallet();
+                            signAndSendPayment(encryptionKey);
+                        }
+                    }.deriveKey(wallet, privateKeyPasswordView.getText().toString().trim());
 
-            setState(State.DECRYPTING);
-        } else {
-            signAndSendPayment(null);
-        }
+                    setState(State.DECRYPTING);
+                } else {
+                    signAndSendPayment(null);
+                }
+            }
+        };
+        new AlertDialog.Builder(getActivity())
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, listener)
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     private void signAndSendPayment(final KeyParameter encryptionKey) {

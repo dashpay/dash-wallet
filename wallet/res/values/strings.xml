@@ -352,5 +352,6 @@
 
     <string name="dash_slogan">Instant - Private - Secure</string>
     <string name="dash_wallet">Wallet</string>
+    <string name="dialog_send_dash_confirmation">Do you really want to send %1$s (%2$s) to %3$s?</string>
 
 </resources>
