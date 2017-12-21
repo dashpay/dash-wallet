@@ -22,22 +22,10 @@ You can build all sub-projects at once using Gradle:
 
 Full Guide for building the APK:
 
-`$ git clone https://github.com/HashEngineering/dashj.git `
-
-`$ cd dashj`
-
-`$ git checkout release-0.14`
-
-`$ mvn clean install -DskipTests`
-
-`$ cd ..`
-
-`$ git clone https://github.com/HashEngineering/dash-wallet.git `
-
-`$ cd dash-wallet`
-
-`$ git checkout release-4`
-
-`$ gradle clean build -x test`
+```
+$ git clone https://github.com/HashEngineering/dash-wallet.git
+$ cd dash-wallet
+$ gradle clean build
+```
 
 
