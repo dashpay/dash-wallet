@@ -3,27 +3,37 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <!--<group android:checkableBehavior="single">-->
-        <item
-            android:id="@+id/nav_home"
-            android:icon="@drawable/ic_menu_home"
-            android:title="Home" />
-        <item
+    <item
+        android:id="@+id/nav_home"
+        android:icon="@drawable/ic_menu_home"
+        android:title="Home" />
+    <item
         android:id="@+id/nav_disconnect"
         android:icon="@drawable/ic_menu_disconnect"
-        android:title="@string/wallet_options_disconnect"
-        />
-        <item
-            android:id="@+id/nav_address_book"
-            android:icon="@drawable/ic_menu_address_book"
-            android:title="@string/address_book_activity_title" />
-        <item
-            android:id="@+id/nav_exchenge_rates"
-            android:icon="@drawable/ic_menu_exchenge"
-            android:title="@string/exchange_rates_activity_title" />
-        <item
-            android:id="@+id/nav_paper_wallet"
-            android:icon="@drawable/ic_menu_paper_wallet"
-            android:title="@string/sweep_wallet_activity_title" />
+        android:title="@string/wallet_options_disconnect" />
+    <item
+        android:id="@+id/nav_address_book"
+        android:icon="@drawable/ic_menu_address_book"
+        android:title="@string/address_book_activity_title" />
+    <item
+        android:id="@+id/nav_exchenge_rates"
+        android:icon="@drawable/ic_menu_exchenge"
+        android:title="@string/exchange_rates_activity_title" />
+    <item
+        android:id="@+id/nav_paper_wallet"
+        android:icon="@drawable/ic_menu_paper_wallet"
+        android:title="@string/sweep_wallet_activity_title" />
+
+    <!--<item-->
+        <!--android:id="@+id/nav_sell_dash_for_cash"-->
+        <!--android:icon="@drawable/ic_menu_sell_dash"-->
+        <!--android:title="@string/sell_dash_for_cash" />-->
+
+    <item
+        android:id="@+id/nav_buy_dash_with_cash"
+        android:icon="@drawable/ic_menu_sell_dash"
+        android:title="@string/buy_dash_with_cash" />
+
     <!--</group>-->
 
     <item android:title="Configuration">

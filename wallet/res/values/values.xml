@@ -6,6 +6,7 @@
 	<string name="symbol_internal">⇄</string>
 	<string name="app_name">Dash Wallet</string>
 	<string name="app_name_short">Dash</string>
+	<string name="WOC_PUBLISHER_ID">https://wallofcoins.com/</string>
 
 	<string-array name="preferences_precision_values">
 		<item>8</item>

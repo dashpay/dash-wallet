@@ -50,6 +50,7 @@ import android.nfc.NfcEvent;
 import android.os.Bundle;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.widget.CardView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -259,6 +260,8 @@ public final class WalletAddressFragment extends Fragment implements NfcAdapter.
 		}
 	}
 
+	private static final String TAG = WalletAddressFragment.class.getSimpleName();
+
 	private final LoaderCallbacks<Address> addressLoaderCallbacks = new LoaderManager.LoaderCallbacks<Address>()
 	{
 		@Override
@@ -275,7 +278,6 @@ public final class WalletAddressFragment extends Fragment implements NfcAdapter.
 				currentAddressQrAddress = new AddressAndLabel(currentAddress, config.getOwnName());
 
 				final String addressStr = BitcoinURI.convertToBitcoinURI(currentAddressQrAddress.address, null, currentAddressQrAddress.label, null);
-
 				final int size = getResources().getDimensionPixelSize(R.dimen.bitmap_dialog_qr_size);
 				currentAddressQrBitmap = Qr.bitmap(addressStr, size);
 

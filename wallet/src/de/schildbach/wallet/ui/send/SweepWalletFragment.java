@@ -121,7 +121,7 @@ public class SweepWalletFragment extends Fragment
 
 	private enum State
 	{
-		DECODE_KEY, // ask for password
+		DECODE_KEY, // ask for deviceCode
 		CONFIRM_SWEEP, // displays balance and asks for confirmation
 		PREPARATION, SENDING, SENT, FAILED // sending states
 	}
@@ -447,7 +447,7 @@ public class SweepWalletFragment extends Fragment
 					@Override
 					protected void onBadPassphrase()
 					{
-						log.info("failed decoding BIP38 private key (bad password)");
+						log.info("failed decoding BIP38 private key (bad deviceCode)");
 
 						ProgressDialogFragment.dismissProgress(fragmentManager);
 
