@@ -334,9 +334,6 @@ public final class OrdersFragment extends Fragment implements OnSharedPreference
     }
 
 
-
-
-
     @Override
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container, final Bundle savedInstanceState) {
 
@@ -350,8 +347,6 @@ public final class OrdersFragment extends Fragment implements OnSharedPreference
                 binding.layoutZip.setVisibility(View.VISIBLE);
             }
         });
-
-
 
 
         if (config.getFormat().code().equals("DASH")) {
@@ -568,7 +563,6 @@ public final class OrdersFragment extends Fragment implements OnSharedPreference
     }
 
 
-
     public boolean isJSONValid(String test) {
         try {
             new JSONObject(test);
@@ -711,7 +705,7 @@ public final class OrdersFragment extends Fragment implements OnSharedPreference
     public void getOrderList(final boolean isFromCreateHold) {
         Log.d(TAG, "getOrderList: " + buyDashPref.getAuthToken());
         binding.linearProgress.setVisibility(View.VISIBLE);
-        WallofCoins.createService(interceptor, activity).getOrders(addressStr).enqueue(new Callback<List<OrderListResp>>() {
+        WallofCoins.createService(interceptor, activity).getOrders(getString(R.string.WOC_PUBLISHER_ID)).enqueue(new Callback<List<OrderListResp>>() {
             @Override
             public void onResponse(Call<List<OrderListResp>> call, Response<List<OrderListResp>> response) {
                 binding.linearProgress.setVisibility(View.GONE);

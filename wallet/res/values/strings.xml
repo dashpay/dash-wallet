@@ -385,7 +385,8 @@
     <string name="price">Price:</string>
 
     <string name="dashUnicode">\u0110 %s</string>
-    <string name="dotUnicode">(\u0111 %s)\n(at %s%s/\u0110)</string>
+    <string name="dotUnicode">(\u0111 %1$s)\n(at %2$s%3$.2f/\u0110)</string>
+    <string name="dotUnicodeNoRate">(\u0111 %s)</string>
     <string name="location_rationale">Your location is used to find nearest payment centers.</string>
     <string name="find_my_location">Find My Location</string>
     <string name="no_thanks">No Thanks</string>

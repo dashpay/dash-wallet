@@ -110,6 +110,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 import static android.content.Context.LOCATION_SERVICE;
+import static org.bitcoinj.wallet.KeyChain.KeyPurpose.RECEIVE_FUNDS;
 
 
 public final class BuyDashFragment extends Fragment implements OnSharedPreferenceChangeListener {
@@ -332,7 +333,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             // Request customization: add request headers
             Request.Builder requestBuilder = original.newBuilder()
                     .addHeader("X-Coins-Api-Token", buyDashPref.getAuthToken())
-                    .addHeader("publisherId", addressStr);
+                    .addHeader("publisherId", getString(R.string.WOC_PUBLISHER_ID));
 
             Request request = requestBuilder.build();
             return chain.proceed(request);
@@ -382,14 +383,13 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                            String permissions[], int[] grantResults) {
         switch (requestCode) {
             case PERMISSIONS_REQUEST_LOCATION: {
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    getZip();
-                } else {
+                if (grantResults.length <= 0 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
                     Toast.makeText(activity, "Location permission denied, \nYou can enable it from Settings", Toast.LENGTH_LONG).show();
                     binding.layoutLocation.setVisibility(View.GONE);
                     binding.layoutZip.setVisibility(View.VISIBLE);
 
+                } else {
+                    getZip();
                 }
             }
         }
@@ -417,12 +417,12 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private void requestLocation() {
         if (ContextCompat.checkSelfPermission(activity,
                 Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
+                == PackageManager.PERMISSION_GRANTED) {
+            getZip();
+        } else {
             ActivityCompat.requestPermissions(activity,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     PERMISSIONS_REQUEST_LOCATION);
-        } else {
-            getZip();
         }
     }
 
@@ -626,7 +626,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     Toast.makeText(getContext(), "Please Enter Purchase Code!", Toast.LENGTH_LONG).show();
                     return;
                 }
-                captureHoldReq.put("publisherId", addressStr);
+                captureHoldReq.put("publisherId", getString(R.string.WOC_PUBLISHER_ID));
                 captureHoldReq.put("verificationCode", otp);
                 Log.d(TAG, "onClick: authToken==>>" + buyDashPref.getAuthToken());
                 binding.linearProgress.setVisibility(View.VISIBLE);
@@ -993,8 +993,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
         HashMap<String, String> discoveryInputsReq = new HashMap<String, String>();
 
-        discoveryInputsReq.put("publisherId", addressStr);
-        discoveryInputsReq.put("publisherId", "47");
+        discoveryInputsReq.put("publisherId", getString(R.string.WOC_PUBLISHER_ID));
+        discoveryInputsReq.put("cryptoAddress", wallet.freshAddress(RECEIVE_FUNDS).toBase58());
         try {
             if (Float.valueOf(binding.requestCoinsAmountLocal.getTextView().getHint().toString()) > 0f) {
                 discoveryInputsReq.put("usdAmount", "" + binding.requestCoinsAmountLocal.getTextView().getHint());
@@ -1036,7 +1036,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                         binding.layoutVerifyOtp.setVisibility(View.GONE);
                                         binding.rvOffers.setVisibility(View.VISIBLE);
                                         backManageViews.add(LAYOUT_OFFERS);
-                                        BuyDashOffersAdapter buyDashOffersAdapter = new BuyDashOffersAdapter(activity, response.body().singleDeposit, response.body().doubleDeposit, new AdapterView.OnItemSelectedListener() {
+                                        BuyDashOffersAdapter buyDashOffersAdapter = new BuyDashOffersAdapter(activity, response.body(), new AdapterView.OnItemSelectedListener() {
                                             @Override
                                             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                                                 hideKeyBoard();
@@ -1051,6 +1051,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                                     createHold(true);
                                                 } else {
                                                     binding.rvOffers.setVisibility(View.GONE);
+                                                    binding.linearPhone.setVisibility(View.GONE);
                                                     binding.linearEmail.setVisibility(View.VISIBLE);
                                                     backManageViews.add(LAYOUT_PHONE);
                                                     binding.btnNextPhone.setOnClickListener(new View.OnClickListener() {
@@ -1138,7 +1139,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
             HashMap<String, String> getAuthTokenReq = new HashMap<String, String>();
             getAuthTokenReq.put(isPass ? "password" : "deviceCode", password);
-            getAuthTokenReq.put("publisherId", addressStr);
+            getAuthTokenReq.put("publisherId", getString(R.string.WOC_PUBLISHER_ID));
 
 
 //            getAuthTokenReq.deviceCode = password;
@@ -1187,7 +1188,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         final HashMap<String, String> createDeviceReq = new HashMap<String, String>();
         createDeviceReq.put("name", "Dash Wallet (Android)");
         createDeviceReq.put("code", password);
-        createDeviceReq.put("publisherId", addressStr);
+        createDeviceReq.put("publisherId", getString(R.string.WOC_PUBLISHER_ID));
         binding.linearProgress.setVisibility(View.VISIBLE);
         WallofCoins.createService(interceptor, getActivity()).createDevice(createDeviceReq).enqueue(new Callback<CreateDeviceResp>() {
             @Override
@@ -1216,7 +1217,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
             if (!isUserExist) createHoldPassReq.put("phone", phone);
             createHoldPassReq.put("offer", offerId);
-            createHoldPassReq.put("publisherId", addressStr);
+            createHoldPassReq.put("publisherId", getString(R.string.WOC_PUBLISHER_ID));
             createHoldPassReq.put("email", email);
             createHoldPassReq.put("deviceName", "Dash Wallet (Android)");
             createHoldPassReq.put("deviceCode", password);
@@ -1229,6 +1230,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
                     if (response.code() == 403) {
                         binding.layoutCreateHold.setVisibility(View.GONE);
+                        binding.linearPhone.setVisibility(View.GONE);
                         binding.linearEmail.setVisibility(View.VISIBLE);
                         backManageViews.add(LAYOUT_PHONE);
                         binding.linearPassword.setVisibility(View.GONE);

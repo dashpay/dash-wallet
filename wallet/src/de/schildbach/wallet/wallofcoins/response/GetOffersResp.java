@@ -19,7 +19,7 @@ public class GetOffersResp {
     public boolean incremented;
     public List<SingleDepositBean> singleDeposit;
     public List<DoubleDepositBean> doubleDeposit;
-    public List<?> multipleBanks;
+    public List<DoubleDepositBean> multipleBanks;
 
     public static class SingleDepositBean {
         /**
