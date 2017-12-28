@@ -40,6 +40,7 @@ import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -373,9 +374,14 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     }
 
     String getDeviceId(Context context) {
-        String deviceID = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
-        byte[] data = (deviceID + deviceID + deviceID).getBytes(Charsets.UTF_8);
-        return Base64.encodeToString(data, Base64.DEFAULT).substring(0, 39);
+        String deviceUID = buyDashPref.getDeviceId();
+        if (TextUtils.isEmpty(deviceUID)) {
+            String deviceID = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
+            byte[] data = (deviceID + deviceID + deviceID).getBytes(Charsets.UTF_8);
+            deviceUID = Base64.encodeToString(data, Base64.DEFAULT).substring(0, 39);
+            buyDashPref.setDeviceId(deviceUID);
+        }
+        return deviceUID;
     }
 
     @Override
@@ -431,7 +437,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         locale = getResources().getConfiguration().locale.getCountry();
         binding.linearProgress.setVisibility(View.VISIBLE);
 
-        WallofCoins.createService(getActivity()).getReceivingOptions(locale.toLowerCase(), addressStr).enqueue(new Callback<List<GetReceivingOptionsResp>>() {
+        WallofCoins.createService(getActivity()).getReceivingOptions(locale.toLowerCase(), getString(R.string.WOC_PUBLISHER_ID)).enqueue(new Callback<List<GetReceivingOptionsResp>>() {
             @Override
             public void onResponse(Call<List<GetReceivingOptionsResp>> call, Response<List<GetReceivingOptionsResp>> response) {
                 Log.e(TAG, "onResponse: " + response.body().size());
@@ -555,6 +561,14 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             public void onClick(View v) {
                 binding.linearEmail.setVisibility(View.GONE);
                 binding.linearPhone.setVisibility(View.VISIBLE);
+            }
+        });
+
+        binding.btnNextPhone.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hideKeyBoard();
+                checkAuth();
             }
         });
 
@@ -793,12 +807,40 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
                                 } else if (null != response && null != response.errorBody()) {
                                     binding.linearProgress.setVisibility(View.GONE);
-                                    try {
-                                        BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
-                                        Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
-                                    } catch (Exception e) {
-                                        e.printStackTrace();
-                                        Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+
+                                    if (response.code() == 404) {
+                                        AlertDialog.Builder builder;
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                            builder = new AlertDialog.Builder(activity, android.R.style.Theme_Material_Dialog_Alert);
+                                        } else {
+                                            builder = new AlertDialog.Builder(activity);
+                                        }
+                                        builder.setTitle("Whoops!")
+                                                .setMessage("The Purchase Code has expired. " +
+                                                        "After you receive the Purchase Code, you will need to type quickly. " +
+                                                        "You will need to create another order to receive another Purchase Code.")
+                                                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                                                    public void onClick(DialogInterface dialog, int which) {
+                                                        binding.layoutCompletionDetail.setVisibility(View.GONE);
+                                                        binding.rvOffers.setVisibility(View.GONE);
+                                                        binding.rvOrderList.setVisibility(View.GONE);
+                                                        binding.linearPhone.setVisibility(View.GONE);
+                                                        binding.linearEmail.setVisibility(View.GONE);
+                                                        binding.linearPassword.setVisibility(View.GONE);
+                                                        binding.layoutVerifyOtp.setVisibility(View.GONE);
+                                                        binding.layoutLocation.setVisibility(View.GONE);
+                                                        binding.layoutCreateHold.setVisibility(View.VISIBLE);
+                                                    }
+                                                })
+                                                .show();
+                                    } else {
+                                        try {
+                                            BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
+                                            Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
+                                        } catch (Exception e) {
+                                            e.printStackTrace();
+                                            Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                                        }
                                     }
                                 } else {
                                     Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
@@ -866,7 +908,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
     private void cancelOrder(String orderId) {
         binding.linearProgress.setVisibility(View.VISIBLE);
-        WallofCoins.createService(interceptor, activity).cancelOrder(orderId, addressStr).enqueue(new Callback<Void>() {
+        WallofCoins.createService(interceptor, activity).cancelOrder(orderId, getString(R.string.WOC_PUBLISHER_ID)).enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
                 binding.linearProgress.setVisibility(View.GONE);
@@ -889,7 +931,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
     private void confirmDeposit(CaptureHoldResp response) {
         binding.linearProgress.setVisibility(View.VISIBLE);
-        WallofCoins.createService(interceptor, getActivity()).confirmDeposit("" + response.id, "", addressStr).enqueue(new Callback<ConfirmDepositResp>() {
+        WallofCoins.createService(interceptor, getActivity()).confirmDeposit("" + response.id, "", getString(R.string.WOC_PUBLISHER_ID)).enqueue(new Callback<ConfirmDepositResp>() {
             @Override
             public void onResponse(Call<ConfirmDepositResp> call, Response<ConfirmDepositResp> response) {
                 binding.linearProgress.setVisibility(View.GONE);
@@ -1018,7 +1060,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
                 if (null != response && null != response.body()) {
                     if (null != response.body().id) {
-                        WallofCoins.createService(getActivity()).getOffers(response.body().id, addressStr).enqueue(new Callback<GetOffersResp>() {
+                        WallofCoins.createService(getActivity()).getOffers(response.body().id, getString(R.string.WOC_PUBLISHER_ID)).enqueue(new Callback<GetOffersResp>() {
                             @Override
                             public void onResponse(Call<GetOffersResp> call, final Response<GetOffersResp> response) {
 
@@ -1054,13 +1096,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                                     binding.linearPhone.setVisibility(View.GONE);
                                                     binding.linearEmail.setVisibility(View.VISIBLE);
                                                     backManageViews.add(LAYOUT_PHONE);
-                                                    binding.btnNextPhone.setOnClickListener(new View.OnClickListener() {
-                                                        @Override
-                                                        public void onClick(View v) {
-                                                            hideKeyBoard();
-                                                            checkAuth();
-                                                        }
-                                                    });
+                                                    clearForm((ViewGroup) binding.getRoot());
                                                 }
                                             }
 
@@ -1228,54 +1264,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 public void onResponse(Call<CreateHoldResp> call, Response<CreateHoldResp> response) {
                     binding.linearProgress.setVisibility(View.GONE);
 
-                    if (response.code() == 403) {
-                        binding.layoutCreateHold.setVisibility(View.GONE);
-                        binding.linearPhone.setVisibility(View.GONE);
-                        binding.linearEmail.setVisibility(View.VISIBLE);
-                        backManageViews.add(LAYOUT_PHONE);
-                        binding.linearPassword.setVisibility(View.GONE);
-                        binding.layoutCompletionDetail.setVisibility(View.GONE);
-                        binding.rvOrderList.setVisibility(View.GONE);
-                        binding.layoutVerifyOtp.setVisibility(View.GONE);
-                        binding.rvOffers.setVisibility(View.GONE);
 
-                        binding.btnNextPhone.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                hideKeyBoard();
-                                checkAuth();
-                            }
-                        });
-                        return;
-                    }
-                    if (response.code() == 404) {
-                        AlertDialog.Builder builder;
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                            builder = new AlertDialog.Builder(activity, android.R.style.Theme_Material_Dialog_Alert);
-                        } else {
-                            builder = new AlertDialog.Builder(activity);
-                        }
-                        builder.setTitle("Whoops!")
-                                .setMessage("The Purchase Code has expired. " +
-                                        "After you receive the Purchase Code, you will need to type quickly. " +
-                                        "You will need to create another order to receive another Purchase Code.")
-                                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        binding.layoutCompletionDetail.setVisibility(View.GONE);
-                                        binding.rvOffers.setVisibility(View.GONE);
-                                        binding.rvOrderList.setVisibility(View.GONE);
-                                        binding.linearPhone.setVisibility(View.GONE);
-                                        binding.linearEmail.setVisibility(View.GONE);
-                                        binding.linearPassword.setVisibility(View.GONE);
-                                        binding.layoutVerifyOtp.setVisibility(View.GONE);
-                                        binding.layoutLocation.setVisibility(View.GONE);
-                                        binding.layoutCreateHold.setVisibility(View.VISIBLE);
-                                    }
-                                })
-                                .show();
-                        return;
-                    }
-                    if (null != response.body()) {
+                    if (null != response.body() && response.code() < 299) {
                         createHoldResp = response.body();
                         buyDashPref.setHoldId(createHoldResp.id);
                         buyDashPref.setCreateHoldResp(createHoldResp);
@@ -1300,6 +1290,20 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 //                        Log.d(TAG, "onResponse: purchase code==>>" + createHoldResp.__PURCHASE_CODE);
                         binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
                     } else if (null != response.errorBody()) {
+                        if (response.code() == 403 || response.code() == 404) {
+//                            binding.layoutCreateHold.setVisibility(View.GONE);
+//                            binding.linearPhone.setVisibility(View.GONE);
+//                            binding.linearEmail.setVisibility(View.VISIBLE);
+//                            backManageViews.add(LAYOUT_PHONE);
+//                            binding.linearPassword.setVisibility(View.GONE);
+//                            binding.layoutCompletionDetail.setVisibility(View.GONE);
+//                            binding.rvOrderList.setVisibility(View.GONE);
+//                            binding.layoutVerifyOtp.setVisibility(View.GONE);
+//                            binding.rvOffers.setVisibility(View.GONE);
+
+                            createHold(false);
+                        }
+
                         try {
                             BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
                             Log.d(TAG, "onResponse: message==>> " + buyDashErrorResp.detail);
@@ -1310,6 +1314,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                             Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
                         }
                     } else {
+                        clearForm((ViewGroup) binding.getRoot());
                         Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
                     }
                 }
@@ -1329,7 +1334,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     public void getOrderList(final boolean isFromCreateHold) {
         Log.d(TAG, "getOrderList: " + buyDashPref.getAuthToken());
         binding.linearProgress.setVisibility(View.VISIBLE);
-        WallofCoins.createService(interceptor, activity).getOrders(addressStr).enqueue(new Callback<List<OrderListResp>>() {
+        WallofCoins.createService(interceptor, activity).getOrders(getString(R.string.WOC_PUBLISHER_ID)).enqueue(new Callback<List<OrderListResp>>() {
             @Override
             public void onResponse(Call<List<OrderListResp>> call, Response<List<OrderListResp>> response) {
                 binding.linearProgress.setVisibility(View.GONE);
@@ -1445,7 +1450,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         if (!TextUtils.isEmpty(phone)) {
             binding.linearProgress.setVisibility(View.VISIBLE);
 
-            WallofCoins.createService(activity).checkAuth(phone, addressStr).enqueue(new Callback<CheckAuthResp>() {
+            WallofCoins.createService(activity).checkAuth(phone, getString(R.string.WOC_PUBLISHER_ID)).enqueue(new Callback<CheckAuthResp>() {
                 @Override
                 public void onResponse(Call<CheckAuthResp> call, Response<CheckAuthResp> response) {
                     Log.d(TAG, "onResponse: response code==>>" + response.code());
@@ -1791,6 +1796,20 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
         public void setLabel(String label) {
             this.label = label;
+        }
+    }
+
+    private void clearForm(ViewGroup root) {
+        for (int i = 0; i < root.getChildCount(); i++) {
+            final View child = root.getChildAt(i);
+            if (child instanceof ViewGroup) {
+                clearForm((ViewGroup) child);
+                // DO SOMETHING WITH VIEWGROUP, AFTER CHILDREN HAS BEEN LOOPED
+            } else {
+                if (child != null && child instanceof EditText) {
+                    ((EditText) child).setText("");
+                }
+            }
         }
     }
 

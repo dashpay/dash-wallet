@@ -2,7 +2,6 @@
 <resources>
 	<string name="app_name">Dash Wallet [testnet]</string>
 	<string name="WOC_PUBLISHER_ID">http://woc.reference.genitrust.com/</string>
-	<!--<string name="WOC_PUBLISHER_ID">http://dev.geni.to:8001/</string>-->
 	<string-array name="preferences_precision_values">
 		<item>8</item>
 		<item>6</item>
