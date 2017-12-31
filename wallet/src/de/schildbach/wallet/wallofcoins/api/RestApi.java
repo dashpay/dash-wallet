@@ -51,6 +51,9 @@ public interface RestApi {
     @GET("api/v1/auth/{phone}/")
     Call<CheckAuthResp> checkAuth(@Path("phone") String username, @Query("publisherId") String publisherId);
 
+    @DELETE("api/v1/auth/{phone}/")
+    Call<CheckAuthResp> deleteAuth(@Path("phone") String username, @Query("publisherId") String publisherId);
+
     @DELETE("api/v1/orders/{orderId}/")
     Call<Void> cancelOrder(@Path("orderId") String orderId, @Query("publisherId") String publisherId);
 

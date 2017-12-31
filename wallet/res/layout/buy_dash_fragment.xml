@@ -246,10 +246,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="4dp"
-                        android:text="Near By Center"
+                        android:text="@string/show_on_map_nearby"
                         android:textColor="@android:color/holo_blue_dark"
                         android:textSize="16dp"
-                        tools:text="Near By Center" />
+                        tools:text="@string/show_on_map_nearby" />
 
                     <TextView
                         android:id="@+id/text_phone"
@@ -265,13 +265,12 @@
             </LinearLayout>
 
             <TextView
-                android:id="@+id/order_status"
+                android:id="@+id/order_dash"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
-                android:layout_marginTop="@dimen/dimen_8dp"
-                android:textSize="16dp"
-                tools:text="Status: Pending" />
+                android:layout_marginTop="4dp"
+                android:textSize="16dp" />
 
             <TextView
                 android:id="@+id/text_name"
@@ -298,7 +297,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
-                android:text='@{TextUtils.isEmpty(confiremedData.payment)?"Cash to Deposit: - ":"Cash to Deposit: $"+ confiremedData.payment}'
+                android:text='@{TextUtils.isEmpty(confiremedData.payment)?"":@string/cash_to_deposit(Float.valueOf(confiremedData.payment))}'
                 android:textSize="16dp"
                 android:visibility='@{TextUtils.isEmpty(confiremedData.payment)?View.GONE:View.VISIBLE}'
                 tools:text="$ 16447878" />
@@ -308,7 +307,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
-                android:text='@{TextUtils.isEmpty(confiremedData.paymentDue)?"Deposit Due: - ":"Deposit Due: " + confiremedData.paymentDue.substring(0,16).replace("T"," ")}'
                 android:textSize="16dp"
                 android:visibility='@{TextUtils.isEmpty(confiremedData.paymentDue)?View.GONE:View.VISIBLE}'
                 tools:text="Deposit Due: Today 12:00 PM" />
@@ -325,6 +323,15 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Cancel Order" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
+                android:text="@string/order_completion_instruction"
+                android:textSize="16dp" />
+
+
         </LinearLayout>
 
         <android.support.v7.widget.RecyclerView
