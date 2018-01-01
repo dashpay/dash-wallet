@@ -670,8 +670,18 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                                 itemBankBinding.textCashToDeposite.setVisibility(View.GONE);
                                             }
 
-                                            itemBankBinding.orderDash.setText("You are ordering: " + dashAmount + " Dash.\n"
+                                            itemBankBinding.orderDash.setText("You are ordering: " + response.body().get(0).total + " Dash.\n"
                                                     + "You will pay with " + defaultCurrency + " cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
+
+                                            itemBankBinding.textContactInstruction.setOnClickListener(new View.OnClickListener() {
+                                                @Override
+                                                public void onClick(View v) {
+                                                    String url = "https://wallofcoins.com]wallofcoins.com";
+                                                    Intent i = new Intent(Intent.ACTION_VIEW);
+                                                    i.setData(Uri.parse(url));
+                                                    startActivity(i);
+                                                }
+                                            });
 
                                             countDownStart(response.body().get(0).paymentDue, itemBankBinding.textPaymentDueDate);
 
@@ -768,8 +778,18 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                     hideViewExcept(binding.layoutCompletionDetail);
                                     backManageViews.add(LAYOUT_COMPLETION_DETAIL);
 
-                                    binding.orderDash.setText("You are ordering: " + dashAmount + " Dash.\n"
+                                    binding.orderDash.setText("You are ordering: " + response.body().get(0).total + " Dash.\n"
                                             + "You will pay with " + defaultCurrency + " cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
+
+                                    binding.textContactInstruction.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            String url = "https://wallofcoins.com]wallofcoins.com";
+                                            Intent i = new Intent(Intent.ACTION_VIEW);
+                                            i.setData(Uri.parse(url));
+                                            startActivity(i);
+                                        }
+                                    });
 
                                     countDownStart(response.body().get(0).paymentDue, binding.textPaymentDueDate);
 
@@ -1638,13 +1658,23 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     holder.itemBinding.btnCancelOrder.setVisibility(View.VISIBLE);
                     holder.itemBinding.btnDepositFinished.setVisibility(View.VISIBLE);
                     countDownStart(orderListResp.paymentDue, holder.itemBinding.textPaymentDueDate);
-                    holder.itemBinding.orderDash.setText("You are ordering: " + dashAmount + " Dash.\n"
+                    holder.itemBinding.orderDash.setText("You are ordering: " + orderListResp.total + " Dash.\n"
                             + "You will pay with " + defaultCurrency + " cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
+                    holder.itemBinding.textContactInstruction.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            String url = "https://wallofcoins.com]wallofcoins.com";
+                            Intent i = new Intent(Intent.ACTION_VIEW);
+                            i.setData(Uri.parse(url));
+                            startActivity(i);
+                        }
+                    });
                 } else {
                     holder.itemBinding.textPaymentDueDate.setVisibility(View.GONE);
                     holder.itemBinding.orderDash.setVisibility(View.GONE);
                     holder.itemBinding.btnCancelOrder.setVisibility(View.GONE);
                     holder.itemBinding.btnDepositFinished.setVisibility(View.GONE);
+                    holder.itemBinding.textContactInstruction.setVisibility(View.GONE);
                 }
 
 

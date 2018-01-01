@@ -79,13 +79,6 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/order_dash"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="4dp"
-                    android:layout_marginTop="4dp"
-                    android:textSize="16dp" />
 
                 <TextView
                     android:id="@+id/text_name_account"
@@ -146,10 +139,26 @@
                     android:text="Cancel Order" />
 
                 <TextView
+                    android:id="@+id/order_dash"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginTop="4dp"
+                    android:textSize="16dp" />
+
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
                     android:text="@string/order_completion_instruction"
+                    android:textSize="16dp" />
+
+                <TextView
+                    android:id="@+id/text_contact_instruction"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/order_contact_instruction"
                     android:textSize="16dp" />
 
             </LinearLayout>
