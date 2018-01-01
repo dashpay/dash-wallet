@@ -1672,12 +1672,18 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     e.printStackTrace();
                 }
 
+                if (orderListResp.status.equals("WDV")) {
+                    holder.itemBinding.textNameAccount.setVisibility(View.GONE);
+                    holder.itemBinding.textPhone.setVisibility(View.GONE);
+                } else {
+                    holder.itemBinding.textNameAccount.setVisibility(View.VISIBLE);
+                    holder.itemBinding.textPhone.setVisibility(View.VISIBLE);
+                }
+
                 if (orderListResp.status.equals("WD")) {
                     holder.itemBinding.btnCancelOrder.setVisibility(View.VISIBLE);
                     holder.itemBinding.btnDepositFinished.setVisibility(View.VISIBLE);
                     countDownStart(orderListResp.paymentDue, holder.itemBinding.textPaymentDueDate);
-                    holder.itemBinding.orderDash.setText("You are ordering: " + orderListResp.total + " Dash.\n"
-                            + "You will pay with " + defaultCurrency + " cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
                     holder.itemBinding.textContactInstruction.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
@@ -1689,11 +1695,12 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     });
                 } else {
                     holder.itemBinding.textPaymentDueDate.setVisibility(View.GONE);
-                    holder.itemBinding.orderDash.setVisibility(View.GONE);
                     holder.itemBinding.btnCancelOrder.setVisibility(View.GONE);
                     holder.itemBinding.btnDepositFinished.setVisibility(View.GONE);
                     holder.itemBinding.textContactInstruction.setVisibility(View.GONE);
                 }
+                holder.itemBinding.orderDash.setText("You are ordering: " + orderListResp.total + " Dash.\n"
+                        + "You will pay with " + defaultCurrency + " cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
 
 
                 holder.itemBinding.btnDepositFinished.setOnClickListener(new View.OnClickListener() {
