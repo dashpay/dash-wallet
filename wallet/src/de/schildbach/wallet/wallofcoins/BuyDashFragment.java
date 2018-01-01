@@ -334,7 +334,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
                 requestBuilder.addHeader("X-Coins-Api-Token", buyDashPref.getAuthToken());
             }
-            requestBuilder.addHeader("publisher-id", "41");
+            requestBuilder.addHeader("publisher-id", "47");
 
             Request request = requestBuilder.build();
             return chain.proceed(request);
@@ -606,7 +606,17 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
         binding.rvOffers.setLayoutManager(new LinearLayoutManager(activity));
 
-        getOrderList(false);
+        if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+            if (!TextUtils.isEmpty(buyDashPref.getHoldId())) {
+                CreateHoldResp createHoldResp = buyDashPref.getCreateHoldResp();
+                binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
+                hideViewExcept(binding.layoutVerifyOtp);
+            } else {
+                getOrderList(false);
+            }
+        }
+
+
         binding.buttonBuyDashGetOffers.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -634,7 +644,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     Toast.makeText(getContext(), "Please Enter Purchase Code!", Toast.LENGTH_LONG).show();
                     return;
                 }
-                captureHoldReq.put("publisherId", "41");
+                captureHoldReq.put("publisherID", "47");
                 captureHoldReq.put("verificationCode", otp);
                 binding.linearProgress.setVisibility(View.VISIBLE);
                 WallofCoins.createService(interceptor, getActivity()).captureHold(buyDashPref.getHoldId(), captureHoldReq)
@@ -642,10 +652,17 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                             @Override
                             public void onResponse(Call<List<CaptureHoldResp>> call, final Response<List<CaptureHoldResp>> response) {
                                 binding.linearProgress.setVisibility(View.GONE);
+                                buyDashPref.setHoldId("");
+                                buyDashPref.setCreateHoldResp(null);
+                                Log.e(TAG, "onResponse: " + buyDashPref.getHoldId() + " here");
                                 if (null != response && null != response.body() && !response.body().isEmpty()) {
                                     if (response.body().get(0).account != null && !TextUtils.isEmpty(response.body().get(0).account)) {
                                         if (isJSONValid(response.body().get(0).account)) {
                                             ItemOrderListBinding itemBankBinding = DataBindingUtil.inflate(LayoutInflater.from(activity), R.layout.item_order_list, null, false);
+
+                                            itemBankBinding.layLogout.setVisibility(View.GONE);
+                                            itemBankBinding.layoutCompletionDetail.setVisibility(View.VISIBLE);
+
                                             Glide.with(activity).load(response.body().get(0).bankLogo).into(itemBankBinding.imageBank);
                                             if (!TextUtils.isEmpty(response.body().get(0).bankName)) {
                                                 itemBankBinding.textBankName.setText(response.body().get(0).bankName);
@@ -909,6 +926,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             }
         });
 
+
         return binding.getRoot();
     }
 
@@ -1131,7 +1149,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
         HashMap<String, String> discoveryInputsReq = new HashMap<String, String>();
 
-        discoveryInputsReq.put("publisherId", "41");
+        discoveryInputsReq.put("publisherID", "47");
         discoveryInputsReq.put("cryptoAddress", wallet.freshAddress(RECEIVE_FUNDS).toBase58());
         try {
             if (Float.valueOf(binding.requestCoinsAmountLocal.getTextView().getHint().toString()) > 0f) {
@@ -1263,7 +1281,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             } else {
                 getAuthTokenReq.put("deviceCode", getDeviceId(activity));
             }
-            getAuthTokenReq.put("publisherId", "41");
+            getAuthTokenReq.put("publisherID", "47");
 
             binding.linearProgress.setVisibility(View.VISIBLE);
             WallofCoins.createService(getActivity()).getAuthToken(phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
@@ -1311,7 +1329,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         final HashMap<String, String> createDeviceReq = new HashMap<String, String>();
         createDeviceReq.put("name", "Dash Wallet (Android)");
         createDeviceReq.put("code", getDeviceId(getContext()));
-        createDeviceReq.put("publisherId", "41");
+        createDeviceReq.put("publisherID", "47");
         binding.linearProgress.setVisibility(View.VISIBLE);
         WallofCoins.createService(interceptor, getActivity()).createDevice(createDeviceReq).enqueue(new Callback<CreateDeviceResp>() {
             @Override
@@ -1337,7 +1355,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 //        if (!isUserExist)
         createHoldPassReq.put("phone", phone);
         createHoldPassReq.put("offer", offerId);
-        createHoldPassReq.put("publisherId", "41");
+        createHoldPassReq.put("publisherID", "47");
         createHoldPassReq.put("email", email);
         createHoldPassReq.put("deviceName", "Dash Wallet (Android)");
         createHoldPassReq.put("deviceCode", getDeviceId(getContext()));

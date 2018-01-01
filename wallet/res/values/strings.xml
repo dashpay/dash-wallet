@@ -125,7 +125,7 @@
     <string name="maintenance_dialog_button_move">Move</string>
     <string name="request_coins_activity_title">Request Dash</string>
     <string name="request_coins_fragment_amount_label">Requested amount (optional)</string>
-    <string name="buy_dash_coins_amount_lable">I\'m looking for</string>
+    <string name="buy_dash_coins_amount_lable">I\'m looking to spend</string>
     <string name="request_coins_fragment_accept_bluetooth_payment">Accept payment via Bluetooth for more reliable processing</string>
     <string name="request_coins_fragment_initiate_request_qr">Have this code scanned by the sender.</string>
     <string name="request_coins_fragment_initiate_request_nfc">Or tap an NFC enabled device.</string>
@@ -404,4 +404,5 @@
     \nWhen you are finished making the payment, you must press "Deposit Finished" to receive your Dash.</string>
     <string name="text_send_email_receipt">Wall of Coins will verify your payment. This usually takes up to 10 minutes. To expedite your order, take a picture of your receipt and &lt;u&gt;click here&lt;/u&gt; to email your receipt to Wall of Coins.</string>
     <string name="order_contact_instruction">If you have any questions, there is a live chat window at <u>wallofcoins.com</u> or you may call the phone number that sent you a text message.</string>
+    <string name="locationsPhone">Location\'s phone #: %s</string>
 </resources>
