@@ -14,8 +14,12 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.TextView;
 
+import java.text.NumberFormat;
+import java.text.ParseException;
 import java.util.List;
+import java.util.Locale;
 
+import de.schildbach.wallet.util.GenericUtils;
 import de.schildbach.wallet.wallofcoins.response.GetOffersResp;
 import hashengineering.darkcoin.wallet.R;
 import hashengineering.darkcoin.wallet.databinding.BuyDashOffersItemBinding;
@@ -28,10 +32,11 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
     private List<GetOffersResp.DoubleDepositBean> doubleDeposit;
     private AdapterView.OnItemSelectedListener onItemSelectedListener;
 
-    public BuyDashOffersAdapter(Context context, List<GetOffersResp.SingleDepositBean> singleDepositBeenList, List<GetOffersResp.DoubleDepositBean> doubleDeposit, AdapterView.OnItemSelectedListener onItemSelectedListener) {
+    public BuyDashOffersAdapter(Context context, GetOffersResp getOffersResp, AdapterView.OnItemSelectedListener onItemSelectedListener) {
         this.context = context;
-        this.singleDepositBeenList = singleDepositBeenList;
-        this.doubleDeposit = doubleDeposit;
+        this.singleDepositBeenList = getOffersResp.singleDeposit;
+        this.doubleDeposit = getOffersResp.doubleDeposit;
+        this.doubleDeposit.addAll(getOffersResp.multipleBanks);
         this.onItemSelectedListener = onItemSelectedListener;
     }
 
@@ -63,6 +68,14 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
             final VHolderSingle vholder = (VHolderSingle) holder;
             vholder.binding.setItem(bean);
 
+            if (getNumAmount(bean.deposit.amount) >= 200) {
+//            android:text="@{@string/dotUnicode(item.amount.dots,GenericUtils.currencySymbol(item.deposit.currency),item.deposit.amount)}"
+                vholder.binding.tvItrmOffer2.setText(context.getString(R.string.dotUnicode, bean.amount.dots, GenericUtils.currencySymbol(bean.deposit.currency), getNumAmount(bean.deposit.amount) / getNumAmount(bean.amount.DASH)));
+            } else {
+                vholder.binding.tvItrmOffer2.setText(context.getString(R.string.dotUnicodeNoRate, bean.amount.dots));
+            }
+
+
             vholder.binding.buttonBuyDashItemOrder.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -81,8 +94,8 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
         } else if (holder instanceof VHolderDouble1) {
             GetOffersResp.DoubleDepositBean beanTemp = doubleDeposit.get(position - singleDepositBeenList.size() - 2);
             final GetOffersResp.SingleDepositBean bean = new GetOffersResp.SingleDepositBean();
-            bean.deposit=new GetOffersResp.DepositBean();
-            bean.amount=new GetOffersResp.AmountBean();
+            bean.deposit = new GetOffersResp.DepositBean();
+            bean.amount = new GetOffersResp.AmountBean();
             if (beanTemp.secondOffer != null) {
                 bean.amount.BTC = beanTemp.sumAmounts(beanTemp.firstOffer.amount.BTC, beanTemp.secondOffer.amount.BTC);
                 bean.amount.bits = beanTemp.sumAmounts(beanTemp.firstOffer.amount.bits, beanTemp.secondOffer.amount.bits);
@@ -110,6 +123,13 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
             final VHolderDouble1 vholder = (VHolderDouble1) holder;
             vholder.binding.setItem(bean);
 
+            if (getNumAmount(bean.deposit.amount) >= 200) {
+//            android:text="@{@string/dotUnicode(item.amount.dots,GenericUtils.currencySymbol(item.deposit.currency),item.deposit.amount)}"
+                vholder.binding.tvItrmOffer2.setText(context.getString(R.string.dotUnicode, bean.amount.dots, GenericUtils.currencySymbol(bean.deposit.currency), getNumAmount(bean.deposit.amount) / getNumAmount(bean.amount.DASH)));
+            } else {
+                vholder.binding.tvItrmOffer2.setText(context.getString(R.string.dotUnicodeNoRate, bean.amount.dots));
+            }
+
             vholder.binding.buttonBuyDashItemOrder.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -134,7 +154,7 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
             if (position == 0 && singleDepositBeenList.size() > 0) {
                 more.setText("Below are offers for $" + singleDepositBeenList.get(0).deposit.amount + ". You must click the ORDER button before you receive instructions to pay at the Cash Payment center.");
             } else {
-                more.setText("Best Value Options : More Dash for $" + singleDepositBeenList.get(0).deposit.amount + " Cash");
+                more.setText("Best Value Options: More Dash for $" + singleDepositBeenList.get(0).deposit.amount + " Cash");
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 more.setTextColor(context.getResources().getColor(R.color.colorPrimary, context.getTheme()));
@@ -144,6 +164,19 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
             more.setGravity(Gravity.CENTER);
             more.layout(30, 30, 30, 30);
         }
+    }
+
+    private float getNumAmount(String strAmount) {
+
+        float amount = 1;
+
+        try {
+            amount = NumberFormat.getNumberInstance(Locale.getDefault()).parse(strAmount).floatValue();
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+
+        return amount;
     }
 
 

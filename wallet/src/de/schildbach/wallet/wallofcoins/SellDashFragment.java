@@ -329,7 +329,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
         if (!TextUtils.isEmpty(phone)) {
             binding.sellDashProgress.setVisibility(View.VISIBLE);
 
-            WallofCoins.createService(activity).checkAuth(phone, "").enqueue(new Callback<CheckAuthResp>() {
+            WallofCoins.createService(activity).checkAuth(phone, "41").enqueue(new Callback<CheckAuthResp>() {
                 @Override
                 public void onResponse(Call<CheckAuthResp> call, Response<CheckAuthResp> response) {
                     binding.sellDashProgress.setVisibility(View.GONE);

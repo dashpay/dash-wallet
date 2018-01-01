@@ -41,6 +41,7 @@ public class BuyDashPref {
     private static final String HOLD_ID = "hold_id";
     private static final String PHONE = "phone";
     private static final String EMAIL = "email";
+    private static final String DEVICE_ID = "device_id";
 
 
     private static final Logger log = LoggerFactory.getLogger(BuyDashPref.class);
@@ -64,6 +65,14 @@ public class BuyDashPref {
 
     public void setPhone(String authToken) {
         prefs.edit().putString(PHONE, authToken).apply();
+    }
+
+    public String getDeviceId() {
+        return prefs.getString(DEVICE_ID, "");
+    }
+
+    public void setDeviceId(String deviceId) {
+        prefs.edit().putString(DEVICE_ID, deviceId).apply();
     }
 
     public String getEmail() {
