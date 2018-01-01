@@ -90,6 +90,7 @@ import de.schildbach.wallet.ui.ProgressDialogFragment;
 import de.schildbach.wallet.ui.ScanActivity;
 import de.schildbach.wallet.ui.TransactionsAdapter;
 import de.schildbach.wallet.util.Bluetooth;
+import de.schildbach.wallet.util.MonetarySpannable;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -123,6 +124,7 @@ import android.app.Fragment;
 import android.app.FragmentManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
+import android.text.Spannable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -1383,7 +1385,10 @@ public final class SendCoinsFragment extends Fragment {
                         hintResId = R.string.send_coins_fragment_hint_fee_zero;
                     else
                         hintResId = R.string.send_coins_fragment_hint_fee;
-                    hintView.setText(getString(hintResId, btcFormat.format(dryrunTransaction.getFee())));
+                    final Spannable hintSpannable = new MonetarySpannable(Constants.LOCAL_FORMAT, amountCalculatorLink.getExchangeRate().coinToFiat(dryrunTransaction.getFee()))
+                            .applyMarkup(null, MonetarySpannable.STANDARD_INSIGNIFICANT_SPANS);
+                    hintView.setText(getString(hintResId, btcFormat.format(dryrunTransaction.getFee())
+                            + " (" + amountCalculatorLink.getExchangeRate().coinToFiat(dryrunTransaction.getFee()).currencyCode + " " + hintSpannable + ")"));
                 } else if (paymentIntent.mayEditAddress() && validatedAddress != null
                         && wallet.isPubKeyHashMine(validatedAddress.address.getHash160())) {
                     hintView.setTextColor(getResources().getColor(R.color.fg_insignificant));
