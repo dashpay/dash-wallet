@@ -73,6 +73,7 @@
     <string name="send_coins_fragment_hint_dusty_send">Ta kwota jest zbyt mała do wysłania.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Brak wystarczających środków. Brakuje ci %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Ilość małych płatności w twoim portfelu nie dodaje się do wartości możliwej do wysyłki.</string>
+    <string name="send_coins_fragment_hint_replaying">Obecnie, płatności nie są możliwe, ponieważ trwa proces replay.</string>
     <string name="send_coins_fragment_direct_payment_enable">Wyślij płatność bezpośrednio do odbiorcy.</string>
     <string name="send_coins_fragment_direct_payment_ack">Twoja płatność bezpośrednia została pomyślnie zrealizowana.</string>
     <string name="send_coins_fragment_direct_payment_nack">Twoja płatność bezpośrednia została odrzucona.</string>
@@ -239,11 +240,11 @@
     <string name="preferences_category_labs">Eksperymentalne</string>
     <string name="preferences_precision_title">Waluta i precyzja</string>
     <string name="preferences_precision_summary">Jednostka w której ma być podawana ilość. Nie wpływa na obliczenia.</string>
-    <string name="preferences_precision_labels_8">DASH, 8 miejsc po przecinku</string>
+    <string name="preferences_precision_labels_8">DASH 8 miejsc po przecinku</string>
     <string name="preferences_precision_labels_6">DASH, 6 miejsc po przecinku</string>
-    <string name="preferences_precision_labels_4">DASH, 4 miejsca po przecinku</string>
+    <string name="preferences_precision_labels_4">DASH, 4 miejsc po przecinku</string>
     <string name="preferences_precision_labels_2_3">mDASH, 2 miejsca po przecinku</string>
-    <string name="preferences_precision_labels_0_6">µDASH, brak miejsc po przecinku</string>
+    <string name="preferences_precision_labels_0_6">µDASH, bez miejsc po przecinku</string>
     <string name="preferences_own_name_title">Podpis</string>
     <string name="preferences_own_name_summary">Twój podpis. Będzie on dołączany do żądań płatności.</string>
     <string name="preferences_send_coins_autoclose_title">Okno szybkiej płatności</string>

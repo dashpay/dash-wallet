@@ -29,6 +29,8 @@
 	<string name="restore_wallet_from_invalid_seed_warning_message">%s jest nieprawidłowym słowem.</string>
 
 
+	<string name="send_coins_options_fee_category_zero">Bez opłaty</string>
+	<string name="send_coins_fragment_hint_fee_zero">Żadna opłata nie będzie uiszczona. Używaj tej opcji tylko wtedy kiedy nie zależy ci na czasie potwierdzenia transakcji.</string>
 
 
 

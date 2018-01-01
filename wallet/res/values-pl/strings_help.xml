@@ -4,25 +4,24 @@
     <string name="help_wallet">
 <![CDATA[
 		<p>
-			W prawym górnym rogu ekranu jest pokazany stan twojego konta w Dash i w jednej wybranej walucie lokalnej.
-			Stuknij, aby przejść do listy walut lokalnych i stuknij w jedną walutę, aby wybrać ją jako domyślną.
+			W prawym górnym rogu możesz znaleźć twoje saldo w Dash oraz wybranej walucie narodowej
+			Puknij aby przejść do listy walut narodowych i wybierz jedną jako twoją domyślną
 		</p>
 		<p>
-			Kod QR, który zawiera twój adres Dash jest dostępny z menu (lewy górny róg) i może zostać zeskanowany przez kogoś innego.
-			Stuknij w kod QR, aby wyświetlić jego większą wersję.
+			Możesz znaleźć kod QR z twoim adresem Dash menu nawigacji (lewy górny róg) i dać komuś do zeskanowania.
+		Puknij w kod QR aby powiększyć
 		</p>
 		<p>
-			Na dole ekranu widać listę twoich transakcji, która na początku jest pusta.
-			Oczekujące transakcje są szare, dopóki nie zostaną potwierdzone.
-			Stuknij na jedną z pozycji, aby zobaczyć szczegóły lub dodaj adres wysyłającego lub odbiorcy do listy adresów.
-			Lista adresów jest dostępna z menu (lewy górny róg).
+			Dolna część twojego ekranu zawiera listę twoich transakcji. Na początku jest ona pusta
+			Transakcje czekające w kolejce są zaznaczone na szaro dopóki nie zostaną potwierdzone
+			Puknij w jedną z transakcji aby zobaczyć więcej informacji lub dodać adres odbiorcy bądź nadawcy do książki adresowej. 
+			Książkę adresową możesz znaleźć w menu nawigacji (w lewym górnym rogu).
 		</p>
 		<p>
-			Możesz wysyłać lub prosić o przesłanie monet przez stukanie w przyciski na pasku działania.
-			Więcej opcji jest dostępnych w menu (lewy górny róg) oraz w ustawieniach.
+			Możesz wysłać lub zażądać płatności w menu akcji
+			Więcej opcji jest dostępnych w menu nawigacji (lewy górny róg) lub w menu opcji.
 		</p>
-	]]>
-    </string>
+	]]></string>
     <string name="help_request_coins">
 <![CDATA[
 		<p>

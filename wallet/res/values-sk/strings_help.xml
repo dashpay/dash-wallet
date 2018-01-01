@@ -4,7 +4,7 @@
     <string name="help_wallet">
 <![CDATA[
 		<p>
-			V ľavej hornej časti displeja sa zobrazuje Vaša bilancia v Dash a jednej zvolenej národnej mene.
+			V pravej hornej časti displeja sa zobrazuje Vaša bilancia v Dash a jednej zvolenej národnej mene.
 			Poklepte na zoznam národných mien a zvoľte jednu ako predvolenú.
 		</p>
 		<p>
@@ -13,13 +13,13 @@
 		</p>
 		<p>
 			V spodnej časti obrazovky nájdete zoznam Vašich transakcií, ktorý je na začiatku prázdny.
-			Čakajúce transakcie sú zašednuté pokiaľ nie sú potvrdené.
-			Poklepaním na záznam uvidíte detaily, alebo pridáte odosielateľov alebo prijímateľov do adresára.
+			Čakajúce transakcie sú zašednuté, pokiaľ nie sú potvrdené.
+			Poklepaním na záznam uvidíte detaily, alebo pridáte odosielateľov či prijímateľov do adresára.
 			Adresár je dostupný z navigačného menu (vľavo hore).
 		</p>
 		<p>
 			Poslať alebo vyžiadať platbu môžete poklepaním na tlačítka v spodnej časti.
-			Viac možností je dostupných v navigačnom  menu (vľavo hore) a menu nastavení.
+			Viac možností je dostupných v navigačnom menu (vľavo hore) a v menu nastavení.
 		</p>
 	]]>
     </string>

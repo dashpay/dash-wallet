@@ -29,6 +29,8 @@
 	<string name="restore_wallet_from_invalid_seed_warning_message">%sе невалидна дума.</string>
 
 
+	<string name="send_coins_options_fee_category_zero">Без такса</string>
+	<string name="send_coins_fragment_hint_fee_zero">Няма да бъде платена такса. Използвайте \"без такса\" само ако не ви е грижа за времето за потвърждение.</string>
 
 
 

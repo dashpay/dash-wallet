@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-    <string name="toast_wallet_reset">Peňaženka bola restovaná.\nObnova chvíľu potrvá.</string>
+    <string name="toast_wallet_reset">Peňaženka bola resetovaná.\nObnova chvíľu potrvá.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Použitie na vlastné riziko. Viac informácií v sekcii &lt;u&gt;Bezpečnosť&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">Je potrebné &lt;u&gt;zálohovať peňaženku&lt;/u&gt;!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d hodín pozadu</string>
@@ -32,7 +32,7 @@
     <string name="wallet_transactions_row_warning_storage_encryption">Tip: pre zvýšenie zabezpečenia Vašej peňaženky môžete &lt;u&gt;zašifrovať Vaše zariadenie&lt;/u&gt;. Zabezpečíte tým aj dáta ostatných aplikácií.</string>
     <string name="wallet_transactions_fragment_coinbase">vyťažené</string>
     <string name="wallet_transactions_fragment_internal">interná</string>
-    <string name="wallet_transactions_options_filter">Filter</string>
+    <string name="wallet_transactions_options_filter">Filter platieb</string>
     <string name="wallet_transactions_options_filter_all">Všetky</string>
     <string name="wallet_transactions_options_filter_received">Prijaté</string>
     <string name="wallet_transactions_options_filter_sent">Odoslané</string>
@@ -66,13 +66,14 @@
     <string name="send_coins_fragment_receiving_address_own">Chystáte sa poslať Dash sami sebe.</string>
     <string name="send_coins_fragment_receiving_address_complex">komplexná\nadresa</string>
     <string name="send_coins_fragment_pending">(%s čaká na potvrdenie)</string>
-    <string name="send_coins_fragment_amount_label">Suma</string>
+    <string name="send_coins_fragment_amount_label">Suma na zaplatenie</string>
     <string name="send_coins_fragment_hint_fee_economic">Bude zaplatený ekonomický poplatok %s. Použite \"ekonomický\" ak Vám nezáleží na čase potvrdenia.</string>
     <string name="send_coins_fragment_hint_fee">Bude zaplatený sieťový poplatok %s.</string>
     <string name="send_coins_fragment_hint_fee_priority">Bude zaplatený prioritný poplatok %s. Ak Vám záleží na nízkych poplatkoch, používajte \"prioritu\" iba ak potrebujete rýchle potvrdenie.</string>
     <string name="send_coins_fragment_hint_dusty_send">Čiastka je príliš nízka pre odoslanie.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Nemáte dostatok mincí. Chýba vám %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Súčet malých platieb vo Vašej peňaženke neumožňuje v súčtu zaslanie platby.</string>
+    <string name="send_coins_fragment_hint_replaying">Platby nie sú momentálne možne, pretože prebieha opakovanie.</string>
     <string name="send_coins_fragment_direct_payment_enable">Odoslať platbu priamo príjemcovi.</string>
     <string name="send_coins_fragment_direct_payment_ack">Platba bola úspešne odoslaná priamo príjemcovi.</string>
     <string name="send_coins_fragment_direct_payment_nack">Platba cez priame spojenie bola zamietnutá.</string>
@@ -95,7 +96,7 @@
     <string name="send_coins_options_fee_category_normal">Normálny</string>
     <string name="send_coins_options_fee_category_priority">Prioritný</string>
     <string name="send_coins_options_empty">Vyprázdniť peňaženku</string>
-    <string name="raise_fee_dialog_title">Zdvihnúť sieťový poplatok </string>
+    <string name="raise_fee_dialog_title">Zvýšiť sieťový poplatok </string>
     <string name="raise_fee_dialog_message">Chcete pre tuto platbu navýšiť poplatok o %s? Urýchli sa tak potvrdenie platby.</string>
     <string name="raise_fee_dialog_determining_fee">Zisťovanie sieťového poplatku...</string>
     <string name="raise_fee_dialog_cant_raise">Sieťový poplatok tejto platby sa nedá zvýšiť.</string>
@@ -104,7 +105,7 @@
     <string name="raise_fee_dialog_button_raise">Zvýšiť</string>
     <string name="sweep_wallet_activity_title">Načítať papierovú peňaženku</string>
     <string name="sweep_wallet_fragment_intro">Chystáte sa načítať papierovú peňaženku alebo kupón. Táto akcia presunie všetky mince z papiera do Vašej peňaženky na tomto zariadení. Potom čo bude transakcia potvrdená už papier nepotrebujete a nemal by byť z bezpečnostných dôvodov ďalej používaný.</string>
-    <string name="sweep_wallet_fragment_hint">Papierové peňaženky sa najčastejšie používajú ako \"cold storage\" - offline uloženie mincí. Niektoré bankomati radšej tlačia na lístok, než aby poslali mince priamo do Vašeho zariadenia. Ľudia tiež niekdy používajú pred-nabité papierové peňaženky pre poslanie mincí (nedoporučuje sa).</string>
+    <string name="sweep_wallet_fragment_hint">Papierové peňaženky sa najčastejšie používajú ako \"cold storage\" - offline uloženie mincí. Niektoré bankomaty radšej tlačia na lístok, než aby poslali mince priamo do Vašeho zariadenia. Ľudia tiež niekdy používajú pred-nabité papierové peňaženky pre poslanie mincí (nedoporučuje sa).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Začnite načítaním privátneho kľúča z papierovej peňaženky. Použite tlačítko kamery.</string>
     <string name="sweep_wallet_fragment_encrypted">Tento súkromný kľúč je chránený heslom.</string>
     <string name="sweep_wallet_fragment_password">heslo</string>
@@ -141,7 +142,7 @@
     <string name="address_book_context_edit_title">Upraviť adresu</string>
     <string name="address_book_context_remove_title">Odstrániť adresu</string>
     <string name="address_book_context_copy_to_clipboard_title">Skopírovať do schránky</string>
-    <string name="address_book_options_paste_from_clipboard_title">Prilepiť zo schránky</string>
+    <string name="address_book_options_paste_from_clipboard_title">Vložiť zo schránky</string>
     <string name="address_book_options_paste_from_clipboard_empty">Schránka je prázdna</string>
     <string name="address_book_options_paste_from_clipboard_invalid">Dáta zo schránky nebolo možné rozpoznať</string>
     <string name="address_book_options_paste_from_clipboard_own_address">Adresa v schránke je Vaše vlastná.</string>
@@ -150,7 +151,7 @@
     <string name="address_book_options_scan_own_address">Naskenovaná adresa je Vaša vlastná.</string>
     <string name="address_book_row_message_compromised_key">Táto adresa môže byť ohrozená. Nemali by ste ju už používať na prijímanie Dashov.</string>
     <string name="edit_address_book_entry_dialog_title_add">Pridať adresu</string>
-    <string name="edit_address_book_entry_dialog_title_edit">Upraviť adresu</string>
+    <string name="edit_address_book_entry_dialog_title_edit">Upraviť popis adresy</string>
     <string name="edit_address_book_entry_dialog_title_add_receive">Pridať štítok k Vašej adrese</string>
     <string name="edit_address_book_entry_dialog_title_edit_receive">Upraviť popis Vašej adresy</string>
     <string name="edit_address_book_entry_dialog_address_label">Adresa</string>
@@ -179,7 +180,7 @@
     <string name="restore_wallet_permission_dialog_title">Chýbajú prístupové práva</string>
     <string name="restore_wallet_permission_dialog_message">Aby ste na Vašom externom úložišti mohli vyhľadávať zálohy peňaženky, potrebujete mať prístupové práva.</string>
     <string name="import_keys_dialog_title">Obnoviť privátne kľúče</string>
-    <string name="import_keys_dialog_message">Vybrať súbor s privátnymi kľúčmi z externej alebo internej pamäte:</string>
+    <string name="import_keys_dialog_message">Vyberte záložný súbor peňaženky z externej pamäte (%s):</string>
     <string name="restore_wallet_dialog_replace_warning">Chystáte sa nahradiť Vašu súčasnú peňaženku. Všetky mince v súčasnej peňaženke budú stratené, pokiaľ nemáte zálohu.</string>
     <string name="import_keys_dialog_warning">Dôležité: Nenahrávajte privátne kľúče z pochybných zdrojov! Ak tak spravíte, niekto iný môže získať kontrolu nad Vašimi peniazmi.</string>
     <string name="import_keys_dialog_file_security_encrypted">heslo zašifrované</string>
@@ -191,26 +192,26 @@
     <string name="import_keys_dialog_button_import">Obnoviť</string>
     <string name="restore_wallet_dialog_success">Peňaženka bol obnovená.</string>
     <string name="restore_wallet_dialog_success_replay">Vaša peňaženka bola úspešne obnovená. Jej bilancia bude nasledovne vypočítaná. Zaberie to nejaký čas.</string>
-    <string name="import_keys_dialog_failure">Privátne kľúče sa nepodarilo obnoviť:\n\n%s\n\nNesprávne heslo?</string>
+    <string name="import_keys_dialog_failure">Peňaženku sa nepodarilo obnoviť:\n\n%s\n\nNesprávne heslo?</string>
     <string name="backup_wallet_permission_dialog_title">Chyba povolenie k ukladaniu dát</string>
     <string name="backup_wallet_permission_dialog_message">Aby ste mohli zálohovať Vašu peňaženku na externé úložisko, potrebujete mať povolenie k ukladaniu dát. </string>
-    <string name="export_keys_dialog_title">Zálohovať privátne kľúče</string>
-    <string name="backup_wallet_dialog_message">Privátne kľúče budú zašifrované zvoleným heslom a uložené na externú pamäť.</string>
+    <string name="export_keys_dialog_title">Zálohovať peňaženku</string>
+    <string name="backup_wallet_dialog_message">Vaša záloha bude zašifrovaná zvoleným heslom a uložená na externú pamäť.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Vaša peňaženka je zabezpečená PIN-om. Uistite sa že si pamätáte nie len PIN ale tiež heslo k zálohe! </string>
     <string name="export_keys_dialog_button_export">Zálohovať</string>
     <string name="export_keys_dialog_success">Privátne kľúče boli zálohované do \n\n%s\n\nDržte ich v bezpečí, a taktiež držte v bezpečí Vaše heslo!\n\nChcete archivovať kľúče použitím aplikácie?</string>
-    <string name="export_keys_dialog_failure">Vaše privátne kľúče sa nepodarilo zálohovať:\n%s</string>
+    <string name="export_keys_dialog_failure">Vašu peňaženku sa nepodarilo zálohovať:\n%s</string>
     <string name="export_keys_dialog_button_archive">Archivovať</string>
-    <string name="export_keys_dialog_mail_subject">Dash Wallet - záloha privátnych kľúčov</string>
-    <string name="export_keys_dialog_mail_text">Príloha obsahuje zašifrované privátne kľúče, uchovajte ich v bezpečí. Nezabudnite vaše heslo!</string>
-    <string name="export_keys_dialog_mail_intent_chooser">Archivovať kľúče použitím…</string>
-    <string name="export_keys_dialog_mail_intent_failed">Archivácia kľúčov sa nepodarila.</string>
+    <string name="export_keys_dialog_mail_subject">Záloha Dash peňaženky</string>
+    <string name="export_keys_dialog_mail_text">Príloha obsahuje zašifrované privátne kľúče Dash, uchovajte ich v bezpečí. Nezabudnite vaše heslo!</string>
+    <string name="export_keys_dialog_mail_intent_chooser">Archivovať peňaženku použitím…</string>
+    <string name="export_keys_dialog_mail_intent_failed">Archivácia peňaženky sa nepodarila.</string>
     <string name="import_export_keys_dialog_password">heslo</string>
     <string name="backup_wallet_dialog_password_again">znovu</string>
     <string name="backup_wallet_dialog_password_mismatch">nesúlad!</string>
     <string name="import_export_keys_dialog_show">Zobraziť heslo</string>
     <string name="import_export_keys_dialog_failure_title">Chyba</string>
-    <string name="import_keys_intent_filter_action">Obnovenie kľúča</string>
+    <string name="import_keys_intent_filter_action">Obnoviť peňaženku</string>
     <string name="encrypt_keys_dialog_title">PIN pre míňanie</string>
     <string name="encrypt_keys_dialog_message">Míňanie z vašej peňaženky bude chránené zvoleným PIN-om.</string>
     <string name="encrypt_keys_dialog_warning">Dôležité: Zapamätajte si Váš PIN a nepoužívajte bežné čísla (napr. rok narodenia).</string>
@@ -228,7 +229,7 @@
     <string name="scan_camera_permission_dialog_title">Povolenia fotoaparátu</string>
     <string name="scan_camera_permission_dialog_message">Pre skenovanie QR kódu musíte povoliť používanie fotoaparátu.</string>
     <string name="input_parser_io_error">Nepodarilo sa prečítať:\n%s</string>
-    <string name="input_parser_cannot_classify">Nepodarilo sa zaradiť vstup:\n%s</string>
+    <string name="input_parser_cannot_classify">Nepodarilo sa rozpoznať vstup:\n%s</string>
     <string name="input_parser_invalid_bitcoin_uri">Neplatná Dash URI:\n%s</string>
     <string name="input_parser_invalid_address">Neplatná Dash adresa!\n(Zamenené Mainnet/Testnet?)</string>
     <string name="input_parser_unverifyable_paymentrequest">Požiadavka na platbu sa nedá overiť:\n%s</string>
@@ -236,7 +237,7 @@
     <string name="input_parser_invalid_transaction">Neplatná transakcia:\n%s</string>
     <string name="preferences_activity_title">Nastavenia</string>
     <string name="preferences_category_diagnostics">Diagnostika</string>
-    <string name="preferences_category_labs">Labs</string>
+    <string name="preferences_category_labs">Experimentálne</string>
     <string name="preferences_precision_title">Jednotka a presnosť</string>
     <string name="preferences_precision_summary">Jednotka pre zobrazenie sumy. Neovplyvňuje výpočty.</string>
     <string name="preferences_precision_labels_8">DASH, 8 desatinných miest</string>
@@ -263,7 +264,7 @@
     <string name="preferences_remind_balance_title">Pripomenutie zostatku</string>
     <string name="preferences_remind_balance_summary">Po niekoľkých týždňoch nepoužívania Vás aplikácia upozorní, ak máte v peňaženke stále nejaké mince.</string>
     <string name="preferences_report_issue_title">Nahlásiť problém</string>
-    <string name="preferences_initiate_reset_title">Resetovať Blockchain</string>
+    <string name="preferences_initiate_reset_title">Resetovať reťazec blokov</string>
     <string name="preferences_initiate_reset_summary">Vymazať reťazec blokov, transakcie a zostatok v peňaženke. Opätovné načítanie bude chvíľu trvať, preto používajte iba v prípade nutnosti.</string>
     <string name="preferences_initiate_reset_dialog_message">Chcete vymazať a znova nahrať reťazec blokov?\n\nTýmto dočasne skryjete svoju bilanciu a zmažete transakcie. Oboje bude obnovené počas synchronizácie reťazca blokov. Uistite sa, že máte spoľahlivé internetové pripojenie</string>
     <string name="preferences_initiate_reset_dialog_positive">Reset</string>
@@ -295,11 +296,11 @@
     <string name="about_credits_zxing_title">ZXing, knižnicu na spracovanie QR kódov</string>
     <string name="about_credits_icon_title">Táto aplikácia používa ikony od \"bitboy\"</string>
     <string name="about_credits_scrypt_title">Scrypt, implementovali Will Glozer a Colin Percival</string>
-    <string name="about_market_app_title">Google Play stránka</string>
+    <string name="about_market_app_title">Stránka Google Play</string>
     <string name="about_market_app_summary">Ohodnotiť aplikáciu</string>
     <string name="about_faq_title">Časté otázky</string>
     <string name="about_faq_summary">Často kladené otázky o aplikácii</string>
-    <string name="about_community_googleplus_title">Google+ Komunita</string>
+    <string name="about_community_googleplus_title">Komunita Google+</string>
     <string name="about_community_googleplus_summary">Diskusia o aplikácii</string>
     <string name="notification_coins_received_msg">Prijaté %s</string>
     <string name="notification_peers_connected_msg">%d pripojených uzlov</string>
@@ -314,7 +315,7 @@
     <string name="button_ok">OK</string>
     <string name="button_dismiss">Zrušiť</string>
     <string name="button_cancel">Zrušiť</string>
-    <string name="button_retry">Znova</string>
+    <string name="button_retry">Znovu</string>
     <string name="button_help">Nápoveda</string>
     <string name="button_add">Pridať</string>
     <string name="button_delete">Zmazať</string>
@@ -329,7 +330,7 @@
     <string name="button_send_coins">Odoslať Dash</string>
     <string name="button_scan">Skenovať</string>
     <string name="button_settings">Nastavenia</string>
-    <string name="action_show_qr">Ukáž QR kód</string>
+    <string name="action_show_qr">Ukázať QR kód</string>
     <string name="action_browse">Otvoriť v prehliadači</string>
 
     <!-- generic strings -->

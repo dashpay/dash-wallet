@@ -73,6 +73,7 @@
     <string name="send_coins_fragment_hint_dusty_send">Тази сума е прекалено малка за да бъде изпратена.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Няма достатъчно налични монети. Липсват ви %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Сумата на малките плащания във вашият портфейл не може да се добави към стойността за изпращане.</string>
+    <string name="send_coins_fragment_hint_replaying">В момента плащанията не са възможни, защото се извършва повторение.</string>
     <string name="send_coins_fragment_direct_payment_enable">Изпратете плащането директно до получателя.</string>
     <string name="send_coins_fragment_direct_payment_ack">Вашето плащане беше успешно изпратено директно.</string>
     <string name="send_coins_fragment_direct_payment_nack">Вашето плащане беше отказано посредством директна връзка.</string>
