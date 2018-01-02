@@ -225,147 +225,149 @@
             <!--android:text="Resend Purchase Code" />-->
         </LinearLayout>
 
-
-        <LinearLayout
-            android:id="@+id/layout_completion_detail"
+        <ScrollView
+            android:id="@+id/scroll_completion_detail"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_margin="@dimen/dimen_8dp"
-            android:orientation="vertical"
-            android:visibility="gone">
+            android:layout_height="match_parent">
 
             <LinearLayout
+                android:id="@+id/layout_completion_detail"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <ImageView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginRight="@dimen/dimen_8dp"
-                    android:layout_weight="1"
-                    android:adjustViewBounds="true"
-                    android:scaleType="fitCenter"
-                    android:src="@{confiremedData.bankLogo}"
-                    tools:src="@mipmap/ic_app_color" />
+                android:layout_height="match_parent"
+                android:layout_margin="@dimen/dimen_8dp"
+                android:orientation="vertical">
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="4"
-                    android:orientation="vertical">
+                    android:orientation="horizontal">
 
-                    <TextView
-                        android:id="@+id/text_bank_name"
-                        android:layout_width="match_parent"
+                    <ImageView
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="4dp"
-                        android:text='@{TextUtils.isEmpty(confiremedData.bankName)?"Bank Name: - ":confiremedData.bankName}'
-                        android:textSize="20dp"
-                        android:textStyle="bold"
-                        android:visibility='@{TextUtils.isEmpty(confiremedData.bankName)?View.GONE:View.VISIBLE}'
-                        tools:text="Bank Name" />
+                        android:layout_marginRight="@dimen/dimen_8dp"
+                        android:layout_weight="1"
+                        android:adjustViewBounds="true"
+                        android:scaleType="fitCenter"
+                        android:src="@{confiremedData.bankLogo}"
+                        tools:src="@mipmap/ic_app_color" />
 
-                    <TextView
-                        android:id="@+id/text_near_by_center"
-                        android:layout_width="match_parent"
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="4dp"
-                        android:text="@string/show_on_map_nearby"
-                        android:textColor="@android:color/holo_blue_dark"
-                        android:textSize="16dp"
-                        tools:text="@string/show_on_map_nearby" />
+                        android:layout_weight="4"
+                        android:orientation="vertical">
 
-                    <TextView
-                        android:id="@+id/text_phone"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="4dp"
-                        android:text='@{TextUtils.isEmpty(confiremedData.nearestBranch.phone)?"Phone: - ":@string/locationsPhone(confiremedData.nearestBranch.phone)}'
-                        android:textSize="16dp"
-                        android:visibility='@{TextUtils.isEmpty(confiremedData.nearestBranch.phone)?View.GONE:View.VISIBLE}'
-                        tools:text="Deposit Due: Today 12:00 PM" />
+                        <TextView
+                            android:id="@+id/text_bank_name"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="4dp"
+                            android:text='@{TextUtils.isEmpty(confiremedData.bankName)?"Bank Name: - ":confiremedData.bankName}'
+                            android:textSize="20dp"
+                            android:textStyle="bold"
+                            android:visibility='@{TextUtils.isEmpty(confiremedData.bankName)?View.GONE:View.VISIBLE}'
+                            tools:text="Bank Name" />
 
+                        <TextView
+                            android:id="@+id/text_near_by_center"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="4dp"
+                            android:text="@string/show_on_map_nearby"
+                            android:textColor="@android:color/holo_blue_dark"
+                            android:textSize="16dp"
+                            tools:text="@string/show_on_map_nearby" />
+
+                        <TextView
+                            android:id="@+id/text_phone"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="4dp"
+                            android:text='@{TextUtils.isEmpty(confiremedData.nearestBranch.phone)?"Phone: - ":@string/locationsPhone(confiremedData.nearestBranch.phone)}'
+                            android:textSize="16dp"
+                            android:visibility='@{TextUtils.isEmpty(confiremedData.nearestBranch.phone)?View.GONE:View.VISIBLE}'
+                            tools:text="Deposit Due: Today 12:00 PM" />
+
+                    </LinearLayout>
                 </LinearLayout>
+
+                <TextView
+                    android:id="@+id/text_name"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text='@{TextUtils.isEmpty(confiremedData.nameOnAccount)?"Name on Account: - ":"Name on Account: " + confiremedData.nameOnAccount}'
+                    android:textSize="16dp"
+                    android:visibility='@{TextUtils.isEmpty(confiremedData.nameOnAccount)?View.GONE:View.VISIBLE}'
+                    tools:text="Deposit Due: Today 12:00 PM" />
+
+                <TextView
+                    android:id="@+id/text_account_no"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text='@{TextUtils.isEmpty(confiremedData.account)?"Account #: - ":"Account #: " + confiremedData.account}'
+                    android:textSize="16dp"
+                    android:visibility='@{TextUtils.isEmpty(confiremedData.account)?View.GONE:View.VISIBLE}'
+                    tools:text="Deposit Due: Today 12:00 PM" />
+
+                <TextView
+                    android:id="@+id/text_cash_to_deposite"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text='@{TextUtils.isEmpty(confiremedData.payment)?"":@string/cash_to_deposit(Float.valueOf(confiremedData.payment))}'
+                    android:textSize="16dp"
+                    android:visibility='@{TextUtils.isEmpty(confiremedData.payment)?View.GONE:View.VISIBLE}'
+                    tools:text="$ 16447878" />
+
+                <TextView
+                    android:id="@+id/text_payment_due_date"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:textSize="16dp"
+                    android:visibility='@{TextUtils.isEmpty(confiremedData.paymentDue)?View.GONE:View.VISIBLE}'
+                    tools:text="Deposit Due: Today 12:00 PM" />
+
+                <Button
+                    android:id="@+id/btn_deposit_finished"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Deposit Finished" />
+
+                <Button
+                    android:id="@+id/btn_cancel_order"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Cancel Order" />
+
+                <TextView
+                    android:id="@+id/order_dash"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginTop="4dp"
+                    android:textSize="16dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/order_completion_instruction"
+                    android:textSize="16dp" />
+
+                <TextView
+                    android:id="@+id/text_contact_instruction"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/order_contact_instruction"
+                    android:textSize="16dp" />
+
             </LinearLayout>
-
-            <TextView
-                android:id="@+id/text_name"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
-                android:text='@{TextUtils.isEmpty(confiremedData.nameOnAccount)?"Name on Account: - ":"Name on Account: " + confiremedData.nameOnAccount}'
-                android:textSize="16dp"
-                android:visibility='@{TextUtils.isEmpty(confiremedData.nameOnAccount)?View.GONE:View.VISIBLE}'
-                tools:text="Deposit Due: Today 12:00 PM" />
-
-            <TextView
-                android:id="@+id/text_account"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
-                android:text='@{TextUtils.isEmpty(confiremedData.account)?"Account #: - ":"Account #: " + confiremedData.account}'
-                android:textSize="16dp"
-                android:visibility='@{TextUtils.isEmpty(confiremedData.account)?View.GONE:View.VISIBLE}'
-                tools:text="Deposit Due: Today 12:00 PM" />
-
-            <TextView
-                android:id="@+id/text_cash_to_deposite"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
-                android:text='@{TextUtils.isEmpty(confiremedData.payment)?"":@string/cash_to_deposit(Float.valueOf(confiremedData.payment))}'
-                android:textSize="16dp"
-                android:visibility='@{TextUtils.isEmpty(confiremedData.payment)?View.GONE:View.VISIBLE}'
-                tools:text="$ 16447878" />
-
-            <TextView
-                android:id="@+id/text_payment_due_date"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
-                android:textSize="16dp"
-                android:visibility='@{TextUtils.isEmpty(confiremedData.paymentDue)?View.GONE:View.VISIBLE}'
-                tools:text="Deposit Due: Today 12:00 PM" />
-
-
-            <Button
-                android:id="@+id/btn_deposit_finished"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Deposit Finished" />
-
-            <Button
-                android:id="@+id/btn_cancel_order"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Cancel Order" />
-
-            <TextView
-                android:id="@+id/order_dash"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
-                android:layout_marginTop="4dp"
-                android:textSize="16dp" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
-                android:text="@string/order_completion_instruction"
-                android:textSize="16dp" />
-
-            <TextView
-                android:id="@+id/text_contact_instruction"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
-                android:text="@string/order_contact_instruction"
-                android:textSize="16dp" />
-
-        </LinearLayout>
-
+        </ScrollView>
 
         <LinearLayout
             android:id="@+id/layout_zip"

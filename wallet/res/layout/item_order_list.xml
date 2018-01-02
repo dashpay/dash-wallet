@@ -88,16 +88,15 @@
                     android:layout_marginBottom="4dp"
                     android:text='@{TextUtils.isEmpty(item.nameOnAccount)?"Name on Account: - ":"Name on Account: " + item.nameOnAccount}'
                     android:textSize="16dp"
-                    android:visibility='@{TextUtils.isEmpty(item.nameOnAccount)?View.GONE:View.VISIBLE}'
                     tools:text="Deposit Due: Today 12:00 PM" />
 
                 <TextView
+                    android:id="@+id/text_account_no"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
                     android:text='@{TextUtils.isEmpty(item.account)?"Account #: - ":"Account #: " + item.account}'
                     android:textSize="16dp"
-                    android:visibility='@{TextUtils.isEmpty(item.account)?View.GONE:View.VISIBLE}'
                     tools:text="Deposit Due: Today 12:00 PM" />
 
                 <LinearLayout
