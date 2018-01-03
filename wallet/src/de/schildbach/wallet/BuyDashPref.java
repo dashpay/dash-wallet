@@ -88,7 +88,11 @@ public class BuyDashPref {
     }
 
     public void setHoldId(String holdId) {
-        prefs.edit().putString(HOLD_ID, holdId).apply();
+        if (holdId != null) {
+            prefs.edit().putString(HOLD_ID, holdId).apply();
+        } else {
+            prefs.edit().remove(HOLD_ID);
+        }
     }
 
     public CreateHoldResp getCreateHoldResp() {
@@ -96,7 +100,11 @@ public class BuyDashPref {
     }
 
     public void setCreateHoldResp(CreateHoldResp createHoldResp) {
-        prefs.edit().putString(CREATE_HOLD_RESP, gson.toJson(createHoldResp)).apply();
+        if (createHoldResp != null) {
+            prefs.edit().putString(CREATE_HOLD_RESP, gson.toJson(createHoldResp)).apply();
+        } else {
+            prefs.edit().remove(CREATE_HOLD_RESP);
+        }
     }
 
     public void registerOnSharedPreferenceChangeListener(final OnSharedPreferenceChangeListener listener) {

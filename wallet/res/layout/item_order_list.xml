@@ -21,9 +21,10 @@
         app:cardElevation="4dp"
         app:cardUseCompatPadding="true">
 
-        <FrameLayout
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
 
             <LinearLayout
                 android:id="@+id/layout_completion_detail"
@@ -71,7 +72,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="4dp"
-                            android:text='@{TextUtils.isEmpty(item.nearestBranch.phone)?"Phone: - ":"Phone: " + item.nearestBranch.phone}'
+                            android:text='@{TextUtils.isEmpty(item.nearestBranch.phone)?"Locations phone - ":@string/locationsPhone(item.nearestBranch.phone)}'
                             android:textSize="16dp"
                             android:visibility='@{TextUtils.isEmpty(item.nearestBranch.phone)?View.GONE:View.VISIBLE}'
                             tools:text="Deposit Due: Today 12:00 PM" />
@@ -87,16 +88,15 @@
                     android:layout_marginBottom="4dp"
                     android:text='@{TextUtils.isEmpty(item.nameOnAccount)?"Name on Account: - ":"Name on Account: " + item.nameOnAccount}'
                     android:textSize="16dp"
-                    android:visibility='@{TextUtils.isEmpty(item.nameOnAccount)?View.GONE:View.VISIBLE}'
                     tools:text="Deposit Due: Today 12:00 PM" />
 
                 <TextView
+                    android:id="@+id/text_account_no"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
                     android:text='@{TextUtils.isEmpty(item.account)?"Account #: - ":"Account #: " + item.account}'
                     android:textSize="16dp"
-                    android:visibility='@{TextUtils.isEmpty(item.account)?View.GONE:View.VISIBLE}'
                     tools:text="Deposit Due: Today 12:00 PM" />
 
                 <LinearLayout
@@ -158,6 +158,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
+                    android:autoLink="none"
                     android:text="@string/order_contact_instruction"
                     android:textSize="16dp" />
 
@@ -187,6 +188,6 @@
                     android:text="Sign Out"
                     android:textColor="@color/colorPrimary" />
             </LinearLayout>
-        </FrameLayout>
+        </LinearLayout>
     </android.support.v7.widget.CardView>
 </layout>

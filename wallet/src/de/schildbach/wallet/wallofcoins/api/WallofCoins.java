@@ -5,13 +5,8 @@ import android.content.Context;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-import java.io.IOException;
-import java.security.KeyManagementException;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.concurrent.TimeUnit;
 
@@ -25,6 +20,7 @@ import javax.net.ssl.X509TrustManager;
 
 import de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp.PayFieldsBeanX;
 import de.schildbach.wallet.wallofcoins.response.PayFieldsDeserializer;
+import hashengineering.darkcoin.wallet.BuildConfig;
 import hashengineering.darkcoin.wallet.R;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
@@ -61,14 +57,14 @@ public class WallofCoins {
 
     public static RestApi createService(Interceptor interceptor, Context context) {
         WallofCoins.context = context;
-        API_BASE_URL = WallofCoins.context.getString(R.string.WOC_PUBLISHER_ID);
+        API_BASE_URL = WallofCoins.context.getString(R.string.base_url);
         return getClient(interceptor)
                 .create(RestApi.class);
     }
 
     public static RestApi createService(Context context) {
         WallofCoins.context = context;
-        API_BASE_URL = WallofCoins.context.getString(R.string.WOC_PUBLISHER_ID);
+        API_BASE_URL = WallofCoins.context.getString(R.string.base_url);
         return getClient(null)
                 .create(RestApi.class);
     }
@@ -108,7 +104,8 @@ public class WallofCoins {
         // set your desired log level
         logging.setLevel(HttpLoggingInterceptor.Level.BODY);
         // add logging as last interceptor
-        httpClient.addInterceptor(logging);  // <-- this is the important line!
+        if (BuildConfig.DEBUG)
+            httpClient.addInterceptor(logging);  // <-- this is the important line!
         if (null != interceptor)
             httpClient.addInterceptor(interceptor);
 
