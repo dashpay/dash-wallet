@@ -137,15 +137,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private BuyDashPref buyDashPref;
     private AddressAndLabel currentAddressQrAddress = null;
 
-    public final int LAYOUT_CREATE_HOLD = 1;
-    public final int LAYOUT_ORDER_LIST = 2;
-    public final int LAYOUT_OFFERS = 3;
-    public final int LAYOUT_VERIFY_OTP = 4;
-    public final int LAYOUT_COMPLETION_DETAIL = 5;
-    public final int LAYOUT_PHONE = 6;
-    public final int LAYOUT_PASSWORD = 7;
-
-
     private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>() {
         @Override
         public Loader<Cursor> onCreateLoader(final int id, final Bundle args) {
@@ -614,6 +605,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
                 hideViewExcept(binding.layoutVerifyOtp);
             } else {
+                hideViewExcept(binding.rvOrderList);
                 getOrderList(false);
             }
         }
@@ -646,6 +638,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     Toast.makeText(getContext(), "Please Enter Purchase Code!", Toast.LENGTH_LONG).show();
                     return;
                 }
+
                 captureHoldReq.put("publisherID", getString(R.string.PUBLISHER_ID));
                 captureHoldReq.put("verificationCode", otp);
                 binding.linearProgress.setVisibility(View.VISIBLE);
@@ -695,7 +688,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                             itemBankBinding.textContactInstruction.setOnClickListener(new View.OnClickListener() {
                                                 @Override
                                                 public void onClick(View v) {
-                                                    String url = "https://wallofcoins.com]wallofcoins.com";
+                                                    String url = "https://wallofcoins.com/";
                                                     Intent i = new Intent(Intent.ACTION_VIEW);
                                                     i.setData(Uri.parse(url));
                                                     startActivity(i);
@@ -719,7 +712,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                                 layoutParams.topMargin = 8;
                                                 textView.setLayoutParams(layoutParams);
                                                 textView.setText(accountList.get(i).getLabel() + ": " + accountList.get(i).getValue());
-                                                itemBankBinding.linearAccountDetail.addView(textView);
+                                                if (response.body().get(0).status.equals("WD") && !accountList.get(i).getLabel().contains("Name on Account"))
+                                                    itemBankBinding.linearAccountDetail.addView(textView);
                                             }
                                             binding.layoutCompletionDetail.removeAllViews();
                                             binding.layoutCompletionDetail.addView(itemBankBinding.getRoot());
@@ -804,7 +798,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                     binding.textContactInstruction.setOnClickListener(new View.OnClickListener() {
                                         @Override
                                         public void onClick(View v) {
-                                            String url = "https://wallofcoins.com]wallofcoins.com";
+                                            String url = "https://wallofcoins.com/";
                                             Intent i = new Intent(Intent.ACTION_VIEW);
                                             i.setData(Uri.parse(url));
                                             startActivity(i);
@@ -1353,8 +1347,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         String phone = buyDashPref.getPhone();
 
         final HashMap<String, String> createHoldPassReq = new HashMap<String, String>();
-//        if (!isUserExist)
-        createHoldPassReq.put("phone", phone);
+        if (!isUserExist)
+            createHoldPassReq.put("phone", phone);
         createHoldPassReq.put("offer", offerId);
         createHoldPassReq.put("publisherID", getString(R.string.PUBLISHER_ID));
         createHoldPassReq.put("email", email);
@@ -1757,7 +1751,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     holder.itemBinding.textContactInstruction.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-                            String url = "https://wallofcoins.com]wallofcoins.com";
+                            String url = "https://wallofcoins.com";
                             Intent i = new Intent(Intent.ACTION_VIEW);
                             i.setData(Uri.parse(url));
                             startActivity(i);

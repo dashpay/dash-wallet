@@ -228,7 +228,8 @@
         <ScrollView
             android:id="@+id/scroll_completion_detail"
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent"
+            android:visibility="gone">
 
             <LinearLayout
                 android:id="@+id/layout_completion_detail"
@@ -363,6 +364,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
+                    android:autoLink="none"
                     android:text="@string/order_contact_instruction"
                     android:textSize="16dp" />
 
