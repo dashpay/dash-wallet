@@ -310,7 +310,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     }
 
     @Nullable
-    private String defaultCurrency = null;
+//    private String defaultCurrency = null;
     private BuyDashFragmentBinding binding;
 
     private String token;
@@ -324,6 +324,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
                 requestBuilder.addHeader("X-Coins-Api-Token", buyDashPref.getAuthToken());
             }
+
             requestBuilder.addHeader("publisher-id", getString(R.string.PUBLISHER_ID));
 
             Request request = requestBuilder.build();
@@ -343,7 +344,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
         this.wallet = application.getWallet();
         this.loaderManager = getLoaderManager();
-
     }
 
     @TargetApi(Build.VERSION_CODES.KITKAT)
@@ -356,7 +356,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         setRetainInstance(true);
         setHasOptionsMenu(true);
 
-        defaultCurrency = config.getExchangeCurrencyCode();
+//        defaultCurrency = config.getExchangeCurrencyCode();
         config.registerOnSharedPreferenceChangeListener(this);
         buyDashPref.registerOnSharedPreferenceChangeListener(this);
     }
@@ -392,6 +392,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     LocationManager mLocationManager;
 
     private Location getLastKnownLocation() {
+
         mLocationManager = (LocationManager) activity.getSystemService(LOCATION_SERVICE);
         List<String> providers = new ArrayList<>();
         if (mLocationManager != null) {
@@ -427,7 +428,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         locale = getResources().getConfiguration().locale.getCountry();
         binding.linearProgress.setVisibility(View.VISIBLE);
 
-        WallofCoins.createService(getActivity()).getReceivingOptions(locale.toLowerCase(), getString(R.string.PUBLISHER_ID)).enqueue(new Callback<List<GetReceivingOptionsResp>>() {
+        WallofCoins.createService(interceptor, getActivity()).getReceivingOptions(locale.toLowerCase(), getString(R.string.PUBLISHER_ID)).enqueue(new Callback<List<GetReceivingOptionsResp>>() {
             @Override
             public void onResponse(Call<List<GetReceivingOptionsResp>> call, Response<List<GetReceivingOptionsResp>> response) {
                 Log.e(TAG, "onResponse: " + response.body().size());
@@ -683,7 +684,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                             }
 
                                             itemBankBinding.orderDash.setText("You are ordering: " + response.body().get(0).total + " Dash.\n"
-                                                    + "You will pay with " + defaultCurrency + " cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
+                                                    + "You must deposit cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
 
                                             itemBankBinding.textContactInstruction.setOnClickListener(new View.OnClickListener() {
                                                 @Override
@@ -793,7 +794,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                     hideViewExcept(binding.scrollCompletionDetail);
 
                                     binding.orderDash.setText("You are ordering: " + response.body().get(0).total + " Dash.\n"
-                                            + "You will pay with " + defaultCurrency + " cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
+                                            + "You must deposit cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
 
                                     binding.textContactInstruction.setOnClickListener(new View.OnClickListener() {
                                         @Override
@@ -1128,7 +1129,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     @Override
     public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences, final String key) {
         if (Configuration.PREFS_KEY_EXCHANGE_CURRENCY.equals(key) || Configuration.PREFS_KEY_BTC_PRECISION.equals(key)) {
-            defaultCurrency = config.getExchangeCurrencyCode();
+//            defaultCurrency = config.getExchangeCurrencyCode();
 
             updateView();
         }
@@ -1164,13 +1165,13 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
         binding.linearProgress.setVisibility(View.VISIBLE);
 
-        WallofCoins.createService(getActivity()).discoveryInputs(discoveryInputsReq).enqueue(new Callback<DiscoveryInputsResp>() {
+        WallofCoins.createService(interceptor, getActivity()).discoveryInputs(discoveryInputsReq).enqueue(new Callback<DiscoveryInputsResp>() {
             @Override
             public void onResponse(Call<DiscoveryInputsResp> call, Response<DiscoveryInputsResp> response) {
 
                 if (null != response && null != response.body()) {
                     if (null != response.body().id) {
-                        WallofCoins.createService(getActivity()).getOffers(response.body().id, getString(R.string.PUBLISHER_ID)).enqueue(new Callback<GetOffersResp>() {
+                        WallofCoins.createService(interceptor, getActivity()).getOffers(response.body().id, getString(R.string.PUBLISHER_ID)).enqueue(new Callback<GetOffersResp>() {
                             @Override
                             public void onResponse(Call<GetOffersResp> call, final Response<GetOffersResp> response) {
 
@@ -1279,7 +1280,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             getAuthTokenReq.put("publisherID", getString(R.string.PUBLISHER_ID));
 
             binding.linearProgress.setVisibility(View.VISIBLE);
-            WallofCoins.createService(getActivity()).getAuthToken(phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
+            WallofCoins.createService(interceptor, getActivity()).getAuthToken(phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
                 @Override
                 public void onResponse(Call<GetAuthTokenResp> call, Response<GetAuthTokenResp> response) {
                     binding.linearProgress.setVisibility(View.GONE);
@@ -1354,6 +1355,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         createHoldPassReq.put("email", email);
         createHoldPassReq.put("deviceName", "Dash Wallet (Android)");
         createHoldPassReq.put("deviceCode", getDeviceId(getContext()));
+        Log.e(TAG, "createHold: " + getDeviceId(activity));
         binding.linearProgress.setVisibility(View.VISIBLE);
         WallofCoins.createService(interceptor, getActivity()).createHold(createHoldPassReq).enqueue(new Callback<CreateHoldResp>() {
             @Override
@@ -1374,7 +1376,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     clearForm((ViewGroup) binding.getRoot());
                     binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
                 } else if (null != response.errorBody()) {
-                    if (response.code() == 403) {
+                    if (response.code() == 403 && !TextUtils.isEmpty(buyDashPref.getAuthToken())) {
                         deleteAuthCall(true);
                     } else if (response.code() == 404) {
                         createHold(false);
@@ -1415,7 +1417,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         if (!TextUtils.isEmpty(phone)) {
             binding.linearProgress.setVisibility(View.VISIBLE);
 
-            WallofCoins.createService(activity).deleteAuth(phone, getString(R.string.PUBLISHER_ID)).enqueue(new Callback<CheckAuthResp>() {
+            WallofCoins.createService(interceptor, activity).deleteAuth(phone, getString(R.string.PUBLISHER_ID)).enqueue(new Callback<CheckAuthResp>() {
                 @Override
                 public void onResponse(Call<CheckAuthResp> call, Response<CheckAuthResp> response) {
                     Log.d(TAG, "onResponse: response code==>>" + response.code());
@@ -1552,7 +1554,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         String phone = buyDashPref.getPhone();
         if (!TextUtils.isEmpty(phone)) {
             binding.linearProgress.setVisibility(View.VISIBLE);
-            WallofCoins.createService(activity).checkAuth(phone, getString(R.string.PUBLISHER_ID)).enqueue(new Callback<CheckAuthResp>() {
+            WallofCoins.createService(interceptor, activity).checkAuth(phone, getString(R.string.PUBLISHER_ID)).enqueue(new Callback<CheckAuthResp>() {
                 @Override
                 public void onResponse(Call<CheckAuthResp> call, Response<CheckAuthResp> response) {
                     Log.d(TAG, "onResponse: response code==>>" + response.code());
@@ -1660,8 +1662,10 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     e.printStackTrace();
                 }
 
+//                you must deposit cash
+
                 holder.itemBinding.orderDash.setText("You are ordering: " + orderListResp.total + " Dash.\n"
-                        + "You will pay with " + defaultCurrency + " cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
+                        + "You must deposit cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
 
 
                 holder.itemBinding.btnDepositFinished.setOnClickListener(new View.OnClickListener() {
