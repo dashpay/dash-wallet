@@ -13,6 +13,8 @@
 		<item name="android:checkboxStyle">@style/My.Widget.CompoundButton.CheckBox</item>
 		<item name="android:spinnerStyle">@style/My.Widget.Spinner</item>
 		<item name="android:windowContentOverlay">@null</item>
+		<item name="windowActionModeOverlay">true</item>
+		<item name="actionModeBackground">@drawable/toolbar_background</item>
 	</style>
 
 	<style name="My.Theme.NoStatusBar" parent="My.Theme.NoActionBar">
