@@ -8,63 +8,64 @@
     android:fitsSystemWindows="true"
     tools:openDrawer="start">
 
-    <android.support.design.widget.CoordinatorLayout
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <de.schildbach.wallet.ui.ExtAppBarLayout
-            android:id="@+id/appbar"
+        <include
+            android:id="@+id/request_send_buttons"
+            android:layout_alignParentBottom="true"
+            layout="@layout/wallet_activity_bottom_include"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <TextView
+            android:id="@+id/message_panel"
+            android:layout_above="@id/request_send_buttons"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:fitsSystemWindows="true"
-            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
-            app:elevation="0dp" />
+            android:background="@color/vivid_red"
+            android:padding="16dp"
+            android:text="Test message"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            tools:visibility="visible"
+            android:visibility="gone"/>
 
-        <fragment
-            android:id="@+id/wallet_transactions_fragment"
-            android:name="de.schildbach.wallet.ui.WalletTransactionsFragment"
+        <android.support.design.widget.CoordinatorLayout
+            android:layout_above="@id/message_panel"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:layout_behavior="@string/appbar_scrolling_view_behavior"
-            tools:layout="@layout/wallet_transactions_fragment" />
+            android:layout_height="match_parent">
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            app:layout_anchor="@id/wallet_transactions_fragment"
-            app:layout_anchorGravity="bottom|end">
-
-            <TextView
-                android:id="@+id/message_panel"
+            <de.schildbach.wallet.ui.ExtAppBarLayout
+                android:id="@+id/appbar"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@color/vivid_red"
-                android:padding="16dp"
-                android:text="Test message"
-                android:textColor="@color/white"
-                android:textSize="14sp"
-                android:visibility="gone"/>
+                android:fitsSystemWindows="true"
+                android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+                app:elevation="0dp" />
 
-            <include
-                layout="@layout/wallet_activity_bottom_include"
+            <fragment
+                android:id="@+id/wallet_transactions_fragment"
+                android:name="de.schildbach.wallet.ui.WalletTransactionsFragment"
                 android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:layout_behavior="@string/appbar_scrolling_view_behavior"
+                tools:layout="@layout/wallet_transactions_fragment" />
+
+            <android.support.design.widget.FloatingActionButton
+                android:id="@+id/fab_scan_qr"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="bottom" />
+                android:layout_gravity="bottom|end"
+                android:layout_marginBottom="16dp"
+                android:layout_marginRight="16dp"
+                android:src="@drawable/ic_qrcode"
+                app:backgroundTint="@color/strong_blue_new" />
 
-        </LinearLayout>
+        </android.support.design.widget.CoordinatorLayout>
 
-        <android.support.design.widget.FloatingActionButton
-            android:id="@+id/fab_scan_qr"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom|end"
-            android:layout_marginBottom="92dp"
-            android:layout_marginRight="16dp"
-            android:src="@drawable/ic_qrcode"
-            app:backgroundTint="@color/strong_blue_new" />
-
-    </android.support.design.widget.CoordinatorLayout>
+    </RelativeLayout>
 
     <android.support.design.widget.NavigationView
         android:id="@+id/nav_view"
