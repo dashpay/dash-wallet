@@ -1385,10 +1385,16 @@ public final class SendCoinsFragment extends Fragment {
                         hintResId = R.string.send_coins_fragment_hint_fee_zero;
                     else
                         hintResId = R.string.send_coins_fragment_hint_fee;
-                    final Spannable hintSpannable = new MonetarySpannable(Constants.LOCAL_FORMAT, amountCalculatorLink.getExchangeRate().coinToFiat(dryrunTransaction.getFee()))
-                            .applyMarkup(null, MonetarySpannable.STANDARD_INSIGNIFICANT_SPANS);
-                    hintView.setText(getString(hintResId, btcFormat.format(dryrunTransaction.getFee())
-                            + " (" + amountCalculatorLink.getExchangeRate().coinToFiat(dryrunTransaction.getFee()).currencyCode + " " + hintSpannable + ")"));
+                    try {
+                        final Spannable hintLocalFee = new MonetarySpannable(Constants.LOCAL_FORMAT, amountCalculatorLink.getExchangeRate().coinToFiat(dryrunTransaction.getFee()))
+                                .applyMarkup(null, MonetarySpannable.STANDARD_INSIGNIFICANT_SPANS);
+                        hintView.setText(getString(hintResId, btcFormat.format(dryrunTransaction.getFee())
+                                + (hintLocalFee != null ? (" (" + amountCalculatorLink.getExchangeRate().coinToFiat(dryrunTransaction.getFee()).currencyCode + " " + hintLocalFee + ")"): "")));
+                    } catch (NullPointerException x)
+                    {
+                        //only show the fee in DASH
+                        hintView.setText(getString(hintResId, btcFormat.format(dryrunTransaction.getFee())));
+                    }
                 } else if (paymentIntent.mayEditAddress() && validatedAddress != null
                         && wallet.isPubKeyHashMine(validatedAddress.address.getHash160())) {
                     hintView.setTextColor(getResources().getColor(R.color.fg_insignificant));
