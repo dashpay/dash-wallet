@@ -280,6 +280,10 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         args.putSerializable(ARG_DIRECTION, direction);
         loaderManager.restartLoader(ID_TRANSACTION_LOADER, args, this);
 
+        if (getActivity() instanceof OnFilterSelected) {
+            ((OnFilterSelected) getActivity()).onFilterSelected();
+        }
+
         return true;
     }
 
@@ -603,5 +607,9 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
             return Warning.STORAGE_ENCRYPTION;
         else
             return null;
+    }
+
+    interface OnFilterSelected {
+        void onFilterSelected();
     }
 }

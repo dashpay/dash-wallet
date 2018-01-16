@@ -24,8 +24,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
@@ -34,8 +32,6 @@ import java.util.List;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
-import org.bitcoinj.crypto.MnemonicCode;
-import org.bitcoinj.crypto.MnemonicException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 
@@ -54,7 +50,6 @@ import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.Io;
-import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -103,7 +98,8 @@ import android.widget.TextView;
  * @author Andreas Schildbach
  */
 public final class WalletActivity extends AbstractBindServiceActivity
-        implements ActivityCompat.OnRequestPermissionsResultCallback, NavigationView.OnNavigationItemSelectedListener {
+        implements ActivityCompat.OnRequestPermissionsResultCallback, NavigationView.OnNavigationItemSelectedListener,
+        WalletTransactionsFragment.OnFilterSelected {
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
     private static final int DIALOG_RESTORE_WALLET = 2;
@@ -117,6 +113,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private DrawerLayout viewDrawer;
     private View viewFakeForSafetySubmenu;
+    private FloatingActionButton fabScanQr;
 
     private Handler handler = new Handler();
 
@@ -201,7 +198,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void initFloatingButton() {
-        FloatingActionButton fabScanQr = (FloatingActionButton) findViewById(R.id.fab_scan_qr);
+        fabScanQr = (FloatingActionButton) findViewById(R.id.fab_scan_qr);
         fabScanQr.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -1020,5 +1017,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private void handleDisconnect() {
         getWalletApplication().stopBlockchainService();
         finish();
+    }
+
+    //Reset FAB State when filter is selected
+    @Override
+    public void onFilterSelected() {
+        fabScanQr.clearAnimation();
+        fabScanQr.setClickable(true);
     }
 }

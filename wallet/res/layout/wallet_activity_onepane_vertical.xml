@@ -61,6 +61,7 @@
                 android:layout_marginBottom="16dp"
                 android:layout_marginRight="16dp"
                 android:src="@drawable/ic_qrcode"
+                app:layout_behavior="de.schildbach.wallet.ui.widget.ScrollFABBehavior"
                 app:backgroundTint="@color/strong_blue_new" />
 
         </android.support.design.widget.CoordinatorLayout>
