@@ -5,7 +5,8 @@
 	tools:ignore="RequiredSize"
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
-	android:paddingTop="16dp">
+	android:paddingTop="16dp"
+	android:focusableInTouchMode="true">
 
 	<LinearLayout
 		android:id="@+id/send_coins_payee_group"

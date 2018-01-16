@@ -134,6 +134,7 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnFocusChangeListener;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
@@ -592,8 +593,7 @@ public final class SendCoinsFragment extends Fragment {
         initFloatingButton();
     }
 
-    private void initFloatingButton()
-    {
+    private void initFloatingButton() {
         viewFabScanQr = (FloatingActionButton) this.activity.findViewById(R.id.fab_scan_qr);
         final PackageManager pm = this.activity.getPackageManager();
         boolean hasCamera = pm.hasSystemFeature(PackageManager.FEATURE_CAMERA) || pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT);
@@ -740,10 +740,9 @@ public final class SendCoinsFragment extends Fragment {
             public void onClick(final View v) {
                 validateReceivingAddress();
 
-                if (everythingPlausible())
+                if (everythingPlausible()) {
                     handleGo();
-                else
-                    requestFocusFirst();
+                }
 
                 updateView();
             }
@@ -909,12 +908,6 @@ public final class SendCoinsFragment extends Fragment {
 
     @Override
     public void onPrepareOptionsMenu(final Menu menu) {
-        //final MenuItem scanAction = menu.findItem(R.id.send_coins_options_scan);
-        //final PackageManager pm = activity.getPackageManager();
-        //scanAction.setVisible(pm.hasSystemFeature(PackageManager.FEATURE_CAMERA)
-        //		|| pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT));
-        //scanAction.setEnabled(state == State.INPUT);
-
         final MenuItem emptyAction = menu.findItem(R.id.send_coins_options_empty);
         emptyAction.setEnabled(state == State.INPUT && paymentIntent.mayEditAmount());
 
@@ -1010,10 +1003,11 @@ public final class SendCoinsFragment extends Fragment {
 
     private void requestFocusFirst() {
         if (!isPayeePlausible())
-            receivingAddressView.requestFocus();
-        else if (!isAmountPlausible())
+            return;
+        else if (!isAmountPlausible()) {
             amountCalculatorLink.requestFocus();
-        else if (!isPasswordPlausible())
+            getActivity().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_UNCHANGED);
+        } else if (!isPasswordPlausible())
             privateKeyPasswordView.requestFocus();
         else if (everythingPlausible())
             viewGo.requestFocus();
