@@ -86,6 +86,7 @@ import de.schildbach.wallet.ui.DialogBuilder;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StreamInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
+import de.schildbach.wallet.ui.InputParser.WalletUriParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
 import de.schildbach.wallet.ui.ScanActivity;
 import de.schildbach.wallet.ui.TransactionsAdapter;
@@ -144,7 +145,6 @@ import android.widget.CursorAdapter;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.TextView;
-import de.schildbach.wallet_test.R;
 import android.app.LoaderManager.LoaderCallbacks;
 
 /**
@@ -207,6 +207,8 @@ public final class SendCoinsFragment extends Fragment {
 
     private Transaction dryrunTransaction;
     private Exception dryrunException;
+
+    private boolean forceInstantSend = false;
 
     private static final int ID_DYNAMIC_FEES_LOADER = 0;
     private static final int ID_RATE_LOADER = 1;
@@ -630,6 +632,8 @@ public final class SendCoinsFragment extends Fragment {
             if ((Intent.ACTION_VIEW.equals(action) || NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action))
                     && intentUri != null && "dash".equals(scheme)) {
                 initStateFromBitcoinUri(intentUri);
+            } else if (Intent.ACTION_VIEW.equals(action) && Constants.WALLET_URI_SCHEME.equals(scheme)) {
+                    initStateFromWalletUri(intentUri);
             } else if ((NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action))
                     && PaymentProtocol.MIMETYPE_PAYMENTREQUEST.equals(mimeType)) {
                 final NdefMessage ndefMessage = (NdefMessage) intent
@@ -703,7 +707,11 @@ public final class SendCoinsFragment extends Fragment {
         });
 
         instantXenable = (CheckBox) view.findViewById(R.id.send_coins_instantx_enable);
-        instantXenable.setVisibility(config.getInstantXEnabled() == true && wallet.getContext().sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED) ? View.VISIBLE : View.INVISIBLE);
+        instantXenable.setVisibility(config.getInstantXEnabled() && wallet.getContext().sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED) ? View.VISIBLE : View.INVISIBLE);
+        if (forceInstantSend) {
+            instantXenable.setChecked(true);
+            instantXenable.setEnabled(false);
+        }
         instantXenable.setOnCheckedChangeListener(new OnCheckedChangeListener()
         {
             @Override
@@ -1499,6 +1507,21 @@ public final class SendCoinsFragment extends Fragment {
             @Override
             protected void handleDirectTransaction(final Transaction transaction) throws VerificationException {
                 throw new UnsupportedOperationException();
+            }
+
+            @Override
+            protected void error(final int messageResId, final Object... messageArgs) {
+                dialog(activity, activityDismissListener, 0, messageResId, messageArgs);
+            }
+        }.parse();
+    }
+
+    private void initStateFromWalletUri(final Uri walletUri) {
+        new WalletUriParser(walletUri) {
+            @Override
+            protected void handlePaymentIntent(final PaymentIntent paymentIntent, boolean forceInstantSend) {
+                SendCoinsFragment.this.forceInstantSend = forceInstantSend;
+                updateStateFrom(paymentIntent);
             }
 
             @Override

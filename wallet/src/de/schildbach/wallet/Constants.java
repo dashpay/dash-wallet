@@ -225,4 +225,6 @@ public final class Constants {
 
     //Dash Specific
     public static long EARLIEST_HD_SEED_CREATION_TIME = 1427610960l;
+
+    public static String WALLET_URI_SCHEME = "dashwallet";
 }

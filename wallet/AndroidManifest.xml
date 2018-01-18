@@ -101,6 +101,7 @@
                 <action android:name="android.intent.action.VIEW" />
 
                 <data android:scheme="dash" />
+                <data android:scheme="dashwallet" />
                 <data android:scheme="darkcoin" />
 
                 <category android:name="android.intent.category.DEFAULT" />
