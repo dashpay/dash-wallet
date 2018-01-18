@@ -23,7 +23,10 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.script.ScriptBuilder;
 
 import android.app.Activity;
+import android.content.ComponentName;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
@@ -44,14 +47,22 @@ import de.schildbach.wallet.integration.android.BitcoinIntegration;
  */
 public class SampleActivity extends Activity {
     private static final long AMOUNT = 500000;
-    private static final String[] DONATION_ADDRESSES_MAINNET = { "18CK5k1gajRKKSC7yVSTXT9LUzbheh1XY4",
-            "1PZmMahjbfsTy6DsaRyfStzoWTPppWwDnZ" };
-    private static final String[] DONATION_ADDRESSES_TESTNET = { "mkCLjaXncyw8eSWJBcBtnTgviU85z5PfwS",
-            "mwEacn7pYszzxfgcNaVUzYvzL6ypRJzB6A" };
+    private static final String[] DONATION_ADDRESSES_MAINNET = {
+            "Xdeh9YTLNtci5zSL4DDayRSVTLf299n9jv",  //Hash Engineering donation DASH address
+            "Xdeh9YTLNtci5zSL4DDayRSVTLf299n9jv"
+    };
+    private static final String[] DONATION_ADDRESSES_TESTNET = {
+            "yd8Q7MwTDe9yJdeMx1YSSYS4wdxQ2HDqTg",   // http://test.faucet.masternode.io/
+            "ye5F5rfx44YqvqCpVvi1SfFS4dvqaqyuDr"    // https://test.faucet.dashninja.pl/
+    };
     private static final String MEMO = "Sample donation";
+    private static final String WALLET_URI_SCHEME = "dashwallet";
     private static final int REQUEST_CODE = 0;
+    private static final int REQUEST_PAYMENT = 1;
+    private static final int REQUEST_PUBLIC_KEY = 2;
+    private static final int REQUEST_ADDRESS = 3;
 
-    private Button donateButton, requestButton;
+    private Button donateButton, requestButton, walletUriRequestButton;
     private TextView donateMessage;
 
     @Override
@@ -71,6 +82,24 @@ public class SampleActivity extends Activity {
         requestButton.setOnClickListener(new OnClickListener() {
             public void onClick(final View v) {
                 handleRequest();
+            }
+        });
+
+        findViewById(R.id.sample_send_payment_request).setOnClickListener(new OnClickListener() {
+            public void onClick(final View v) {
+                handlePaymentRequest();
+            }
+        });
+
+        findViewById(R.id.sample_send_public_key_request).setOnClickListener(new OnClickListener() {
+            public void onClick(final View v) {
+                handlePublicKeyRequestRequest();
+            }
+        });
+
+        findViewById(R.id.sample_send_address_request).setOnClickListener(new OnClickListener() {
+            public void onClick(final View v) {
+                handleAddressForPaymentRequest();
             }
         });
 
@@ -121,6 +150,56 @@ public class SampleActivity extends Activity {
         }
     }
 
+    private void handlePaymentRequest() {
+        Uri requestUri = new Uri.Builder()
+                .scheme(WALLET_URI_SCHEME)
+                .authority("")
+                .appendQueryParameter("pay", donationAddresses()[0])
+                .appendQueryParameter("amount", "0.123")
+                .appendQueryParameter("req-IS", "1")
+                .appendQueryParameter("sender", getAppName())
+                .build();
+        sendInterAppCommunicationRequest(requestUri, REQUEST_PAYMENT);
+    }
+
+    private void handlePublicKeyRequestRequest() {
+        Uri requestUri = new Uri.Builder()
+                .scheme(WALLET_URI_SCHEME)
+                .authority("")
+                .appendQueryParameter("request", "masterPublicKey")
+                .appendQueryParameter("account", "0")
+                .appendQueryParameter("sender", getAppName())
+                .build();
+        sendInterAppCommunicationRequest(requestUri, REQUEST_PUBLIC_KEY);
+    }
+
+    private void handleAddressForPaymentRequest() {
+        Uri requestUri = new Uri.Builder()
+                .scheme(WALLET_URI_SCHEME)
+                .authority("")
+                .appendQueryParameter("request", "address")
+                .appendQueryParameter("sender", getAppName())
+                .build();
+        sendInterAppCommunicationRequest(requestUri, REQUEST_ADDRESS);
+    }
+
+    private void sendInterAppCommunicationRequest(Uri requestUri, int requestCode) {
+        Intent walletUriIntent = new Intent(Intent.ACTION_VIEW, requestUri);
+        ComponentName componentName = walletUriIntent.resolveActivity(getPackageManager());
+        if (componentName != null) {
+            Intent chooserIntent = Intent.createChooser(walletUriIntent, "Select Wallet");
+            startActivityForResult(chooserIntent, requestCode);
+        } else {
+            Toast.makeText(this, "Dash Wallet not installed", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private String getAppName() {
+        ApplicationInfo applicationInfo = getApplicationInfo();
+        int stringId = applicationInfo.labelRes;
+        return stringId == 0 ? applicationInfo.nonLocalizedLabel.toString() : getString(stringId);
+    }
+
     @Override
     protected void onActivityResult(final int requestCode, final int resultCode, final Intent data) {
         if (requestCode == REQUEST_CODE) {
@@ -145,6 +224,35 @@ public class SampleActivity extends Activity {
             } else {
                 Toast.makeText(this, "Unknown result.", Toast.LENGTH_LONG).show();
             }
+        } else if (resultCode == Activity.RESULT_OK) {
+            Uri resultData = data.getData();
+            String message;
+            if (resultData != null) {
+                if (requestCode == REQUEST_PAYMENT) {
+                    String callback = resultData.getQueryParameter("callback");
+                    String address = resultData.getQueryParameter("address");
+                    String txid = resultData.getQueryParameter("txid");
+                    message = String.format("callback: %s\naddress: %s\ntxid: %s", callback, address, txid);
+                } else if (requestCode == REQUEST_PUBLIC_KEY) {
+                    String callback = resultData.getQueryParameter("callback");
+                    String masterPublicKeyBip32 = resultData.getQueryParameter("masterPublicKeyBIP32");
+                    String masterPublicKeyBip44 = resultData.getQueryParameter("masterPublicKeyBIP44");
+                    String source = resultData.getQueryParameter("source");
+                    message = String.format("%s\n%s\n%s\n%s", callback, masterPublicKeyBip32, masterPublicKeyBip44, source);
+                } else if (requestCode == REQUEST_ADDRESS) {
+                    String callback = resultData.getQueryParameter("callback");
+                    String address = resultData.getQueryParameter("address");
+                    String source = resultData.getQueryParameter("source");
+                    message = String.format("%s\n%s\n%s", callback, address, source);
+                } else {
+                    message = "Invalid requestCode" + requestCode;
+                }
+            } else {
+                message = "Error: result data is empty";
+            }
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+        } else {
+            Toast.makeText(this, "Operation canceled", Toast.LENGTH_LONG).show();
         }
     }
 }
