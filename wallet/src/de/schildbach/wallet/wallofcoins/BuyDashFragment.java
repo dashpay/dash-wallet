@@ -36,7 +36,6 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.Html;
 import android.text.TextUtils;
-import android.text.method.LinkMovementMethod;
 import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -45,7 +44,6 @@ import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -71,7 +69,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
-import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -663,7 +660,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     return;
                 }
 
-                captureHoldReq.put("publisherId", getString(R.string.PUBLISHER_ID));
+                captureHoldReq.put("publisherID", getString(R.string.PUBLISHER_ID));
                 captureHoldReq.put("verificationCode", otp);
                 binding.linearProgress.setVisibility(View.VISIBLE);
                 WallofCoins.createService(interceptor, getActivity()).captureHold(buyDashPref.getHoldId(), captureHoldReq)
@@ -1205,7 +1202,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
         HashMap<String, String> discoveryInputsReq = new HashMap<String, String>();
 
-        discoveryInputsReq.put("publisherId", getString(R.string.PUBLISHER_ID));
+        discoveryInputsReq.put("publisherID", getString(R.string.PUBLISHER_ID));
         discoveryInputsReq.put("cryptoAddress", wallet.freshAddress(RECEIVE_FUNDS).toBase58());
         try {
             if (Float.valueOf(binding.requestCoinsAmountLocal.getTextView().getHint().toString()) > 0f) {
@@ -1336,7 +1333,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             } else {
                 getAuthTokenReq.put("deviceCode", getDeviceId(activity));
             }
-            getAuthTokenReq.put("publisherId", getString(R.string.PUBLISHER_ID));
+            getAuthTokenReq.put("publisherID", getString(R.string.PUBLISHER_ID));
 
             binding.linearProgress.setVisibility(View.VISIBLE);
             WallofCoins.createService(null, getActivity()).getAuthToken(phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
@@ -1345,22 +1342,10 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     binding.linearProgress.setVisibility(View.GONE);
                     int code = response.code();
 
-                 /*   if(code == 400 && response.body() == null){
-                        try {
-                            BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
-                            showUserPasswordAuthenticationDialog();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
-                        }
-                        return;
-
-                    }*/
                     if (code >= 400 && response.body() == null) {
                         try {
                             BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
                             Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
-
                         } catch (Exception e) {
                             e.printStackTrace();
                             Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
@@ -1392,44 +1377,14 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         }
     }
 
-    private void showUserPasswordAuthenticationDialog() {
-        AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(activity);
-        LayoutInflater inflater = activity.getLayoutInflater();
-        final View dialogView = inflater.inflate(R.layout.authenticate_password_wallet_dialog, null);
-        dialogBuilder.setView(dialogView);
 
-        final EditText edtPassword = (EditText) dialogView.findViewById(R.id.edt_woc_authenticaion_password);
 
-        final  TextView txtTitle = (TextView) dialogView.findViewById(R.id.txt_existing_user_dialog_message);
-        txtTitle.setMovementMethod(LinkMovementMethod.getInstance());
-        final  TextView txtRestPassword = (TextView) dialogView.findViewById(R.id.txt_reset_password);
-        txtRestPassword.setMovementMethod(LinkMovementMethod.getInstance());
-
-        Button btnLogin = (Button)dialogView.findViewById(R.id.btnLogin);
-
-        final AlertDialog alertDialog = dialogBuilder.create();
-        alertDialog.show();
-
-        btnLogin.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String password = edtPassword.getText().toString().trim();
-                if(password.length()>0){
-                    getAuthTokenCall(password);
-                    alertDialog.dismiss();
-                }else{
-                    Toast.makeText(getContext(), R.string.password_alert, Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-
-    }
 
     private void creteDevice() {
         final HashMap<String, String> createDeviceReq = new HashMap<String, String>();
         createDeviceReq.put("name", "Dash Wallet (Android)");
         createDeviceReq.put("code", getDeviceId(getContext()));
-        createDeviceReq.put("publisherId", getString(R.string.PUBLISHER_ID));
+        createDeviceReq.put("publisherID", getString(R.string.PUBLISHER_ID));
         binding.linearProgress.setVisibility(View.VISIBLE);
         WallofCoins.createService(interceptor, getActivity()).createDevice(createDeviceReq).enqueue(new Callback<CreateDeviceResp>() {
             @Override
@@ -1455,7 +1410,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         if (!isUserExist)
             createHoldPassReq.put("phone", phone);
         createHoldPassReq.put("offer", offerId);
-        createHoldPassReq.put("publisherId", getString(R.string.PUBLISHER_ID));
+        createHoldPassReq.put("publisherID", getString(R.string.PUBLISHER_ID));
         createHoldPassReq.put("email", email);
         createHoldPassReq.put("deviceName", "Dash Wallet (Android)");
         createHoldPassReq.put("deviceCode", getDeviceId(getContext()));
@@ -1762,7 +1717,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         TextView textView = new TextView(getActivity());
                         textView.setTextSize(16);
                         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-                        layoutParams.topMargin = 0;
+                        layoutParams.topMargin = 8;
                         textView.setLayoutParams(layoutParams);
                         textView.setText(accountList.get(i).getLabel() + ": " + accountList.get(i).getValue());
                         holder.itemBinding.linearAccountDetail.addView(textView);
@@ -1772,17 +1727,10 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 }
 
 //                you must deposit cash
-                double dots =    Double.parseDouble(orderListResp.total)* 100000;
-                DecimalFormat formatter = new DecimalFormat("#,###,###.##");
-                String yourFormattedDots = formatter.format(dots);
-                if(orderListResp.status.equals("WD")){
-                    holder.itemBinding.orderDash.setText("Total Dash: " + orderListResp.total + " (" + yourFormattedDots + " dots)\n"
-                            + "You must deposit cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
-                    holder.itemBinding.orderDashInstruction.setVisibility(View.VISIBLE);
-                }else{
-                    holder.itemBinding.orderDash.setText("Total Dash: " + orderListResp.total + " (" + yourFormattedDots +" dots)");
-                    holder.itemBinding.orderDashInstruction.setVisibility(View.GONE);
-                }
+
+                holder.itemBinding.orderDash.setText("You are ordering: " + orderListResp.total + " Dash.\n"
+                        + "You must deposit cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
+
 
                 holder.itemBinding.btnDepositFinished.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -1864,9 +1812,9 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 });
 
                 if (orderListResp.status.equals("WD")) {
-                    holder.itemBinding.btnCancelOrder.setVisibility(View.GONE);
-                    holder.itemBinding.btnDepositFinished.setVisibility(View.GONE);
-                    holder.itemBinding.textAccountNo.setVisibility(View.GONE);
+                    holder.itemBinding.btnCancelOrder.setVisibility(View.VISIBLE);
+                    holder.itemBinding.btnDepositFinished.setVisibility(View.VISIBLE);
+                    holder.itemBinding.textAccountNo.setVisibility(View.VISIBLE);
                     countDownStart(orderListResp.paymentDue, holder.itemBinding.textPaymentDueDate);
                     holder.itemBinding.textContactInstruction.setOnClickListener(new View.OnClickListener() {
                         @Override
