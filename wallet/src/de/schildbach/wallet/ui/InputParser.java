@@ -63,6 +63,7 @@ import de.schildbach.wallet_test.R;
 
 import android.content.Context;
 import android.content.DialogInterface.OnClickListener;
+import android.net.Uri;
 
 /**
  * @author Andreas Schildbach
@@ -268,6 +269,60 @@ public abstract class InputParser {
         protected final void handleDirectTransaction(final Transaction transaction) throws VerificationException {
             throw new UnsupportedOperationException();
         }
+    }
+
+    public abstract static class WalletUriParser extends InputParser {
+        private final Uri input;
+
+        public WalletUriParser(final Uri input) {
+            this.input = input;
+        }
+
+        @Override
+        public void parse() {
+            WalletUri walletUri;
+            try {
+                walletUri = WalletUri.parse(input);
+            } catch (BitcoinURIParseException x) {
+                log.info("got invalid dashwallet uri: '" + input + "'", x);
+
+                error(R.string.input_parser_invalid_bitcoin_uri, input);
+                return;
+            }
+
+            if (walletUri.isPaymentUri()) {
+                BitcoinURI bitcoinUri = null;
+                try {
+                    bitcoinUri = walletUri.toBitcoinUri();
+                    handlePaymentIntent(PaymentIntent.fromBitcoinUri(bitcoinUri), walletUri.forceInstantSend());
+                } catch (BitcoinURIParseException x) {
+                    log.info("got invalid dashwallet uri: '" + input + "'", x);
+
+                    error(R.string.input_parser_invalid_bitcoin_uri, input);
+                }
+            } else if (walletUri.isMasterPublicKeyRequest()) {
+                handleMasterPublicKeyRequest();
+            } else if (walletUri.isAddressRequest()) {
+                handleAddressRequest();
+            } else {
+                cannotClassify(input.toString());
+            }
+        }
+
+        protected abstract void handleMasterPublicKeyRequest();
+        protected abstract void handleAddressRequest();
+
+        @Override
+        protected void handleDirectTransaction(final Transaction transaction) throws VerificationException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected void handlePaymentIntent(PaymentIntent paymentIntent) {
+            handlePaymentIntent(paymentIntent, false);
+        }
+
+        protected abstract void handlePaymentIntent(PaymentIntent paymentIntent, boolean forceInstantSend);
     }
 
     public abstract void parse();

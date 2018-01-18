@@ -27,6 +27,7 @@ import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.HelpDialogFragment;
 import de.schildbach.wallet_test.R;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -39,6 +40,9 @@ import android.view.MenuItem;
 public final class SendCoinsActivity extends AbstractBindServiceActivity {
 	public static final String INTENT_EXTRA_PAYMENT_INTENT = "payment_intent";
 	public static final String INTENT_EXTRA_FEE_CATEGORY = "fee_category";
+	public static final String INTENT_EXTRA_FORCE_INSTANT_SEND = "force_instant_send";
+
+	public static final String ACTION_SEND_FROM_WALLET_URI = "de.schildbach.wallet.action.SEND_FROM_WALLET_URI";
 
 	public static void start(final Context context, final PaymentIntent paymentIntent,
 							 final @Nullable FeeCategory feeCategory, final int intentFlags) {
@@ -53,6 +57,15 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity {
 
 	public static void start(final Context context, final PaymentIntent paymentIntent) {
 		start(context, paymentIntent, null, 0);
+	}
+
+	public static void sendFromWalletUri(final Activity callingActivity, int requestCode,
+									  final PaymentIntent paymentIntent, boolean forceInstantSend) {
+		final Intent intent = new Intent(callingActivity, SendCoinsActivity.class);
+		intent.setAction(ACTION_SEND_FROM_WALLET_URI);
+		intent.putExtra(INTENT_EXTRA_PAYMENT_INTENT, paymentIntent);
+		intent.putExtra(INTENT_EXTRA_FORCE_INSTANT_SEND, forceInstantSend);
+		callingActivity.startActivityForResult(intent, requestCode);
 	}
 
 	public static void startDonate(final Context context, final Coin amount, final @Nullable FeeCategory feeCategory,
