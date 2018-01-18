@@ -102,7 +102,6 @@ import de.schildbach.wallet.wallofcoins.response.ConfirmDepositResp;
 import de.schildbach.wallet.wallofcoins.response.CountryData;
 import de.schildbach.wallet.wallofcoins.response.CreateDeviceResp;
 import de.schildbach.wallet.wallofcoins.response.CreateHoldResp;
-import de.schildbach.wallet.wallofcoins.response.DeviceListResp;
 import de.schildbach.wallet.wallofcoins.response.DiscoveryInputsResp;
 import de.schildbach.wallet.wallofcoins.response.GetAuthTokenResp;
 import de.schildbach.wallet.wallofcoins.response.GetOffersResp;
@@ -390,45 +389,27 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         }
     }
 
-   // LocationManager mLocationManager;
+    LocationManager mLocationManager;
 
     private Location getLastKnownLocation() {
-        boolean gps_enabled = false;
-        boolean network_enabled = false;
 
-        LocationManager lm = (LocationManager) activity
-                .getSystemService(Context.LOCATION_SERVICE);
-
-        gps_enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
-        network_enabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-
-        Location net_loc = null, gps_loc = null, finalLoc = null;
-
-        if (gps_enabled)
-            gps_loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        if (network_enabled)
-            net_loc = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-
-        if (gps_loc != null && net_loc != null) {
-
-            //smaller the number more accurate result will
-            if (gps_loc.getAccuracy() > net_loc.getAccuracy())
-                finalLoc = net_loc;
-            else
-                finalLoc = gps_loc;
-
-            // I used this just to get an idea (if both avail, its upto you which you want to take
-            // as I've taken location with more accuracy)
-
-        } else {
-
-            if (gps_loc != null) {
-                finalLoc = gps_loc;
-            } else if (net_loc != null) {
-                finalLoc = net_loc;
+        mLocationManager = (LocationManager) activity.getSystemService(LOCATION_SERVICE);
+        List<String> providers = new ArrayList<>();
+        if (mLocationManager != null) {
+            providers = mLocationManager.getProviders(true);
+        }
+        Location bestLocation = null;
+        for (String provider : providers) {
+            Location l = mLocationManager.getLastKnownLocation(provider);
+            if (l == null) {
+                continue;
+            }
+            if (bestLocation == null || l.getAccuracy() < bestLocation.getAccuracy()) {
+                // Found best last known location: %s", l);
+                bestLocation = l;
             }
         }
-        return finalLoc;
+        return bestLocation;
     }
 
     private void requestLocation() {
@@ -576,7 +557,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 buyDashPref.setPhone(phone);
                 hideKeyBoard();
                 checkAuth();
-
             }
         });
 
@@ -1004,57 +984,21 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private void getZip() {
 
         Location myLocation = getLastKnownLocation();
-        if(myLocation != null) {
+        Geocoder geocoder;
+        List<android.location.Address> addresses;
+        geocoder = new Geocoder(activity, Locale.getDefault());
 
-            Geocoder geocoder;
-            List<android.location.Address> addresses;
-            geocoder = new Geocoder(activity, Locale.getDefault());
-            if (geocoder != null) {
-                try {
-                    addresses = geocoder.getFromLocation(myLocation.getLatitude(), myLocation.getLongitude(), 1); // Here 1 represent max location result to returned, by documents it recommended 1 to 5
-                    zipCode = addresses.get(0).getPostalCode();
+        try {
+            addresses = geocoder.getFromLocation(myLocation.getLatitude(), myLocation.getLongitude(), 1); // Here 1 represent max location result to returned, by documents it recommended 1 to 5
+            zipCode = addresses.get(0).getPostalCode();
 
-                    hideViewExcept(binding.layoutCreateHold);
-                    showKeyBoard();
+            hideViewExcept(binding.layoutCreateHold);
+            showKeyBoard();
 
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }else{
-            LocationManager mlocManager = (LocationManager) activity.getSystemService(Context.LOCATION_SERVICE);
-            boolean enabled = mlocManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-
-            if(!enabled) {
-                showDialogGPS();
-            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
-
-    /**
-     * Show a dialog to the user requesting that GPS be enabled
-     */
-    private void showDialogGPS() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setCancelable(false);
-        builder.setTitle("Enable GPS");
-        builder.setMessage("Please enable GPS for Find My Location");
-        builder.setInverseBackgroundForced(true);
-        builder.setPositiveButton("Enable", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                startActivity(
-                        new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
-            }
-        });
-        builder.setNegativeButton("Ignore", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.dismiss();
-            }
-        });
-        AlertDialog alert = builder.create();
-        alert.show();
-    }
-
 
     public boolean isJSONValid(String test) {
         try {
@@ -1227,7 +1171,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
                 if (null != response && null != response.body()) {
                     if (null != response.body().id) {
-                        WallofCoins.createService(null, getActivity()).getOffers(response.body().id, getString(R.string.PUBLISHER_ID)).enqueue(new Callback<GetOffersResp>() {
+                        WallofCoins.createService(interceptor, getActivity()).getOffers(response.body().id, getString(R.string.PUBLISHER_ID)).enqueue(new Callback<GetOffersResp>() {
                             @Override
                             public void onResponse(Call<GetOffersResp> call, final Response<GetOffersResp> response) {
 
@@ -1336,7 +1280,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             getAuthTokenReq.put("publisherID", getString(R.string.PUBLISHER_ID));
 
             binding.linearProgress.setVisibility(View.VISIBLE);
-            WallofCoins.createService(null, getActivity()).getAuthToken(phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
+            WallofCoins.createService(interceptor, getActivity()).getAuthToken(phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
                 @Override
                 public void onResponse(Call<GetAuthTokenResp> call, Response<GetAuthTokenResp> response) {
                     binding.linearProgress.setVisibility(View.GONE);
@@ -1376,9 +1320,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             Toast.makeText(getContext(), "Phone and Password is required", Toast.LENGTH_SHORT).show();
         }
     }
-
-
-
 
     private void creteDevice() {
         final HashMap<String, String> createDeviceReq = new HashMap<String, String>();
@@ -1437,17 +1378,13 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 } else if (null != response.errorBody()) {
                     if (response.code() == 403 && !TextUtils.isEmpty(buyDashPref.getAuthToken())) {
                         deleteAuthCall(true);
-                        creteDevice();
-                    }else if (response.code() == 403 && TextUtils.isEmpty(buyDashPref.getAuthToken())) {
-                        getAuthTokenCall(null);
-                    }  else if (response.code() == 404) {
+                    } else if (response.code() == 404) {
                         createHold(false);
                     } else if (response.code() == 400) {
                         if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
                             getOrderList(true);
                         } else {
-                            getAuthTokenCall(
-                                    null);
+                            getAuthTokenCall(null);
                         }
                     } else {
                         try {
@@ -1617,7 +1554,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         String phone = buyDashPref.getPhone();
         if (!TextUtils.isEmpty(phone)) {
             binding.linearProgress.setVisibility(View.VISIBLE);
-
             WallofCoins.createService(interceptor, activity).checkAuth(phone, getString(R.string.PUBLISHER_ID)).enqueue(new Callback<CheckAuthResp>() {
                 @Override
                 public void onResponse(Call<CheckAuthResp> call, Response<CheckAuthResp> response) {
