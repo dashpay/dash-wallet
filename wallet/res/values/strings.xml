@@ -337,7 +337,7 @@
 
     <!-- generic strings -->
     <string name="time_today">today</string>
-    <string name="address_unlabeled">WallofCoins.com</string>
+    <string name="address_unlabeled">(unlabeled)</string>
     <string name="private_key_password">PIN</string>
     <string name="private_key_bad_password">bad PIN!</string>
 
@@ -405,10 +405,4 @@
     <string name="text_send_email_receipt">Wall of Coins will verify your payment. This usually takes up to 10 minutes. To expedite your order, take a picture of your receipt and &lt;u&gt;click here&lt;/u&gt; to email your receipt to Wall of Coins.</string>
     <string name="order_contact_instruction">If you have any questions, there is a live chat window at <u>wallofcoins.com</u> or you may call the phone number that sent you a text message.</string>
     <string name="locationsPhone">Location\'s phone #: %s</string>
-
-    <string name="password_authenticate_dialog_message">It appears that you already have a <a href="https://wallofcoins.com">Wall of Coins</a> user account!</string>
-    <string name="password_authenticate_dialog_set_title">Input your Wall of Coins password below:</string>
-    <string name="password_authenticate_dialog_info_message">(your password is only sent to Wall of Coins)</string>
-    <string name="password_authenticate_dialog_reset_password_message">Forgot your Wall of Coins password? <a href="https://wallofcoins.com/forgotPassword/">Reset</a> it here.</string>
-    <string name="password_alert">Please enter password in password filed</string>
 </resources>

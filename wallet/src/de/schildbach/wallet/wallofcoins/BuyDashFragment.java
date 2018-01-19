@@ -4,8 +4,6 @@ import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
-import android.content.ContentResolver;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -38,7 +36,6 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.Html;
 import android.text.TextUtils;
-import android.text.method.LinkMovementMethod;
 import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -47,7 +44,6 @@ import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -73,7 +69,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
-import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -85,7 +80,6 @@ import java.util.concurrent.RejectedExecutionException;
 
 import javax.annotation.Nullable;
 
-import de.schildbach.wallet.AddressBookProvider;
 import de.schildbach.wallet.BuyDashPref;
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
@@ -122,6 +116,7 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+import static android.content.Context.LOCATION_SERVICE;
 import static org.bitcoinj.wallet.KeyChain.KeyPurpose.RECEIVE_FUNDS;
 
 
@@ -141,7 +136,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private CurrencyCalculatorLink amountCalculatorLink;
     private BuyDashPref buyDashPref;
     private AddressAndLabel currentAddressQrAddress = null;
-    private String address;
+
     private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>() {
         @Override
         public Loader<Cursor> onCreateLoader(final int id, final Bundle args) {
@@ -153,6 +148,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             if (data != null && data.getCount() > 0) {
                 data.moveToFirst();
                 final ExchangeRatesProvider.ExchangeRate exchangeRate = ExchangeRatesProvider.getExchangeRate(data);
+
                 amountCalculatorLink.setExchangeRate(exchangeRate.rate);
                 updateView();
             }
@@ -393,45 +389,27 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         }
     }
 
-   // LocationManager mLocationManager;
+    LocationManager mLocationManager;
 
     private Location getLastKnownLocation() {
-        boolean gps_enabled = false;
-        boolean network_enabled = false;
 
-        LocationManager lm = (LocationManager) activity
-                .getSystemService(Context.LOCATION_SERVICE);
-
-        gps_enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
-        network_enabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-
-        Location net_loc = null, gps_loc = null, finalLoc = null;
-
-        if (gps_enabled)
-            gps_loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        if (network_enabled)
-            net_loc = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-
-        if (gps_loc != null && net_loc != null) {
-
-            //smaller the number more accurate result will
-            if (gps_loc.getAccuracy() > net_loc.getAccuracy())
-                finalLoc = net_loc;
-            else
-                finalLoc = gps_loc;
-
-            // I used this just to get an idea (if both avail, its upto you which you want to take
-            // as I've taken location with more accuracy)
-
-        } else {
-
-            if (gps_loc != null) {
-                finalLoc = gps_loc;
-            } else if (net_loc != null) {
-                finalLoc = net_loc;
+        mLocationManager = (LocationManager) activity.getSystemService(LOCATION_SERVICE);
+        List<String> providers = new ArrayList<>();
+        if (mLocationManager != null) {
+            providers = mLocationManager.getProviders(true);
+        }
+        Location bestLocation = null;
+        for (String provider : providers) {
+            Location l = mLocationManager.getLastKnownLocation(provider);
+            if (l == null) {
+                continue;
+            }
+            if (bestLocation == null || l.getAccuracy() < bestLocation.getAccuracy()) {
+                // Found best last known location: %s", l);
+                bestLocation = l;
             }
         }
-        return finalLoc;
+        return bestLocation;
     }
 
     private void requestLocation() {
@@ -579,7 +557,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 buyDashPref.setPhone(phone);
                 hideKeyBoard();
                 checkAuth();
-
             }
         });
 
@@ -663,7 +640,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     return;
                 }
 
-                captureHoldReq.put("publisherId", getString(R.string.PUBLISHER_ID));
+                captureHoldReq.put("publisherID", getString(R.string.PUBLISHER_ID));
                 captureHoldReq.put("verificationCode", otp);
                 binding.linearProgress.setVisibility(View.VISIBLE);
                 WallofCoins.createService(interceptor, getActivity()).captureHold(buyDashPref.getHoldId(), captureHoldReq)
@@ -676,8 +653,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                 Log.e(TAG, "onResponse: " + buyDashPref.getHoldId() + " here");
                                 if (null != response && null != response.body() && !response.body().isEmpty()) {
                                     if (response.body().get(0).account != null && !TextUtils.isEmpty(response.body().get(0).account)) {
-                                        updateAddressBookValue(address,getString(R.string.address_unlabeled)+" Order " + response.body().get(0).id);
-
                                         if (isJSONValid(response.body().get(0).account)) {
                                             ItemOrderListBinding itemBankBinding = DataBindingUtil.inflate(LayoutInflater.from(activity), R.layout.item_order_list, null, false);
 
@@ -1009,57 +984,21 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private void getZip() {
 
         Location myLocation = getLastKnownLocation();
-        if(myLocation != null) {
+        Geocoder geocoder;
+        List<android.location.Address> addresses;
+        geocoder = new Geocoder(activity, Locale.getDefault());
 
-            Geocoder geocoder;
-            List<android.location.Address> addresses;
-            geocoder = new Geocoder(activity, Locale.getDefault());
-            if (geocoder != null) {
-                try {
-                    addresses = geocoder.getFromLocation(myLocation.getLatitude(), myLocation.getLongitude(), 1); // Here 1 represent max location result to returned, by documents it recommended 1 to 5
-                    zipCode = addresses.get(0).getPostalCode();
+        try {
+            addresses = geocoder.getFromLocation(myLocation.getLatitude(), myLocation.getLongitude(), 1); // Here 1 represent max location result to returned, by documents it recommended 1 to 5
+            zipCode = addresses.get(0).getPostalCode();
 
-                    hideViewExcept(binding.layoutCreateHold);
-                    showKeyBoard();
+            hideViewExcept(binding.layoutCreateHold);
+            showKeyBoard();
 
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }else{
-            LocationManager mlocManager = (LocationManager) activity.getSystemService(Context.LOCATION_SERVICE);
-            boolean enabled = mlocManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-
-            if(!enabled) {
-                showDialogGPS();
-            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
-
-    /**
-     * Show a dialog to the user requesting that GPS be enabled
-     */
-    private void showDialogGPS() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setCancelable(false);
-        builder.setTitle("Enable GPS");
-        builder.setMessage("Please enable GPS for Find My Location");
-        builder.setInverseBackgroundForced(true);
-        builder.setPositiveButton("Enable", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                startActivity(
-                        new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
-            }
-        });
-        builder.setNegativeButton("Ignore", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.dismiss();
-            }
-        });
-        AlertDialog alert = builder.create();
-        alert.show();
-    }
-
 
     public boolean isJSONValid(String test) {
         try {
@@ -1207,10 +1146,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
         HashMap<String, String> discoveryInputsReq = new HashMap<String, String>();
 
-        discoveryInputsReq.put("publisherId", getString(R.string.PUBLISHER_ID));
+        discoveryInputsReq.put("publisherID", getString(R.string.PUBLISHER_ID));
         discoveryInputsReq.put("cryptoAddress", wallet.freshAddress(RECEIVE_FUNDS).toBase58());
-        address = wallet.freshAddress(RECEIVE_FUNDS).toBase58();
-
         try {
             if (Float.valueOf(binding.requestCoinsAmountLocal.getTextView().getHint().toString()) > 0f) {
                 discoveryInputsReq.put("usdAmount", "" + binding.requestCoinsAmountLocal.getTextView().getHint());
@@ -1234,7 +1171,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
                 if (null != response && null != response.body()) {
                     if (null != response.body().id) {
-                        WallofCoins.createService(null, getActivity()).getOffers(response.body().id, getString(R.string.PUBLISHER_ID)).enqueue(new Callback<GetOffersResp>() {
+                        WallofCoins.createService(interceptor, getActivity()).getOffers(response.body().id, getString(R.string.PUBLISHER_ID)).enqueue(new Callback<GetOffersResp>() {
                             @Override
                             public void onResponse(Call<GetOffersResp> call, final Response<GetOffersResp> response) {
 
@@ -1340,10 +1277,10 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             } else {
                 getAuthTokenReq.put("deviceCode", getDeviceId(activity));
             }
-            getAuthTokenReq.put("publisherId", getString(R.string.PUBLISHER_ID));
+            getAuthTokenReq.put("publisherID", getString(R.string.PUBLISHER_ID));
 
             binding.linearProgress.setVisibility(View.VISIBLE);
-            WallofCoins.createService(null, getActivity()).getAuthToken(phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
+            WallofCoins.createService(interceptor, getActivity()).getAuthToken(phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
                 @Override
                 public void onResponse(Call<GetAuthTokenResp> call, Response<GetAuthTokenResp> response) {
                     binding.linearProgress.setVisibility(View.GONE);
@@ -1353,7 +1290,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         try {
                             BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
                             Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
-
                         } catch (Exception e) {
                             e.printStackTrace();
                             Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
@@ -1385,44 +1321,11 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         }
     }
 
-    private void showUserPasswordAuthenticationDialog() {
-        AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(activity);
-        LayoutInflater inflater = activity.getLayoutInflater();
-        final View dialogView = inflater.inflate(R.layout.authenticate_password_wallet_dialog, null);
-        dialogBuilder.setView(dialogView);
-
-        final EditText edtPassword = (EditText) dialogView.findViewById(R.id.edt_woc_authenticaion_password);
-
-        final  TextView txtTitle = (TextView) dialogView.findViewById(R.id.txt_existing_user_dialog_message);
-        txtTitle.setMovementMethod(LinkMovementMethod.getInstance());
-        final  TextView txtRestPassword = (TextView) dialogView.findViewById(R.id.txt_reset_password);
-        txtRestPassword.setMovementMethod(LinkMovementMethod.getInstance());
-
-        Button btnLogin = (Button)dialogView.findViewById(R.id.btnLogin);
-
-        final AlertDialog alertDialog = dialogBuilder.create();
-        alertDialog.show();
-
-        btnLogin.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String password = edtPassword.getText().toString().trim();
-                if(password.length()>0){
-                    getAuthTokenCall(password);
-                    alertDialog.dismiss();
-                }else{
-                    Toast.makeText(getContext(), R.string.password_alert, Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-
-    }
-
     private void creteDevice() {
         final HashMap<String, String> createDeviceReq = new HashMap<String, String>();
         createDeviceReq.put("name", "Dash Wallet (Android)");
         createDeviceReq.put("code", getDeviceId(getContext()));
-        createDeviceReq.put("publisherId", getString(R.string.PUBLISHER_ID));
+        createDeviceReq.put("publisherID", getString(R.string.PUBLISHER_ID));
         binding.linearProgress.setVisibility(View.VISIBLE);
         WallofCoins.createService(interceptor, getActivity()).createDevice(createDeviceReq).enqueue(new Callback<CreateDeviceResp>() {
             @Override
@@ -1441,29 +1344,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         });
     }
 
-
-
-    public void updateAddressBookValue(String KEY_ADDRESS,String newLabel){
-        Address address = Address.fromBase58(Constants.NETWORK_PARAMETERS, KEY_ADDRESS);
-        final Uri uri = AddressBookProvider.contentUri(activity.getPackageName()).buildUpon().appendPath(address.toBase58()).build();
-        final String label1 = AddressBookProvider.resolveLabel(activity, address.toBase58());
-
-        ContentResolver contentResolver;
-        contentResolver = activity.getContentResolver();
-
-        final ContentValues values = new ContentValues();
-
-        values.put(AddressBookProvider.KEY_LABEL, newLabel);
-
-        if (label1 == null){
-            contentResolver.insert(uri, values);
-        }
-        else {
-            contentResolver.update(uri, values, null, null);
-        }
-
-    }
-
     public void createHold(boolean isUserExist) {
         String phone = buyDashPref.getPhone();
 
@@ -1471,7 +1351,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         if (!isUserExist)
             createHoldPassReq.put("phone", phone);
         createHoldPassReq.put("offer", offerId);
-        createHoldPassReq.put("publisherId", getString(R.string.PUBLISHER_ID));
+        createHoldPassReq.put("publisherID", getString(R.string.PUBLISHER_ID));
         createHoldPassReq.put("email", email);
         createHoldPassReq.put("deviceName", "Dash Wallet (Android)");
         createHoldPassReq.put("deviceCode", getDeviceId(getContext()));
@@ -1483,7 +1363,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 binding.linearProgress.setVisibility(View.GONE);
 
                 if (null != response.body() && response.code() < 299) {
-
                     createHoldResp = response.body();
                     buyDashPref.setHoldId(createHoldResp.id);
                     buyDashPref.setCreateHoldResp(createHoldResp);
@@ -1499,17 +1378,13 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 } else if (null != response.errorBody()) {
                     if (response.code() == 403 && !TextUtils.isEmpty(buyDashPref.getAuthToken())) {
                         deleteAuthCall(true);
-                        creteDevice();
-                    }else if (response.code() == 403 && TextUtils.isEmpty(buyDashPref.getAuthToken())) {
-                        getAuthTokenCall(null);
-                    }  else if (response.code() == 404) {
+                    } else if (response.code() == 404) {
                         createHold(false);
                     } else if (response.code() == 400) {
                         if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
                             getOrderList(true);
                         } else {
-                            getAuthTokenCall(
-                                    null);
+                            getAuthTokenCall(null);
                         }
                     } else {
                         try {
@@ -1648,6 +1523,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 OrderListResp orderListResp = new OrderListResp();
                 orderListResp.id = -1;
                 orderList.add(lastWDV + 1, orderListResp);
+
                 binding.textEmailReceipt.setVisibility(View.VISIBLE);
                 binding.textEmailReceipt.setText(Html.fromHtml(getString(R.string.text_send_email_receipt)));
                 final int finalLastWDV = lastWDV;
@@ -1678,29 +1554,36 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         String phone = buyDashPref.getPhone();
         if (!TextUtils.isEmpty(phone)) {
             binding.linearProgress.setVisibility(View.VISIBLE);
-
             WallofCoins.createService(interceptor, activity).checkAuth(phone, getString(R.string.PUBLISHER_ID)).enqueue(new Callback<CheckAuthResp>() {
                 @Override
                 public void onResponse(Call<CheckAuthResp> call, Response<CheckAuthResp> response) {
                     Log.d(TAG, "onResponse: response code==>>" + response.code());
                     binding.linearProgress.setVisibility(View.GONE);
                     if (response.code() == 200) {
-                        if (response.body() != null
-                                && response.body().getAvailableAuthSources() != null
-                                && response.body().getAvailableAuthSources().size() > 0) {
-                            if (response.body().getAvailableAuthSources().get(0).equals("password")) {
-
-                                showUserPasswordAuthenticationDialog();
-
-                                return;
-                            }else if (response.body().getAvailableAuthSources().size() >= 2
-                                    && response.body().getAvailableAuthSources().get(1).equals("device")) {
+                        if (response.body() != null && response.body().getAvailableAuthSources() != null && response.body().getAvailableAuthSources().size() > 0) {
+                            if (response.body().getAvailableAuthSources().size() >= 2 && response.body().getAvailableAuthSources().get(1).equals("device")) {
                                 hideKeyBoard();
                                 createHold(true);
-                            }else if (response.body().getAvailableAuthSources().get(0).equals("device")) {
+                            } else if (response.body().getAvailableAuthSources().get(0).equals("device")) {
                                 hideKeyBoard();
                                 createHold(true);
                                 Log.d(TAG, "onResponse: device");
+                            } else if (response.body().getAvailableAuthSources().get(0).equals("password")) {
+                                hideViewExcept(binding.linearPassword);
+                                binding.textPassAbove.setText("Existing Account Login");
+                                binding.etPassword.setHint("Password");
+                                binding.btnNextPassword.setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        hideKeyBoard();
+                                        String password = binding.etPassword.getText().toString();
+                                        if (TextUtils.isEmpty(password)) {
+                                            Toast.makeText(activity, "Please Enter Password First!", Toast.LENGTH_LONG).show();
+                                        } else {
+                                            getAuthTokenCall(password);
+                                        }
+                                    }
+                                });
                             }
                         }
                     } else if (response.code() == 404) {
@@ -1770,7 +1653,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         TextView textView = new TextView(getActivity());
                         textView.setTextSize(16);
                         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-                        layoutParams.topMargin = 0;
+                        layoutParams.topMargin = 8;
                         textView.setLayoutParams(layoutParams);
                         textView.setText(accountList.get(i).getLabel() + ": " + accountList.get(i).getValue());
                         holder.itemBinding.linearAccountDetail.addView(textView);
@@ -1780,17 +1663,10 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 }
 
 //                you must deposit cash
-                double dots =    Double.parseDouble(orderListResp.total)* 100000;
-                DecimalFormat formatter = new DecimalFormat("#,###,###.##");
-                String yourFormattedDots = formatter.format(dots);
-                if(orderListResp.status.equals("WD")){
-                    holder.itemBinding.orderDash.setText("Total Dash: " + orderListResp.total + " (" + yourFormattedDots + " dots)\n"
-                            + "You must deposit cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
-                    holder.itemBinding.orderDashInstruction.setVisibility(View.VISIBLE);
-                }else{
-                    holder.itemBinding.orderDash.setText("Total Dash: " + orderListResp.total + " (" + yourFormattedDots +" dots)");
-                    holder.itemBinding.orderDashInstruction.setVisibility(View.GONE);
-                }
+
+                holder.itemBinding.orderDash.setText("You are ordering: " + orderListResp.total + " Dash.\n"
+                        + "You must deposit cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
+
 
                 holder.itemBinding.btnDepositFinished.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -1872,9 +1748,9 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 });
 
                 if (orderListResp.status.equals("WD")) {
-                    holder.itemBinding.btnCancelOrder.setVisibility(View.GONE);
-                    holder.itemBinding.btnDepositFinished.setVisibility(View.GONE);
-                    holder.itemBinding.textAccountNo.setVisibility(View.GONE);
+                    holder.itemBinding.btnCancelOrder.setVisibility(View.VISIBLE);
+                    holder.itemBinding.btnDepositFinished.setVisibility(View.VISIBLE);
+                    holder.itemBinding.textAccountNo.setVisibility(View.VISIBLE);
                     countDownStart(orderListResp.paymentDue, holder.itemBinding.textPaymentDueDate);
                     holder.itemBinding.textContactInstruction.setOnClickListener(new View.OnClickListener() {
                         @Override
