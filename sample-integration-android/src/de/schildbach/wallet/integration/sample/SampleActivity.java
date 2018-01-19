@@ -187,7 +187,8 @@ public class SampleActivity extends Activity {
         Intent walletUriIntent = new Intent(Intent.ACTION_VIEW, requestUri);
         ComponentName componentName = walletUriIntent.resolveActivity(getPackageManager());
         if (componentName != null) {
-            startActivityForResult(walletUriIntent, requestCode);
+            Intent chooserIntent = Intent.createChooser(walletUriIntent, "Select Wallet");
+            startActivityForResult(chooserIntent, requestCode);
         } else {
             Toast.makeText(this, "Dash Wallet not installed", Toast.LENGTH_LONG).show();
         }
