@@ -90,6 +90,7 @@ import de.schildbach.wallet.ui.InputParser.WalletUriParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
 import de.schildbach.wallet.ui.ScanActivity;
 import de.schildbach.wallet.ui.TransactionsAdapter;
+import de.schildbach.wallet.ui.WalletUri;
 import de.schildbach.wallet.util.Bluetooth;
 import de.schildbach.wallet.util.MonetarySpannable;
 import de.schildbach.wallet.util.Nfc;
@@ -1095,10 +1096,19 @@ public final class SendCoinsFragment extends Fragment {
                 if (callingActivity != null) {
                     log.info("returning result to calling activity: {}", callingActivity.flattenToString());
 
-                    final Intent result = new Intent();
-                    BitcoinIntegration.transactionHashToResult(result, sentTransaction.getHashAsString());
-                    if (paymentIntent.standard == Standard.BIP70)
-                        BitcoinIntegration.paymentToResult(result, payment.toByteArray());
+                    Intent requestIntent = activity.getIntent();
+                    Uri requestData = requestIntent.getData();
+                    String requestScheme = requestData != null ? requestData.getScheme() : null;
+
+                    Intent result;
+                    if (Constants.WALLET_URI_SCHEME.equals(requestScheme)) {
+                         result = WalletUri.createResult(requestData, transaction.getHashAsString());
+                    } else {
+                        result = new Intent();
+                        BitcoinIntegration.transactionHashToResult(result, sentTransaction.getHashAsString());
+                        if (paymentIntent.standard == Standard.BIP70)
+                            BitcoinIntegration.paymentToResult(result, payment.toByteArray());
+                    }
                     activity.setResult(Activity.RESULT_OK, result);
                 }
             }

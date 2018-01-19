@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui;
 
+import android.content.Intent;
 import android.net.Uri;
 
 import org.bitcoinj.core.Address;
@@ -35,11 +36,14 @@ public class WalletUri {
     public static final String FIELD_SENDER = "sender";
     public static final String FIELD_ADDRESS = "address";
     public static final String FIELD_CALLBACK = "callback";
+    public static final String FIELD_TXID = "txid";
     public static final String FIELD_REQUEST = "request";
     public static final String FIELD_ACCOUNT = "account";
 
     public static final String REQUEST_MASTER_PUBLIC_KEY = "masterPublicKey";
     public static final String REQUEST_ADDRESS = "address";
+
+    public static final String CALLBACK_PAYACK = "payack";
 
     public static final String SCHEME = Constants.WALLET_URI_SCHEME;
 
@@ -60,7 +64,12 @@ public class WalletUri {
                 throw new BitcoinURIParseException(String.format(missingParameterFormat, FIELD_AMOUNT));
             }
             String rawAddress = input.getQueryParameter(FIELD_PAY);
-            final Address address = Address.fromBase58(null, rawAddress);
+            Address address;
+            try {
+                address = Address.fromBase58(null, rawAddress);
+            } catch (Exception e) {
+                throw new BitcoinURIParseException(e.getMessage());
+            }
             if (!Constants.NETWORK_PARAMETERS.equals(address.getParameters())) {
                 throw new BitcoinURIParseException("Mismatched network");
             }
@@ -144,5 +153,23 @@ public class WalletUri {
             bitcoinUri += "&" + BitcoinURI.FIELD_INSTANTSEND + "=1";
         }
         return new BitcoinURI(bitcoinUri);
+    }
+
+    public static Intent createResult(Uri inputUri, String hash) {
+        try {
+            WalletUri walletUri = WalletUri.parse(inputUri);
+            Intent resultIntent = new Intent();
+            Uri data = new Uri.Builder()
+                    .authority("")
+                    .scheme(walletUri.getSender())
+                    .appendQueryParameter(FIELD_CALLBACK, CALLBACK_PAYACK)
+                    .appendQueryParameter(FIELD_ADDRESS, walletUri.getPayAddress().toBase58())
+                    .appendQueryParameter(FIELD_TXID, hash)
+                    .build();
+            resultIntent.setData(data);
+            return resultIntent;
+        } catch (BitcoinURIParseException e) {
+            return null;
+        }
     }
 }
