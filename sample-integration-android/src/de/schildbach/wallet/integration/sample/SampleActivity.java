@@ -1,12 +1,12 @@
 /**
  * Copyright 2012-2015 the original author or authors.
- * <p>
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,6 +15,12 @@
  */
 
 package de.schildbach.wallet.integration.sample;
+
+import org.bitcoin.protocols.payments.Protos;
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.AddressFormatException;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.script.ScriptBuilder;
 
 import android.app.Activity;
 import android.content.ComponentName;
@@ -34,12 +40,6 @@ import android.widget.Toast;
 
 import com.google.protobuf.ByteString;
 
-import org.bitcoin.protocols.payments.Protos;
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.AddressFormatException;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.script.ScriptBuilder;
-
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 
 /**
@@ -48,8 +48,8 @@ import de.schildbach.wallet.integration.android.BitcoinIntegration;
 public class SampleActivity extends Activity {
     private static final long AMOUNT = 500000;
     private static final String[] DONATION_ADDRESSES_MAINNET = {
-            "18CK5k1gajRKKSC7yVSTXT9LUzbheh1XY4",
-            "1PZmMahjbfsTy6DsaRyfStzoWTPppWwDnZ"
+            "Xdeh9YTLNtci5zSL4DDayRSVTLf299n9jv",  //Hash Engineering donation DASH address
+            "Xdeh9YTLNtci5zSL4DDayRSVTLf299n9jv"
     };
     private static final String[] DONATION_ADDRESSES_TESTNET = {
             "yd8Q7MwTDe9yJdeMx1YSSYS4wdxQ2HDqTg",   // http://test.faucet.masternode.io/
