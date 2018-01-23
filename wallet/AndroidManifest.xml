@@ -86,6 +86,15 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <data android:scheme="dashwallet" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+            </intent-filter>
+
             <meta-data
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
@@ -101,7 +110,6 @@
                 <action android:name="android.intent.action.VIEW" />
 
                 <data android:scheme="dash" />
-                <data android:scheme="dashwallet" />
                 <data android:scheme="darkcoin" />
 
                 <category android:name="android.intent.category.DEFAULT" />

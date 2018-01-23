@@ -301,13 +301,16 @@ public abstract class InputParser {
                     error(R.string.input_parser_invalid_bitcoin_uri, input);
                 }
             } else if (walletUri.isMasterPublicKeyRequest()) {
-                throw new RuntimeException("not yet implemented");
+                handleMasterPublicKeyRequest();
             } else if (walletUri.isAddressRequest()) {
-                throw new RuntimeException("not yet implemented");
+                handleAddressRequest();
             } else {
                 cannotClassify(input.toString());
             }
         }
+
+        protected abstract void handleMasterPublicKeyRequest();
+        protected abstract void handleAddressRequest();
 
         @Override
         protected void handleDirectTransaction(final Transaction transaction) throws VerificationException {

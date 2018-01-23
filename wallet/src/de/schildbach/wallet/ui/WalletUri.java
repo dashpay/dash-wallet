@@ -34,9 +34,12 @@ public class WalletUri {
     public static final String FIELD_INSTANT_SEND = "IS";
     public static final String FIELD_FORCE_INSTANT_SEND = "req-IS";
     public static final String FIELD_SENDER = "sender";
+    public static final String FIELD_SOURCE = "source";
     public static final String FIELD_ADDRESS = "address";
     public static final String FIELD_CALLBACK = "callback";
     public static final String FIELD_TXID = "txid";
+    public static final String FIELD_MASTER_PUBLIC_KEY_BIP32 = "masterPublicKeyBIP32";
+    public static final String FIELD_MASTER_PUBLIC_KEY_BIP44 = "masterPublicKeyBIP44";
     public static final String FIELD_REQUEST = "request";
     public static final String FIELD_ACCOUNT = "account";
 
@@ -155,7 +158,7 @@ public class WalletUri {
         return new BitcoinURI(bitcoinUri);
     }
 
-    public static Intent createResult(Uri inputUri, String hash) {
+    public static Intent createPaymentResult(Uri inputUri, String hash) {
         try {
             WalletUri walletUri = WalletUri.parse(inputUri);
             Intent resultIntent = new Intent();
@@ -165,6 +168,44 @@ public class WalletUri {
                     .appendQueryParameter(FIELD_CALLBACK, CALLBACK_PAYACK)
                     .appendQueryParameter(FIELD_ADDRESS, walletUri.getPayAddress().toBase58())
                     .appendQueryParameter(FIELD_TXID, hash)
+                    .build();
+            resultIntent.setData(data);
+            return resultIntent;
+        } catch (BitcoinURIParseException e) {
+            return null;
+        }
+    }
+
+    public static Intent createMasterPublicKeyResult(Uri inputUri, String masterPublicKeyBip32,
+                                                     String masterPublicKeyBip44, String source) {
+        try {
+            WalletUri walletUri = WalletUri.parse(inputUri);
+            Intent resultIntent = new Intent();
+            Uri data = new Uri.Builder()
+                    .authority("")
+                    .scheme(walletUri.getSender())
+                    .appendQueryParameter(FIELD_CALLBACK, REQUEST_MASTER_PUBLIC_KEY)
+                    .appendQueryParameter(FIELD_MASTER_PUBLIC_KEY_BIP32, masterPublicKeyBip32)
+                    .appendQueryParameter(FIELD_MASTER_PUBLIC_KEY_BIP44, masterPublicKeyBip44)
+                    .appendQueryParameter(FIELD_SOURCE, source)
+                    .build();
+            resultIntent.setData(data);
+            return resultIntent;
+        } catch (BitcoinURIParseException e) {
+            return null;
+        }
+    }
+
+    public static Intent createAddressResult(Uri inputUri, String address, String source) {
+        try {
+            WalletUri walletUri = WalletUri.parse(inputUri);
+            Intent resultIntent = new Intent();
+            Uri data = new Uri.Builder()
+                    .authority("")
+                    .scheme(walletUri.getSender())
+                    .appendQueryParameter(FIELD_CALLBACK, REQUEST_ADDRESS)
+                    .appendQueryParameter(FIELD_ADDRESS, address)
+                    .appendQueryParameter(FIELD_SOURCE, source)
                     .build();
             resultIntent.setData(data);
             return resultIntent;
