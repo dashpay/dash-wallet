@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
 	<string name="app_name">Dash Wallet [testnet]</string>
-	<string name="base_url">http://dev.geni.to:8001/</string>
+	<string name="base_url">http://woc.reference.genitrust.com/</string>
 	<string name="PUBLISHER_ID">47</string>
 	<string-array name="preferences_precision_values">
 		<item>8</item>
