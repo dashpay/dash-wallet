@@ -231,16 +231,6 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
             binding.spCountry.setAdapter(countryAdapter);
         }
 
-        // do something for a debug build
-//        if (BuildConfig.DEBUG) {
-//            binding.etPhone.setText("2154078737");
-////            binding.etEmail.setText("viral@viralsonawala.com");
-//            binding.etPassword.setText("1234qwer");
-//            binding.etMaxPayment.setText("1000");
-//            binding.etMinPayment.setText("10");
-//            binding.etSellerFee.setText("0");
-//        }
-
         if (null != sellDashPref.getAuthToken() && !TextUtils.isEmpty(sellDashPref.getAuthToken())) {
 
             callAdList();
@@ -329,7 +319,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
         if (!TextUtils.isEmpty(phone)) {
             binding.sellDashProgress.setVisibility(View.VISIBLE);
 
-            WallofCoins.createService(activity).checkAuth(phone, getString(R.string.PUBLISHER_ID)).enqueue(new Callback<CheckAuthResp>() {
+            WallofCoins.createService(activity).checkAuth(phone, getString(R.string.WALLOFCOINS_PUBLISHER_ID)).enqueue(new Callback<CheckAuthResp>() {
                 @Override
                 public void onResponse(Call<CheckAuthResp> call, Response<CheckAuthResp> response) {
                     binding.sellDashProgress.setVisibility(View.GONE);

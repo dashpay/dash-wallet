@@ -7,7 +7,7 @@
     <string name="app_name">Dash Wallet</string>
     <string name="app_name_short">Dash</string>
     <string name="base_url">https://wallofcoins.com/</string>
-    <string name="PUBLISHER_ID">47</string>
+    <string name="WALLOFCOINS_PUBLISHER_ID">47</string>
 
     <string-array name="preferences_precision_values">
         <item>8</item>
