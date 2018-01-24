@@ -143,7 +143,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private CurrencyCalculatorLink amountCalculatorLink;
     private BuyDashPref buyDashPref;
     private AddressAndLabel currentAddressQrAddress = null;
-    private String address;
+    private String keyAddress;
     private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>() {
         @Override
         public Loader<Cursor> onCreateLoader(final int id, final Bundle args) {
@@ -703,7 +703,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         Log.e(TAG, "onResponse: " + buyDashPref.getHoldId() + " here");
                         if (null != response && null != response.body() && !response.body().isEmpty()) {
                             if (response.body().get(0).account != null && !TextUtils.isEmpty(response.body().get(0).account)) {
-                                updateAddressBookValue(address,"WallofCoins.com - Order " + response.body().get(0).id);
+                                updateAddressBookValue(keyAddress,"WallofCoins.com - Order " + response.body().get(0).id);
 
                                 if (isJSONValid(response.body().get(0).account)) {
                                     ItemOrderListBinding itemBankBinding = DataBindingUtil.inflate(LayoutInflater.from(activity), R.layout.item_order_list, null, false);
@@ -1230,8 +1230,9 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         HashMap<String, String> discoveryInputsReq = new HashMap<String, String>();
 
         discoveryInputsReq.put("publisherId", getString(R.string.WALLOFCOINS_PUBLISHER_ID));
-        discoveryInputsReq.put("cryptoAddress", wallet.freshAddress(RECEIVE_FUNDS).toBase58());
-        address = wallet.freshAddress(RECEIVE_FUNDS).toBase58();
+        keyAddress = wallet.freshAddress(RECEIVE_FUNDS).toBase58();
+        discoveryInputsReq.put("cryptoAddress", keyAddress);
+
 
         try {
             if (Float.valueOf(binding.requestCoinsAmountLocal.getTextView().getHint().toString()) > 0f) {
@@ -1256,7 +1257,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
                 if (null != response && null != response.body()) {
                     if (null != response.body().id) {
-                        updateAddressBookValue(address,"WallofCoins.com");
+                        updateAddressBookValue(keyAddress,"WallofCoins.com");
 
                         WallofCoins.createService(null, getActivity()).getOffers(response.body().id, getString(R.string.WALLOFCOINS_PUBLISHER_ID)).enqueue(new Callback<GetOffersResp>() {
                             @Override
@@ -1811,19 +1812,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     e.printStackTrace();
                 }
 
-//                you must deposit cash
-                double dots =    Double.parseDouble(orderListResp.total)* 100000;
-                DecimalFormat formatter = new DecimalFormat("#,###,###.##");
-                String yourFormattedDots = formatter.format(dots);
-                if(orderListResp.status.equals("WD")){
-                    holder.itemBinding.orderDash.setText("Total Dash: " + orderListResp.total + " (" + yourFormattedDots + " dots)\n"
-                            + "You must deposit cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
-                    holder.itemBinding.orderDashInstruction.setVisibility(View.VISIBLE);
-                }else{
-                    holder.itemBinding.orderDash.setText("Total Dash: " + orderListResp.total + " (" + yourFormattedDots +" dots)");
-                    holder.itemBinding.textPaymentDueDate.setVisibility(View.GONE);
-                    holder.itemBinding.orderDashInstruction.setVisibility(View.GONE);
-                }
 
                 holder.itemBinding.btnDepositFinished.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -1904,9 +1892,24 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     }
                 });
 
+
+//                you must deposit cash
+                double dots =    Double.parseDouble(orderListResp.total)* 1000000;
+                DecimalFormat formatter = new DecimalFormat("#,###,###.##");
+                String yourFormattedDots = formatter.format(dots);
+
+                if(orderListResp.status.equals("WD")){
+                }else{
+                     }
+
+
+
                 if (orderListResp.status.equals("WD")) {
-                    holder.itemBinding.btnCancelOrder.setVisibility(View.GONE);
-                    holder.itemBinding.btnDepositFinished.setVisibility(View.GONE);
+                    holder.itemBinding.orderDash.setText("Total Dash: " + orderListResp.total + " (" + yourFormattedDots + " dots)\n"
+                            + "You must deposit cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
+                    holder.itemBinding.orderDashInstruction.setVisibility(View.VISIBLE);
+                    holder.itemBinding.btnCancelOrder.setVisibility(View.VISIBLE);
+                    holder.itemBinding.btnDepositFinished.setVisibility(View.VISIBLE);
                     holder.itemBinding.textAccountNo.setVisibility(View.GONE);
                     countDownStart(orderListResp.paymentDue, holder.itemBinding.textPaymentDueDate);
                     holder.itemBinding.textContactInstruction.setOnClickListener(new View.OnClickListener() {
@@ -1919,8 +1922,11 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         }
                     });
                 } else {
-                    holder.itemBinding.textAccountNo.setVisibility(View.GONE);
+                    holder.itemBinding.orderDash.setText("Total Dash: " + orderListResp.total + " (" + yourFormattedDots +" dots)");
+
                     holder.itemBinding.textPaymentDueDate.setVisibility(View.GONE);
+                    holder.itemBinding.orderDashInstruction.setVisibility(View.GONE);
+                    holder.itemBinding.textAccountNo.setVisibility(View.GONE);
                     holder.itemBinding.btnCancelOrder.setVisibility(View.GONE);
                     holder.itemBinding.btnDepositFinished.setVisibility(View.GONE);
                     holder.itemBinding.textContactInstruction.setVisibility(View.GONE);
