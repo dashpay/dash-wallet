@@ -251,6 +251,8 @@ public class SampleActivity extends Activity {
                 message = "Error: result data is empty";
             }
             Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+        } else {
+            Toast.makeText(this, "Operation canceled", Toast.LENGTH_LONG).show();
         }
     }
 }

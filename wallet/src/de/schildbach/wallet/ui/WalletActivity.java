@@ -24,15 +24,18 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.crypto.MnemonicCode;
+import org.bitcoinj.crypto.MnemonicException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 
@@ -43,7 +46,6 @@ import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.preference.PreferenceActivity;
@@ -52,6 +54,7 @@ import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.Io;
+import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -65,7 +68,6 @@ import android.content.DialogInterface.OnCancelListener;
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -121,7 +123,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private static final int REQUEST_CODE_SCAN = 0;
     private static final int REQUEST_CODE_BACKUP_WALLET = 1;
     private static final int REQUEST_CODE_RESTORE_WALLET = 2;
-    private static final int REQUEST_CODE_SEND_FROM_WALLET_URI = 3;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -238,8 +239,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void handleIntent(final Intent intent) {
         final String action = intent.getAction();
-        final Uri intentUri = intent.getData();
-        final String scheme = intentUri != null ? intentUri.getScheme() : null;
 
         if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)) {
             final String inputType = intent.getType();
@@ -256,53 +255,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 @Override
                 protected void error(final int messageResId, final Object... messageArgs) {
                     dialog(WalletActivity.this, null, 0, messageResId, messageArgs);
-                }
-            }.parse();
-        } else if (Intent.ACTION_VIEW.equals(action) && Constants.WALLET_URI_SCHEME.equals(scheme)) {
-
-            new InputParser.WalletUriParser(intentUri) {
-                @Override
-                protected void handlePaymentIntent(final PaymentIntent paymentIntent, boolean forceInstantSend) {
-                    SendCoinsActivity.sendFromWalletUri(
-                            WalletActivity.this, REQUEST_CODE_SEND_FROM_WALLET_URI, paymentIntent, forceInstantSend);
-                }
-
-                @Override
-                protected void handleMasterPublicKeyRequest() {
-                    if (wallet != null) {
-                        String watchingKey = wallet.getWatchingKey().serializePubB58(wallet.getNetworkParameters());
-                        Uri requestData = getIntent().getData();
-                        Intent result = WalletUri.createMasterPublicKeyResult(requestData, watchingKey, null, getAppName());
-                        setResult(RESULT_OK, result);
-                    } else {
-                        setResult(RESULT_CANCELED);
-                    }
-                    finish();
-                }
-
-                @Override
-                protected void handleAddressRequest() {
-                    if (wallet != null) {
-                        Address address = wallet.currentReceiveAddress();
-                        Uri requestData = getIntent().getData();
-
-                        Intent result = WalletUri.createAddressResult(requestData, address.toBase58(), getAppName());
-                        setResult(RESULT_OK, result);
-                    } else {
-                        setResult(RESULT_CANCELED);
-                    }
-                    finish();
-                }
-
-                @Override
-                protected void error(final int messageResId, final Object... messageArgs) {
-                    dialog(WalletActivity.this, null, 0, messageResId, messageArgs);
-                }
-
-                private String getAppName() {
-                    ApplicationInfo applicationInfo = getApplicationInfo();
-                    int stringId = applicationInfo.labelRes;
-                    return stringId == 0 ? applicationInfo.nonLocalizedLabel.toString() : getString(stringId);
                 }
             }.parse();
         }
@@ -350,15 +302,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     dialog(WalletActivity.this, null, R.string.button_scan, messageResId, messageArgs);
                 }
             }.parse();
-        } else if (requestCode == REQUEST_CODE_SEND_FROM_WALLET_URI) {
-            Intent result = null;
-            if (resultCode == Activity.RESULT_OK) {
-                Uri requestData = getIntent().getData();
-                String transactionHash = BitcoinIntegration.transactionHashFromResult(intent);
-                result = WalletUri.createPaymentResult(requestData, transactionHash);
-            }
-            setResult(resultCode, result);
-            finish();
         }
     }
 
