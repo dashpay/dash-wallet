@@ -208,6 +208,8 @@ public final class SendCoinsFragment extends Fragment {
     private Transaction dryrunTransaction;
     private Exception dryrunException;
 
+    private boolean forceInstantSend = false;
+
     private static final int ID_DYNAMIC_FEES_LOADER = 0;
     private static final int ID_RATE_LOADER = 1;
     private static final int ID_BLOCKCHAIN_STATE_LOADER = 2;
@@ -702,7 +704,11 @@ public final class SendCoinsFragment extends Fragment {
         });
 
         instantXenable = (CheckBox) view.findViewById(R.id.send_coins_instantx_enable);
-        instantXenable.setVisibility(config.getInstantXEnabled() == true && wallet.getContext().sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED) ? View.VISIBLE : View.INVISIBLE);
+        instantXenable.setVisibility(config.getInstantXEnabled() && wallet.getContext().sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED) ? View.VISIBLE : View.INVISIBLE);
+        if (forceInstantSend) {
+            instantXenable.setChecked(true);
+            instantXenable.setEnabled(false);
+        }
         instantXenable.setOnCheckedChangeListener(new OnCheckedChangeListener()
         {
             @Override
@@ -1466,6 +1472,7 @@ public final class SendCoinsFragment extends Fragment {
         final PaymentIntent paymentIntent = extras.getParcelable(SendCoinsActivity.INTENT_EXTRA_PAYMENT_INTENT);
         final FeeCategory feeCategory = (FeeCategory) extras
                 .getSerializable(SendCoinsActivity.INTENT_EXTRA_FEE_CATEGORY);
+        forceInstantSend = extras.getBoolean(SendCoinsActivity.INTENT_EXTRA_FORCE_INSTANT_SEND, false);
 
         if (feeCategory != null) {
             log.info("got fee category {}", feeCategory);
