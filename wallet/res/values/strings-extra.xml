@@ -68,5 +68,12 @@
 	<string name="password_authenticate_dialog_set_title">Input your Wall of Coins password below:</string>
 	<string name="password_authenticate_dialog_info_message">(For security, your password will not be saved.)</string>
 	<string name="password_alert">Please enter password in password filed</string>
+	<string name="x_coins_api">X-Coins-Api-Token</string>
+	<string name="reject_execution">rejected execution</string>
+	<string name="publisher_id">publisher-id</string>
+	<string name="location_denied">Location permission denied,</string>
+	<string name="enable_location">You can enable it from Settings</string>
+	<string name="onresponce">onResponse:</string>
+	<string name="alert_thanks_for_payment">Thank you for making the payment! Once we verify your payment, we will send the Dash to your wallet!</string>
 
 </resources>

@@ -324,15 +324,12 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         @Override
         public okhttp3.Response intercept(Chain chain) throws IOException {
             Request original = chain.request();
-
             // Request customization: add request headers
             Request.Builder requestBuilder = original.newBuilder();
             if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
                 requestBuilder.addHeader("X-Coins-Api-Token", buyDashPref.getAuthToken());
             }
-
             requestBuilder.addHeader("publisher-id", getString(R.string.WALLOFCOINS_PUBLISHER_ID));
-
             Request request = requestBuilder.build();
             return chain.proceed(request);
         }
@@ -709,6 +706,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                     ItemOrderListBinding itemBankBinding = DataBindingUtil.inflate(LayoutInflater.from(activity), R.layout.item_order_list, null, false);
 
                                     itemBankBinding.layLogout.setVisibility(View.GONE);
+                                    itemBankBinding.layHelpInstruction.setVisibility(View.GONE);
                                     itemBankBinding.layoutCompletionDetail.setVisibility(View.VISIBLE);
 
                                     Glide.with(activity).load(response.body().get(0).bankLogo).into(itemBankBinding.imageBank);
@@ -1017,6 +1015,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                             countdownInterval = 1000;
                         }
                     } else {
+
                         textDepositeDue.setText("Deposit Due: 0 minutes 0 seconds");
                         handler.removeMessages(0);
                     }
@@ -1081,7 +1080,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         AlertDialog alert = builder.create();
         alert.show();
     }
-
 
     public boolean isJSONValid(String test) {
         try {
@@ -1679,8 +1677,15 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
             if (lastWDV != -1) {
                 OrderListResp orderListResp = new OrderListResp();
-                orderListResp.id = -1;
-                orderList.add(lastWDV + 1, orderListResp);
+                orderListResp.id = -2;
+                orderList.add(lastWDV+ 1, orderListResp);
+
+                OrderListResp orderListResp1 = new OrderListResp();
+                orderListResp1.id = -1;
+
+                orderList.add(lastWDV + 2, orderListResp1);
+
+
                 binding.textEmailReceipt.setVisibility(View.VISIBLE);
                 binding.textEmailReceipt.setText(Html.fromHtml(getString(R.string.text_send_email_receipt)));
                 final int finalLastWDV = lastWDV;
@@ -1787,10 +1792,10 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         @Override
         public void onBindViewHolder(OrderListAdapter.VHolder holder, int position) {
             final OrderListResp orderListResp = orderList.get(position);
-            if (orderListResp.id != -1) {
+            if (orderListResp.id != -1 & orderListResp.id != -2) {
                 holder.itemBinding.layLogout.setVisibility(View.GONE);
+                holder.itemBinding.layHelpInstruction.setVisibility(View.GONE);
                 holder.itemBinding.layoutCompletionDetail.setVisibility(View.VISIBLE);
-
                 holder.itemBinding.setItem(orderListResp);
 
                 Type listType = new TypeToken<ArrayList<AccountJson>>() {
@@ -1799,14 +1804,19 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 holder.itemBinding.linearAccountDetail.removeAllViews();
                 try {
                     ArrayList<AccountJson> accountList = new Gson().fromJson(orderListResp.account, listType);
-                    for (int i = 0; i < accountList.size(); i++) {
-                        TextView textView = new TextView(getActivity());
-                        textView.setTextSize(16);
-                        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-                        layoutParams.topMargin = 0;
-                        textView.setLayoutParams(layoutParams);
-                        textView.setText(accountList.get(i).getLabel() + ": " + accountList.get(i).getValue());
-                        holder.itemBinding.linearAccountDetail.addView(textView);
+
+                    if(accountList!=null) {
+                        for (int i = 0; i < accountList.size(); i++) {
+                            TextView textView = new TextView(getActivity());
+                            textView.setTextSize(16);
+                            LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+                            layoutParams.topMargin = 0;
+                            textView.setLayoutParams(layoutParams);
+                            textView.setText(accountList.get(i).getLabel() + ": " + accountList.get(i).getValue());
+                            holder.itemBinding.linearAccountDetail.addView(textView);
+                        }
+                    }else{
+                        holder.itemBinding.linearAccountDetail.setVisibility(View.GONE);
                     }
                 } catch (JsonSyntaxException e) {
                     e.printStackTrace();
@@ -1817,7 +1827,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     @Override
                     public void onClick(View v) {
                         hideKeyBoard();
-
                         AlertDialog.Builder builder;
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                             builder = new AlertDialog.Builder(activity, android.R.style.Theme_Material_Dialog_Alert);
@@ -1892,17 +1901,10 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     }
                 });
 
-
-//                you must deposit cash
+//              you must deposit cash
                 double dots =    Double.parseDouble(orderListResp.total)* 1000000;
                 DecimalFormat formatter = new DecimalFormat("#,###,###.##");
                 String yourFormattedDots = formatter.format(dots);
-
-                if(orderListResp.status.equals("WD")){
-                }else{
-                     }
-
-
 
                 if (orderListResp.status.equals("WD")) {
                     holder.itemBinding.orderDash.setText("Total Dash: " + orderListResp.total + " (" + yourFormattedDots + " dots)\n"
@@ -1910,27 +1912,46 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     holder.itemBinding.orderDashInstruction.setVisibility(View.VISIBLE);
                     holder.itemBinding.btnCancelOrder.setVisibility(View.VISIBLE);
                     holder.itemBinding.btnDepositFinished.setVisibility(View.VISIBLE);
-                    holder.itemBinding.textAccountNo.setVisibility(View.GONE);
+                    holder.itemBinding.layoutDueDate.setVisibility(View.VISIBLE);
+
+                    holder.itemBinding.textPaymentDueDate.setVisibility(View.VISIBLE);
                     countDownStart(orderListResp.paymentDue, holder.itemBinding.textPaymentDueDate);
                     holder.itemBinding.textContactInstruction.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-                            String url = "https://wallofcoins.com";
-                            Intent i = new Intent(Intent.ACTION_VIEW);
-                            i.setData(Uri.parse(url));
-                            startActivity(i);
+                            goToUrl("https://wallofcoins.com");
                         }
                     });
                 } else {
                     holder.itemBinding.orderDash.setText("Total Dash: " + orderListResp.total + " (" + yourFormattedDots +" dots)");
-
+                    holder.itemBinding.layoutDueDate.setVisibility(View.GONE);
                     holder.itemBinding.textPaymentDueDate.setVisibility(View.GONE);
                     holder.itemBinding.orderDashInstruction.setVisibility(View.GONE);
-                    holder.itemBinding.textAccountNo.setVisibility(View.GONE);
                     holder.itemBinding.btnCancelOrder.setVisibility(View.GONE);
                     holder.itemBinding.btnDepositFinished.setVisibility(View.GONE);
                     holder.itemBinding.textContactInstruction.setVisibility(View.GONE);
                 }
+
+                if(orderListResp.status.equals("WD")){
+                    holder.itemBinding.textTransactionStatus.setText("Status: Waiting Deposit");
+                }else  if(orderListResp.status.equals("WDV")){
+                    holder.itemBinding.textTransactionStatus.setText("Status: Waiting Deposit Verification");
+                }else  if(orderListResp.status.equals("RERR")){
+                    holder.itemBinding.textTransactionStatus.setText("Status: Issue with Receipt");
+                }else  if(orderListResp.status.equals("DERR")){
+                    holder.itemBinding.textTransactionStatus.setText("Status: Issue with Deposit");
+                }else  if(orderListResp.status.equals("RSD")){
+                    holder.itemBinding.textTransactionStatus.setText("Status: Reserved for Deposit'");
+                }else  if(orderListResp.status.equals("RMIT")){
+                    holder.itemBinding.textTransactionStatus.setText("Status: Remit Address Missing");
+                }else  if(orderListResp.status.equals("UCRV")){
+                    holder.itemBinding.textTransactionStatus.setText("Status: Under Review");
+                }else  if(orderListResp.status.equals("PAYP")){
+                    holder.itemBinding.textTransactionStatus.setText("Status: Done - Pending Delivery");
+                }else  if(orderListResp.status.equals("SENT")){
+                    holder.itemBinding.textTransactionStatus.setText("Status: Waiting Done - Units Delivered");
+                }
+
 
                 Log.e(TAG, "onBindViewHolder: " + orderListResp.status);
                 if (orderListResp.status.equals("WDV")) {
@@ -1941,14 +1962,29 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     holder.itemBinding.textPhone.setVisibility(View.VISIBLE);
                 }
 
-            } else {
+            } else if (orderListResp.id == -1){
                 holder.itemBinding.layoutCompletionDetail.setVisibility(View.GONE);
+                holder.itemBinding.layHelpInstruction.setVisibility(View.GONE);
                 holder.itemBinding.layLogout.setVisibility(View.VISIBLE);
                 holder.itemBinding.textMessage.setText("Your wallet is signed into Wall of Coins using your mobile number " + buyDashPref.getPhone());
+
                 holder.itemBinding.btnSignout.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         deleteAuthCall(false);
+                    }
+                });
+
+
+            } else if (orderListResp.id == -2){
+                holder.itemBinding.layoutCompletionDetail.setVisibility(View.GONE);
+                holder.itemBinding.layHelpInstruction.setVisibility(View.VISIBLE);
+                holder.itemBinding.layLogout.setVisibility(View.GONE);
+                holder.itemBinding.textHelpMessage.setText(" Call (866) 841-2646 for help. \n Help is also available on the website.");
+                holder.itemBinding.btnWebLink.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        goToUrl("https://wallofcoins.com");
                     }
                 });
             }
