@@ -4,6 +4,8 @@ import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -34,8 +36,11 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.Editable;
 import android.text.Html;
 import android.text.TextUtils;
+import android.text.TextWatcher;
+import android.text.method.LinkMovementMethod;
 import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -44,6 +49,7 @@ import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -69,6 +75,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -80,6 +87,7 @@ import java.util.concurrent.RejectedExecutionException;
 
 import javax.annotation.Nullable;
 
+import de.schildbach.wallet.AddressBookProvider;
 import de.schildbach.wallet.BuyDashPref;
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
@@ -116,7 +124,6 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-import static android.content.Context.LOCATION_SERVICE;
 import static org.bitcoinj.wallet.KeyChain.KeyPurpose.RECEIVE_FUNDS;
 
 
@@ -136,7 +143,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private CurrencyCalculatorLink amountCalculatorLink;
     private BuyDashPref buyDashPref;
     private AddressAndLabel currentAddressQrAddress = null;
-
+    private String keyAddress;
     private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>() {
         @Override
         public Loader<Cursor> onCreateLoader(final int id, final Bundle args) {
@@ -148,7 +155,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             if (data != null && data.getCount() > 0) {
                 data.moveToFirst();
                 final ExchangeRatesProvider.ExchangeRate exchangeRate = ExchangeRatesProvider.getExchangeRate(data);
-
                 amountCalculatorLink.setExchangeRate(exchangeRate.rate);
                 updateView();
             }
@@ -318,15 +324,12 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         @Override
         public okhttp3.Response intercept(Chain chain) throws IOException {
             Request original = chain.request();
-
             // Request customization: add request headers
             Request.Builder requestBuilder = original.newBuilder();
             if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
                 requestBuilder.addHeader("X-Coins-Api-Token", buyDashPref.getAuthToken());
             }
-
-            requestBuilder.addHeader("publisher-id", getString(R.string.PUBLISHER_ID));
-
+            requestBuilder.addHeader("publisher-id", getString(R.string.WALLOFCOINS_PUBLISHER_ID));
             Request request = requestBuilder.build();
             return chain.proceed(request);
         }
@@ -389,27 +392,45 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         }
     }
 
-    LocationManager mLocationManager;
+   // LocationManager mLocationManager;
 
     private Location getLastKnownLocation() {
+        boolean gps_enabled = false;
+        boolean network_enabled = false;
 
-        mLocationManager = (LocationManager) activity.getSystemService(LOCATION_SERVICE);
-        List<String> providers = new ArrayList<>();
-        if (mLocationManager != null) {
-            providers = mLocationManager.getProviders(true);
-        }
-        Location bestLocation = null;
-        for (String provider : providers) {
-            Location l = mLocationManager.getLastKnownLocation(provider);
-            if (l == null) {
-                continue;
+        LocationManager lm = (LocationManager) activity
+                .getSystemService(Context.LOCATION_SERVICE);
+
+        gps_enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        network_enabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+
+        Location net_loc = null, gps_loc = null, finalLoc = null;
+
+        if (gps_enabled)
+            gps_loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        if (network_enabled)
+            net_loc = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+
+        if (gps_loc != null && net_loc != null) {
+
+            //smaller the number more accurate result will
+            if (gps_loc.getAccuracy() > net_loc.getAccuracy())
+                finalLoc = net_loc;
+            else
+                finalLoc = gps_loc;
+
+            // I used this just to get an idea (if both avail, its upto you which you want to take
+            // as I've taken location with more accuracy)
+
+        } else {
+
+            if (gps_loc != null) {
+                finalLoc = gps_loc;
+            } else if (net_loc != null) {
+                finalLoc = net_loc;
             }
-            if (bestLocation == null || l.getAccuracy() < bestLocation.getAccuracy()) {
-                // Found best last known location: %s", l);
-                bestLocation = l;
-            }
         }
-        return bestLocation;
+        return finalLoc;
     }
 
     private void requestLocation() {
@@ -428,7 +449,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         locale = getResources().getConfiguration().locale.getCountry();
         binding.linearProgress.setVisibility(View.VISIBLE);
 
-        WallofCoins.createService(interceptor, getActivity()).getReceivingOptions(locale.toLowerCase(), getString(R.string.PUBLISHER_ID)).enqueue(new Callback<List<GetReceivingOptionsResp>>() {
+        WallofCoins.createService(interceptor, getActivity()).getReceivingOptions(locale.toLowerCase(), getString(R.string.WALLOFCOINS_PUBLISHER_ID)).enqueue(new Callback<List<GetReceivingOptionsResp>>() {
             @Override
             public void onResponse(Call<List<GetReceivingOptionsResp>> call, Response<List<GetReceivingOptionsResp>> response) {
                 Log.e(TAG, "onResponse: " + response.body().size());
@@ -557,6 +578,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 buyDashPref.setPhone(phone);
                 hideKeyBoard();
                 checkAuth();
+
             }
         });
 
@@ -632,171 +654,89 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         binding.buttonVerifyOtp.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                hideKeyBoard();
-                HashMap<String, String> captureHoldReq = new HashMap<String, String>();
-                String otp = binding.etOtp.getText().toString().trim();
-                if (TextUtils.isEmpty(otp)) {
-                    Toast.makeText(getContext(), "Please Enter Purchase Code!", Toast.LENGTH_LONG).show();
-                    return;
-                }
+                verifyOTP();
+            }
+        });
+        binding.etOtp.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
 
-                captureHoldReq.put("publisherID", getString(R.string.PUBLISHER_ID));
-                captureHoldReq.put("verificationCode", otp);
-                binding.linearProgress.setVisibility(View.VISIBLE);
-                WallofCoins.createService(interceptor, getActivity()).captureHold(buyDashPref.getHoldId(), captureHoldReq)
-                        .enqueue(new Callback<List<CaptureHoldResp>>() {
-                            @Override
-                            public void onResponse(Call<List<CaptureHoldResp>> call, final Response<List<CaptureHoldResp>> response) {
-                                binding.linearProgress.setVisibility(View.GONE);
-                                buyDashPref.setHoldId("");
-                                buyDashPref.setCreateHoldResp(null);
-                                Log.e(TAG, "onResponse: " + buyDashPref.getHoldId() + " here");
-                                if (null != response && null != response.body() && !response.body().isEmpty()) {
-                                    if (response.body().get(0).account != null && !TextUtils.isEmpty(response.body().get(0).account)) {
-                                        if (isJSONValid(response.body().get(0).account)) {
-                                            ItemOrderListBinding itemBankBinding = DataBindingUtil.inflate(LayoutInflater.from(activity), R.layout.item_order_list, null, false);
+            }
 
-                                            itemBankBinding.layLogout.setVisibility(View.GONE);
-                                            itemBankBinding.layoutCompletionDetail.setVisibility(View.VISIBLE);
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
 
-                                            Glide.with(activity).load(response.body().get(0).bankLogo).into(itemBankBinding.imageBank);
-                                            if (!TextUtils.isEmpty(response.body().get(0).bankName)) {
-                                                itemBankBinding.textBankName.setText(response.body().get(0).bankName);
-                                            } else {
-                                                itemBankBinding.textBankName.setVisibility(View.GONE);
-                                            }
-                                            if (!TextUtils.isEmpty(response.body().get(0).nearestBranch.phone)) {
-                                                itemBankBinding.textPhone.setText("Phone: " + response.body().get(0).nearestBranch.phone);
-                                            } else {
-                                                itemBankBinding.textPhone.setVisibility(View.GONE);
-                                            }
+            }
 
-                                            if (!TextUtils.isEmpty(response.body().get(0).nameOnAccount)) {
-                                                itemBankBinding.textNameAccount.setText("Name on Account: " + response.body().get(0).nameOnAccount);
-                                            } else {
-                                                itemBankBinding.textNameAccount.setVisibility(View.GONE);
-                                            }
+            @Override
+            public void afterTextChanged(Editable s) {
+                if(s.length() ==5)
+                    verifyOTP();
+            }
+        });
 
-                                            if (!TextUtils.isEmpty(response.body().get(0).payment)) {
-                                                itemBankBinding.textCashToDeposite.setText(getString(R.string.cash_to_deposit, Float.valueOf(response.body().get(0).payment)));
-                                            } else {
-                                                itemBankBinding.textCashToDeposite.setVisibility(View.GONE);
-                                            }
+        return binding.getRoot();
+    }
 
-                                            itemBankBinding.orderDash.setText("You are ordering: " + response.body().get(0).total + " Dash.\n"
-                                                    + "You must deposit cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
+    private void verifyOTP(){
+        hideKeyBoard();
+        HashMap<String, String> captureHoldReq = new HashMap<String, String>();
+        String otp = binding.etOtp.getText().toString().trim();
+        if (TextUtils.isEmpty(otp)) {
+            Toast.makeText(getContext(), "Please Enter Purchase Code!", Toast.LENGTH_LONG).show();
+            return;
+        }
 
-                                            itemBankBinding.textContactInstruction.setOnClickListener(new View.OnClickListener() {
-                                                @Override
-                                                public void onClick(View v) {
-                                                    String url = "https://wallofcoins.com/";
-                                                    Intent i = new Intent(Intent.ACTION_VIEW);
-                                                    i.setData(Uri.parse(url));
-                                                    startActivity(i);
-                                                }
-                                            });
+        captureHoldReq.put("publisherId", getString(R.string.WALLOFCOINS_PUBLISHER_ID));
+        captureHoldReq.put("verificationCode", otp);
+        binding.linearProgress.setVisibility(View.VISIBLE);
+        WallofCoins.createService(interceptor, getActivity()).captureHold(buyDashPref.getHoldId(), captureHoldReq)
+                .enqueue(new Callback<List<CaptureHoldResp>>() {
+                    @Override
+                    public void onResponse(Call<List<CaptureHoldResp>> call, final Response<List<CaptureHoldResp>> response) {
+                        binding.linearProgress.setVisibility(View.GONE);
+                        buyDashPref.setHoldId("");
+                        buyDashPref.setCreateHoldResp(null);
+                        Log.e(TAG, "onResponse: " + buyDashPref.getHoldId() + " here");
+                        if (null != response && null != response.body() && !response.body().isEmpty()) {
+                            if (response.body().get(0).account != null && !TextUtils.isEmpty(response.body().get(0).account)) {
+                                updateAddressBookValue(keyAddress,"WallofCoins.com - Order " + response.body().get(0).id);
 
-                                            countDownStart(response.body().get(0).paymentDue, itemBankBinding.textPaymentDueDate);
+                                if (isJSONValid(response.body().get(0).account)) {
+                                    ItemOrderListBinding itemBankBinding = DataBindingUtil.inflate(LayoutInflater.from(activity), R.layout.item_order_list, null, false);
 
-//                                            if (response.body().get(0).paymentDue != null && !TextUtils.isEmpty(response.body().get(0).paymentDue)) {
-//                                                itemBankBinding.textDepositeDue.setText("Deposit Due: " + response.body().get(0).paymentDue.substring(0, 16).replace("T", " "));
-//                                            } else {
-//                                                itemBankBinding.textDepositeDue.setVisibility(View.GONE);
-//                                            }
-                                            Type listType = new TypeToken<ArrayList<AccountJson>>() {
-                                            }.getType();
-                                            ArrayList<AccountJson> accountList = new Gson().fromJson(response.body().get(0).account, listType);
-                                            for (int i = 0; i < accountList.size(); i++) {
-                                                TextView textView = new TextView(getActivity());
-                                                textView.setTextSize(16);
-                                                LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-                                                layoutParams.topMargin = 8;
-                                                textView.setLayoutParams(layoutParams);
-                                                textView.setText(accountList.get(i).getLabel() + ": " + accountList.get(i).getValue());
-                                                if (response.body().get(0).status.equals("WD") && !accountList.get(i).getLabel().contains("Name on Account"))
-                                                    itemBankBinding.linearAccountDetail.addView(textView);
-                                            }
-                                            binding.layoutCompletionDetail.removeAllViews();
-                                            binding.layoutCompletionDetail.addView(itemBankBinding.getRoot());
+                                    itemBankBinding.layLogout.setVisibility(View.GONE);
+                                    itemBankBinding.layHelpInstruction.setVisibility(View.GONE);
+                                    itemBankBinding.layoutCompletionDetail.setVisibility(View.VISIBLE);
 
-                                            if (response.body().get(0).status.equals("WD")) {
-                                                itemBankBinding.btnCancelOrder.setVisibility(View.VISIBLE);
-                                                itemBankBinding.btnDepositFinished.setVisibility(View.VISIBLE);
-                                                itemBankBinding.textAccountNo.setVisibility(View.VISIBLE);
-                                            } else {
-                                                itemBankBinding.btnCancelOrder.setVisibility(View.GONE);
-                                                itemBankBinding.btnDepositFinished.setVisibility(View.GONE);
-                                                itemBankBinding.textAccountNo.setVisibility(View.GONE);
-                                            }
-
-                                            itemBankBinding.btnDepositFinished.setOnClickListener(new View.OnClickListener() {
-                                                @Override
-                                                public void onClick(View v) {
-                                                    hideKeyBoard();
-                                                    AlertDialog.Builder builder;
-                                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                                        builder = new AlertDialog.Builder(activity, android.R.style.Theme_Material_Dialog_Alert);
-                                                    } else {
-                                                        builder = new AlertDialog.Builder(activity);
-                                                    }
-                                                    builder.setTitle(getString(R.string.deposit_finish_confirmation_title))
-                                                            .setMessage(getString(R.string.deposit_finish_confirmation_message))
-                                                            .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-                                                                public void onClick(DialogInterface dialog, int which) {
-                                                                    confirmDeposit(response.body().get(0));
-                                                                }
-                                                            })
-                                                            .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
-                                                                @Override
-                                                                public void onClick(DialogInterface dialog, int which) {
-                                                                    dialog.dismiss();
-                                                                }
-                                                            })
-                                                            .show();
-                                                }
-                                            });
-
-                                            itemBankBinding.btnCancelOrder.setOnClickListener(new View.OnClickListener() {
-                                                @Override
-                                                public void onClick(View v) {
-                                                    hideKeyBoard();
-                                                    // call cancel order
-                                                    AlertDialog.Builder builder;
-                                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                                        builder = new AlertDialog.Builder(activity, android.R.style.Theme_Material_Dialog_Alert);
-                                                    } else {
-                                                        builder = new AlertDialog.Builder(activity);
-                                                    }
-                                                    builder.setTitle(getString(R.string.deposit_cancel_confirmation_title))
-                                                            .setMessage(getString(R.string.deposit_cancel_confirmation_message))
-                                                            .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-                                                                @Override
-                                                                public void onClick(DialogInterface dialog, int which) {
-                                                                    cancelOrder("" + response.body().get(0).id);
-                                                                }
-                                                            })
-                                                            .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
-                                                                @Override
-                                                                public void onClick(DialogInterface dialog, int which) {
-                                                                    dialog.dismiss();
-                                                                }
-                                                            })
-                                                            .show();
-                                                }
-                                            });
-                                        } else {
-                                            binding.setConfiremedData(response.body().get(0));
-                                        }
+                                    Glide.with(activity).load(response.body().get(0).bankLogo).into(itemBankBinding.imageBank);
+                                    if (!TextUtils.isEmpty(response.body().get(0).bankName)) {
+                                        itemBankBinding.textBankName.setText(response.body().get(0).bankName);
                                     } else {
-                                        binding.setConfiremedData(response.body().get(0));
+                                        itemBankBinding.textBankName.setVisibility(View.GONE);
+                                    }
+                                    if (!TextUtils.isEmpty(response.body().get(0).nearestBranch.phone)) {
+                                        itemBankBinding.textPhone.setText("Phone: " + response.body().get(0).nearestBranch.phone);
+                                    } else {
+                                        itemBankBinding.textPhone.setVisibility(View.GONE);
                                     }
 
-                                    hideViewExcept(binding.scrollCompletionDetail);
+                                    if (!TextUtils.isEmpty(response.body().get(0).nameOnAccount)) {
+                                        itemBankBinding.textNameAccount.setText("Name on Account: " + response.body().get(0).nameOnAccount);
+                                    } else {
+                                        itemBankBinding.textNameAccount.setVisibility(View.GONE);
+                                    }
 
-                                    binding.orderDash.setText("You are ordering: " + response.body().get(0).total + " Dash.\n"
+                                    if (!TextUtils.isEmpty(response.body().get(0).payment)) {
+                                        itemBankBinding.textCashToDeposite.setText(getString(R.string.cash_to_deposit, Float.valueOf(response.body().get(0).payment)));
+                                    } else {
+                                        itemBankBinding.textCashToDeposite.setVisibility(View.GONE);
+                                    }
+
+                                    itemBankBinding.orderDash.setText("You are ordering: " + response.body().get(0).total + " Dash.\n"
                                             + "You must deposit cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
 
-                                    binding.textContactInstruction.setOnClickListener(new View.OnClickListener() {
+                                    itemBankBinding.textContactInstruction.setOnClickListener(new View.OnClickListener() {
                                         @Override
                                         public void onClick(View v) {
                                             String url = "https://wallofcoins.com/";
@@ -806,26 +746,43 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                         }
                                     });
 
-                                    countDownStart(response.body().get(0).paymentDue, binding.textPaymentDueDate);
+                                    countDownStart(response.body().get(0).paymentDue, itemBankBinding.textPaymentDueDate);
 
-                                    binding.textNearByCenter.setOnClickListener(new View.OnClickListener() {
+//                                            if (response.body().get(0).paymentDue != null && !TextUtils.isEmpty(response.body().get(0).paymentDue)) {
+//                                                itemBankBinding.textDepositeDue.setText("Deposit Due: " + response.body().get(0).paymentDue.substring(0, 16).replace("T", " "));
+//                                            } else {
+//                                                itemBankBinding.textDepositeDue.setVisibility(View.GONE);
+//                                            }
+                                    Type listType = new TypeToken<ArrayList<AccountJson>>() {
+                                    }.getType();
+                                    ArrayList<AccountJson> accountList = new Gson().fromJson(response.body().get(0).account, listType);
+                                    for (int i = 0; i < accountList.size(); i++) {
+                                        TextView textView = new TextView(getActivity());
+                                        textView.setTextSize(16);
+                                        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+                                        layoutParams.topMargin = 8;
+                                        textView.setLayoutParams(layoutParams);
+                                        textView.setText(accountList.get(i).getLabel() + ": " + accountList.get(i).getValue());
+                                        if (response.body().get(0).status.equals("WD") && !accountList.get(i).getLabel().contains("Name on Account"))
+                                            itemBankBinding.linearAccountDetail.addView(textView);
+                                    }
+                                    binding.layoutCompletionDetail.removeAllViews();
+                                    binding.layoutCompletionDetail.addView(itemBankBinding.getRoot());
+
+                                    if (response.body().get(0).status.equals("WD")) {
+                                        itemBankBinding.btnCancelOrder.setVisibility(View.VISIBLE);
+                                        itemBankBinding.btnDepositFinished.setVisibility(View.VISIBLE);
+                                        itemBankBinding.textAccountNo.setVisibility(View.VISIBLE);
+                                    } else {
+                                        itemBankBinding.btnCancelOrder.setVisibility(View.GONE);
+                                        itemBankBinding.btnDepositFinished.setVisibility(View.GONE);
+                                        itemBankBinding.textAccountNo.setVisibility(View.GONE);
+                                    }
+
+                                    itemBankBinding.btnDepositFinished.setOnClickListener(new View.OnClickListener() {
                                         @Override
                                         public void onClick(View v) {
                                             hideKeyBoard();
-                                            String yourAddress = response.body().get(0).nearestBranch.name
-                                                    + ", " + response.body().get(0).nearestBranch.address
-                                                    + ", " + response.body().get(0).nearestBranch.city
-                                                    + ", " + response.body().get(0).nearestBranch.state;
-                                            String uri = "http://maps.google.co.in/maps?q=" + yourAddress;
-                                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
-                                            activity.startActivity(intent);
-                                        }
-                                    });
-                                    binding.btnDepositFinished.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            hideKeyBoard();
-
                                             AlertDialog.Builder builder;
                                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                                                 builder = new AlertDialog.Builder(activity, android.R.style.Theme_Material_Dialog_Alert);
@@ -849,7 +806,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                         }
                                     });
 
-                                    binding.btnCancelOrder.setOnClickListener(new View.OnClickListener() {
+                                    itemBankBinding.btnCancelOrder.setOnClickListener(new View.OnClickListener() {
                                         @Override
                                         public void onClick(View v) {
                                             hideKeyBoard();
@@ -877,55 +834,143 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                                     .show();
                                         }
                                     });
-
-                                } else if (null != response && null != response.errorBody()) {
-                                    binding.linearProgress.setVisibility(View.GONE);
-
-                                    if (response.code() == 404) {
-                                        AlertDialog.Builder builder;
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                            builder = new AlertDialog.Builder(activity, android.R.style.Theme_Material_Dialog_Alert);
-                                        } else {
-                                            builder = new AlertDialog.Builder(activity);
-                                        }
-                                        builder.setTitle("Whoops!")
-                                                .setMessage("The Purchase Code has expired. " +
-                                                        "After you receive the Purchase Code, you will need to type quickly. " +
-                                                        "You will need to create another order to receive another Purchase Code.")
-                                                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                                                    public void onClick(DialogInterface dialog, int which) {
-                                                        hideViewExcept(binding.layoutCreateHold);
-                                                    }
-                                                })
-                                                .show();
-                                    } else {
-                                        try {
-                                            BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
-                                            Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
-                                        } catch (Exception e) {
-                                            e.printStackTrace();
-                                            Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
-                                        }
-                                    }
                                 } else {
+                                    binding.setConfiremedData(response.body().get(0));
+                                }
+                            } else {
+                                binding.setConfiremedData(response.body().get(0));
+                            }
+
+                            hideViewExcept(binding.scrollCompletionDetail);
+
+                            binding.orderDash.setText("You are ordering: " + response.body().get(0).total + " Dash.\n"
+                                    + "You must deposit cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
+
+                            binding.textContactInstruction.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    String url = "https://wallofcoins.com/";
+                                    Intent i = new Intent(Intent.ACTION_VIEW);
+                                    i.setData(Uri.parse(url));
+                                    startActivity(i);
+                                }
+                            });
+
+                            countDownStart(response.body().get(0).paymentDue, binding.textPaymentDueDate);
+
+                            binding.textNearByCenter.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    hideKeyBoard();
+                                    String yourAddress = response.body().get(0).nearestBranch.name
+                                            + ", " + response.body().get(0).nearestBranch.address
+                                            + ", " + response.body().get(0).nearestBranch.city
+                                            + ", " + response.body().get(0).nearestBranch.state;
+                                    String uri = "http://maps.google.co.in/maps?q=" + yourAddress;
+                                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+                                    activity.startActivity(intent);
+                                }
+                            });
+                            binding.btnDepositFinished.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    hideKeyBoard();
+
+                                    AlertDialog.Builder builder;
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                        builder = new AlertDialog.Builder(activity, android.R.style.Theme_Material_Dialog_Alert);
+                                    } else {
+                                        builder = new AlertDialog.Builder(activity);
+                                    }
+                                    builder.setTitle(getString(R.string.deposit_finish_confirmation_title))
+                                            .setMessage(getString(R.string.deposit_finish_confirmation_message))
+                                            .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                                                public void onClick(DialogInterface dialog, int which) {
+                                                    confirmDeposit(response.body().get(0));
+                                                }
+                                            })
+                                            .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                                                @Override
+                                                public void onClick(DialogInterface dialog, int which) {
+                                                    dialog.dismiss();
+                                                }
+                                            })
+                                            .show();
+                                }
+                            });
+
+                            binding.btnCancelOrder.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    hideKeyBoard();
+                                    // call cancel order
+                                    AlertDialog.Builder builder;
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                        builder = new AlertDialog.Builder(activity, android.R.style.Theme_Material_Dialog_Alert);
+                                    } else {
+                                        builder = new AlertDialog.Builder(activity);
+                                    }
+                                    builder.setTitle(getString(R.string.deposit_cancel_confirmation_title))
+                                            .setMessage(getString(R.string.deposit_cancel_confirmation_message))
+                                            .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                                                @Override
+                                                public void onClick(DialogInterface dialog, int which) {
+                                                    cancelOrder("" + response.body().get(0).id);
+                                                }
+                                            })
+                                            .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                                                @Override
+                                                public void onClick(DialogInterface dialog, int which) {
+                                                    dialog.dismiss();
+                                                }
+                                            })
+                                            .show();
+                                }
+                            });
+
+                        } else if (null != response && null != response.errorBody()) {
+                            binding.linearProgress.setVisibility(View.GONE);
+
+                            if (response.code() == 404) {
+                                AlertDialog.Builder builder;
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                    builder = new AlertDialog.Builder(activity, android.R.style.Theme_Material_Dialog_Alert);
+                                } else {
+                                    builder = new AlertDialog.Builder(activity);
+                                }
+                                builder.setTitle("Whoops!")
+                                        .setMessage("The Purchase Code has expired. " +
+                                                "After you receive the Purchase Code, you will need to type quickly. " +
+                                                "You will need to create another order to receive another Purchase Code.")
+                                        .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                                            public void onClick(DialogInterface dialog, int which) {
+                                                hideViewExcept(binding.layoutCreateHold);
+                                            }
+                                        })
+                                        .show();
+                            } else {
+                                try {
+                                    BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
+                                    Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
+                                } catch (Exception e) {
+                                    e.printStackTrace();
                                     Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
-                                    binding.linearProgress.setVisibility(View.GONE);
                                 }
                             }
+                        } else {
+                            Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                            binding.linearProgress.setVisibility(View.GONE);
+                        }
+                    }
 
-                            @Override
-                            public void onFailure
-                                    (Call<List<CaptureHoldResp>> call, Throwable t) {
-                                binding.linearProgress.setVisibility(View.GONE);
-                                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
-                                Log.e(TAG, "onFailure: ", t);
-                            }
-                        });
-            }
-        });
-
-
-        return binding.getRoot();
+                    @Override
+                    public void onFailure
+                            (Call<List<CaptureHoldResp>> call, Throwable t) {
+                        binding.linearProgress.setVisibility(View.GONE);
+                        Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                        Log.e(TAG, "onFailure: ", t);
+                    }
+                });
     }
 
     int countdownInterval = 1000;
@@ -970,6 +1015,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                             countdownInterval = 1000;
                         }
                     } else {
+
                         textDepositeDue.setText("Deposit Due: 0 minutes 0 seconds");
                         handler.removeMessages(0);
                     }
@@ -984,20 +1030,55 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private void getZip() {
 
         Location myLocation = getLastKnownLocation();
-        Geocoder geocoder;
-        List<android.location.Address> addresses;
-        geocoder = new Geocoder(activity, Locale.getDefault());
+        if(myLocation != null) {
 
-        try {
-            addresses = geocoder.getFromLocation(myLocation.getLatitude(), myLocation.getLongitude(), 1); // Here 1 represent max location result to returned, by documents it recommended 1 to 5
-            zipCode = addresses.get(0).getPostalCode();
+            Geocoder geocoder;
+            List<android.location.Address> addresses;
+            geocoder = new Geocoder(activity, Locale.getDefault());
+            if (geocoder != null) {
+                try {
+                    addresses = geocoder.getFromLocation(myLocation.getLatitude(), myLocation.getLongitude(), 1); // Here 1 represent max location result to returned, by documents it recommended 1 to 5
+                    zipCode = addresses.get(0).getPostalCode();
 
-            hideViewExcept(binding.layoutCreateHold);
-            showKeyBoard();
+                    hideViewExcept(binding.layoutCreateHold);
+                    showKeyBoard();
 
-        } catch (IOException e) {
-            e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }else{
+            LocationManager mlocManager = (LocationManager) activity.getSystemService(Context.LOCATION_SERVICE);
+            boolean enabled = mlocManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+
+            if(!enabled) {
+                showDialogGPS();
+            }
         }
+    }
+
+    /**
+     * Show a dialog to the user requesting that GPS be enabled
+     */
+    private void showDialogGPS() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        builder.setCancelable(false);
+        builder.setTitle("Enable GPS");
+        builder.setMessage("Please enable GPS for Find My Location");
+        builder.setInverseBackgroundForced(true);
+        builder.setPositiveButton("Enable", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                startActivity(
+                        new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+            }
+        });
+        builder.setNegativeButton("Ignore", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+        AlertDialog alert = builder.create();
+        alert.show();
     }
 
     public boolean isJSONValid(String test) {
@@ -1015,7 +1096,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
     private void cancelOrder(String orderId) {
         binding.linearProgress.setVisibility(View.VISIBLE);
-        WallofCoins.createService(interceptor, activity).cancelOrder(orderId, getString(R.string.PUBLISHER_ID)).enqueue(new Callback<Void>() {
+        WallofCoins.createService(interceptor, activity).cancelOrder(orderId, getString(R.string.WALLOFCOINS_PUBLISHER_ID)).enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
                 binding.linearProgress.setVisibility(View.GONE);
@@ -1041,7 +1122,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
     private void confirmDeposit(CaptureHoldResp response) {
         binding.linearProgress.setVisibility(View.VISIBLE);
-        WallofCoins.createService(interceptor, getActivity()).confirmDeposit("" + response.id, "", getString(R.string.PUBLISHER_ID)).enqueue(new Callback<ConfirmDepositResp>() {
+        WallofCoins.createService(interceptor, getActivity()).confirmDeposit("" + response.id, "", getString(R.string.WALLOFCOINS_PUBLISHER_ID)).enqueue(new Callback<ConfirmDepositResp>() {
             @Override
             public void onResponse(Call<ConfirmDepositResp> call, Response<ConfirmDepositResp> response) {
                 binding.linearProgress.setVisibility(View.GONE);
@@ -1146,8 +1227,11 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
         HashMap<String, String> discoveryInputsReq = new HashMap<String, String>();
 
-        discoveryInputsReq.put("publisherID", getString(R.string.PUBLISHER_ID));
-        discoveryInputsReq.put("cryptoAddress", wallet.freshAddress(RECEIVE_FUNDS).toBase58());
+        discoveryInputsReq.put("publisherId", getString(R.string.WALLOFCOINS_PUBLISHER_ID));
+        keyAddress = wallet.freshAddress(RECEIVE_FUNDS).toBase58();
+        discoveryInputsReq.put("cryptoAddress", keyAddress);
+
+
         try {
             if (Float.valueOf(binding.requestCoinsAmountLocal.getTextView().getHint().toString()) > 0f) {
                 discoveryInputsReq.put("usdAmount", "" + binding.requestCoinsAmountLocal.getTextView().getHint());
@@ -1171,7 +1255,9 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
                 if (null != response && null != response.body()) {
                     if (null != response.body().id) {
-                        WallofCoins.createService(interceptor, getActivity()).getOffers(response.body().id, getString(R.string.PUBLISHER_ID)).enqueue(new Callback<GetOffersResp>() {
+                        updateAddressBookValue(keyAddress,"WallofCoins.com");
+
+                        WallofCoins.createService(null, getActivity()).getOffers(response.body().id, getString(R.string.WALLOFCOINS_PUBLISHER_ID)).enqueue(new Callback<GetOffersResp>() {
                             @Override
                             public void onResponse(Call<GetOffersResp> call, final Response<GetOffersResp> response) {
 
@@ -1277,10 +1363,10 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             } else {
                 getAuthTokenReq.put("deviceCode", getDeviceId(activity));
             }
-            getAuthTokenReq.put("publisherID", getString(R.string.PUBLISHER_ID));
+            getAuthTokenReq.put("publisherId", getString(R.string.WALLOFCOINS_PUBLISHER_ID));
 
             binding.linearProgress.setVisibility(View.VISIBLE);
-            WallofCoins.createService(interceptor, getActivity()).getAuthToken(phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
+            WallofCoins.createService(null, getActivity()).getAuthToken(phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
                 @Override
                 public void onResponse(Call<GetAuthTokenResp> call, Response<GetAuthTokenResp> response) {
                     binding.linearProgress.setVisibility(View.GONE);
@@ -1290,6 +1376,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         try {
                             BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
                             Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
+
                         } catch (Exception e) {
                             e.printStackTrace();
                             Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
@@ -1321,11 +1408,54 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         }
     }
 
+    private void showUserPasswordAuthenticationDialog() {
+        AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(activity);
+        LayoutInflater inflater = activity.getLayoutInflater();
+        final View dialogView = inflater.inflate(R.layout.authenticate_password_wallet_dialog, null);
+        dialogBuilder.setView(dialogView);
+
+        final EditText edtPassword = (EditText) dialogView.findViewById(R.id.edt_woc_authenticaion_password);
+
+        final  TextView txtTitle = (TextView) dialogView.findViewById(R.id.txt_existing_user_dialog_message);
+        txtTitle.setMovementMethod(LinkMovementMethod.getInstance());
+
+        Button btnLogin = (Button)dialogView.findViewById(R.id.btnLogin);
+        Button btnForgotPassword = (Button)dialogView.findViewById(R.id.btnForgotPassword);
+        final AlertDialog alertDialog = dialogBuilder.create();
+        alertDialog.show();
+
+        btnForgotPassword.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                goToUrl("https://wallofcoins.com/forgotPassword/");
+            }
+        });
+        btnLogin.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String password = edtPassword.getText().toString().trim();
+                if(password.length()>0){
+                    getAuthTokenCall(password);
+                    alertDialog.dismiss();
+                }else{
+                    Toast.makeText(getContext(), R.string.password_alert, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+    }
+
+    private void goToUrl (String url) {
+        Uri uriUrl = Uri.parse(url);
+        Intent launchBrowser = new Intent(Intent.ACTION_VIEW, uriUrl);
+        startActivity(launchBrowser);
+    }
+
     private void creteDevice() {
         final HashMap<String, String> createDeviceReq = new HashMap<String, String>();
         createDeviceReq.put("name", "Dash Wallet (Android)");
         createDeviceReq.put("code", getDeviceId(getContext()));
-        createDeviceReq.put("publisherID", getString(R.string.PUBLISHER_ID));
+        createDeviceReq.put("publisherId", getString(R.string.WALLOFCOINS_PUBLISHER_ID));
         binding.linearProgress.setVisibility(View.VISIBLE);
         WallofCoins.createService(interceptor, getActivity()).createDevice(createDeviceReq).enqueue(new Callback<CreateDeviceResp>() {
             @Override
@@ -1344,6 +1474,27 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         });
     }
 
+    public void updateAddressBookValue(String KEY_ADDRESS,String newLabel){
+        if(KEY_ADDRESS!=null && newLabel!=null) {
+            Address keyAddress = Address.fromBase58(Constants.NETWORK_PARAMETERS, KEY_ADDRESS);
+            final Uri uri = AddressBookProvider.contentUri(activity.getPackageName()).buildUpon().appendPath(keyAddress.toBase58()).build();
+            final String addressLabel = AddressBookProvider.resolveLabel(activity, keyAddress.toBase58());
+
+            ContentResolver contentResolver;
+            contentResolver = activity.getContentResolver();
+
+            final ContentValues values = new ContentValues();
+
+            values.put(AddressBookProvider.KEY_LABEL, newLabel);
+
+            if (addressLabel == null) {
+                contentResolver.insert(uri, values);
+            } else {
+                contentResolver.update(uri, values, null, null);
+            }
+        }
+    }
+
     public void createHold(boolean isUserExist) {
         String phone = buyDashPref.getPhone();
 
@@ -1351,7 +1502,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         if (!isUserExist)
             createHoldPassReq.put("phone", phone);
         createHoldPassReq.put("offer", offerId);
-        createHoldPassReq.put("publisherID", getString(R.string.PUBLISHER_ID));
+        createHoldPassReq.put("publisherId", getString(R.string.WALLOFCOINS_PUBLISHER_ID));
         createHoldPassReq.put("email", email);
         createHoldPassReq.put("deviceName", "Dash Wallet (Android)");
         createHoldPassReq.put("deviceCode", getDeviceId(getContext()));
@@ -1363,6 +1514,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 binding.linearProgress.setVisibility(View.GONE);
 
                 if (null != response.body() && response.code() < 299) {
+
                     createHoldResp = response.body();
                     buyDashPref.setHoldId(createHoldResp.id);
                     buyDashPref.setCreateHoldResp(createHoldResp);
@@ -1378,13 +1530,17 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 } else if (null != response.errorBody()) {
                     if (response.code() == 403 && !TextUtils.isEmpty(buyDashPref.getAuthToken())) {
                         deleteAuthCall(true);
-                    } else if (response.code() == 404) {
+                        creteDevice();
+                    }else if (response.code() == 403 && TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+                        getAuthTokenCall(null);
+                    }  else if (response.code() == 404) {
                         createHold(false);
                     } else if (response.code() == 400) {
                         if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
                             getOrderList(true);
                         } else {
-                            getAuthTokenCall(null);
+                            getAuthTokenCall(
+                                    null);
                         }
                     } else {
                         try {
@@ -1417,7 +1573,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         if (!TextUtils.isEmpty(phone)) {
             binding.linearProgress.setVisibility(View.VISIBLE);
 
-            WallofCoins.createService(interceptor, activity).deleteAuth(phone, getString(R.string.PUBLISHER_ID)).enqueue(new Callback<CheckAuthResp>() {
+            WallofCoins.createService(interceptor, activity).deleteAuth(phone, getString(R.string.WALLOFCOINS_PUBLISHER_ID)).enqueue(new Callback<CheckAuthResp>() {
                 @Override
                 public void onResponse(Call<CheckAuthResp> call, Response<CheckAuthResp> response) {
                     Log.d(TAG, "onResponse: response code==>>" + response.code());
@@ -1450,7 +1606,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
     public void getOrderList(final boolean isFromCreateHold) {
         binding.linearProgress.setVisibility(View.VISIBLE);
-        WallofCoins.createService(interceptor, activity).getOrders(getString(R.string.PUBLISHER_ID)).enqueue(new Callback<List<OrderListResp>>() {
+        WallofCoins.createService(interceptor, activity).getOrders(getString(R.string.WALLOFCOINS_PUBLISHER_ID)).enqueue(new Callback<List<OrderListResp>>() {
             @Override
             public void onResponse(Call<List<OrderListResp>> call, Response<List<OrderListResp>> response) {
                 binding.linearProgress.setVisibility(View.GONE);
@@ -1521,8 +1677,14 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
             if (lastWDV != -1) {
                 OrderListResp orderListResp = new OrderListResp();
-                orderListResp.id = -1;
-                orderList.add(lastWDV + 1, orderListResp);
+                orderListResp.id = -2;
+                orderList.add(lastWDV+ 1, orderListResp);
+
+                OrderListResp orderListResp1 = new OrderListResp();
+                orderListResp1.id = -1;
+
+                orderList.add(lastWDV + 2, orderListResp1);
+
 
                 binding.textEmailReceipt.setVisibility(View.VISIBLE);
                 binding.textEmailReceipt.setText(Html.fromHtml(getString(R.string.text_send_email_receipt)));
@@ -1554,36 +1716,29 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         String phone = buyDashPref.getPhone();
         if (!TextUtils.isEmpty(phone)) {
             binding.linearProgress.setVisibility(View.VISIBLE);
-            WallofCoins.createService(interceptor, activity).checkAuth(phone, getString(R.string.PUBLISHER_ID)).enqueue(new Callback<CheckAuthResp>() {
+
+            WallofCoins.createService(interceptor, activity).checkAuth(phone, getString(R.string.WALLOFCOINS_PUBLISHER_ID)).enqueue(new Callback<CheckAuthResp>() {
                 @Override
                 public void onResponse(Call<CheckAuthResp> call, Response<CheckAuthResp> response) {
                     Log.d(TAG, "onResponse: response code==>>" + response.code());
                     binding.linearProgress.setVisibility(View.GONE);
                     if (response.code() == 200) {
-                        if (response.body() != null && response.body().getAvailableAuthSources() != null && response.body().getAvailableAuthSources().size() > 0) {
-                            if (response.body().getAvailableAuthSources().size() >= 2 && response.body().getAvailableAuthSources().get(1).equals("device")) {
+                        if (response.body() != null
+                                && response.body().getAvailableAuthSources() != null
+                                && response.body().getAvailableAuthSources().size() > 0) {
+                            if (response.body().getAvailableAuthSources().get(0).equals("password")) {
+
+                                showUserPasswordAuthenticationDialog();
+
+                                return;
+                            }else if (response.body().getAvailableAuthSources().size() >= 2
+                                    && response.body().getAvailableAuthSources().get(1).equals("device")) {
                                 hideKeyBoard();
                                 createHold(true);
-                            } else if (response.body().getAvailableAuthSources().get(0).equals("device")) {
+                            }else if (response.body().getAvailableAuthSources().get(0).equals("device")) {
                                 hideKeyBoard();
                                 createHold(true);
                                 Log.d(TAG, "onResponse: device");
-                            } else if (response.body().getAvailableAuthSources().get(0).equals("password")) {
-                                hideViewExcept(binding.linearPassword);
-                                binding.textPassAbove.setText("Existing Account Login");
-                                binding.etPassword.setHint("Password");
-                                binding.btnNextPassword.setOnClickListener(new View.OnClickListener() {
-                                    @Override
-                                    public void onClick(View v) {
-                                        hideKeyBoard();
-                                        String password = binding.etPassword.getText().toString();
-                                        if (TextUtils.isEmpty(password)) {
-                                            Toast.makeText(activity, "Please Enter Password First!", Toast.LENGTH_LONG).show();
-                                        } else {
-                                            getAuthTokenCall(password);
-                                        }
-                                    }
-                                });
                             }
                         }
                     } else if (response.code() == 404) {
@@ -1637,10 +1792,10 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         @Override
         public void onBindViewHolder(OrderListAdapter.VHolder holder, int position) {
             final OrderListResp orderListResp = orderList.get(position);
-            if (orderListResp.id != -1) {
+            if (orderListResp.id != -1 & orderListResp.id != -2) {
                 holder.itemBinding.layLogout.setVisibility(View.GONE);
+                holder.itemBinding.layHelpInstruction.setVisibility(View.GONE);
                 holder.itemBinding.layoutCompletionDetail.setVisibility(View.VISIBLE);
-
                 holder.itemBinding.setItem(orderListResp);
 
                 Type listType = new TypeToken<ArrayList<AccountJson>>() {
@@ -1649,30 +1804,29 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 holder.itemBinding.linearAccountDetail.removeAllViews();
                 try {
                     ArrayList<AccountJson> accountList = new Gson().fromJson(orderListResp.account, listType);
-                    for (int i = 0; i < accountList.size(); i++) {
-                        TextView textView = new TextView(getActivity());
-                        textView.setTextSize(16);
-                        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-                        layoutParams.topMargin = 8;
-                        textView.setLayoutParams(layoutParams);
-                        textView.setText(accountList.get(i).getLabel() + ": " + accountList.get(i).getValue());
-                        holder.itemBinding.linearAccountDetail.addView(textView);
+
+                    if(accountList!=null) {
+                        for (int i = 0; i < accountList.size(); i++) {
+                            TextView textView = new TextView(getActivity());
+                            textView.setTextSize(16);
+                            LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+                            layoutParams.topMargin = 0;
+                            textView.setLayoutParams(layoutParams);
+                            textView.setText(accountList.get(i).getLabel() + ": " + accountList.get(i).getValue());
+                            holder.itemBinding.linearAccountDetail.addView(textView);
+                        }
+                    }else{
+                        holder.itemBinding.linearAccountDetail.setVisibility(View.GONE);
                     }
                 } catch (JsonSyntaxException e) {
                     e.printStackTrace();
                 }
-
-//                you must deposit cash
-
-                holder.itemBinding.orderDash.setText("You are ordering: " + orderListResp.total + " Dash.\n"
-                        + "You must deposit cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
 
 
                 holder.itemBinding.btnDepositFinished.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         hideKeyBoard();
-
                         AlertDialog.Builder builder;
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                             builder = new AlertDialog.Builder(activity, android.R.style.Theme_Material_Dialog_Alert);
@@ -1747,27 +1901,57 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     }
                 });
 
+//              you must deposit cash
+                double dots =    Double.parseDouble(orderListResp.total)* 1000000;
+                DecimalFormat formatter = new DecimalFormat("#,###,###.##");
+                String yourFormattedDots = formatter.format(dots);
+
                 if (orderListResp.status.equals("WD")) {
+                    holder.itemBinding.orderDash.setText("Total Dash: " + orderListResp.total + " (" + yourFormattedDots + " dots)\n"
+                            + "You must deposit cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
+                    holder.itemBinding.orderDashInstruction.setVisibility(View.VISIBLE);
                     holder.itemBinding.btnCancelOrder.setVisibility(View.VISIBLE);
                     holder.itemBinding.btnDepositFinished.setVisibility(View.VISIBLE);
-                    holder.itemBinding.textAccountNo.setVisibility(View.VISIBLE);
+                    holder.itemBinding.layoutDueDate.setVisibility(View.VISIBLE);
+
+                    holder.itemBinding.textPaymentDueDate.setVisibility(View.VISIBLE);
                     countDownStart(orderListResp.paymentDue, holder.itemBinding.textPaymentDueDate);
                     holder.itemBinding.textContactInstruction.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-                            String url = "https://wallofcoins.com";
-                            Intent i = new Intent(Intent.ACTION_VIEW);
-                            i.setData(Uri.parse(url));
-                            startActivity(i);
+                            goToUrl("https://wallofcoins.com");
                         }
                     });
                 } else {
-                    holder.itemBinding.textAccountNo.setVisibility(View.GONE);
+                    holder.itemBinding.orderDash.setText("Total Dash: " + orderListResp.total + " (" + yourFormattedDots +" dots)");
+                    holder.itemBinding.layoutDueDate.setVisibility(View.GONE);
                     holder.itemBinding.textPaymentDueDate.setVisibility(View.GONE);
+                    holder.itemBinding.orderDashInstruction.setVisibility(View.GONE);
                     holder.itemBinding.btnCancelOrder.setVisibility(View.GONE);
                     holder.itemBinding.btnDepositFinished.setVisibility(View.GONE);
                     holder.itemBinding.textContactInstruction.setVisibility(View.GONE);
                 }
+
+                if(orderListResp.status.equals("WD")){
+                    holder.itemBinding.textTransactionStatus.setText("Status: Waiting Deposit");
+                }else  if(orderListResp.status.equals("WDV")){
+                    holder.itemBinding.textTransactionStatus.setText("Status: Waiting Deposit Verification");
+                }else  if(orderListResp.status.equals("RERR")){
+                    holder.itemBinding.textTransactionStatus.setText("Status: Issue with Receipt");
+                }else  if(orderListResp.status.equals("DERR")){
+                    holder.itemBinding.textTransactionStatus.setText("Status: Issue with Deposit");
+                }else  if(orderListResp.status.equals("RSD")){
+                    holder.itemBinding.textTransactionStatus.setText("Status: Reserved for Deposit'");
+                }else  if(orderListResp.status.equals("RMIT")){
+                    holder.itemBinding.textTransactionStatus.setText("Status: Remit Address Missing");
+                }else  if(orderListResp.status.equals("UCRV")){
+                    holder.itemBinding.textTransactionStatus.setText("Status: Under Review");
+                }else  if(orderListResp.status.equals("PAYP")){
+                    holder.itemBinding.textTransactionStatus.setText("Status: Done - Pending Delivery");
+                }else  if(orderListResp.status.equals("SENT")){
+                    holder.itemBinding.textTransactionStatus.setText("Status: Waiting Done - Units Delivered");
+                }
+
 
                 Log.e(TAG, "onBindViewHolder: " + orderListResp.status);
                 if (orderListResp.status.equals("WDV")) {
@@ -1778,14 +1962,29 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     holder.itemBinding.textPhone.setVisibility(View.VISIBLE);
                 }
 
-            } else {
+            } else if (orderListResp.id == -1){
                 holder.itemBinding.layoutCompletionDetail.setVisibility(View.GONE);
+                holder.itemBinding.layHelpInstruction.setVisibility(View.GONE);
                 holder.itemBinding.layLogout.setVisibility(View.VISIBLE);
                 holder.itemBinding.textMessage.setText("Your wallet is signed into Wall of Coins using your mobile number " + buyDashPref.getPhone());
+
                 holder.itemBinding.btnSignout.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         deleteAuthCall(false);
+                    }
+                });
+
+
+            } else if (orderListResp.id == -2){
+                holder.itemBinding.layoutCompletionDetail.setVisibility(View.GONE);
+                holder.itemBinding.layHelpInstruction.setVisibility(View.VISIBLE);
+                holder.itemBinding.layLogout.setVisibility(View.GONE);
+                holder.itemBinding.textHelpMessage.setText(" Call (866) 841-2646 for help. \n Help is also available on the website.");
+                holder.itemBinding.btnWebLink.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        goToUrl("https://wallofcoins.com");
                     }
                 });
             }

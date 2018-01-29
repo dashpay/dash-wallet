@@ -1,7 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-
 	<string name="send_coins_fragment_instantx_enable">Use InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">This InstantSend payment has not been transmitted yet.</string>
 	<string name="transaction_row_message_own_instantx_lock_request">This InstantSend payment is awaiting verification by the Dash Network.</string>
@@ -10,8 +9,71 @@
 	<string name="transaction_row_message_received_instantx_locked">This InstantSend payment has been verified by the Dash Network.</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">Unconfirmed InstantSend</string>
 	<string name="transaction_row_message_received_instantx_locked2">Locked InstantSend</string>
-
 	<string name="wallet_options_disconnect">Disconnect</string>
-
 	<string name="network_monitor_masternodes_title">Masternodes</string>
+	<string name="wallet_disclaimer_fragment_buy_wizard">Find a location nearby to &lt;u&gt;load your new Dash Wallet&lt;/u&gt;!</string>
+	<string name="buy_dash_coins_amount_lable">I\'m looking to spend</string>
+
+	<string name="sell_dash_for_cash">Sell Dash For Cash</string>
+	<string name="hint_phone">Phone</string>
+	<string name="hint_email">Email</string>
+	<string name="hint_password">Password</string>
+	<string name="text_create_auth">Create Auth</string>
+	<string name="text_create_ad">Create Ad</string>
+	<string name="maximum_payment">Maximum payment</string>
+	<string name="seller_fee">Seller fee (%)</string>
+	<string name="minimum_payment">Minimum payment</string>
+	<string name="use_dynamic_pricing">Use Dynamic Pricing?</string>
+	<string name="select_pricing_option">SELECT PRICING OPTIONS</string>
+	<string name="static_price">You can say how much you want per dash</string>
+	<string name="text_otp">Your Purchase Code has been sent via text message. Enter the code in the field below.</string>
+	<string name="enter_purchase_code">Enter Purchase Code</string>
+	<string name="resend_otp">Resend OTP</string>
+	<string name="country_flag">Country Flag</string>
+	<string name="all_field_required">All Fields Are Required!</string>
+	<string name="error_primary_secondry_same">Primary And Secondary Market Can Not Be Same.</string>
+	<string name="secondary_empty">Please Select Secondary Market</string>
+	<string name="primary_empty">Please Select Primary Market</string>
+	<string name="receivnig_option_empty">Please Select Your Cash Account</string>
+	<string name="buy_dash_with_cash">Buy Dash With Cash</string>
+	<string name="get_offers">Get Offers</string>
+	<string name="try_again">Something went wrong, Try Again!</string>
+	<string name="zip_code">Zip Code</string>
+	<string name="date_format">%1$td/%1$tm/%1$tY</string>
+	<string name="text_above_phone">A mobile phone that can receive text messages is required for order verification.</string>
+	<string name="create_an_ad">Create an Ad</string>
+	<string name="price">Price:</string>
+	<string name="dashUnicode">\u0110 %s</string>
+	<string name="dotUnicode">(\u0111 %1$s)\n(at %2$s%3$.2f/\u0110)</string>
+	<string name="dotUnicodeNoRate">(\u0111 %s)</string>
+	<string name="location_rationale">Your location is used to find nearest payment centers.</string>
+	<string name="find_my_location">Find My Location</string>
+	<string name="no_thanks">No Thanks</string>
+	<string name="str_zip_code_blank">Leave Zip Code blank to see all available bank deposit destinations.</string>
+	<string name="select_payment_center">Select a nearby payment center...</string>
+	<string name="text_above_email">For your records, we can email you a receipt along with buying instructions.</string>
+	<string name="deposit_finish_confirmation_title">Confirmation!</string>
+	<string name="deposit_finish_confirmation_message">Are you sure you finished making the payment?</string>
+	<string name="deposit_cancel_confirmation_title">Confirmation!</string>
+	<string name="deposit_cancel_confirmation_message">Are you sure you want to Cancel your order?</string>
+	<string name="show_on_map_nearby">Show on Map Nearby</string>
+	<string name="cash_to_deposit">Cash to Deposit: $%1$.2f</string>
+	<string name="order_completion_instruction">Do not throw away or misplace your receipt. A receipt is required before you will receive Dash!
+    \nFor your convenience, we are texting you these payment instructions.
+    \nWhen you are finished making the payment, you must press "Deposit Finished" to receive your Dash.</string>
+	<string name="text_send_email_receipt">Wall of Coins will verify your payment. This usually takes up to 10 minutes. To expedite your order, take a picture of your receipt and &lt;u&gt;click here&lt;/u&gt; to email your receipt to Wall of Coins.</string>
+	<string name="order_contact_instruction">If you have any questions, there is a live chat window at <u>wallofcoins.com</u> or you may call the phone number that sent you a text message.</string>
+	<string name="locationsPhone">Location\'s phone #: %s</string>
+	<string name="password_authenticate_dialog_message">You are already signed up for <a href="https://wallofcoins.com">Wall of Coins</a>!</string>
+	<string name="password_authenticate_dialog_set_title">Input your Wall of Coins password below:</string>
+	<string name="password_authenticate_dialog_info_message">(For security, your password will not be saved.)</string>
+	<string name="password_alert">Please enter password in password filed</string>
+	<string name="x_coins_api">X-Coins-Api-Token</string>
+	<string name="reject_execution">rejected execution</string>
+	<string name="publisher_id">publisher-id</string>
+	<string name="location_denied">Location permission denied,</string>
+	<string name="enable_location">You can enable it from Settings</string>
+	<string name="onresponce">onResponse:</string>
+	<string name="alert_thanks_for_payment">Thank you for making the payment! Once we verify your payment, we will send the Dash to your wallet!</string>
+
 </resources>

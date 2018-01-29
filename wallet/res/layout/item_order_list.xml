@@ -17,6 +17,7 @@
     <android.support.v7.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:padding="2dp"
         app:cardCornerRadius="8dp"
         app:cardElevation="4dp"
         app:cardUseCompatPadding="true">
@@ -117,36 +118,50 @@
                     tools:text="$ 16447878" />
 
                 <TextView
-                    android:id="@+id/text_payment_due_date"
+                    android:id="@+id/text_transaction_Status"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
                     android:textSize="16dp"
-                    android:visibility='@{TextUtils.isEmpty(item.paymentDue)?View.GONE:View.VISIBLE}'
-                    tools:text="Deposit Due: Today 12:00 PM" />
+                    tools:text="Status:" />
 
-
-                <Button
-                    android:id="@+id/btn_deposit_finished"
+                <LinearLayout
+                    android:id="@+id/layout_due_date"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Deposit Finished" />
+                    android:layout_marginBottom="4dp"
+                    android:orientation="vertical">
 
-                <Button
-                    android:id="@+id/btn_cancel_order"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Cancel Order" />
+                    <TextView
+                        android:id="@+id/text_payment_due_date"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="4dp"
+                        android:textSize="16dp"
+                        tools:text="Deposit Due: Today 12:00 PM" />
+
+                    <Button
+                        android:id="@+id/btn_deposit_finished"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Deposit Finished" />
+
+                    <Button
+                        android:id="@+id/btn_cancel_order"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Cancel Order" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/order_dash"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
-                    android:layout_marginTop="4dp"
                     android:textSize="16dp" />
 
                 <TextView
+                    android:id="@+id/order_dash_instruction"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
@@ -162,6 +177,28 @@
                     android:text="@string/order_contact_instruction"
                     android:textSize="16dp" />
 
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/lay_help_instruction"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="@dimen/dimen_8dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/text_help_message"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:textSize="16dp" />
+
+
+                <Button
+                    android:id="@+id/btn_WebLink"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="WALLOFCOINS.COM" />
             </LinearLayout>
 
             <LinearLayout
