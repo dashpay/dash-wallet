@@ -51,8 +51,6 @@ dependencies {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
         exclude group: 'com.android.support', module: 'support-annotations'
     }
-    //Multidex for faster build times when Developing/Debugging
-    debugCompile 'com.android.support:multidex:1.0.1'
 }
 
 ext {
@@ -73,14 +71,13 @@ android {
     }
 
     buildTypes {
-        release {
+        all {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg'
+            testProguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg', 'proguardTest-rules.txt'
         }
         debug {
             debuggable true
-            multiDexEnabled true
-            minifyEnabled false
         }
     }
     sourceSets {
