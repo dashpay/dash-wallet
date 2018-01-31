@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <dimen name="app_bar_title_margin_start">56dp</dimen>
+    <dimen name="app_bar_balance_font_size">20sp</dimen>
+    <dimen name="app_bar_balance_local_font_size">@dimen/font_size_tiny</dimen>
+    <dimen name="app_bar_slogan_font_size">13sp</dimen>
+    <dimen name="app_bar_logo_width">148dp</dimen>
+    <dimen name="app_bar_logo_height">14dp</dimen>
+
+</resources>
