@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+
+        <import type="android.view.View" />
+
+        <import type="android.text.TextUtils" />
+
+        <variable
+            name="item"
+            type="de.schildbach.wallet.wallofcoins.response.OrderListResp" />
+    </data>
+
+    <android.support.v7.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="2dp"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="4dp"
+        app:cardUseCompatPadding="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/layout_completion_detail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="@dimen/dimen_8dp"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/image_bank"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginRight="@dimen/dimen_8dp"
+                        android:layout_weight="1"
+                        android:adjustViewBounds="true"
+                        android:scaleType="fitCenter"
+                        android:src="@{item.bankLogo}"
+                        tools:src="@mipmap/ic_app_color" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="4"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/text_bank_name"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="4dp"
+                            android:text='@{TextUtils.isEmpty(item.bankName)?"Bank Name: - ":item.bankName}'
+                            android:textSize="20dp"
+                            android:textStyle="bold"
+                            android:visibility='@{TextUtils.isEmpty(item.bankName)?View.GONE:View.VISIBLE}'
+                            tools:text="Bank Name" />
+                        <TextView
+                            android:id="@+id/tv_itrm_offer_4"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:ellipsize="end"
+                            android:lines="1"
+                            android:text="Subject to local availability"
+                            android:textSize="12dp"
+                            tools:text="TextView" />
+                        <TextView
+                            android:id="@+id/button_buy_dash_item_location"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="bottom"
+                            android:autoLink="web"
+                            android:text="Check Location"
+                            android:textColor="@color/colorPrimary"
+                            android:textSize="14sp"/>
+                        <TextView
+                            android:id="@+id/text_phone"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="4dp"
+                            android:text='@{TextUtils.isEmpty(item.nearestBranch.phone)?"Locations phone - ":@string/locationsPhone(item.nearestBranch.phone)}'
+                            android:textSize="16dp"
+                            android:visibility='@{TextUtils.isEmpty(item.nearestBranch.phone)?View.GONE:View.VISIBLE}'
+                            tools:text="Deposit Due: Today 12:00 PM" />
+
+                    </LinearLayout>
+                </LinearLayout>
+
+
+                <TextView
+                    android:id="@+id/text_name_account"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text='@{TextUtils.isEmpty(item.nameOnAccount)?"Name on Account: - ":"Name on Account: " + item.nameOnAccount}'
+                    android:textSize="16dp"
+                    tools:text="Deposit Due: Today 12:00 PM" />
+
+                <TextView
+                    android:id="@+id/text_account_no"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text='@{TextUtils.isEmpty(item.account)?"Account #: - ":"Account #: " + item.account}'
+                    android:textSize="16dp"
+                    tools:text="Deposit Due: Today 12:00 PM" />
+
+                <LinearLayout
+                    android:id="@+id/linear_account_detail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:orientation="vertical" />
+
+                <TextView
+                    android:id="@+id/text_cash_to_deposite"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text='@{TextUtils.isEmpty(item.payment)?"":@string/cash_to_deposit(Float.valueOf(item.payment))}'
+                    android:textSize="16dp"
+                    android:visibility='@{TextUtils.isEmpty(item.payment)?View.GONE:View.VISIBLE}'
+                    tools:text="$ 16447878" />
+
+                <TextView
+                    android:id="@+id/text_transaction_Status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:textSize="16dp"
+                    tools:text="Status:" />
+
+                <LinearLayout
+                    android:id="@+id/layout_due_date"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/text_payment_due_date"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="4dp"
+                        android:textSize="16dp"
+                        tools:text="Deposit Due: Today 12:00 PM" />
+
+                    <Button
+                        android:id="@+id/btn_deposit_finished"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Deposit Finished" />
+
+                    <Button
+                        android:id="@+id/btn_cancel_order"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Cancel Order" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/order_dash"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:textSize="16dp" />
+
+                <TextView
+                    android:id="@+id/order_dash_instruction"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/order_completion_instruction"
+                    android:textSize="16dp" />
+
+                <TextView
+                    android:id="@+id/text_contact_instruction"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:autoLink="none"
+                    android:text="@string/order_contact_instruction"
+                    android:textSize="16dp" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/lay_help_instruction"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="@dimen/dimen_8dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/text_help_message"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:textSize="16dp" />
+
+
+                <Button
+                    android:id="@+id/btn_WebLink"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="WALLOFCOINS.COM" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/lay_logout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="@dimen/dimen_8dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/text_message"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:textSize="16dp" />
+
+
+                <Button
+                    android:id="@+id/btn_signout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:backgroundTint="@color/woc_yellow"
+                    android:drawableTint="@color/woc_yellow"
+                    android:text="Sign Out"
+                    android:textColor="@color/colorPrimary" />
+            </LinearLayout>
+        </LinearLayout>
+    </android.support.v7.widget.CardView>
+</layout>

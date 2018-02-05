@@ -34,6 +34,11 @@ dependencies {
     }
     compile 'com.github.tony19:logback-android-core:1.1.1-6'
     compile 'com.google.code.findbugs:jsr305:2.0.3'
+    compile 'com.squareup.retrofit2:retrofit:2.0.2'
+    compile 'com.squareup.retrofit2:converter-gson:2.0.2'
+    compile 'com.squareup.okhttp3:logging-interceptor:3.3.1'
+    compile 'com.github.bumptech.glide:glide:3.8.0'
+
     testCompile 'junit:junit:4.12'
 
     //Memory Leak Detection
@@ -47,6 +52,14 @@ ext {
 }
 
 android {
+    signingConfigs {
+        config {
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+            storeFile file('C:/Users/Dipak/.android/debug.keystore')
+            storePassword 'android'
+        }
+    }
     compileSdkVersion 'android-25'
     buildToolsVersion '25.0.2'
 
@@ -93,13 +106,15 @@ android {
                 }
                 prod {
                     applicationId = "hashengineering.darkcoin.wallet"
+
                 }
                 _testNet3 {
                     applicationId = "hashengineering.darkcoin.wallet_test"
                 }
             }
-
-
+    dataBinding {
+        enabled = true
+    }
     packagingOptions {
         exclude 'lib/x86_64/darwin/libscrypt.dylib'
         exclude 'lib/x86_64/freebsd/libscrypt.so'

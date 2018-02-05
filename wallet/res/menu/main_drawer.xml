@@ -21,10 +21,17 @@
             android:icon="@drawable/ic_menu_paper_wallet"
             android:title="@string/sweep_wallet_activity_title" />
     <item
+        android:id="@+id/nav_buy_dash_with_cash"
+        android:icon="@drawable/ic_menu_sell_dash"
+        android:title="@string/buy_dash_with_cash" />
+    <item
         android:id="@+id/nav_report_issue"
         android:icon="@drawable/ic_menu_address_book"
         android:title="@string/preferences_report_issue_title"
         />
+
+
+
     <!--</group>-->
 
     <item android:title="@string/navigation_configuration">

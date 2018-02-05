@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+
+        <variable
+            name="item"
+            type="de.schildbach.wallet.wallofcoins.response.GetOffersResp.SingleDepositBean" />
+
+        <import type="android.text.Html" />
+
+        <import type="android.view.View" />
+
+        <import type="de.schildbach.wallet.util.GenericUtils" />
+    </data>
+
+    <android.support.v7.widget.CardView xmlns:card_view="http://schemas.android.com/apk/res-auto"
+        android:id="@+id/card_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        card_view:cardCornerRadius="4dp"
+        card_view:cardPreventCornerOverlap="false"
+        card_view:cardUseCompatPadding="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="@dimen/dimen_8dp"
+            android:weightSum="100">
+
+            <ImageView
+                android:id="@+id/iv_offer"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="@dimen/dimen_8dp"
+                android:layout_weight="20"
+                android:scaleType="fitCenter"
+                android:src="@{item.bankLogo}"
+                tools:src="@drawable/ic_account_balance_black_24dp" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="80"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="55"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tv_itrm_offer_1"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:ellipsize="end"
+                            android:lines="1"
+                            android:text='@{@string/dashUnicode(item.amount.DASH)}'
+                            android:textSize="20dp"
+                            android:textStyle="bold"
+                            tools:text="\u0110ASH" />
+
+                        <TextView
+                            android:id="@+id/tv_itrm_offer_2"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:maxLines="2"
+                            android:textSize="10dp"
+                            tools:text="0.5458  \u0111ots" />
+
+                    </LinearLayout>
+
+                    <Button
+                        android:id="@+id/button_buy_dash_item_order"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="25"
+                        android:backgroundTint="#5cb85c"
+                        android:text="Order"
+                        android:textColor="@color/white"
+                        android:textSize="14sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="60"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tv_itrm_offer_3"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:ellipsize="end"
+                            android:lines="1"
+                            android:text="@{item.bankName}"
+                            android:textSize="16dp"
+                            android:textStyle="bold"
+                            tools:text="TextView" />
+
+                        <TextView
+                            android:id="@+id/tv_itrm_offer_4"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:ellipsize="end"
+                            android:lines="1"
+                            android:text="@{item.address.length()>0?item.address:`Subject to local availability`}"
+                            android:textSize="12dp"
+                            tools:text="TextView" />
+
+                        <TextView
+                            android:id="@+id/tv_itrm_offer_5"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:autoLink="web"
+                            android:ellipsize="end"
+                            android:lines="1"
+                            android:text='@{item.distance>0?(String.format("%.1f",item.distance)+" miles - "+item.city+","+item.state):``}'
+                            android:textSize="12dp"
+                            android:visibility="@{item.distance>0?View.VISIBLE:View.GONE}"
+                            tools:text="TextView" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/button_buy_dash_item_location"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom"
+                        android:layout_weight="40"
+                        android:autoLink="web"
+                        android:text="Check Location"
+                        android:textColor="@color/colorPrimary"
+                        android:textSize="14sp"
+                        android:visibility='@{(item.distance==0 &amp;&amp; item.bankLocationUrl!=null &amp;&amp; item.bankLocationUrl.length()>0)?View.VISIBLE:View.INVISIBLE}' />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </android.support.v7.widget.CardView>
+</layout>

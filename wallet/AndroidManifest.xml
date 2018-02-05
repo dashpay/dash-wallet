@@ -24,6 +24,8 @@
     <uses-permission android:name="android.permission.CAMERA" /> <!-- group: CAMERA -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /> <!-- group: STORAGE -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /> <!-- group: STORAGE -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <uses-feature
         android:name="android.hardware.touchscreen"
@@ -149,6 +151,19 @@
             android:name="de.schildbach.wallet.ui.ExchangeRatesActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:label="@string/exchange_rates_activity_title"
+            android:screenOrientation="behind"
+            android:theme="@style/My.Theme.ChildActivity" />
+        <activity
+            android:name="de.schildbach.wallet.wallofcoins.SellDashActivity"
+            android:configChanges="keyboard|keyboardHidden"
+            android:label="@string/sell_dash_for_cash"
+            android:screenOrientation="behind"
+            android:theme="@style/My.Theme.ChildActivity" />
+        <activity
+            android:name="de.schildbach.wallet.wallofcoins.buydash.BuyDashActivity"
+            android:configChanges="keyboard|keyboardHidden"
+            android:label="@string/buy_dash_with_cash"
+            android:screenOrientation="behind"
             android:theme="@style/My.Theme.ChildActivity" />
         <activity
             android:name="de.schildbach.wallet.ui.NetworkMonitorActivity"

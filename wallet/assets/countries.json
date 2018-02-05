@@ -1,0 +1,172 @@
+{
+  "countries": [
+    {
+      "name": "United States",
+      "code": "+1",
+      "currency": "USD",
+      "short": "us",
+      "top": 210,
+      "left": 210
+    },
+    {
+      "name": "United Kingdom",
+      "code": "+44",
+      "currency": "USD",
+      "short": "uk",
+      "top": 268,
+      "left": 132
+    },
+    {
+      "name": "Argentina",
+      "code": "+54",
+      "currency": "USD",
+      "short": "ar",
+      "top": 100,
+      "left": 194
+    },
+    {
+      "name": "Australia",
+      "code": "+61",
+      "currency": "USD",
+      "short": "au",
+      "top": 247,
+      "left": 33
+    },
+    {
+      "name": "Brazil",
+      "code": "+55",
+      "currency": "USD",
+      "short": "br",
+      "top": 63,
+      "left": 47
+    },
+    {
+      "name": "Canada",
+      "code": "+1",
+      "currency": "USD",
+      "short": "ca",
+      "top": 268,
+      "left": 55
+    },
+    {
+      "name": "China",
+      "code": "+86",
+      "currency": "USD",
+      "short": "cn",
+      "top": 105,
+      "left": 55
+    },
+    {
+      "name": "Germany",
+      "code": "+49",
+      "currency": "USD",
+      "short": "de",
+      "top": 42,
+      "left": 210
+    },
+    {
+      "name": "Ghana",
+      "code": "+233",
+      "currency": "USD",
+      "short": "gh",
+      "top": 105,
+      "left": 121
+    },
+    {
+      "name": "Hong Kong",
+      "code": "+852",
+      "currency": "USD",
+      "short": "hk",
+      "top": 147,
+      "left": 116
+    },
+    {
+      "name": "Latvia",
+      "code": "+371",
+      "currency": "USD",
+      "short": "lv",
+      "top": 147,
+      "left": 176
+    },
+    {
+      "name": "Malaysia",
+      "code": "+60",
+      "currency": "USD",
+      "short": "my",
+      "top": 268,
+      "left": 22
+    },
+    {
+      "name": "Mexico",
+      "code": "+52",
+      "currency": "USD",
+      "short": "mx",
+      "top": 268,
+      "left": 210
+    },
+    {
+      "name": "Nigeria",
+      "code": "+234",
+      "currency": "USD",
+      "short": "ng",
+      "top": 268,
+      "left": 110
+    },
+    {
+      "name": "Philippines",
+      "code": "+63",
+      "currency": "USD",
+      "short": "ph",
+      "top": 42,
+      "left": 234
+    },
+    {
+      "name": "Poland",
+      "code": "+48",
+      "currency": "USD",
+      "short": "pl",
+      "top": 142,
+      "left": 194
+    },
+    {
+      "name": "Portugal",
+      "code": "+351",
+      "currency": "USD",
+      "short": "pt",
+      "top": 147,
+      "left": 179
+    },
+    {
+      "name": "Romania",
+      "code": "+40",
+      "currency": "USD",
+      "short": "ro",
+      "top": 84,
+      "left": 179
+    },
+    {
+      "name": "Russia",
+      "code": "+7",
+      "currency": "USD",
+      "short": "ru",
+      "top": 189,
+      "left": 116
+    },
+    {
+      "name": "Singapore",
+      "code": "+65",
+      "currency": "USD",
+      "short": "sg",
+      "top": 168,
+      "left": 116
+    },
+    {
+      "name": "Spain",
+      "code": "+34",
+      "currency": "USD",
+      "short": "es",
+      "top": 123,
+      "left": 29
+    }
+  ]
+}

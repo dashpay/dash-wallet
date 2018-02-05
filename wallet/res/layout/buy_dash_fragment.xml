@@ -1,0 +1,622 @@
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+
+        <import type="android.view.View" />
+
+        <import type="android.text.TextUtils" />
+
+        <variable
+            name="confiremedData"
+            type="de.schildbach.wallet.wallofcoins.response.CaptureHoldResp" />
+    </data>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="8dp">
+
+        <LinearLayout
+            android:id="@+id/layout_order_list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/btn_buy_more"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="Buy More Bitcoin!"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/text_email_receipt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/dimen_8dp"
+                android:textSize="16dp"
+                android:visibility="gone" />
+
+            <android.support.v7.widget.RecyclerView
+                android:id="@+id/rv_order_list"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_below="@+id/btn_buy_more"
+                android:layout_weight="1" />
+
+
+        </LinearLayout>
+
+        <android.support.v7.widget.RecyclerView
+            android:id="@+id/rv_offers"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/linear_phone"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/dimen_8dp"
+                android:text="@string/text_above_phone"
+                android:textSize="16dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="bottom"
+                android:orientation="horizontal">
+
+                <Spinner
+                    android:id="@+id/sp_country"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="5dp"
+                    android:layout_weight="1" />
+
+                <EditText
+                    android:id="@+id/edit_buy_dash_phone"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom"
+                    android:layout_weight="1"
+                    android:ems="10"
+                    android:hint="@string/hint_phone"
+                    android:inputType="phone"
+                    android:lines="1"
+                    android:textSize="@dimen/font_size_normal" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btn_next_phone"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="16dp"
+                android:text="Next"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/linear_email"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/dimen_8dp"
+                android:text="@string/text_above_email"
+                android:textSize="16dp" />
+
+            <EditText
+                android:id="@+id/edit_buy_dash_email"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:hint="@string/hint_email"
+                android:inputType="textEmailAddress"
+                android:lines="1"
+                android:textSize="@dimen/font_size_normal" />
+
+            <TextView
+                android:id="@+id/tv_skip_email"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginBottom="@dimen/dimen_8dp"
+                android:layout_marginTop="16dp"
+                android:clickable="true"
+                android:text="[Do Not send me email]"
+                android:textColor="@color/colorPrimary"
+                android:textSize="16dp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btn_next_email"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="16dp"
+                android:text="Next"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/linear_password"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/text_pass_above"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/dimen_8dp"
+                android:textSize="16dp"
+                tools:text="Existing Acount Login" />
+
+            <EditText
+                android:id="@+id/et_password"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Password"
+                android:inputType="textPassword" />
+
+            <Button
+                android:id="@+id/btn_next_password"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="16dp"
+                android:text="Next"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/layout_verify_otp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="@string/text_otp"
+                android:textSize="16dp" />
+
+            <EditText
+                android:id="@+id/et_otp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:ems="10"
+                android:hint="@string/enter_purchase_code"
+                android:inputType="textPersonName"
+                android:lines="1" />
+
+
+            <Button
+                android:id="@+id/button_verify_otp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Confirm Purchase Code" />
+
+            <!--<Button-->
+            <!--android:id="@+id/button_resend_otp"-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:layout_marginTop="8dp"-->
+            <!--android:text="Resend Purchase Code" />-->
+        </LinearLayout>
+
+        <ScrollView
+            android:id="@+id/scroll_completion_detail"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/layout_completion_detail"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_margin="@dimen/dimen_8dp"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginRight="@dimen/dimen_8dp"
+                        android:layout_weight="1"
+                        android:adjustViewBounds="true"
+                        android:scaleType="fitCenter"
+                        android:src="@{confiremedData.bankLogo}"
+                        tools:src="@mipmap/ic_app_color" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="4"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/text_bank_name"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="4dp"
+                            android:text='@{TextUtils.isEmpty(confiremedData.bankName)?"Bank Name: - ":confiremedData.bankName}'
+                            android:textSize="20dp"
+                            android:textStyle="bold"
+                            android:visibility='@{TextUtils.isEmpty(confiremedData.bankName)?View.GONE:View.VISIBLE}'
+                            tools:text="Bank Name" />
+
+                        <TextView
+                            android:id="@+id/text_near_by_center"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="4dp"
+                            android:text="@string/show_on_map_nearby"
+                            android:textColor="@android:color/holo_blue_dark"
+                            android:textSize="16dp"
+                            tools:text="@string/show_on_map_nearby" />
+
+                        <TextView
+                            android:id="@+id/text_phone"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="4dp"
+                            android:text='@{TextUtils.isEmpty(confiremedData.nearestBranch.phone)?"Phone: - ":@string/locationsPhone(confiremedData.nearestBranch.phone)}'
+                            android:textSize="16dp"
+                            android:visibility='@{TextUtils.isEmpty(confiremedData.nearestBranch.phone)?View.GONE:View.VISIBLE}'
+                            tools:text="Deposit Due: Today 12:00 PM" />
+
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/text_name"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text='@{TextUtils.isEmpty(confiremedData.nameOnAccount)?"Name on Account: - ":"Name on Account: " + confiremedData.nameOnAccount}'
+                    android:textSize="16dp"
+                    android:visibility='@{TextUtils.isEmpty(confiremedData.nameOnAccount)?View.GONE:View.VISIBLE}'
+                    tools:text="Deposit Due: Today 12:00 PM" />
+
+                <TextView
+                    android:id="@+id/text_account_no"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text='@{TextUtils.isEmpty(confiremedData.account)?"Account #: - ":"Account #: " + confiremedData.account}'
+                    android:textSize="16dp"
+                    android:visibility='@{TextUtils.isEmpty(confiremedData.account)?View.GONE:View.VISIBLE}'
+                    tools:text="Deposit Due: Today 12:00 PM" />
+
+                <TextView
+                    android:id="@+id/text_cash_to_deposite"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text='@{TextUtils.isEmpty(confiremedData.payment)?"":@string/cash_to_deposit(Float.valueOf(confiremedData.payment))}'
+                    android:textSize="16dp"
+                    android:visibility='@{TextUtils.isEmpty(confiremedData.payment)?View.GONE:View.VISIBLE}'
+                    tools:text="$ 16447878" />
+
+                <TextView
+                    android:id="@+id/text_payment_due_date"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:textSize="16dp"
+                    android:visibility='@{TextUtils.isEmpty(confiremedData.paymentDue)?View.GONE:View.VISIBLE}'
+                    tools:text="Deposit Due: Today 12:00 PM" />
+
+                <Button
+                    android:id="@+id/btn_deposit_finished"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Deposit Finished" />
+
+                <Button
+                    android:id="@+id/btn_cancel_order"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Cancel Order" />
+
+                <TextView
+                    android:id="@+id/order_dash"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginTop="4dp"
+                    android:textSize="16dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/order_completion_instruction"
+                    android:textSize="16dp" />
+
+                <TextView
+                    android:id="@+id/text_contact_instruction"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:autoLink="none"
+                    android:text="@string/order_contact_instruction"
+                    android:textSize="16dp" />
+                <LinearLayout
+                    android:id="@+id/lay_help_instruction"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="@dimen/dimen_8dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/text_help_message"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="4dp"
+                        android:textSize="16dp" />
+
+
+                    <Button
+                        android:id="@+id/btn_WebLink"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="WALLOFCOINS.COM" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/lay_logout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="@dimen/dimen_8dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/text_message"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="4dp"
+                        android:textSize="16dp" />
+
+
+                    <Button
+                        android:id="@+id/btn_signout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:backgroundTint="@color/woc_yellow"
+                        android:drawableTint="@color/woc_yellow"
+                        android:text="Sign Out"
+                        android:textColor="@color/colorPrimary" />
+                </LinearLayout>
+
+            </LinearLayout>
+        </ScrollView>
+
+        <LinearLayout
+            android:id="@+id/layout_zip"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:padding="@dimen/dimen_12dp"
+                android:text="@string/str_zip_code_blank"
+                android:textColor="@color/colorPrimary"
+                android:textSize="16dp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/buy_dash_zip"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/zip_code"
+                android:imeOptions="flagNoExtractUi"
+                android:inputType="number"
+                android:lines="1"
+                android:textSize="@dimen/font_size_normal"
+                tools:ignore="TextFields" />
+
+            <Button
+                android:id="@+id/button_buy_dash_zip_next"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/colorPrimary"
+                android:text="Next"
+                android:textColor="@color/white"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/layout_banks"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:padding="@dimen/dimen_12dp"
+                android:text="@string/select_payment_center"
+                android:textColor="@color/colorPrimary"
+                android:textSize="16dp"
+                android:textStyle="bold" />
+
+            <android.support.v7.widget.AppCompatSpinner
+                android:id="@+id/sp_banks"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/dimen_8dp" />
+
+            <Button
+                android:id="@+id/button_buy_dash_bank_next"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/colorPrimary"
+                android:text="Next"
+                android:textColor="@color/white"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+
+        <LinearLayout
+            android:id="@+id/layout_location"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="visible">
+
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:padding="@dimen/dimen_12dp"
+                android:text="@string/location_rationale"
+                android:textColor="@color/colorPrimary"
+                android:textSize="16dp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/button_buy_dash_get_location"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/colorPrimary"
+                android:text="@string/find_my_location"
+                android:textColor="@color/white"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/button_buy_dash_get_location_no"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:backgroundTint="#FFF"
+                android:text="@string/no_thanks"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/layout_create_hold"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/text_requested_amount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
+                android:layout_marginTop="8dp"
+                android:text="@string/buy_dash_coins_amount_lable"
+                android:textSize="16dp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/linear_currency"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:divider="@drawable/divider_currency"
+                android:orientation="horizontal"
+                android:showDividers="middle">
+
+                <de.schildbach.wallet.ui.CurrencyAmountView
+                    android:id="@+id/request_coins_amount_btc"
+                    android:layout_width="0px"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1">
+
+                    <EditText
+                        android:id="@+id/request_coins_amount_btc_edittext"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:imeOptions="flagNoExtractUi"
+                        android:textSize="@dimen/font_size_large"
+                        tools:ignore="TextFields">
+
+                        <requestFocus />
+                    </EditText>
+                </de.schildbach.wallet.ui.CurrencyAmountView>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:padding="4dp"
+                    android:text="Or"
+                    android:textColor="@android:color/black"
+                    android:textSize="20dp"
+                    android:textStyle="bold" />
+
+                <de.schildbach.wallet.ui.CurrencyAmountView
+                    android:id="@+id/request_coins_amount_local"
+                    android:layout_width="0px"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1">
+
+                    <EditText
+                        android:id="@+id/request_coins_amount_local_edittext"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:imeOptions="flagNoExtractUi"
+                        android:textSize="@dimen/font_size_large"
+                        tools:ignore="TextFields" />
+                </de.schildbach.wallet.ui.CurrencyAmountView>
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/button_buy_dash_get_offers"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/get_offers"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/linear_progress"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#fcfbfb"
+            android:gravity="center"
+            android:visibility="gone">
+
+            <ProgressBar
+                android:id="@+id/buy_dash_progress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center" />
+        </LinearLayout>
+    </RelativeLayout>
+</layout>
