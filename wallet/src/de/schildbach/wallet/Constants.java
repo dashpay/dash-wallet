@@ -171,6 +171,7 @@ public final class Constants {
     public static final String MARKET_APP_URL = "market://details?id=%s";
     public static final String WEBMARKET_APP_URL = "https://play.google.com/store/apps/details?id=%s";
 
+    public static final int HTTP_TIMEOUT_MS = 15 * (int) DateUtils.SECOND_IN_MILLIS;
     public static final int PEER_DISCOVERY_TIMEOUT_MS = 10 * (int) DateUtils.SECOND_IN_MILLIS;
     public static final int PEER_TIMEOUT_MS = 15 * (int) DateUtils.SECOND_IN_MILLIS;
 
@@ -200,6 +201,8 @@ public final class Constants {
             .equals(NetworkParameters.ID_MAINNET) ? 50001 : 51001;
     public static final int ELECTRUM_SERVER_DEFAULT_PORT_TLS = NETWORK_PARAMETERS.getId()
             .equals(NetworkParameters.ID_MAINNET) ? 50002 : 51002;
+
+
 
     /** Shared HTTP client, can reuse connections */
     public static final OkHttpClient HTTP_CLIENT = new OkHttpClient();

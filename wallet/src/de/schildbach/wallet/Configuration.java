@@ -32,6 +32,7 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 import de.schildbach.wallet.data.ExchangeRate;
 import de.schildbach.wallet_test.R;
 
@@ -243,7 +244,7 @@ public class Configuration {
             prefs.edit().putInt(PREFS_KEY_BEST_CHAIN_HEIGHT_EVER, bestChainHeightEver).apply();
     }
 
-    public ExchangeRate getCachedExchangeRate() {
+    public de.schildbach.wallet.data.ExchangeRate getCachedExchangeRate() {
         if (prefs.contains(PREFS_KEY_CACHED_EXCHANGE_CURRENCY) && prefs.contains(PREFS_KEY_CACHED_EXCHANGE_RATE_COIN)
                 && prefs.contains(PREFS_KEY_CACHED_EXCHANGE_RATE_FIAT)) {
             final String cachedExchangeCurrency = prefs.getString(PREFS_KEY_CACHED_EXCHANGE_CURRENCY, null);

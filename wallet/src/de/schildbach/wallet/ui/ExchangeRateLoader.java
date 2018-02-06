@@ -23,7 +23,8 @@ import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.support.v4.content.CursorLoader;
 
 import de.schildbach.wallet.Configuration;
-import de.schildbach.wallet.ExchangeRatesProvider;
+import de.schildbach.wallet.data.ExchangeRatesProvider;
+
 
 /**
  * @author Andreas Schildbach

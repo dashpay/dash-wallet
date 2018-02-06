@@ -77,6 +77,9 @@
 	<string name="deposit_cancel_confirmation_message">Are you sure you want to Cancel your order?</string>
 	<string name="show_on_map_nearby">Show on Map Nearby</string>
 	<string name="cash_to_deposit">Cash to Deposit: $%1$.2f</string>
+	<string name="phone">Phone: %s</string>
+	<string name="name_on_account">Name on Account: %s</string>
+	<string name="deposit_instruction" formatted="false">You are ordering: %s Dash (%s dots) .\n You must deposit cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.</string>
 	<string name="order_completion_instruction">Do not throw away or misplace your receipt. A receipt is required before you will receive Dash!
     \nFor your convenience, we are texting you these payment instructions.
     \nWhen you are finished making the payment, you must press "Deposit Finished" to receive your Dash.</string>
@@ -94,5 +97,26 @@
 	<string name="enable_location">You can enable it from Settings</string>
 	<string name="onresponce">onResponse:</string>
 	<string name="alert_thanks_for_payment">Thank you for making the payment! Once we verify your payment, we will send the Dash to your wallet!</string>
-
+	<string name="alert_location_permission_denied">Location permission denied, \nYou can enable it from Settings</string>
+	<string name="label_select_payment_center">Select Payment Center</string>
+	<string name="alert_select_any_payment_center">Select Any Payment Center</string>
+	<string name="alert_enter_valid_email">Enter Valid Email or click [Do Not send me email] to skip</string>
+	<string name="label_buy_more_dash">Buy More Dash!</string>
+	<string name="label_buy_more_bitcoin">Buy More Bitcoin!</string>
+	<string name="alert_puchase_amout">Purchase amount must be at least $5</string>
+	<string name="alert_amount">Enter amount</string>
+	<string name="alert_purchase_code">Please Enter Purchase Code!</string>
+	<string name="alert_title_purchase_code">Whoops!</string>
+	<string name="alert_description_purchase_code">"The Purchase Code has expired. \n After you receive the Purchase Code, you will need to type quickly. " +
+		"You will need to create another order to receive another Purchase Code."</string>
+	<string name="alert_no_offers">No offers available</string>
+	<string name="alert_phone_password_required">Phone and Password is required</string>
+	<string name="alert_sign_out">Signed Out Successfully</string>
+	<string name="alert_phone">Enter phone number</string>
+	<string name="enable_gps">Enable GPS</string>
+	<string name="enable_gps_location">Please enable GPS for Find My Location</string>
+	<string name="enable_label">Enable</string>
+	<string name="ignore_label">Ignore</string>
+	<string name="alert_cancel_order">Your Order cancelled successfully</string>
+	<string name="alert_payment_done">Thank you for making the payment! Once we verify your payment, we will send the Dash to your wallet!</string>
 </resources>
