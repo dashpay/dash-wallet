@@ -205,7 +205,12 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
             if (adapter.getItemCount() == 0 && query == null) {
                 viewGroup.setDisplayedChild(1);
             } else if (adapter.getItemCount() == 0 && query != null) {
-                viewGroup.setDisplayedChild(2);
+                viewGroup.getHandler().post(new Runnable() {
+                    @Override
+                    public void run() {
+                        viewGroup.setDisplayedChild(2);
+                    }
+                });
             } else {
                 viewGroup.setDisplayedChild(3);
                 final int positionToScrollTo = adapter.getDefaultCurrencyPosition();

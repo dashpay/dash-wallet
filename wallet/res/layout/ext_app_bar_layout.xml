@@ -36,7 +36,7 @@
         android:id="@+id/toolbar_title_panel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="56dp"
+        android:layout_marginLeft="@dimen/app_bar_title_margin_start"
         android:layout_marginTop="18dp"
         android:clickable="true"
         android:orientation="vertical"
@@ -44,8 +44,8 @@
 
         <ImageView
             android:id="@+id/toolbar_logo"
-            android:layout_width="148dp"
-            android:layout_height="14dp"
+            android:layout_width="@dimen/app_bar_logo_width"
+            android:layout_height="@dimen/app_bar_logo_height"
             android:scaleType="fitStart"
             android:src="@drawable/dash_logo_white" />
 
@@ -68,9 +68,10 @@
             android:layout_height="wrap_content"
             android:text="@string/dash_slogan"
             android:textColor="#ffffff"
-            android:textSize="13sp"
+            android:textSize="@dimen/app_bar_slogan_font_size"
             android:layout_below="@+id/toolbar_logo"
             android:layout_marginTop="10dp" />
+
     </RelativeLayout>
 
 </android.support.design.widget.CollapsingToolbarLayout>
