@@ -20,6 +20,8 @@ import javax.net.ssl.X509TrustManager;
 
 import de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp.PayFieldsBeanX;
 import de.schildbach.wallet.wallofcoins.response.PayFieldsDeserializer;
+import de.schildbach.wallet_test.BuildConfig;
+import de.schildbach.wallet_test.R;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;

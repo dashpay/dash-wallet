@@ -14,7 +14,7 @@ import android.widget.TextView;
 import java.util.List;
 
 import de.schildbach.wallet.wallofcoins.response.CountryData;
-import hashengineering.darkcoin.wallet.R;
+import de.schildbach.wallet_test.R;
 
 
 public class CustomAdapter extends ArrayAdapter<CountryData.CountriesBean> {

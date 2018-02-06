@@ -76,9 +76,9 @@ import de.schildbach.wallet.wallofcoins.response.GetPricingOptionsResp;
 import de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp;
 import de.schildbach.wallet.wallofcoins.response.SendVerificationResp;
 import de.schildbach.wallet.wallofcoins.response.VerifyAdResp;
-import hashengineering.darkcoin.wallet.R;
-import hashengineering.darkcoin.wallet.databinding.ItemAdsListingBinding;
-import hashengineering.darkcoin.wallet.databinding.SellDashFragmentBinding;
+import de.schildbach.wallet_test.R;
+import de.schildbach.wallet_test.databinding.ItemAdsListingBinding;
+import de.schildbach.wallet_test.databinding.SellDashFragmentBinding;
 import okhttp3.Interceptor;
 import okhttp3.Request;
 import retrofit2.Call;
@@ -102,7 +102,8 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
     private final LoaderManager.LoaderCallbacks<Coin> balanceLoaderCallbacks = new LoaderManager.LoaderCallbacks<Coin>() {
         @Override
         public Loader<Coin> onCreateLoader(final int id, final Bundle args) {
-            return new WalletBalanceLoader(activity, wallet);
+            new WalletBalanceLoader(activity, wallet);
+            return null;
         }
 
         @Override
@@ -121,7 +122,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
     private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>() {
         @Override
         public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args) {
-            return new BlockchainStateLoader(activity);
+            return null;//new BlockchainStateLoader(activity);
         }
 
         @Override

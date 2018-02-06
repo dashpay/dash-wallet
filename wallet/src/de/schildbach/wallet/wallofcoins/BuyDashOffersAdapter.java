@@ -21,9 +21,9 @@ import java.util.Locale;
 
 import de.schildbach.wallet.util.GenericUtils;
 import de.schildbach.wallet.wallofcoins.response.GetOffersResp;
-import hashengineering.darkcoin.wallet.R;
-import hashengineering.darkcoin.wallet.databinding.BuyDashOffersItemBinding;
-import hashengineering.darkcoin.wallet.databinding.BuyDashOffersItemDoubleBinding;
+import de.schildbach.wallet_test.R;
+import de.schildbach.wallet_test.databinding.BuyDashOffersItemBinding;
+import de.schildbach.wallet_test.databinding.BuyDashOffersItemDoubleBinding;
 
 public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 

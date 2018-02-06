@@ -90,8 +90,10 @@ import de.schildbach.wallet.AddressBookProvider;
 import de.schildbach.wallet.BuyDashPref;
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
+
 import de.schildbach.wallet.ExchangeRatesProvider;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.ExchangeRate;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet.ui.AbstractWalletActivity;
@@ -114,9 +116,10 @@ import de.schildbach.wallet.wallofcoins.response.GetAuthTokenResp;
 import de.schildbach.wallet.wallofcoins.response.GetOffersResp;
 import de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp;
 import de.schildbach.wallet.wallofcoins.response.OrderListResp;
-import hashengineering.darkcoin.wallet.R;
-import hashengineering.darkcoin.wallet.databinding.BuyDashFragmentBinding;
-import hashengineering.darkcoin.wallet.databinding.ItemOrderListBinding;
+
+import de.schildbach.wallet_test.R;
+import de.schildbach.wallet_test.databinding.BuyDashFragmentBinding;
+import de.schildbach.wallet_test.databinding.ItemOrderListBinding;
 import okhttp3.Interceptor;
 import okhttp3.Request;
 import retrofit2.Call;
@@ -162,7 +165,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         public void onLoadFinished(final Loader<Cursor> loader, final Cursor data) {
             if (data != null && data.getCount() > 0) {
                 data.moveToFirst();
-                final ExchangeRatesProvider.ExchangeRate exchangeRate = ExchangeRatesProvider.getExchangeRate(data);
+                final ExchangeRate exchangeRate = ExchangeRatesProvider.getExchangeRate(data);
                 amountCalculatorLink.setExchangeRate(exchangeRate.rate);
                 updateView();
             }
@@ -176,7 +179,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private final LoaderManager.LoaderCallbacks<Coin> balanceLoaderCallbacks = new LoaderManager.LoaderCallbacks<Coin>() {
         @Override
         public Loader<Coin> onCreateLoader(final int id, final Bundle args) {
-            return new WalletBalanceLoader(activity, wallet);
+            new WalletBalanceLoader(activity, wallet);
+            return null;
         }
 
         @Override
@@ -193,7 +197,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>() {
         @Override
         public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args) {
-            return new BlockchainStateLoader(activity);
+            return null;//new BlockchainStateLoader(activity.this);
         }
 
         @Override

@@ -8,8 +8,8 @@ import android.support.v4.app.FragmentTransaction;
 import android.view.MenuItem;
 
 import de.schildbach.wallet.ui.AbstractWalletActivity;
-import hashengineering.darkcoin.wallet.R;
-import hashengineering.darkcoin.wallet.databinding.SellDashContentBinding;
+import de.schildbach.wallet_test.R;
+import de.schildbach.wallet_test.databinding.SellDashContentBinding;
 
 public final class SellDashActivity extends AbstractWalletActivity {
 
