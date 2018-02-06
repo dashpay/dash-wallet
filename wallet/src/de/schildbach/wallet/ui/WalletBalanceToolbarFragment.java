@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.app.Fragment;
@@ -141,6 +142,14 @@ public final class WalletBalanceToolbarFragment extends Fragment
 		viewBalanceLocal = (CurrencyTextView) view.findViewById(R.id.wallet_balance_local);
 		viewBalanceLocal.setInsignificantRelativeSize(1);
 		viewBalanceLocal.setStrikeThru(Constants.TEST);
+
+		viewBalance.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				showWarningIfBalanceTooMuch();
+				showExchangeRatesActivity();
+			}
+		});
 	}
 
     @Override
@@ -300,20 +309,21 @@ public final class WalletBalanceToolbarFragment extends Fragment
         if (balance == null)
             return;
 
-        final boolean tooMuch = balance.isGreaterThan(TOO_MUCH_BALANCE_THRESHOLD);
+        boolean tooMuch = balance.isGreaterThan(TOO_MUCH_BALANCE_THRESHOLD);
         viewBalanceTooMuch.setVisibility(tooMuch ? View.VISIBLE : View.GONE);
-        if (tooMuch)
-        {
-            viewBalance.setOnClickListener(new OnClickListener()
-            {
-                @Override
-                public void onClick(View v)
-                {
-                    Toast.makeText(application, getString(R.string.wallet_balance_fragment_too_much), Toast.LENGTH_LONG).show();
-                }
-            });
-        }
     }
+
+    private void showWarningIfBalanceTooMuch() {
+		if (balance != null && balance.isGreaterThan(TOO_MUCH_BALANCE_THRESHOLD)) {
+			Toast.makeText(application, getString(R.string.wallet_balance_fragment_too_much),
+					Toast.LENGTH_LONG).show();
+		}
+	}
+
+	private void showExchangeRatesActivity() {
+		Intent intent = new Intent(getActivity(), ExchangeRatesActivity.class);
+		getActivity().startActivity(intent);
+	}
 
 	private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>()
 	{
