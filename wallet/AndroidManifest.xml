@@ -188,7 +188,7 @@
         <activity
             android:name="de.schildbach.wallet.ui.WalletUriHandlerActivity"
             android:label="@string/app_name"
-            android:theme="@style/My.Theme.ChildActivity" >
+            android:theme="@style/My.Theme.Transparent" >
 
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
