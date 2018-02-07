@@ -48,7 +48,7 @@ dependencies {
 }
 
 ext {
-     archivesBaseName = 'dash-wallet'
+    archivesBaseName = 'dash-wallet'
 }
 
 android {
@@ -60,7 +60,6 @@ android {
             storePassword 'android'
         }
     }
-    flavorDimensions "default"
     compileSdkVersion 25
     buildToolsVersion '26.0.2'
 
@@ -106,7 +105,7 @@ android {
             res.srcDirs = ["beta/res"]
         }
     }
-    /*productFlavors {
+    productFlavors {
         beta {
             applicationId = "hashengineering.dash.wallet.beta"
         }
@@ -117,7 +116,7 @@ android {
         _testNet3 {
             applicationId = "hashengineering.darkcoin.wallet_test"
         }
-    }*/
+    }
     dataBinding {
         enabled = true
     }

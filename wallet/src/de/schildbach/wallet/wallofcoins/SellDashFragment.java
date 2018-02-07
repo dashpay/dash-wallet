@@ -148,7 +148,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 
     private Interceptor interceptor = new Interceptor() {
         @Override
-        public okhttp3.Response intercept(Interceptor.Chain chain) throws IOException {
+        public okhttp3.Response intercept(Chain chain) throws IOException {
             Request original = chain.request();
 
             // Request customization: add request headers
@@ -237,7 +237,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
             binding.linearPhone.setVisibility(View.VISIBLE);
         }
 
-        binding.btnNextPhone.setOnClickListener(new View.OnClickListener()
+        binding.btnNextPhone.setOnClickListener(new OnClickListener()
 
         {
             @Override
@@ -335,7 +335,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
                                 binding.textPassAbove.setText("Existing Account Login");
                                 binding.etPassword.setHint("Password");
 
-                                binding.btnNextPassword.setOnClickListener(new View.OnClickListener() {
+                                binding.btnNextPassword.setOnClickListener(new OnClickListener() {
                                     @Override
                                     public void onClick(View v) {
                                         hideKeyBoard();
@@ -352,7 +352,7 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 
                         binding.textPassAbove.setText("Register New Account");
                         binding.etPassword.setHint("Password");
-                        binding.btnNextPassword.setOnClickListener(new View.OnClickListener() {
+                        binding.btnNextPassword.setOnClickListener(new OnClickListener() {
                             @Override
                             public void onClick(View v) {
                                 hideKeyBoard();

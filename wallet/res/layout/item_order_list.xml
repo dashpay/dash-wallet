@@ -48,7 +48,7 @@
                         android:adjustViewBounds="true"
                         android:scaleType="fitCenter"
                         android:src="@{item.bankLogo}"
-                        tools:src="@mipmap/ic_app_color" />
+                        tools:src="@drawable/ic_account_balance_black_24dp" />
 
                     <LinearLayout
                         android:layout_width="0dp"

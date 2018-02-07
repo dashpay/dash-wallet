@@ -7,11 +7,12 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 import android.view.MenuItem;
 
+import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.AbstractWalletActivity;
 import de.schildbach.wallet_test.R;
 import de.schildbach.wallet_test.databinding.SellDashContentBinding;
 
-public final class SellDashActivity extends AbstractWalletActivity {
+public final class SellDashActivity extends AbstractBindServiceActivity {
 
     private SellDashContentBinding binding;
     private FragmentManager manager;
