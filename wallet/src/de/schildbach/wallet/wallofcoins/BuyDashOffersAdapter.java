@@ -1,6 +1,5 @@
 package de.schildbach.wallet.wallofcoins;
 
-
 import android.content.Context;
 import android.content.Intent;
 import android.databinding.DataBindingUtil;
@@ -13,6 +12,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.TextView;
+
+import com.bumptech.glide.Glide;
 
 import java.text.NumberFormat;
 import java.text.ParseException;
@@ -74,6 +75,12 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
                 vholder.binding.tvItrmOffer2.setText(context.getString(R.string.dotUnicodeNoRate, bean.amount.dots));
             }
 
+            Glide.with(context)
+                    .load(bean.bankLogo)
+                    .placeholder(R.drawable.ic_account_balance_black_24dp)
+                    .error(R.drawable.ic_account_balance_black_24dp)
+                    .into(vholder.binding.ivOffer);
+
 
             vholder.binding.buttonBuyDashItemOrder.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -121,6 +128,11 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
 
             final VHolderDouble1 vholder = (VHolderDouble1) holder;
             vholder.binding.setItem(bean);
+            Glide.with(context)
+                    .load(bean.bankLogo)
+                    .placeholder(R.drawable.ic_account_balance_black_24dp)
+                    .error(R.drawable.ic_account_balance_black_24dp)
+                    .into(vholder.binding.ivOffer);
 
             if (getNumAmount(bean.deposit.amount) >= 200) {
                 vholder.binding.tvItrmOffer2.setText(context.getString(R.string.dotUnicode, bean.amount.dots, GenericUtils.currencySymbol(bean.deposit.currency), getNumAmount(bean.deposit.amount) / getNumAmount(bean.amount.DASH)));

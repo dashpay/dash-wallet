@@ -55,6 +55,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
 import com.google.common.base.Charsets;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -1314,8 +1315,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
                             getOrderList(true);
                         } else {
-                            getAuthTokenCall(
-                                    null);
+                            getAuthTokenCall(null);
                         }
                     } else {
                         try {
@@ -1716,13 +1716,17 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     }
                 });
 
-
-
 //              you must deposit cash
                 double dots =    Double.parseDouble(orderListResp.total)* 1000000;
                 DecimalFormat formatter = new DecimalFormat("#,###,###.##");
                 String yourFormattedDots = formatter.format(dots);
 
+
+                Glide.with(activity)
+                        .load(orderListResp.bankLogo)
+                        .placeholder(R.drawable.ic_account_balance_black_24dp)
+                        .error(R.drawable.ic_account_balance_black_24dp)
+                        .into(holder.itemBinding.imageBank);
 
                 Log.e(TAG, "onBindViewHolder: " + orderListResp.status);
 
