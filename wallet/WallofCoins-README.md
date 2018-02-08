@@ -6,7 +6,8 @@ Setup [Retrofit](https://github.com/square/retrofit) for making API call.
 Create Structure (Classes and interface) for make API call with Retrofit
 Set Base URL: http://woc.reference.genitrust.com/api/v1
 
-
+Setup [Glide](https://github.com/bumptech/glide) for load images in Async
+call from web server. 
 
 #### GET AVAILABLE PAYMENT CENTERS (OPTIONAL)
 
@@ -28,7 +29,7 @@ GET http://woc.reference.genitrust.com/api/v1/banks/
     "icon": null,
     "iconHq": null,
     "country": "us",
-    "payFields": false},...
+    "payFields": false}
 ]
 ```
 This method is optional.
@@ -56,12 +57,12 @@ POST http://woc.reference.genitrust.com/api/v1/discoveryInputs/
 }
 ```
 
->   Publisher Id: an Unique ID generated for commit transections.
->   cryptoAddress: Cryptographic Address for user, it's optional parameter.
->   usdAmount: Amount in USD (Need to apply conversation from DASH to USD)
->   crypto: crypto type either DASH or BTC for bitcoin.
->   bank: Selected bank ID from bank list. pass empty if selected none.
->   zipCode: zip code of user, need to take input from user.
+*   Publisher Id: an Unique ID generated for commit transections.
+*   cryptoAddress: Cryptographic Address for user, it's optional parameter.
+*   usdAmount: Amount in USD (Need to apply conversation from DASH to USD)
+*   crypto: crypto type either DASH or BTC for bitcoin.
+*   bank: Selected bank ID from bank list. pass empty if selected none.
+*   zipCode: zip code of user, need to take input from user.
 
 ##### Response :
 
@@ -122,7 +123,7 @@ GET http://woc.reference.genitrust.com/api/v1/discoveryInputs/<Discovery ID>/off
     "bankIcon": "/media/logos/icon_us_MoneyGram.png",
     "bankIconHq": "/media/logos/icon_us_MoneyGram%402x.png",
     "bankLocationUrl": "https://secure.moneygram.com/locations",
-    "city": ""},
+    "city": ""}
   ],
   "doubleDeposit": [{
     "id": "eyJkaSI6IC...",
@@ -192,15 +193,17 @@ GET http://woc.reference.genitrust.com/api/v1/discoveryInputs/<Discovery ID>/off
 
 #### CREATE HOLD
 
+##### (NEW USER REGISTER USING PHONE NUMBER)
 From offer list on offer click we have to create an hold on offer for generate initial request.
 
 ```http
-HEADER X-Coins-Api-Token: 
-
+HEADER: 
+        publisher-id: ##
+       
 POST http://woc.reference.genitrust.com/api/v1/holds/
 ```
 
-It need X-Coins-Api-Token as a header parameter which is five time mobile number without space and country code.
+It need  publisher-id as a header parameter.
 
 ##### Request :
 
@@ -210,9 +213,35 @@ It need X-Coins-Api-Token as a header parameter which is five time mobile number
   "offer": "eyJ1c2QiOiAiNTA...",
   "phone": "+19411101467",
   "deviceName": "Ref Client",
-  "password": "94111014679411101467941110146794111014679411101467"
+  "deviceCode": "############"
 }
 ```
+
+##### (Existing user request for create hold)
+
+```http
+HEADER: 
+        X-Coins-Api-Token: ZGV2aWNlOjQ0NT...
+        publisher-id: ##
+       
+POST http://woc.reference.genitrust.com/api/v1/holds/
+```
+
+It need publisher-id and X-Coins-Api-Token as a header parameter.
+
+##### Request :
+
+```json
+{
+  "publisherId": "",
+  "offer": "eyJ1c2QiOiAiNTA...",
+  "phone": "+19411101467",
+  "deviceName": "Ref Client",
+  "deviceCode": "############"
+}
+```
+
+
 
 ##### Response :
 
@@ -231,8 +260,17 @@ It need X-Coins-Api-Token as a header parameter which is five time mobile number
   "__PURCHASE_CODE": "CK99K"
 }
 ```
-  This API will send purchase code to user's device and it will be same as `__PURCHASE_CODE` value.
+  
 
+##### Status Code :
+
+* 201 returned when the hold is created
+* 400 when one of the parameters are missing! for example, if you're creating a new device... you need "phone", "deviceName", and "deviceCode".
+* 403 when a token is required or the phone number supplied needs password?
+* 404 when the offer no-longer is available (either the time expired or the ad will now be negative.)
+
+   This API will send purchase code to user's device on his register phone number and it will be same
+   as `__PURCHASE_CODE` value.
 
 
 #### CAPTURE HOLD
@@ -240,8 +278,9 @@ It need X-Coins-Api-Token as a header parameter which is five time mobile number
 We have to match user input code with `__PURCHASE_CODE`  and if verify, we have to proceed further.
 
 ```http
-HEADER X-Coins-Api-Token: ZGV2aWNlOjQ0NT...
-
+HEADER:
+       X-Coins-Api-Token: ZGV2aWNlOjQ0NT...
+       publisher-id: ##
 POST http://woc.reference.genitrust.com/api/v1/holds/<Hold ID>/capture/
 ```
 
@@ -255,7 +294,6 @@ POST http://woc.reference.genitrust.com/api/v1/holds/<Hold ID>/capture/
 ```
 
 ##### Response :
-
 
 
 ```json
@@ -293,7 +331,10 @@ it will confirm the user authentication with  `__PURCHASE_CODE`  and in next ste
 #### CONFIRM DEPOSIT
 
 ```http
-HEADER X-Coins-Api-Token: 
+REQUEST HEADER: 
+        X-Coins-Api-Token: ZGV2aWNlOjQ0NT...
+        publisher-id: ##
+        
 
 POST http://woc.reference.genitrust.com/api/v1/orders/<Order ID>/confirmDeposit/
 ```
