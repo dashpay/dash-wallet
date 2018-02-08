@@ -913,12 +913,16 @@ public final class SendCoinsFragment extends Fragment {
 
         final MenuItem feeCategoryAction = menu.findItem(R.id.send_coins_options_fee_category);
         feeCategoryAction.setEnabled(state == State.INPUT);
+        if (feeCategory == FeeCategory.ZERO)
+            menu.findItem(R.id.send_coins_options_fee_category_zero).setChecked(true);
         if (feeCategory == FeeCategory.ECONOMIC)
             menu.findItem(R.id.send_coins_options_fee_category_economic).setChecked(true);
         else if (feeCategory == FeeCategory.NORMAL)
             menu.findItem(R.id.send_coins_options_fee_category_normal).setChecked(true);
         else if (feeCategory == FeeCategory.PRIORITY)
             menu.findItem(R.id.send_coins_options_fee_category_priority).setChecked(true);
+
+        menu.findItem(R.id.send_coins_options_fee_category_zero).setVisible(Constants.ENABLE_ZERO_FEES);
 
         super.onPrepareOptionsMenu(menu);
     }
@@ -1058,7 +1062,7 @@ public final class SendCoinsFragment extends Fragment {
 
         if(usingInstantSend)
             sendRequest.ensureMinRequiredFee = true;
-        else if(feeCategory == FeeCategory.ECONOMIC || feeCategory == FeeCategory.ZERO)
+        else if(Constants.ENABLE_ZERO_FEES && feeCategory == FeeCategory.ECONOMIC || feeCategory == FeeCategory.ZERO)
             sendRequest.ensureMinRequiredFee = false;  //Allow for below the reference fee transactions
         else sendRequest.ensureMinRequiredFee = true;
 
@@ -1248,7 +1252,7 @@ public final class SendCoinsFragment extends Fragment {
 
                     if(sendRequest.useInstantSend)
                         sendRequest.ensureMinRequiredFee = true;
-                    else if(feeCategory == FeeCategory.ECONOMIC || feeCategory == FeeCategory.ZERO)
+                    else if(Constants.ENABLE_ZERO_FEES && feeCategory == FeeCategory.ECONOMIC || feeCategory == FeeCategory.ZERO)
                         sendRequest.ensureMinRequiredFee = false;  //Allow for below the reference fee transactions
                     else sendRequest.ensureMinRequiredFee = true;
 
