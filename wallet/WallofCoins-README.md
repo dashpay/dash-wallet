@@ -250,7 +250,7 @@ It need  X-Coins-Publisher as a header parameter.
   "offer": "eyJ1c2QiOiAiNTA...",
   "phone": "+19411101467",
   "deviceName": "Ref Client",
-  "deviceCode": "############"
+  "deviceCode": "device-code-is-a-password_and_MUST_be_30_characters_or_more"
 }
 ```
 
@@ -274,7 +274,7 @@ It need X-Coins-Publisher and X-Coins-Api-Token as a header parameter.
   "offer": "eyJ1c2QiOiAiNTA...",
   "phone": "+19411101467",
   "deviceName": "Ref Client",
-  "deviceCode": "############"
+  "deviceCode": "device-code-is-a-password_and_MUST_be_30_characters_or_more"
 }
 ```
 
@@ -301,9 +301,9 @@ It need X-Coins-Publisher and X-Coins-Api-Token as a header parameter.
 ##### Status Code :
 
 * 201 returned when the hold is created
-* 400 when one of the parameters are missing! for example, if you're creating a new device... you need "phone", "deviceName", and "deviceCode".
-* 403 when a token is required or the phone number supplied needs password?
-* 404 when the offer no-longer is available (either the time expired or the ad will now be negative.)
+* 400 returned when one of the parameters are missing! for example, if you're creating a new device... you need "phone", "deviceName", and "deviceCode".
+* 403 returned when a X-Coins-Api-Token is required or the phone number supplied needs password
+* 404 returned when the offer no-longer is available (either the time expired or the ad will now be negative.)
 
    This API will send purchase code to user's device on his register phone number and it will be same
    as `__PURCHASE_CODE` value.
