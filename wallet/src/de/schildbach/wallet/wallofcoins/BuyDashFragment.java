@@ -1348,7 +1348,9 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         if (!TextUtils.isEmpty(phone)) {
             binding.linearProgress.setVisibility(View.VISIBLE);
 
-            WallofCoins.createService(interceptor, activity).deleteAuth(phone, getString(R.string.WALLOFCOINS_PUBLISHER_ID)).enqueue(new Callback<CheckAuthResp>() {
+            WallofCoins.createService(interceptor, activity)
+                    .deleteAuth(phone, getString(R.string.WALLOFCOINS_PUBLISHER_ID))
+                    .enqueue(new Callback<CheckAuthResp>() {
                 @Override
                 public void onResponse(Call<CheckAuthResp> call, Response<CheckAuthResp> response) {
                     Log.d(TAG, "onResponse: response code==>>" + response.code());
@@ -1381,7 +1383,9 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
     public void getOrderList(final boolean isFromCreateHold) {
         binding.linearProgress.setVisibility(View.VISIBLE);
-        WallofCoins.createService(interceptor, activity).getOrders(getString(R.string.WALLOFCOINS_PUBLISHER_ID)).enqueue(new Callback<List<OrderListResp>>() {
+        WallofCoins.createService(interceptor, activity)
+                .getOrders(getString(R.string.WALLOFCOINS_PUBLISHER_ID))
+                .enqueue(new Callback<List<OrderListResp>>() {
             @Override
             public void onResponse(Call<List<OrderListResp>> call, Response<List<OrderListResp>> response) {
                 binding.linearProgress.setVisibility(View.GONE);

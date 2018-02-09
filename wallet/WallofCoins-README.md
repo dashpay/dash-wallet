@@ -1,13 +1,20 @@
-### WOC Buy API Setup (Android)
+### Wall of Coins Platform API
 
-#### Installation
+To receive sales affiliate commissions, you must have a Publisher account with Wall of Coins. Visit this page for more information: https://wallofcoins.com/developer-api
 
-Setup [Retrofit](https://github.com/square/retrofit) for making API call. 
-Create Structure (Classes and interface) for make API call with Retrofit
-Set Base URL: http://woc.reference.genitrust.com/api/v1
+API endpoints:
 
-Setup [Glide](https://github.com/bumptech/glide) for load images in Async
-call from web server. 
+* Production: https://wallofcoins.com/api/v1
+* Development: http://woc.reference.genitrust.com/api/v1
+
+### **Authentication methods**
+
+WOC API supports authentication via auth token.
+
+#### **Auth token:**
+
+In order to be authenticated you should send a token within every API request. Token must be sent in request header called **‘X-Coins-Api-Token’**. Token must not be expired. Token must have a valid signature and all needed authentication data. Token will look like a long **base64** encoded string: **YXV0aDo2OjE0MjE1OTU1ODN8MDk3NTAyYmE1YzM4YWY4MzUxYTg1NDU2ODFjN2U4ODgyZDhkYmY0Yg==** Each token has a limited lifetime (currently 3 hours, but it can be changed). Token expiration time is always returned by API. Your application should care about automatical token renewal before it expires.
+
 
 #### GET AVAILABLE PAYMENT CENTERS (OPTIONAL)
 
@@ -20,7 +27,8 @@ GET http://woc.reference.genitrust.com/api/v1/banks/
 ##### Response : 
 
 ```json
-[{
+[
+  {
     "id": 14,
     "name": "Genitrust",
     "url": "http://genitrust.com/",
@@ -29,7 +37,8 @@ GET http://woc.reference.genitrust.com/api/v1/banks/
     "icon": null,
     "iconHq": null,
     "country": "us",
-    "payFields": false}
+    "payFields": false
+  }
 ]
 ```
 This method is optional.
@@ -190,6 +199,34 @@ GET http://woc.reference.genitrust.com/api/v1/discoveryInputs/<Discovery ID>/off
 }
 ```
 
+#### GET AUTH DETAILS
+
+**GET /api/v1/auth/<phone>/**
+
+This endpoint will return HTTP 404 if phone is not registered in our system, otherwise it will return a list of available authentication methods.
+
+**GET /api/v1/auth/15005550001/**
+
+```http
+HEADER: 
+        X-Coins-Publisher: ##
+```
+It need  X-Coins-Publisher as a header parameter.
+
+
+##### Request :
+
+```
+{
+"phone": "15005550001",
+"availableAuthSources": [
+    "device"
+    ]
+}
+```
+This endpoint will return HTTP 404 if phone is not registered in our system then call Create Hold
+, otherwise it will return a list of available authentication methods.
+
 
 #### CREATE HOLD
 
@@ -198,12 +235,12 @@ From offer list on offer click we have to create an hold on offer for generate i
 
 ```http
 HEADER: 
-        publisher-id: ##
+        X-Coins-Publisher: ##
        
 POST http://woc.reference.genitrust.com/api/v1/holds/
 ```
 
-It need  publisher-id as a header parameter.
+It need  X-Coins-Publisher as a header parameter.
 
 ##### Request :
 
@@ -222,12 +259,12 @@ It need  publisher-id as a header parameter.
 ```http
 HEADER: 
         X-Coins-Api-Token: ZGV2aWNlOjQ0NT...
-        publisher-id: ##
+        X-Coins-Publisher: ##
        
 POST http://woc.reference.genitrust.com/api/v1/holds/
 ```
 
-It need publisher-id and X-Coins-Api-Token as a header parameter.
+It need X-Coins-Publisher and X-Coins-Api-Token as a header parameter.
 
 ##### Request :
 
@@ -240,7 +277,6 @@ It need publisher-id and X-Coins-Api-Token as a header parameter.
   "deviceCode": "############"
 }
 ```
-
 
 
 ##### Response :
@@ -280,7 +316,7 @@ We have to match user input code with `__PURCHASE_CODE`  and if verify, we have 
 ```http
 HEADER:
        X-Coins-Api-Token: ZGV2aWNlOjQ0NT...
-       publisher-id: ##
+       X-Coins-Publisher: ##
 POST http://woc.reference.genitrust.com/api/v1/holds/<Hold ID>/capture/
 ```
 
@@ -333,9 +369,8 @@ it will confirm the user authentication with  `__PURCHASE_CODE`  and in next ste
 ```http
 REQUEST HEADER: 
         X-Coins-Api-Token: ZGV2aWNlOjQ0NT...
-        publisher-id: ##
-        
-
+        X-Coins-Publisher: ##
+       
 POST http://woc.reference.genitrust.com/api/v1/orders/<Order ID>/confirmDeposit/
 ```
 
@@ -365,5 +400,47 @@ POST http://woc.reference.genitrust.com/api/v1/orders/<Order ID>/confirmDeposit/
   "privateId": "c149c6e90e13de979ff12e0aaa2a9c4d9f88d510"
 }
 ```
+This method used for confirm user order
 
-it will provide transaction details which will be display to user for proceed manually at bank location.
+#### ORDER LIST
+
+```http
+REQUEST HEADER: 
+        X-Coins-Api-Token: ZGV2aWNlOjQ0NT...
+        X-Coins-Publisher: ##
+        
+
+GET http://woc.reference.genitrust.comapi/v1/orders/?<publisherId>
+```
+
+##### Response  
+
+```json
+[{
+ "id": 100823,
+ "total": "0.43763420",
+ "payment": "5.52",
+ "paymentDue": "2018-02-08T11:06:06.842Z",
+ "bankName": "Money Gram",
+ "nameOnAccount": "",
+ "account": "[{\"displaySort\": 0.0, \"name\": \"firstName\", \"value\": \"Paul\", \"label\": \"First Name\"}, {\"displaySort\": 1.0, \"name\": \"lastName\", \"value\": \"Alberto\", \"label\": \"Last Name\"}, {\"displaySort\": 2.0, \"name\": \"birthCountry\", \"value\": \"USA\", \"label\": \"Country of Birth\"}, {\"displaySort\": 1.5, \"name\": \"pickupState\", \"value\": \"FL\", \"label\": \"Pick-up State\"}]",
+ "status": "WDV",
+ "nearestBranch": {
+ "city": "",
+ "state": "",
+ "name": "Money Gram",
+ "phone": null,
+ "address": ""
+ },
+ "bankUrl": "https://moneygram.com/",
+ "bankLogo": "/media/logos/logo_us_Money%20Gram.png",
+ "bankIcon": "/media/logos/icon_us_Money%20Gram.png",
+ "bankIconHq": "/media/logos/icon_us_Money%20Gram%402x.png",
+ "privateId": "d674d55f9e",
+ "currencyName": "US Dollar",
+ "currencySymbol": "$",
+ "cryptoName": "Dash",
+ "cryptoSymbol": "\u0110"
+}]
+```
+This method is user for get user order list

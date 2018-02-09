@@ -8,7 +8,7 @@ package de.schildbach.wallet.wallofcoins;
 public final class WOCConstants {
     // REST FUll API KEY Constant
     public static final String KEY_HEADER_AUTH_TOKEN = "X-Coins-Api-Token";
-    public static final String KEY_HEADER_PUBLISHER_ID = "publisher-id";
+    public static final String KEY_HEADER_PUBLISHER_ID = "X-Coins-Publisher";
     public static final String KEY_DASH ="DASH";
     public static final String KEY_PUBLISHER_ID = "publisherId";
     public static final String KEY_VERIFICATION_CODE ="verificationCode";
