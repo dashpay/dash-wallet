@@ -73,6 +73,7 @@
     <string name="send_coins_fragment_hint_dusty_send">La cantidad es demasiado baja para enviar.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Dash insuficientes. Te faltan %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">La cantidad de pequeños pagos en tu billetera no es suficiente para poder enviarlos.</string>
+    <string name="send_coins_fragment_hint_replaying">Actualmente los pagos no están disponibles por proceso de reinicio en progreso</string>
     <string name="send_coins_fragment_direct_payment_enable">Enviar pago directamente al receptor.</string>
     <string name="send_coins_fragment_direct_payment_ack">Tu pago se ha enviado directamente con éxito.</string>
     <string name="send_coins_fragment_direct_payment_nack">Tu pago mediante conexión directa ha sido rechazado.</string>
@@ -239,11 +240,11 @@
     <string name="preferences_category_labs">Laboratorio</string>
     <string name="preferences_precision_title">Denominación y precisión</string>
     <string name="preferences_precision_summary">Unidad para mostrar cantidad. No afecta a los cálculos.</string>
-    <string name="preferences_precision_labels_8">DASH, 8 decimales</string>
-    <string name="preferences_precision_labels_6">DASH, 6 decimales</string>
-    <string name="preferences_precision_labels_4">DASH, 4 decimales</string>
-    <string name="preferences_precision_labels_2_3">mDASH, 2 decimales</string>
-    <string name="preferences_precision_labels_0_6">µDASH, sin decimales</string>
+    <string name="preferences_precision_labels_8">DASH, 8  décimas</string>
+    <string name="preferences_precision_labels_6">DASH. 6 décimas</string>
+    <string name="preferences_precision_labels_4">DASH, 4 décimas</string>
+    <string name="preferences_precision_labels_2_3">mDASH, 2 décimas</string>
+    <string name="preferences_precision_labels_0_6">µDASH, sin décimas</string>
     <string name="preferences_own_name_title">Tu nombre</string>
     <string name="preferences_own_name_summary">Tu nombre, para añadirlo a las peticiones de pago. Intenta que sea corto.</string>
     <string name="preferences_send_coins_autoclose_title">Diálogo de envio de monedas auto-cerrado</string>

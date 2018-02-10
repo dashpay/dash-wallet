@@ -1,7 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-
 	<string name="send_coins_fragment_instantx_enable">Usar InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Este pago enviado por InstantSend aún no ha sido transmitido.</string>
 	<string name="transaction_row_message_own_instantx_lock_request">Este pago enviado por InstantSend está a la espera de verificación por parte de la red de Dash.</string>
@@ -19,17 +18,17 @@
 	<string name="backup_to_seed_wallet_dialog_message">Esta es tu frase de recuperación. Por favor anótala.</string>
 	<string name="backup_wallet_to_seed_dialog_warning">NO DEJES a nadie ver tu frase de recuperación o podrán gastar tus Dash. Esta frase no es compatible con otros softwares Dash.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Tu billetera está protegida por un PIN de gasto. Introduce tu PIN y presiona Mostrar para ver tu frase de recuperación.</string>
-    <string name="import_keys_from_seed_dialog_message">Introduce tu frase de recuperación aqui.</string>
+	<string name="import_keys_from_seed_dialog_message">Introduce tu frase de recuperación aqui.</string>
 	<string name="import_export_keys_dialog_password_phrase">Aqui va la frase de recuperación.</string>
 	<string name="preferences_report_issue_summary">Reune información sobre tu problema y envía por email tu reporte a los desarrolladores.</string>
 	<string name="navigation_configuration">Configuración</string>
-    <string name="button_copy_address">Pegar dirección</string>
+	<string name="button_copy_address">Pegar dirección</string>
 	<string name="request_coins_clipboard_address_msg">Dirección Dash pegada al portapapeles</string>
 	<string name="backup_wallet_to_seed_show_recovery_phrase">Mostrar</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%ses una palabra inválida.</string>
 
 
-
-
+	<string name="send_coins_options_fee_category_zero">Sin comisión</string>
+	<string name="send_coins_fragment_hint_fee_zero">No pagar comisión. Usa \"Sin comisión\", solo si no te importa el tiempo de confirmación.</string>
 
 </resources>

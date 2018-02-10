@@ -1,7 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-
 	<string name="send_coins_fragment_instantx_enable">Use InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">This InstantSend payment has not been transmitted yet.</string>
 	<string name="transaction_row_message_own_instantx_lock_request">This InstantSend payment is awaiting verification by the Dash Network.</string>
@@ -27,7 +26,6 @@
 	<string name="request_coins_clipboard_address_msg">Dash address copied to clipboard</string>
 	<string name="backup_wallet_to_seed_show_recovery_phrase">Show</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%s is an invalid word.</string>
-
 
 	<string name="send_coins_options_fee_category_zero">No Fee</string>
 	<string name="send_coins_fragment_hint_fee_zero">No fee of will be paid. Use \'no fee\' only if you don\'t care about confirmation time.</string>
