@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources>
+
+	<string name="send_coins_fragment_instantx_enable">استخدام الإرسال الفوري</string>
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">لم يتم إرسال هذا الدفع الفوري بعد.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">هذا الدفع الفوري ينتظر الدفع التحقق من قبل شبكة داش.</string>
+	<string name="transaction_row_message_own_instantx_locked">إرسال المعاملة الفورية (مغلق)</string>
+	<string name="transaction_row_message_received_instantx_lock_request">هذا الدفع الفوري ينتظر الدفع التحقق من قبل شبكة داش.</string>
+	<string name="transaction_row_message_received_instantx_locked">تم التحقق من عملية الدفع الفوري هذه بواسطة شبكة داش.</string>
+	<string name="transaction_row_message_received_unconfirmed_instantx">إرسال فوري غير مؤكد</string>
+	<string name="transaction_row_message_received_instantx_locked2">إرسال الرسائل الفورية المقفلة</string>
+
+	<string name="wallet_options_disconnect">قطع الاتصال</string>
+
+	<string name="network_monitor_masternodes_title">العقد الرئيسية</string>
+	<string name="export_keys_dialog_title_to_seed">عرض عبارة الاسترداد</string>
+	<string name="import_keys_dialog_title_from_seed">استعادة من عبارة الاسترداد</string>
+	<string name="backup_to_seed_wallet_dialog_message">هذه عبارة الاسترداد. يرجى الكتابة عليه.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">لا تدع أي شخص يرى عبارة الاسترداد أو أنها يمكن أن تنفق داش الخاص بك. هذه العبارة غير متوافقة مع برامج داش الأخرى.</string>
+	<string name="backup_to_seed_wallet_dialog_enter_pin_message">محفظتك محمي من قبل بين الإنفاق. أدخل رقم التعريف الشخصي واضغط على عرض لعرض عبارة الاسترداد.</string>
+	<string name="import_keys_from_seed_dialog_message">أدخل عبارة الاسترداد هنا.</string>
+	<string name="import_export_keys_dialog_password_phrase">العبارة الانتعاش يذهب هنا.</string>
+	<string name="preferences_report_issue_summary">جمع المعلومات حول مشكلتك والبريد الإلكتروني تقريرك للمطورين.</string>
+	<string name="navigation_configuration">ترتيب</string>
+	<string name="button_copy_address">نسخ عنوان</string>
+	<string name="request_coins_clipboard_address_msg">تم نسخ عنوان داش إلى الحافظة</string>
+	<string name="backup_wallet_to_seed_show_recovery_phrase">تبين</string>
+	<string name="restore_wallet_from_invalid_seed_warning_message">%s هي كلمة غير صالحة.</string>
+
+
+	<string name="send_coins_options_fee_category_zero">بدون رسوم</string>
+	<string name="send_coins_fragment_hint_fee_zero">لن يتم دفع أي رسوم. استخدام \"أي رسوم\" إلا إذا كنت لا تهتم وقت التأكيد.</string>
+
+</resources>

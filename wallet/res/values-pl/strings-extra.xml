@@ -1,7 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-
 	<string name="send_coins_fragment_instantx_enable">Użyj InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Ta płatność InstantSend nie została jeszcze przesłana.</string>
 	<string name="transaction_row_message_own_instantx_lock_request">Płatność InstantSend oczekuje na weryfikację przez sieć Dash.</string>
@@ -19,19 +18,16 @@
 	<string name="backup_to_seed_wallet_dialog_message">To jest twoja fraza odzyskiwania portfela. Proszę zapisz ją.</string>
 	<string name="backup_wallet_to_seed_dialog_warning">NIE POZWÓL by ktoś zobaczył frazę odzyskiwania portfela. W przeciwnym razie możesz stracić swoje monety. Niniejsza fraza nie jest kompatybilne z innym oprogramowaniem Dash.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Twój portfel jest zabezpieczony PINem przed wydaniem środków. Wpisz PIN aby zobaczyć twoje frazy odzyskiwania portfela.</string>
-    <string name="import_keys_from_seed_dialog_message">Tutaj wpisz frazę odzyskiwania portfela.</string>
+	<string name="import_keys_from_seed_dialog_message">Tutaj wpisz frazę odzyskiwania portfela.</string>
 	<string name="import_export_keys_dialog_password_phrase">Miejsce na frazę odzyskiwania portfela.</string>
 	<string name="preferences_report_issue_summary">Zbierz informacje dotyczące twojego problemu i wyślij je do deweloperów.</string>
 	<string name="navigation_configuration">Konfiguracja</string>
-    <string name="button_copy_address">Kopiuj adres</string>
+	<string name="button_copy_address">Kopiuj adres</string>
 	<string name="request_coins_clipboard_address_msg">Adres Dash został skopiowany do schowka</string>
 	<string name="backup_wallet_to_seed_show_recovery_phrase">Pokaż</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%s jest nieprawidłowym słowem.</string>
 
-
 	<string name="send_coins_options_fee_category_zero">Bez opłaty</string>
 	<string name="send_coins_fragment_hint_fee_zero">Żadna opłata nie będzie uiszczona. Używaj tej opcji tylko wtedy kiedy nie zależy ci na czasie potwierdzenia transakcji.</string>
-
-
 
 </resources>

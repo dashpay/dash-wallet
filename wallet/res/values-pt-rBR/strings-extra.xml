@@ -1,15 +1,14 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-
 	<string name="send_coins_fragment_instantx_enable">Usar InstantSend</string>
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">Este pagamento ainda não foi transmitido.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Este pagamento ainda não foi transmitido.</string>
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">Este pagamento InstantSend ainda não foi transmitido.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">Este pagamento InstantSend está aguardando por verificação da rede Dash.</string>
 	<string name="transaction_row_message_own_instantx_locked">Enviar transação instantânea (bloqueado)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Este pagamento ainda não foi transmitido.</string>
-	<string name="transaction_row_message_received_instantx_locked">Este pagamento foi verificado pela rede Dash</string>
+	<string name="transaction_row_message_received_instantx_lock_request">Este pagamento InstantSend está aguardando por verificação da rede Dash.</string>
+	<string name="transaction_row_message_received_instantx_locked">Este pagamento InstantSend foi verificado pela rede Dash</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">InstantSend não confirmado</string>
-	<string name="transaction_row_message_received_instantx_locked2">Bloquear InstantSend</string>
+	<string name="transaction_row_message_received_instantx_locked2">InstantSend bloqueado</string>
 
 	<string name="wallet_options_disconnect">Desconectado</string>
 
@@ -17,19 +16,18 @@
 	<string name="export_keys_dialog_title_to_seed">Ver frase de recuperação</string>
 	<string name="import_keys_dialog_title_from_seed">Restaurar a partir da frase de recuperação</string>
 	<string name="backup_to_seed_wallet_dialog_message">Esta é a sua frase de recuperação. Por favor, anote isso.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">NÃO deixe ninguém ver sua frase de recuperação ou ela podera gastar seu Dash. Esta frase não é compatível com outros  Software Dash.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">NÃO deixe ninguém ver sua frase de recuperação ou poderão gastar seu Dash. Esta frase não é compatível com outros Softwares Dash.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Sua carteira é protegida por um PIN. Digite seu PIN e pressione Mostrar para ver sua frase de recuperação.</string>
-    <string name="import_keys_from_seed_dialog_message">Digite sua frase de recuperação aqui.</string>
-	<string name="import_export_keys_dialog_password_phrase">A frase de recuperação está aqui.</string>
-	<string name="preferences_report_issue_summary">Colete informações sobre seu problema e enviar seu relatório por e-mail para os desenvolvedores.</string>
+	<string name="import_keys_from_seed_dialog_message">Digite sua frase de recuperação aqui.</string>
+	<string name="import_export_keys_dialog_password_phrase">A frase de recuperação vai aqui.</string>
+	<string name="preferences_report_issue_summary">Coletar informações sobre seu problema e enviar seu relatório por e-mail para os desenvolvedores.</string>
 	<string name="navigation_configuration">Configuração</string>
-    <string name="button_copy_address">Copiar endereço</string>
+	<string name="button_copy_address">Copiar endereço</string>
 	<string name="request_coins_clipboard_address_msg">Endereço Dash copiado para a área de transferência</string>
 	<string name="backup_wallet_to_seed_show_recovery_phrase">Mostrar</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%sé uma palavra inválida.</string>
 
-
-
-
+	<string name="send_coins_options_fee_category_zero">Sem Taxa</string>
+	<string name="send_coins_fragment_hint_fee_zero">Nenhuma taxa será paga. Use \'sem taxa\' somente se você não se importa com o tempo de confirmação.</string>
 
 </resources>
