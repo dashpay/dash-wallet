@@ -334,6 +334,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 requestBuilder.addHeader(WOCConstants.KEY_HEADER_AUTH_TOKEN, buyDashPref.getAuthToken());
             }
             requestBuilder.addHeader(WOCConstants.KEY_HEADER_PUBLISHER_ID, getString(R.string.WALLOFCOINS_PUBLISHER_ID));
+            requestBuilder.addHeader(WOCConstants.KEY_HEADER_CONTENT_TYPE,WOCConstants.KEY_HEADER_CONTENT_TYPE_VALUE);
             Request request = requestBuilder.build();
             return chain.proceed(request);
         }
@@ -1143,7 +1144,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             getAuthTokenReq.put(WOCConstants.KEY_PUBLISHER_ID, getString(R.string.WALLOFCOINS_PUBLISHER_ID));
 
             binding.linearProgress.setVisibility(View.VISIBLE);
-            WallofCoins.createService(null, getActivity()).getAuthToken(phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
+            WallofCoins.createService(interceptor, getActivity()).getAuthToken(phone, getAuthTokenReq).enqueue(new Callback<GetAuthTokenResp>() {
                 @Override
                 public void onResponse(Call<GetAuthTokenResp> call, Response<GetAuthTokenResp> response) {
                     binding.linearProgress.setVisibility(View.GONE);
