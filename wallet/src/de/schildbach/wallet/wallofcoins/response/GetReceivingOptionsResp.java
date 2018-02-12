@@ -10,10 +10,10 @@ public class GetReceivingOptionsResp {
      * id : 19
      * name : Axis Bank
      * url : https://www.axisbank.com/
-     * logo : http://woc.reference.genitrust.com/static/logos/logo_in_Axis%20Bank.png
-     * logoHq : http://woc.reference.genitrust.com/static/logos/logo_in_Axis%20Bank%402x.png
-     * icon : http://woc.reference.genitrust.com/static/logos/icon_in_Axis%20Bank.png
-     * iconHq : http://woc.reference.genitrust.com/static/logos/icon_in_Axis%20Bank%402x.png
+     * logo : https://woc.reference.genitrust.com/static/logos/logo_in_Axis%20Bank.png
+     * logoHq : https://woc.reference.genitrust.com/static/logos/logo_in_Axis%20Bank%402x.png
+     * icon : https://woc.reference.genitrust.com/static/logos/icon_in_Axis%20Bank.png
+     * iconHq : https://woc.reference.genitrust.com/static/logos/icon_in_Axis%20Bank%402x.png
      * country : in
      * payFields : {"payFields":[{"name":"birthCountry","label":"Country of Birth","parse":"","displaySort":2,"paymentDestination_id":17,"id":7},{"name":"pickupState","label":"Pick-up State","parse":"","displaySort":0.5,"paymentDestination_id":17,"id":6},{"name":"lastName","label":"Last Name","parse":"","displaySort":1,"paymentDestination_id":17,"id":5},{"name":"firstName","label":"First Name","parse":"","displaySort":0,"paymentDestination_id":17,"id":4}],"confirmFields":[{"name":"receiveCode","label":"Receive Code (Confirm)","parse":"","displaySort":0,"paymentDestination_id":17,"id":3}],"trigger":"Check here if this is a biller account (Business)","dynamicFields":[{"name":"accountNumber","label":"Customer Account #","parse":"","displaySort":2,"paymentDestination_id":17,"id":4},{"name":"receiveCode","label":"Receive Code","parse":"","displaySort":1.5,"paymentDestination_id":17,"id":3},{"name":"businessCity","label":"Business City/State","parse":"","displaySort":1,"paymentDestination_id":17,"id":2},{"name":"businessName","label":"Business Name","parse":"","displaySort":0,"paymentDestination_id":17,"id":1}]}
      */

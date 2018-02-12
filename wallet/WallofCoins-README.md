@@ -5,7 +5,7 @@ To receive sales affiliate commissions, you must have a Publisher account with W
 API endpoints:
 
 * Production: https://wallofcoins.com/api/v1
-* Development: http://woc.reference.genitrust.com/api/v1
+* Development: https://woc.reference.genitrust.com/api/v1
 
 ### **Authentication methods**
 
@@ -21,7 +21,7 @@ In order to be authenticated you should send a token within every API request. T
 API for get payment center list using GET method...
 
 ```http
-GET http://woc.reference.genitrust.com/api/v1/banks/
+GET https://woc.reference.genitrust.com/api/v1/banks/
 ```
 
 ##### Response : 
@@ -49,8 +49,15 @@ This method is optional.
 
 An API for discover available option, which will return Discovery ID along with list of information.
 
+
+
 ```http
-POST http://woc.reference.genitrust.com/api/v1/discoveryInputs/
+
+HEADER:
+        X-Coins-Publisher: ##
+        Content-Type: application/json
+
+POST https://woc.reference.genitrust.com/api/v1/discoveryInputs/
 ```
 
 ##### Request :
@@ -102,7 +109,7 @@ POST http://woc.reference.genitrust.com/api/v1/discoveryInputs/
 An API for fetch all offers for received Discovery ID. 
 
 ```http
-GET http://woc.reference.genitrust.com/api/v1/discoveryInputs/<Discovery ID>/offers/
+GET https://woc.reference.genitrust.com/api/v1/discoveryInputs/<Discovery ID>/offers/
 ```
 
 ##### Response :
@@ -210,6 +217,7 @@ This endpoint will return HTTP 404 if phone is not registered in our system, oth
 ```http
 HEADER: 
         X-Coins-Publisher: ##
+        Content-Type: application/json
 ```
 It need  X-Coins-Publisher as a header parameter.
 
@@ -236,8 +244,9 @@ From offer list on offer click we have to create an hold on offer for generate i
 ```http
 HEADER: 
         X-Coins-Publisher: ##
-       
-POST http://woc.reference.genitrust.com/api/v1/holds/
+        Content-Type: application/json
+
+POST https://woc.reference.genitrust.com/api/v1/holds/
 ```
 
 It need  X-Coins-Publisher as a header parameter.
@@ -260,8 +269,9 @@ It need  X-Coins-Publisher as a header parameter.
 HEADER: 
         X-Coins-Api-Token: ZGV2aWNlOjQ0NT...
         X-Coins-Publisher: ##
-       
-POST http://woc.reference.genitrust.com/api/v1/holds/
+        Content-Type: application/json
+
+POST https://woc.reference.genitrust.com/api/v1/holds/
 ```
 
 It need X-Coins-Publisher and X-Coins-Api-Token as a header parameter.
@@ -317,7 +327,9 @@ We have to match user input code with `__PURCHASE_CODE`  and if verify, we have 
 HEADER:
        X-Coins-Api-Token: ZGV2aWNlOjQ0NT...
        X-Coins-Publisher: ##
-POST http://woc.reference.genitrust.com/api/v1/holds/<Hold ID>/capture/
+       Content-Type: application/json
+
+POST https://woc.reference.genitrust.com/api/v1/holds/<Hold ID>/capture/
 ```
 
 #####Request : 
@@ -370,8 +382,9 @@ it will confirm the user authentication with  `__PURCHASE_CODE`  and in next ste
 REQUEST HEADER: 
         X-Coins-Api-Token: ZGV2aWNlOjQ0NT...
         X-Coins-Publisher: ##
+        Content-Type: application/json
        
-POST http://woc.reference.genitrust.com/api/v1/orders/<Order ID>/confirmDeposit/
+POST https://woc.reference.genitrust.com/api/v1/orders/<Order ID>/confirmDeposit/
 ```
 
 ##### Response  
@@ -408,9 +421,9 @@ This method used for confirm user order
 REQUEST HEADER: 
         X-Coins-Api-Token: ZGV2aWNlOjQ0NT...
         X-Coins-Publisher: ##
-        
+        Content-Type: application/json
 
-GET http://woc.reference.genitrust.comapi/v1/orders/?<publisherId>
+GET https://woc.reference.genitrust.comapi/v1/orders/?<publisherId>
 ```
 
 ##### Response  
@@ -444,3 +457,4 @@ GET http://woc.reference.genitrust.comapi/v1/orders/?<publisherId>
 }]
 ```
 This method is user for get user order list
+
