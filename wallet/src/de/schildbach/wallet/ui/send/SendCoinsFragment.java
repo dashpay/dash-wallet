@@ -1052,6 +1052,8 @@ public final class SendCoinsFragment extends Fragment {
         finalPaymentIntent.setInstantX(usingInstantSend);
         final SendRequest sendRequest = finalPaymentIntent.toSendRequest();
         sendRequest.useInstantSend = usingInstantSend;
+        ixCoinSelector.setUsingInstantX(sendRequest.useInstantSend);
+        sendRequest.coinSelector = ixCoinSelector;
         sendRequest.emptyWallet = paymentIntent.mayEditAmount()
                 && finalAmount.equals(wallet.getBalance(BalanceType.AVAILABLE));
         sendRequest.feePerKb = fees.get(feeCategory);
