@@ -86,9 +86,9 @@
 	<string name="text_send_email_receipt">Wall of Coins will verify your payment. This usually takes up to 10 minutes. To expedite your order, take a picture of your receipt and &lt;u&gt;click here&lt;/u&gt; to email your receipt to Wall of Coins.</string>
 	<string name="order_contact_instruction">If you have any questions, there is a live chat window at <u>wallofcoins.com</u> or you may call the phone number that sent you a text message.</string>
 	<string name="locationsPhone">Location\'s phone #: %s</string>
-	<string name="password_authenticate_dialog_message">You are already signed up for <a href="https://wallofcoins.com">Wall of Coins</a>!</string>
-	<string name="password_authenticate_dialog_set_title">Input your Wall of Coins password below:</string>
-	<string name="password_authenticate_dialog_info_message">(For security, your password will not be saved.)</string>
+	<string name="password_authenticate_dialog_message">You\'re already signed up for <a href="https://wallofcoins.com">Wall of Coins.</a></string>
+	<string name="password_authenticate_dialog_set_title">Input your password below:</string>
+	<string name="password_authenticate_dialog_info_message">Your password is transmitted securely.</string>
 	<string name="password_alert">Please enter password in password filed</string>
 	<string name="x_coins_api">X-Coins-Api-Token</string>
 	<string name="reject_execution">rejected execution</string>

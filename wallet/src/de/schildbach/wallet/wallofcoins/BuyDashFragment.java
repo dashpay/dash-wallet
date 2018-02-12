@@ -51,6 +51,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -1151,7 +1152,9 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     if (code >= 400 && response.body() == null) {
                         try {
                             BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
-                            Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
+                            //Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
+                            if(TextUtils.isEmpty(password))
+                                createHold(false);
                         } catch (Exception e) {
                             e.printStackTrace();
                             Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
@@ -1199,6 +1202,14 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         final AlertDialog alertDialog = dialogBuilder.create();
         alertDialog.show();
 
+        ImageView imgClose = (ImageView) dialogView.findViewById(R.id.imgClose);
+
+        imgClose.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                alertDialog.dismiss();
+            }
+        });
         btnForgotPassword.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -1312,6 +1323,15 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         createHold(false);
                     } else if (response.code() == 400) {
                         if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+                            try {
+                                BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
+                                Log.d(TAG, "onResponse: message==>> " + buyDashErrorResp.detail);
+                                getOrderList(false);
+                                Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                            }
                             getOrderList(true);
                         } else {
                             getAuthTokenCall(null);
@@ -1401,7 +1421,10 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                     break;
                                 }
                             }
-                            manageOrderList(orderList);
+                            if(orderList.size()>0)
+                                manageOrderList(orderList);
+                            else
+                                manageOrderList(response.body());
                         } else {
                             manageOrderList(response.body());
                         }
@@ -1723,12 +1746,20 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 String yourFormattedDots = formatter.format(dots);
 
 
-                Glide.with(activity)
-                        .load(orderListResp.bankLogo)
-                        .placeholder(R.drawable.ic_account_balance_black_24dp)
-                        .error(R.drawable.ic_account_balance_black_24dp)
-                        .into(holder.itemBinding.imageBank);
-
+                if (orderListResp.bankLogo!=null
+                        && !orderListResp.bankLogo.equals("")) {
+                    Glide.with(activity)
+                            .load(orderListResp.bankLogo)
+                            .placeholder(R.drawable.ic_account_balance_black_24dp)
+                            .error(R.drawable.ic_account_balance_black_24dp)
+                            .into(holder.itemBinding.imageBank);
+                }else{
+                    Glide.with(activity)
+                            .load(orderListResp.bankIcon)
+                            .placeholder(R.drawable.ic_account_balance_black_24dp)
+                            .error(R.drawable.ic_account_balance_black_24dp)
+                            .into(holder.itemBinding.imageBank);
+                }
                 Log.e(TAG, "onBindViewHolder: " + orderListResp.status);
 
                 if (orderListResp.status.equals("WD")) {
@@ -1755,6 +1786,9 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     holder.itemBinding.btnCancelOrder.setVisibility(View.GONE);
                     holder.itemBinding.btnDepositFinished.setVisibility(View.GONE);
                     holder.itemBinding.textContactInstruction.setVisibility(View.GONE);
+                    holder.itemBinding.textAccountNo.setVisibility(View.GONE);
+                    holder.itemBinding.textNameAccount.setVisibility(View.GONE);
+
                 }
 
                 if(orderListResp.status.equals("WD")){
