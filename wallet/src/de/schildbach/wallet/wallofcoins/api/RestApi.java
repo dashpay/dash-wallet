@@ -64,10 +64,10 @@ public interface RestApi {
     @POST("api/v1/auth/{phone}/authorize/")
     Call<GetAuthTokenResp> getAuthToken(@Path("phone") String username, @FieldMap Map<String, String> partMap);
 
-    @GET("api/v1/banks")
+    @GET("api/v1/banks/")
     Call<List<GetReceivingOptionsResp>> getReceivingOptions(@Query("country") String country, @Query("publisherId") String publisherId);
 
-    @GET("api/v1/ad")
+    @GET("api/v1/ad/")
     Call<List<AdsListActivityResp>> getAdsListing();
 
     @GET("api/v1/markets/{crypto}/{currency}/")

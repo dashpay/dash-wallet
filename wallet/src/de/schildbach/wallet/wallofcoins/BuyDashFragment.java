@@ -1152,7 +1152,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         try {
                             BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
                             Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
-
                         } catch (Exception e) {
                             e.printStackTrace();
                             Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
@@ -1511,9 +1510,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                 && response.body().getAvailableAuthSources() != null
                                 && response.body().getAvailableAuthSources().size() > 0) {
                             if (response.body().getAvailableAuthSources().get(0).equals("password")) {
-
                                 showUserPasswordAuthenticationDialog();
-
                                 return;
                             }else if (response.body().getAvailableAuthSources().size() >= 2
                                     && response.body().getAvailableAuthSources().get(1).equals("device")) {
@@ -1777,7 +1774,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 }else  if(orderListResp.status.equals("PAYP")){
                     holder.itemBinding.textTransactionStatus.setText("Status: Done - Pending Delivery");
                 }else  if(orderListResp.status.equals("SENT")){
-                    holder.itemBinding.textTransactionStatus.setText("Status: Waiting Done - Units Delivered");
+                    holder.itemBinding.textTransactionStatus.setText("Status: Done - Units Delivered");
                 }
 
             } else if (orderListResp.id == -1){
