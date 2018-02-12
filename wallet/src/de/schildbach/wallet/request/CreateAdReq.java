@@ -4,7 +4,7 @@ public class CreateAdReq {
 
     /**
      * phone : 19033949493
-     * email : demo@geni.to
+     * email : demo@gmail.com
      * phoneCode : 1
      * bankBusiness : 17
      * sellCrypto : DASH

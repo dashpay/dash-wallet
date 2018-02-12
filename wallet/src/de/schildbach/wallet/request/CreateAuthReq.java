@@ -4,7 +4,7 @@ public class CreateAuthReq {
 
     /**
      * phone : +19418555706
-     * email : demo@geni.to
+     * email : demo@gmail.com
      * deviceCode : asdf1234
      */
 

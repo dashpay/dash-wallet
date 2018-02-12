@@ -9,7 +9,7 @@ public class GetAuthTokenResp {
      * phone : 19418555706
      * token : YXV0aDoxNzM6MTQ5OTcxNzY5NXwzZDljNDkxZDgwNmVjZDUzYTNmM2NjNzFiMTI0ZWE2ZGIzMTRlMjJk
      * authSource : deviceCode
-     * email : demo@geni.to
+     * email : demo@gmail.com
      */
 
     public String createdOn;

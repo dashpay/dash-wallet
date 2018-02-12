@@ -11,7 +11,7 @@ public class AddCreateReq {
 
     /**
      * phone : 9414477260
-     * email : demo@geni.to
+     * email : demo@gmail.com
      * phoneCode : 1
      * bankBusiness : 1
      * sellCrypto : DASH
