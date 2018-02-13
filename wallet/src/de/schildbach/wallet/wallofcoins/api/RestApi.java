@@ -3,7 +3,7 @@ package de.schildbach.wallet.wallofcoins.api;
 import java.util.List;
 import java.util.Map;
 
-import de.schildbach.wallet.request.CreateAuthReq;
+import de.schildbach.wallet.wallofcoins.request.CreateAuthReq;
 import de.schildbach.wallet.wallofcoins.response.AdsListActivityResp;
 import de.schildbach.wallet.wallofcoins.response.CaptureHoldResp;
 import de.schildbach.wallet.wallofcoins.response.CheckAuthResp;

@@ -8,19 +8,39 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center" />
-
-    <TextView
-        android:id="@+id/wallet_transactions_empty"
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        android:textSize="@dimen/font_size_small" />
+        android:layout_height="wrap_content"
+         android:layout_gravity="center"
+        >
 
+        <TextView
+            android:id="@+id/wallet_transactions_empty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true"
+            android:layout_margin="8dp"
+            android:gravity="center"
+            android:textSize="@dimen/font_size_small" />
+
+        <Button
+            android:id="@+id/buy_dash_with_cash"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_below="@+id/wallet_transactions_empty"
+            android:drawableLeft="@drawable/ic_menu_sell_dash"
+            android:drawablePadding="4dp"
+            android:text="@string/buy_dash_with_cash" />
+    </RelativeLayout>
     <android.support.v7.widget.RecyclerView
         android:id="@+id/wallet_transactions_list"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scrollbars="vertical"
         android:animateLayoutChanges="false"/>
+
+
 
 </ViewAnimator>

@@ -24,7 +24,7 @@ API for get payment center list using GET method...
 GET https://woc.reference.genitrust.com/api/v1/banks/
 ```
 
-##### Response : 
+##### Response :
 
 ```json
 [
@@ -33,9 +33,7 @@ GET https://woc.reference.genitrust.com/api/v1/banks/
     "name": "Genitrust",
     "url": "http://genitrust.com/",
     "logo": null,
-    "logoHq": null,
     "icon": null,
-    "iconHq": null,
     "country": "us",
     "payFields": false
   }
@@ -106,7 +104,7 @@ POST https://woc.reference.genitrust.com/api/v1/discoveryInputs/
 
 #### GET OFFERS
 
-An API for fetch all offers for received Discovery ID. 
+An API for fetch all offers for received Discovery ID.
 
 ```http
 GET https://woc.reference.genitrust.com/api/v1/discoveryInputs/<Discovery ID>/offers/
@@ -135,9 +133,7 @@ GET https://woc.reference.genitrust.com/api/v1/discoveryInputs/<Discovery ID>/of
     "state": "",
     "bankName": "MoneyGram",
     "bankLogo": "/media/logos/logo_us_MoneyGram.png",
-    "bankLogoHq": "/media/logos/logo_us_MoneyGram%402x.png",
     "bankIcon": "/media/logos/icon_us_MoneyGram.png",
-    "bankIconHq": "/media/logos/icon_us_MoneyGram%402x.png",
     "bankLocationUrl": "https://secure.moneygram.com/locations",
     "city": ""}
   ],
@@ -161,9 +157,7 @@ GET https://woc.reference.genitrust.com/api/v1/discoveryInputs/<Discovery ID>/of
         "state": "FL",
         "bankName": "Chase",
         "bankLogo": "/media/logos/logo_us_Chase.png",
-        "bankLogoHq": "/media/logos/logo_us_Chase%402x.png",
         "bankIcon": "/media/logos/icon_us_Chase.png",
-        "bankIconHq": "/media/logos/icon_us_Chase%402x.png",
         "bankLocationUrl": null,
         "city": "Sarasota"
     },
@@ -185,9 +179,7 @@ GET https://woc.reference.genitrust.com/api/v1/discoveryInputs/<Discovery ID>/of
         "state": "FL",
         "bankName": "Chase",
         "bankLogo": "/media/logos/logo_us_Chase.png",
-        "bankLogoHq": "/media/logos/logo_us_Chase%402x.png",
         "bankIcon": "/media/logos/icon_us_Chase.png",
-        "bankIconHq": "/media/logos/icon_us_Chase%402x.png",
         "bankLocationUrl": null,
         "city": "Sarasota"
     },
@@ -206,6 +198,18 @@ GET https://woc.reference.genitrust.com/api/v1/discoveryInputs/<Discovery ID>/of
 }
 ```
 
+When they Discovery Input offers object contains...
+
+```
+{
+  . . .
+  incremented: true
+}
+```
+
+This means that the search amount (for example "$25") was not available for all offers--some offers that are available REQUIRE the end user (buyer) to deposit slightly more than $25. This is what is meant by the term ```incremented``` so buyer need to pay that incremented amount for buy dash.
+
+
 #### GET AUTH DETAILS
 
 **GET /api/v1/auth/<phone>/**
@@ -215,7 +219,7 @@ This endpoint will return HTTP 404 if phone is not registered in our system, oth
 **GET /api/v1/auth/15005550001/**
 
 ```http
-HEADER: 
+HEADER:
         X-Coins-Publisher: ##
         Content-Type: application/json
 ```
@@ -242,7 +246,7 @@ This endpoint will return HTTP 404 if phone is not registered in our system then
 From offer list on offer click we have to create an hold on offer for generate initial request.
 
 ```http
-HEADER: 
+HEADER:
         X-Coins-Publisher: ##
         Content-Type: application/json
 
@@ -266,7 +270,7 @@ It need  X-Coins-Publisher as a header parameter.
 ##### (Existing user request for create hold)
 
 ```http
-HEADER: 
+HEADER:
         X-Coins-Api-Token: ZGV2aWNlOjQ0NT...
         X-Coins-Publisher: ##
         Content-Type: application/json
@@ -306,7 +310,7 @@ It need X-Coins-Publisher and X-Coins-Api-Token as a header parameter.
   "__PURCHASE_CODE": "CK99K"
 }
 ```
-  
+
 
 ##### Status Code :
 
@@ -332,7 +336,7 @@ HEADER:
 POST https://woc.reference.genitrust.com/api/v1/holds/<Hold ID>/capture/
 ```
 
-#####Request : 
+#####Request :
 
 ```
 {
@@ -365,7 +369,6 @@ POST https://woc.reference.genitrust.com/api/v1/holds/<Hold ID>/capture/
     "bankUrl": "https://secure.moneygram.com",
     "bankLogo": "/media/logos/logo_us_MoneyGram.png",
     "bankIcon": "/media/logos/icon_us_MoneyGram.png",
-    "bankIconHq": "/media/logos/icon_us_MoneyGram%402x.png",
     "privateId": "c149c6e90e13de979ff12e0aaa2a9c4d9f88d510"
     }
 ]
@@ -379,15 +382,15 @@ it will confirm the user authentication with  `__PURCHASE_CODE`  and in next ste
 #### CONFIRM DEPOSIT
 
 ```http
-REQUEST HEADER: 
+REQUEST HEADER:
         X-Coins-Api-Token: ZGV2aWNlOjQ0NT...
         X-Coins-Publisher: ##
         Content-Type: application/json
-       
+
 POST https://woc.reference.genitrust.com/api/v1/orders/<Order ID>/confirmDeposit/
 ```
 
-##### Response  
+##### Response
 
 ```json
 {
@@ -409,7 +412,6 @@ POST https://woc.reference.genitrust.com/api/v1/orders/<Order ID>/confirmDeposit
   "bankUrl": "https://secure.moneygram.com",
   "bankLogo": "/media/logos/logo_us_MoneyGram.png",
   "bankIcon": "/media/logos/icon_us_MoneyGram.png",
-  "bankIconHq": "/media/logos/icon_us_MoneyGram%402x.png",
   "privateId": "c149c6e90e13de979ff12e0aaa2a9c4d9f88d510"
 }
 ```
@@ -418,7 +420,7 @@ This method used for confirm user order
 #### ORDER LIST
 
 ```http
-REQUEST HEADER: 
+REQUEST HEADER:
         X-Coins-Api-Token: ZGV2aWNlOjQ0NT...
         X-Coins-Publisher: ##
         Content-Type: application/json
@@ -426,7 +428,7 @@ REQUEST HEADER:
 GET https://woc.reference.genitrust.comapi/v1/orders/?<publisherId>
 ```
 
-##### Response  
+##### Response
 
 ```json
 [{
@@ -448,7 +450,6 @@ GET https://woc.reference.genitrust.comapi/v1/orders/?<publisherId>
  "bankUrl": "https://moneygram.com/",
  "bankLogo": "/media/logos/logo_us_Money%20Gram.png",
  "bankIcon": "/media/logos/icon_us_Money%20Gram.png",
- "bankIconHq": "/media/logos/icon_us_Money%20Gram%402x.png",
  "privateId": "d674d55f9e",
  "currencyName": "US Dollar",
  "currencySymbol": "$",
@@ -458,3 +459,16 @@ GET https://woc.reference.genitrust.comapi/v1/orders/?<publisherId>
 ```
 This method is user for get user order list
 
+Below is the list of order status for user orders history:
+
+WD = Waiting Deposit
+WDV = Waiting Deposit Verification
+RERR = Issue with Receipt
+DERR = Issue with Deposit
+RSD = Reserved for Deposit
+RMIT = Remit Address Missing
+UCRV = Under Review
+PAYP = Done - Pending Delivery
+SENT = Done - Units Delivered
+
+If you get status = 'WD', then you will need to display 'Status: Waiting Deposit'.

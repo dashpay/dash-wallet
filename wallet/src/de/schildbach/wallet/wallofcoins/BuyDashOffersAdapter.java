@@ -32,13 +32,17 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
     private List<GetOffersResp.SingleDepositBean> singleDepositBeenList;
     private List<GetOffersResp.DoubleDepositBean> doubleDeposit;
     private AdapterView.OnItemSelectedListener onItemSelectedListener;
+    private String offerAmount;
+    private boolean incremented;
 
-    public BuyDashOffersAdapter(Context context, GetOffersResp getOffersResp, AdapterView.OnItemSelectedListener onItemSelectedListener) {
+    public BuyDashOffersAdapter(Context context, GetOffersResp getOffersResp,String offerAmount, AdapterView.OnItemSelectedListener onItemSelectedListener) {
         this.context = context;
         this.singleDepositBeenList = getOffersResp.singleDeposit;
         this.doubleDeposit = getOffersResp.doubleDeposit;
         this.doubleDeposit.addAll(getOffersResp.multipleBanks);
         this.onItemSelectedListener = onItemSelectedListener;
+        this.incremented = getOffersResp.incremented;
+        this.offerAmount = offerAmount;
     }
 
     @Override
@@ -75,7 +79,11 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
                 vholder.binding.tvItrmOffer2.setText(context.getString(R.string.dotUnicodeNoRate, bean.amount.dots));
             }
 
-
+            if(incremented){
+                vholder.binding.txtAmount.setVisibility(View.VISIBLE);
+            }else {
+                vholder.binding.txtAmount.setVisibility(View.INVISIBLE);
+            }
             if (bean.bankLogo!=null
                     && !bean.bankLogo.equals("")) {
                 Glide.with(context)
@@ -183,9 +191,9 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
         } else {
             TextView more = (TextView) holder.itemView;
             if (position == 0 && singleDepositBeenList.size() > 0) {
-                more.setText("Below are offers for $" + singleDepositBeenList.get(0).deposit.amount + ". You must click the ORDER button before you receive instructions to pay at the Cash Payment center.");
+                more.setText("Below are offers for at least $" + String.format("%.2f",Double.parseDouble(offerAmount)) + ". You must click the ORDER button before you receive instructions to pay at the Cash Payment center.");
             } else {
-                more.setText("Best Value Options: More Dash for $" + singleDepositBeenList.get(0).deposit.amount + " Cash");
+                more.setText("Best Value Options: More Dash for $" + String.format("%.2f",Double.parseDouble(offerAmount)) + " Cash");
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 more.setTextColor(context.getResources().getColor(R.color.colorPrimary, context.getTheme()));

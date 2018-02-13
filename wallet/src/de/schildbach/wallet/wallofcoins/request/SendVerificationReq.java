@@ -1,4 +1,4 @@
-package de.schildbach.wallet.request;
+package de.schildbach.wallet.wallofcoins.request;
 
 public class SendVerificationReq {
 

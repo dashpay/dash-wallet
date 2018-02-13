@@ -237,11 +237,29 @@
                     android:id="@+id/btn_signout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:backgroundTint="@color/woc_yellow"
-                    android:drawableTint="@color/woc_yellow"
                     android:text="Sign Out"
-                    android:textColor="@color/colorPrimary" />
+                    />
             </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/lay_order_history"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="@dimen/dimen_8dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/text_message_history"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:gravity="center"
+                    android:text="Order History"
+                    android:textSize="22dp" />
+
+            </LinearLayout>
+
+
         </LinearLayout>
     </android.support.v7.widget.CardView>
 </layout>

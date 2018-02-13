@@ -140,18 +140,33 @@
                             android:visibility="@{item.distance>0?View.VISIBLE:View.GONE}"
                             tools:text="TextView" />
                     </LinearLayout>
+                   <LinearLayout
+                       android:layout_width="0dp"
+                       android:layout_height="wrap_content"
+                       android:layout_weight="40"
+                        android:orientation="vertical"
+                       >
+                        <TextView
+                            android:id="@+id/txt_amount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text='@{"Pay $" + item.deposit.amount}'
+                            android:layout_gravity="right"
+                            android:visibility="invisible"
+                            android:gravity="right"
+                            />
+                        <TextView
+                            android:id="@+id/button_buy_dash_item_location"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="bottom"
 
-                    <TextView
-                        android:id="@+id/button_buy_dash_item_location"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="bottom"
-                        android:layout_weight="40"
-                        android:autoLink="web"
-                        android:text="Check Location"
-                        android:textColor="@color/colorPrimary"
-                        android:textSize="14sp"
-                        android:visibility='@{(item.distance==0 &amp;&amp; item.bankLocationUrl!=null &amp;&amp; item.bankLocationUrl.length()>0)?View.VISIBLE:View.INVISIBLE}' />
+                            android:autoLink="web"
+                            android:text="Check Location"
+                            android:textColor="@color/colorPrimary"
+                            android:textSize="14sp"
+                            android:visibility='@{(item.distance==0 &amp;&amp; item.bankLocationUrl!=null &amp;&amp; item.bankLocationUrl.length()>0)?View.VISIBLE:View.INVISIBLE}' />
+                   </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>

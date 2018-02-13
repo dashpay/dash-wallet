@@ -30,6 +30,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
                 android:text="Buy More Bitcoin!"
+                android:backgroundTint="@color/woc_yellow"
+                android:drawableTint="@color/woc_yellow"
+                android:textColor="@color/colorPrimary"
                 android:textSize="16sp" />
 
             <TextView

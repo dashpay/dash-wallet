@@ -25,7 +25,7 @@ import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.schildbach.wallet.request.CreateAuthReq;
+import de.schildbach.wallet.wallofcoins.request.CreateAuthReq;
 import de.schildbach.wallet.wallofcoins.response.CreateAuthResp;
 
 /**
