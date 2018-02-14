@@ -417,6 +417,22 @@ POST https://woc.reference.genitrust.com/api/v1/orders/<Order ID>/confirmDeposit
 ```
 This method used for confirm user order
 
+#### CANCEL ORDER
+
+```http
+REQUEST HEADER:
+        X-Coins-Api-Token: ZGV2aWNlOjQ0NT...
+        X-Coins-Publisher: ##
+        Content-Type: application/json
+
+DELETE https://woc.reference.genitrust.com/api/v1/orders/{orderId}/?<publisherId>
+```
+
+##### Response
+    204 NO CONTENT
+    
+This method is used for cancel order by orderId created by user.
+
 #### ORDER LIST
 
 ```http
@@ -425,8 +441,9 @@ REQUEST HEADER:
         X-Coins-Publisher: ##
         Content-Type: application/json
 
-GET https://woc.reference.genitrust.comapi/v1/orders/?<publisherId>
+GET https://woc.reference.genitrust.com/api/v1/orders/?<publisherId>
 ```
+
 
 ##### Response
 
@@ -471,4 +488,73 @@ UCRV = Under Review
 PAYP = Done - Pending Delivery
 SENT = Done - Units Delivered
 
-If you get status = 'WD', then you will need to display 'Status: Waiting Deposit'.
+If you get status = 'WD', then you will need to display 'Status: Waiting Deposit' to end user for all orders. 
+
+#### CREATE DEVICE
+
+```http
+HEADER:
+       X-Coins-Api-Token: ZGV2aWNlOjQ0NT...
+       X-Coins-Publisher: ##
+       Content-Type: application/json
+
+POST https://woc.reference.genitrust.com/api/v1/devices/
+```
+
+#####Request :
+
+```
+{
+  "name": "Test Device",
+  "code": "CK99K"
+}
+```
+
+##### Response :
+
+
+```json
+{
+  "id": 540,
+  "name": "Dash Wallet (Android)",
+  "createdOn": "2018-02-12T14:53:55.234Z"
+}
+```
+This method use for register new device with API.
+DeviceID(id) will be used to as Header parameter in "api/v1/auth/{phone}/authorize/" API for 
+Authorize user 
+
+#### GET DEVICES
+
+```http
+HEADER:
+       X-Coins-Api-Token: ZGV2aWNlOjQ0NT...
+       X-Coins-Publisher: ##
+       Content-Type: application/json
+
+GET https://woc.reference.genitrust.com/api/v1/devices/
+```
+
+##### Response :
+
+
+```json
+[
+  {
+    "id": 11,
+    "name": "rgenito",
+    "createdOn": "2015-05-13T00:17:49.210Z"
+  },
+  {
+    "id": 13,
+    "name": "rgenito",
+    "createdOn": "2015-08-05T00:00:43.421Z"
+  },
+  {
+    "id": 15,
+    "name": "rgenito",  
+    "createdOn": "2015-12-07T17:32:45.992Z"
+  }
+]
+```
+This method is use for get all devices for user 
