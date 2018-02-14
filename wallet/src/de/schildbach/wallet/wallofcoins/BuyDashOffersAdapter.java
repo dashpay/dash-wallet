@@ -35,7 +35,8 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
     private String offerAmount;
     private boolean incremented;
 
-    public BuyDashOffersAdapter(Context context, GetOffersResp getOffersResp,String offerAmount, AdapterView.OnItemSelectedListener onItemSelectedListener) {
+    public BuyDashOffersAdapter(Context context, GetOffersResp getOffersResp,String offerAmount,
+                                AdapterView.OnItemSelectedListener onItemSelectedListener) {
         this.context = context;
         this.singleDepositBeenList = getOffersResp.singleDeposit;
         this.doubleDeposit = getOffersResp.doubleDeposit;
@@ -98,7 +99,6 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
                         .error(R.drawable.ic_account_balance_black_24dp)
                         .into(vholder.binding.ivOffer);
             }
-
 
 
             vholder.binding.buttonBuyDashItemOrder.setOnClickListener(new View.OnClickListener() {

@@ -89,20 +89,23 @@ import java.util.concurrent.RejectedExecutionException;
 import javax.annotation.Nullable;
 
 import de.schildbach.wallet.AddressBookProvider;
-import de.schildbach.wallet.BuyDashPref;
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 
-import de.schildbach.wallet.ExchangeRatesProvider;
+
 import de.schildbach.wallet.WalletApplication;
+
 import de.schildbach.wallet.data.ExchangeRate;
-import de.schildbach.wallet.service.BlockchainState;
+import de.schildbach.wallet.data.ExchangeRatesProvider;
 import de.schildbach.wallet.service.BlockchainStateLoader;
+import de.schildbach.wallet.ui.AbstractBindServiceActivity;
+import de.schildbach.wallet.ui.ExchangeRateLoader;
+
+import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.ui.AbstractWalletActivity;
 import de.schildbach.wallet.ui.AddressAndLabel;
 import de.schildbach.wallet.ui.CurrencyAmountView;
 import de.schildbach.wallet.ui.CurrencyCalculatorLink;
-import de.schildbach.wallet.ui.ExchangeRateLoader;
 import de.schildbach.wallet.ui.WalletBalanceLoader;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet.wallofcoins.api.WallofCoins;
@@ -138,7 +141,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private static final int ID_BLOCKCHAIN_STATE_LOADER = 2;
     private static final int ID_ADDRESS_LOADER = 4;
     private static final int PERMISSIONS_REQUEST_LOCATION = 8989;
-    private AbstractWalletActivity activity;
+    private AbstractBindServiceActivity activity;
     private WalletApplication application;
     private Configuration config;
     private Wallet wallet;
@@ -178,28 +181,12 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         }
     };
 
-    private final LoaderManager.LoaderCallbacks<Coin> balanceLoaderCallbacks = new LoaderManager.LoaderCallbacks<Coin>() {
-        @Override
-        public Loader<Coin> onCreateLoader(final int id, final Bundle args) {
-            new WalletBalanceLoader(activity, wallet);
-            return null;
-        }
 
-        @Override
-        public void onLoadFinished(final Loader<Coin> loader, final Coin balance) {
-            BuyDashFragment.this.balance = balance;
-            updateView();
-        }
 
-        @Override
-        public void onLoaderReset(final Loader<Coin> loader) {
-        }
-    };
-
-    private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>() {
+    /*private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>() {
         @Override
         public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args) {
-            return null;//new BlockchainStateLoader(activity.this);
+            return new BlockchainStateLoader(activity0.this);
         }
 
         @Override
@@ -210,7 +197,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         @Override
         public void onLoaderReset(final Loader<BlockchainState> loader) {
         }
-    };
+    };*/
 
     private final LoaderManager.LoaderCallbacks<Address> addressLoaderCallbacks = new LoaderManager.LoaderCallbacks<Address>() {
         @Override
@@ -346,7 +333,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     public void onAttach(final Context context) {
         super.onAttach(context);
 
-        this.activity = (AbstractWalletActivity) context;
+        this.activity = (AbstractBindServiceActivity) context;
         this.application = (WalletApplication) activity.getApplication();
         this.config = application.getConfiguration();
 
@@ -960,8 +947,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         });
         loaderManager.initLoader(ID_RATE_LOADER, null, rateLoaderCallbacks);
 
-        loaderManager.initLoader(ID_BALANCE_LOADER, null, balanceLoaderCallbacks);
-        loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
+       // loaderManager.initLoader(ID_BALANCE_LOADER, null, balanceLoaderCallbacks);
+        //loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
         loaderManager.initLoader(ID_ADDRESS_LOADER, null, addressLoaderCallbacks);
 
         updateView();
@@ -1315,7 +1302,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
                     hideViewExcept(binding.layoutVerifyOtp);
 
-//                        Log.d(TAG, "onResponse: purchase code==>>" + createHoldResp.__PURCHASE_CODE);
+//                      Log.d(TAG, "onResponse: purchase code==>>" + createHoldResp.__PURCHASE_CODE);
                     clearForm((ViewGroup) binding.getRoot());
                     binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
                 } else if (null != response.errorBody()) {
@@ -1366,6 +1353,9 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         });
 
     }
+
+
+
 
     public void deleteAuthCall(final boolean isPendingHold) {
         String phone = buyDashPref.getPhone();

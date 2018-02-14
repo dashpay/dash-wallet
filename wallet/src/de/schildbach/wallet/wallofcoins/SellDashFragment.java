@@ -50,10 +50,8 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 import de.schildbach.wallet.AddressBookProvider;
-import de.schildbach.wallet.BuyDashPref;
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.SellDashPref;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.wallofcoins.request.CreateAuthReq;
