@@ -99,8 +99,8 @@ public interface RestApi {
     @POST("api/v1/holds/")
     Call<CreateHoldResp> createHold(@FieldMap Map<String, String> partMap);
 
-    @DELETE("api/v1/holds/")
-    Call<CreateHoldResp> deleteHold(@FieldMap Map<String, String> partMap);
+    @DELETE("api/v1/holds/{id}/")
+    Call<Void> deleteHold(@Path("id") String id);
 
 
     @FormUrlEncoded

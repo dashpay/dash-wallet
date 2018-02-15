@@ -21,6 +21,7 @@ public final class WOCConstants {
     public static final String KEY_ZIP_CODE = "zipCode";
     public static final String KEY_PASSWORD = "password";
     public static final String KEY_DEVICECODE = "deviceCode";
+    public static final String KEY_DEVICEID = "deviceId";
     public static final String KEY_DEVICE_NAME = "name";
     public static final String KEY_DEVICE_CODE = "code";
     public static final String KEY_PHONE = "phone";

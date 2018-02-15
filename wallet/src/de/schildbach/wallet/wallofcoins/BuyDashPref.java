@@ -41,6 +41,7 @@ public class BuyDashPref {
     private static final String HOLD_ID = "hold_id";
     private static final String PHONE = "phone";
     private static final String EMAIL = "email";
+    private static final String DEVICE_CODE = "device_code";
     private static final String DEVICE_ID = "device_id";
 
 
@@ -67,6 +68,14 @@ public class BuyDashPref {
         prefs.edit().putString(PHONE, authToken).apply();
     }
 
+    public String getDeviceCode() {
+        return prefs.getString(DEVICE_CODE, "");
+    }
+
+    public void setDeviceCode(String deviceCode) {
+        prefs.edit().putString(DEVICE_CODE, deviceCode).apply();
+    }
+
     public String getDeviceId() {
         return prefs.getString(DEVICE_ID, "");
     }
@@ -74,7 +83,6 @@ public class BuyDashPref {
     public void setDeviceId(String deviceId) {
         prefs.edit().putString(DEVICE_ID, deviceId).apply();
     }
-
     public String getEmail() {
         return prefs.getString(EMAIL, "");
     }
@@ -93,6 +101,15 @@ public class BuyDashPref {
         } else {
             prefs.edit().remove(HOLD_ID);
         }
+    }
+
+    public void clearAllPrefrance(){
+        setDeviceId("");
+        setAuthToken("");
+        setDeviceCode("");
+        setCreateHoldResp(null);
+        setPhone("");
+        prefs.edit().clear();
     }
 
     public CreateHoldResp getCreateHoldResp() {

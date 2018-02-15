@@ -152,6 +152,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private AddressAndLabel currentAddressQrAddress = null;
     private String keyAddress;
     private CreateHoldResp createHoldResp;
+    private CreateDeviceResp createDeviceResp;
     private String offerId;
     private boolean isBuyMoreVisible;
     private List<GetReceivingOptionsResp> receivingOptionsResps;
@@ -159,6 +160,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private String dashAmount = "";
     private String bankId = "";
     private String zipCode;
+    private String password = "";
 
     private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>() {
         @Override
@@ -356,13 +358,13 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         buyDashPref.registerOnSharedPreferenceChangeListener(this);
     }
 
-    private String getDeviceId(Context context) {
-        String deviceUID = buyDashPref.getDeviceId();
+    private String getDeviceCode(Context context) {
+        String deviceUID = buyDashPref.getDeviceCode();
         if (TextUtils.isEmpty(deviceUID)) {
             String deviceID = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
             byte[] data = (deviceID + deviceID + deviceID).getBytes(Charsets.UTF_8);
             deviceUID = Base64.encodeToString(data, Base64.DEFAULT).substring(0, 39);
-            buyDashPref.setDeviceId(deviceUID);
+            buyDashPref.setDeviceCode(deviceUID);
         }
         return deviceUID;
     }
@@ -1130,8 +1132,13 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             if (!TextUtils.isEmpty(password)) {
                 getAuthTokenReq.put(WOCConstants.KEY_PASSWORD, password);
             } else {
-                getAuthTokenReq.put(WOCConstants.KEY_DEVICECODE, getDeviceId(activity));
+                getAuthTokenReq.put(WOCConstants.KEY_DEVICECODE, getDeviceCode(activity));
             }
+
+            if(!TextUtils.isEmpty(buyDashPref.getDeviceId())){
+                getAuthTokenReq.put(WOCConstants.KEY_DEVICEID, buyDashPref.getDeviceId());
+            }
+
             getAuthTokenReq.put(WOCConstants.KEY_PUBLISHER_ID, getString(R.string.WALLOFCOINS_PUBLISHER_ID));
 
             binding.linearProgress.setVisibility(View.VISIBLE);
@@ -1159,7 +1166,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     }
                     hideViewExcept(null);
                     // call create hold
-                    if (!TextUtils.isEmpty(password)) {
+                    if (!TextUtils.isEmpty(password) && TextUtils.isEmpty(buyDashPref.getDeviceId())) {
                         creteDevice();
                     } else {
                         createHold(true);
@@ -1211,7 +1218,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         btnLogin.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String password = edtPassword.getText().toString().trim();
+                password = edtPassword.getText().toString().trim();
                 if(password.length()>0){
                     getAuthTokenCall(password);
                     alertDialog.dismiss();
@@ -1232,14 +1239,17 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private void creteDevice() {
         final HashMap<String, String> createDeviceReq = new HashMap<String, String>();
         createDeviceReq.put(WOCConstants.KEY_DEVICE_NAME, "Dash Wallet (Android)");
-        createDeviceReq.put(WOCConstants.KEY_DEVICE_CODE, getDeviceId(getContext()));
+        createDeviceReq.put(WOCConstants.KEY_DEVICE_CODE, getDeviceCode(getContext()));
         createDeviceReq.put(WOCConstants.KEY_PUBLISHER_ID, getString(R.string.WALLOFCOINS_PUBLISHER_ID));
         binding.linearProgress.setVisibility(View.VISIBLE);
         WallofCoins.createService(interceptor, getActivity()).createDevice(createDeviceReq).enqueue(new Callback<CreateDeviceResp>() {
             @Override
             public void onResponse(Call<CreateDeviceResp> call, Response<CreateDeviceResp> response) {
-                if (response.code() < 299) {
-                    createHold(true);
+                if (null != response.body() && response.code() < 299) {
+                    createDeviceResp = response.body();
+                    buyDashPref.setDeviceId(createDeviceResp.getId()+"");
+                    getAuthTokenCall(password);
+              //      createHold(true);
                 } else {
                     Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
                 }
@@ -1283,8 +1293,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         createHoldPassReq.put(WOCConstants.KEY_PUBLISHER_ID, getString(R.string.WALLOFCOINS_PUBLISHER_ID));
         createHoldPassReq.put(WOCConstants.KEY_EMAIL, email);
         createHoldPassReq.put(WOCConstants.KEY_deviceName, "Dash Wallet (Android)");
-        createHoldPassReq.put(WOCConstants.KEY_DEVICECODE, getDeviceId(getContext()));
-        Log.e(TAG, "createHold: " + getDeviceId(activity));
+        createHoldPassReq.put(WOCConstants.KEY_DEVICECODE, getDeviceCode(getContext()));
+        Log.e(TAG, "createHold: " + getDeviceCode(activity));
         binding.linearProgress.setVisibility(View.VISIBLE);
         WallofCoins.createService(interceptor, getActivity()).createHold(createHoldPassReq).enqueue(new Callback<CreateHoldResp>() {
             @Override
@@ -1294,17 +1304,25 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 if (null != response.body() && response.code() < 299) {
 
                     createHoldResp = response.body();
-                    buyDashPref.setHoldId(createHoldResp.id);
-                    buyDashPref.setCreateHoldResp(createHoldResp);
-                    if (!TextUtils.isEmpty(response.body().token)) {
-                        buyDashPref.setAuthToken(createHoldResp.token);
-                    }
+                    if(TextUtils.isEmpty(buyDashPref.getDeviceId())
+                            && !TextUtils.isEmpty(createHoldResp.deviceId)) {
+                        buyDashPref.setDeviceId(createHoldResp.deviceId);
+                        deleteHold(createHoldResp.id);
+                        getAuthTokenCall(null);
+                    }else {
+                        buyDashPref.setHoldId(createHoldResp.id);
+                        buyDashPref.setCreateHoldResp(createHoldResp);
 
-                    hideViewExcept(binding.layoutVerifyOtp);
+                        if (!TextUtils.isEmpty(response.body().token)) {
+                            buyDashPref.setAuthToken(createHoldResp.token);
+                        }
+
+                        hideViewExcept(binding.layoutVerifyOtp);
 
 //                      Log.d(TAG, "onResponse: purchase code==>>" + createHoldResp.__PURCHASE_CODE);
-                    clearForm((ViewGroup) binding.getRoot());
-                    binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
+                        clearForm((ViewGroup) binding.getRoot());
+                        binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
+                    }
                 } else if (null != response.errorBody()) {
                     if (response.code() == 403 && !TextUtils.isEmpty(buyDashPref.getAuthToken())) {
                         deleteAuthCall(true);
@@ -1356,12 +1374,27 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
 
 
+    private void deleteHold(String holdId) {
+        binding.linearProgress.setVisibility(View.VISIBLE);
+        WallofCoins.createService(interceptor, getActivity()).deleteHold(holdId).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+             }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                binding.linearProgress.setVisibility(View.GONE);
+                Log.e(TAG, "onFailure: ", t);
+                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+            }
+        });
+    }
 
     public void deleteAuthCall(final boolean isPendingHold) {
-        String phone = buyDashPref.getPhone();
+        final String phone = buyDashPref.getPhone();
         if (!TextUtils.isEmpty(phone)) {
             binding.linearProgress.setVisibility(View.VISIBLE);
-
+            password = "";
             WallofCoins.createService(interceptor, activity)
                     .deleteAuth(phone, getString(R.string.WALLOFCOINS_PUBLISHER_ID))
                     .enqueue(new Callback<CheckAuthResp>() {
@@ -1371,6 +1404,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     binding.linearProgress.setVisibility(View.GONE);
                     if (response.code() < 299) {
                         buyDashPref.setAuthToken("");
+                        password="";
+                        buyDashPref.clearAllPrefrance();
                         if (isPendingHold) {
                             binding.editBuyDashPhone.setText(null);
                             checkAuth();

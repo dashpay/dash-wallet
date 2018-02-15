@@ -20,6 +20,7 @@ public class CreateHoldResp {
     public String discoveryInput;
     public String token;
     public String tokenExpiresAt;
+    public String deviceId;
     public String __PURCHASE_CODE;
     public List<HoldsBean> holds;
 
