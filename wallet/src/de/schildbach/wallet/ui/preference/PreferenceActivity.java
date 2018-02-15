@@ -45,7 +45,7 @@ public final class PreferenceActivity extends AppCompatPreferenceActivity {
     private void initToolbar()
     {
         LinearLayout root = (LinearLayout)findViewById(android.R.id.list).getParent().getParent().getParent();
-        AppBarLayout appBar = (AppBarLayout) LayoutInflater.from(this).inflate(R.layout.app_bar_preferences, root, false);
+        AppBarLayout appBar = (AppBarLayout) LayoutInflater.from(this).inflate(R.layout.app_bar_general, root, false);
         root.addView(appBar, 0); // insert at top
 
         Toolbar toolbarView = (Toolbar) appBar.findViewById(R.id.toolbar);

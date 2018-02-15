@@ -200,7 +200,9 @@
             </intent-filter>
 
         </activity>
-
+        <activity android:name="de.schildbach.wallet.ui.WebViewActivity"
+            android:label="@string/preferences_activity_title"
+            android:theme="@style/My.Theme.ChildActivity"/>
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"
             android:authorities="${applicationId}.address_book"

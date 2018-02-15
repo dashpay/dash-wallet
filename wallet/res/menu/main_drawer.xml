@@ -17,6 +17,10 @@
             android:icon="@drawable/ic_menu_exchenge"
             android:title="@string/exchange_rates_activity_title" />
         <item
+            android:id="@+id/nav_buy_dash"
+            android:icon="@drawable/ic_menu_buy"
+            android:title="@string/buy_dash_activity_title" />
+        <item
             android:id="@+id/nav_paper_wallet"
             android:icon="@drawable/ic_menu_paper_wallet"
             android:title="@string/sweep_wallet_activity_title" />

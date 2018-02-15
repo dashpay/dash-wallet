@@ -31,4 +31,6 @@
 	<string name="send_coins_options_fee_category_zero">Sin comisión</string>
 	<string name="send_coins_fragment_hint_fee_zero">No pagar comisión. Usa \"Sin comisión\", solo si no te importa el tiempo de confirmación.</string>
 
+	<string name="buy_dash_activity_title">Comprar Dash</string>
+
 </resources>
