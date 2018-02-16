@@ -228,7 +228,7 @@ It need  X-Coins-Publisher as a header parameter.
 
 ##### Request :
 
-```
+```json
 {
 "phone": "15005550001",
 "availableAuthSources": [
@@ -238,6 +238,87 @@ It need  X-Coins-Publisher as a header parameter.
 ```
 This endpoint will return HTTP 404 if phone is not registered in our system then call Create Hold
 , otherwise it will return a list of available authentication methods.
+
+
+#### POST AUTH DETAILS (PASSWORD)
+
+**POST /api/v1/auth/<phone>/authorize**
+
+This endpoint will return **token**  and use that **token** as **auth token** to create hold. You must need to pass **deviceId** with **password** in this API.
+
+**POST /api/v1/auth/15005550001/authorize/**
+
+```http
+HEADER:
+        X-Coins-Publisher: ##
+        Content-Type: application/json
+```
+It need  X-Coins-Publisher as a header parameter.
+
+
+##### Request :
+
+```json
+{
+    "deviceId" : "768",
+    "password" : "abc123",
+    "publisherId" : "52"
+}
+```
+
+##### Response :
+
+```json
+{
+  "accessedOn" : "2018-02-16T06:28:41.745351Z",
+  "authSource" : "password",
+  "createdOn" : "2014-08-29T02:19:45.826334Z",
+  "email" : "",
+  "phone" : "12397776832",
+  "token" : "YXV0aDoxOjE1MTg3NzMzMjF8OWFjMWQ5ZmNiOGU1OWZhOThhNTg3YWM2YjBlZWUxMDk1NGM3NGI3OQ==",
+  "tokenExpiresAt" : "2018-02-16T09:28:41.742641Z"
+}
+```
+
+#### POST AUTH DETAILS (DEVICE)
+
+**POST /api/v1/auth/<phone>/authorize**
+
+This endpoint will return **token**  and use that **token** as **auth token** to create hold. You must need to pass **deviceId** with **deviceCode** in this API.
+
+**POST /api/v1/auth/15005550001/authorize/**
+
+```http
+    HEADER:
+    X-Coins-Publisher: ##
+    Content-Type: application/json
+```
+It need  X-Coins-Publisher as a header parameter.
+
+
+##### Request :
+
+```json
+{
+    "deviceId" : 769,
+    "deviceCode" : "C1813921-DD87-4BE6-9F73-D78B603CF1C8",
+    "publisherId" : "52"
+}
+```
+
+##### Response :
+
+```json
+{
+  "accessedOn" : "2018-02-16T06:28:41.745351Z",
+  "authSource" : "password",
+  "createdOn" : "2014-08-29T02:19:45.826334Z",
+  "email" : "",
+  "phone" : "12397776832",
+  "token" : "YXV0aDoxOjE1MTg3NzMzMjF8OWFjMWQ5ZmNiOGU1OWZhOThhNTg3YWM2YjBlZWUxMDk1NGM3NGI3OQ==",
+  "tokenExpiresAt" : "2018-02-16T09:28:41.742641Z"
+}
+```
 
 
 #### CREATE HOLD
@@ -323,6 +404,48 @@ It need X-Coins-Publisher and X-Coins-Api-Token as a header parameter.
    as `__PURCHASE_CODE` value.
 
 
+#### GET HOLD
+
+**GET /api/v1/holds/**
+
+This endpoint will return active **holdId**. You must need to pass **auth token** as **X-Coins-Api-Token** in header of this API.
+
+```http
+HEADER:
+    X-Coins-Publisher: ##
+    X-Coins-Api-Token: ZGV2aWN..
+```
+It need  X-Coins-Publisher and X-Coins-Api-Token as a header parameter.
+
+##### Response
+
+```json
+[
+  {
+    "id": "ec11665efc6eeb8e8ca083360c70a659",
+    "expirationTime": "2018-02-16T06:38:14.408227Z",
+    "discoveryInput": "8f4a39a2ca29607da6d8c891e8318b26"
+  }
+]
+```
+
+Use **id** as **holdId** to delete an active hold.
+
+#### DELETE HOLD
+
+This endpoint will delete an active hold. You must need to pass **auth token** as **X-Coins-Api-Token** in header of this API.
+
+```http
+HEADER:
+    X-Coins-Publisher: ##
+    X-Coins-Api-Token: ZGV2aWN..
+DELETE https://woc.reference.genitrust.com/api/v1/holds/<hold-Id>/
+```
+It need  X-Coins-Publisher and X-Coins-Api-Token as a header parameter.
+
+##### Response :
+204 NO CONTENT
+
 #### CAPTURE HOLD
 
 We have to match user input code with `__PURCHASE_CODE`  and if verify, we have to proceed further.
@@ -338,7 +461,7 @@ POST https://woc.reference.genitrust.com/api/v1/holds/<Hold ID>/capture/
 
 #####Request :
 
-```
+```json
 {
   "publisherId": "",
   "verificationCode": "CK99K"
@@ -448,31 +571,33 @@ GET https://woc.reference.genitrust.com/api/v1/orders/?<publisherId>
 ##### Response
 
 ```json
-[{
- "id": 100823,
- "total": "0.43763420",
- "payment": "5.52",
- "paymentDue": "2018-02-08T11:06:06.842Z",
- "bankName": "Money Gram",
- "nameOnAccount": "",
- "account": "[{\"displaySort\": 0.0, \"name\": \"firstName\", \"value\": \"Paul\", \"label\": \"First Name\"}, {\"displaySort\": 1.0, \"name\": \"lastName\", \"value\": \"Alberto\", \"label\": \"Last Name\"}, {\"displaySort\": 2.0, \"name\": \"birthCountry\", \"value\": \"USA\", \"label\": \"Country of Birth\"}, {\"displaySort\": 1.5, \"name\": \"pickupState\", \"value\": \"FL\", \"label\": \"Pick-up State\"}]",
- "status": "WDV",
- "nearestBranch": {
- "city": "",
- "state": "",
- "name": "Money Gram",
- "phone": null,
- "address": ""
+[
+  {
+    "id": 100823,
+    "total": "0.43763420",
+    "payment": "5.52",
+    "paymentDue": "2018-02-08T11:06:06.842Z",
+    "bankName": "Money Gram",
+    "nameOnAccount": "",
+    "account": "[{\"displaySort\": 0.0, \"name\": \"firstName\", \"value\": \"Paul\", \"label\": \"First Name\"}, {\"displaySort\": 1.0, \"name\": \"lastName\", \"value\": \"Alberto\", \"label\": \"Last Name\"}, {\"displaySort\": 2.0, \"name\": \"birthCountry\", \"value\": \"USA\", \"label\": \"Country of Birth\"}, {\"displaySort\": 1.5, \"name\": \"pickupState\", \"value\": \"FL\", \"label\": \"Pick-up State\"}]",
+    "status": "WDV",
+    "nearestBranch": {
+      "city": "",
+      "state": "",
+      "name": "Money Gram",
+      "phone": null,
+      "address": ""
  },
- "bankUrl": "https://moneygram.com/",
- "bankLogo": "/media/logos/logo_us_Money%20Gram.png",
- "bankIcon": "/media/logos/icon_us_Money%20Gram.png",
- "privateId": "d674d55f9e",
- "currencyName": "US Dollar",
- "currencySymbol": "$",
- "cryptoName": "Dash",
- "cryptoSymbol": "\u0110"
-}]
+  "bankUrl": "https://moneygram.com/",
+  "bankLogo": "/media/logos/logo_us_Money%20Gram.png",
+  "bankIcon": "/media/logos/icon_us_Money%20Gram.png",
+  "privateId": "d674d55f9e",
+  "currencyName": "US Dollar",
+  "currencySymbol": "$",
+  "cryptoName": "Dash",
+  "cryptoSymbol": "\u0110"
+  }
+]
 ```
 This method is user for get user order list
 
@@ -503,7 +628,7 @@ POST https://woc.reference.genitrust.com/api/v1/devices/
 
 #####Request :
 
-```
+```json
 {
   "name": "Test Device",
   "code": "CK99K"
@@ -557,4 +682,4 @@ GET https://woc.reference.genitrust.com/api/v1/devices/
   }
 ]
 ```
-This method is use for get all devices for user 
+This method is use for get all devices for register user

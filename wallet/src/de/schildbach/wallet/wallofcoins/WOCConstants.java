@@ -18,6 +18,7 @@ public final class WOCConstants {
     public static final String KEY_USD_AMOUNT ="usdAmount";
     public static final String KEY_CRYPTO = "crypto";
     public static final String KEY_BANK = "bank";
+    public static final String KEY_CRYPTO_AMOUNT = "cryptoAmount";
     public static final String KEY_ZIP_CODE = "zipCode";
     public static final String KEY_PASSWORD = "password";
     public static final String KEY_DEVICECODE = "deviceCode";

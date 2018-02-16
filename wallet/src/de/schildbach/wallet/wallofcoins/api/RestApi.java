@@ -16,6 +16,7 @@ import de.schildbach.wallet.wallofcoins.response.CurrentAuthResp;
 import de.schildbach.wallet.wallofcoins.response.DiscoveryInputsResp;
 import de.schildbach.wallet.wallofcoins.response.GetAuthTokenResp;
 import de.schildbach.wallet.wallofcoins.response.GetCurrencyResp;
+import de.schildbach.wallet.wallofcoins.response.GetHoldsResp;
 import de.schildbach.wallet.wallofcoins.response.GetOffersResp;
 import de.schildbach.wallet.wallofcoins.response.GetPricingOptionsResp;
 import de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp;
@@ -48,8 +49,6 @@ public interface RestApi {
     @GET("api/v1/orders/")
     Call<List<OrderListResp>> getOrders(@Query("publisherId") String publisherId);
 
-    @GET("api/v1/holds/")
-    Call<List<OrderListResp>> getHolds();
 
     @GET("api/v1/auth/{phone}/")
     Call<CheckAuthResp> checkAuth(@Path("phone") String username, @Query("publisherId") String publisherId);
@@ -99,9 +98,11 @@ public interface RestApi {
     @POST("api/v1/holds/")
     Call<CreateHoldResp> createHold(@FieldMap Map<String, String> partMap);
 
+    @GET("api/v1/holds/")
+    Call<List<GetHoldsResp>> getHolds();
+
     @DELETE("api/v1/holds/{id}/")
     Call<Void> deleteHold(@Path("id") String id);
-
 
     @FormUrlEncoded
     @POST("api/v1/holds/{id}/capture/")

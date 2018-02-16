@@ -31,7 +31,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class WallofCoins {
 
-    private static final String TAG = "WallofCoins";
+    private static final String TAG = "WallOfCoins";
     // TODO need to change url for production
     private static String API_BASE_URL;
     private static Context context;
@@ -54,6 +54,12 @@ public class WallofCoins {
             }
     };
 
+    /**
+     * Method for Create RestAPI call
+     * @param interceptor
+     * @param context context object of parent class
+     * @return RestApi Client object
+     */
     public static RestApi createService(Interceptor interceptor, Context context) {
         WallofCoins.context = context;
         API_BASE_URL = WallofCoins.context.getString(R.string.base_url);
@@ -61,6 +67,11 @@ public class WallofCoins {
                 .create(RestApi.class);
     }
 
+    /**
+     * Method for Create RestAPI call
+     * @param context context object of parent class
+     * @return RestApi Client object
+     */
     public static RestApi createService(Context context) {
         WallofCoins.context = context;
         API_BASE_URL = WallofCoins.context.getString(R.string.base_url);
@@ -68,6 +79,11 @@ public class WallofCoins {
                 .create(RestApi.class);
     }
 
+    /**
+     * Method for get retrofit
+     * @param interceptor
+     * @return Retrofit Object
+     */
     private static Retrofit getClient(Interceptor interceptor) {
 
         OkHttpClient.Builder httpClient = new OkHttpClient.Builder();

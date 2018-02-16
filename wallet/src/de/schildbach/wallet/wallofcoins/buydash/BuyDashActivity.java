@@ -2,11 +2,10 @@ package de.schildbach.wallet.wallofcoins.buydash;
 
 import android.os.Bundle;
 import android.view.MenuItem;
-
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
-import de.schildbach.wallet.ui.AbstractWalletActivity;
 import de.schildbach.wallet.wallofcoins.BuyDashFragment;
 import de.schildbach.wallet_test.R;
+
 
 public final class BuyDashActivity extends AbstractBindServiceActivity {
     private static final String TAG = BuyDashActivity.class.getSimpleName();

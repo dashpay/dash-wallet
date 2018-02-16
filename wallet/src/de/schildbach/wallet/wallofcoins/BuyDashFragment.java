@@ -118,6 +118,7 @@ import de.schildbach.wallet.wallofcoins.response.CreateDeviceResp;
 import de.schildbach.wallet.wallofcoins.response.CreateHoldResp;
 import de.schildbach.wallet.wallofcoins.response.DiscoveryInputsResp;
 import de.schildbach.wallet.wallofcoins.response.GetAuthTokenResp;
+import de.schildbach.wallet.wallofcoins.response.GetHoldsResp;
 import de.schildbach.wallet.wallofcoins.response.GetOffersResp;
 import de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp;
 import de.schildbach.wallet.wallofcoins.response.OrderListResp;
@@ -1015,7 +1016,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         discoveryInputsReq.put(WOCConstants.KEY_CRYPTO, config.getFormat().code());
         discoveryInputsReq.put(WOCConstants.KEY_BANK, bankId);
         discoveryInputsReq.put(WOCConstants.KEY_ZIP_CODE, zipCode);
-
+        discoveryInputsReq.put(WOCConstants.KEY_CRYPTO_AMOUNT,"0");
         binding.linearProgress.setVisibility(View.VISIBLE);
 
         final String finalOfferAmount = offerAmount;
@@ -1337,6 +1338,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                 BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
                                 Log.d(TAG, "onResponse: message==>> " + buyDashErrorResp.detail);
                                 getOrderList(false);
+                                //getHolds();
                                 Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
                             } catch (Exception e) {
                                 e.printStackTrace();
@@ -1344,12 +1346,14 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                             }
                             getOrderList(true);
                         } else {
+                            //getHolds();
                             getAuthTokenCall(null);
                         }
                     } else {
                         try {
                             BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
                             Log.d(TAG, "onResponse: message==>> " + buyDashErrorResp.detail);
+                            //getHolds();
                             getOrderList(false);
                             Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
                         } catch (Exception e) {
@@ -1372,6 +1376,28 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
     }
 
+    private void getHolds() {
+        binding.linearProgress.setVisibility(View.VISIBLE);
+        WallofCoins.createService(interceptor, getActivity()).getHolds().enqueue(new Callback<List<GetHoldsResp>>() {
+            @Override
+            public void onResponse(Call<List<GetHoldsResp>> call, Response<List<GetHoldsResp>> response) {
+                if (response.code() == 200 && response.body() != null) {
+                    List<GetHoldsResp> holdsList = response.body();
+                    for (int i =0 ;i< holdsList.size();i++){
+                        deleteHold(holdsList.get(i).id);
+                    }
+                    createHold(false);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<GetHoldsResp>> call, Throwable t) {
+                binding.linearProgress.setVisibility(View.GONE);
+                Log.e(TAG, "onFailure: ", t);
+                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+            }
+        });
+    }
 
 
     private void deleteHold(String holdId) {
@@ -1430,7 +1456,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         }
     }
 
-    public void getOrderList(final boolean isFromCreateHold) {
+    private void getOrderList(final boolean isFromCreateHold) {
         binding.linearProgress.setVisibility(View.VISIBLE);
         WallofCoins.createService(interceptor, activity)
                 .getOrders(getString(R.string.WALLOFCOINS_PUBLISHER_ID))
@@ -1556,7 +1582,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         }
     }
 
-    public void checkAuth() {
+    private void checkAuth() {
         String phone = buyDashPref.getPhone();
         if (!TextUtils.isEmpty(phone)) {
             binding.linearProgress.setVisibility(View.VISIBLE);
@@ -1600,7 +1626,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         }
     }
 
-    public void hideKeyBoard() {
+    private void hideKeyBoard() {
         View view = activity.getCurrentFocus();
         if (view != null) {
             InputMethodManager imm = (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -1608,7 +1634,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         }
     }
 
-    public void showKeyBoard() {
+    private void showKeyBoard() {
         binding.requestCoinsAmountBtcEdittext.requestFocus();
         InputMethodManager imm = (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, InputMethodManager.HIDE_IMPLICIT_ONLY);

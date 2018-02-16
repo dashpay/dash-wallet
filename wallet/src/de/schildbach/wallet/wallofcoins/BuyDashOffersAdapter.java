@@ -40,7 +40,8 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
         this.context = context;
         this.singleDepositBeenList = getOffersResp.singleDeposit;
         this.doubleDeposit = getOffersResp.doubleDeposit;
-        this.doubleDeposit.addAll(getOffersResp.multipleBanks);
+        if(getOffersResp.multipleBanks!=null && doubleDeposit!=null)
+            this.doubleDeposit.addAll(getOffersResp.multipleBanks);
         this.onItemSelectedListener = onItemSelectedListener;
         this.incremented = getOffersResp.incremented;
         this.offerAmount = offerAmount;
@@ -228,7 +229,7 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
             count++;
         }
 
-        if (doubleDeposit.size() > 0) {
+        if (null != doubleDeposit && doubleDeposit.size() > 0) {
             count += doubleDeposit.size();
             count++;
         }
