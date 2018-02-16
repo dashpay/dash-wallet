@@ -78,6 +78,7 @@ public class WebViewActivity extends AppCompatActivity {
      * @return
      */
     private boolean handleUrlChange(String url) {
+        //TODO: Handle Registration User Case
         if (url.contains(Constants.UPHOLD_AUTH_REDIRECT_URL)) {
             Uri uri = Uri.parse(url);
             String code = uri.getQueryParameter("code");
