@@ -2,16 +2,18 @@ package de.schildbach.wallet.data;
 
 import android.util.Log;
 
+import com.squareup.moshi.Moshi;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import de.schildbach.wallet.Constants;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import retrofit2.Call;
-import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.moshi.MoshiConverterFactory;
@@ -41,10 +43,13 @@ public class UpholdClient {
     private UpholdClient() {
         //TODO: Parametrize baseURL according to ENV
         OkHttpClient okClient = new OkHttpClient.Builder().addInterceptor(headerInterceptor).build();
+
+        Moshi moshi = new Moshi.Builder().add(new UpholdCardAddressAdapter()).build();
+
         Retrofit retrofit = new Retrofit.Builder()
                 .client(okClient)
                 .baseUrl("https://api-sandbox.uphold.com/")
-                .addConverterFactory(MoshiConverterFactory.create())
+                .addConverterFactory(MoshiConverterFactory.create(moshi))
                 .build();
 
         this.service = retrofit.create(UpholdService.class);
@@ -67,7 +72,7 @@ public class UpholdClient {
                     getCards(new Callback<List<UpholdCard>>() {
                         @Override
                         public void onSuccess(List<UpholdCard> cards) {
-                            UpholdClient.this.cards = cards;
+                                UpholdClient.this.cards = cards;
                         }
 
                         @Override
@@ -99,6 +104,9 @@ public class UpholdClient {
                     if (dashCard == null) {
                         createDashCard();
                     } else {
+                        if (dashCard.getAddress().getCryptoAddress() == null) {
+                            createDashAddress(dashCard.getId());
+                        }
                         //TODO: Store Dash Card
                         Log.d("Dash Card", dashCard.toString());
                     }
@@ -115,17 +123,38 @@ public class UpholdClient {
     }
 
     private void createDashCard() {
-        HashMap<String, String> body = new HashMap<>();
+        Map<String, String> body = new HashMap<>();
         body.put("label", "Dash Card");
         body.put("currency", "DASH");
         service.createCard(body).enqueue(new retrofit2.Callback<UpholdCard>() {
             @Override
             public void onResponse(Call<UpholdCard> call, Response<UpholdCard> response) {
+                if (response.isSuccessful()) {
+                    createDashAddress(response.body().getId());
+                } else {
+                    //TODO: Handle error
+                }
                 Log.d("Response", response.toString());
             }
 
             @Override
             public void onFailure(Call<UpholdCard> call, Throwable t) {
+                t.printStackTrace();
+            }
+        });
+    }
+
+    private void createDashAddress(String cardId) {
+        Map<String, String> body = new HashMap<>();
+        body.put("network", "dash");
+        service.createCardAddress(cardId, body).enqueue(new retrofit2.Callback<UpholdCryptoCardAddress>() {
+            @Override
+            public void onResponse(Call<UpholdCryptoCardAddress> call, Response<UpholdCryptoCardAddress> response) {
+                Log.d("Uphold", "Address created: " + response.body().getAddress());
+            }
+
+            @Override
+            public void onFailure(Call<UpholdCryptoCardAddress> call, Throwable t) {
                 t.printStackTrace();
             }
         });

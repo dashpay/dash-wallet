@@ -9,6 +9,7 @@ import retrofit2.http.Field;
 import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
+import retrofit2.http.Path;
 
 public interface UpholdService {
 
@@ -24,5 +25,8 @@ public interface UpholdService {
 
     @POST("v0/me/cards")
     Call<UpholdCard> createCard(@Body Map<String, String> body);
+
+    @POST("v0/me/cards/{id}/addresses")
+    Call<UpholdCryptoCardAddress> createCardAddress(@Path("id") String cardId, @Body Map<String, String> body);
 
 }
