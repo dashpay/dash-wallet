@@ -118,5 +118,5 @@
 	<string name="enable_label">Enable</string>
 	<string name="ignore_label">Ignore</string>
 	<string name="alert_cancel_order">Your Order cancelled successfully</string>
-	<string name="alert_payment_done">Thank you for making the payment! Once we verify your payment, we will send the Dash to your wallet!</string>
+	<string name="alert_payment_done">Thank you for making the payment! Once Wall of Coins verifies the payment, you will receive your Dash!</string>
 </resources>

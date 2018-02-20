@@ -192,7 +192,11 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
         } else {
             TextView more = (TextView) holder.itemView;
             if (position == 0 && singleDepositBeenList.size() > 0) {
-                more.setText("Below are offers for at least $" + String.format("%.2f",Double.parseDouble(offerAmount)) + ". You must click the ORDER button before you receive instructions to pay at the Cash Payment center.");
+                if(incremented) {
+                    more.setText("Below are offers for at least $" + String.format("%.2f", Double.parseDouble(offerAmount)) + ". You must click the ORDER button before you receive instructions to pay at the Cash Payment center.");
+                }else {
+                    more.setText("Below are offers for $" + singleDepositBeenList.get(0).deposit.amount + ". You must click the ORDER button before you receive instructions to pay at the Cash Payment center.");
+                }
             } else {
                 more.setText("Best Value Options: More Dash for $" + String.format("%.2f",Double.parseDouble(offerAmount)) + " Cash");
             }

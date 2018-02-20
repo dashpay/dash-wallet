@@ -378,11 +378,15 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 for (int grantResult : grantResults) {
                     if (grantResult != PackageManager.PERMISSION_GRANTED) {
                         Toast.makeText(activity, R.string.alert_location_permission_denied, Toast.LENGTH_LONG).show();
-                        hideViewExcept(binding.layoutZip);
+                        //hideViewExcept(binding.layoutZip);
+
+                        return;
+                    }else if(grantResult ==  PackageManager.PERMISSION_GRANTED){
+                        requestLocation();
                         return;
                     }
                 }
-                getZip();
+
             }
         }
     }
@@ -400,23 +404,24 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         network_enabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
         Location net_loc = null, gps_loc = null, finalLoc = null;
+        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            if (gps_enabled)
+                gps_loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            if (network_enabled)
+                net_loc = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
 
-        if (gps_enabled)
-            gps_loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        if (network_enabled)
-            net_loc = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+        } else {
+            requestPermissions(
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
+                    PERMISSIONS_REQUEST_LOCATION);
+        }
 
         if (gps_loc != null && net_loc != null) {
-
-            //smaller the number more accurate result will
             if (gps_loc.getAccuracy() > net_loc.getAccuracy())
                 finalLoc = net_loc;
             else
                 finalLoc = gps_loc;
-
-            // I used this just to get an idea (if both avail, its upto you which you want to take
-            // as I've taken location with more accuracy)
-
         } else {
 
             if (gps_loc != null) {
@@ -433,7 +438,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 && ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             getZip();
         } else {
-            ActivityCompat.requestPermissions(activity,
+            requestPermissions(
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
                     PERMISSIONS_REQUEST_LOCATION);
         }
@@ -1305,9 +1310,14 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 if (null != response.body() && response.code() < 299) {
 
                     createHoldResp = response.body();
+
                     if(TextUtils.isEmpty(buyDashPref.getDeviceId())
                             && !TextUtils.isEmpty(createHoldResp.deviceId)) {
                         buyDashPref.setDeviceId(createHoldResp.deviceId);
+
+                        if (!TextUtils.isEmpty(response.body().token)) {
+                            buyDashPref.setAuthToken(createHoldResp.token);
+                        }
                         deleteHold(createHoldResp.id);
                         getAuthTokenCall(null);
                     }else {
@@ -1399,7 +1409,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         });
     }
 
-
     private void deleteHold(String holdId) {
         binding.linearProgress.setVisibility(View.VISIBLE);
         WallofCoins.createService(interceptor, getActivity()).deleteHold(holdId).enqueue(new Callback<Void>() {
@@ -1418,7 +1427,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
     public void deleteAuthCall(final boolean isPendingHold) {
         final String phone = buyDashPref.getPhone();
-        if (!TextUtils.isEmpty(phone)) {
+            if (!TextUtils.isEmpty(phone)) {
             binding.linearProgress.setVisibility(View.VISIBLE);
             password = "";
             WallofCoins.createService(interceptor, activity)
@@ -1551,28 +1560,20 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
                 binding.textEmailReceipt.setVisibility(View.VISIBLE);
                 binding.textEmailReceipt.setText(Html.fromHtml(getString(R.string.text_send_email_receipt)));
-                final int finalLastWDV = lastWDV;
+
                 binding.textEmailReceipt.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         Intent emailIntent = new Intent(Intent.ACTION_SENDTO, Uri.fromParts(
                                 "mailto", WOCConstants.SUPPORT_EMAIL, null));
                         emailIntent.putExtra(Intent.EXTRA_EMAIL, new String[]{WOCConstants.SUPPORT_EMAIL});
-                        emailIntent.putExtra(Intent.EXTRA_SUBJECT, "Order #{" + orderList.get(finalLastWDV).id + "} - {" + buyDashPref.getPhone() + "}.");
+                        if(orderList.size()>0)
+                            emailIntent.putExtra(Intent.EXTRA_SUBJECT, "Order #{" + orderList.get(0).id + "} - {" + buyDashPref.getPhone() + "}.");
                         emailIntent.putExtra(Intent.EXTRA_TEXT, "");
                         startActivity(Intent.createChooser(emailIntent, WOCConstants.SEND_EMAIL));
                     }
                 });
             }
-
-/*
-            if (lastWDV != -1) {
-
-
-            } else {
-                binding.textEmailReceipt.setVisibility(View.GONE);
-            }
-*/
 
             LinearLayoutManager linearLayoutManager = new LinearLayoutManager(activity);
             binding.rvOrderList.setLayoutManager(linearLayoutManager);
@@ -1675,7 +1676,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 try {
                     ArrayList<AccountJson> accountList = new Gson().fromJson(orderListResp.account, listType);
 
-                    if(accountList!=null) {
+                    if(accountList!=null && orderListResp.status.equals("WD")) {
                         for (int i = 0; i < accountList.size(); i++) {
                             TextView textView = new TextView(getActivity());
                             textView.setTextSize(16);
@@ -2015,12 +2016,17 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         if (binding.layoutOrderList.getVisibility() == View.VISIBLE) {
             return true;
         } else if (binding.layoutLocation.getVisibility() == View.VISIBLE) {
+/*
             if (binding.rvOrderList.getAdapter() != null) {
                 hideViewExcept(binding.layoutOrderList);
                 return false;
             } else {
-                return true;
+
             }
+*/
+
+            return true;
+
         } else if (binding.layoutZip.getVisibility() == View.VISIBLE) {
             hideViewExcept(binding.layoutLocation);
             return false;
