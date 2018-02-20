@@ -7,7 +7,9 @@ import android.os.Bundle;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.MenuItem;
+import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -24,6 +26,7 @@ public class WebViewActivity extends AppCompatActivity {
     public static final String ACTIVITY_TITLE = "activity_title";
 
     private WebView webView;
+    private String url;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -58,10 +61,20 @@ public class WebViewActivity extends AppCompatActivity {
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 return handleUrlChange(url);
             }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                String cookies = CookieManager.getInstance().getCookie(url);
+                Log.d("Cookies. Finshed: ", url);
+                if (cookies != null) {
+                    Log.d("Fresh Cookies", cookies);
+                }
+            }
         });
 
         Intent intent = getIntent();
-        String url = intent.getStringExtra(WEBVIEW_URL);
+        url = intent.getStringExtra(WEBVIEW_URL);
         if (url != null) {
             webView.loadUrl(url);
         }
@@ -72,12 +85,22 @@ public class WebViewActivity extends AppCompatActivity {
         }
     }
 
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (url != null) {
+            webView.loadUrl(url);
+        }
+    }
+
     /**
      * TODO: Java Doc.
      * @param url
      * @return
      */
     private boolean handleUrlChange(String url) {
+        Log.d("Cookies URL", url);
         //TODO: Handle Registration User Case
         if (url.contains(Constants.UPHOLD_AUTH_REDIRECT_URL)) {
             Uri uri = Uri.parse(url);
@@ -87,6 +110,7 @@ public class WebViewActivity extends AppCompatActivity {
                     @Override
                     public void onSuccess(String accessToken) {
                         Toast.makeText(WebViewActivity.this, accessToken, Toast.LENGTH_SHORT).show();
+                        finish();
                     }
 
                     @Override

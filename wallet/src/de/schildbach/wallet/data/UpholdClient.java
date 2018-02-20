@@ -24,7 +24,6 @@ public class UpholdClient {
     private final UpholdService service;
 
     private String accessToken;
-    private List<UpholdCard> cards;
 
     private Interceptor headerInterceptor = new Interceptor() {
 
@@ -72,7 +71,7 @@ public class UpholdClient {
                     getCards(new Callback<List<UpholdCard>>() {
                         @Override
                         public void onSuccess(List<UpholdCard> cards) {
-                                UpholdClient.this.cards = cards;
+
                         }
 
                         @Override
