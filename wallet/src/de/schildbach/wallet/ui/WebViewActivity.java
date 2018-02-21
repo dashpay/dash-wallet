@@ -27,6 +27,7 @@ public class WebViewActivity extends AppCompatActivity {
 
     private WebView webView;
     private String url;
+    private String confirmationUrl;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -85,11 +86,25 @@ public class WebViewActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * TODO: Java Doc
+     * @param intent
+     */
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        confirmationUrl = intent.getDataString();
+    }
 
+    /**
+     * TODO: Java Doc
+     */
     @Override
     protected void onResume() {
         super.onResume();
-        if (url != null) {
+        if (confirmationUrl != null) {
+            webView.loadUrl(confirmationUrl);
+        } else if (url != null) {
             webView.loadUrl(url);
         }
     }
