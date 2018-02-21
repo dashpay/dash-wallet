@@ -528,6 +528,36 @@
                 android:backgroundTint="#FFF"
                 android:text="@string/no_thanks"
                 android:textStyle="bold" />
+
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/layout_hold"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:padding="@dimen/dimen_12dp"
+                android:text="@string/created_hold"
+                android:textSize="16dp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btn_createhold"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="wallofcoins.com"
+                android:backgroundTint="@color/woc_yellow"
+                android:drawableTint="@color/woc_yellow"
+                android:textColor="@color/colorPrimary"
+                android:textSize="16sp" />
+
         </LinearLayout>
 
         <LinearLayout

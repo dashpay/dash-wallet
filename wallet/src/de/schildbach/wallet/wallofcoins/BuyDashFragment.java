@@ -134,7 +134,6 @@ import retrofit2.Response;
 
 import static org.bitcoinj.wallet.KeyChain.KeyPurpose.RECEIVE_FUNDS;
 
-
 public final class BuyDashFragment extends Fragment implements OnSharedPreferenceChangeListener {
     private static final String TAG = BuyDashFragment.class.getSimpleName();
     private static final int ID_BALANCE_LOADER = 0;
@@ -162,6 +161,9 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private String bankId = "";
     private String zipCode;
     private String password = "";
+    private String phoneno = "";
+    private String country_code = "";
+
 
     private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>() {
         @Override
@@ -183,24 +185,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         public void onLoaderReset(final Loader<Cursor> loader) {
         }
     };
-
-
-
-    /*private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>() {
-        @Override
-        public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args) {
-            return new BlockchainStateLoader(activity0.this);
-        }
-
-        @Override
-        public void onLoadFinished(final Loader<BlockchainState> loader, final BlockchainState blockchainState) {
-            updateView();
-        }
-
-        @Override
-        public void onLoaderReset(final Loader<BlockchainState> loader) {
-        }
-    };*/
 
     private final LoaderManager.LoaderCallbacks<Address> addressLoaderCallbacks = new LoaderManager.LoaderCallbacks<Address>() {
         @Override
@@ -539,6 +523,13 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             }
         });
 
+        binding.btnCreatehold.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                goToUrl("https://wallofcoins.com/signin/"+country_code.replace("+","")+"-"+phoneno+"/");
+            }
+        });
+
         binding.buttonBuyDashBankNext.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -573,8 +564,10 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         binding.btnNextPhone.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String countryCode = countryData.countries.get(binding.spCountry.getSelectedItemPosition()).code;
-                String phone = countryCode + binding.editBuyDashPhone.getText().toString().trim();
+                country_code = countryData.countries.get(binding.spCountry.getSelectedItemPosition()).code;
+                phoneno = binding.editBuyDashPhone.getText().toString().trim();
+                String phone = country_code + binding.editBuyDashPhone.getText().toString().trim();
+
                 buyDashPref.setPhone(phone);
                 hideKeyBoard();
                 checkAuth();
@@ -771,8 +764,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     if (!currentDate.after(eventDate)) {
                         long diff = eventDate.getTime()
                                 - currentDate.getTime();
-//                        long days = diff / (24 * 60 * 60 * 1000);
-//                        diff -= days * (24 * 60 * 60 * 1000);
                         long hours = diff / (60 * 60 * 1000);
                         diff -= hours * (60 * 60 * 1000);
                         long minutes = diff / (60 * 1000);
@@ -792,7 +783,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                             countdownInterval = 1000;
                         }
                     } else {
-
                         textDepositeDue.setText("Deposit Due: 0 minutes 0 seconds");
                         handler.removeMessages(0);
                     }
@@ -807,7 +797,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private void getZip() {
 
         Location myLocation = getLastKnownLocation();
-        if(myLocation != null) {
+        if (myLocation != null) {
 
             Geocoder geocoder;
             List<android.location.Address> addresses;
@@ -816,7 +806,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 try {
                     addresses = geocoder.getFromLocation(myLocation.getLatitude(), myLocation.getLongitude(), 1); // Here 1 represent max location result to returned, by documents it recommended 1 to 5
                     zipCode = addresses.get(0).getPostalCode();
-
                     hideViewExcept(binding.layoutCreateHold);
                     showKeyBoard();
 
@@ -824,11 +813,11 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     e.printStackTrace();
                 }
             }
-        }else{
+        } else {
             LocationManager mlocManager = (LocationManager) activity.getSystemService(Context.LOCATION_SERVICE);
             boolean enabled = mlocManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
 
-            if(!enabled) {
+            if (!enabled) {
                 showDialogGPS();
             }
         }
@@ -1156,14 +1145,12 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
                     if (code >= 400 && response.body() == null) {
                         try {
-                            BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
-                            //Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
-                            if(TextUtils.isEmpty(password))
-                                createHold(false);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
-                        }
+                                BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
+                                showAlertPasswordDialog();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+                           }
                         return;
                     }
 
@@ -1171,7 +1158,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         buyDashPref.setAuthToken(response.body().token);
                     }
                     hideViewExcept(null);
-                    // call create hold
                     if (!TextUtils.isEmpty(password) && TextUtils.isEmpty(buyDashPref.getDeviceId())) {
                         creteDevice();
                     } else {
@@ -1189,6 +1175,23 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         } else {
             Toast.makeText(getContext(), R.string.alert_phone_password_required, Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void  showAlertPasswordDialog(){
+        AlertDialog.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            builder = new AlertDialog.Builder(activity, android.R.style.Theme_Material_Dialog_Alert);
+        } else {
+            builder = new AlertDialog.Builder(activity);
+        }
+        builder.setTitle("")
+                .setMessage(getString(R.string.user_pass_wrong))
+                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                })
+                .show();
     }
 
     private void showUserPasswordAuthenticationDialog() {
@@ -1293,7 +1296,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         String phone = buyDashPref.getPhone();
 
         final HashMap<String, String> createHoldPassReq = new HashMap<String, String>();
-        if (!isUserExist)
+        if(TextUtils.isEmpty(buyDashPref.getAuthToken()))
             createHoldPassReq.put(WOCConstants.KEY_PHONE, phone);
         createHoldPassReq.put(WOCConstants.KEY_OFFER, offerId);
         createHoldPassReq.put(WOCConstants.KEY_PUBLISHER_ID, getString(R.string.WALLOFCOINS_PUBLISHER_ID));
@@ -1311,69 +1314,52 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
 
                     createHoldResp = response.body();
 
-                    if(TextUtils.isEmpty(buyDashPref.getDeviceId())
+                    buyDashPref.setHoldId(createHoldResp.id);
+                    buyDashPref.setCreateHoldResp(createHoldResp);
+                    if (TextUtils.isEmpty(buyDashPref.getDeviceId())
                             && !TextUtils.isEmpty(createHoldResp.deviceId)) {
                         buyDashPref.setDeviceId(createHoldResp.deviceId);
-
-                        if (!TextUtils.isEmpty(response.body().token)) {
-                            buyDashPref.setAuthToken(createHoldResp.token);
-                        }
-                        deleteHold(createHoldResp.id);
-                        getAuthTokenCall(null);
-                    }else {
-                        buyDashPref.setHoldId(createHoldResp.id);
-                        buyDashPref.setCreateHoldResp(createHoldResp);
-
-                        if (!TextUtils.isEmpty(response.body().token)) {
-                            buyDashPref.setAuthToken(createHoldResp.token);
-                        }
-
-                        hideViewExcept(binding.layoutVerifyOtp);
-
-//                      Log.d(TAG, "onResponse: purchase code==>>" + createHoldResp.__PURCHASE_CODE);
-                        clearForm((ViewGroup) binding.getRoot());
-                        binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
                     }
+                    if (!TextUtils.isEmpty(response.body().token)) {
+                        buyDashPref.setAuthToken(createHoldResp.token);
+                    }
+
+                    hideViewExcept(binding.layoutVerifyOtp);
+                    clearForm((ViewGroup) binding.getRoot());
+                    binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
+
                 } else if (null != response.errorBody()) {
-                    if (response.code() == 403 && !TextUtils.isEmpty(buyDashPref.getAuthToken())) {
-                        deleteAuthCall(true);
-                        creteDevice();
-                    }else if (response.code() == 403 && TextUtils.isEmpty(buyDashPref.getAuthToken())) {
-                        getAuthTokenCall(null);
-                    }  else if (response.code() == 404) {
-                        createHold(false);
+                    BuyDashErrorResp buyDashErrorResp = null;
+                    try {
+                        buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    if (response.code() == 403 && TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+                        hideViewExcept(binding.layoutHold);
+                        clearForm((ViewGroup) binding.getRoot());
+                    } else if (response.code() == 403 && !TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+                        getOrderList(false);
+                        //getHolds();
                     } else if (response.code() == 400) {
                         if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
-                            try {
-                                BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
-                                Log.d(TAG, "onResponse: message==>> " + buyDashErrorResp.detail);
-                                getOrderList(false);
-                                //getHolds();
-                                Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
-                            }
-                            getOrderList(true);
+                            getOrderList(false);
                         } else {
-                            //getHolds();
-                            getAuthTokenCall(null);
+                            hideViewExcept(binding.layoutHold);
+                            clearForm((ViewGroup) binding.getRoot());
                         }
                     } else {
                         try {
-                            BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
-                            Log.d(TAG, "onResponse: message==>> " + buyDashErrorResp.detail);
-                            //getHolds();
-                            getOrderList(false);
-                            Toast.makeText(getContext(), buyDashErrorResp.detail, Toast.LENGTH_LONG).show();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
-                        }
+                                if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+                                    getOrderList(false);
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
                     }
                 } else {
                     clearForm((ViewGroup) binding.getRoot());
-                    Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
                 }
             }
 
@@ -1393,13 +1379,16 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             public void onResponse(Call<List<GetHoldsResp>> call, Response<List<GetHoldsResp>> response) {
                 if (response.code() == 200 && response.body() != null) {
                     List<GetHoldsResp> holdsList = response.body();
-                    for (int i =0 ;i< holdsList.size();i++){
-                        deleteHold(holdsList.get(i).id);
+                    if(holdsList.size()>0) {
+                        for (int i = 0; i < holdsList.size(); i++) {
+                            deleteHold(holdsList.get(i).id);
+                        }
+                        createHold(false);
+                    }else{
+                        getOrderList(false);
                     }
-                    createHold(false);
                 }
             }
-
             @Override
             public void onFailure(Call<List<GetHoldsResp>> call, Throwable t) {
                 binding.linearProgress.setVisibility(View.GONE);
@@ -1478,7 +1467,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     if (response.body() != null && response.body().size() > 0) {
                         if (isFromCreateHold) {
                             List<OrderListResp> orderList = new ArrayList<>();
-
                             for (OrderListResp orderListResp : response.body()) {
                                 if (orderListResp.status.equals("WD")) {
                                     Log.d(TAG, "onResponse: status==>" + orderListResp.status);
@@ -1486,10 +1474,11 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                     break;
                                 }
                             }
-                            if(orderList.size()>0)
-                                manageOrderList(orderList,isFromCreateHold);
-                            else
-                                manageOrderList(response.body(),isFromCreateHold);
+                            if (orderList.size()>0) {
+                                manageOrderList(orderList, isFromCreateHold);
+                            } else {
+                                manageOrderList(response.body(), isFromCreateHold);
+                            }
                         } else {
                             manageOrderList(response.body(),false);
                         }
@@ -1541,22 +1530,28 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 }
             }
 
-            OrderListResp orderListResp = new OrderListResp();
-            orderListResp.id = -3;
-            orderList.add(lastWDV+ 1, orderListResp);
-
             OrderListResp orderListResp1 = new OrderListResp();
-            orderListResp1.id = -2;
-            orderList.add(lastWDV + 2, orderListResp1);
-            if(!isFromCreateHold){
+            orderListResp1.id = -1;
+            orderList.add(lastWDV + 1, orderListResp1);
+
+            OrderListResp orderListResp = new OrderListResp();
+            orderListResp.id = -2;
+            orderList.add(lastWDV+ 2, orderListResp);
+
+            if (orderList.size()-2 == 1 && orderList.get(0).status != null && orderList.get(0).status.equals("WD")) {
+                isFromCreateHold = true;
+            }
+
+            if (!isFromCreateHold ) {
                 OrderListResp orderListResp2 = new OrderListResp();
-                orderListResp2.id = -1;
+                orderListResp2.id = -3;
                 orderList.add(lastWDV + 3, orderListResp2);
             }
 
-            if(orderList.size()== 1 && orderList.get(0).status.equals("WD")) {
+
+            if (orderList.size()== 1 && orderList.get(0).status.equals("WD")) {
                 binding.textEmailReceipt.setVisibility(View.GONE);
-            }else{
+            } else {
 
                 binding.textEmailReceipt.setVisibility(View.VISIBLE);
                 binding.textEmailReceipt.setText(Html.fromHtml(getString(R.string.text_send_email_receipt)));
@@ -1696,7 +1691,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     e.printStackTrace();
                 }
 
-
                 if(orderListResp.account == null
                         || orderListResp.account.equals("") ){
                     holder.itemBinding.textAccountNo.setVisibility(View.GONE);
@@ -1705,7 +1699,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         || orderListResp.nameOnAccount.equals("") ){
                     holder.itemBinding.textNameAccount.setVisibility(View.GONE);
                 }
-
 
                 holder.itemBinding.btnDepositFinished.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -1877,7 +1870,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 }
 
             }
-            else if (orderListResp.id == -1){
+            else if (orderListResp.id == -3){
                 holder.itemBinding.layoutCompletionDetail.setVisibility(View.GONE);
                 holder.itemBinding.layHelpInstruction.setVisibility(View.GONE);
                 holder.itemBinding.layLogout.setVisibility(View.GONE);
@@ -1900,7 +1893,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 });
 
 
-            } else if (orderListResp.id == -3){
+            } else if (orderListResp.id == -1){
                 holder.itemBinding.layoutCompletionDetail.setVisibility(View.GONE);
                 holder.itemBinding.layHelpInstruction.setVisibility(View.VISIBLE);
                 holder.itemBinding.layLogout.setVisibility(View.GONE);
@@ -2005,7 +1998,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         binding.scrollCompletionDetail.setVisibility(View.GONE);
         binding.layoutBanks.setVisibility(View.GONE);
         binding.layoutZip.setVisibility(View.GONE);
-
+        binding.layoutHold.setVisibility(View.GONE);
         if (v != null) v.setVisibility(View.VISIBLE);
     }
 

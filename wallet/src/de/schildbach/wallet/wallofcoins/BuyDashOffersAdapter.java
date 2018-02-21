@@ -83,7 +83,7 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
 
             if(incremented){
                 vholder.binding.txtAmount.setVisibility(View.VISIBLE);
-            }else {
+            } else {
                 vholder.binding.txtAmount.setVisibility(View.INVISIBLE);
             }
             if (bean.bankLogo!=null
@@ -93,7 +93,7 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
                         .placeholder(R.drawable.ic_account_balance_black_24dp)
                         .error(R.drawable.ic_account_balance_black_24dp)
                         .into(vholder.binding.ivOffer);
-            }else{
+            } else {
                 Glide.with(context)
                         .load(bean.bankIcon)
                         .placeholder(R.drawable.ic_account_balance_black_24dp)
@@ -155,7 +155,7 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
                         .placeholder(R.drawable.ic_account_balance_black_24dp)
                         .error(R.drawable.ic_account_balance_black_24dp)
                         .into(vholder.binding.ivOffer);
-            }else{
+            } else {
                 Glide.with(context)
                         .load(bean.bankIcon)
                         .placeholder(R.drawable.ic_account_balance_black_24dp)
@@ -192,9 +192,9 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
         } else {
             TextView more = (TextView) holder.itemView;
             if (position == 0 && singleDepositBeenList.size() > 0) {
-                if(incremented) {
+                if (incremented) {
                     more.setText("Below are offers for at least $" + String.format("%.2f", Double.parseDouble(offerAmount)) + ". You must click the ORDER button before you receive instructions to pay at the Cash Payment center.");
-                }else {
+                } else {
                     more.setText("Below are offers for $" + singleDepositBeenList.get(0).deposit.amount + ". You must click the ORDER button before you receive instructions to pay at the Cash Payment center.");
                 }
             } else {

@@ -43,7 +43,6 @@ public final class SellDashActivity extends AbstractBindServiceActivity {
                 finish();
                 return true;
         }
-
         return super.onOptionsItemSelected(item);
     }
 }

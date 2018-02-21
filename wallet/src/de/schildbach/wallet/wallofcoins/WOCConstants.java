@@ -11,11 +11,11 @@ public final class WOCConstants {
     public static final String KEY_HEADER_PUBLISHER_ID = "X-Coins-Publisher";
     public static final String KEY_HEADER_CONTENT_TYPE = "Content-Type";
     public static final String KEY_HEADER_CONTENT_TYPE_VALUE = "application/json";
-    public static final String KEY_DASH ="DASH";
+    public static final String KEY_DASH = "DASH";
     public static final String KEY_PUBLISHER_ID = "publisherId";
-    public static final String KEY_VERIFICATION_CODE ="verificationCode";
-    public static final String KEY_CRYPTO_ADDRESS ="cryptoAddress";
-    public static final String KEY_USD_AMOUNT ="usdAmount";
+    public static final String KEY_VERIFICATION_CODE = "verificationCode";
+    public static final String KEY_CRYPTO_ADDRESS = "cryptoAddress";
+    public static final String KEY_USD_AMOUNT = "usdAmount";
     public static final String KEY_CRYPTO = "crypto";
     public static final String KEY_BANK = "bank";
     public static final String KEY_CRYPTO_AMOUNT = "cryptoAmount";
@@ -33,6 +33,6 @@ public final class WOCConstants {
     //BuyDash General Constants
     public static final String KEY_WEB_URL = "https://wallofcoins.com/";
     public static final String KEY_FORGOT_PASSWORD_URL = "https://wallofcoins.com/forgotPassword/";
-    public static final String SUPPORT_EMAIL ="support@wallofcoins.com";
-    public static final String SEND_EMAIL ="Send email...";
+    public static final String SUPPORT_EMAIL = "support@wallofcoins.com";
+    public static final String SEND_EMAIL = "Send email...";
 }

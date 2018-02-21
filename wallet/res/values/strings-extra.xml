@@ -68,11 +68,17 @@
 	<string name="location_rationale">Your location is used to find nearest payment centers.</string>
 	<string name="find_my_location">Find My Location</string>
 	<string name="no_thanks">No Thanks</string>
+	<string name="created_hold">You already have an open hold or a pending order with Wall of Coins. Before you can create a new order, you must finish these orders.</string>
+
+
+
+
 	<string name="str_zip_code_blank">Leave Zip Code blank to see all available bank deposit destinations.</string>
 	<string name="select_payment_center">Select a nearby payment center...</string>
 	<string name="text_above_email">For your records, we can email you a receipt along with buying instructions.</string>
 	<string name="deposit_finish_confirmation_title">Confirmation!</string>
 	<string name="deposit_finish_confirmation_message">Are you sure you finished making the payment?</string>
+	<string name="user_pass_wrong">Unable to Sign In. Check that you input your right phone number and re-try your password.</string>
 	<string name="deposit_cancel_confirmation_title">Confirmation!</string>
 	<string name="deposit_cancel_confirmation_message">Are you sure you want to Cancel your order?</string>
 	<string name="show_on_map_nearby">Show on Map Nearby</string>
