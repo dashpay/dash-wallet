@@ -432,7 +432,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         String locale;
         locale = getResources().getConfiguration().locale.getCountry();
         binding.linearProgress.setVisibility(View.VISIBLE);
-
         WallofCoins.createService(interceptor, getActivity()).getReceivingOptions(locale.toLowerCase(), getString(R.string.WALLOFCOINS_PUBLISHER_ID)).enqueue(new Callback<List<GetReceivingOptionsResp>>() {
             @Override
             public void onResponse(Call<List<GetReceivingOptionsResp>> call, Response<List<GetReceivingOptionsResp>> response) {
@@ -523,12 +522,19 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             }
         });
 
-        binding.btnCreatehold.setOnClickListener(new View.OnClickListener() {
+        binding.btnSignIn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 goToUrl("https://wallofcoins.com/signin/"+country_code.replace("+","")+"-"+phoneno+"/");
             }
         });
+        binding.btnSignOutWoc.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                deleteAuthCall(false);
+            }
+        });
+
 
         binding.buttonBuyDashBankNext.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -1340,8 +1346,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                         hideViewExcept(binding.layoutHold);
                         clearForm((ViewGroup) binding.getRoot());
                     } else if (response.code() == 403 && !TextUtils.isEmpty(buyDashPref.getAuthToken())) {
-                        getOrderList(false);
-                        //getHolds();
+                        //getOrderList(false);
+                        getHolds();
                     } else if (response.code() == 400) {
                         if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
                             getOrderList(false);
@@ -1379,12 +1385,18 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             public void onResponse(Call<List<GetHoldsResp>> call, Response<List<GetHoldsResp>> response) {
                 if (response.code() == 200 && response.body() != null) {
                     List<GetHoldsResp> holdsList = response.body();
-                    if(holdsList.size()>0) {
+                    int holdCount = 0;
+                    if (holdsList.size()>0) {
                         for (int i = 0; i < holdsList.size(); i++) {
-                            deleteHold(holdsList.get(i).id);
+                            if (null!= holdsList.get(i).status && holdsList.get(i).status.equals("AC")) {
+                                deleteHold(holdsList.get(i).id);
+                                holdCount++;
+                            }
                         }
-                        createHold(false);
-                    }else{
+                        if (holdCount == 0) {
+                            getOrderList(false);
+                        }
+                    } else {
                         getOrderList(false);
                     }
                 }
@@ -1403,6 +1415,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         WallofCoins.createService(interceptor, getActivity()).deleteHold(holdId).enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
+                createHold(false);
              }
 
             @Override
@@ -1999,6 +2012,13 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         binding.layoutBanks.setVisibility(View.GONE);
         binding.layoutZip.setVisibility(View.GONE);
         binding.layoutHold.setVisibility(View.GONE);
+        if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+            binding.layoutSignOut.setVisibility(View.VISIBLE);
+            binding.textMessageSignOut.setText("Your wallet is signed into Wall of Coins using your mobile number " + buyDashPref.getPhone());
+        } else {
+            binding.layoutSignOut.setVisibility(View.GONE);
+        }
+
         if (v != null) v.setVisibility(View.VISIBLE);
     }
 
@@ -2009,17 +2029,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         if (binding.layoutOrderList.getVisibility() == View.VISIBLE) {
             return true;
         } else if (binding.layoutLocation.getVisibility() == View.VISIBLE) {
-/*
-            if (binding.rvOrderList.getAdapter() != null) {
-                hideViewExcept(binding.layoutOrderList);
-                return false;
-            } else {
-
-            }
-*/
-
             return true;
-
         } else if (binding.layoutZip.getVisibility() == View.VISIBLE) {
             hideViewExcept(binding.layoutLocation);
             return false;

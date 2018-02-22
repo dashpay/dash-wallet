@@ -55,6 +55,7 @@
 	<string name="primary_empty">Please Select Primary Market</string>
 	<string name="receivnig_option_empty">Please Select Your Cash Account</string>
 	<string name="buy_dash_with_cash">Buy Dash With Cash</string>
+	<string name="sign_in">SIGN IN</string>
 	<string name="get_offers">Get Offers</string>
 	<string name="try_again">Something went wrong, Try Again!</string>
 	<string name="zip_code">Zip Code</string>
@@ -69,10 +70,6 @@
 	<string name="find_my_location">Find My Location</string>
 	<string name="no_thanks">No Thanks</string>
 	<string name="created_hold">You already have an open hold or a pending order with Wall of Coins. Before you can create a new order, you must finish these orders.</string>
-
-
-
-
 	<string name="str_zip_code_blank">Leave Zip Code blank to see all available bank deposit destinations.</string>
 	<string name="select_payment_center">Select a nearby payment center...</string>
 	<string name="text_above_email">For your records, we can email you a receipt along with buying instructions.</string>

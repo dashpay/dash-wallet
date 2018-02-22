@@ -15,4 +15,5 @@ public class GetHoldsResp {
     public String id;
     public String expirationTime;
     public String discoveryInput;
+    public String status;
 }
