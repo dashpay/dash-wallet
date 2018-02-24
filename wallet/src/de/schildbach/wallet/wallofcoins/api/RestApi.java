@@ -116,4 +116,7 @@ public interface RestApi {
     @POST("api/v1/devices/")
     Call<CreateDeviceResp> createDevice(@FieldMap Map<String, String> partMap);
 
+    @GET("api/v1/devices/")
+    Call<List<CreateDeviceResp>> getDevice();
+
 }

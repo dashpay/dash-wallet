@@ -29,6 +29,7 @@ import de.schildbach.wallet.wallofcoins.request.CreateAuthReq;
 import de.schildbach.wallet.wallofcoins.response.CreateAuthResp;
 
 /**
+ * Class for Manage Sell Dash SharedPreferences
  * @author Andreas Schildbach
  */
 public class SellDashPref {

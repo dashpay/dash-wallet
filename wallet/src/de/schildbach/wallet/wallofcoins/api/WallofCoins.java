@@ -28,13 +28,12 @@ import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-
+/**
+ * WalloCoins call for manage API call from Base URL
+ */
 public class WallofCoins {
 
-    private static final String TAG = "WallOfCoins";
-    // TODO need to change url for production
     private static String API_BASE_URL;
-    private static Context context;
 
     static final TrustManager[] trustAllCerts = new TrustManager[]{
             new X509TrustManager() {
@@ -61,8 +60,7 @@ public class WallofCoins {
      * @return RestApi Client object
      */
     public static RestApi createService(Interceptor interceptor, Context context) {
-        WallofCoins.context = context;
-        API_BASE_URL = WallofCoins.context.getString(R.string.base_url);
+        API_BASE_URL = context.getString(R.string.base_url);
         return getClient(interceptor)
                 .create(RestApi.class);
     }
@@ -73,8 +71,7 @@ public class WallofCoins {
      * @return RestApi Client object
      */
     public static RestApi createService(Context context) {
-        WallofCoins.context = context;
-        API_BASE_URL = WallofCoins.context.getString(R.string.base_url);
+        API_BASE_URL = context.getString(R.string.base_url);
         return getClient(null)
                 .create(RestApi.class);
     }

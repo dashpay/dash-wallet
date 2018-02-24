@@ -28,14 +28,13 @@ import org.slf4j.LoggerFactory;
 import de.schildbach.wallet.wallofcoins.response.CreateHoldResp;
 
 /**
+ * Class for Manage Buy Dash SharedPreferences
  * @author Andreas Schildbach
  */
 public class BuyDashPref {
 
     private final SharedPreferences prefs;
     private final Gson gson;
-
-
     private static final String CREATE_HOLD_RESP = "create_hold_resp";
     private static final String AUTH_TOKEN = "auth_token";
     private static final String HOLD_ID = "hold_id";

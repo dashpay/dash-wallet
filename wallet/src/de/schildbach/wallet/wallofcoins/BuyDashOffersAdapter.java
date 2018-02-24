@@ -86,7 +86,7 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
             } else {
                 vholder.binding.txtAmount.setVisibility(View.INVISIBLE);
             }
-            if (bean.bankLogo!=null
+            if (bean.bankLogo != null
                     && !bean.bankLogo.equals("")) {
                 Glide.with(context)
                         .load(bean.bankLogo)
@@ -117,11 +117,13 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
                     context.startActivity(i);
                 }
             });
+
         } else if (holder instanceof VHolderDouble1) {
             GetOffersResp.DoubleDepositBean beanTemp = doubleDeposit.get(position - singleDepositBeenList.size() - 2);
             final GetOffersResp.SingleDepositBean bean = new GetOffersResp.SingleDepositBean();
             bean.deposit = new GetOffersResp.DepositBean();
             bean.amount = new GetOffersResp.AmountBean();
+
             if (beanTemp.secondOffer != null) {
                 bean.amount.BTC = beanTemp.sumAmounts(beanTemp.firstOffer.amount.BTC, beanTemp.secondOffer.amount.BTC);
                 bean.amount.bits = beanTemp.sumAmounts(beanTemp.firstOffer.amount.bits, beanTemp.secondOffer.amount.bits);
@@ -148,7 +150,8 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
 
             final VHolderDouble1 vholder = (VHolderDouble1) holder;
             vholder.binding.setItem(bean);
-            if (bean.bankLogo!=null
+
+            if (bean.bankLogo != null
                     && !bean.bankLogo.equals("")) {
                 Glide.with(context)
                         .load(bean.bankLogo)
@@ -190,6 +193,7 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
             });
 
         } else {
+
             TextView more = (TextView) holder.itemView;
             if (position == 0 && singleDepositBeenList.size() > 0) {
                 if (incremented) {
@@ -207,6 +211,7 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
             }
             more.setGravity(Gravity.CENTER);
             more.layout(30, 30, 30, 30);
+
         }
     }
 
@@ -243,7 +248,8 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
 
     @Override
     public int getItemViewType(int position) {
-        if ((position == 0 && singleDepositBeenList.size() > 0) || (singleDepositBeenList.size() + 1 == position)) {
+        if ((position == 0 && singleDepositBeenList.size() > 0)
+                || (singleDepositBeenList.size() + 1 == position)) {
             return 1;
         }
         if (position > singleDepositBeenList.size() + 1) {

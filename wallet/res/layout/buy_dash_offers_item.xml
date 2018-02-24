@@ -42,7 +42,6 @@
                 android:adjustViewBounds="true"
                 android:scaleType="fitCenter"
                 android:layout_gravity="center"
-                android:src="@{item.bankLogo}"
                 tools:src="@drawable/ic_account_balance_black_24dp" />
 
             <LinearLayout

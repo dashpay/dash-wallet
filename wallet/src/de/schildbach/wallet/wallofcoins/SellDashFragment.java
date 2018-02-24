@@ -740,12 +740,9 @@ public final class SellDashFragment extends Fragment implements OnSharedPreferen
 //            public void onResponse(Call<GetAuthTokenResp> call, Response<GetAuthTokenResp> response) {
 //                getAuthTokenResp = response.body();
 //                sellDashPref.setAuthToken(getAuthTokenResp.token);
-//
 //                getReceivingOptions();
-//
 //                getCurrency();
-//
-//            }
+//           }
 //
 //            @Override
 //            public void onFailure(Call<GetAuthTokenResp> call, Throwable t) {

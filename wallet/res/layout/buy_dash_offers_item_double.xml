@@ -41,7 +41,6 @@
             android:adjustViewBounds="true"
             android:scaleType="fitCenter"
             android:layout_gravity="center"
-            android:src="@{item.firstOffer.bankLogo}"
             tools:src="@drawable/ic_account_balance_black_24dp"/>
 
 
@@ -54,7 +53,6 @@
                 android:adjustViewBounds="true"
                 android:scaleType="fitCenter"
                 android:layout_gravity="center"
-                android:src="@{item.firstOffer.bankLogo}"
                 tools:src="@drawable/ic_account_balance_black_24dp"/>
 
 
