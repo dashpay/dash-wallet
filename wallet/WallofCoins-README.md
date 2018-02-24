@@ -397,11 +397,24 @@ It need X-Coins-Publisher and X-Coins-Api-Token as a header parameter.
 
 * 201 returned when the hold is created
 * 400 returned when one of the parameters are missing! for example, if you're creating a new device... you need "phone", "deviceName", and "deviceCode".
-* 403 returned when a X-Coins-Api-Token is required or the phone number supplied needs password
+* 401 will be "returned when a X-Coins-Api-Token is required or the phone number supplied needs password".
+* 403 will have details: "Not permitted to create a hold while an open hold or order with status WD is current."
 * 404 returned when the offer no-longer is available (either the time expired or the ad will now be negative.)
 
-   This API will send purchase code to user's device on his register phone number and it will be same
-   as `__PURCHASE_CODE` value.
+if you have token then you have to pass only offer in JSON request
+
+if you get status code 403, then you have to delete active hold first then need to create hold again. As you have **auth token** available, you need to call Get Hold API by passing **auth token** as **X-Coins-Api-Token** in header, which will return active hold in response. Get Hold API returns array of hold in response, then user need to delete active hold with status is equal to “AC” by calling Delete Hold API by passing **auth token** as **X-Coins-Api-Token** in header. Suppose user do not get any active holds then it means that there is some pending order. so you need to get all orders and find pending order with status = "WD" and give option to confirm deposite Or cancel Order functionality.
+
+##### Hold Status :
+
+PE = Pending
+AC = Active, waiting for Order
+CAP = Captured
+EX = Expired
+CAN = Canceled
+
+This API will send purchase code to user's device on his register phone number and it will be same
+as `__PURCHASE_CODE` value.
 
 
 #### GET HOLD
