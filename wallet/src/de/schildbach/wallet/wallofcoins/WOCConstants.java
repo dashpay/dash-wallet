@@ -20,6 +20,9 @@ public final class WOCConstants {
     public static final String KEY_BANK = "bank";
     public static final String KEY_CRYPTO_AMOUNT = "cryptoAmount";
     public static final String KEY_ZIP_CODE = "zipCode";
+    public static final String KEY_BROWSE_LOCATION = "browserLocation";
+    public static final String KEY_LATITUDE ="latitude";
+    public static final String KEY_LONGITUDE ="longitude";
     public static final String KEY_PASSWORD = "password";
     public static final String KEY_DEVICECODE = "deviceCode";
     public static final String KEY_DEVICEID = "deviceId";

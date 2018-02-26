@@ -67,7 +67,11 @@ POST https://woc.reference.genitrust.com/api/v1/discoveryInputs/
   "usdAmount": "500",
   "crypto": "DASH",
   "bank": "",
-  "zipCode": "34236"
+  "zipCode": "34236",
+  "browserLocation":  {
+    "latitude": 27.3331293,
+    "longitude": -82.5456374
+  }
 }
 ```
 

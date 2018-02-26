@@ -60,6 +60,7 @@ import android.widget.Toast;
 import com.bumptech.glide.Glide;
 import com.google.common.base.Charsets;
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 
@@ -147,6 +148,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     private String dashAmount = "";
     private String bankId = "";
     private String zipCode;
+    private double latitude;
+    private double longitude;
     private String password = "";
     private String phone_no = "";
     private String country_code = "";
@@ -204,12 +207,10 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     /**
      * AsyncTask Loader for CurrentAddress
      */
-    public static class CurrentAddressLoader extends AsyncTaskLoader<Address> {
+    public class CurrentAddressLoader extends AsyncTaskLoader<Address> {
         private LocalBroadcastManager broadcastManager;
-        private final Wallet wallet;
+        private Wallet wallet;
         private Configuration config;
-
-        private static final Logger log = LoggerFactory.getLogger(WalletBalanceLoader.class);
 
         public CurrentAddressLoader(final Context context, final Wallet wallet, final Configuration config) {
             super(context);
@@ -236,10 +237,12 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         protected void onStopLoading() {
             config.unregisterOnSharedPreferenceChangeListener(preferenceChangeListener);
             broadcastManager.unregisterReceiver(walletChangeReceiver);
+            broadcastManager = null;
             wallet.removeChangeEventListener(walletChangeListener);
             wallet.removeCoinsSentEventListener(walletChangeListener);
             wallet.removeCoinsReceivedEventListener(walletChangeListener);
             walletChangeListener.removeCallbacks();
+            walletChangeListener = null;
 
             super.onStopLoading();
         }
@@ -248,6 +251,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         protected void onReset() {
             config.unregisterOnSharedPreferenceChangeListener(preferenceChangeListener);
             broadcastManager.unregisterReceiver(walletChangeReceiver);
+            broadcastManager = null;
             wallet.removeChangeEventListener(walletChangeListener);
             wallet.removeCoinsSentEventListener(walletChangeListener);
             wallet.removeCoinsReceivedEventListener(walletChangeListener);
@@ -259,17 +263,18 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         @Override
         public Address loadInBackground() {
             org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+
             return wallet.currentReceiveAddress();
         }
 
-        private final ThrottlingWalletChangeListener walletChangeListener = new ThrottlingWalletChangeListener() {
+        private  ThrottlingWalletChangeListener walletChangeListener = new ThrottlingWalletChangeListener() {
             @Override
             public void onThrottledWalletChanged() {
                 safeForceLoad();
             }
         };
 
-        private final BroadcastReceiver walletChangeReceiver = new BroadcastReceiver() {
+        private  BroadcastReceiver walletChangeReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(final Context context, final Intent intent) {
                 safeForceLoad();
@@ -288,7 +293,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             try {
                 forceLoad();
             } catch (final RejectedExecutionException x) {
-                log.info("rejected execution: " + CurrentAddressLoader.this.toString());
+                x.printStackTrace();
             }
         }
     }
@@ -312,8 +317,7 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         }
     };
 
-
-    @Override
+   @Override
     public void onAttach(final Context context) {
         super.onAttach(context);
 
@@ -506,7 +510,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             return android.util.Patterns.EMAIL_ADDRESS.matcher(target).matches();
         }
     }
-
 
     @Override
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container, final Bundle savedInstanceState) {
@@ -855,6 +858,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             if (geocoder != null) {
                 try {
                     addresses = geocoder.getFromLocation(myLocation.getLatitude(), myLocation.getLongitude(), 1); // Here 1 represent max location result to returned, by documents it recommended 1 to 5
+                    latitude = myLocation.getLatitude();
+                    longitude = myLocation.getLongitude();
                     zipCode = addresses.get(0).getPostalCode();
                     hideViewExcept(binding.layoutCreateHold);
                     showKeyBoard();
@@ -872,7 +877,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             }
         }
     }
-
 
     /**
      * Show a dialog to the user requesting that GPS be enabled
@@ -987,7 +991,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             }
         });
         loaderManager.initLoader(ID_RATE_LOADER, null, rateLoaderCallbacks);
-        loaderManager.initLoader(ID_ADDRESS_LOADER, null, addressLoaderCallbacks);
     }
 
     @Override
@@ -1000,7 +1003,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     @Override
     public void onDestroy() {
         config.unregisterOnSharedPreferenceChangeListener(this);
-
         config.setLastExchangeDirection(amountCalculatorLink.getExchangeDirection());
         loaderManager.destroyLoader(ID_RATE_LOADER);
 
@@ -1039,6 +1041,11 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         discoveryInputsReq.put(WOCConstants.KEY_CRYPTO, config.getFormat().code());
         discoveryInputsReq.put(WOCConstants.KEY_BANK, bankId);
         discoveryInputsReq.put(WOCConstants.KEY_ZIP_CODE, zipCode);
+        JsonObject jObj = new JsonObject();
+        jObj.addProperty(WOCConstants.KEY_LATITUDE,latitude+"");
+        jObj.addProperty(WOCConstants.KEY_LONGITUDE,longitude+"");
+
+        discoveryInputsReq.put(WOCConstants.KEY_BROWSE_LOCATION,jObj.toString());
         discoveryInputsReq.put(WOCConstants.KEY_CRYPTO_AMOUNT,"0");
         binding.linearProgress.setVisibility(View.VISIBLE);
 
@@ -1181,7 +1188,11 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     if (code >= 400 && response.body() == null) {
                         try {
                                 BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
-                                showAlertPasswordDialog();
+                              if(!TextUtils.isEmpty(password)) {
+                                  showAlertPasswordDialog();
+                              }else{
+                                  createDevice();
+                              }
                             } catch (Exception e) {
                                 e.printStackTrace();
                                 Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
@@ -2039,8 +2050,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             }
         }
     }
-
-
 
     class AccountJson {
 
