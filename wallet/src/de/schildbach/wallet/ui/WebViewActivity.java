@@ -1,7 +1,9 @@
 package de.schildbach.wallet.ui;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.ActionBar;
@@ -124,6 +126,7 @@ public class WebViewActivity extends AppCompatActivity {
                 UpholdClient.getInstance().getAccessToken(code, new UpholdClient.Callback<String>() {
                     @Override
                     public void onSuccess(String accessToken) {
+                        storeUpholdAccessToken(accessToken);
                         Toast.makeText(WebViewActivity.this, accessToken, Toast.LENGTH_SHORT).show();
                         finish();
                     }
@@ -140,6 +143,11 @@ public class WebViewActivity extends AppCompatActivity {
             }
         }
         return false;
+    }
+
+    private void storeUpholdAccessToken(String accessToken) {
+        SharedPreferences prefs = getSharedPreferences(Constants.UPHOLD_PREFS, Context.MODE_PRIVATE);
+        prefs.edit().putString(Constants.UPHOLD_ACCESS_TOKEN, accessToken).apply();
     }
 
     @Override
