@@ -229,4 +229,6 @@ public final class Constants {
     public static String WALLET_URI_SCHEME = "dashwallet";
 
     public static boolean ENABLE_ZERO_FEES = TEST; //Enable Zero Fee's on TestNet only.
+
+    public static boolean BIP44_SUPPORT = true;
 }

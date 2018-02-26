@@ -49,6 +49,7 @@ import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.MnemonicCode;
 import org.bitcoinj.crypto.MnemonicException;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.UnreadableWalletException;
@@ -181,6 +182,9 @@ public class WalletUtils {
         try {
             final Wallet wallet = new WalletProtobufSerializer().readWallet(is, true, null);
 
+            if(Constants.BIP44_SUPPORT)
+                wallet.addKeyChain(DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH);
+
             if (!wallet.getParams().equals(expectedNetworkParameters))
                 throw new IOException("bad wallet backup network parameters: " + wallet.getParams().getId());
             if (!wallet.isConsistent())
@@ -195,7 +199,14 @@ public class WalletUtils {
     public static Wallet restoreWalletFromSeed(final List<String> words,
                                                    final NetworkParameters expectedNetworkParameters) throws IOException {
         try {
-            final Wallet wallet = new Wallet(Constants.NETWORK_PARAMETERS, new KeyChainGroup(Constants.NETWORK_PARAMETERS, new DeterministicSeed(words, null,"", Constants.EARLIEST_HD_SEED_CREATION_TIME)));//new WalletProtobufSerializer().readWallet(is, true, null);
+            DeterministicSeed seed =  new DeterministicSeed(words, null,"", Constants.EARLIEST_HD_SEED_CREATION_TIME);
+            KeyChainGroup group = new KeyChainGroup(Constants.NETWORK_PARAMETERS, seed);
+
+            if(Constants.BIP44_SUPPORT) {
+                group.addAndActivateHDChain(new DeterministicKeyChain(seed, DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH));
+            }
+
+            final Wallet wallet = new Wallet(Constants.NETWORK_PARAMETERS, group);//new WalletProtobufSerializer().readWallet(is, true, null);
 
             if (!wallet.getParams().equals(expectedNetworkParameters))
                 throw new IOException("bad wallet backup network parameters: " + wallet.getParams().getId());
@@ -222,6 +233,8 @@ public class WalletUtils {
 
         // create non-HD wallet
         final KeyChainGroup group = new KeyChainGroup(expectedNetworkParameters);
+        if(Constants.BIP44_SUPPORT)
+            group.addAndActivateHDChain(new DeterministicKeyChain(group.getActiveKeyChain().getSeed(), DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH));
         group.importKeys(WalletUtils.readKeys(keyReader, expectedNetworkParameters));
         return new Wallet(expectedNetworkParameters, group);
     }

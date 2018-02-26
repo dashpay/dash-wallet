@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<string name="app_name">Dash Wallet [testnet]</string>
+	<string name="app_name">Dash Wallet [testnet44]</string>
 
 	<string-array name="preferences_precision_values">
 		<item>8</item>
