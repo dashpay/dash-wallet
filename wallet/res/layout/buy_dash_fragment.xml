@@ -97,7 +97,6 @@
                     android:inputType="phone"
                     android:lines="1"
                     android:textSize="@dimen/font_size_normal" />
-
             </LinearLayout>
 
             <Button
@@ -108,7 +107,6 @@
                 android:layout_marginTop="16dp"
                 android:text="Next"
                 android:textStyle="bold" />
-
         </LinearLayout>
 
         <LinearLayout
@@ -213,6 +211,7 @@
                 android:hint="@string/enter_purchase_code"
                 android:inputType="textPersonName"
                 android:lines="1" />
+
 
             <Button
                 android:id="@+id/button_verify_otp"
@@ -385,7 +384,6 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="WALLOFCOINS.COM" />
-
                 </LinearLayout>
 
                 <LinearLayout
@@ -528,29 +526,25 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:visibility="gone">
-
                 <android.support.v7.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_gravity="bottom"
-                    android:padding="2dp"
+                    android:padding="4dp"
                     app:cardCornerRadius="8dp"
                     app:cardElevation="4dp"
                     app:cardUseCompatPadding="true">
-
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_margin="4dp"
                         android:orientation="vertical">
-
                         <TextView
                             android:id="@+id/text_message_sign_out"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="4dp"
                             android:textSize="16dp" />
-
                         <Button
                             android:id="@+id/btn_sign_out_woc"
                             android:layout_width="match_parent"
@@ -558,9 +552,20 @@
                             android:layout_gravity="bottom"
                             android:text="Sign Out"
                             android:visibility="visible"
+                            android:textStyle="bold"
                             android:layout_marginBottom="@dimen/dimen_8dp"
                             android:textColor="@color/colorPrimary" />
-
+                        <Button
+                            android:id="@+id/btn_order_history_woc"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Order History"
+                            android:visibility="visible"
+                            android:layout_margin="4dp"
+                            android:backgroundTint="#FFF"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="@dimen/dimen_8dp"
+                            />
                     </LinearLayout>
                 </android.support.v7.widget.CardView>
             </LinearLayout>
@@ -633,9 +638,9 @@
                         android:imeOptions="flagNoExtractUi"
                         android:textSize="@dimen/font_size_large"
                         tools:ignore="TextFields">
+
                         <requestFocus />
                     </EditText>
-
                 </de.schildbach.wallet.ui.CurrencyAmountView>
 
                 <TextView
@@ -661,9 +666,7 @@
                         android:imeOptions="flagNoExtractUi"
                         android:textSize="@dimen/font_size_large"
                         tools:ignore="TextFields" />
-
                 </de.schildbach.wallet.ui.CurrencyAmountView>
-
             </LinearLayout>
 
             <Button

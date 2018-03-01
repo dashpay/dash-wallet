@@ -263,7 +263,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         @Override
         public Address loadInBackground() {
             org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
-
             return wallet.currentReceiveAddress();
         }
 
@@ -544,6 +543,13 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                     hideViewExcept(binding.layoutCreateHold);
                     showKeyBoard();
                 }
+            }
+        });
+
+        binding.btnOrderHistoryWoc.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+             getOrderList(false);
             }
         });
 
@@ -1332,7 +1338,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         });
 
     }
-
 
     /**
      * Method for register new device

@@ -1,7 +1,11 @@
 apply plugin: 'com.android.application'
 
 repositories {
-    mavenLocal();
+    mavenLocal()
+    maven {
+        url 'https://maven.google.com/'
+        name 'Google'
+    }
 }
 dependencies {
     compile 'com.android.support:design:25.1.1'
@@ -40,11 +44,18 @@ dependencies {
     compile 'com.github.bumptech.glide:glide:3.8.0'
 
     testCompile 'junit:junit:4.12'
-
     //Memory Leak Detection
     debugCompile 'com.squareup.leakcanary:leakcanary-android:1.5.1'
     releaseCompile 'com.squareup.leakcanary:leakcanary-android-no-op:1.5.1'
     testCompile 'com.squareup.leakcanary:leakcanary-android-no-op:1.5.1'
+    //Espresso
+    androidTestCompile ('com.android.support.test:runner:1.0.1') {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    }
+    androidTestCompile ('com.android.support.test.espresso:espresso-core:3.0.1') {
+        exclude group: 'com.google.code.findbugs', module: 'jsr305'
+        exclude group: 'com.android.support', module: 'support-annotations'
+    }
 }
 
 ext {
@@ -52,41 +63,28 @@ ext {
 }
 
 android {
-    signingConfigs {
-        config {
-            keyAlias 'androiddebugkey'
-            keyPassword 'android'
-            storeFile file('C:/Users/Dipak/.android/debug.keystore')
-            storePassword 'android'
-        }
-    }
-    compileSdkVersion 25
-    buildToolsVersion '26.0.2'
+    compileSdkVersion 'android-25'
+    buildToolsVersion '25.0.2'
 
     lintOptions {
         abortOnError false
         disable 'MissingTranslation'
     }
-
     defaultConfig {
-        signingConfig signingConfigs.config
         generatedDensities = ['hdpi', 'xhdpi']
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         all {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg'
+            testProguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg', 'proguardTest-rules.txt'
         }
         debug {
             debuggable true
         }
-        release {
-            signingConfig signingConfigs.config
-        }
     }
-
-
     sourceSets {
         main {
             manifest.srcFile 'AndroidManifest.xml'
@@ -97,6 +95,11 @@ android {
         test {
             java.srcDirs = ['test']
             resources.srcDirs = ['test']
+        }
+        androidTest {
+            java.srcDirs = ['androidTest']
+            resources.srcDirs = ['androidTest/java']
+            res.srcDirs = ['androidTest/testNet3/res']
         }
         _testNet3 {
             res.srcDirs = ["testNet3/res"]
@@ -111,7 +114,6 @@ android {
         }
         prod {
             applicationId = "hashengineering.darkcoin.wallet"
-            signingConfig signingConfigs.config
         }
         _testNet3 {
             applicationId = "hashengineering.darkcoin.wallet_test"
@@ -132,8 +134,8 @@ android {
         exclude 'org.bitcoin.test.checkpoints.txt'
         exclude 'messages.properties'
         exclude 'META-INF/services/sun.net.spi.nameservice.NameServiceDescriptor'
+        exclude 'META-INF/services/org.xmlpull.v1.XmlPullParserFactory'
     }
-
 
     task buildNativeScrypt(type: GradleBuild) {
         buildFile = '../native-scrypt/build.gradle'
