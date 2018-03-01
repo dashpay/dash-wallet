@@ -1,7 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-
 	<string name="send_coins_fragment_instantx_enable">使用即時到帳功能</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">這個即時到帳交易尚未發送。</string>
 	<string name="transaction_row_message_own_instantx_lock_request">這個即時到帳交易正在等待達世幣網絡確認。</string>
@@ -14,4 +13,22 @@
 	<string name="wallet_options_disconnect">離線</string>
 
 	<string name="network_monitor_masternodes_title">主節點</string>
+	<string name="export_keys_dialog_title_to_seed">查看恢復詞組</string>
+	<string name="import_keys_dialog_title_from_seed">從恢復詞組中復原</string>
+	<string name="backup_to_seed_wallet_dialog_message">這是你的恢復詞組。 請寫下來。</string>
+	<string name="backup_wallet_to_seed_dialog_warning">不要讓任何人看到你的恢復詞組，否則他們可以花你達世幣。這個詞組與其他達世幣軟件不兼容。</string>
+	<string name="backup_to_seed_wallet_dialog_enter_pin_message">您的錢包受個人密碼保護。輸入您的PIN碼並按 顯示 查看您的恢復詞組。</string>
+	<string name="import_keys_from_seed_dialog_message">在這裡輸入你的恢復詞組。</string>
+	<string name="import_export_keys_dialog_password_phrase">恢復詞組在這裡。</string>
+	<string name="preferences_report_issue_summary">收集有關您問題的信息，並將您的報告以電子郵件發方式發送給開發人員。</string>
+	<string name="navigation_configuration">配置</string>
+	<string name="button_copy_address">複製位址</string>
+	<string name="request_coins_clipboard_address_msg">達世幣位址複製到剪貼板</string>
+	<string name="backup_wallet_to_seed_show_recovery_phrase">顯示</string>
+	<string name="restore_wallet_from_invalid_seed_warning_message">%s是一個無效的詞語。</string>
+
+
+	<string name="send_coins_options_fee_category_zero">不支付交易費用</string>
+	<string name="send_coins_fragment_hint_fee_zero">不支付任何交易費用。 只有在你不關心確認時間的情況下才使用“不支付交易費用”。</string>
+
 </resources>

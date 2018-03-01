@@ -1,5 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
+
 	<string name="toast_wallet_reset">錢包已經重置，\n更新恢復需要一點時間完成。</string>
 	<string name="wallet_disclaimer_fragment_remind_safety">使用注意安全風險，請詳讀&lt;u&gt;安全提示&lt;/u&gt;。</string>
 	<string name="wallet_disclaimer_fragment_remind_backup">你需要&lt;u&gt;備份你的錢包&lt;/u&gt;!</string>
@@ -11,7 +12,7 @@
 	<string name="blockchain_state_progress_stalled">同步停滯</string>
 	<string name="blockchain_state_progress_problem_storage">同步中: 出現儲存問題</string>
 	<string name="blockchain_state_progress_problem_network">同步中: 出現網路問題</string>
-	<string name="wallet_address_fragment_clipboard_msg">達世幣地址已經複製到剪貼簿</string>
+	<string name="wallet_address_fragment_clipboard_msg">達世幣位址已經複製到剪貼簿</string>
 	<string name="wallet_address_dialog_fragment_hint">為了保護您的私隱，每當你收到一筆交易後你的錢包地址將會改變。</string>
 	<string name="wallet_balance_fragment_too_much">存放在流動錢包的餘額相當大。請將部份資金存放到一些比較安全的地方。</string>
 	<string name="wallet_balance_fragment_replaying">重播中餘額無法展示</string>
@@ -23,11 +24,12 @@
 	<string name="exchange_rates_fragment_balance">餘額</string>
 	<string name="exchange_rates_fragment_source">價格由 %s 起</string>
 	<string name="exchange_rates_options_search">搜尋匯率</string>
-	<string name="exchange_rates_context_set_as_default_title">設定預設外幣</string>
+	<string name="exchange_rates_context_set_as_default_title">設為預設值</string>
 	<string name="wallet_transactions_fragment_empty_text_received">尚未收到達世幣</string>
 	<string name="wallet_transactions_fragment_empty_text_sent">尚未付出達世幣</string>
 	<string name="wallet_transactions_fragment_empty_text_howto">如何獲得達世幣?\\n\\n用傳統貨幣交易,\\n賣物品或是服務或\\n線上挖掘。</string>
 	<string name="wallet_transactions_row_warning_backup">恭喜你收到第一筆付款! 你是否已經&lt;u&gt;備份好你的錢包&lt;/u&gt;來防止意外發生?</string>
+	<string name="wallet_transactions_row_warning_storage_encryption">提示 : 為了增加你的錢包的安全性，你可以 &lt;u&gt;加密您的裝置&lt;/u&gt;. 這同時也會保護其他應用程式的數據。</string>
 	<string name="wallet_transactions_fragment_coinbase">已採礦</string>
 	<string name="wallet_transactions_fragment_internal">內部</string>
 	<string name="wallet_transactions_options_filter">篩選</string>
@@ -39,37 +41,39 @@
 	<string name="wallet_options_encrypt_keys_change">修改支付 PIN 碼</string>
 	<string name="wallet_options_safety">安全提示</string>
 	<string name="wallet_options_donate">捐贈</string>
-	<string name="wallet_donate_address_label">捐贈給Dash Wallet App</string>
+	<string name="wallet_donate_address_label">捐助達世幣錢包</string>
 	<string name="wallet_low_storage_dialog_title">儲存空間不足!</string>
-	<string name="wallet_low_storage_dialog_msg">Dash Wallet App 使用手機內部儲存空間來紀錄交易，如果空間不足該 App 無法正常運作而且可能導致你的達世幣不安全!\\n\\n你是否需要開啟應用程式頁來刪除一些較少使用 app?</string>
+	<string name="wallet_low_storage_dialog_msg">達世幣錢包使用內部存儲來記錄交易和區塊資料。如果空間不足，它將停止工作，你的達世幣將處於危險之中!\n\n你想打開應用程序管理器來卸載不需要的應用程式嗎?</string>
 	<string name="wallet_low_storage_dialog_button_apps">管理App</string>
+	<string name="wallet_timeskew_dialog_title">檢查日期 &amp; 時間設置</string>
+	<string name="wallet_timeskew_dialog_msg">你的裝置時間慢了%d分鐘。由於這個問題，您可能無法發送或接收達世幣。\n\n您應該檢查，如有必要，更正您的日期，時間和時區設置。</string>
 	<string name="wallet_version_dialog_title">有新版本!</string>
 	<string name="wallet_version_dialog_msg">這版本修正重要的錯誤，細節請參閱Google Play上說明。</string>
 	<string name="wallet_version_dialog_msg_deprecated">如果你看不到任何 App 更新，很可能你的 Android 版本已經不再支援。</string>
 	<string name="wallet_version_dialog_button_market">Google Play</string>
 	<string name="wallet_version_dialog_button_binary">下載</string>
-
 	<string name="wallet_old_sdk_dialog_title">Android 版本太舊</string>
-	<string name="wallet_old_sdk_dialog_message">很可能下個版本的 Dash Wallet App 將不再支援你的裝置，某些狀況下可能導致難以付款，\n\n除非你確認其中風險，不然建議你儘快將錢包的錢轉出。</string>
+	<string name="wallet_old_sdk_dialog_message">下個版本的達世幣錢包可能不再支援你的裝置。在某些情況下，在這台裝置上的錢可能會出現發送困難的情況。\n\n除非你知道你在做什麼，否則建議你盡快轉出你的幣。</string>
 	<string name="send_coins_activity_title">達世幣付款</string>
 	<string name="send_coins_fragment_request_payment_request_progress">由 %s 讀取簽名…</string>
 	<string name="send_coins_fragment_request_payment_request_failed_title">讀取簽名失敗</string>
 	<string name="send_coins_fragment_request_payment_request_wrong_signature">簽名錯誤!</string>
-
 	<string name="send_coins_fragment_payee_verified_by">由 %s 驗證</string>
 	<string name="send_coins_fragment_payee_verified_by_unknown">不知名</string>
-
 	<string name="send_coins_fragment_receiving_address_label">付給</string>
 	<string name="send_coins_fragment_receiving_address_hint">輸入地址或是名稱</string>
-	<string name="send_coins_fragment_receiving_address_error">無效達世幣地址!</string>
+	<string name="send_coins_fragment_receiving_address_error">無效的達世幣位址!</string>
 	<string name="send_coins_fragment_receiving_address_own">您即將發送交易給自己！</string>
 	<string name="send_coins_fragment_receiving_address_complex">複雜\n地址</string>
 	<string name="send_coins_fragment_pending">(%s 等候確認)</string>
 	<string name="send_coins_fragment_amount_label">總金額</string>
-	<string name="send_coins_fragment_hint_fee">將會支付 %s 的小量網絡費用。</string>
+	<string name="send_coins_fragment_hint_fee_economic">只支付 %s 經濟的手續費。只有在你不關心確認時間的情況下才使用“經濟”的手續費。</string>
+	<string name="send_coins_fragment_hint_fee">將收取%s作為網絡費用。</string>
+	<string name="send_coins_fragment_hint_fee_priority">將支付%s優先級的手續費。如果您希望支付較低的費用，則您只有在需要盡快確認時才使用“優先級”。</string>
 	<string name="send_coins_fragment_hint_dusty_send">這個金額太小，無法發送。</string>
 	<string name="send_coins_fragment_hint_insufficient_money">餘額不足。你還差 %s 的達世幣才能發送。</string>
 	<string name="send_coins_fragment_hint_empty_wallet_failed">在你的錢包微小金額加起來不足以發送。</string>
+	<string name="send_coins_fragment_hint_replaying">目前付款是不可能的，正在進行重播。</string>
 	<string name="send_coins_fragment_direct_payment_enable">直接付款給收款人</string>
 	<string name="send_coins_fragment_direct_payment_ack">你的付款已經直接傳送成功</string>
 	<string name="send_coins_fragment_direct_payment_nack">你的付款經直接連線被拒絕</string>
@@ -93,7 +97,9 @@
 	<string name="send_coins_options_fee_category_priority">優先處理</string>
 	<string name="send_coins_options_empty">空錢包</string>
 	<string name="raise_fee_dialog_title">提高網絡費用</string>
-	<string name="raise_fee_dialog_message">你想提高這個交易所需 %s 的費用嗎？這將加快這個交易的確認。</string>
+	<string name="raise_fee_dialog_message">你想提高這筆交易的網絡費用 %s 嗎？這將加快這個交易的確認。</string>
+	<string name="raise_fee_dialog_determining_fee">正在確定網絡費用...</string>
+	<string name="raise_fee_dialog_cant_raise">這筆款項的網絡費用不能提高。</string>
 	<string name="raise_fee_dialog_state_decrypting">正在解密...</string>
 	<string name="raise_fee_dialog_state_done">已完成。</string>
 	<string name="raise_fee_dialog_button_raise">增加</string>
@@ -125,7 +131,7 @@
 	<string name="request_coins_fragment_initiate_request_nfc">或是使用 NFC 裝置付款。</string>
 	<string name="request_coins_clipboard_msg">索取達世幣的請求已複製到剪貼簿</string>
 	<string name="request_coins_share_dialog_title">分享索取達世幣的資訊…</string>
-	<string name="request_coins_no_local_app_msg">未找到其他達世幣應用程序</string>
+	<string name="request_coins_no_local_app_msg">未找到其他達世幣應用程式</string>
 	<string name="request_coins_options_local_app_title">來自本裝置 app 的請款</string>
 	<string name="address_book_activity_title">地址簿</string>
 	<string name="address_book_list_receiving_title">你的地址</string>
@@ -156,17 +162,23 @@
 	<string name="transaction_row_message_purpose_raise_fee">這個交易增加了先前交易的網絡費用。</string>
 	<string name="transaction_row_message_own_unbroadcasted">付款尚未傳輸。</string>
 	<string name="transaction_row_message_received_direct">該付款已經被直接接收，這類付款存在可能無法花費的風險。</string>
+	<string name="transaction_row_message_received_unconfirmed_delayed">這筆款項的確認被延遲了，可能是由於達世幣網絡的超載所致。</string>
 	<string name="transaction_row_message_received_unconfirmed_unlocked">付款應該在幾分鐘之後才可以使用。</string>
+	<string name="transaction_row_message_received_in_conflict">這筆款項有被發送者逆轉的風險！ 如果可以，請等待確認。</string>
 	<string name="transaction_row_message_received_dead">該付款已被付款人撤銷。</string>
 	<string name="transaction_row_message_received_dust">極小額付款可能無法有效支付</string>
 	<string name="transaction_row_message_received_pay_to_many">這個交易除了支付給你外，還支付給其他錢包，這會令應用程序逐漸變慢。如果可以的話，盡量接受只支付給你的付款。</string>
+	<string name="transaction_row_message_received_rbf">由於發件人使用了不安全的交易類型，此款項被延遲。</string>
 	<string name="network_monitor_activity_title">網路監視器</string>
 	<string name="network_monitor_peer_list_title">節點</string>
 	<string name="network_monitor_block_list_title">區塊</string>
+	<string name="block_row_mining_difficulty_adjustment">採礦難度調整</string>
+	<string name="block_row_mining_reward_adjustment">採礦獎勵減半</string>
 	<string name="block_row_now">剛剛</string>
 	<string name="peer_list_fragment_empty">無節點連結</string>
 	<string name="peer_list_row_ping_time">⇆ %d&#x2009;ms</string>
-
+	<string name="restore_wallet_permission_dialog_title">沒有讀取權限</string>
+	<string name="restore_wallet_permission_dialog_message">為了在外部存儲器上搜索錢包備份，您需要授予讀取權限。</string>
 	<string name="import_keys_dialog_title">回復錢包</string>
 	<string name="import_keys_dialog_message">從外部或是app內部存放區選取一個備份錢包檔案</string>
 	<string name="restore_wallet_dialog_replace_warning">你打算更換現有錢包，如無另外備份，任何現有錢包裡的比特幣將會消失。</string>
@@ -181,7 +193,8 @@
 	<string name="restore_wallet_dialog_success">錢包已經回覆</string>
 	<string name="restore_wallet_dialog_success_replay">你的錢包已經成功恢復。下一步將會確定你的餘額，這將會花費一些時間。</string>
 	<string name="import_keys_dialog_failure">錢包無法回復:\n\n%s\n\n密碼錯誤?</string>
-
+	<string name="backup_wallet_permission_dialog_title">沒有寫入權限</string>
+	<string name="backup_wallet_permission_dialog_message">為了將錢包備份到外部存儲，您需要授予寫入權限。</string>
 	<string name="export_keys_dialog_title">備份錢包</string>
 	<string name="backup_wallet_dialog_message">你的錢包將依照選取密碼加密並存到外部存放</string>
 	<string name="backup_wallet_dialog_warning_encrypted">你的錢包受支付PIN碼保護。除了備份密碼以外，請確保你記住該PIN碼！</string>
@@ -213,40 +226,47 @@
 	<string name="encrypt_keys_dialog_state_done">已完成。</string>
 	<string name="scan_camera_problem_dialog_title">抱歉</string>
 	<string name="scan_camera_problem_dialog_message">照相機有問題，你可能需要重新啟動裝置</string>
+	<string name="scan_camera_permission_dialog_title">相機權限</string>
+	<string name="scan_camera_permission_dialog_message">為了掃描QR碼，您需要授予使用相機的權限。</string>
 	<string name="input_parser_io_error">無法讀取資料:\n%s</string>
 	<string name="input_parser_cannot_classify">無法辨識輸入:\n%s</string>
 	<string name="input_parser_invalid_bitcoin_uri">達世幣 URI 無效:\\n%s</string>
 	<string name="input_parser_invalid_address">取得無效達世幣地址!\\n(是否 Mainnet/Testnet 混用?)</string>
 	<string name="input_parser_unverifyable_paymentrequest">無法驗證付款請求:\n%s</string>
-
 	<string name="input_parser_invalid_paymentrequest">無效付款請求:\n%s</string>
-
 	<string name="input_parser_invalid_transaction">無效交易:\n%s</string>
 	<string name="preferences_activity_title">設定</string>
 	<string name="preferences_category_diagnostics">診斷</string>
 	<string name="preferences_category_labs">實驗室功能</string>
 	<string name="preferences_precision_title">顯示單位</string>
 	<string name="preferences_precision_summary">改變顯示單位，但不影響計算。</string>
-	<string name="preferences_precision_labels_8">DASH, 8位數</string>
-	<string name="preferences_precision_labels_6">DASH, 6位數</string>
-	<string name="preferences_precision_labels_4">DASH, 4位數</string>
-	<string name="preferences_precision_labels_2_3">mDASH, 2位數</string>
-	<string name="preferences_precision_labels_0_6">µDASH, 0位數</string>
+	<string name="preferences_precision_labels_8">DASH，小數點後8位</string>
+	<string name="preferences_precision_labels_6">DASH，小數點後6位</string>
+	<string name="preferences_precision_labels_4">DASH，小數點後4位</string>
+	<string name="preferences_precision_labels_2_3">mDASH，小數點後2位</string>
+	<string name="preferences_precision_labels_0_6">µDASH，沒有小數位</string>
 	<string name="preferences_own_name_title">自己的名字</string>
 	<string name="preferences_own_name_summary">為自己起名，可在支付請求中顯示。請盡量簡短。</string>
+	<string name="preferences_send_coins_autoclose_title">自動關閉發送錢幣對話框</string>
+	<string name="preferences_send_coins_autoclose_summary">付款時，發送對話框將自動關閉。</string>
 	<string name="preferences_connectivity_notification_title">連線指示</string>
 	<string name="preferences_connectivity_notification_summary">顯示目前連線節點數量到通知區。</string>
 	<string name="preferences_trusted_peer_title">信任節點</string>
 	<string name="preferences_trusted_peer_summary">節點的IP 或是 hostname。</string>
+	<string name="preferences_trusted_peer_resolve_progress">正在解決...</string>
+	<string name="preferences_trusted_peer_resolve_unknown_host">未知的主機名!</string>
 	<string name="preferences_trusted_peer_only_title">跳過例行的節點搜尋</string>
 	<string name="preferences_trusted_peer_only_summary">禁止信任節點外的連線</string>
+	<string name="preferences_block_explorer_title">區塊瀏覽器</string>
+	<string name="preferences_block_explorer_summary">外部區塊瀏覽器用來瀏覽交易，地址和區塊。</string>
 	<string name="preferences_data_usage_title">資料使用</string>
 	<string name="preferences_data_usage_summary">顯示選項來控制行動網路流量</string>
+	<string name="preferences_remind_balance_title">餘額提醒</string>
+	<string name="preferences_remind_balance_summary">經過幾個星期的不用，應用程式會通知錢包裡還有錢。</string>
 	<string name="preferences_report_issue_title">問題報告</string>
-	<string name="preferences_report_issue_summary">收集問題的資訊並寄給開發者</string>
 	<string name="preferences_initiate_reset_title">重置區塊鏈</string>
-	<string name="preferences_initiate_reset_summary">重置區塊鏈 blockchain、交易以及錢包餘額，重新可使用需要一點時間。</string>
-	<string name="preferences_initiate_reset_dialog_message">你是否要重置區塊鏈?\n\n這個動作會暫時導致錢包餘額不顯示以及交易資料被移除的現象，這兩個資訊需要等到區塊鏈同步完成才會恢復。</string>
+	<string name="preferences_initiate_reset_summary">重置區塊鏈，交易和錢包餘額。 重播將需要一段時間，所以只有在你明白的情況下才這樣做。</string>
+	<string name="preferences_initiate_reset_dialog_message">您是否要重置並重播區塊鏈?\n\n這會暫時隱藏您的錢包餘額並移除交易。隨著區塊鏈進行同步，兩者都會恢復。確保你有一個可靠的互聯網連線。</string>
 	<string name="preferences_initiate_reset_dialog_positive">重設</string>
 	<string name="preferences_extended_public_key_title">顯示 xpub</string>
 	<string name="preferences_extended_public_key_summary">查看你的錢包的擴展公鑰，這樣就可以將其導入其他程式或服務中。請注意：這樣做會泄露您的財務私隱給該程式。</string>
@@ -255,7 +275,8 @@
 	<string name="extended_public_key_fragment_share">分享 xpub...</string>
 	<string name="report_issue_dialog_title_issue">問題報告</string>
 	<string name="report_issue_dialog_title_crash">發現前次當機</string>
-	<string name="report_issue_dialog_message_issue">請明確描述你的問題讓這個問題容易重現。</string>
+	<string name="report_issue_dialog_title_transaction">於選定的付款中報告問題</string>
+	<string name="report_issue_dialog_message_issue">請準確描述您的問題以方便重現刻問題。 如果可以的話請使用英文。</string>
 	<string name="report_issue_dialog_message_crash">你是否要寄送當機報告幫助解決問題?</string>
 	<string name="report_issue_dialog_description">問題描述</string>
 	<string name="report_issue_dialog_report">報告</string>
@@ -270,15 +291,26 @@
 	<string name="about_copyright_title">著作權</string>
 	<string name="about_license_title">授權</string>
 	<string name="about_source_title">原始碼</string>
-	<string name="about_credits_zxing_title">本 app 使用 \'zxing\'</string>
-	<string name="about_credits_icon_title">本 app 使用圖標來自\'bitboy\'</string>
-	<string name="about_community_googleplus_title">Google+ 社群</string>
-	<string name="about_community_googleplus_summary">討論本 app</string>
+	<string name="about_category_credits">這個程式正在使用...</string>
+	<string name="about_credits_bitcoinj_title">dashj%s，一個達世幣協議實施</string>
+	<string name="about_credits_zxing_title">ZXing，一個二維碼處理庫</string>
+	<string name="about_credits_icon_title">這個應用程式正在使用\'bitboy\'的圖示</string>
+	<string name="about_credits_scrypt_title">由Will Glozer和Colin Percival所實施的Scrypt</string>
 	<string name="about_market_app_title">Google Play 商店頁面</string>
 	<string name="about_market_app_summary">app評分</string>
+	<string name="about_faq_title">常見問題</string>
+	<string name="about_faq_summary">有關應用程式的常見問題</string>
+	<string name="about_community_googleplus_title">Google+ 社群</string>
+	<string name="about_community_googleplus_summary">討論應用程式的相關資訊</string>
 	<string name="notification_coins_received_msg">收到 %s</string>
-
 	<string name="notification_peers_connected_msg">%d 節點連線</string>
+	<string name="notification_inactivity_title">你在這個裝置上還存放有達世幣!</string>
+	<string name="notification_inactivity_message">請緊記如果您卸載達世幣錢包前沒有把餘額發送出去的話，在你的錢包中的%s餘額將會丟失。</string>
+	<string name="notification_inactivity_message_donate">如果你不在乎你的資金，你可以把它捐給達世幣錢包項目。</string>
+	<string name="notification_inactivity_action_dismiss">稍後提醒我</string>
+	<string name="notification_inactivity_action_dismiss_forever">不要提醒我</string>
+	<string name="appwidget_wallet_balance_title">達世幣結餘</string>
+
 	<!-- generic buttons -->
 	<string name="button_ok">OK</string>
 	<string name="button_dismiss">取消</string>

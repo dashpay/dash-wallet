@@ -80,7 +80,7 @@ public abstract class InputParser {
 
         @Override
         public void parse() {
-            if (input.startsWith(CoinDefinition.coinURIScheme.toUpperCase()+ ":-")) {
+            if (input.startsWith(CoinDefinition.coinURIScheme.toUpperCase() + ":-")) {
                 try {
                     final byte[] serializedPaymentRequest = Qr.decodeBinary(input.substring(9));
 
@@ -98,7 +98,7 @@ public abstract class InputParser {
 
                     error(R.string.input_parser_invalid_paymentrequest, x.getMessage());
                 }
-            } else if (input.startsWith(CoinDefinition.coinURIScheme +":")) {
+            } else if (input.startsWith(CoinDefinition.coinURIScheme + ":")) {
                 try {
                     final BitcoinURI bitcoinUri = new BitcoinURI(null, input);
                     final Address address = bitcoinUri.getAddress();
@@ -291,7 +291,7 @@ public abstract class InputParser {
             }
 
             if (walletUri.isPaymentUri()) {
-                BitcoinURI bitcoinUri = null;
+                BitcoinURI bitcoinUri;
                 try {
                     bitcoinUri = walletUri.toBitcoinUri();
                     handlePaymentIntent(PaymentIntent.fromBitcoinUri(bitcoinUri), walletUri.forceInstantSend());
@@ -301,16 +301,16 @@ public abstract class InputParser {
                     error(R.string.input_parser_invalid_bitcoin_uri, input);
                 }
             } else if (walletUri.isMasterPublicKeyRequest()) {
-                handleMasterPublicKeyRequest();
+                handleMasterPublicKeyRequest(walletUri.getSender());
             } else if (walletUri.isAddressRequest()) {
-                handleAddressRequest();
+                handleAddressRequest(walletUri.getSender());
             } else {
                 cannotClassify(input.toString());
             }
         }
 
-        protected abstract void handleMasterPublicKeyRequest();
-        protected abstract void handleAddressRequest();
+        protected abstract void handleMasterPublicKeyRequest(String sender);
+        protected abstract void handleAddressRequest(String sender);
 
         @Override
         protected void handleDirectTransaction(final Transaction transaction) throws VerificationException {

@@ -33,6 +33,7 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
+import de.schildbach.wallet_test.R;
 
 /**
  * The only purpose of this Activity is to handle all so called Wallet Uris
@@ -81,22 +82,32 @@ public final class WalletUriHandlerActivity extends Activity {
                             WalletUriHandlerActivity.this, REQUEST_CODE_SEND_FROM_WALLET_URI, paymentIntent, forceInstantSend);
                 }
 
-                @Override
-                protected void handleMasterPublicKeyRequest() {
-                    String watchingKey = wallet.getWatchingKey().serializePubB58(wallet.getNetworkParameters());
-                    Uri requestData = getIntent().getData();
-                    Intent result = WalletUri.createMasterPublicKeyResult(requestData, watchingKey, null, getAppName());
-                    setResult(RESULT_OK, result);
-                    finish();
+                protected void handleMasterPublicKeyRequest(String sender) {
+                    String confirmationMessage = getString(R.string.wallet_uri_handler_public_key_request_dialog_msg, sender);
+                    showConfirmationDialog(confirmationMessage, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            String watchingKey = wallet.getWatchingKey().serializePubB58(wallet.getNetworkParameters());
+                            Uri requestData = getIntent().getData();
+                            Intent result = WalletUri.createMasterPublicKeyResult(requestData, watchingKey, null, getAppName());
+                            setResult(RESULT_OK, result);
+                            finish();
+                        }
+                    });
                 }
 
-                @Override
-                protected void handleAddressRequest() {
-                    Address address = wallet.currentReceiveAddress();
-                    Uri requestData = getIntent().getData();
-                    Intent result = WalletUri.createAddressResult(requestData, address.toBase58(), getAppName());
-                    setResult(RESULT_OK, result);
-                    finish();
+                protected void handleAddressRequest(String sender) {
+                    String confirmationMessage = getString(R.string.wallet_uri_handler_address_request_dialog_msg, sender);
+                    showConfirmationDialog(confirmationMessage, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            Address address = wallet.freshReceiveAddress();
+                            Uri requestData = getIntent().getData();
+                            Intent result = WalletUri.createAddressResult(requestData, address.toBase58(), getAppName());
+                            setResult(RESULT_OK, result);
+                            finish();
+                        }
+                    });
                 }
 
                 @Override
@@ -116,6 +127,22 @@ public final class WalletUriHandlerActivity extends Activity {
                 }
             }.parse();
         }
+    }
+
+    private void showConfirmationDialog(String message, final DialogInterface.OnClickListener onPositiveButtonClickListener) {
+        final DialogBuilder dialog = new DialogBuilder(WalletUriHandlerActivity.this);
+        dialog.setMessage(message);
+        dialog.setTitle(R.string.app_name);
+        dialog.setPositiveButton(R.string.button_ok, onPositiveButtonClickListener);
+        dialog.setNegativeButton(R.string.button_cancel, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+                setResult(RESULT_CANCELED);
+                finish();
+            }
+        });
+        dialog.show();
     }
 
     @Override

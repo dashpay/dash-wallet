@@ -1,7 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-
 	<string name="send_coins_fragment_instantx_enable">Използвайте InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">InstantSend плащането все още не е предадено.</string>
 	<string name="transaction_row_message_own_instantx_lock_request">InstantSend плащането изчаква потвърждение от Dash мрежата.</string>
@@ -19,11 +18,11 @@
 	<string name="backup_to_seed_wallet_dialog_message">Това е вашата фраза за възстановяване. Моля, напишете я.</string>
 	<string name="backup_wallet_to_seed_dialog_warning">НЕ позволявайте на никого да види фразата ви за възстановяване или могат да похарчат вашите Dash. Тази фраза не е съвместима с друг Dash софтуер .</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Портфейлът Ви е защитен от ПИН . Въведете своя ПИН и натиснете Покажи, за да видите фразата си за възстановяване.</string>
-    <string name="import_keys_from_seed_dialog_message">Въведете фразата си за възстановяване тук.</string>
+	<string name="import_keys_from_seed_dialog_message">Въведете фразата си за възстановяване тук.</string>
 	<string name="import_export_keys_dialog_password_phrase">Фразата за възстановяване отива тук.</string>
 	<string name="preferences_report_issue_summary">Съберете информацията за проблема си и я изпратете  до разработчиците.</string>
 	<string name="navigation_configuration">Конфигурация</string>
-    <string name="button_copy_address">Копирай адрес</string>
+	<string name="button_copy_address">Копирай адрес</string>
 	<string name="request_coins_clipboard_address_msg">Dash е копиран в клипборда</string>
 	<string name="backup_wallet_to_seed_show_recovery_phrase">Покажи</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%sе невалидна дума.</string>
@@ -31,7 +30,5 @@
 
 	<string name="send_coins_options_fee_category_zero">Без такса</string>
 	<string name="send_coins_fragment_hint_fee_zero">Няма да бъде платена такса. Използвайте \"без такса\" само ако не ви е грижа за времето за потвърждение.</string>
-
-
 
 </resources>

@@ -4,22 +4,22 @@
     <string name="help_wallet">
 <![CDATA[
 		<p>
-			Votre solde Dash et celui d\'une monnaie nationale sont affichés en haut à droite de votre écran.
-			Touchez pour afficher la liste des monnaies nationales, et touchez-en une pour en faire votre monnaie par défaut.
+			Le coin supérieur droit de l\'écran montre votre solde en dashs et en une monnaie nationale choisie.
+			Touchez pour accéder à la liste des monnaies nationales, et touchez une de ces monnaies pour en faire celle par défaut.
 		</p>
 		<p>
-			Le QR-code qui contient votre adresse Dash est accessible par le menu de navigation (en haut à gauche) et peut être scanné par quelqu\'un d\'autre.
-			Touchez le QR-code pour en obtenir une version plus grande.
+			Le code QR qui contient votre adresse Dash est accessible par le menu de navigation (en haut à gauche) et peut être scanné par quelqu\'un d\'autre.
+			Touchez le code QR pour en voir une version plus grande.
 		</p>
 		<p>
-			Le bas de l\'écran affiche votre liste de transactions, laquelle est vide au début.
-			Les transactions en cours sont grisées tant qu\'elles ne sont pas confirmées.
-			Touchez une transaction pour en voir les détails, ou pour ajouter les adresses d\'envoi ou de réception à votre carnet d\'adresses.
-			Le carnet d\'adresses est accessible depuis le menu de navigation (en haut à gauche).
+			Le bas de l\'écran montre la liste de vos transactions, qui, au début, est vide.
+			Les transactions en cours sont grisées jusqu\'à ce qu\'elles soient confirmées.
+			Touchez une transaction pour en voir les détails ou pour ajouter expéditeurs ou destinataires à votre carnet d\'adresses.
+			Le carnet d\'adresses est accessible par le menu de navigation (en haut à gauche).
 		</p>
 		<p>
-			Vous pouvez envoyer ou demander de l\'argent en touchant les boutons dans la barre d\'actions.
-			Plus d\'options sont disponibles dans les menus de navigation (en haut à gauche) et dans le menu d\'options.
+			Vous pouvez envoyer ou demander de l\'argent en touchant les boutons de la barre d\'action.
+			Plus d\'options sont disponibles dans les menus de navigation (en haut à gauche) et d\'options.
 		</p>
 	]]>
     </string>
