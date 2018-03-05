@@ -183,6 +183,7 @@
 		android:divider="@drawable/divider_field"
 		android:orientation="horizontal"
 		android:showDividers="middle"
+		tools:visibility="visible"
 		android:visibility="gone" >
 
 		<EditText
@@ -203,7 +204,9 @@
 			android:text="@string/private_key_bad_password"
 			android:textColor="@color/fg_error"
 			android:textStyle="bold"
+			tools:visibility="visible"
 			android:visibility="invisible" />
+
 	</LinearLayout>
 
 	<TextView

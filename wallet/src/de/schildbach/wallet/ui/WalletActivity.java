@@ -17,48 +17,6 @@
 
 package de.schildbach.wallet.ui;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedList;
-import java.util.List;
-
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.VersionedChecksummedBytes;
-import org.bitcoinj.crypto.MnemonicCode;
-import org.bitcoinj.crypto.MnemonicException;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.Wallet.BalanceType;
-
-import com.google.common.base.Charsets;
-import com.squareup.okhttp.HttpUrl;
-
-import de.schildbach.wallet.Configuration;
-import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
-import de.schildbach.wallet.ui.InputParser.StringInputParser;
-import de.schildbach.wallet.ui.preference.PreferenceActivity;
-import de.schildbach.wallet.ui.send.SendCoinsActivity;
-import de.schildbach.wallet.ui.send.SweepWalletActivity;
-import de.schildbach.wallet.util.CrashReporter;
-import de.schildbach.wallet.util.Crypto;
-import de.schildbach.wallet.util.Io;
-import de.schildbach.wallet.util.KeyboardUtil;
-import de.schildbach.wallet.util.Nfc;
-import de.schildbach.wallet.util.WalletUtils;
-import de.schildbach.wallet_test.R;
-
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -68,6 +26,7 @@ import android.content.DialogInterface.OnCancelListener;
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -99,6 +58,44 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import com.google.common.base.Charsets;
+import com.squareup.okhttp.HttpUrl;
+
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.Wallet.BalanceType;
+
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedList;
+import java.util.List;
+
+import de.schildbach.wallet.Configuration;
+import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
+import de.schildbach.wallet.ui.InputParser.StringInputParser;
+import de.schildbach.wallet.ui.preference.PreferenceActivity;
+import de.schildbach.wallet.ui.send.SendCoinsActivity;
+import de.schildbach.wallet.ui.send.SweepWalletActivity;
+import de.schildbach.wallet.util.CrashReporter;
+import de.schildbach.wallet.util.Crypto;
+import de.schildbach.wallet.util.Io;
+import de.schildbach.wallet.util.Nfc;
+import de.schildbach.wallet.util.Toast;
+import de.schildbach.wallet.util.WalletUtils;
+import de.schildbach.wallet_test.R;
+
 /**
  * @author Andreas Schildbach
  */
@@ -114,6 +111,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private WalletApplication application;
     private Configuration config;
     private Wallet wallet;
+    private SharedPreferences walletLockPreferences;
 
     private DrawerLayout viewDrawer;
     private View viewFakeForSafetySubmenu;
@@ -131,6 +129,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         application = getWalletApplication();
         config = application.getConfiguration();
         wallet = application.getWallet();
+        walletLockPreferences = getSharedPreferences(Constants.WALLET_LOCK_PREFS_NAME, MODE_PRIVATE);
 
         setContentView(R.layout.wallet_activity_onepane_vertical);
 
@@ -208,6 +207,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 handleScan();
             }
         });
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        checkWalletEncryptionDialog();
     }
 
     @Override
@@ -365,16 +370,29 @@ public final class WalletActivity extends AbstractBindServiceActivity
 				HelpDialogFragment.page(getFragmentManager(), R.string.help_safety);
 				return true;
 */
-        case R.id.wallet_options_report_issue:
-            handleReportIssue();
-            return true;
+            case R.id.wallet_options_report_issue:
+                handleReportIssue();
+                return true;
 
             case R.id.wallet_options_help:
                 HelpDialogFragment.page(getFragmentManager(), R.string.help_wallet);
                 return true;
+
+            case R.id.wallet_options_lock:
+                android.widget.Toast.makeText(this, "Unlock Wallet", android.widget.Toast.LENGTH_SHORT).show();
+                return true;
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private void checkWalletEncryptionDialog() {
+        boolean initalEncryptionDialogDismissed = walletLockPreferences
+                .getBoolean(Constants.WALLET_LOCK_PREFS_INITAL_DIALOG_DISMISSED, false);
+
+        if (!wallet.isEncrypted() && !initalEncryptionDialogDismissed) {
+            handleEncryptKeys();
+        }
     }
 
     public void handleRequestCoins() {
