@@ -31,4 +31,7 @@
 	<string name="send_coins_options_fee_category_zero">Sin comisión</string>
 	<string name="send_coins_fragment_hint_fee_zero">No pagar comisión. Usa \"Sin comisión\", solo si no te importa el tiempo de confirmación.</string>
 
+	<string name="wallet_lock_unlock_to_see_txs_title">Billetera bloqueada.</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">Toque el ícono de candado arriba para desbloquear tu billetera y ver el historial de transacciones.</string>
+
 </resources>
