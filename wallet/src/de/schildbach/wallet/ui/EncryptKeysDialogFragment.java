@@ -28,7 +28,9 @@ import org.spongycastle.crypto.params.KeyParameter;
 
 import com.google.common.base.Strings;
 
+import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
@@ -36,8 +38,10 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.app.FragmentManager;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnShowListener;
+import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
@@ -199,6 +203,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         showView.setOnCheckedChangeListener(null);
 
         wipePasswords();
+        updateEncryptionDialogPreferences();
 
         super.onDismiss(dialog);
     }
@@ -210,15 +215,21 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         super.onDestroy();
     }
 
+    private void updateEncryptionDialogPreferences() {
+        SharedPreferences prefs = getActivity().getSharedPreferences(Constants.WALLET_LOCK_PREFS_NAME,
+                Context.MODE_PRIVATE);
+        prefs.edit().putBoolean(Constants.WALLET_LOCK_PREFS_INITAL_DIALOG_DISMISSED, true).apply();
+    }
+
     private void handleGo() {
         final String oldPassword = Strings.emptyToNull(oldPasswordView.getText().toString().trim());
         final String newPassword = Strings.emptyToNull(newPasswordView.getText().toString().trim());
 
         if (oldPassword != null && newPassword != null)
             log.info("changing spending password");
-        else if (newPassword != null)
+        else if (newPassword != null) {
             log.info("setting spending password");
-        else if (oldPassword != null)
+        } else if (oldPassword != null)
             log.info("removing spending password");
         else
             throw new IllegalStateException();
@@ -267,6 +278,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                                     "wallet successfully encrypted, using key derived by new spending password ({} scrypt iterations)",
                                     keyCrypter.getScryptParameters().getN());
                             state = State.DONE;
+                            WalletLock.getInstance().setWalletLocked(true);
                         }
 
                         updateView();

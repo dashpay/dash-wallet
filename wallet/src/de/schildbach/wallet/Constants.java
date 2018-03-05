@@ -229,4 +229,10 @@ public final class Constants {
     public static String WALLET_URI_SCHEME = "dashwallet";
 
     public static boolean ENABLE_ZERO_FEES = TEST; //Enable Zero Fee's on TestNet only.
+
+    //Wallet Lock Preferences
+    public static final String WALLET_LOCK_PREFS_NAME = "wallet_lock_prefs";
+    public static final String WALLET_LOCK_PREFS_LOCKED = "wallet_locked_prefs";
+    public static final String WALLET_LOCK_PREFS_INITAL_DIALOG_DISMISSED = "wallet_lock_prefs_dialog_dismissed";
+
 }

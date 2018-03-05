@@ -30,4 +30,11 @@
 	<string name="send_coins_options_fee_category_zero">Sem Taxa</string>
 	<string name="send_coins_fragment_hint_fee_zero">Nenhuma taxa será paga. Use \'sem taxa\' somente se você não se importa com o tempo de confirmação.</string>
 
+	<string name="wallet_lock_unlock">Desbloquear</string>
+	<string name="wallet_lock_unlock_wallet">Desbloquear carteira</string>
+	<string name="wallet_lock_unlock_to_see_txs_title">Carteira bloqueada.</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">Toque o ícone de cadeado acima para desbloquear a sua carteira e ver o histórico de transações.</string>
+	<string name="wallet_lock_unlock_dialog_title">Desbloquear para ver seu saldo</string>
+	<string name="wallet_lock_unlock_dialog_message">Sua carteira é protegida por um PIN. Digite seu PIN e pressione Desbloquear para ver seu saldo.</string>
+
 </resources>

@@ -43,6 +43,7 @@ import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
+import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.TransactionsAdapter.Warning;
 import de.schildbach.wallet.ui.send.RaiseFeeDialogFragment;
 import de.schildbach.wallet.util.BitmapFragment;
@@ -96,37 +97,38 @@ import android.widget.ViewAnimator;
  * @author Andreas Schildbach
  */
 public class WalletTransactionsFragment extends Fragment implements LoaderCallbacks<List<Transaction>>,
-        TransactionsAdapter.OnClickListener, OnSharedPreferenceChangeListener {
-    public enum Direction {
-        RECEIVED, SENT
-    }
+        TransactionsAdapter.OnClickListener, OnSharedPreferenceChangeListener, WalletLock.OnLockChangeListener {
 
+
+    public enum Direction {
+        RECEIVED, SENT;
+    }
     private AbstractWalletActivity activity;
+
     private WalletApplication application;
     private Configuration config;
     private Wallet wallet;
     private ContentResolver resolver;
     private LoaderManager loaderManager;
     private DevicePolicyManager devicePolicyManager;
-
     private ViewAnimator viewGroup;
+
     private TextView emptyView;
     private RecyclerView recyclerView;
     private TransactionsAdapter adapter;
     private MenuItem filterMenuItem;
-
     @Nullable
     private Direction direction;
 
     private final Handler handler = new Handler();
 
     private static final int ID_TRANSACTION_LOADER = 0;
-    private static final String ARG_DIRECTION = "direction";
 
+    private static final String ARG_DIRECTION = "direction";
     private static final long THROTTLE_MS = DateUtils.SECOND_IN_MILLIS;
+
     private static final Uri KEY_ROTATION_URI = Uri.parse("https://bitcoin.org/en/alert/2013-08-11-android");
     private static final int SHOW_QR_THRESHOLD_BYTES = 2500;
-
     private static final Logger log = LoggerFactory.getLogger(WalletTransactionsFragment.class);
 
     private final ContentObserver addressBookObserver = new ContentObserver(handler) {
@@ -160,6 +162,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
         this.direction = null;
     }
+
     @Override
     public void onDestroyView() {
         super.onDestroyView();
@@ -218,6 +221,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         wallet.addTransactionConfidenceEventListener(Threading.SAME_THREAD, transactionChangeListener);
 
         updateView();
+
+        WalletLock.getInstance().addListener(this);
     }
 
     @Override
@@ -233,6 +238,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         config.unregisterOnSharedPreferenceChangeListener(this);
 
         resolver.unregisterContentObserver(addressBookObserver);
+
+        WalletLock.getInstance().removeListener(this);
 
         super.onPause();
     }
@@ -276,11 +283,14 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         }
         item.setChecked(true);
 
+        reloadTransactions();
+        return true;
+    }
+
+    private void reloadTransactions() {
         final Bundle args = new Bundle();
         args.putSerializable(ARG_DIRECTION, direction);
         loaderManager.restartLoader(ID_TRANSACTION_LOADER, args, this);
-
-        return true;
     }
 
     private void maybeSetFilterMenuItemIcon(final int iconResId) {
@@ -433,20 +443,38 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
         adapter.replace(transactions);
 
-        if (transactions.isEmpty()) {
-            viewGroup.setDisplayedChild(1);
-
-            final SpannableStringBuilder emptyText = new SpannableStringBuilder(
-                    getString(direction == Direction.SENT ? R.string.wallet_transactions_fragment_empty_text_sent
-                            : R.string.wallet_transactions_fragment_empty_text_received));
-            emptyText.setSpan(new StyleSpan(Typeface.BOLD), 0, emptyText.length(),
-                    SpannableStringBuilder.SPAN_POINT_MARK);
-            if (direction != Direction.SENT)
-                emptyText.append("\n\n").append(getString(R.string.wallet_transactions_fragment_empty_text_howto));
-            emptyView.setText(emptyText);
+        if (WalletLock.getInstance().isWalletLocked(wallet)) {
+            hideTransactions();
+        } else if (transactions.isEmpty()) {
+            showEmptyTransactions(direction);
         } else {
             viewGroup.setDisplayedChild(2);
         }
+    }
+
+    private void hideTransactions() {
+        viewGroup.setDisplayedChild(1);
+
+        final SpannableStringBuilder lockedWalletText = new SpannableStringBuilder(
+                getString(R.string.wallet_lock_unlock_to_see_txs_title));
+        lockedWalletText.setSpan(new StyleSpan(Typeface.BOLD), 0, lockedWalletText.length(),
+                SpannableStringBuilder.SPAN_POINT_MARK);
+        lockedWalletText.append("\n\n").append(getString(R.string.wallet_lock_unlock_to_see_txs_txt));
+
+        emptyView.setText(lockedWalletText);
+    }
+
+    private void showEmptyTransactions(Direction direction) {
+        viewGroup.setDisplayedChild(1);
+
+        final SpannableStringBuilder emptyText = new SpannableStringBuilder(
+                getString(direction == Direction.SENT ? R.string.wallet_transactions_fragment_empty_text_sent
+                        : R.string.wallet_transactions_fragment_empty_text_received));
+        emptyText.setSpan(new StyleSpan(Typeface.BOLD), 0, emptyText.length(),
+                SpannableStringBuilder.SPAN_POINT_MARK);
+        if (direction != Direction.SENT)
+            emptyText.append("\n\n").append(getString(R.string.wallet_transactions_fragment_empty_text_howto));
+        emptyView.setText(emptyText);
     }
 
     @Override
@@ -463,11 +491,11 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
     };
 
     private static class TransactionsLoader extends AsyncTaskLoader<List<Transaction>> {
+
         private LocalBroadcastManager broadcastManager;
         private final Wallet wallet;
         @Nullable
         private final Direction direction;
-
         private TransactionsLoader(final Context context, final Wallet wallet, @Nullable final Direction direction) {
             super(context);
 
@@ -580,8 +608,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
                 return tx1.getHash().compareTo(tx2.getHash());
             }
         };
-    }
 
+    }
     @Override
     public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences, final String key) {
         if (Configuration.PREFS_KEY_BTC_PRECISION.equals(key) || Configuration.PREFS_KEY_REMIND_BACKUP.equals(key))
@@ -604,4 +632,14 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         else
             return null;
     }
+
+    @Override
+    public void onLockChanged(boolean locked) {
+        if (locked) {
+            hideTransactions();
+        } else {
+            reloadTransactions();
+        }
+    }
+
 }

@@ -30,6 +30,7 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.ExchangeRate;
 import de.schildbach.wallet.data.ExchangeRatesProvider;
+import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet_test.R;
@@ -153,6 +154,9 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
     @Override
     public void onCreateOptionsMenu(final Menu menu, final MenuInflater inflater) {
         inflater.inflate(R.menu.exchange_rates_fragment_options, menu);
+
+        MenuItem walletLockMenuItem = menu.findItem(R.id.wallet_options_lock);
+        walletLockMenuItem.setVisible(WalletLock.getInstance().isWalletLocked(wallet));
 
         final SearchView searchView = (SearchView) menu.findItem(R.id.exchange_rates_options_search).getActionView();
         searchView.setOnQueryTextListener(new OnQueryTextListener() {

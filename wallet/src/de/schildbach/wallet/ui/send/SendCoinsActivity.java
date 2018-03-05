@@ -23,6 +23,7 @@ import org.bitcoinj.core.Coin;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.HelpDialogFragment;
 import de.schildbach.wallet_test.R;
