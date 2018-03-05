@@ -43,6 +43,7 @@ import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
+import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.TransactionsAdapter.Warning;
 import de.schildbach.wallet.ui.send.RaiseFeeDialogFragment;
 import de.schildbach.wallet.util.BitmapFragment;
@@ -160,6 +161,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
         this.direction = null;
     }
+
     @Override
     public void onDestroyView() {
         super.onDestroyView();
@@ -433,7 +435,17 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
         adapter.replace(transactions);
 
-        if (transactions.isEmpty()) {
+        if (WalletLock.getInstance().isWalletLocked(wallet)) {
+            viewGroup.setDisplayedChild(1);
+
+            final SpannableStringBuilder lockedWalletText = new SpannableStringBuilder(
+                    getString(R.string.wallet_lock_unlock_to_see_txs_title));
+            lockedWalletText.setSpan(new StyleSpan(Typeface.BOLD), 0, lockedWalletText.length(),
+                    SpannableStringBuilder.SPAN_POINT_MARK);
+            lockedWalletText.append("\n\n").append(getString(R.string.wallet_lock_unlock_to_see_txs_txt));
+
+            emptyView.setText(lockedWalletText);
+        } else if (transactions.isEmpty()) {
             viewGroup.setDisplayedChild(1);
 
             final SpannableStringBuilder emptyText = new SpannableStringBuilder(
