@@ -333,11 +333,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
         super.onCreate(savedInstanceState);
 
         this.buyDashPref = new BuyDashPref(PreferenceManager.getDefaultSharedPreferences(activity.getApplicationContext()));
-
         setRetainInstance(true);
         setHasOptionsMenu(true);
-
-//        defaultCurrency = config.getExchangeCurrencyCode();
         config.registerOnSharedPreferenceChangeListener(this);
         buyDashPref.registerOnSharedPreferenceChangeListener(this);
     }
