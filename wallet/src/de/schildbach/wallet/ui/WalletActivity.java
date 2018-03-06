@@ -83,6 +83,7 @@ import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.preference.PreferenceActivity;
@@ -92,7 +93,6 @@ import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet.util.Nfc;
-import de.schildbach.wallet.util.Toast;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
@@ -100,7 +100,7 @@ import de.schildbach.wallet_test.R;
  * @author Andreas Schildbach
  */
 public final class WalletActivity extends AbstractBindServiceActivity
-        implements ActivityCompat.OnRequestPermissionsResultCallback, NavigationView.OnNavigationItemSelectedListener {
+        implements ActivityCompat.OnRequestPermissionsResultCallback, NavigationView.OnNavigationItemSelectedListener, WalletLock.OnLockChangeListener {
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
     private static final int DIALOG_RESTORE_WALLET = 2;
@@ -115,6 +115,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private DrawerLayout viewDrawer;
     private View viewFakeForSafetySubmenu;
+    private MenuItem walletLockMenuItem;
 
     private Handler handler = new Handler();
 
@@ -228,11 +229,14 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }, 1000);
 
         checkLowStorageAlert();
+
+        WalletLock.getInstance().addListener(this);
     }
 
     @Override
     protected void onPause() {
         handler.removeCallbacksAndMessages(null);
+        WalletLock.getInstance().removeListener(this);
 
         super.onPause();
     }
@@ -316,6 +320,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         getMenuInflater().inflate(R.menu.wallet_options, menu);
 
+        walletLockMenuItem = menu.findItem(R.id.wallet_options_lock);
+        walletLockMenuItem.setVisible(WalletLock.getInstance().isWalletLocked(wallet));
+
         return true;
     }
 
@@ -379,20 +386,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 return true;
 
             case R.id.wallet_options_lock:
-                android.widget.Toast.makeText(this, "Unlock Wallet", android.widget.Toast.LENGTH_SHORT).show();
+                unlockWallet();
                 return true;
         }
 
         return super.onOptionsItemSelected(item);
-    }
-
-    private void checkWalletEncryptionDialog() {
-        boolean initalEncryptionDialogDismissed = walletLockPreferences
-                .getBoolean(Constants.WALLET_LOCK_PREFS_INITAL_DIALOG_DISMISSED, false);
-
-        if (!wallet.isEncrypted() && !initalEncryptionDialogDismissed) {
-            handleEncryptKeys();
-        }
     }
 
     public void handleRequestCoins() {
@@ -959,6 +957,19 @@ public final class WalletActivity extends AbstractBindServiceActivity
         dialog.show();
     }
 
+    private void checkWalletEncryptionDialog() {
+        boolean initialEncryptionDialogDismissed = walletLockPreferences
+                .getBoolean(Constants.WALLET_LOCK_PREFS_INITAL_DIALOG_DISMISSED, false);
+
+        if (!wallet.isEncrypted() && !initialEncryptionDialogDismissed) {
+            handleEncryptKeys();
+        }
+    }
+
+    private void unlockWallet() {
+        UnlockWalletDialogFragment.show(getFragmentManager());
+    }
+
     @Override
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
         super.onCreateContextMenu(menu, v, menuInfo);
@@ -1039,4 +1050,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
         getWalletApplication().stopBlockchainService();
         finish();
     }
+
+    @Override
+    public void onLockChanged(boolean locked) {
+        invalidateOptionsMenu();
+    }
+
 }
