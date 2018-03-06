@@ -1044,9 +1044,11 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
             discoveryInputsReq.put(WOCConstants.KEY_USD_AMOUNT, "0");
             e.printStackTrace();
         }
+        discoveryInputsReq.put(WOCConstants.KEY_COUNTRY,getCountryCode().toLowerCase());
         discoveryInputsReq.put(WOCConstants.KEY_CRYPTO, config.getFormat().code());
         discoveryInputsReq.put(WOCConstants.KEY_BANK, bankId);
         discoveryInputsReq.put(WOCConstants.KEY_ZIP_CODE, zipCode);
+
         JsonObject jObj = new JsonObject();
         jObj.addProperty(WOCConstants.KEY_LATITUDE,latitude+"");
         jObj.addProperty(WOCConstants.KEY_LONGITUDE,longitude+"");
@@ -1160,6 +1162,29 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                 Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
             }
         });
+    }
+
+    /**
+     * get country code form current latitude & longitude
+     * @return Country Code
+     */
+    private String getCountryCode(){
+        String countryCode = "";
+        try {
+            Geocoder geo = new Geocoder(activity.getApplicationContext(), Locale.getDefault());
+            List<android.location.Address> addresses = geo.getFromLocation(latitude, longitude, 1);
+            android.location.Address obj = addresses.get(0);
+            countryCode = obj.getCountryCode();
+        }
+        catch(Exception e){
+            e.printStackTrace();
+        }
+
+        if(countryCode.equals("")){
+            return  "us";
+        }else {
+            return countryCode;
+        }
     }
 
     /**
@@ -1505,6 +1530,8 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
     }
 
     /**
+     *
+     *
      * Method call for delete for provide holdId
      * @param holdId
      */
@@ -1864,7 +1891,6 @@ public final class BuyDashFragment extends Fragment implements OnSharedPreferenc
                                         response.bankIcon = orderListResp.account;
                                         response.bankIconHq = orderListResp.account;
                                         response.privateId = orderListResp.account;
-
                                         confirmDeposit(response);
                                     }
                                 })
