@@ -53,8 +53,7 @@ import de.schildbach.wallet_test.R;
 /**
  * @author Andreas Schildbach
  */
-public final class WalletBalanceToolbarFragment extends Fragment
-{
+public final class WalletBalanceToolbarFragment extends Fragment implements WalletLock.OnLockChangeListener {
 	private WalletApplication application;
 	private AbstractBindServiceActivity activity;
 	private Configuration config;
@@ -165,6 +164,8 @@ public final class WalletBalanceToolbarFragment extends Fragment
 		else loaderManager.restartLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
 
 		updateView();
+
+		WalletLock.getInstance().addListener(this);
 	}
 
 	@Override
@@ -175,6 +176,7 @@ public final class WalletBalanceToolbarFragment extends Fragment
 		loaderManager.destroyLoader(ID_BALANCE_LOADER);
 		//loaderManager.destroyLoader(ID_MASTERNODE_SYNC_LOADER);
 
+		WalletLock.getInstance().removeListener(this);
 		super.onPause();
 	}
 
@@ -284,7 +286,6 @@ public final class WalletBalanceToolbarFragment extends Fragment
 			} else {
 				viewBalance.setVisibility(View.VISIBLE);
 			}
-			getView().invalidate();
         }
 		else
 		{
@@ -399,6 +400,12 @@ public final class WalletBalanceToolbarFragment extends Fragment
 		{
 		}
 	};
+
+	@Override
+	public void onLockChanged(boolean locked) {
+		updateView();
+	}
+
 	/*private final LoaderManager.LoaderCallbacks<Integer> masternodeSyncLoaderCallbacks = new LoaderManager.LoaderCallbacks<Integer>()
 	{
 		@Override
