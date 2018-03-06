@@ -231,6 +231,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         checkLowStorageAlert();
 
         WalletLock.getInstance().addListener(this);
+        lockWalletIfNeeded();
     }
 
     @Override
@@ -968,6 +969,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void unlockWallet() {
         UnlockWalletDialogFragment.show(getFragmentManager());
+    }
+
+    private void lockWalletIfNeeded() {
+        WalletLock walletLock = WalletLock.getInstance();
+        if (wallet.isEncrypted() && !walletLock.isWalletLocked(wallet)) {
+            walletLock.setWalletLocked(true);
+        }
     }
 
     @Override

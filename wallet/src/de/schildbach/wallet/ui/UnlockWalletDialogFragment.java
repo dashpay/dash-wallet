@@ -129,7 +129,7 @@ public class UnlockWalletDialogFragment extends DialogFragment {
             @Override
             protected void onSuccess() {
                 WalletLock.getInstance().setWalletLocked(false);
-                dismiss();
+                dismissAllowingStateLoss();
             }
 
             @Override
