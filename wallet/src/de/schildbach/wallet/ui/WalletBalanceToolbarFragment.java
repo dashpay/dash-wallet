@@ -147,7 +147,8 @@ public final class WalletBalanceToolbarFragment extends Fragment
 			@Override
 			public void onClick(View v) {
 				showWarningIfBalanceTooMuch();
-				showExchangeRatesActivity();
+				if(!(getActivity() instanceof ExchangeRatesActivity))
+					showExchangeRatesActivity();
 			}
 		});
 	}
