@@ -17,42 +17,6 @@
 
 package de.schildbach.wallet.ui;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.RejectedExecutionException;
-
-import javax.annotation.Nullable;
-
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.CoinDefinition;
-import org.bitcoinj.core.ScriptException;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.Transaction.Purpose;
-import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.Wallet;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import de.schildbach.wallet.Configuration;
-import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.AddressBookProvider;
-import de.schildbach.wallet.ui.TransactionsAdapter.Warning;
-import de.schildbach.wallet.ui.send.RaiseFeeDialogFragment;
-import de.schildbach.wallet.util.BitmapFragment;
-import de.schildbach.wallet.util.CrashReporter;
-import de.schildbach.wallet.util.Qr;
-import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
-import de.schildbach.wallet.util.WalletUtils;
-import de.schildbach.wallet.wallofcoins.buydash.BuyDashActivity;
-import de.schildbach.wallet_test.R;
-
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.LoaderManager;
@@ -93,6 +57,42 @@ import android.widget.PopupMenu;
 import android.widget.PopupMenu.OnMenuItemClickListener;
 import android.widget.TextView;
 import android.widget.ViewAnimator;
+
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.CoinDefinition;
+import org.bitcoinj.core.ScriptException;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.Transaction.Purpose;
+import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
+import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.Wallet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.RejectedExecutionException;
+
+import javax.annotation.Nullable;
+
+import de.schildbach.wallet.Configuration;
+import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.AddressBookProvider;
+import de.schildbach.wallet.ui.TransactionsAdapter.Warning;
+import de.schildbach.wallet.ui.send.RaiseFeeDialogFragment;
+import de.schildbach.wallet.util.BitmapFragment;
+import de.schildbach.wallet.util.CrashReporter;
+import de.schildbach.wallet.util.Qr;
+import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
+import de.schildbach.wallet.util.WalletUtils;
+import de.schildbach.wallet.wallofcoins.buydash.BuyDashActivity;
+import de.schildbach.wallet_test.R;
 
 /**
  * @author Andreas Schildbach
@@ -163,6 +163,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
         this.direction = null;
     }
+
     @Override
     public void onDestroyView() {
         super.onDestroyView();
@@ -171,7 +172,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
     @Override
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
-            final Bundle savedInstanceState) {
+                             final Bundle savedInstanceState) {
         final View view = inflater.inflate(R.layout.wallet_transactions_fragment, container, false);
 
         viewGroup = (ViewAnimator) view.findViewById(R.id.wallet_transactions_group);
@@ -188,7 +189,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
             @Override
             public void getItemOffsets(final Rect outRect, final View view, final RecyclerView parent,
-                    final RecyclerView.State state) {
+                                       final RecyclerView.State state) {
                 super.getItemOffsets(outRect, view, parent, state);
 
                 final int position = parent.getChildAdapterPosition(view);
@@ -327,29 +328,29 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
             @Override
             public boolean onMenuItemClick(final MenuItem item) {
                 switch (item.getItemId()) {
-                case R.id.wallet_transactions_context_edit_address:
-                    handleEditAddress(tx);
-                    return true;
+                    case R.id.wallet_transactions_context_edit_address:
+                        handleEditAddress(tx);
+                        return true;
 
-                case R.id.wallet_transactions_context_show_qr:
-                    handleShowQr();
-                    return true;
+                    case R.id.wallet_transactions_context_show_qr:
+                        handleShowQr();
+                        return true;
 
-                case R.id.wallet_transactions_context_raise_fee:
-                    RaiseFeeDialogFragment.show(getFragmentManager(), tx);
-                    return true;
+                    case R.id.wallet_transactions_context_raise_fee:
+                        RaiseFeeDialogFragment.show(getFragmentManager(), tx);
+                        return true;
 
-                case R.id.wallet_transactions_context_report_issue:
-                    handleReportIssue(tx);
-                    return true;
+                    case R.id.wallet_transactions_context_report_issue:
+                        handleReportIssue(tx);
+                        return true;
 
-                case R.id.wallet_transactions_context_browse:
-                    if (!txRotation)
-                        startActivity(new Intent(Intent.ACTION_VIEW,
-                                Uri.withAppendedPath(config.getBlockExplorer(), "tx/" + tx.getHashAsString())));
-                    else
-                        startActivity(new Intent(Intent.ACTION_VIEW, KEY_ROTATION_URI));
-                    return true;
+                    case R.id.wallet_transactions_context_browse:
+                        if (!txRotation)
+                            startActivity(new Intent(Intent.ACTION_VIEW,
+                                    Uri.withAppendedPath(config.getBlockExplorer(), "tx/" + tx.getHashAsString())));
+                        else
+                            startActivity(new Intent(Intent.ACTION_VIEW, KEY_ROTATION_URI));
+                        return true;
                 }
 
                 return false;
@@ -415,13 +416,13 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
     @Override
     public void onWarningClick() {
         switch (warning()) {
-        case BACKUP:
-            ((WalletActivity) activity).handleBackupWallet();
-            break;
+            case BACKUP:
+                ((WalletActivity) activity).handleBackupWallet();
+                break;
 
-        case STORAGE_ENCRYPTION:
-            startActivity(new Intent(Settings.ACTION_SECURITY_SETTINGS));
-            break;
+            case STORAGE_ENCRYPTION:
+                startActivity(new Intent(Settings.ACTION_SECURITY_SETTINGS));
+                break;
         }
     }
 
@@ -452,6 +453,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
                 @Override
                 public void onClick(View v) {
                     startActivity(new Intent(activity, BuyDashActivity.class));
+
                 }
             });
         } else {
@@ -486,7 +488,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
             this.direction = direction;
         }
 
-        public @Nullable Direction getDirection() {
+        public @Nullable
+        Direction getDirection() {
             return direction;
         }
 
@@ -609,7 +612,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
             return Warning.BACKUP;
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
                 && (storageEncryptionStatus == DevicePolicyManager.ENCRYPTION_STATUS_INACTIVE
-                        || storageEncryptionStatus == DevicePolicyManager.ENCRYPTION_STATUS_ACTIVE_DEFAULT_KEY))
+                || storageEncryptionStatus == DevicePolicyManager.ENCRYPTION_STATUS_ACTIVE_DEFAULT_KEY))
             return Warning.STORAGE_ENCRYPTION;
         else
             return null;

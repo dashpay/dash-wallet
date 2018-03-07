@@ -66,6 +66,12 @@ public interface RestApi {
     @GET("api/v1/banks/")
     Call<List<GetReceivingOptionsResp>> getReceivingOptions(@Query("country") String country, @Query("publisherId") String publisherId);
 
+
+    //--------------dash wizard
+    @GET("api/v1/banks/")
+    Call<List<GetReceivingOptionsResp>> getReceivingOptions();
+    //----------------------
+
     @GET("api/v1/ad/")
     Call<List<AdsListActivityResp>> getAdsListing();
 

@@ -17,7 +17,6 @@ import de.schildbach.wallet_test.R;
 public class BuyDashBaseActivity extends AppCompatActivity {
 
 
-
     private FragmentManager fragmentManager;
     private FragmentTransaction fragmentTransaction;
 
@@ -39,15 +38,19 @@ public class BuyDashBaseActivity extends AppCompatActivity {
         fragmentTransaction = fragmentManager.beginTransaction();
 
         if (withAnimation)
-            //fragmentTransaction.setCustomAnimations(R.anim.activity_in, R.anim.activity_out, R.anim.activity_backin, R.anim.activity_back_out);
-            if (withBackStack)
-                fragmentTransaction.replace(R.id.containerBuyDashBase, fragment).addToBackStack(tag);
-            else
-                fragmentTransaction.replace(R.id.containerBuyDashBase, fragment);
+            fragmentTransaction.setCustomAnimations(R.anim.activity_in, R.anim.activity_out, R.anim.activity_backin, R.anim.activity_back_out);
+        if (withBackStack)
+            fragmentTransaction.replace(R.id.containerBuyDashBase, fragment).addToBackStack(tag);
+        else
+            fragmentTransaction.replace(R.id.containerBuyDashBase, fragment);
         fragmentTransaction.commitAllowingStateLoss();
     }
 
+    public void finishBaseActivity() {
+        this.finish();
+    }
 
-
-
+    public void popbackFragment() {
+        fragmentManager.popBackStack();
+    }
 }

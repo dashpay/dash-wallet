@@ -41,4 +41,11 @@ public final class WOCConstants {
     public static final String SUPPORT_EMAIL = "support@wallofcoins.com";
     public static final String SEND_EMAIL = "Send email...";
     public static final String WOC_ADDRESS = "WallofCoins.com";
+
+
+    //buying wizard
+    public static String LATITUDE = "latitude";
+    public static String LONGITUDE = "longitude";
+    public static String ZIP = "zip";
+    public static String BANK_ID = "bankId";
 }
