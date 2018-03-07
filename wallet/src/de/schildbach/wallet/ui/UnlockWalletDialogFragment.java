@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.app.FragmentManager;
@@ -38,6 +39,7 @@ import org.bitcoinj.wallet.Wallet;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.WalletLock;
+import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet_test.R;
 
 public class UnlockWalletDialogFragment extends DialogFragment {
@@ -95,7 +97,15 @@ public class UnlockWalletDialogFragment extends DialogFragment {
         builder.setPositiveButton(R.string.button_ok, null);
         builder.setCancelable(false);
 
-        return builder.create();
+        AlertDialog alertDialog = builder.create();
+        alertDialog.setOnShowListener(new DialogInterface.OnShowListener() {
+            @Override
+            public void onShow(DialogInterface dialog) {
+                KeyboardUtil.showSoftKeyboard(getActivity(), pinView);
+            }
+        });
+        
+        return alertDialog;
     }
 
     @Override
