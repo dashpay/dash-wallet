@@ -67,20 +67,11 @@ public class KeyboardResponsiveCoordinatorLayout extends CoordinatorLayout {
         public void onGlobalLayout() {
             int difference = calculateDifferenceBetweenHeightAndUsableArea();
 
-            if (difference != 0) {
-                if (viewToHide != null) {
+            if (viewToHide != null) {
+                if (difference != 0) {
                     viewToHide.setVisibility(View.GONE);
-                }
-            } else {
-                if (viewToHide != null) {
-                    /*The delay is to avoid showing the scan button while the keyboard hide
-                    animation is running, which causes a visual glitch.*/
-                    viewToHide.getHandler().postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            viewToHide.setVisibility(View.VISIBLE);
-                        }
-                    }, 100);
+                } else {
+                    viewToHide.setVisibility(View.VISIBLE);
                 }
             }
         }
