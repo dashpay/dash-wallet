@@ -115,7 +115,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private DrawerLayout viewDrawer;
     private View viewFakeForSafetySubmenu;
-    private MenuItem walletLockMenuItem;
 
     private Handler handler = new Handler();
 
@@ -229,15 +228,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }, 1000);
 
         checkLowStorageAlert();
-
-        WalletLock.getInstance().addListener(this);
-        lockWalletIfNeeded();
     }
 
     @Override
     protected void onPause() {
         handler.removeCallbacksAndMessages(null);
-        WalletLock.getInstance().removeListener(this);
 
         super.onPause();
     }
@@ -321,7 +316,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         getMenuInflater().inflate(R.menu.wallet_options, menu);
 
-        walletLockMenuItem = menu.findItem(R.id.wallet_options_lock);
+        MenuItem walletLockMenuItem = menu.findItem(R.id.wallet_options_lock);
         walletLockMenuItem.setVisible(WalletLock.getInstance().isWalletLocked(wallet));
 
         return true;
@@ -384,10 +379,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
             case R.id.wallet_options_help:
                 HelpDialogFragment.page(getFragmentManager(), R.string.help_wallet);
-                return true;
-
-            case R.id.wallet_options_lock:
-                unlockWallet();
                 return true;
         }
 
@@ -967,17 +958,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }
     }
 
-    private void unlockWallet() {
-        UnlockWalletDialogFragment.show(getFragmentManager());
-    }
-
-    private void lockWalletIfNeeded() {
-        WalletLock walletLock = WalletLock.getInstance();
-        if (wallet.isEncrypted() && !walletLock.isWalletLocked(wallet)) {
-            walletLock.setWalletLocked(true);
-        }
-    }
-
     @Override
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
         super.onCreateContextMenu(menu, v, menuInfo);
@@ -1057,11 +1037,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private void handleDisconnect() {
         getWalletApplication().stopBlockchainService();
         finish();
-    }
-
-    @Override
-    public void onLockChanged(boolean locked) {
-        invalidateOptionsMenu();
     }
 
 }
