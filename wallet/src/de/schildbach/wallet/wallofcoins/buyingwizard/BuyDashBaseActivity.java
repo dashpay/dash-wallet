@@ -53,4 +53,9 @@ public class BuyDashBaseActivity extends AppCompatActivity {
     public void popbackFragment() {
         fragmentManager.popBackStack();
     }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+    }
 }

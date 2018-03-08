@@ -36,7 +36,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 /**
- * Created by Bypt on 07-Mar-18.
+ * Created on 07-Mar-18.
  */
 
 public class BuyDashPaymentCenterFragment extends BuyDashBaseFragment implements View.OnClickListener {

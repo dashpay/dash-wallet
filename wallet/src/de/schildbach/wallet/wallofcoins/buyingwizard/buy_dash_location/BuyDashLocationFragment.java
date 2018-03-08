@@ -2,13 +2,11 @@ package de.schildbach.wallet.wallofcoins.buyingwizard.buy_dash_location;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
@@ -41,6 +39,8 @@ import de.schildbach.wallet.wallofcoins.api.WallofCoins;
 import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseActivity;
 import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseFragment;
 import de.schildbach.wallet.wallofcoins.buyingwizard.offer_amount.BuyDashOfferAmountFragment;
+import de.schildbach.wallet.wallofcoins.buyingwizard.order_history.OrderHistoryFragment;
+import de.schildbach.wallet.wallofcoins.buyingwizard.verification_otp.VerifycationOtpFragment;
 import de.schildbach.wallet.wallofcoins.buyingwizard.zip.BuyDashZipFragment;
 import de.schildbach.wallet.wallofcoins.response.BuyDashErrorResp;
 import de.schildbach.wallet.wallofcoins.response.CheckAuthResp;
@@ -62,7 +62,7 @@ public class BuyDashLocationFragment extends BuyDashBaseFragment implements View
 
 
     private View rootView;
-    private Button button_buy_dash_get_location, button_buy_dash_get_location_no, btn_sign_out_woc;
+    private Button button_buy_dash_get_location, button_buy_dash_get_location_no, btn_sign_out_woc, btn_order_history_woc;
     private TextView txtViewLocationMessage, text_message_sign_out;
     private ImageView imgViewToolbarBack;
     private String zipCode, password;
@@ -85,6 +85,20 @@ public class BuyDashLocationFragment extends BuyDashBaseFragment implements View
             rootView = inflater.inflate(R.layout.layout_buy_dash_location, container, false);
             init();
             setListeners();
+
+            /*if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+                if (!TextUtils.isEmpty(buyDashPref.getHoldId())) {
+                    CreateHoldResp createHoldResp = buyDashPref.getCreateHoldResp();
+                    //binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
+                    // hideViewExcept(binding.layoutVerifyOtp);
+                    navigateToVerifyOtp(createHoldResp.__PURCHASE_CODE);
+                } else {
+                    //hideViewExcept(binding.rvOrderList);
+                    //getOrderList(false);
+                    navigateToOrderList(false);
+                }
+            }*/
+
             return rootView;
         } else
             return rootView;
@@ -101,6 +115,7 @@ public class BuyDashLocationFragment extends BuyDashBaseFragment implements View
         text_message_sign_out = (TextView) rootView.findViewById(R.id.text_message_sign_out);
         layout_sign_out = (LinearLayout) rootView.findViewById(R.id.layout_sign_out);
         linear_progress = (LinearLayout) rootView.findViewById(R.id.linear_progress);
+        btn_order_history_woc = (Button) rootView.findViewById(R.id.btn_order_history_woc);
     }
 
     private void setListeners() {
@@ -109,8 +124,18 @@ public class BuyDashLocationFragment extends BuyDashBaseFragment implements View
         imgViewToolbarBack.setOnClickListener(this);
         btn_sign_out_woc.setOnClickListener(this);
         buyDashPref.registerOnSharedPreferenceChangeListener(this);
+        btn_order_history_woc.setOnClickListener(this);
     }
 
+    private void navigateToVerifyOtp(String otp) {
+        Bundle bundle = new Bundle();
+        bundle.putString(WOCConstants.VERIFICATION_OTP, otp);
+        VerifycationOtpFragment otpFragment = new VerifycationOtpFragment();
+        otpFragment.setArguments(bundle);
+
+        ((BuyDashBaseActivity) mContext).replaceFragment(otpFragment, true, true,
+                "VerifycationOtpFragment");
+    }
 
     @Override
     public void onClick(View view) {
@@ -133,8 +158,21 @@ public class BuyDashLocationFragment extends BuyDashBaseFragment implements View
             case R.id.btn_sign_out_woc:
                 deleteAuthCall(false);
                 break;
+            case R.id.btn_order_history_woc:
+                navigateToOrderList(false);
+                break;
+
 
         }
+    }
+
+    private void navigateToOrderList(boolean isFromCreateHold) {
+        OrderHistoryFragment historyFragment = new OrderHistoryFragment();
+        Bundle bundle = new Bundle();
+        bundle.putBoolean("isFromCreateHold", isFromCreateHold);
+        historyFragment.setArguments(bundle);
+        ((BuyDashBaseActivity) mContext).replaceFragment(historyFragment, true, true,
+                "OrderHistoryFragment");
     }
 
     @Override
@@ -347,7 +385,7 @@ public class BuyDashLocationFragment extends BuyDashBaseFragment implements View
 
     /**
      * Show alert dialog  wrong username or password
-     */
+     *//*
     private void showAlertPasswordDialog() {
         AlertDialog.Builder builder;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -364,7 +402,7 @@ public class BuyDashLocationFragment extends BuyDashBaseFragment implements View
                 })
                 .show();
     }
-
+*/
     @SuppressLint("HardwareIds")
     private String getDeviceCode(Context context) {
 

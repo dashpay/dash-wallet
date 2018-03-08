@@ -2,9 +2,12 @@ package de.schildbach.wallet.wallofcoins.buyingwizard.offer_amount;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
@@ -26,19 +29,29 @@ import org.bitcoinj.wallet.Wallet;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.ExchangeRate;
+import de.schildbach.wallet.data.ExchangeRatesProvider;
 import de.schildbach.wallet.ui.CurrencyAmountView;
+import de.schildbach.wallet.ui.CurrencyCalculatorLink;
+import de.schildbach.wallet.ui.ExchangeRateLoader;
 import de.schildbach.wallet.wallofcoins.BuyDashOffersAdapter;
 import de.schildbach.wallet.wallofcoins.BuyDashPref;
 import de.schildbach.wallet.wallofcoins.WOCConstants;
 import de.schildbach.wallet.wallofcoins.api.WallofCoins;
 import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseActivity;
 import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseFragment;
+import de.schildbach.wallet.wallofcoins.buyingwizard.email_phone.EmailAndPhoneFragment;
+import de.schildbach.wallet.wallofcoins.buyingwizard.order_history.OrderHistoryFragment;
+import de.schildbach.wallet.wallofcoins.buyingwizard.verification_otp.VerifycationOtpFragment;
 import de.schildbach.wallet.wallofcoins.response.BuyDashErrorResp;
+import de.schildbach.wallet.wallofcoins.response.CreateHoldResp;
 import de.schildbach.wallet.wallofcoins.response.DiscoveryInputsResp;
+import de.schildbach.wallet.wallofcoins.response.GetHoldsResp;
 import de.schildbach.wallet.wallofcoins.response.GetOffersResp;
 import de.schildbach.wallet_test.R;
 import okhttp3.Interceptor;
@@ -50,7 +63,7 @@ import retrofit2.Response;
 import static org.bitcoinj.wallet.KeyChain.KeyPurpose.RECEIVE_FUNDS;
 
 /**
- * Created by Bypt on 07-Mar-18.
+ * Created on 07-Mar-18.
  */
 
 public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements View.OnClickListener, SharedPreferences.OnSharedPreferenceChangeListener {
@@ -69,7 +82,11 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
     private Configuration config;
     private WalletApplication application;
     private RecyclerView rv_offers;
-    private CurrencyAmountView request_coins_amount_local;
+    private CurrencyAmountView request_coins_amount_local, request_coins_amount_btc;
+    private CurrencyCalculatorLink amountCalculatorLink;
+    private LoaderManager loaderManager;
+    private final int ID_RATE_LOADER = 1;
+    private CreateHoldResp createHoldResp;
 
     @Override
     public void onAttach(Context context) {
@@ -96,16 +113,27 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
         this.buyDashPref = new BuyDashPref(PreferenceManager.getDefaultSharedPreferences(mContext));
         this.config = application.getConfiguration();
         this.wallet = application.getWallet();
+        this.loaderManager = getLoaderManager();
+
+
         imgViewToolbarBack = (ImageView) rootView.findViewById(R.id.imgViewToolbarBack);
         button_buy_dash_get_offers = (Button) rootView.findViewById(R.id.button_buy_dash_get_offers);
         request_coins_amount_btc_edittext = (EditText) rootView.findViewById(R.id.request_coins_amount_btc_edittext);
         request_coins_amount_local_edittext = (EditText) rootView.findViewById(R.id.request_coins_amount_local_edittext);
         linearProgress = (LinearLayout) rootView.findViewById(R.id.linear_progress);
         layout_create_hold = (LinearLayout) rootView.findViewById(R.id.layout_create_hold);
-        request_coins_amount_local= (CurrencyAmountView) rootView.findViewById(R.id.request_coins_amount_local);
+        request_coins_amount_local = (CurrencyAmountView) rootView.findViewById(R.id.request_coins_amount_local);
+        request_coins_amount_btc = (CurrencyAmountView) rootView.findViewById(R.id.request_coins_amount_btc);
+
+        request_coins_amount_btc.setCurrencySymbol(config.getFormat().code());
+        request_coins_amount_btc.setInputFormat(config.getMaxPrecisionFormat());
+        request_coins_amount_btc.setHintFormat(config.getFormat());
+
 
         request_coins_amount_local.setInputFormat(Constants.LOCAL_FORMAT);
         request_coins_amount_local.setHintFormat(Constants.LOCAL_FORMAT);
+
+        amountCalculatorLink = new CurrencyCalculatorLink(request_coins_amount_btc, request_coins_amount_local);
 
         rv_offers = (RecyclerView) rootView.findViewById(R.id.rv_offers);
         rv_offers.setLayoutManager(new LinearLayoutManager(mContext));
@@ -118,28 +146,70 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
     }
 
     /**
-     * handle the arguments comes from previos screen
+     * handle the arguments according to user come from previos screen
      */
     private void handleArgs() {
         if (getArguments() != null) {
-            if (getArguments().containsKey(WOCConstants.LATITUDE)) {
+            if (getArguments().containsKey(WOCConstants.LATITUDE)) { //user come from my location
                 latitude = getArguments().getDouble(WOCConstants.LATITUDE);
                 longitude = getArguments().getDouble(WOCConstants.LONGITUDE);
             }
-            if (getArguments().containsKey(WOCConstants.ZIP)) {
+            if (getArguments().containsKey(WOCConstants.ZIP)) { // user come with only zip
                 zipCode = getArguments().getString(WOCConstants.ZIP);
             }
-            if (getArguments().containsKey(WOCConstants.BANK_ID)) {
+            if (getArguments().containsKey(WOCConstants.BANK_ID)) {// user come from bank list
                 bankId = getArguments().getString(WOCConstants.BANK_ID);
             }
         }
     }
 
     @Override
+    public void onViewCreated(final View view, final Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        amountCalculatorLink.setExchangeDirection(config.getLastExchangeDirection());
+        amountCalculatorLink.requestFocus();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        amountCalculatorLink.setListener(new CurrencyAmountView.Listener() {
+            @Override
+            public void changed() {
+            }
+
+            @Override
+            public void focusChanged(final boolean hasFocus) {
+            }
+        });
+        loaderManager.initLoader(ID_RATE_LOADER, null, rateLoaderCallbacks);
+    }
+
+    @Override
+    public void onPause() {
+        amountCalculatorLink.setListener(null);
+        super.onPause();
+    }
+
+    @Override
+    public void onDestroy() {
+        config.unregisterOnSharedPreferenceChangeListener(this);
+        config.setLastExchangeDirection(amountCalculatorLink.getExchangeDirection());
+        loaderManager.destroyLoader(ID_RATE_LOADER);
+        super.onDestroy();
+    }
+
+    @Override
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.imgViewToolbarBack:
-                ((BuyDashBaseActivity) mContext).popbackFragment();
+                if (layout_create_hold.getVisibility() == View.GONE) {
+                    layout_create_hold.setVisibility(View.VISIBLE);
+                    rv_offers.setVisibility(View.GONE);
+                } else
+                    ((BuyDashBaseActivity) mContext).popbackFragment();
                 break;
             case R.id.button_buy_dash_get_offers:
                 hideKeyBoard();
@@ -161,6 +231,29 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
 
         }
     }
+
+    /**
+     * Callback Manager for Load Exchange rate from Exchange rate Provider
+     */
+    private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>() {
+        @Override
+        public Loader<Cursor> onCreateLoader(final int id, final Bundle args) {
+            return new ExchangeRateLoader(mContext, config);
+        }
+
+        @Override
+        public void onLoadFinished(final Loader<Cursor> loader, final Cursor data) {
+            if (data != null && data.getCount() > 0) {
+                data.moveToFirst();
+                final ExchangeRate exchangeRate = ExchangeRatesProvider.getExchangeRate(data);
+                amountCalculatorLink.setExchangeRate(exchangeRate.rate);
+            }
+        }
+
+        @Override
+        public void onLoaderReset(final Loader<Cursor> loader) {
+        }
+    };
 
     /**
      * API Header parameter interceptor
@@ -207,11 +300,14 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
         if (latitude > 0.0)
             discoveryInputsReq.put(WOCConstants.KEY_COUNTRY, getCountryCode(latitude, longitude).toLowerCase());
         discoveryInputsReq.put(WOCConstants.KEY_CRYPTO, config.getFormat().code());
-        discoveryInputsReq.put(WOCConstants.KEY_BANK, bankId);
-        discoveryInputsReq.put(WOCConstants.KEY_ZIP_CODE, zipCode);
 
-        if (latitude > 0.0)
-        {
+        if (bankId != null)
+            discoveryInputsReq.put(WOCConstants.KEY_BANK, bankId);
+
+        if (zipCode != null)
+            discoveryInputsReq.put(WOCConstants.KEY_ZIP_CODE, zipCode);
+
+        if (latitude > 0.0) {
             JsonObject jObj = new JsonObject();
             jObj.addProperty(WOCConstants.KEY_LATITUDE, latitude + "");
             jObj.addProperty(WOCConstants.KEY_LONGITUDE, longitude + "");
@@ -257,8 +353,15 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
                                                             dashAmount = response.body().doubleDeposit.get(position - response.body().singleDeposit.size() - 2).totalAmount.DASH;
                                                         }
                                                         if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
-                                                            // createHold();
+                                                            createHold();
                                                         } else {
+                                                            Bundle bundle = new Bundle();
+                                                            bundle.putString(WOCConstants.OFFER_ID, offerId);
+                                                            EmailAndPhoneFragment fragment = new EmailAndPhoneFragment();
+                                                            fragment.setArguments(bundle);
+
+                                                            ((BuyDashBaseActivity) mContext).replaceFragment(fragment, true, true,
+                                                                    "EmailAndPhoneFragment");
                                                             // hideViewExcept(binding.linearEmail);
                                                             //clearForm((ViewGroup) binding.getRoot());
                                                         }
@@ -327,6 +430,160 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
                         Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
                     }
                 });
+    }
+
+    /**
+     * Method for create new hold
+     */
+    public void createHold() {
+        String phone = buyDashPref.getPhone();
+
+        final HashMap<String, String> createHoldPassReq = new HashMap<String, String>();
+
+        if (TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+            createHoldPassReq.put(WOCConstants.KEY_PHONE, phone);
+            createHoldPassReq.put(WOCConstants.KEY_PUBLISHER_ID, getString(R.string.WALLOFCOINS_PUBLISHER_ID));
+            //createHoldPassReq.put(WOCConstants.KEY_EMAIL, email);
+            createHoldPassReq.put(WOCConstants.KEY_deviceName, WOCConstants.KEY_DEVICE_NAME_VALUE);
+            createHoldPassReq.put(WOCConstants.KEY_DEVICECODE, getDeviceCode(mContext, buyDashPref));
+        }
+        createHoldPassReq.put(WOCConstants.KEY_OFFER, offerId);
+
+        linearProgress.setVisibility(View.VISIBLE);
+
+        WallofCoins.createService(interceptor, getActivity()).createHold(createHoldPassReq).enqueue(new Callback<CreateHoldResp>() {
+            @Override
+            public void onResponse(Call<CreateHoldResp> call, Response<CreateHoldResp> response) {
+                linearProgress.setVisibility(View.GONE);
+
+                if (null != response.body() && response.code() < 299) {
+
+                    createHoldResp = response.body();
+                    buyDashPref.setHoldId(createHoldResp.id);
+                    buyDashPref.setCreateHoldResp(createHoldResp);
+                    if (TextUtils.isEmpty(buyDashPref.getDeviceId())
+                            && !TextUtils.isEmpty(createHoldResp.deviceId)) {
+                        buyDashPref.setDeviceId(createHoldResp.deviceId);
+                    }
+                    if (!TextUtils.isEmpty(response.body().token)) {
+                        buyDashPref.setAuthToken(createHoldResp.token);
+                    }
+                    //hideViewExcept(binding.layoutVerifyOtp);
+                    //clearForm((ViewGroup) binding.getRoot());
+                    //binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
+                    navigateToVerifyOtp(createHoldResp.__PURCHASE_CODE);
+
+                } else if (null != response.errorBody()) {
+                    if (response.code() == 403 && TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+                        //hideViewExcept(binding.layoutHold);
+                        //clearForm((ViewGroup) binding.getRoot());
+                    } else if (response.code() == 403 && !TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+                        getHolds();
+                    } else if (response.code() == 400) {
+                        if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+                            navigateToOrderList(false);
+                            //getOrderList(false);
+                        } else {
+                            //hideViewExcept(binding.layoutHold);
+                            //clearForm((ViewGroup) binding.getRoot());
+                        }
+                    } else {
+                        try {
+                            if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+                                //getOrderList(false);
+                                navigateToOrderList(false);
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                } else {
+                    //clearForm((ViewGroup) binding.getRoot());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<CreateHoldResp> call, Throwable t) {
+                linearProgress.setVisibility(View.GONE);
+                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_SHORT).show();
+            }
+        });
+
+    }
+    /**
+     * Get all holds for delete active hold
+     */
+    private void getHolds() {
+        linearProgress.setVisibility(View.VISIBLE);
+        WallofCoins.createService(interceptor, getActivity()).getHolds().enqueue(new Callback<List<GetHoldsResp>>() {
+            @Override
+            public void onResponse(Call<List<GetHoldsResp>> call, Response<List<GetHoldsResp>> response) {
+                if (response.code() == 200 && response.body() != null) {
+                    List<GetHoldsResp> holdsList = response.body();
+                    int holdCount = 0;
+                    if (holdsList.size() > 0) {
+                        for (int i = 0; i < holdsList.size(); i++) {
+                            if (null != holdsList.get(i).status && holdsList.get(i).status.equals("AC")) {
+                                deleteHold(holdsList.get(i).id);
+                                holdCount++;
+                            }
+                        }
+                        if (holdCount == 0) {
+                            navigateToOrderList(false);
+                            //getOrderList(false);
+                        }
+                    } else {
+                        //getOrderList(false);
+                        navigateToOrderList(false);
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<GetHoldsResp>> call, Throwable t) {
+                linearProgress.setVisibility(View.GONE);
+                Log.e(TAG, "onFailure: ", t);
+                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+    /**
+     * Method call for delete for provide holdId
+     *
+     * @param holdId
+     */
+    private void deleteHold(String holdId) {
+        linearProgress.setVisibility(View.VISIBLE);
+        WallofCoins.createService(interceptor, getActivity()).deleteHold(holdId).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                createHold();
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                linearProgress.setVisibility(View.GONE);
+                Log.e(TAG, "onFailure: ", t);
+                Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+    private void navigateToOrderList(boolean isFromCreateHold) {
+        OrderHistoryFragment historyFragment = new OrderHistoryFragment();
+        Bundle bundle = new Bundle();
+        bundle.putBoolean("isFromCreateHold", isFromCreateHold);
+        historyFragment.setArguments(bundle);
+        ((BuyDashBaseActivity) mContext).replaceFragment(historyFragment, true, true,
+                "OrderHistoryFragment");
+    }
+    private void navigateToVerifyOtp(String otp) {
+        Bundle bundle = new Bundle();
+        bundle.putString(WOCConstants.VERIFICATION_OTP, otp);
+        VerifycationOtpFragment otpFragment = new VerifycationOtpFragment();
+        otpFragment.setArguments(bundle);
+
+        ((BuyDashBaseActivity) mContext).replaceFragment(otpFragment, true, true,
+                "VerifycationOtpFragment");
     }
 
     @Override

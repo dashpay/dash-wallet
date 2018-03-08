@@ -22,8 +22,8 @@ public final class WOCConstants {
     public static final String KEY_CRYPTO_AMOUNT = "cryptoAmount";
     public static final String KEY_ZIP_CODE = "zipCode";
     public static final String KEY_BROWSE_LOCATION = "browserLocation";
-    public static final String KEY_LATITUDE ="latitude";
-    public static final String KEY_LONGITUDE ="longitude";
+    public static final String KEY_LATITUDE = "latitude";
+    public static final String KEY_LONGITUDE = "longitude";
     public static final String KEY_PASSWORD = "password";
     public static final String KEY_DEVICECODE = "deviceCode";
     public static final String KEY_DEVICEID = "deviceId";
@@ -48,4 +48,6 @@ public final class WOCConstants {
     public static String LONGITUDE = "longitude";
     public static String ZIP = "zip";
     public static String BANK_ID = "bankId";
+    public static String OFFER_ID = "offerId";
+    public static String VERIFICATION_OTP = "otp";
 }
