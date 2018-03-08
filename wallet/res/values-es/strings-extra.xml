@@ -35,7 +35,7 @@
 	<string name="wallet_lock_unlock_wallet">Desbloquear billetera</string>
 	<string name="wallet_lock_unlock_to_see_txs_title">Billetera bloqueada.</string>
 	<string name="wallet_lock_unlock_to_see_txs_txt">Toque el ícono de candado arriba para desbloquear tu billetera y ver el historial de transacciones.</string>
-	<string name="wallet_lock_unlock_dialog_title">Desbloquear para ver tu saldo</string>
+	<string name="wallet_lock_unlock_dialog_title">Desbloquee para ver tu saldo</string>
 	<string name="wallet_lock_unlock_dialog_message">Tu billetera está protegida por un PIN de gasto. Introduce tu PIN y presiona Desbloquear para ver tu saldo.</string>
 
 </resources>
