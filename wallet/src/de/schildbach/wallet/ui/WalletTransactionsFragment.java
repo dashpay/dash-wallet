@@ -283,11 +283,14 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         }
         item.setChecked(true);
 
+        reloadTransactions();
+        return true;
+    }
+
+    private void reloadTransactions() {
         final Bundle args = new Bundle();
         args.putSerializable(ARG_DIRECTION, direction);
         loaderManager.restartLoader(ID_TRANSACTION_LOADER, args, this);
-
-        return true;
     }
 
     private void maybeSetFilterMenuItemIcon(final int iconResId) {
@@ -635,11 +638,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         if (locked) {
             hideTransactions();
         } else {
-            if (adapter.getItemCount() > 0) {
-                viewGroup.setDisplayedChild(2);
-            } else {
-                showEmptyTransactions(direction);
-            }
+            reloadTransactions();
         }
     }
 
