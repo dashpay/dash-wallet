@@ -17,10 +17,49 @@
 
 package de.schildbach.wallet.ui;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedList;
+import java.util.List;
+
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.Wallet.BalanceType;
+
+import com.google.common.base.Charsets;
+import com.squareup.okhttp.HttpUrl;
+
+import de.schildbach.wallet.Configuration;
+import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.data.WalletLock;
+import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
+import de.schildbach.wallet.ui.InputParser.StringInputParser;
+import de.schildbach.wallet.ui.preference.PreferenceActivity;
+import de.schildbach.wallet.ui.send.SendCoinsActivity;
+import de.schildbach.wallet.ui.send.SweepWalletActivity;
+import de.schildbach.wallet.util.CrashReporter;
+import de.schildbach.wallet.util.Crypto;
+import de.schildbach.wallet.util.Io;
+import de.schildbach.wallet.util.Nfc;
+import de.schildbach.wallet.util.WalletUtils;
+import de.schildbach.wallet_test.R;
+
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnCancelListener;
 import android.content.DialogInterface.OnClickListener;
@@ -57,44 +96,6 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
-
-import com.google.common.base.Charsets;
-import com.squareup.okhttp.HttpUrl;
-
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.VersionedChecksummedBytes;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.Wallet.BalanceType;
-
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedList;
-import java.util.List;
-
-import de.schildbach.wallet.Configuration;
-import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.data.WalletLock;
-import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
-import de.schildbach.wallet.ui.InputParser.StringInputParser;
-import de.schildbach.wallet.ui.preference.PreferenceActivity;
-import de.schildbach.wallet.ui.send.SendCoinsActivity;
-import de.schildbach.wallet.ui.send.SweepWalletActivity;
-import de.schildbach.wallet.util.CrashReporter;
-import de.schildbach.wallet.util.Crypto;
-import de.schildbach.wallet.util.Io;
-import de.schildbach.wallet.util.Nfc;
-import de.schildbach.wallet.util.WalletUtils;
-import de.schildbach.wallet_test.R;
 
 /**
  * @author Andreas Schildbach
@@ -398,6 +399,20 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     public void handleBackupWallet() {
+        //Only allow to backup when wallet is unlocked
+        final WalletLock walletLock = WalletLock.getInstance();
+        if (WalletLock.getInstance().isWalletLocked(wallet)) {
+            UnlockWalletDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
+                @Override
+                public void onDismiss(DialogInterface dialog) {
+                    if (!walletLock.isWalletLocked(wallet)) {
+                        handleBackupWallet();
+                    }
+                }
+            });
+            return;
+        }
+
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
             BackupWalletDialogFragment.show(getFragmentManager());
@@ -417,7 +432,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     public void handleBackupWalletToSeed() {
         //if (ContextCompat.checkSelfPermission(this,
         //        Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
-            BackupWalletToSeedDialogFragment.show(getFragmentManager());
+        BackupWalletToSeedDialogFragment.show(getFragmentManager());
         //else
         //    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
         //            REQUEST_CODE_BACKUP_WALLET);
@@ -933,6 +948,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     public void restoreWallet(final Wallet wallet) throws IOException {
         application.replaceWallet(wallet);
+        getSharedPreferences(Constants.WALLET_LOCK_PREFS_NAME, Context.MODE_PRIVATE).edit().clear().commit();
 
         config.disarmBackupReminder();
 
@@ -951,7 +967,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void checkWalletEncryptionDialog() {
         boolean initialEncryptionDialogDismissed = walletLockPreferences
-                .getBoolean(Constants.WALLET_LOCK_PREFS_INITAL_DIALOG_DISMISSED, false);
+                .getBoolean(Constants.WALLET_LOCK_PREFS_INITIAL_DIALOG_DISMISSED, false);
 
         if (!wallet.isEncrypted() && !initialEncryptionDialogDismissed) {
             handleEncryptKeys();

@@ -2,8 +2,9 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
     android:fillViewport="true"
-    android:scrollbars="none" >
+    android:scrollbars="none">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -38,6 +39,7 @@
                 android:singleLine="true" />
 
             <TextView
+                tools:visibility="visible"
                 android:id="@+id/encrypt_keys_dialog_bad_password"
                 android:layout_width="0px"
                 android:layout_height="wrap_content"
@@ -46,6 +48,7 @@
                 android:textColor="@color/fg_error"
                 android:textStyle="bold"
                 android:visibility="invisible" />
+
         </LinearLayout>
 
         <LinearLayout
@@ -67,11 +70,14 @@
                 android:singleLine="true" />
 
             <TextView
+                tools:visibility="visible"
+                tools:text="weak"
                 android:id="@+id/encrypt_keys_dialog_password_strength"
                 android:layout_width="0px"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:textStyle="bold" />
+
         </LinearLayout>
 
         <CheckBox
@@ -83,6 +89,16 @@
             android:text="@string/encrypt_keys_dialog_show" />
 
         <TextView
+            tools:visibility="visible"
+            tools:text="6 attempts remaining"
+            android:id="@+id/pin_attempts"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/fg_error"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/list_entry_padding_vertical_lax"
@@ -90,6 +106,7 @@
             android:text="@string/encrypt_keys_dialog_warning"
             android:textColor="@color/fg_less_significant"
             android:textSize="@dimen/font_size_small" />
+
     </LinearLayout>
 
 </ScrollView>

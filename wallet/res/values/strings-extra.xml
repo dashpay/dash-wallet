@@ -37,7 +37,32 @@
 	<string name="wallet_lock_unlock_wallet">Unlock wallet</string>
 	<string name="wallet_lock_unlock_to_see_txs_title">Wallet locked.</string>
 	<string name="wallet_lock_unlock_to_see_txs_txt">Tap the lock icon above to unlock your wallet and see the transaction history.</string>
-	<string name="wallet_lock_unlock_dialog_title">Unlock to see your balance</string>
-	<string name="wallet_lock_unlock_dialog_message">Your wallet is protected by a spending PIN. Enter your PIN and press Unlock to see your balance.</string>
+	<string name="wallet_lock_unlock_dialog_title">Unlock your wallet</string>
+	<string name="wallet_lock_unlock_dialog_message">Your wallet is protected by a spending PIN. Enter your PIN and press Unlock to continue.</string>
+	<string name="wallet_lock_reset_wallet_title">Reset wallet</string>
+	<string name="wallet_lock_reset_wallet_message">Are you sure? All stored data will be deleted and your wallet will only be recoverable by a backup file or recovery seed.</string>
+
+	<string name="wallet_lock_wallet_disabled">Wallet disabled</string>
+	<string name="wallet_lock_try_again">Try again in %1$d %2$s</string>
+	<string name="wallet_lock_reset">Reset</string>
+	<string name="wallet_lock_wrong_pin">Wrong PIN! %s</string>
+
+	<plurals name="wallet_lock_attempts_remaining">
+		<item quantity="zero">%d attempts remaining</item>
+		<item quantity="one">%d attempt remaining</item>
+		<item quantity="other">%d attempts remaining</item>
+	</plurals>
+
+	<plurals name="minute">
+		<item quantity="zero">minutes</item>
+		<item quantity="one">minute</item>
+		<item quantity="other">minutes</item>
+	</plurals>
+	
+	<plurals name="hour">
+		<item quantity="zero">hours</item>
+		<item quantity="one">hour</item>
+		<item quantity="other">hours</item>
+	</plurals>
 
 </resources>
