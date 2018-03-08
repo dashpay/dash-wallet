@@ -88,10 +88,6 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity {
 	public boolean onCreateOptionsMenu(final Menu menu) {
 		getMenuInflater().inflate(R.menu.send_coins_activity_options, menu);
 
-		MenuItem walletLockMenuItem = menu.findItem(R.id.wallet_options_lock);
-		walletLockMenuItem.setVisible(WalletLock.getInstance()
-				.isWalletLocked(getWalletApplication().getWallet()));
-
 		return super.onCreateOptionsMenu(menu);
 	}
 
