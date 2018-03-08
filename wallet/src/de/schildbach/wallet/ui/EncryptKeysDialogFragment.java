@@ -30,6 +30,7 @@ import com.google.common.base.Strings;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
@@ -226,9 +227,9 @@ public class EncryptKeysDialogFragment extends DialogFragment {
 
         if (oldPassword != null && newPassword != null)
             log.info("changing spending password");
-        else if (newPassword != null)
+        else if (newPassword != null) {
             log.info("setting spending password");
-        else if (oldPassword != null)
+        } else if (oldPassword != null)
             log.info("removing spending password");
         else
             throw new IllegalStateException();
@@ -277,6 +278,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                                     "wallet successfully encrypted, using key derived by new spending password ({} scrypt iterations)",
                                     keyCrypter.getScryptParameters().getN());
                             state = State.DONE;
+                            WalletLock.getInstance().setWalletLocked(true);
                         }
 
                         updateView();
