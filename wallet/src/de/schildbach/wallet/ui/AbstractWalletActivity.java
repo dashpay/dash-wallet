@@ -32,6 +32,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.app.ActivityManager.TaskDescription;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.Menu;
 import android.view.MenuItem;
 
 /**
@@ -86,6 +87,16 @@ public abstract class AbstractWalletActivity extends AppCompatActivity implement
                 return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(final Menu menu) {
+        MenuItem walletLockMenuItem = menu.findItem(R.id.wallet_options_lock);
+        if (walletLockMenuItem != null) {
+            walletLockMenuItem.setVisible(WalletLock.getInstance()
+                    .isWalletLocked(getWalletApplication().getWallet()));
+        }
+        return super.onCreateOptionsMenu(menu);
     }
 
     private void unlockWallet() {
