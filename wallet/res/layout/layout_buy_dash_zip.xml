@@ -7,6 +7,7 @@
 
     <include
         android:id="@+id/layoutToolbar"
+        android:visibility="gone"
         layout="@layout/layout_buy_dash_top" />
 
     <LinearLayout
@@ -44,7 +45,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:backgroundTint="@color/colorPrimary"
-            android:text="Next"
+            android:text="@string/next_action"
             android:textColor="@color/white"
             android:textStyle="bold" />
 

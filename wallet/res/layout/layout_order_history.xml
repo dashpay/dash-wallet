@@ -6,6 +6,7 @@
 
     <include
         android:id="@+id/layoutToolbar"
+        android:visibility="gone"
         layout="@layout/layout_buy_dash_top" />
 
     <LinearLayout
@@ -23,7 +24,7 @@
             android:layout_marginBottom="8dp"
             android:backgroundTint="@color/woc_yellow"
             android:drawableTint="@color/woc_yellow"
-            android:text="Buy More Bitcoin!"
+            android:text="@string/action_buy_more_bitcoin"
             android:textColor="@color/colorPrimary"
             android:textSize="16sp" />
 
@@ -32,7 +33,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/dimen_8dp"
-            android:textSize="16dp"
+            android:textSize="16sp"
             android:visibility="gone" />
 
         <android.support.v7.widget.RecyclerView

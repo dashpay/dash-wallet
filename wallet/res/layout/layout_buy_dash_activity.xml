@@ -4,9 +4,14 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
+    <include
+        android:id="@+id/layoutToolbar"
+        layout="@layout/layout_buy_dash_top" />
+
     <FrameLayout
         android:id="@+id/containerBuyDashBase"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:layout_below="@+id/layoutToolbar" />
 
 </RelativeLayout>

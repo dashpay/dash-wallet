@@ -1,6 +1,6 @@
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <data>
 
@@ -30,9 +30,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:text="Buy More Bitcoin!"
                 android:backgroundTint="@color/woc_yellow"
                 android:drawableTint="@color/woc_yellow"
+                android:text="Buy More Bitcoin!"
                 android:textColor="@color/colorPrimary"
                 android:textSize="16sp" />
 
@@ -364,6 +364,7 @@
                     android:autoLink="none"
                     android:text="@string/order_contact_instruction"
                     android:textSize="16dp" />
+
                 <LinearLayout
                     android:id="@+id/lay_help_instruction"
                     android:layout_width="match_parent"
@@ -513,6 +514,7 @@
                 android:text="@string/find_my_location"
                 android:textColor="@color/white"
                 android:textStyle="bold" />
+
             <Button
                 android:id="@+id/button_buy_dash_get_location_no"
                 android:layout_width="match_parent"
@@ -526,6 +528,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:visibility="gone">
+
                 <android.support.v7.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -534,38 +537,41 @@
                     app:cardCornerRadius="8dp"
                     app:cardElevation="4dp"
                     app:cardUseCompatPadding="true">
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_margin="4dp"
                         android:orientation="vertical">
+
                         <TextView
                             android:id="@+id/text_message_sign_out"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="4dp"
                             android:textSize="16dp" />
+
                         <Button
                             android:id="@+id/btn_sign_out_woc"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_gravity="bottom"
-                            android:text="Sign Out"
-                            android:visibility="visible"
-                            android:textStyle="bold"
                             android:layout_marginBottom="@dimen/dimen_8dp"
-                            android:textColor="@color/colorPrimary" />
+                            android:text="Sign Out"
+                            android:textColor="@color/colorPrimary"
+                            android:textStyle="bold"
+                            android:visibility="visible" />
+
                         <Button
                             android:id="@+id/btn_order_history_woc"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Order History"
-                            android:visibility="visible"
                             android:layout_margin="4dp"
-                            android:backgroundTint="#FFF"
-                            android:textStyle="bold"
                             android:layout_marginBottom="@dimen/dimen_8dp"
-                            />
+                            android:backgroundTint="#FFF"
+                            android:text="Order History"
+                            android:textStyle="bold"
+                            android:visibility="visible" />
                     </LinearLayout>
                 </android.support.v7.widget.CardView>
             </LinearLayout>
@@ -592,9 +598,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:text="@string/sign_in"
                 android:backgroundTint="@color/woc_yellow"
                 android:drawableTint="@color/woc_yellow"
+                android:text="@string/sign_in"
                 android:textColor="@color/colorPrimary"
                 android:textSize="16sp" />
 

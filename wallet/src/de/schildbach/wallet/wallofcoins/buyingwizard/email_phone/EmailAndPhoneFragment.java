@@ -3,7 +3,6 @@ package de.schildbach.wallet.wallofcoins.buyingwizard.email_phone;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
 import android.text.TextUtils;
@@ -12,6 +11,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -28,13 +28,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import de.schildbach.wallet.wallofcoins.BuyDashPref;
 import de.schildbach.wallet.wallofcoins.CustomAdapter;
 import de.schildbach.wallet.wallofcoins.WOCConstants;
 import de.schildbach.wallet.wallofcoins.api.WallofCoins;
 import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseActivity;
 import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseFragment;
 import de.schildbach.wallet.wallofcoins.buyingwizard.order_history.OrderHistoryFragment;
+import de.schildbach.wallet.wallofcoins.buyingwizard.utils.FragmentUtils;
 import de.schildbach.wallet.wallofcoins.buyingwizard.verification_otp.VerifycationOtpFragment;
 import de.schildbach.wallet.wallofcoins.response.BuyDashErrorResp;
 import de.schildbach.wallet.wallofcoins.response.CheckAuthResp;
@@ -44,8 +44,6 @@ import de.schildbach.wallet.wallofcoins.response.CreateHoldResp;
 import de.schildbach.wallet.wallofcoins.response.GetAuthTokenResp;
 import de.schildbach.wallet.wallofcoins.response.GetHoldsResp;
 import de.schildbach.wallet_test.R;
-import okhttp3.Interceptor;
-import okhttp3.Request;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -62,10 +60,10 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
     private CountryData countryData;
     private Spinner sp_country;
     private Button btn_next_phone, btn_next_email, btn_sign_in;
-    private ImageView imgViewToolbarBack;
+    //private ImageView imgViewToolbarBack;
     private String country_code = "", phone_no = "", email = "", password = "", offerId = "";
     private EditText edit_buy_dash_phone, edit_buy_dash_email;
-    private BuyDashPref buyDashPref;
+    //private BuyDashPref buyDashPref;
     private TextView tv_skip_email;
     private CreateDeviceResp createDeviceResp;
     private CreateHoldResp createHoldResp;
@@ -92,10 +90,10 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
 
     private void init() {
 
-        this.buyDashPref = new BuyDashPref(PreferenceManager.getDefaultSharedPreferences(mContext));
-        buyDashPref.registerOnSharedPreferenceChangeListener(this);
+        //this.buyDashPref = new BuyDashPref(PreferenceManager.getDefaultSharedPreferences(mContext));
+        //buyDashPref.registerOnSharedPreferenceChangeListener(this);
 
-        imgViewToolbarBack = (ImageView) rootView.findViewById(R.id.imgViewToolbarBack);
+        //imgViewToolbarBack = (ImageView) rootView.findViewById(R.id.imgViewToolbarBack);
         linearProgress = (LinearLayout) rootView.findViewById(R.id.linear_progress);
         linear_email = (LinearLayout) rootView.findViewById(R.id.linear_email);
         sp_country = (Spinner) rootView.findViewById(R.id.sp_country);
@@ -111,7 +109,7 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
 
     private void setListeners() {
         btn_next_phone.setOnClickListener(this);
-        imgViewToolbarBack.setOnClickListener(this);
+        //imgViewToolbarBack.setOnClickListener(this);
         btn_next_email.setOnClickListener(this);
         tv_skip_email.setOnClickListener(this);
         btn_sign_in.setOnClickListener(this);
@@ -128,10 +126,25 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
         }
     }
 
+    public void changeView() {
+        if (linear_email.getVisibility() == View.VISIBLE)
+            ((BuyDashBaseActivity) mContext).popBackDirect();
+        else if (linear_phone.getVisibility() == View.GONE) {
+            layout_hold.setVisibility(View.GONE);
+            linear_phone.setVisibility(View.VISIBLE);
+            linear_email.setVisibility(View.GONE);
+
+        } else if (linear_email.getVisibility() == View.GONE) {
+            linear_email.setVisibility(View.VISIBLE);
+            linear_phone.setVisibility(View.GONE);
+            layout_hold.setVisibility(View.GONE);
+        }
+    }
+
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
-            case R.id.imgViewToolbarBack:
+            /*case R.id.imgViewToolbarBack:
 
                 if (linear_email.getVisibility() == View.VISIBLE)
                     ((BuyDashBaseActivity) mContext).popbackFragment();
@@ -146,14 +159,16 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                     layout_hold.setVisibility(View.GONE);
                 }
 
-                break;
+                break;*/
             case R.id.btn_next_phone:
-                country_code = countryData.countries.get(sp_country.getSelectedItemPosition()).code;
-                phone_no = edit_buy_dash_phone.getText().toString().trim();
-                String phone = country_code + edit_buy_dash_phone.getText().toString().trim();
-                buyDashPref.setPhone(phone);
-                hideKeyBoard();
-                checkAuth();
+                if (isValidPhone()) {
+                    country_code = countryData.countries.get(sp_country.getSelectedItemPosition()).code;
+                    phone_no = edit_buy_dash_phone.getText().toString().trim();
+                    String phone = country_code + edit_buy_dash_phone.getText().toString().trim();
+                    ((BuyDashBaseActivity) mContext).buyDashPref.setPhone(phone);
+                    hideKeyBoard();
+                    checkAuth();
+                }
                 break;
 
             case R.id.btn_next_email:
@@ -180,6 +195,19 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                 goToUrl("https://wallofcoins.com/signin/" + country_code.replace("+", "") + "-" + phone_no + "/");
                 break;
         }
+    }
+
+    private boolean isValidPhone() {
+        if (edit_buy_dash_phone.getText().toString().trim().isEmpty()) {
+            edit_buy_dash_phone.requestFocus();
+            Toast.makeText(mContext, R.string.please_enter_phone_no, Toast.LENGTH_SHORT).show();
+            return false;
+        } else if (edit_buy_dash_phone.getText().toString().trim().length() < 10) {
+            edit_buy_dash_phone.requestFocus();
+            Toast.makeText(mContext, R.string.please_enter_10_digits_phone_no, Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        return true;
     }
 
     //add country code list for phone
@@ -215,29 +243,10 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
     }
 
     /**
-     * API Header parameter interceptor
-     */
-    private Interceptor interceptor = new Interceptor() {
-        @Override
-        public okhttp3.Response intercept(Chain chain) throws IOException {
-            Request original = chain.request();
-            // Request customization: add request headers
-            Request.Builder requestBuilder = original.newBuilder();
-            if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
-                requestBuilder.addHeader(WOCConstants.KEY_HEADER_AUTH_TOKEN, buyDashPref.getAuthToken());
-            }
-            requestBuilder.addHeader(WOCConstants.KEY_HEADER_PUBLISHER_ID, getString(R.string.WALLOFCOINS_PUBLISHER_ID));
-            requestBuilder.addHeader(WOCConstants.KEY_HEADER_CONTENT_TYPE, WOCConstants.KEY_HEADER_CONTENT_TYPE_VALUE);
-            Request request = requestBuilder.build();
-            return chain.proceed(request);
-        }
-    };
-
-    /**
      * Method for check authentication type
      */
     private void checkAuth() {
-        String phone = buyDashPref.getPhone();
+        String phone = ((BuyDashBaseActivity) mContext).buyDashPref.getPhone();
         if (!TextUtils.isEmpty(phone)) {
             linearProgress.setVisibility(View.VISIBLE);
 
@@ -334,7 +343,7 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
      * @param password
      */
     private void getAuthTokenCall(final String password) {
-        String phone = buyDashPref.getPhone();
+        String phone = ((BuyDashBaseActivity) mContext).buyDashPref.getPhone();
 
         if (!TextUtils.isEmpty(phone)) {
 
@@ -342,11 +351,11 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
             if (!TextUtils.isEmpty(password)) {
                 getAuthTokenReq.put(WOCConstants.KEY_PASSWORD, password);
             } else {
-                getAuthTokenReq.put(WOCConstants.KEY_DEVICECODE, getDeviceCode(mContext, buyDashPref));
+                getAuthTokenReq.put(WOCConstants.KEY_DEVICECODE, getDeviceCode(mContext, ((BuyDashBaseActivity) mContext).buyDashPref));
             }
 
-            if (!TextUtils.isEmpty(buyDashPref.getDeviceId())) {
-                getAuthTokenReq.put(WOCConstants.KEY_DEVICEID, buyDashPref.getDeviceId());
+            if (!TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getDeviceId())) {
+                getAuthTokenReq.put(WOCConstants.KEY_DEVICEID, ((BuyDashBaseActivity) mContext).buyDashPref.getDeviceId());
             }
 
             getAuthTokenReq.put(WOCConstants.KEY_PUBLISHER_ID, getString(R.string.WALLOFCOINS_PUBLISHER_ID));
@@ -374,10 +383,10 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                     }
 
                     if (!TextUtils.isEmpty(response.body().token)) {
-                        buyDashPref.setAuthToken(response.body().token);
+                        ((BuyDashBaseActivity) mContext).buyDashPref.setAuthToken(response.body().token);
                     }
                     //hideViewExcept(null);
-                    if (!TextUtils.isEmpty(password) && TextUtils.isEmpty(buyDashPref.getDeviceId())) {
+                    if (!TextUtils.isEmpty(password) && TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getDeviceId())) {
                         getDevice();
                     } else {
                         createHold();
@@ -400,16 +409,16 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
      * Method for create new hold
      */
     public void createHold() {
-        String phone = buyDashPref.getPhone();
+        String phone = ((BuyDashBaseActivity) mContext).buyDashPref.getPhone();
 
         final HashMap<String, String> createHoldPassReq = new HashMap<String, String>();
 
-        if (TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+        if (TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getAuthToken())) {
             createHoldPassReq.put(WOCConstants.KEY_PHONE, phone);
             createHoldPassReq.put(WOCConstants.KEY_PUBLISHER_ID, getString(R.string.WALLOFCOINS_PUBLISHER_ID));
             createHoldPassReq.put(WOCConstants.KEY_EMAIL, email);
             createHoldPassReq.put(WOCConstants.KEY_deviceName, WOCConstants.KEY_DEVICE_NAME_VALUE);
-            createHoldPassReq.put(WOCConstants.KEY_DEVICECODE, getDeviceCode(mContext, buyDashPref));
+            createHoldPassReq.put(WOCConstants.KEY_DEVICECODE, getDeviceCode(mContext, ((BuyDashBaseActivity) mContext).buyDashPref));
         }
         createHoldPassReq.put(WOCConstants.KEY_OFFER, offerId);
 
@@ -423,14 +432,14 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                 if (null != response.body() && response.code() < 299) {
 
                     createHoldResp = response.body();
-                    buyDashPref.setHoldId(createHoldResp.id);
-                    buyDashPref.setCreateHoldResp(createHoldResp);
-                    if (TextUtils.isEmpty(buyDashPref.getDeviceId())
+                    ((BuyDashBaseActivity) mContext).buyDashPref.setHoldId(createHoldResp.id);
+                    ((BuyDashBaseActivity) mContext).buyDashPref.setCreateHoldResp(createHoldResp);
+                    if (TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getDeviceId())
                             && !TextUtils.isEmpty(createHoldResp.deviceId)) {
-                        buyDashPref.setDeviceId(createHoldResp.deviceId);
+                        ((BuyDashBaseActivity) mContext).buyDashPref.setDeviceId(createHoldResp.deviceId);
                     }
                     if (!TextUtils.isEmpty(response.body().token)) {
-                        buyDashPref.setAuthToken(createHoldResp.token);
+                        ((BuyDashBaseActivity) mContext).buyDashPref.setAuthToken(createHoldResp.token);
                     }
                     navigateToVerifyOtp(createHoldResp.__PURCHASE_CODE);
                     //hideViewExcept(binding.layoutVerifyOtp);
@@ -438,16 +447,16 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                     //binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
 
                 } else if (null != response.errorBody()) {
-                    if (response.code() == 403 && TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+                    if (response.code() == 403 && TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getAuthToken())) {
                         layout_hold.setVisibility(View.VISIBLE);
                         linear_email.setVisibility(View.GONE);
                         linear_phone.setVisibility(View.GONE);
                         //hideViewExcept(binding.layoutHold);
                         //clearForm((ViewGroup) binding.getRoot());
-                    } else if (response.code() == 403 && !TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+                    } else if (response.code() == 403 && !TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getAuthToken())) {
                         getHolds();
                     } else if (response.code() == 400) {
-                        if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+                        if (!TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getAuthToken())) {
                             navigateToOrderList(false);
                         } else {
                             layout_hold.setVisibility(View.VISIBLE);
@@ -458,7 +467,7 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                         }
                     } else {
                         try {
-                            if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+                            if (!TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getAuthToken())) {
                                 navigateToOrderList(false);
                             }
                         } catch (Exception e) {
@@ -485,8 +494,7 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
         VerifycationOtpFragment otpFragment = new VerifycationOtpFragment();
         otpFragment.setArguments(bundle);
 
-        ((BuyDashBaseActivity) mContext).replaceFragment(otpFragment, true, false,
-                "VerifycationOtpFragment");
+        ((BuyDashBaseActivity) mContext).replaceFragment(otpFragment, true, true);
     }
 
     /**
@@ -532,8 +540,7 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
         Bundle bundle = new Bundle();
         bundle.putBoolean("isFromCreateHold", isFromCreateHold);
         historyFragment.setArguments(bundle);
-        ((BuyDashBaseActivity) mContext).replaceFragment(historyFragment, true, true,
-                "OrderHistoryFragment");
+        ((BuyDashBaseActivity) mContext).replaceFragment(historyFragment, true, true);
     }
 
     /**
@@ -570,7 +577,7 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                 if (response.code() == 200 && response.body() != null) {
                     List<CreateDeviceResp> deviceList = response.body();
                     if (deviceList.size() > 0) {
-                        buyDashPref.setDeviceId(deviceList.get(deviceList.size() - 1).getId() + "");
+                        ((BuyDashBaseActivity) mContext).buyDashPref.setDeviceId(deviceList.get(deviceList.size() - 1).getId() + "");
                         getAuthTokenCall("");
                     } else {
                         createDevice();
@@ -593,8 +600,8 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
      */
     private void createDevice() {
         final HashMap<String, String> createDeviceReq = new HashMap<String, String>();
-        createDeviceReq.put(WOCConstants.KEY_DEVICE_NAME, "Dash Wallet (Android)");
-        createDeviceReq.put(WOCConstants.KEY_DEVICE_CODE, getDeviceCode(mContext, buyDashPref));
+        createDeviceReq.put(WOCConstants.KEY_DEVICE_NAME, mContext.getString(R.string.dash_wallet_name));
+        createDeviceReq.put(WOCConstants.KEY_DEVICE_CODE, getDeviceCode(mContext, ((BuyDashBaseActivity) mContext).buyDashPref));
         createDeviceReq.put(WOCConstants.KEY_PUBLISHER_ID, getString(R.string.WALLOFCOINS_PUBLISHER_ID));
         linearProgress.setVisibility(View.VISIBLE);
         WallofCoins.createService(interceptor, getActivity()).createDevice(createDeviceReq).enqueue(new Callback<CreateDeviceResp>() {
@@ -602,7 +609,7 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
             public void onResponse(Call<CreateDeviceResp> call, Response<CreateDeviceResp> response) {
                 if (null != response.body() && response.code() < 299) {
                     createDeviceResp = response.body();
-                    buyDashPref.setDeviceId(createDeviceResp.getId() + "");
+                    ((BuyDashBaseActivity) mContext).buyDashPref.setDeviceId(createDeviceResp.getId() + "");
                     getAuthTokenCall("");
                 } else {
                     Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
@@ -614,5 +621,17 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                 Toast.makeText(getContext(), R.string.try_again, Toast.LENGTH_LONG).show();
             }
         });
+    }
+
+    //this method remove animation when user want to clear back stack
+    @Override
+    public Animation onCreateAnimation(int transit, boolean enter, int nextAnim) {
+        if (FragmentUtils.sDisableFragmentAnimations) {
+            Animation a = new Animation() {
+            };
+            a.setDuration(0);
+            return a;
+        }
+        return super.onCreateAnimation(transit, enter, nextAnim);
     }
 }

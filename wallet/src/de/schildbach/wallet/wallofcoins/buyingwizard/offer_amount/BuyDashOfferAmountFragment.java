@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
@@ -15,10 +14,10 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
@@ -27,7 +26,6 @@ import com.google.gson.JsonObject;
 
 import org.bitcoinj.wallet.Wallet;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 
@@ -40,13 +38,13 @@ import de.schildbach.wallet.ui.CurrencyAmountView;
 import de.schildbach.wallet.ui.CurrencyCalculatorLink;
 import de.schildbach.wallet.ui.ExchangeRateLoader;
 import de.schildbach.wallet.wallofcoins.BuyDashOffersAdapter;
-import de.schildbach.wallet.wallofcoins.BuyDashPref;
 import de.schildbach.wallet.wallofcoins.WOCConstants;
 import de.schildbach.wallet.wallofcoins.api.WallofCoins;
 import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseActivity;
 import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseFragment;
 import de.schildbach.wallet.wallofcoins.buyingwizard.email_phone.EmailAndPhoneFragment;
 import de.schildbach.wallet.wallofcoins.buyingwizard.order_history.OrderHistoryFragment;
+import de.schildbach.wallet.wallofcoins.buyingwizard.utils.FragmentUtils;
 import de.schildbach.wallet.wallofcoins.buyingwizard.verification_otp.VerifycationOtpFragment;
 import de.schildbach.wallet.wallofcoins.response.BuyDashErrorResp;
 import de.schildbach.wallet.wallofcoins.response.CreateHoldResp;
@@ -54,8 +52,6 @@ import de.schildbach.wallet.wallofcoins.response.DiscoveryInputsResp;
 import de.schildbach.wallet.wallofcoins.response.GetHoldsResp;
 import de.schildbach.wallet.wallofcoins.response.GetOffersResp;
 import de.schildbach.wallet_test.R;
-import okhttp3.Interceptor;
-import okhttp3.Request;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -69,12 +65,12 @@ import static org.bitcoinj.wallet.KeyChain.KeyPurpose.RECEIVE_FUNDS;
 public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements View.OnClickListener, SharedPreferences.OnSharedPreferenceChangeListener {
 
     private View rootView;
-    private ImageView imgViewToolbarBack;
+    //private ImageView imgViewToolbarBack;
     private String zipCode;
     private double latitude, longitude;
     private Button button_buy_dash_get_offers;
     private EditText request_coins_amount_btc_edittext, request_coins_amount_local_edittext;
-    private BuyDashPref buyDashPref;
+    //private BuyDashPref buyDashPref;
     private LinearLayout linearProgress, layout_create_hold;
     private final String TAG = "BuyDashOfferFragment";
     private Wallet wallet;
@@ -110,13 +106,13 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
 
     private void init() {
         this.application = (WalletApplication) getActivity().getApplication();
-        this.buyDashPref = new BuyDashPref(PreferenceManager.getDefaultSharedPreferences(mContext));
+        //this.buyDashPref = new BuyDashPref(PreferenceManager.getDefaultSharedPreferences(mContext));
         this.config = application.getConfiguration();
         this.wallet = application.getWallet();
         this.loaderManager = getLoaderManager();
 
 
-        imgViewToolbarBack = (ImageView) rootView.findViewById(R.id.imgViewToolbarBack);
+        //imgViewToolbarBack = (ImageView) rootView.findViewById(R.id.imgViewToolbarBack);
         button_buy_dash_get_offers = (Button) rootView.findViewById(R.id.button_buy_dash_get_offers);
         request_coins_amount_btc_edittext = (EditText) rootView.findViewById(R.id.request_coins_amount_btc_edittext);
         request_coins_amount_local_edittext = (EditText) rootView.findViewById(R.id.request_coins_amount_local_edittext);
@@ -140,9 +136,9 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
     }
 
     private void setListeners() {
-        imgViewToolbarBack.setOnClickListener(this);
+        //imgViewToolbarBack.setOnClickListener(this);
         button_buy_dash_get_offers.setOnClickListener(this);
-        buyDashPref.registerOnSharedPreferenceChangeListener(this);
+        //buyDashPref.registerOnSharedPreferenceChangeListener(this);
     }
 
     /**
@@ -201,16 +197,27 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
         super.onDestroy();
     }
 
+    /**
+     * hide show view
+     */
+    public void changeView() {
+        if (layout_create_hold.getVisibility() == View.GONE) {
+            layout_create_hold.setVisibility(View.VISIBLE);
+            rv_offers.setVisibility(View.GONE);
+        } else
+            ((BuyDashBaseActivity) mContext).popBackDirect();
+    }
+
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
-            case R.id.imgViewToolbarBack:
+            /*case R.id.imgViewToolbarBack:
                 if (layout_create_hold.getVisibility() == View.GONE) {
                     layout_create_hold.setVisibility(View.VISIBLE);
                     rv_offers.setVisibility(View.GONE);
                 } else
                     ((BuyDashBaseActivity) mContext).popbackFragment();
-                break;
+                break;*/
             case R.id.button_buy_dash_get_offers:
                 hideKeyBoard();
                 if (Float.valueOf(request_coins_amount_local_edittext.getHint().toString()) > 0f
@@ -255,24 +262,6 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
         }
     };
 
-    /**
-     * API Header parameter interceptor
-     */
-    private Interceptor interceptor = new Interceptor() {
-        @Override
-        public okhttp3.Response intercept(Chain chain) throws IOException {
-            Request original = chain.request();
-            // Request customization: add request headers
-            Request.Builder requestBuilder = original.newBuilder();
-            if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
-                requestBuilder.addHeader(WOCConstants.KEY_HEADER_AUTH_TOKEN, buyDashPref.getAuthToken());
-            }
-            requestBuilder.addHeader(WOCConstants.KEY_HEADER_PUBLISHER_ID, getString(R.string.WALLOFCOINS_PUBLISHER_ID));
-            requestBuilder.addHeader(WOCConstants.KEY_HEADER_CONTENT_TYPE, WOCConstants.KEY_HEADER_CONTENT_TYPE_VALUE);
-            Request request = requestBuilder.build();
-            return chain.proceed(request);
-        }
-    };
 
     /**
      * Method for call discovery inputs & offers for discovery input
@@ -352,7 +341,7 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
                                                             offerId = response.body().doubleDeposit.get(position - response.body().singleDeposit.size() - 2).id;
                                                             dashAmount = response.body().doubleDeposit.get(position - response.body().singleDeposit.size() - 2).totalAmount.DASH;
                                                         }
-                                                        if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+                                                        if (!TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getAuthToken())) {
                                                             createHold();
                                                         } else {
                                                             Bundle bundle = new Bundle();
@@ -360,8 +349,8 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
                                                             EmailAndPhoneFragment fragment = new EmailAndPhoneFragment();
                                                             fragment.setArguments(bundle);
 
-                                                            ((BuyDashBaseActivity) mContext).replaceFragment(fragment, true, true,
-                                                                    "EmailAndPhoneFragment");
+                                                            ((BuyDashBaseActivity) mContext).replaceFragment(fragment, true,
+                                                                    true);
                                                             // hideViewExcept(binding.linearEmail);
                                                             //clearForm((ViewGroup) binding.getRoot());
                                                         }
@@ -436,16 +425,16 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
      * Method for create new hold
      */
     public void createHold() {
-        String phone = buyDashPref.getPhone();
+        String phone = ((BuyDashBaseActivity) mContext).buyDashPref.getPhone();
 
         final HashMap<String, String> createHoldPassReq = new HashMap<String, String>();
 
-        if (TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+        if (TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getAuthToken())) {
             createHoldPassReq.put(WOCConstants.KEY_PHONE, phone);
             createHoldPassReq.put(WOCConstants.KEY_PUBLISHER_ID, getString(R.string.WALLOFCOINS_PUBLISHER_ID));
             //createHoldPassReq.put(WOCConstants.KEY_EMAIL, email);
             createHoldPassReq.put(WOCConstants.KEY_deviceName, WOCConstants.KEY_DEVICE_NAME_VALUE);
-            createHoldPassReq.put(WOCConstants.KEY_DEVICECODE, getDeviceCode(mContext, buyDashPref));
+            createHoldPassReq.put(WOCConstants.KEY_DEVICECODE, getDeviceCode(mContext, ((BuyDashBaseActivity) mContext).buyDashPref));
         }
         createHoldPassReq.put(WOCConstants.KEY_OFFER, offerId);
 
@@ -459,14 +448,14 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
                 if (null != response.body() && response.code() < 299) {
 
                     createHoldResp = response.body();
-                    buyDashPref.setHoldId(createHoldResp.id);
-                    buyDashPref.setCreateHoldResp(createHoldResp);
-                    if (TextUtils.isEmpty(buyDashPref.getDeviceId())
+                    ((BuyDashBaseActivity) mContext).buyDashPref.setHoldId(createHoldResp.id);
+                    ((BuyDashBaseActivity) mContext).buyDashPref.setCreateHoldResp(createHoldResp);
+                    if (TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getDeviceId())
                             && !TextUtils.isEmpty(createHoldResp.deviceId)) {
-                        buyDashPref.setDeviceId(createHoldResp.deviceId);
+                        ((BuyDashBaseActivity) mContext).buyDashPref.setDeviceId(createHoldResp.deviceId);
                     }
                     if (!TextUtils.isEmpty(response.body().token)) {
-                        buyDashPref.setAuthToken(createHoldResp.token);
+                        ((BuyDashBaseActivity) mContext).buyDashPref.setAuthToken(createHoldResp.token);
                     }
                     //hideViewExcept(binding.layoutVerifyOtp);
                     //clearForm((ViewGroup) binding.getRoot());
@@ -474,13 +463,13 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
                     navigateToVerifyOtp(createHoldResp.__PURCHASE_CODE);
 
                 } else if (null != response.errorBody()) {
-                    if (response.code() == 403 && TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+                    if (response.code() == 403 && TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getAuthToken())) {
                         //hideViewExcept(binding.layoutHold);
                         //clearForm((ViewGroup) binding.getRoot());
-                    } else if (response.code() == 403 && !TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+                    } else if (response.code() == 403 && !TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getAuthToken())) {
                         getHolds();
                     } else if (response.code() == 400) {
-                        if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+                        if (!TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getAuthToken())) {
                             navigateToOrderList(false);
                             //getOrderList(false);
                         } else {
@@ -489,7 +478,7 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
                         }
                     } else {
                         try {
-                            if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
+                            if (!TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getAuthToken())) {
                                 //getOrderList(false);
                                 navigateToOrderList(false);
                             }
@@ -510,6 +499,7 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
         });
 
     }
+
     /**
      * Get all holds for delete active hold
      */
@@ -547,6 +537,7 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
             }
         });
     }
+
     /**
      * Method call for delete for provide holdId
      *
@@ -568,26 +559,38 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
             }
         });
     }
+
     private void navigateToOrderList(boolean isFromCreateHold) {
         OrderHistoryFragment historyFragment = new OrderHistoryFragment();
         Bundle bundle = new Bundle();
         bundle.putBoolean("isFromCreateHold", isFromCreateHold);
         historyFragment.setArguments(bundle);
-        ((BuyDashBaseActivity) mContext).replaceFragment(historyFragment, true, true,
-                "OrderHistoryFragment");
+        ((BuyDashBaseActivity) mContext).replaceFragment(historyFragment, true, true);
     }
+
     private void navigateToVerifyOtp(String otp) {
         Bundle bundle = new Bundle();
         bundle.putString(WOCConstants.VERIFICATION_OTP, otp);
         VerifycationOtpFragment otpFragment = new VerifycationOtpFragment();
         otpFragment.setArguments(bundle);
 
-        ((BuyDashBaseActivity) mContext).replaceFragment(otpFragment, true, true,
-                "VerifycationOtpFragment");
+        ((BuyDashBaseActivity) mContext).replaceFragment(otpFragment, true, true);
     }
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String s) {
 
+    }
+
+    //this method remove animation when user want to clear back stack
+    @Override
+    public Animation onCreateAnimation(int transit, boolean enter, int nextAnim) {
+        if (FragmentUtils.sDisableFragmentAnimations) {
+            Animation a = new Animation() {
+            };
+            a.setDuration(0);
+            return a;
+        }
+        return super.onCreateAnimation(transit, enter, nextAnim);
     }
 }

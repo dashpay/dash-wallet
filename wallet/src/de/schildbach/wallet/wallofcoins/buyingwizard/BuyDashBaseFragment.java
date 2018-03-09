@@ -28,13 +28,17 @@ import android.view.inputmethod.InputMethodManager;
 
 import com.google.common.base.Charsets;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
 import de.schildbach.wallet.AddressBookProvider;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.wallofcoins.BuyDashPref;
+import de.schildbach.wallet.wallofcoins.WOCConstants;
 import de.schildbach.wallet_test.R;
+import okhttp3.Interceptor;
+import okhttp3.Request;
 
 /**
  * Created on 6/3/18.
@@ -247,5 +251,23 @@ public class BuyDashBaseFragment extends Fragment {
                 })
                 .show();
     }
+    /**
+     * API Header parameter interceptor
+     */
+    protected Interceptor interceptor = new Interceptor() {
+        @Override
+        public okhttp3.Response intercept(Chain chain) throws IOException {
+            Request original = chain.request();
+            // Request customization: add request headers
+            Request.Builder requestBuilder = original.newBuilder();
+            if (!TextUtils.isEmpty(((BuyDashBaseActivity)mContext).buyDashPref.getAuthToken())) {
+                requestBuilder.addHeader(WOCConstants.KEY_HEADER_AUTH_TOKEN, ((BuyDashBaseActivity)mContext).buyDashPref.getAuthToken());
+            }
+            requestBuilder.addHeader(WOCConstants.KEY_HEADER_PUBLISHER_ID, getString(R.string.WALLOFCOINS_PUBLISHER_ID));
+            requestBuilder.addHeader(WOCConstants.KEY_HEADER_CONTENT_TYPE, WOCConstants.KEY_HEADER_CONTENT_TYPE_VALUE);
+            Request request = requestBuilder.build();
+            return chain.proceed(request);
+        }
+    };
 }
 

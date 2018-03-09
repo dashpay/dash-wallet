@@ -38,11 +38,11 @@ public class OrderListAdapter extends RecyclerView.Adapter<OrderListAdapter.VHol
     private OrderHistoryFragment historyFragment;
     private BuyDashPref buyDashPref;
 
-    public OrderListAdapter(Context mContext, List<OrderListResp> orderList, OrderHistoryFragment historyFragment,BuyDashPref buyDashPref) {
+    public OrderListAdapter(Context mContext, List<OrderListResp> orderList, OrderHistoryFragment historyFragment, BuyDashPref buyDashPref) {
         this.mContext = mContext;
         this.orderList = orderList;
         this.historyFragment = historyFragment;
-        this.buyDashPref=buyDashPref;
+        this.buyDashPref = buyDashPref;
     }
 
     @Override
@@ -186,23 +186,23 @@ public class OrderListAdapter extends RecyclerView.Adapter<OrderListAdapter.VHol
             }
 
             if (orderListResp.status.equals("WD")) {
-                holder.itemBinding.textTransactionStatus.setText("Status: Waiting Deposit");
+                holder.itemBinding.textTransactionStatus.setText(mContext.getString(R.string.status_waiting_deposit));
             } else if (orderListResp.status.equals("WDV")) {
-                holder.itemBinding.textTransactionStatus.setText("Status: Waiting Deposit Verification");
+                holder.itemBinding.textTransactionStatus.setText(mContext.getString(R.string.status_waiting_deposit_verification));
             } else if (orderListResp.status.equals("RERR")) {
-                holder.itemBinding.textTransactionStatus.setText("Status: Issue with Receipt");
+                holder.itemBinding.textTransactionStatus.setText(mContext.getString(R.string.status_issue_with_receipt));
             } else if (orderListResp.status.equals("DERR")) {
-                holder.itemBinding.textTransactionStatus.setText("Status: Issue with Deposit");
+                holder.itemBinding.textTransactionStatus.setText(mContext.getString(R.string.status_issue_with_deposit));
             } else if (orderListResp.status.equals("RSD")) {
-                holder.itemBinding.textTransactionStatus.setText("Status: Reserved for Deposit");
+                holder.itemBinding.textTransactionStatus.setText(mContext.getString(R.string.status_reserved_for_deposit));
             } else if (orderListResp.status.equals("RMIT")) {
-                holder.itemBinding.textTransactionStatus.setText("Status: Remit Address Missing");
+                holder.itemBinding.textTransactionStatus.setText(mContext.getString(R.string.status_remit_address_missing));
             } else if (orderListResp.status.equals("UCRV")) {
-                holder.itemBinding.textTransactionStatus.setText("Status: Under Review");
+                holder.itemBinding.textTransactionStatus.setText(mContext.getString(R.string.status_under_review));
             } else if (orderListResp.status.equals("PAYP")) {
-                holder.itemBinding.textTransactionStatus.setText("Status: Done - Pending Delivery");
+                holder.itemBinding.textTransactionStatus.setText(mContext.getString(R.string.status_done_pending_delivery));
             } else if (orderListResp.status.equals("SENT")) {
-                holder.itemBinding.textTransactionStatus.setText("Status: Done - Units Delivered");
+                holder.itemBinding.textTransactionStatus.setText(mContext.getString(R.string.status_done_units_delivered));
             }
 
         } else if (orderListResp.id == -3) {
@@ -219,7 +219,7 @@ public class OrderListAdapter extends RecyclerView.Adapter<OrderListAdapter.VHol
             holder.itemBinding.layLogout.setVisibility(View.VISIBLE);
             holder.itemBinding.layOrderHistory.setVisibility(View.GONE);
 
-            holder.itemBinding.textMessage.setText("Your wallet is signed into Wall of Coins using your mobile number " +
+            holder.itemBinding.textMessage.setText(mContext.getString(R.string.wallet_is_signed) + " " +
                     buyDashPref.getPhone());
 
             holder.itemBinding.btnSignout.setOnClickListener(new View.OnClickListener() {
@@ -237,7 +237,7 @@ public class OrderListAdapter extends RecyclerView.Adapter<OrderListAdapter.VHol
             holder.itemBinding.layLogout.setVisibility(View.GONE);
             holder.itemBinding.layOrderHistory.setVisibility(View.GONE);
 
-            holder.itemBinding.textHelpMessage.setText(" Call (866) 841-2646 for help. \n Help is also available on the website.");
+            holder.itemBinding.textHelpMessage.setText(R.string.call_for_help);
             holder.itemBinding.btnWebLink.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {

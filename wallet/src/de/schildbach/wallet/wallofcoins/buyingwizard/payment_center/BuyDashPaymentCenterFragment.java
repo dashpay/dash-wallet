@@ -2,35 +2,30 @@ package de.schildbach.wallet.wallofcoins.buyingwizard.payment_center;
 
 import android.content.Context;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.AppCompatSpinner;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.schildbach.wallet.wallofcoins.BuyDashPref;
 import de.schildbach.wallet.wallofcoins.WOCConstants;
 import de.schildbach.wallet.wallofcoins.api.WallofCoins;
 import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseActivity;
 import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseFragment;
 import de.schildbach.wallet.wallofcoins.buyingwizard.offer_amount.BuyDashOfferAmountFragment;
+import de.schildbach.wallet.wallofcoins.buyingwizard.utils.FragmentUtils;
 import de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp;
 import de.schildbach.wallet_test.R;
-import okhttp3.Interceptor;
-import okhttp3.Request;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -42,13 +37,13 @@ import retrofit2.Response;
 public class BuyDashPaymentCenterFragment extends BuyDashBaseFragment implements View.OnClickListener {
 
     private View rootView;
-    private BuyDashPref buyDashPref;
+    //private BuyDashPref buyDashPref;
     private LinearLayout linear_progress;
     private final String TAG = "PaymentCenterFragment";
     private AppCompatSpinner sp_banks;
     private String bankId;
     private Button button_buy_dash_bank_next;
-    private ImageView imgViewToolbarBack;
+    //private ImageView imgViewToolbarBack;
 
 
     @Override
@@ -71,36 +66,17 @@ public class BuyDashPaymentCenterFragment extends BuyDashBaseFragment implements
     }
 
     private void init() {
-        this.buyDashPref = new BuyDashPref(PreferenceManager.getDefaultSharedPreferences(mContext));
+        //this.buyDashPref = new BuyDashPref(PreferenceManager.getDefaultSharedPreferences(mContext));
         linear_progress = (LinearLayout) rootView.findViewById(R.id.linear_progress);
         sp_banks = (AppCompatSpinner) rootView.findViewById(R.id.sp_banks);
         button_buy_dash_bank_next = (Button) rootView.findViewById(R.id.button_buy_dash_bank_next);
-        imgViewToolbarBack = (ImageView) rootView.findViewById(R.id.imgViewToolbarBack);
+        //imgViewToolbarBack = (ImageView) rootView.findViewById(R.id.imgViewToolbarBack);
     }
 
     private void setListeners() {
         button_buy_dash_bank_next.setOnClickListener(this);
-        imgViewToolbarBack.setOnClickListener(this);
+        //imgViewToolbarBack.setOnClickListener(this);
     }
-
-    /**
-     * API Header parameter interceptor
-     */
-    private Interceptor interceptor = new Interceptor() {
-        @Override
-        public okhttp3.Response intercept(Chain chain) throws IOException {
-            Request original = chain.request();
-            // Request customization: add request headers
-            Request.Builder requestBuilder = original.newBuilder();
-            if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {
-                requestBuilder.addHeader(WOCConstants.KEY_HEADER_AUTH_TOKEN, buyDashPref.getAuthToken());
-            }
-            requestBuilder.addHeader(WOCConstants.KEY_HEADER_PUBLISHER_ID, getString(R.string.WALLOFCOINS_PUBLISHER_ID));
-            requestBuilder.addHeader(WOCConstants.KEY_HEADER_CONTENT_TYPE, WOCConstants.KEY_HEADER_CONTENT_TYPE_VALUE);
-            Request request = requestBuilder.build();
-            return chain.proceed(request);
-        }
-    };
 
     /**
      * API call for get all receiving options by country code
@@ -180,9 +156,9 @@ public class BuyDashPaymentCenterFragment extends BuyDashBaseFragment implements
                 }
                 break;
 
-            case R.id.imgViewToolbarBack:
+          /*  case R.id.imgViewToolbarBack:
                 ((BuyDashBaseActivity) mContext).popbackFragment();
-                break;
+                break;*/
 
         }
     }
@@ -193,6 +169,17 @@ public class BuyDashPaymentCenterFragment extends BuyDashBaseFragment implements
         BuyDashOfferAmountFragment offerAmountFragment = new BuyDashOfferAmountFragment();
         offerAmountFragment.setArguments(bundle);
 
-        ((BuyDashBaseActivity) mContext).replaceFragment(offerAmountFragment, true, true, "BuyDashOfferAmountFragment");
+        ((BuyDashBaseActivity) mContext).replaceFragment(offerAmountFragment, true, true);
+    }
+    //this method remove animation when user want to clear back stack
+    @Override
+    public Animation onCreateAnimation(int transit, boolean enter, int nextAnim) {
+        if (FragmentUtils.sDisableFragmentAnimations) {
+            Animation a = new Animation() {
+            };
+            a.setDuration(0);
+            return a;
+        }
+        return super.onCreateAnimation(transit, enter, nextAnim);
     }
 }

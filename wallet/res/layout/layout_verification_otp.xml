@@ -6,6 +6,7 @@
 
     <include
         android:id="@+id/layoutToolbar"
+        android:visibility="gone"
         layout="@layout/layout_buy_dash_top" />
 
     <LinearLayout
@@ -39,7 +40,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Confirm Purchase Code" />
+            android:text="@string/action_confirm_purchase_code" />
 
     </LinearLayout>
 

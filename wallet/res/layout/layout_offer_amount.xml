@@ -7,6 +7,7 @@
 
     <include
         android:id="@+id/layoutToolbar"
+        android:visibility="gone"
         layout="@layout/layout_buy_dash_top" />
 
     <LinearLayout
@@ -25,7 +26,7 @@
             android:layout_marginBottom="4dp"
             android:layout_marginTop="8dp"
             android:text="@string/buy_dash_coins_amount_lable"
-            android:textSize="16dp"
+            android:textSize="16sp"
             android:textStyle="bold" />
 
         <LinearLayout
@@ -59,9 +60,9 @@
                 android:layout_height="match_parent"
                 android:gravity="center"
                 android:padding="4dp"
-                android:text="Or"
+                android:text="@string/or"
                 android:textColor="@android:color/black"
-                android:textSize="20dp"
+                android:textSize="20sp"
                 android:textStyle="bold" />
 
             <de.schildbach.wallet.ui.CurrencyAmountView

@@ -6,7 +6,8 @@
 
     <include
         android:id="@+id/layoutToolbar"
-        layout="@layout/layout_buy_dash_top" />
+        layout="@layout/layout_buy_dash_top"
+        android:visibility="gone" />
 
     <LinearLayout
         android:id="@+id/linear_email"
@@ -22,7 +23,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/dimen_8dp"
             android:text="@string/text_above_email"
-            android:textSize="16dp" />
+            android:textSize="16sp" />
 
         <EditText
             android:id="@+id/edit_buy_dash_email"
@@ -42,9 +43,9 @@
             android:layout_marginBottom="@dimen/dimen_8dp"
             android:layout_marginTop="16dp"
             android:clickable="true"
-            android:text="[Do Not send me email]"
+            android:text="@string/do_not_send_me_email"
             android:textColor="@color/colorPrimary"
-            android:textSize="16dp"
+            android:textSize="16sp"
             android:textStyle="bold" />
 
         <Button
@@ -53,7 +54,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:layout_marginTop="16dp"
-            android:text="Next"
+            android:text="@string/next_action"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -71,7 +72,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/dimen_8dp"
             android:text="@string/text_above_phone"
-            android:textSize="16dp" />
+            android:textSize="16sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -96,6 +97,7 @@
                 android:hint="@string/hint_phone"
                 android:inputType="phone"
                 android:lines="1"
+                android:maxLength="10"
                 android:textSize="@dimen/font_size_normal" />
         </LinearLayout>
 
@@ -105,7 +107,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:layout_marginTop="16dp"
-            android:text="Next"
+            android:text="@string/next_action"
             android:textStyle="bold" />
     </LinearLayout>
 

@@ -18,13 +18,12 @@
 package de.schildbach.wallet.ui;
 
 import android.app.Activity;
-import android.content.Context;
-import android.content.Intent;
-import android.database.Cursor;
-import android.os.Bundle;
 import android.app.Fragment;
 import android.app.LoaderManager;
+import android.content.Intent;
 import android.content.Loader;
+import android.database.Cursor;
+import android.os.Bundle;
 import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -35,17 +34,17 @@ import android.widget.Toast;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.MasternodeSync;
-import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.utils.Fiat;
+import org.bitcoinj.wallet.Wallet;
 
 import javax.annotation.Nullable;
 
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.data.ExchangeRatesProvider;
+import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.ExchangeRate;
 import de.schildbach.wallet.data.ExchangeRatesLoader;
-import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.ExchangeRatesProvider;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet_test.R;

@@ -7,6 +7,7 @@
 
     <include
         android:id="@+id/layoutToolbar"
+        android:visibility="gone"
         layout="@layout/layout_buy_dash_top" />
 
     <LinearLayout
@@ -78,7 +79,7 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="bottom"
                     android:layout_marginBottom="@dimen/dimen_8dp"
-                    android:text="Sign Out"
+                    android:text="@string/action_sign_out"
                     android:textColor="@color/colorPrimary"
                     android:textStyle="bold"
                     android:visibility="visible" />
@@ -90,7 +91,7 @@
                     android:layout_margin="4dp"
                     android:layout_marginBottom="@dimen/dimen_8dp"
                     android:backgroundTint="#FFF"
-                    android:text="Order History"
+                    android:text="@string/action_order_history"
                     android:textStyle="bold"
                     android:visibility="visible" />
             </LinearLayout>

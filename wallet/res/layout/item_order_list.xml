@@ -61,10 +61,11 @@
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="4dp"
                             android:text='@{TextUtils.isEmpty(item.bankName)?"Bank Name: - ":item.bankName}'
-                            android:textSize="20dp"
+                            android:textSize="20sp"
                             android:textStyle="bold"
                             android:visibility='@{TextUtils.isEmpty(item.bankName)?View.GONE:View.VISIBLE}'
                             tools:text="Bank Name" />
+
                         <TextView
                             android:id="@+id/tv_itrm_offer_4"
                             android:layout_width="wrap_content"
@@ -72,25 +73,27 @@
                             android:layout_weight="1"
                             android:ellipsize="end"
                             android:lines="1"
-                            android:text="Subject to local availability"
-                            android:textSize="12dp"
+                            android:text="@string/subject_to_local_availability"
+                            android:textSize="12sp"
                             tools:text="TextView" />
+
                         <TextView
                             android:id="@+id/button_buy_dash_item_location"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_gravity="bottom"
                             android:autoLink="web"
-                            android:text="Check Location"
+                            android:text="@string/action_check_location"
                             android:textColor="@color/colorPrimary"
-                            android:textSize="14sp"/>
+                            android:textSize="14sp" />
+
                         <TextView
                             android:id="@+id/text_phone"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="4dp"
                             android:text='@{TextUtils.isEmpty(item.nearestBranch.phone)?"Locations phone - ":@string/locationsPhone(item.nearestBranch.phone)}'
-                            android:textSize="16dp"
+                            android:textSize="16sp"
                             android:visibility='@{TextUtils.isEmpty(item.nearestBranch.phone)?View.GONE:View.VISIBLE}'
                             tools:text="Deposit Due: Today 12:00 PM" />
 
@@ -104,7 +107,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
                     android:text='@{TextUtils.isEmpty(item.nameOnAccount)?"Name on Account: - ":"Name on Account: " + item.nameOnAccount}'
-                    android:textSize="16dp"
+                    android:textSize="16sp"
                     tools:text="Deposit Due: Today 12:00 PM" />
 
                 <TextView
@@ -113,7 +116,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
                     android:text='@{TextUtils.isEmpty(item.account)?"Account #: - ":"Account #: " + item.account}'
-                    android:textSize="16dp"
+                    android:textSize="16sp"
                     tools:text="Deposit Due: Today 12:00 PM" />
 
                 <LinearLayout
@@ -129,7 +132,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
                     android:text='@{TextUtils.isEmpty(item.payment)?"":@string/cash_to_deposit(Float.valueOf(item.payment))}'
-                    android:textSize="16dp"
+                    android:textSize="16sp"
                     android:visibility='@{TextUtils.isEmpty(item.payment)?View.GONE:View.VISIBLE}'
                     tools:text="$ 16447878" />
 
@@ -138,7 +141,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
-                    android:textSize="16dp"
+                    android:textSize="16sp"
                     tools:text="Status:" />
 
                 <LinearLayout
@@ -153,20 +156,20 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="4dp"
-                        android:textSize="16dp"
+                        android:textSize="16sp"
                         tools:text="Deposit Due: Today 12:00 PM" />
 
                     <Button
                         android:id="@+id/btn_deposit_finished"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Deposit Finished" />
+                        android:text="@string/action_deposit_finished" />
 
                     <Button
                         android:id="@+id/btn_cancel_order"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Cancel Order" />
+                        android:text="@string/action_cancel_order" />
                 </LinearLayout>
 
                 <TextView
@@ -174,7 +177,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
-                    android:textSize="16dp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:id="@+id/order_dash_instruction"
@@ -182,7 +185,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
                     android:text="@string/order_completion_instruction"
-                    android:textSize="16dp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:id="@+id/text_contact_instruction"
@@ -191,7 +194,7 @@
                     android:layout_marginBottom="4dp"
                     android:autoLink="none"
                     android:text="@string/order_contact_instruction"
-                    android:textSize="16dp" />
+                    android:textSize="16sp" />
 
             </LinearLayout>
 
@@ -207,14 +210,14 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
-                    android:textSize="16dp" />
+                    android:textSize="16sp" />
 
 
                 <Button
                     android:id="@+id/btn_WebLink"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="WALLOFCOINS.COM" />
+                    android:text="@string/wallofcoins_com" />
             </LinearLayout>
 
             <LinearLayout
@@ -229,15 +232,14 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
-                    android:textSize="16dp" />
+                    android:textSize="16sp" />
 
 
                 <Button
                     android:id="@+id/btn_signout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Sign Out"
-                    />
+                    android:text="@string/action_sign_out" />
             </LinearLayout>
 
             <LinearLayout
@@ -253,8 +255,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
                     android:gravity="center"
-                    android:text="Order History"
-                    android:textSize="22dp" />
+                    android:text="@string/action_order_history"
+                    android:textSize="22sp" />
 
             </LinearLayout>
 
