@@ -1,4 +1,7 @@
 Dash Wallet
+v5.17.6
+* Fix crashing keyboard bug
+* Prevent activating exchange rates from exchange rates activity
 
 v5.17.5
 * Disable sending free transactions (was buggy)
