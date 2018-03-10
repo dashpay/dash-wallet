@@ -27,7 +27,6 @@ public class BuyDashZipFragment extends BuyDashBaseFragment implements View.OnCl
 
     private View rootView;
     private Button button_buy_dash_zip_next;
-    //private ImageView imgViewToolbarBack;
     private String zipCode;
     private EditText buy_dash_zip;
     private final String TAG = "BuyDashZipFragment";
@@ -53,21 +52,16 @@ public class BuyDashZipFragment extends BuyDashBaseFragment implements View.OnCl
     private void init() {
 
         button_buy_dash_zip_next = (Button) rootView.findViewById(R.id.button_buy_dash_zip_next);
-        //imgViewToolbarBack = (ImageView) rootView.findViewById(R.id.imgViewToolbarBack);
         buy_dash_zip = (EditText) rootView.findViewById(R.id.buy_dash_zip);
     }
 
     private void setListeners() {
         button_buy_dash_zip_next.setOnClickListener(this);
-        //imgViewToolbarBack.setOnClickListener(this);
     }
 
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
-         /*   case R.id.imgViewToolbarBack:
-                ((BuyDashBaseActivity) mContext).popbackFragment();
-                break;*/
             case R.id.button_buy_dash_zip_next:
                 zipCode = buy_dash_zip.getText().toString().trim();
                 if (TextUtils.isEmpty(zipCode)) {
@@ -93,6 +87,7 @@ public class BuyDashZipFragment extends BuyDashBaseFragment implements View.OnCl
         BuyDashPaymentCenterFragment centerFragment = new BuyDashPaymentCenterFragment();
         ((BuyDashBaseActivity) mContext).replaceFragment(centerFragment, true, true);
     }
+
     //this method remove animation when user want to clear back stack
     @Override
     public Animation onCreateAnimation(int transit, boolean enter, int nextAnim) {

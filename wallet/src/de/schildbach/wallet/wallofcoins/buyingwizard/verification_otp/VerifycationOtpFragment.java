@@ -50,10 +50,8 @@ public class VerifycationOtpFragment extends BuyDashBaseFragment implements View
 
 
     private View rootView;
-    //private ImageView imgViewToolbarBack;
     private Button button_verify_otp;
     private EditText et_otp;
-    //private BuyDashPref buyDashPref;
     private LinearLayout linearProgress;
     private final String TAG = "VerifycationOtpFragment";
     private String otp = "", keyAddress = "";
@@ -80,23 +78,18 @@ public class VerifycationOtpFragment extends BuyDashBaseFragment implements View
     }
 
     private void init() {
-         this.application = (WalletApplication) getActivity().getApplication();
-        //this.buyDashPref = new BuyDashPref(PreferenceManager.getDefaultSharedPreferences(mContext));
-        // this.config = application.getConfiguration();
+        this.application = (WalletApplication) getActivity().getApplication();
         this.wallet = application.getWallet();
         //this.loaderManager = getLoaderManager();
         keyAddress = wallet.freshAddress(RECEIVE_FUNDS).toBase58();
 
         linearProgress = (LinearLayout) rootView.findViewById(R.id.linear_progress);
-        //imgViewToolbarBack = (ImageView) rootView.findViewById(R.id.imgViewToolbarBack);
         button_verify_otp = (Button) rootView.findViewById(R.id.button_verify_otp);
         et_otp = (EditText) rootView.findViewById(R.id.et_otp);
     }
 
     private void setListeners() {
-        //imgViewToolbarBack.setOnClickListener(this);
         button_verify_otp.setOnClickListener(this);
-        //buyDashPref.registerOnSharedPreferenceChangeListener(this);
     }
 
     private void handleArgs() {
@@ -111,9 +104,6 @@ public class VerifycationOtpFragment extends BuyDashBaseFragment implements View
     public void onClick(View view) {
 
         switch (view.getId()) {
-        /*    case R.id.imgViewToolbarBack:
-                ((BuyDashBaseActivity) mContext).popbackFragment();
-                break;*/
             case R.id.button_verify_otp:
                 verifyOTP();
                 break;
@@ -139,14 +129,14 @@ public class VerifycationOtpFragment extends BuyDashBaseFragment implements View
         captureHoldReq.put(WOCConstants.KEY_VERIFICATION_CODE, otp);
         linearProgress.setVisibility(View.VISIBLE);
         WallofCoins.createService(interceptor, getActivity()).captureHold((
-                (BuyDashBaseActivity)mContext).buyDashPref.getHoldId(), captureHoldReq)
+                (BuyDashBaseActivity) mContext).buyDashPref.getHoldId(), captureHoldReq)
                 .enqueue(new Callback<List<CaptureHoldResp>>() {
                     @Override
                     public void onResponse(Call<List<CaptureHoldResp>> call, final Response<List<CaptureHoldResp>> response) {
                         linearProgress.setVisibility(View.GONE);
-                        ((BuyDashBaseActivity)mContext).buyDashPref.setHoldId("");
-                        ((BuyDashBaseActivity)mContext).buyDashPref.setCreateHoldResp(null);
-                        Log.e(TAG, "onResponse: " + ((BuyDashBaseActivity)mContext).buyDashPref.getHoldId() + " here");
+                        ((BuyDashBaseActivity) mContext).buyDashPref.setHoldId("");
+                        ((BuyDashBaseActivity) mContext).buyDashPref.setCreateHoldResp(null);
+                        Log.e(TAG, "onResponse: " + ((BuyDashBaseActivity) mContext).buyDashPref.getHoldId() + " here");
                         if (null != response && null != response.body() && !response.body().isEmpty()) {
                             if (response.body().get(0).account != null && !TextUtils.isEmpty(response.body().get(0).account)) {
                                 updateAddressBookValue(keyAddress, "WallofCoins.com - Order " + response.body().get(0).id);
@@ -157,7 +147,7 @@ public class VerifycationOtpFragment extends BuyDashBaseFragment implements View
                                 navigateToOrderList(true);
                             }
 
-                           // hideViewExcept(binding.scrollCompletionDetail);
+                            // hideViewExcept(binding.scrollCompletionDetail);
 
                         } else if (null != response && null != response.errorBody()) {
                             linearProgress.setVisibility(View.GONE);
@@ -173,7 +163,7 @@ public class VerifycationOtpFragment extends BuyDashBaseFragment implements View
                                         .setMessage(getString(R.string.alert_description_purchase_code))
                                         .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                                             public void onClick(DialogInterface dialog, int which) {
-                                               // hideViewExcept(binding.layoutCreateHold);
+                                                // hideViewExcept(binding.layoutCreateHold);
                                                 navigateToLocation();
 
                                             }
@@ -226,6 +216,7 @@ public class VerifycationOtpFragment extends BuyDashBaseFragment implements View
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String s) {
 
     }
+
     //this method remove animation when user want to clear back stack
     @Override
     public Animation onCreateAnimation(int transit, boolean enter, int nextAnim) {

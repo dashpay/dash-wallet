@@ -61,7 +61,6 @@ public class OrderHistoryFragment extends BuyDashBaseFragment implements SharedP
     private View rootView;
     private RecyclerView rv_order_list;
     private LinearLayout linearProgress;
-    //private BuyDashPref buyDashPref;
     private Button btn_buy_more;
     private boolean isFromCreateHold;
     private OrderHistoryFragment fragment;
@@ -100,9 +99,6 @@ public class OrderHistoryFragment extends BuyDashBaseFragment implements SharedP
 
     private void init() {
         fragment = this;
-        //this.buyDashPref = new BuyDashPref(PreferenceManager.getDefaultSharedPreferences(mContext));
-        //buyDashPref.registerOnSharedPreferenceChangeListener(this);
-
         rv_order_list = (RecyclerView) rootView.findViewById(R.id.rv_order_list);
         linearProgress = (LinearLayout) rootView.findViewById(R.id.linear_progress);
         btn_buy_more = (Button) rootView.findViewById(R.id.btn_buy_more);
@@ -253,58 +249,6 @@ public class OrderHistoryFragment extends BuyDashBaseFragment implements SharedP
         ((BuyDashBaseActivity) mContext).replaceFragment(new BuyDashLocationFragment(), true, false);
     }
 
-    private static class countDownRunnable implements Runnable {
-        private Handler handler;
-        private TextView textDepositeDue;
-        private int countdownInterval;
-        private String dueDateTime;
-
-        public countDownRunnable(String dueDateTime, Handler handler, TextView textDepositeDue, int countdownInterval) {
-            this.handler = handler;
-            this.textDepositeDue = textDepositeDue;
-            this.countdownInterval = countdownInterval;
-            this.dueDateTime = dueDateTime;
-        }
-
-        @Override
-        public void run() {
-            try {
-                SimpleDateFormat dateFormat = new SimpleDateFormat(
-                        "yyyy-MM-dd HH:mm:ss");
-                dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-                // Here Set your Event Date
-                Date eventDate = dateFormat.parse(dueDateTime.replace("T", " ").substring(0, 19));
-                Date currentDate = new Date();
-                if (!currentDate.after(eventDate)) {
-                    long diff = eventDate.getTime()
-                            - currentDate.getTime();
-                    long hours = diff / (60 * 60 * 1000);
-                    diff -= hours * (60 * 60 * 1000);
-                    long minutes = diff / (60 * 1000);
-                    diff -= minutes * (60 * 1000);
-                    long seconds = diff / 1000;
-
-                    if (hours > 0) {
-                        textDepositeDue.setText("Deposit Due: " + hours + " hours " + minutes + " minutes");
-                        countdownInterval = 60 * 1000;
-                    } else {
-                        if (minutes < 10) {
-                            textDepositeDue.setTextColor(Color.parseColor("#DD0000"));
-                        } else {
-                            textDepositeDue.setTextColor(Color.parseColor("#000000"));
-                        }
-                        textDepositeDue.setText("Deposit Due: " + minutes + " minutes " + seconds + " seconds");
-                        countdownInterval = 1000;
-                    }
-                } else {
-                    textDepositeDue.setText("Deposit Due: 0 minutes 0 seconds");
-                    handler.removeMessages(0);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
     private static class MyRunnable implements Runnable {
         WeakReference<TextView> textDepositeDue1;
         Handler handler;

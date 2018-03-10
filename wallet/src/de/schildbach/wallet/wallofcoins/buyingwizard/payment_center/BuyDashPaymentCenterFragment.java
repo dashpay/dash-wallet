@@ -37,14 +37,11 @@ import retrofit2.Response;
 public class BuyDashPaymentCenterFragment extends BuyDashBaseFragment implements View.OnClickListener {
 
     private View rootView;
-    //private BuyDashPref buyDashPref;
     private LinearLayout linear_progress;
     private final String TAG = "PaymentCenterFragment";
     private AppCompatSpinner sp_banks;
     private String bankId;
     private Button button_buy_dash_bank_next;
-    //private ImageView imgViewToolbarBack;
-
 
     @Override
     public void onAttach(Context context) {
@@ -66,16 +63,13 @@ public class BuyDashPaymentCenterFragment extends BuyDashBaseFragment implements
     }
 
     private void init() {
-        //this.buyDashPref = new BuyDashPref(PreferenceManager.getDefaultSharedPreferences(mContext));
         linear_progress = (LinearLayout) rootView.findViewById(R.id.linear_progress);
         sp_banks = (AppCompatSpinner) rootView.findViewById(R.id.sp_banks);
         button_buy_dash_bank_next = (Button) rootView.findViewById(R.id.button_buy_dash_bank_next);
-        //imgViewToolbarBack = (ImageView) rootView.findViewById(R.id.imgViewToolbarBack);
     }
 
     private void setListeners() {
         button_buy_dash_bank_next.setOnClickListener(this);
-        //imgViewToolbarBack.setOnClickListener(this);
     }
 
     /**
@@ -155,10 +149,6 @@ public class BuyDashPaymentCenterFragment extends BuyDashBaseFragment implements
                     navigateToOtherScreen();
                 }
                 break;
-
-          /*  case R.id.imgViewToolbarBack:
-                ((BuyDashBaseActivity) mContext).popbackFragment();
-                break;*/
 
         }
     }

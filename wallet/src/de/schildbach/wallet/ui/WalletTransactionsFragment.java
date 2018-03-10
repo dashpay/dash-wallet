@@ -453,7 +453,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
                 @Override
                 public void onClick(View v) {
                     startActivity(new Intent(activity, BuyDashActivity.class));
-
                 }
             });
         } else {

@@ -197,12 +197,15 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
             TextView more = (TextView) holder.itemView;
             if (position == 0 && singleDepositBeenList.size() > 0) {
                 if (incremented) {
-                    more.setText("Below are offers for at least $" + String.format("%.2f", Double.parseDouble(offerAmount)) + ". You must click the ORDER button before you receive instructions to pay at the Cash Payment center.");
+                    more.setText("Below are offers for at least $" +
+                            String.format("%.2f", Double.parseDouble(offerAmount)) + ". You must click the ORDER button before you receive instructions to pay at the Cash Payment center.");
                 } else {
-                    more.setText("Below are offers for $" + singleDepositBeenList.get(0).deposit.amount + ". You must click the ORDER button before you receive instructions to pay at the Cash Payment center.");
+                    more.setText("Below are offers for $" +
+                            singleDepositBeenList.get(0).deposit.amount + ". You must click the ORDER button before you receive instructions to pay at the Cash Payment center.");
                 }
             } else {
-                more.setText("Best Value Options: More Dash for $" + String.format("%.2f",Double.parseDouble(offerAmount)) + " Cash");
+                more.setText("Best Value Options: More Dash for $" +
+                        String.format("%.2f",Double.parseDouble(offerAmount)) + " Cash");
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 more.setTextColor(context.getResources().getColor(R.color.colorPrimary, context.getTheme()));
@@ -263,35 +266,35 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
         return 0;
     }
 
-    public class VHolderSingle extends RecyclerView.ViewHolder {
+    private class VHolderSingle extends RecyclerView.ViewHolder {
         private BuyDashOffersItemBinding binding;
 
-        public VHolderSingle(BuyDashOffersItemBinding binding) {
+        private VHolderSingle(BuyDashOffersItemBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
         }
     }
 
-    public class VHolderMore extends RecyclerView.ViewHolder {
+    private class VHolderMore extends RecyclerView.ViewHolder {
 
-        public VHolderMore(View v) {
+        private VHolderMore(View v) {
             super(v);
         }
     }
 
-    public class VHolderDouble2 extends RecyclerView.ViewHolder {
+    private class VHolderDouble2 extends RecyclerView.ViewHolder {
         private BuyDashOffersItemDoubleBinding binding;
 
-        public VHolderDouble2(BuyDashOffersItemDoubleBinding binding) {
+        private VHolderDouble2(BuyDashOffersItemDoubleBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
         }
     }
 
-    public class VHolderDouble1 extends RecyclerView.ViewHolder {
+    private class VHolderDouble1 extends RecyclerView.ViewHolder {
         private BuyDashOffersItemBinding binding;
 
-        public VHolderDouble1(BuyDashOffersItemBinding binding) {
+        private VHolderDouble1(BuyDashOffersItemBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
         }

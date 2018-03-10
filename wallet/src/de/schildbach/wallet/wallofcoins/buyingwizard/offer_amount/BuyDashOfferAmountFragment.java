@@ -65,12 +65,10 @@ import static org.bitcoinj.wallet.KeyChain.KeyPurpose.RECEIVE_FUNDS;
 public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements View.OnClickListener, SharedPreferences.OnSharedPreferenceChangeListener {
 
     private View rootView;
-    //private ImageView imgViewToolbarBack;
     private String zipCode;
     private double latitude, longitude;
     private Button button_buy_dash_get_offers;
     private EditText request_coins_amount_btc_edittext, request_coins_amount_local_edittext;
-    //private BuyDashPref buyDashPref;
     private LinearLayout linearProgress, layout_create_hold;
     private final String TAG = "BuyDashOfferFragment";
     private Wallet wallet;
@@ -106,13 +104,11 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
 
     private void init() {
         this.application = (WalletApplication) getActivity().getApplication();
-        //this.buyDashPref = new BuyDashPref(PreferenceManager.getDefaultSharedPreferences(mContext));
         this.config = application.getConfiguration();
         this.wallet = application.getWallet();
         this.loaderManager = getLoaderManager();
 
 
-        //imgViewToolbarBack = (ImageView) rootView.findViewById(R.id.imgViewToolbarBack);
         button_buy_dash_get_offers = (Button) rootView.findViewById(R.id.button_buy_dash_get_offers);
         request_coins_amount_btc_edittext = (EditText) rootView.findViewById(R.id.request_coins_amount_btc_edittext);
         request_coins_amount_local_edittext = (EditText) rootView.findViewById(R.id.request_coins_amount_local_edittext);
@@ -125,7 +121,6 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
         request_coins_amount_btc.setInputFormat(config.getMaxPrecisionFormat());
         request_coins_amount_btc.setHintFormat(config.getFormat());
 
-
         request_coins_amount_local.setInputFormat(Constants.LOCAL_FORMAT);
         request_coins_amount_local.setHintFormat(Constants.LOCAL_FORMAT);
 
@@ -136,9 +131,7 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
     }
 
     private void setListeners() {
-        //imgViewToolbarBack.setOnClickListener(this);
         button_buy_dash_get_offers.setOnClickListener(this);
-        //buyDashPref.registerOnSharedPreferenceChangeListener(this);
     }
 
     /**
@@ -211,13 +204,6 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
-            /*case R.id.imgViewToolbarBack:
-                if (layout_create_hold.getVisibility() == View.GONE) {
-                    layout_create_hold.setVisibility(View.VISIBLE);
-                    rv_offers.setVisibility(View.GONE);
-                } else
-                    ((BuyDashBaseActivity) mContext).popbackFragment();
-                break;*/
             case R.id.button_buy_dash_get_offers:
                 hideKeyBoard();
                 if (Float.valueOf(request_coins_amount_local_edittext.getHint().toString()) > 0f

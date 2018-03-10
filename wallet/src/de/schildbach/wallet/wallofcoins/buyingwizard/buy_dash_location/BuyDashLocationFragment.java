@@ -58,11 +58,9 @@ public class BuyDashLocationFragment extends BuyDashBaseFragment implements View
     private View rootView;
     private Button button_buy_dash_get_location, button_buy_dash_get_location_no, btn_sign_out_woc, btn_order_history_woc;
     private TextView txtViewLocationMessage, text_message_sign_out;
-    //private ImageView imgViewToolbarBack;
     private String zipCode, password;
     private double latitude, longitude;
     private final String TAG = "BuyDashOfferAmtFragment";
-    //private BuyDashPref buyDashPref;
     private LinearLayout layout_sign_out, linear_progress;
     private CreateDeviceResp createDeviceResp;
 
@@ -86,12 +84,10 @@ public class BuyDashLocationFragment extends BuyDashBaseFragment implements View
     }
 
     private void init() {
-        //this.buyDashPref = new BuyDashPref(PreferenceManager.getDefaultSharedPreferences(mContext));
 
         button_buy_dash_get_location_no = (Button) rootView.findViewById(R.id.button_buy_dash_get_location_no);
         button_buy_dash_get_location = (Button) rootView.findViewById(R.id.button_buy_dash_get_location);
         txtViewLocationMessage = (TextView) rootView.findViewById(R.id.txtViewLocationMessage);
-        //imgViewToolbarBack = (ImageView) rootView.findViewById(R.id.imgViewToolbarBack);
         btn_sign_out_woc = (Button) rootView.findViewById(R.id.btn_sign_out_woc);
         text_message_sign_out = (TextView) rootView.findViewById(R.id.text_message_sign_out);
         layout_sign_out = (LinearLayout) rootView.findViewById(R.id.layout_sign_out);
@@ -102,9 +98,7 @@ public class BuyDashLocationFragment extends BuyDashBaseFragment implements View
     private void setListeners() {
         button_buy_dash_get_location.setOnClickListener(this);
         button_buy_dash_get_location_no.setOnClickListener(this);
-        //imgViewToolbarBack.setOnClickListener(this);
         btn_sign_out_woc.setOnClickListener(this);
-        //buyDashPref.registerOnSharedPreferenceChangeListener(this);
         btn_order_history_woc.setOnClickListener(this);
     }
 
@@ -130,18 +124,12 @@ public class BuyDashLocationFragment extends BuyDashBaseFragment implements View
             case R.id.button_buy_dash_get_location_no:
                 ((BuyDashBaseActivity) mContext).replaceFragment(new BuyDashZipFragment(), true, true);
                 break;
-
-        /*    case R.id.imgViewToolbarBack:
-                ((BuyDashBaseActivity) mContext).finishBaseActivity();
-                break;*/
             case R.id.btn_sign_out_woc:
                 deleteAuthCall(false);
                 break;
             case R.id.btn_order_history_woc:
                 navigateToOrderList(false);
                 break;
-
-
         }
     }
 
@@ -341,28 +329,6 @@ public class BuyDashLocationFragment extends BuyDashBaseFragment implements View
             }
         });
     }
-
-    /**
-     * Show alert dialog  wrong username or password
-     *//*
-    private void showAlertPasswordDialog() {
-        AlertDialog.Builder builder;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            builder = new AlertDialog.Builder(mContext, android.R.style.Theme_Material_Dialog_Alert);
-        } else {
-            builder = new AlertDialog.Builder(mContext);
-        }
-        builder.setTitle("")
-                .setMessage(getString(R.string.user_pass_wrong))
-                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.dismiss();
-                    }
-                })
-                .show();
-    }
-*/
-
 
     /**
      * Method for check authentication type

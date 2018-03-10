@@ -60,10 +60,8 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
     private CountryData countryData;
     private Spinner sp_country;
     private Button btn_next_phone, btn_next_email, btn_sign_in;
-    //private ImageView imgViewToolbarBack;
     private String country_code = "", phone_no = "", email = "", password = "", offerId = "";
     private EditText edit_buy_dash_phone, edit_buy_dash_email;
-    //private BuyDashPref buyDashPref;
     private TextView tv_skip_email;
     private CreateDeviceResp createDeviceResp;
     private CreateHoldResp createHoldResp;
@@ -89,11 +87,6 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
     }
 
     private void init() {
-
-        //this.buyDashPref = new BuyDashPref(PreferenceManager.getDefaultSharedPreferences(mContext));
-        //buyDashPref.registerOnSharedPreferenceChangeListener(this);
-
-        //imgViewToolbarBack = (ImageView) rootView.findViewById(R.id.imgViewToolbarBack);
         linearProgress = (LinearLayout) rootView.findViewById(R.id.linear_progress);
         linear_email = (LinearLayout) rootView.findViewById(R.id.linear_email);
         sp_country = (Spinner) rootView.findViewById(R.id.sp_country);
@@ -109,7 +102,6 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
 
     private void setListeners() {
         btn_next_phone.setOnClickListener(this);
-        //imgViewToolbarBack.setOnClickListener(this);
         btn_next_email.setOnClickListener(this);
         tv_skip_email.setOnClickListener(this);
         btn_sign_in.setOnClickListener(this);
@@ -144,22 +136,6 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
-            /*case R.id.imgViewToolbarBack:
-
-                if (linear_email.getVisibility() == View.VISIBLE)
-                    ((BuyDashBaseActivity) mContext).popbackFragment();
-                else if (linear_phone.getVisibility() == View.GONE) {
-                    layout_hold.setVisibility(View.GONE);
-                    linear_phone.setVisibility(View.VISIBLE);
-                    linear_email.setVisibility(View.GONE);
-
-                } else if (linear_email.getVisibility() == View.GONE) {
-                    linear_email.setVisibility(View.VISIBLE);
-                    linear_phone.setVisibility(View.GONE);
-                    layout_hold.setVisibility(View.GONE);
-                }
-
-                break;*/
             case R.id.btn_next_phone:
                 if (isValidPhone()) {
                     country_code = countryData.countries.get(sp_country.getSelectedItemPosition()).code;
