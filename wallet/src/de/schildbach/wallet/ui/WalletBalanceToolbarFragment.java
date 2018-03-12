@@ -18,12 +18,13 @@
 package de.schildbach.wallet.ui;
 
 import android.app.Activity;
-import android.app.Fragment;
-import android.app.LoaderManager;
+import android.content.Context;
 import android.content.Intent;
-import android.content.Loader;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.app.Fragment;
+import android.app.LoaderManager;
+import android.content.Loader;
 import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -34,17 +35,17 @@ import android.widget.Toast;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.MasternodeSync;
-import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.utils.Fiat;
 
 import javax.annotation.Nullable;
 
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.ExchangeRatesProvider;
 import de.schildbach.wallet.data.ExchangeRate;
 import de.schildbach.wallet.data.ExchangeRatesLoader;
-import de.schildbach.wallet.data.ExchangeRatesProvider;
+import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
@@ -65,11 +66,11 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 	private CurrencyTextView viewBalanceBtc;
 	private View viewBalanceTooMuch;
 	private CurrencyTextView viewBalanceLocal;
-    private TextView appBarMessageView;
+	private TextView appBarMessageView;
 
 	private boolean showLocalBalance;
 
-    private String progressMessage;
+	private String progressMessage;
 
 	@Nullable
 	private Coin balance = null;
@@ -77,25 +78,25 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 	private ExchangeRate exchangeRate = null;
 	@Nullable
 	private BlockchainState blockchainState = null;
-    @Nullable
-    private int masternodeSyncStatus = MasternodeSync.MASTERNODE_SYNC_FINISHED;
+	@Nullable
+	private int masternodeSyncStatus = MasternodeSync.MASTERNODE_SYNC_FINISHED;
 
 	private static final int ID_BALANCE_LOADER = 0;
 	private static final int ID_RATE_LOADER = 1;
 	private static final int ID_BLOCKCHAIN_STATE_LOADER = 2;
-    private static final int ID_MASTERNODE_SYNC_LOADER = 3;
+	private static final int ID_MASTERNODE_SYNC_LOADER = 3;
 
 	private static final long BLOCKCHAIN_UPTODATE_THRESHOLD_MS = DateUtils.HOUR_IN_MILLIS;
 	private static final Coin TOO_MUCH_BALANCE_THRESHOLD = Coin.COIN.multiply(30);
 
 	private boolean initComplete = false;
 
-    @Override
-    public void onCreate(Bundle savedInstanceState)
-    {
-        super.onCreate(savedInstanceState);
-        setHasOptionsMenu(true);
-    }
+	@Override
+	public void onCreate(Bundle savedInstanceState)
+	{
+		super.onCreate(savedInstanceState);
+		setHasOptionsMenu(true);
+	}
 
 	@Override
 	public void onAttach(final Activity activity)
@@ -111,14 +112,14 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 		showLocalBalance = getResources().getBoolean(R.bool.show_local_balance);
 	}
 
-    @Override
-    public void onActivityCreated(@android.support.annotation.Nullable Bundle savedInstanceState)
-    {
-        super.onActivityCreated(savedInstanceState);
-        this.appBarMessageView = (TextView) activity.findViewById(R.id.toolbar_message);
-    }
+	@Override
+	public void onActivityCreated(@android.support.annotation.Nullable Bundle savedInstanceState)
+	{
+		super.onActivityCreated(savedInstanceState);
+		this.appBarMessageView = (TextView) activity.findViewById(R.id.toolbar_message);
+	}
 
-    @Override
+	@Override
 	public View onCreateView(final LayoutInflater inflater, final ViewGroup container, final Bundle savedInstanceState)
 	{
 		return inflater.inflate(R.layout.wallet_balance_toolbar_fragment, container, false);
@@ -152,7 +153,7 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 		});
 	}
 
-    @Override
+	@Override
 	public void onResume() {
 		super.onResume();
 
@@ -202,22 +203,22 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 			if (blockchainLag < 2 * DateUtils.DAY_IN_MILLIS)
 			{
 				final long hours = blockchainLag / DateUtils.HOUR_IN_MILLIS;
-                progressMessage = getString(R.string.blockchain_state_progress_hours, downloading, hours);
+				progressMessage = getString(R.string.blockchain_state_progress_hours, downloading, hours);
 			}
 			else if (blockchainLag < 2 * DateUtils.WEEK_IN_MILLIS)
 			{
 				final long days = blockchainLag / DateUtils.DAY_IN_MILLIS;
-                progressMessage = getString(R.string.blockchain_state_progress_days, downloading, days);
+				progressMessage = getString(R.string.blockchain_state_progress_days, downloading, days);
 			}
 			else if (blockchainLag < 90 * DateUtils.DAY_IN_MILLIS)
 			{
 				final long weeks = blockchainLag / DateUtils.WEEK_IN_MILLIS;
-                progressMessage = getString(R.string.blockchain_state_progress_weeks, downloading, weeks);
+				progressMessage = getString(R.string.blockchain_state_progress_weeks, downloading, weeks);
 			}
 			else
 			{
 				final long months = blockchainLag / (30 * DateUtils.DAY_IN_MILLIS);
-                progressMessage = getString(R.string.blockchain_state_progress_months, downloading, months);
+				progressMessage = getString(R.string.blockchain_state_progress_months, downloading, months);
 			}
 		}
 		else
@@ -238,7 +239,7 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 				viewBalanceBtc.setFormat(config.getFormat().noCode());
 				viewBalanceBtc.setAmount(balance);
 
-                updateBalanceTooMuchWarning();
+				updateBalanceTooMuchWarning();
 
 				if (showLocalBalance)
 				{
@@ -260,68 +261,68 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 				viewBalanceBtc.setVisibility(View.INVISIBLE);
 			}
 
-            //if(masternodeSyncStatus != MasternodeSync.MASTERNODE_SYNC_FINISHED)
-            //{
+			//if(masternodeSyncStatus != MasternodeSync.MASTERNODE_SYNC_FINISHED)
+			//{
 //                progressView.setVisibility(View.VISIBLE);
-                viewBalance.setVisibility(View.VISIBLE);
-    //            String syncStatus = wallet.getContext().masternodeSync.getSyncStatus();
-      //          showAppBarMessage(syncStatus);
-        //    } else {
-				//Show sync status of Masternodes
-				//int masternodesLoaded = wallet.getContext().masternodeSync.mapSeenSyncMNB.size();
-				//int totalMasternodes = wallet.getContext().masternodeSync.masterNodeCountFromNetwork();
+			viewBalance.setVisibility(View.VISIBLE);
+			//            String syncStatus = wallet.getContext().masternodeSync.getSyncStatus();
+			//          showAppBarMessage(syncStatus);
+			//    } else {
+			//Show sync status of Masternodes
+			//int masternodesLoaded = wallet.getContext().masternodeSync.mapSeenSyncMNB.size();
+			//int totalMasternodes = wallet.getContext().masternodeSync.masterNodeCountFromNetwork();
 
-				//if(totalMasternodes == 0 || totalMasternodes < masternodesLoaded + 100) {
-					progressView.setVisibility(View.GONE);
-					showAppBarMessage(null);
-				//}
-				//else
-				//{
-					//showAppBarMessage("Masternodes Loaded: " + masternodesLoaded *100 /totalMasternodes +"%");
-				//	showAppBarMessage("Masternodes Loaded: " + masternodesLoaded +" of "+ totalMasternodes);
-				//}
-            //}
+			//if(totalMasternodes == 0 || totalMasternodes < masternodesLoaded + 100) {
+			progressView.setVisibility(View.GONE);
+			showAppBarMessage(null);
+			//}
+			//else
+			//{
+			//showAppBarMessage("Masternodes Loaded: " + masternodesLoaded *100 /totalMasternodes +"%");
+			//	showAppBarMessage("Masternodes Loaded: " + masternodesLoaded +" of "+ totalMasternodes);
+			//}
+			//}
 
 			if (WalletLock.getInstance().isWalletLocked(wallet)) {
 				viewBalance.setVisibility(View.GONE);
 			} else {
 				viewBalance.setVisibility(View.VISIBLE);
 			}
-        }
+		}
 		else
 		{
-            showAppBarMessage(progressMessage);
-            progressView.setVisibility(View.VISIBLE);
-            progressView.setOnClickListener(new OnClickListener()
-            {
-                @Override
-                public void onClick(View v)
-                {
-                    Toast.makeText(application, progressMessage, Toast.LENGTH_LONG).show();
-                }
-            });
-            viewBalance.setVisibility(View.INVISIBLE);
-        }
-    }
+			showAppBarMessage(progressMessage);
+			progressView.setVisibility(View.VISIBLE);
+			progressView.setOnClickListener(new OnClickListener()
+			{
+				@Override
+				public void onClick(View v)
+				{
+					Toast.makeText(application, progressMessage, Toast.LENGTH_LONG).show();
+				}
+			});
+			viewBalance.setVisibility(View.INVISIBLE);
+		}
+	}
 
-    private void showAppBarMessage(CharSequence message) {
-        if (message != null) {
-            appBarMessageView.setVisibility(View.VISIBLE);
-            appBarMessageView.setText(message);
-        } else {
-            appBarMessageView.setVisibility(View.GONE);
-        }
-    }
+	private void showAppBarMessage(CharSequence message) {
+		if (message != null) {
+			appBarMessageView.setVisibility(View.VISIBLE);
+			appBarMessageView.setText(message);
+		} else {
+			appBarMessageView.setVisibility(View.GONE);
+		}
+	}
 
-    private void updateBalanceTooMuchWarning() {
-        if (balance == null)
-            return;
+	private void updateBalanceTooMuchWarning() {
+		if (balance == null)
+			return;
 
-        boolean tooMuch = balance.isGreaterThan(TOO_MUCH_BALANCE_THRESHOLD);
-        viewBalanceTooMuch.setVisibility(tooMuch ? View.VISIBLE : View.GONE);
-    }
+		boolean tooMuch = balance.isGreaterThan(TOO_MUCH_BALANCE_THRESHOLD);
+		viewBalanceTooMuch.setVisibility(tooMuch ? View.VISIBLE : View.GONE);
+	}
 
-    private void showWarningIfBalanceTooMuch() {
+	private void showWarningIfBalanceTooMuch() {
 		if (balance != null && balance.isGreaterThan(TOO_MUCH_BALANCE_THRESHOLD)) {
 			Toast.makeText(application, getString(R.string.wallet_balance_fragment_too_much),
 					Toast.LENGTH_LONG).show();
