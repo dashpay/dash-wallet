@@ -94,7 +94,6 @@ public class UnlockWalletDialogFragment extends DialogFragment {
         final DialogBuilder builder = new DialogBuilder(activity);
         builder.setTitle(R.string.wallet_lock_unlock_dialog_title);
         builder.setView(view);
-        builder.setPositiveButton(R.string.button_ok, null);
         builder.setCancelable(false);
 
         AlertDialog alertDialog = builder.create();
