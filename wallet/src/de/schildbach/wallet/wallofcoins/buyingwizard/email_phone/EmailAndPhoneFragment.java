@@ -3,6 +3,7 @@ package de.schildbach.wallet.wallofcoins.buyingwizard.email_phone;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
 import android.text.TextUtils;
@@ -34,9 +35,9 @@ import de.schildbach.wallet.wallofcoins.api.WallofCoins;
 import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseActivity;
 import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseFragment;
 import de.schildbach.wallet.wallofcoins.buyingwizard.order_history.OrderHistoryFragment;
+import de.schildbach.wallet.wallofcoins.buyingwizard.utils.BuyDashCredentilasPref;
 import de.schildbach.wallet.wallofcoins.buyingwizard.utils.FragmentUtils;
 import de.schildbach.wallet.wallofcoins.buyingwizard.verification_otp.VerifycationOtpFragment;
-import de.schildbach.wallet.wallofcoins.response.BuyDashErrorResp;
 import de.schildbach.wallet.wallofcoins.response.CheckAuthResp;
 import de.schildbach.wallet.wallofcoins.response.CountryData;
 import de.schildbach.wallet.wallofcoins.response.CreateDeviceResp;
@@ -65,6 +66,7 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
     private TextView tv_skip_email;
     private CreateDeviceResp createDeviceResp;
     private CreateHoldResp createHoldResp;
+    private BuyDashCredentilasPref credentilasPref;
 
     @Override
     public void onAttach(Context context) {
@@ -87,6 +89,8 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
     }
 
     private void init() {
+        credentilasPref = new BuyDashCredentilasPref(PreferenceManager.getDefaultSharedPreferences(mContext));
+
         linearProgress = (LinearLayout) rootView.findViewById(R.id.linear_progress);
         linear_email = (LinearLayout) rootView.findViewById(R.id.linear_email);
         sp_country = (Spinner) rootView.findViewById(R.id.sp_country);
@@ -144,6 +148,7 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                     ((BuyDashBaseActivity) mContext).buyDashPref.setPhone(phone);
                     hideKeyBoard();
                     checkAuth();
+                    credentilasPref.setCredentials(phone_no, ((BuyDashBaseActivity) mContext).buyDashPref.getDeviceId());
                 }
                 break;
 
@@ -235,6 +240,7 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                         if (response.body() != null
                                 && response.body().getAvailableAuthSources() != null
                                 && response.body().getAvailableAuthSources().size() > 0) {
+
                             if (response.body().getAvailableAuthSources().get(0).equals("password")) {
                                 showUserPasswordAuthenticationDialog();
                                 return;
@@ -345,7 +351,7 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
 
                     if (code >= 400 && response.body() == null) {
                         try {
-                            BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
+                            //BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
                             if (!TextUtils.isEmpty(password)) {
                                 showAlertPasswordDialog();
                             } else {

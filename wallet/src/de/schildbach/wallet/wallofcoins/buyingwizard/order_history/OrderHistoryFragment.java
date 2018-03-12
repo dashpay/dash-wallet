@@ -66,6 +66,8 @@ public class OrderHistoryFragment extends BuyDashBaseFragment implements SharedP
     private OrderHistoryFragment fragment;
     private int countdownInterval = 1000;
     private TextView text_email_receipt;
+    private Handler handler;
+    private MyRunnable myRunnable;
 
     @Override
     public void onAttach(Context context) {
@@ -91,6 +93,7 @@ public class OrderHistoryFragment extends BuyDashBaseFragment implements SharedP
 
         if (getArguments() != null && getArguments().containsKey("isFromCreateHold"))
             isFromCreateHold = getArguments().getBoolean("isFromCreateHold");
+
     }
 
     private void setListeners() {
@@ -254,7 +257,8 @@ public class OrderHistoryFragment extends BuyDashBaseFragment implements SharedP
         Handler handler;
         String dueDateTime;
         int countdownInterval;
-        public MyRunnable(TextView tvText,Handler handler,String dueDateTime,int countdownInterval) {
+
+        public MyRunnable(TextView tvText, Handler handler, String dueDateTime, int countdownInterval) {
             this.textDepositeDue1 = new WeakReference<TextView>(tvText);
             this.handler = handler;
             this.dueDateTime = dueDateTime;
@@ -284,7 +288,7 @@ public class OrderHistoryFragment extends BuyDashBaseFragment implements SharedP
 
                     if (hours > 0) {
                         textDepositeDue.setText("Deposit Due: " + hours + " hours " + minutes + " minutes");
-                        countdownInterval = 60 * 1000;
+                        countdownInterval = 60 * 1000; // call in minutes
                     } else {
                         if (minutes < 10) {
                             textDepositeDue.setTextColor(Color.parseColor("#DD0000"));
@@ -292,7 +296,7 @@ public class OrderHistoryFragment extends BuyDashBaseFragment implements SharedP
                             textDepositeDue.setTextColor(Color.parseColor("#000000"));
                         }
                         textDepositeDue.setText("Deposit Due: " + minutes + " minutes " + seconds + " seconds");
-                        countdownInterval = 1000;
+                        countdownInterval = 1000; // call in seconds
                     }
                 } else {
                     textDepositeDue.setText("Deposit Due: 0 minutes 0 seconds");
@@ -303,6 +307,18 @@ public class OrderHistoryFragment extends BuyDashBaseFragment implements SharedP
             }
         }
     }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+
+        if (handler != null) {
+            handler.removeCallbacks(myRunnable);
+            myRunnable = null;
+        }
+
+    }
+
     /**
      * Count down timer for Hold Expire status
      *
@@ -312,7 +328,13 @@ public class OrderHistoryFragment extends BuyDashBaseFragment implements SharedP
     public void countDownStart(final String dueDateTime, final TextView textDepositeDue) {
         Log.e(TAG, "countDownStart: " + dueDateTime);
         countdownInterval = 1000;
-        final Handler handler = new Handler();
+
+        if (handler == null) {
+            handler = new Handler();
+            myRunnable = new MyRunnable(textDepositeDue, handler, dueDateTime, countdownInterval);
+            handler.postDelayed(myRunnable, 0);
+        }
+
         /*final Runnable runnable = new Runnable() {
             @Override
             public void run() {
@@ -356,7 +378,7 @@ public class OrderHistoryFragment extends BuyDashBaseFragment implements SharedP
         };*/
         //handler.postDelayed(runnable, 0);
 
-        handler.postDelayed(new MyRunnable(textDepositeDue,handler,dueDateTime,countdownInterval), 0);
+
     }
 
     /**

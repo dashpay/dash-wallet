@@ -17,23 +17,6 @@
 
 package de.schildbach.wallet.ui;
 
-import javax.annotation.Nullable;
-
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.wallet.Wallet;
-
-import com.google.common.base.Strings;
-
-import de.schildbach.wallet.Configuration;
-import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.WalletBalanceWidgetProvider;
-import de.schildbach.wallet.data.ExchangeRate;
-import de.schildbach.wallet.data.ExchangeRatesProvider;
-import de.schildbach.wallet.service.BlockchainState;
-import de.schildbach.wallet.service.BlockchainStateLoader;
-import de.schildbach.wallet_test.R;
-
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.LoaderManager;
@@ -49,6 +32,8 @@ import android.os.Bundle;
 import android.provider.BaseColumns;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.SearchView;
+import android.support.v7.widget.SearchView.OnQueryTextListener;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -58,10 +43,25 @@ import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.PopupMenu;
-import android.support.v7.widget.SearchView;
-import android.support.v7.widget.SearchView.OnQueryTextListener;
 import android.widget.TextView;
 import android.widget.ViewAnimator;
+
+import com.google.common.base.Strings;
+
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.wallet.Wallet;
+
+import javax.annotation.Nullable;
+
+import de.schildbach.wallet.Configuration;
+import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.WalletBalanceWidgetProvider;
+import de.schildbach.wallet.data.ExchangeRate;
+import de.schildbach.wallet.data.ExchangeRatesProvider;
+import de.schildbach.wallet.service.BlockchainState;
+import de.schildbach.wallet.service.BlockchainStateLoader;
+import de.schildbach.wallet_test.R;
 
 /**
  * @author Andreas Schildbach
@@ -145,6 +145,10 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
     public void onDestroy() {
         config.unregisterOnSharedPreferenceChangeListener(this);
 
+        //added
+        loaderManager.destroyLoader(ID_BALANCE_LOADER);
+        loaderManager.destroyLoader(ID_BLOCKCHAIN_STATE_LOADER);
+        //---
         loaderManager.destroyLoader(ID_RATE_LOADER);
 
         super.onDestroy();
