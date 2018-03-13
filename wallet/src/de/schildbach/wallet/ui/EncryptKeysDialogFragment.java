@@ -281,11 +281,11 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                             WalletLock.getInstance().setWalletLocked(true);
                         }
 
-                        updateView();
-
                         if (state == State.DONE) {
                             application.backupWallet();
                             delayedDismiss();
+                        } else {
+                            updateView();
                         }
                     }
 
