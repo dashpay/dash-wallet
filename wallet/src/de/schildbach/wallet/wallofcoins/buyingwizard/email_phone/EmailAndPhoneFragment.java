@@ -148,7 +148,7 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                     ((BuyDashBaseActivity) mContext).buyDashPref.setPhone(phone);
                     hideKeyBoard();
                     checkAuth();
-                    credentilasPref.setCredentials(phone_no, ((BuyDashBaseActivity) mContext).buyDashPref.getDeviceId());
+
                 }
                 break;
 
@@ -241,10 +241,10 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                                 && response.body().getAvailableAuthSources() != null
                                 && response.body().getAvailableAuthSources().size() > 0) {
 
-                            if (response.body().getAvailableAuthSources().get(0).equals("password")) {
+                            if (response.body().getAvailableAuthSources().get(0).equals("password")) {//from wesite
                                 showUserPasswordAuthenticationDialog();
                                 return;
-                            } else if ((response.body().getAvailableAuthSources().size() >= 2
+                            } else if ((response.body().getAvailableAuthSources().size() >= 2//from mobile
                                     && response.body().getAvailableAuthSources().get(1).equals("device"))
                                     || (response.body().getAvailableAuthSources().get(0).equals("device"))) {
                                 hideKeyBoard();
@@ -422,6 +422,8 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                     }
                     if (!TextUtils.isEmpty(response.body().token)) {
                         ((BuyDashBaseActivity) mContext).buyDashPref.setAuthToken(createHoldResp.token);
+                        //added
+                        credentilasPref.setCredentials(phone_no, ((BuyDashBaseActivity) mContext).buyDashPref.getAuthToken());
                     }
                     navigateToVerifyOtp(createHoldResp.__PURCHASE_CODE);
                     //hideViewExcept(binding.layoutVerifyOtp);
@@ -430,6 +432,10 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
 
                 } else if (null != response.errorBody()) {
                     if (response.code() == 403 && TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getAuthToken())) {
+
+                      /*  String token = credentilasPref.getAuthTokenFromPhoneNum(phone_no);
+                        ((BuyDashBaseActivity) mContext).buyDashPref.setAuthToken(token);
+                        getHolds();*/
                         layout_hold.setVisibility(View.VISIBLE);
                         linear_email.setVisibility(View.GONE);
                         linear_phone.setVisibility(View.GONE);
@@ -488,6 +494,7 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
             @Override
             public void onResponse(Call<List<GetHoldsResp>> call, Response<List<GetHoldsResp>> response) {
                 if (response.code() == 200 && response.body() != null) {
+                    linearProgress.setVisibility(View.GONE);
                     List<GetHoldsResp> holdsList = response.body();
                     int holdCount = 0;
                     if (holdsList.size() > 0) {
@@ -557,6 +564,7 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
             @Override
             public void onResponse(Call<List<CreateDeviceResp>> call, Response<List<CreateDeviceResp>> response) {
                 if (response.code() == 200 && response.body() != null) {
+                    linearProgress.setVisibility(View.GONE);
                     List<CreateDeviceResp> deviceList = response.body();
                     if (deviceList.size() > 0) {
                         ((BuyDashBaseActivity) mContext).buyDashPref.setDeviceId(deviceList.get(deviceList.size() - 1).getId() + "");

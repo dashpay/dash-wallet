@@ -5,6 +5,7 @@ import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
 import android.text.TextUtils;
@@ -32,6 +33,7 @@ import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseActivity;
 import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseFragment;
 import de.schildbach.wallet.wallofcoins.buyingwizard.buy_dash_location.BuyDashLocationFragment;
 import de.schildbach.wallet.wallofcoins.buyingwizard.order_history.OrderHistoryFragment;
+import de.schildbach.wallet.wallofcoins.buyingwizard.utils.BuyDashAddressPref;
 import de.schildbach.wallet.wallofcoins.buyingwizard.utils.FragmentUtils;
 import de.schildbach.wallet.wallofcoins.response.BuyDashErrorResp;
 import de.schildbach.wallet.wallofcoins.response.CaptureHoldResp;
@@ -39,8 +41,6 @@ import de.schildbach.wallet_test.R;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-
-import static org.bitcoinj.wallet.KeyChain.KeyPurpose.RECEIVE_FUNDS;
 
 /**
  * Created on 08-Mar-18.
@@ -81,8 +81,11 @@ public class VerifycationOtpFragment extends BuyDashBaseFragment implements View
         this.application = (WalletApplication) getActivity().getApplication();
         this.wallet = application.getWallet();
         //this.loaderManager = getLoaderManager();
-        keyAddress = wallet.freshAddress(RECEIVE_FUNDS).toBase58();
 
+        BuyDashAddressPref dashAddressPref= new BuyDashAddressPref(PreferenceManager.getDefaultSharedPreferences(mContext));
+        //keyAddress = wallet.freshAddress(RECEIVE_FUNDS).toBase58();
+        keyAddress=dashAddressPref.getBuyDashAddress();
+         Log.e("------------------",keyAddress);
         linearProgress = (LinearLayout) rootView.findViewById(R.id.linear_progress);
         button_verify_otp = (Button) rootView.findViewById(R.id.button_verify_otp);
         et_otp = (EditText) rootView.findViewById(R.id.et_otp);

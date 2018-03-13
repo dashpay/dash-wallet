@@ -25,10 +25,10 @@ public class BuyDashCredentilasPref {
         ArrayList<CredentialsVO> voArrayList;
 
         try {
-            voArrayList = (ArrayList) ObjectSerializer.deserialize(prefs.getString(CREDENTIALS_LIST,
+            voArrayList = (ArrayList<CredentialsVO>) ObjectSerializer.deserialize(prefs.getString(CREDENTIALS_LIST,
                     ObjectSerializer.serialize(new ArrayList())));
             CredentialsVO createHoldResp = new CredentialsVO();
-            createHoldResp.setDeviceToken(deviceToken);
+            createHoldResp.setAuthToken(deviceToken);
             createHoldResp.setPhoneNumber(phone);
 
             voArrayList.add(createHoldResp);
@@ -40,7 +40,7 @@ public class BuyDashCredentilasPref {
             editor.commit();
 
             for (CredentialsVO vo : voArrayList) {
-                Log.e("Device id list", vo.getDeviceToken());
+                Log.e("Auth id list", vo.getAuthToken());
                 Log.e("phone no list", vo.getPhoneNumber());
             }
 
@@ -61,17 +61,18 @@ public class BuyDashCredentilasPref {
         return voArrayList;
     }
 
-    public String getDeviceIdFromPhoneNum(String phone) {
+    public String getAuthTokenFromPhoneNum(String phone) {
         String deviceId = "";
         ArrayList<CredentialsVO> voArrayList;
 
         try {
-            voArrayList = (ArrayList) ObjectSerializer.deserialize(prefs.getString(CREDENTIALS_LIST,
+            voArrayList = (ArrayList<CredentialsVO>) ObjectSerializer.deserialize(prefs.getString(CREDENTIALS_LIST,
                     ObjectSerializer.serialize(new ArrayList())));
 
             for (CredentialsVO vo : voArrayList) {
-                if (vo.getPhoneNumber().equals(phone)) {
-                    deviceId = vo.getDeviceToken();
+                Log.e("Stored phone",vo.getPhoneNumber()+"---"+"Stored token"+vo.getAuthToken());
+                if (vo.getPhoneNumber().equalsIgnoreCase(phone)) {
+                    deviceId = vo.getAuthToken();
                     break;
                 }
             }

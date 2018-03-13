@@ -25,6 +25,7 @@ import android.text.TextUtils;
 import android.util.Base64;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Toast;
 
 import com.google.common.base.Charsets;
 
@@ -114,6 +115,7 @@ public class BuyDashBaseFragment extends Fragment {
         }
         return finalLoc;
     }
+
     /**
      * Method for Open web url link in external browser app
      *
@@ -124,12 +126,13 @@ public class BuyDashBaseFragment extends Fragment {
         Intent launchBrowser = new Intent(Intent.ACTION_VIEW, uriUrl);
         startActivity(launchBrowser);
     }
+
     /**
      * get country code form current latitude & longitude
      *
      * @return Country Code
      */
-    protected String getCountryCode(double latitude,double longitude) {
+    protected String getCountryCode(double latitude, double longitude) {
         String countryCode = "";
         try {
             Geocoder geo = new Geocoder(mContext, Locale.getDefault());
@@ -146,6 +149,7 @@ public class BuyDashBaseFragment extends Fragment {
             return countryCode;
         }
     }
+
     /**
      * Method for hide keyboard
      */
@@ -156,6 +160,7 @@ public class BuyDashBaseFragment extends Fragment {
             imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
         }
     }
+
     /**
      * Show a dialog to the user requesting that GPS be enabled
      */
@@ -205,6 +210,7 @@ public class BuyDashBaseFragment extends Fragment {
             }
         }
     }
+
     @SuppressLint("HardwareIds")
     protected String getDeviceCode(Context context, BuyDashPref buyDashPref) {
 
@@ -219,6 +225,12 @@ public class BuyDashBaseFragment extends Fragment {
 
         return deviceUID;
     }
+
+
+    protected void showToast(String msg) {
+        Toast.makeText(mContext, msg, Toast.LENGTH_SHORT).show();
+    }
+
     /**
      * Validate Email id
      *
@@ -232,6 +244,7 @@ public class BuyDashBaseFragment extends Fragment {
             return android.util.Patterns.EMAIL_ADDRESS.matcher(target).matches();
         }
     }
+
     /**
      * Show alert dialog  wrong username or password
      */
@@ -251,6 +264,7 @@ public class BuyDashBaseFragment extends Fragment {
                 })
                 .show();
     }
+
     /**
      * API Header parameter interceptor
      */
@@ -260,8 +274,8 @@ public class BuyDashBaseFragment extends Fragment {
             Request original = chain.request();
             // Request customization: add request headers
             Request.Builder requestBuilder = original.newBuilder();
-            if (!TextUtils.isEmpty(((BuyDashBaseActivity)mContext).buyDashPref.getAuthToken())) {
-                requestBuilder.addHeader(WOCConstants.KEY_HEADER_AUTH_TOKEN, ((BuyDashBaseActivity)mContext).buyDashPref.getAuthToken());
+            if (!TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getAuthToken())) {
+                requestBuilder.addHeader(WOCConstants.KEY_HEADER_AUTH_TOKEN, ((BuyDashBaseActivity) mContext).buyDashPref.getAuthToken());
             }
             requestBuilder.addHeader(WOCConstants.KEY_HEADER_PUBLISHER_ID, getString(R.string.WALLOFCOINS_PUBLISHER_ID));
             requestBuilder.addHeader(WOCConstants.KEY_HEADER_CONTENT_TYPE, WOCConstants.KEY_HEADER_CONTENT_TYPE_VALUE);

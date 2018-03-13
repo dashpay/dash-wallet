@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
@@ -44,6 +45,7 @@ import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseActivity;
 import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseFragment;
 import de.schildbach.wallet.wallofcoins.buyingwizard.email_phone.EmailAndPhoneFragment;
 import de.schildbach.wallet.wallofcoins.buyingwizard.order_history.OrderHistoryFragment;
+import de.schildbach.wallet.wallofcoins.buyingwizard.utils.BuyDashAddressPref;
 import de.schildbach.wallet.wallofcoins.buyingwizard.utils.FragmentUtils;
 import de.schildbach.wallet.wallofcoins.buyingwizard.verification_otp.VerifycationOtpFragment;
 import de.schildbach.wallet.wallofcoins.response.BuyDashErrorResp;
@@ -81,6 +83,7 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
     private LoaderManager loaderManager;
     private final int ID_RATE_LOADER = 1;
     private CreateHoldResp createHoldResp;
+    private BuyDashAddressPref dashAddressPref;
 
     @Override
     public void onAttach(Context context) {
@@ -107,7 +110,7 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
         this.config = application.getConfiguration();
         this.wallet = application.getWallet();
         this.loaderManager = getLoaderManager();
-
+        dashAddressPref = new BuyDashAddressPref(PreferenceManager.getDefaultSharedPreferences(mContext));
 
         button_buy_dash_get_offers = (Button) rootView.findViewById(R.id.button_buy_dash_get_offers);
         request_coins_amount_btc_edittext = (EditText) rootView.findViewById(R.id.request_coins_amount_btc_edittext);
@@ -208,11 +211,15 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
                 hideKeyBoard();
                 if (Float.valueOf(request_coins_amount_local_edittext.getHint().toString()) > 0f
                         || !TextUtils.isEmpty(request_coins_amount_local_edittext.getText())) {
+
                     if (!TextUtils.isEmpty(request_coins_amount_local_edittext.getText().toString())
                             && Float.valueOf(request_coins_amount_local_edittext.getText().toString()) >= 5f
+
                             || !TextUtils.isEmpty(request_coins_amount_local_edittext.getHint().toString())
                             && Float.valueOf(request_coins_amount_local_edittext.getHint().toString()) >= 5f) {
-                        callDiscoveryInputs();
+
+                        if (isValidAmount())
+                            callDiscoveryInputs();
                     } else {
                         Toast.makeText(mContext, R.string.alert_puchase_amout, Toast.LENGTH_SHORT).show();
                     }
@@ -223,6 +230,18 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
 
 
         }
+    }
+
+    private boolean isValidAmount() {
+        if (!TextUtils.isEmpty(request_coins_amount_local_edittext.getText().toString())
+                && Float.valueOf(request_coins_amount_local_edittext.getText().toString()) > 1000000f
+
+                || !TextUtils.isEmpty(request_coins_amount_local_edittext.getHint().toString())
+                && Float.valueOf(request_coins_amount_local_edittext.getHint().toString()) > 1000000f) {
+            showToast("Amount should be less than 1000000.");
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -252,10 +271,14 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
     /**
      * Method for call discovery inputs & offers for discovery input
      */
+
     private void callDiscoveryInputs() {
         HashMap<String, String> discoveryInputsReq = new HashMap<String, String>();
         discoveryInputsReq.put(WOCConstants.KEY_PUBLISHER_ID, getString(R.string.WALLOFCOINS_PUBLISHER_ID));
         keyAddress = wallet.freshAddress(RECEIVE_FUNDS).toBase58();
+        dashAddressPref.setBuyDashAddress(keyAddress);
+
+        // Log.e("------------------",dashAddressPref.getBuyDashAddress());
         discoveryInputsReq.put(WOCConstants.KEY_CRYPTO_ADDRESS, keyAddress);
         String offerAmount = "0";
         try {
@@ -313,6 +336,7 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
 
                                             if (null != response.body().singleDeposit && !response.body().singleDeposit.isEmpty()) {
                                                 rv_offers.setVisibility(View.VISIBLE);
+                                                GetOffersResp getOffersResp = response.body();
                                                 layout_create_hold.setVisibility(View.GONE);
                                                 //binding.spBanks.setAdapter(null);
 
@@ -494,6 +518,7 @@ public class BuyDashOfferAmountFragment extends BuyDashBaseFragment implements V
         WallofCoins.createService(interceptor, getActivity()).getHolds().enqueue(new Callback<List<GetHoldsResp>>() {
             @Override
             public void onResponse(Call<List<GetHoldsResp>> call, Response<List<GetHoldsResp>> response) {
+                linearProgress.setVisibility(View.GONE);
                 if (response.code() == 200 && response.body() != null) {
                     List<GetHoldsResp> holdsList = response.body();
                     int holdCount = 0;

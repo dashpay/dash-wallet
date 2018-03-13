@@ -127,7 +127,7 @@ public class BuyDashPaymentCenterFragment extends BuyDashBaseFragment implements
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 if (position == 0) return;
-                bankId = "" + receivingOptionsResps.get(position - 1).id;
+                bankId = "" + receivingOptionsResps.get(position).id;
             }
 
             @Override
