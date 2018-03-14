@@ -278,12 +278,12 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                                     "wallet successfully encrypted, using key derived by new spending password ({} scrypt iterations)",
                                     keyCrypter.getScryptParameters().getN());
                             state = State.DONE;
-                            WalletLock.getInstance().setWalletLocked(true);
                         }
 
                         if (state == State.DONE) {
                             application.backupWallet();
                             delayedDismiss();
+                            WalletLock.getInstance().setWalletLocked(wallet.isEncrypted());
                         } else {
                             updateView();
                         }
