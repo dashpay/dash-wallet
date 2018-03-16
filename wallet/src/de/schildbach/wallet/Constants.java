@@ -23,12 +23,15 @@ import java.util.concurrent.TimeUnit;
 import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.MonetaryFormat;
+import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.BaseEncoding;
 import com.squareup.okhttp.HttpUrl;
 import com.squareup.okhttp.OkHttpClient;
@@ -234,4 +237,6 @@ public final class Constants {
     public static final String WALLET_LOCK_PREFS_NAME = "wallet_lock_prefs";
     public static final String WALLET_LOCK_PREFS_INITIAL_DIALOG_DISMISSED = "wallet_lock_prefs_dialog_dismissed";
 
+    //BIP44 Support
+    public static final ImmutableList<ChildNumber> BIP44_PATH = TEST ? DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET : DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH;
 }

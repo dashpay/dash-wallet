@@ -17,43 +17,20 @@
 
 package de.schildbach.wallet.ui;
 
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.Dialog;
-import android.app.DialogFragment;
 import android.app.FragmentManager;
 import android.content.DialogInterface;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.Process;
-import android.text.Editable;
-import android.text.TextWatcher;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.View.OnClickListener;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.TextView;
-
-import org.bitcoinj.wallet.Wallet;
-
-import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.WalletLock;
-import de.schildbach.wallet.ui.preference.PinRetryController;
-import de.schildbach.wallet.util.KeyboardUtil;
+
 import de.schildbach.wallet_test.R;
 
-public class UnlockWalletDialogFragment extends DialogFragment {
+public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
 
     private static final String FRAGMENT_TAG = UnlockWalletDialogFragment.class.getName();
-
-    private DialogInterface.OnDismissListener onDismissListener;
 
     public static void show(final FragmentManager fm) {
         new UnlockWalletDialogFragment().show(fm, FRAGMENT_TAG);
     }
-
 
     public static void show(FragmentManager fm, DialogInterface.OnDismissListener onDismissListener) {
         UnlockWalletDialogFragment dialogFragment = new UnlockWalletDialogFragment();
@@ -61,90 +38,13 @@ public class UnlockWalletDialogFragment extends DialogFragment {
         dialogFragment.show(fm, FRAGMENT_TAG);
     }
 
-    private AbstractWalletActivity activity;
-    private WalletApplication application;
-    private Handler backgroundHandler;
-    private Wallet wallet;
-    private PinRetryController pinRetryController;
-
-    private EditText pinView;
-    private TextView badPinView;
-    private Button unlockButton;
-
-    @Override
-    public void onAttach(final Activity activity) {
-        super.onAttach(activity);
-
-        this.activity = (AbstractWalletActivity) activity;
-        this.application = (WalletApplication) activity.getApplication();
-        this.wallet = application.getWallet();
-        this.pinRetryController = new PinRetryController(activity);
+    public UnlockWalletDialogFragment()
+    {
+        this.dialogTitle = R.string.wallet_lock_unlock_wallet;
+        this.dialogFragmentId = R.layout.unlock_wallet_dialog;
     }
 
-    @Override
-    public Dialog onCreateDialog(final Bundle savedInstanceState) {
-        final View view = LayoutInflater.from(activity).inflate(R.layout.unlock_wallet_dialog, null);
-
-        pinView = (EditText) view.findViewById(R.id.pin);
-        badPinView = (TextView) view.findViewById(R.id.bad_pin);
-        unlockButton = (Button) view.findViewById(R.id.unlock);
-
-        pinView.addTextChangedListener(privateKeyPasswordListener);
-        unlockButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                checkPassword(pinView.getText().toString());
-            }
-        });
-
-        if (wallet.isEncrypted()) {
-            HandlerThread backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);
-            backgroundThread.start();
-            backgroundHandler = new Handler(backgroundThread.getLooper());
-        }
-
-        final DialogBuilder builder = new DialogBuilder(activity);
-        builder.setTitle(R.string.wallet_lock_unlock_dialog_title);
-        builder.setView(view);
-        builder.setCancelable(false);
-
-        AlertDialog alertDialog = builder.create();
-        alertDialog.setOnShowListener(new DialogInterface.OnShowListener() {
-            @Override
-            public void onShow(DialogInterface dialog) {
-                KeyboardUtil.showSoftKeyboard(getActivity(), pinView);
-            }
-        });
-
-        return alertDialog;
-    }
-
-    @Override
-    public void onDismiss(final DialogInterface dialog) {
-        if (onDismissListener != null) {
-            onDismissListener.onDismiss(dialog);
-        }
-        pinView.removeTextChangedListener(privateKeyPasswordListener);
-        super.onDismiss(dialog);
-    }
-
-    private final TextWatcher privateKeyPasswordListener = new TextWatcher() {
-        @Override
-        public void onTextChanged(final CharSequence s, final int start, final int before, final int count) {
-            badPinView.setVisibility(View.INVISIBLE);
-            unlockButton.setEnabled(true);
-        }
-
-        @Override
-        public void beforeTextChanged(final CharSequence s, final int start, final int count, final int after) {
-        }
-
-        @Override
-        public void afterTextChanged(final Editable s) {
-        }
-    };
-
-    private void checkPassword(final String password) {
+    protected void checkPassword(final String password) {
         if (pinRetryController.isLocked()) {
             return;
         }

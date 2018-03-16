@@ -32,9 +32,8 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.crypto.LinuxSecureRandom;
 import org.bitcoinj.crypto.MnemonicCode;
-import org.bitcoinj.crypto.MnemonicException;
-import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
@@ -76,8 +75,6 @@ import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
-
-import static de.schildbach.wallet.Constants.HEX;
 
 /**
  * @author Andreas Schildbach
@@ -289,7 +286,6 @@ public class WalletApplication extends Application implements Application.Activi
                 final Stopwatch watch = Stopwatch.createStarted();
                 walletStream = new FileInputStream(walletFile);
                 wallet = new WalletProtobufSerializer().readWallet(walletStream);
-                watch.stop();
 
                 if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
                     throw new UnreadableWalletException("bad wallet network parameters: " + wallet.getParams().getId());
@@ -327,6 +323,7 @@ public class WalletApplication extends Application implements Application.Activi
                 throw new Error("bad wallet network parameters: " + wallet.getParams().getId());
         } else {
             wallet = new Wallet(Constants.NETWORK_PARAMETERS);
+            wallet.addKeyChain(Constants.BIP44_PATH);
 
             saveWallet();
             backupWallet();
@@ -347,6 +344,8 @@ public class WalletApplication extends Application implements Application.Activi
 
             if (!wallet.isConsistent())
                 throw new Error("inconsistent backup");
+
+            wallet.addKeyChain(Constants.BIP44_PATH);
 
             resetBlockchain();
 
