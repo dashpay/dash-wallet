@@ -16,6 +16,8 @@ import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import de.schildbach.wallet.wallofcoins.WOCConstants;
@@ -114,8 +116,11 @@ public class BuyDashPaymentCenterFragment extends BuyDashBaseFragment implements
     private void setPaymentOptNames(final List<GetReceivingOptionsResp> receivingOptionsResps) {
         final ArrayList<String> names = new ArrayList<String>();
         GetReceivingOptionsResp optionsRespDefaultName = new GetReceivingOptionsResp();
+        Collections.sort(receivingOptionsResps, new ContactComparator());
         optionsRespDefaultName.name = getString(R.string.label_select_payment_center);
         receivingOptionsResps.add(0, optionsRespDefaultName);
+
+
         for (GetReceivingOptionsResp receivingOptionsResp : receivingOptionsResps) {
             names.add((receivingOptionsResp.name));
         }
@@ -137,7 +142,13 @@ public class BuyDashPaymentCenterFragment extends BuyDashBaseFragment implements
         });
 
     }
-
+    private class ContactComparator implements Comparator<GetReceivingOptionsResp> {
+        public int compare(GetReceivingOptionsResp optionsResp1, GetReceivingOptionsResp optionsResp2) {
+            //In the following line you set the criterion,
+            //which is the name of Contact in my example scenario
+            return optionsResp1.name.compareTo(optionsResp2.name);
+        }
+    }
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
