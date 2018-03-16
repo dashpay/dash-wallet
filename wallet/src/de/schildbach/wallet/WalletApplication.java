@@ -35,6 +35,9 @@ import org.bitcoinj.crypto.MnemonicCode;
 import org.bitcoinj.crypto.MnemonicException;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.DeterministicKeyChain;
+import org.bitcoinj.wallet.DeterministicSeed;
+import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
@@ -289,6 +292,7 @@ public class WalletApplication extends Application implements Application.Activi
                 final Stopwatch watch = Stopwatch.createStarted();
                 walletStream = new FileInputStream(walletFile);
                 wallet = new WalletProtobufSerializer().readWallet(walletStream);
+                wallet.addKeyChain(DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH);
                 watch.stop();
 
                 if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
@@ -327,6 +331,7 @@ public class WalletApplication extends Application implements Application.Activi
                 throw new Error("bad wallet network parameters: " + wallet.getParams().getId());
         } else {
             wallet = new Wallet(Constants.NETWORK_PARAMETERS);
+            wallet.addKeyChain(DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH);
 
             saveWallet();
             backupWallet();
@@ -347,6 +352,8 @@ public class WalletApplication extends Application implements Application.Activi
 
             if (!wallet.isConsistent())
                 throw new Error("inconsistent backup");
+
+            wallet.addKeyChain(DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH);
 
             resetBlockchain();
 
