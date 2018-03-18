@@ -46,9 +46,17 @@ public class UnlockWalletDialogFragment extends DialogFragment {
 
     private static final String FRAGMENT_TAG = UnlockWalletDialogFragment.class.getName();
 
+    private DialogInterface.OnDismissListener onDismissListener;
+
     public static void show(final FragmentManager fm) {
-        final DialogFragment newFragment = new UnlockWalletDialogFragment();
-        newFragment.show(fm, FRAGMENT_TAG);
+        new UnlockWalletDialogFragment().show(fm, FRAGMENT_TAG);
+    }
+
+
+    public static void show(FragmentManager fm, DialogInterface.OnDismissListener onDismissListener) {
+        UnlockWalletDialogFragment dialogFragment = new UnlockWalletDialogFragment();
+        dialogFragment.onDismissListener = onDismissListener;
+        dialogFragment.show(fm, FRAGMENT_TAG);
     }
 
     private AbstractWalletActivity activity;
@@ -103,12 +111,15 @@ public class UnlockWalletDialogFragment extends DialogFragment {
                 KeyboardUtil.showSoftKeyboard(getActivity(), pinView);
             }
         });
-        
+
         return alertDialog;
     }
 
     @Override
     public void onDismiss(final DialogInterface dialog) {
+        if (onDismissListener != null) {
+            onDismissListener.onDismiss(dialog);
+        }
         pinView.removeTextChangedListener(privateKeyPasswordListener);
         super.onDismiss(dialog);
     }
