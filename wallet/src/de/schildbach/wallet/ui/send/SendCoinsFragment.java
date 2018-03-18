@@ -74,6 +74,7 @@ import de.schildbach.wallet.data.ExchangeRatesLoader;
 import de.schildbach.wallet.data.ExchangeRatesProvider;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.data.PaymentIntent.Standard;
+import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.offline.DirectPaymentTask;
 import de.schildbach.wallet.service.BlockchainState;
@@ -89,6 +90,7 @@ import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
 import de.schildbach.wallet.ui.ScanActivity;
 import de.schildbach.wallet.ui.TransactionsAdapter;
+import de.schildbach.wallet.ui.UnlockWalletDialogFragment;
 import de.schildbach.wallet.util.Bluetooth;
 import de.schildbach.wallet.util.MonetarySpannable;
 import de.schildbach.wallet.util.Nfc;
@@ -96,6 +98,7 @@ import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
+import android.app.Dialog;
 import android.app.LoaderManager;
 import android.bluetooth.BluetoothAdapter;
 import android.content.AsyncTaskLoader;
@@ -1217,11 +1220,23 @@ public final class SendCoinsFragment extends Fragment {
     }
 
     private void handleEmpty() {
-        final Coin available = wallet.getBalance(BalanceType.AVAILABLE);
-        amountCalculatorLink.setBtcAmount(available);
+        final WalletLock walletLock = WalletLock.getInstance();
+        if (walletLock.isWalletLocked(wallet)) {
+            UnlockWalletDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
+                @Override
+                public void onDismiss(DialogInterface dialog) {
+                    if (!walletLock.isWalletLocked(wallet)) {
+                        handleEmpty();
+                    }
+                }
+            });
+        } else {
+            final Coin available = wallet.getBalance(BalanceType.AVAILABLE);
+            amountCalculatorLink.setBtcAmount(available);
 
-        updateView();
-        handler.post(dryrunRunnable);
+            updateView();
+            handler.post(dryrunRunnable);
+        }
     }
 
     private Runnable dryrunRunnable = new Runnable() {
