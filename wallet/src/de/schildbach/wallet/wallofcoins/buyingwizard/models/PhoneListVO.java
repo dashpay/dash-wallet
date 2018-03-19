@@ -1,23 +1,24 @@
 package de.schildbach.wallet.wallofcoins.buyingwizard.models;
 
+import java.io.Serializable;
+
 /**
  * Created by  on 12-Mar-18.
  */
 
-public class CredentialsVO {
+public class PhoneListVO implements Serializable {
 
     private String phoneNumber = "";
+    private String deviceId = "";
 
-    public String getAuthToken() {
-        return authToken;
+
+    public String getDeviceId() {
+        return deviceId;
     }
 
-    public void setAuthToken(String authToken) {
-        this.authToken = authToken;
+    public void setDeviceId(String deviceId) {
+        this.deviceId = deviceId;
     }
-
-    private String authToken = "";
-
 
     public String getPhoneNumber() {
         return phoneNumber;
@@ -26,8 +27,5 @@ public class CredentialsVO {
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
     }
-
-
-
 
 }

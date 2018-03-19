@@ -35,6 +35,7 @@ import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseActivity;
 import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseFragment;
 import de.schildbach.wallet.wallofcoins.buyingwizard.offer_amount.BuyDashOfferAmountFragment;
 import de.schildbach.wallet.wallofcoins.buyingwizard.order_history.OrderHistoryFragment;
+import de.schildbach.wallet.wallofcoins.buyingwizard.phone_list.PhoneListFragment;
 import de.schildbach.wallet.wallofcoins.buyingwizard.utils.FragmentUtils;
 import de.schildbach.wallet.wallofcoins.buyingwizard.verification_otp.VerifycationOtpFragment;
 import de.schildbach.wallet.wallofcoins.buyingwizard.zip.BuyDashZipFragment;
@@ -56,12 +57,13 @@ public class BuyDashLocationFragment extends BuyDashBaseFragment implements View
 
 
     private View rootView;
-    private Button button_buy_dash_get_location, button_buy_dash_get_location_no, btn_sign_out_woc, btn_order_history_woc;
+    private Button button_buy_dash_get_location, button_buy_dash_get_location_no, btn_sign_out_woc, btn_order_history_woc,
+            btn_sign_in_woc;
     private TextView txtViewLocationMessage, text_message_sign_out;
     private String zipCode, password;
     private double latitude, longitude;
     private final String TAG = "BuyDashOfferAmtFragment";
-    private LinearLayout layout_sign_out, linear_progress;
+    private LinearLayout layout_sign_out, linear_progress, layout_sign_in;
     private CreateDeviceResp createDeviceResp;
 
     @Override
@@ -93,6 +95,8 @@ public class BuyDashLocationFragment extends BuyDashBaseFragment implements View
         layout_sign_out = (LinearLayout) rootView.findViewById(R.id.layout_sign_out);
         linear_progress = (LinearLayout) rootView.findViewById(R.id.linear_progress);
         btn_order_history_woc = (Button) rootView.findViewById(R.id.btn_order_history_woc);
+        layout_sign_in = (LinearLayout) rootView.findViewById(R.id.layout_sign_in);
+        btn_sign_in_woc = (Button) rootView.findViewById(R.id.btn_sign_in_woc);
     }
 
     private void setListeners() {
@@ -100,6 +104,7 @@ public class BuyDashLocationFragment extends BuyDashBaseFragment implements View
         button_buy_dash_get_location_no.setOnClickListener(this);
         btn_sign_out_woc.setOnClickListener(this);
         btn_order_history_woc.setOnClickListener(this);
+        btn_sign_in_woc.setOnClickListener(this);
     }
 
     private void navigateToVerifyOtp(String otp) {
@@ -130,6 +135,9 @@ public class BuyDashLocationFragment extends BuyDashBaseFragment implements View
             case R.id.btn_order_history_woc:
                 navigateToOrderList(false);
                 break;
+            case R.id.btn_sign_in_woc:
+                ((BuyDashBaseActivity) mContext).replaceFragment(new PhoneListFragment(), true, true);
+                break;
         }
     }
 
@@ -146,10 +154,12 @@ public class BuyDashLocationFragment extends BuyDashBaseFragment implements View
         super.onResume();
         if (!TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getAuthToken())) {
             layout_sign_out.setVisibility(View.VISIBLE);
-            text_message_sign_out.setText(mContext.getString(R.string.wallet_is_signed)+" "+
+            layout_sign_in.setVisibility(View.GONE);
+            text_message_sign_out.setText(mContext.getString(R.string.wallet_is_signed) + " " +
                     ((BuyDashBaseActivity) mContext).buyDashPref.getPhone());
         } else {
             layout_sign_out.setVisibility(View.GONE);
+            layout_sign_in.setVisibility(View.VISIBLE);
         }
     }
 
@@ -401,6 +411,7 @@ public class BuyDashLocationFragment extends BuyDashBaseFragment implements View
                                 } else {
                                     Toast.makeText(mContext, R.string.alert_sign_out, Toast.LENGTH_LONG).show();
                                     layout_sign_out.setVisibility(View.GONE);
+                                    layout_sign_in.setVisibility(View.VISIBLE);
                                     //hideViewExcept(binding.layoutLocation);
 
                                 }

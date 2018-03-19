@@ -35,7 +35,7 @@ import de.schildbach.wallet.wallofcoins.api.WallofCoins;
 import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseActivity;
 import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseFragment;
 import de.schildbach.wallet.wallofcoins.buyingwizard.order_history.OrderHistoryFragment;
-import de.schildbach.wallet.wallofcoins.buyingwizard.utils.BuyDashCredentilasPref;
+import de.schildbach.wallet.wallofcoins.buyingwizard.utils.BuyDashPhoneListPref;
 import de.schildbach.wallet.wallofcoins.buyingwizard.utils.FragmentUtils;
 import de.schildbach.wallet.wallofcoins.buyingwizard.verification_otp.VerifycationOtpFragment;
 import de.schildbach.wallet.wallofcoins.response.CheckAuthResp;
@@ -66,7 +66,7 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
     private TextView tv_skip_email;
     private CreateDeviceResp createDeviceResp;
     private CreateHoldResp createHoldResp;
-    private BuyDashCredentilasPref credentilasPref;
+    private BuyDashPhoneListPref credentilasPref;
 
     @Override
     public void onAttach(Context context) {
@@ -89,7 +89,7 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
     }
 
     private void init() {
-        credentilasPref = new BuyDashCredentilasPref(PreferenceManager.getDefaultSharedPreferences(mContext));
+        credentilasPref = new BuyDashPhoneListPref(PreferenceManager.getDefaultSharedPreferences(mContext));
 
         linearProgress = (LinearLayout) rootView.findViewById(R.id.linear_progress);
         linear_email = (LinearLayout) rootView.findViewById(R.id.linear_email);
@@ -141,7 +141,8 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.btn_next_phone:
-                if (isValidPhone()) {
+                hideKeyBoard();
+                if (!offerId.isEmpty()) {
                     country_code = countryData.countries.get(sp_country.getSelectedItemPosition()).code;
                     phone_no = edit_buy_dash_phone.getText().toString().trim();
                     String phone = country_code + edit_buy_dash_phone.getText().toString().trim();
@@ -149,6 +150,9 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                     hideKeyBoard();
                     checkAuth();
 
+                } else {
+                    showToast(getString(R.string.offerid_not_available));
+                    ((BuyDashBaseActivity) mContext).popBackDirect();
                 }
                 break;
 
@@ -419,11 +423,13 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                     if (TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getDeviceId())
                             && !TextUtils.isEmpty(createHoldResp.deviceId)) {
                         ((BuyDashBaseActivity) mContext).buyDashPref.setDeviceId(createHoldResp.deviceId);
+
+                        //added
+                        String phone = country_code + edit_buy_dash_phone.getText().toString().trim();
+                        credentilasPref.addPhone(phone, ((BuyDashBaseActivity) mContext).buyDashPref.getDeviceId());
                     }
                     if (!TextUtils.isEmpty(response.body().token)) {
                         ((BuyDashBaseActivity) mContext).buyDashPref.setAuthToken(createHoldResp.token);
-                        //added
-                        credentilasPref.setCredentials(phone_no, ((BuyDashBaseActivity) mContext).buyDashPref.getAuthToken());
                     }
                     navigateToVerifyOtp(createHoldResp.__PURCHASE_CODE);
                     //hideViewExcept(binding.layoutVerifyOtp);

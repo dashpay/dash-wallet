@@ -5,30 +5,30 @@ import android.util.Log;
 
 import java.util.ArrayList;
 
-import de.schildbach.wallet.wallofcoins.buyingwizard.models.CredentialsVO;
+import de.schildbach.wallet.wallofcoins.buyingwizard.models.PhoneListVO;
 
 /**
  * Created by  on 12-Mar-18.
  */
 
-public class BuyDashCredentilasPref {
+public class BuyDashPhoneListPref {
 
     private final SharedPreferences prefs;
     private static final String CREDENTIALS_LIST = "credentials_list";
 
-    public BuyDashCredentilasPref(final SharedPreferences prefs) {
+    public BuyDashPhoneListPref(final SharedPreferences prefs) {
         this.prefs = prefs;
     }
 
 
-    public void setCredentials(String phone, String deviceToken) {
-        ArrayList<CredentialsVO> voArrayList;
+    public void addPhone(String phone, String deviceId) {
+        ArrayList<PhoneListVO> voArrayList;
 
         try {
-            voArrayList = (ArrayList<CredentialsVO>) ObjectSerializer.deserialize(prefs.getString(CREDENTIALS_LIST,
+            voArrayList = (ArrayList<PhoneListVO>) ObjectSerializer.deserialize(prefs.getString(CREDENTIALS_LIST,
                     ObjectSerializer.serialize(new ArrayList())));
-            CredentialsVO createHoldResp = new CredentialsVO();
-            createHoldResp.setAuthToken(deviceToken);
+            PhoneListVO createHoldResp = new PhoneListVO();
+            createHoldResp.setDeviceId(deviceId);
             createHoldResp.setPhoneNumber(phone);
 
             voArrayList.add(createHoldResp);
@@ -39,8 +39,8 @@ public class BuyDashCredentilasPref {
 
             editor.commit();
 
-            for (CredentialsVO vo : voArrayList) {
-                Log.e("Auth id list", vo.getAuthToken());
+            for (PhoneListVO vo : voArrayList) {
+                Log.e("Auth id list", vo.getDeviceId());
                 Log.e("phone no list", vo.getPhoneNumber());
             }
 
@@ -49,8 +49,8 @@ public class BuyDashCredentilasPref {
         }
     }
 
-    public ArrayList<CredentialsVO> getCredentialsList() {
-        ArrayList<CredentialsVO> voArrayList = new ArrayList<>();
+    public ArrayList<PhoneListVO> getStoredPhoneList() {
+        ArrayList<PhoneListVO> voArrayList = new ArrayList<>();
 
         try {
             voArrayList = (ArrayList) ObjectSerializer.deserialize(prefs.getString(CREDENTIALS_LIST,
@@ -61,18 +61,18 @@ public class BuyDashCredentilasPref {
         return voArrayList;
     }
 
-    public String getAuthTokenFromPhoneNum(String phone) {
+    public String getDeviceIdFromPhone(String phone) {
         String deviceId = "";
-        ArrayList<CredentialsVO> voArrayList;
+        ArrayList<PhoneListVO> voArrayList;
 
         try {
-            voArrayList = (ArrayList<CredentialsVO>) ObjectSerializer.deserialize(prefs.getString(CREDENTIALS_LIST,
+            voArrayList = (ArrayList<PhoneListVO>) ObjectSerializer.deserialize(prefs.getString(CREDENTIALS_LIST,
                     ObjectSerializer.serialize(new ArrayList())));
 
-            for (CredentialsVO vo : voArrayList) {
-                Log.e("Stored phone",vo.getPhoneNumber()+"---"+"Stored token"+vo.getAuthToken());
+            for (PhoneListVO vo : voArrayList) {
+                Log.e("Stored phone",vo.getPhoneNumber()+"---"+"Stored deviceId"+vo.getDeviceId());
                 if (vo.getPhoneNumber().equalsIgnoreCase(phone)) {
-                    deviceId = vo.getAuthToken();
+                    deviceId = vo.getDeviceId();
                     break;
                 }
             }

@@ -7,8 +7,8 @@
 
     <include
         android:id="@+id/layoutToolbar"
-        android:visibility="gone"
-        layout="@layout/layout_buy_dash_top" />
+        layout="@layout/layout_buy_dash_top"
+        android:visibility="gone" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -43,6 +43,52 @@
             android:backgroundTint="#FFF"
             android:text="@string/no_thanks"
             android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout_sign_in"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
+
+        <android.support.v7.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:padding="4dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="4dp"
+            app:cardUseCompatPadding="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="4dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/text_message_sign_in"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:gravity="center_horizontal"
+                    android:text="@string/do_you_already_have_an_order"
+                    android:textSize="16sp" />
+
+                <Button
+                    android:id="@+id/btn_sign_in_woc"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom"
+                    android:layout_marginBottom="@dimen/dimen_8dp"
+                    android:text="@string/action_sign_in_here"
+                    android:textAllCaps="true"
+                    android:textColor="@color/colorPrimary"
+                    android:textStyle="bold"
+                    android:visibility="visible" />
+
+            </LinearLayout>
+        </android.support.v7.widget.CardView>
     </LinearLayout>
 
     <LinearLayout

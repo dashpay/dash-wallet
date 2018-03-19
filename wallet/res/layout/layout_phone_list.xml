@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/recyclerViewPhoneList"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/layoutBottom"
+        android:layout_alignParentTop="true"
+        android:padding="10dp" />
+
+
+    <TextView
+        android:id="@+id/txtViewNoData"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:text="@string/no_phones_available"
+        android:textSize="14sp" />
+
+    <LinearLayout
+        android:id="@+id/layoutBottom"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <Button
+            android:id="@+id/btnSignUp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_above="@+id/btnExistingSignIn"
+            android:backgroundTint="@color/woc_yellow"
+            android:text="@string/wallofcoins_sign_up"
+            android:textSize="14sp" />
+
+        <Button
+            android:id="@+id/btnExistingSignIn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_marginTop="6dp"
+            android:backgroundTint="@color/woc_yellow"
+            android:text="@string/existing_wallofcoins_account_sign_in"
+            android:textSize="14sp" />
+    </LinearLayout>
+</RelativeLayout>

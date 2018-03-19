@@ -41,6 +41,7 @@ public final class WOCConstants {
     public static final String SUPPORT_EMAIL = "support@wallofcoins.com";
     public static final String SEND_EMAIL = "Send email...";
     public static final String WOC_ADDRESS = "WallofCoins.com";
+    public static final String KEY_SIGN_UP_URL = "https://wallofcoins.com/signup/";
 
 
     //buying wizard

@@ -19,4 +19,6 @@ public class GetAuthTokenResp {
     public String token;
     public String authSource;
     public String email;
+    public String deviceId;
+
 }
