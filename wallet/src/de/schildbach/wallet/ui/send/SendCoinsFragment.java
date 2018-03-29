@@ -91,6 +91,7 @@ import de.schildbach.wallet.ui.ProgressDialogFragment;
 import de.schildbach.wallet.ui.ScanActivity;
 import de.schildbach.wallet.ui.TransactionsAdapter;
 import de.schildbach.wallet.ui.UnlockWalletDialogFragment;
+import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.util.Bluetooth;
 import de.schildbach.wallet.util.MonetarySpannable;
 import de.schildbach.wallet.util.Nfc;
@@ -98,7 +99,6 @@ import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
-import android.app.Dialog;
 import android.app.LoaderManager;
 import android.bluetooth.BluetoothAdapter;
 import android.content.AsyncTaskLoader;
@@ -190,6 +190,7 @@ public final class SendCoinsFragment extends Fragment {
     private View privateKeyPasswordViewGroup;
     private EditText privateKeyPasswordView;
     private View privateKeyBadPasswordView;
+    private TextView attemptsRemainingTextView;
     private Button viewGo;
     private Button viewCancel;
     private FloatingActionButton viewFabScanQr;
@@ -210,6 +211,7 @@ public final class SendCoinsFragment extends Fragment {
 
     private Transaction dryrunTransaction;
     private Exception dryrunException;
+    private PinRetryController pinRetryController;
 
     private boolean forceInstantSend = false;
 
@@ -299,6 +301,7 @@ public final class SendCoinsFragment extends Fragment {
         @Override
         public void onTextChanged(final CharSequence s, final int start, final int before, final int count) {
             privateKeyBadPasswordView.setVisibility(View.INVISIBLE);
+            attemptsRemainingTextView.setVisibility(View.GONE);
             updateView();
         }
 
@@ -588,6 +591,7 @@ public final class SendCoinsFragment extends Fragment {
         this.contentResolver = activity.getContentResolver();
         this.loaderManager = getLoaderManager();
         this.fragmentManager = getFragmentManager();
+        this.pinRetryController = new PinRetryController(activity);
     }
 
     @Override
@@ -736,6 +740,7 @@ public final class SendCoinsFragment extends Fragment {
         privateKeyPasswordViewGroup = view.findViewById(R.id.send_coins_private_key_password_group);
         privateKeyPasswordView = (EditText) view.findViewById(R.id.send_coins_private_key_password);
         privateKeyBadPasswordView = view.findViewById(R.id.send_coins_private_key_bad_password);
+        attemptsRemainingTextView = (TextView) view.findViewById(R.id.pin_attempts);
 
         viewGo = (Button) view.findViewById(R.id.send_coins_go);
         viewGo.setOnClickListener(new OnClickListener() {
@@ -1024,6 +1029,8 @@ public final class SendCoinsFragment extends Fragment {
 
     private void handleGo() {
         privateKeyBadPasswordView.setVisibility(View.INVISIBLE);
+        attemptsRemainingTextView.setVisibility(View.GONE);
+        final String pin = privateKeyPasswordView.getText().toString().trim();
 
         if (wallet.isEncrypted()) {
             new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
@@ -1031,9 +1038,9 @@ public final class SendCoinsFragment extends Fragment {
                 protected void onSuccess(final KeyParameter encryptionKey, final boolean wasChanged) {
                     if (wasChanged)
                         application.backupWallet();
-                    signAndSendPayment(encryptionKey);
+                    signAndSendPayment(encryptionKey, pin);
                 }
-            }.deriveKey(wallet, privateKeyPasswordView.getText().toString().trim());
+            }.deriveKey(wallet, pin);
 
             setState(State.DECRYPTING);
         } else {
@@ -1041,7 +1048,7 @@ public final class SendCoinsFragment extends Fragment {
         }
     }
 
-    private void signAndSendPayment(final KeyParameter encryptionKey) {
+    private void signAndSendPayment(final KeyParameter encryptionKey, final String pin) {
         setState(State.SIGNING);
 
         // final payment intent
@@ -1074,6 +1081,9 @@ public final class SendCoinsFragment extends Fragment {
         new SendCoinsOfflineTask(wallet, backgroundHandler) {
             @Override
             protected void onSuccess(final Transaction transaction) {
+                if (pin != null) {
+                    pinRetryController.successfulAttempt();
+                }
                 sentTransaction = transaction;
 
                 setState(State.SENDING);
@@ -1181,7 +1191,10 @@ public final class SendCoinsFragment extends Fragment {
             protected void onInvalidEncryptionKey() {
                 setState(State.INPUT);
 
+                pinRetryController.failedAttempt(pin);
                 privateKeyBadPasswordView.setVisibility(View.VISIBLE);
+                attemptsRemainingTextView.setVisibility(View.VISIBLE);
+                attemptsRemainingTextView.setText(pinRetryController.getRemainingAttemptsMessage());
                 privateKeyPasswordView.requestFocus();
             }
 

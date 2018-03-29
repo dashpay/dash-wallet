@@ -34,11 +34,13 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import org.bitcoinj.wallet.Wallet;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.WalletLock;
+import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet_test.R;
 
@@ -63,9 +65,10 @@ public class UnlockWalletDialogFragment extends DialogFragment {
     private WalletApplication application;
     private Handler backgroundHandler;
     private Wallet wallet;
+    private PinRetryController pinRetryController;
 
     private EditText pinView;
-    private View badPinView;
+    private TextView badPinView;
     private Button unlockButton;
 
     @Override
@@ -75,6 +78,7 @@ public class UnlockWalletDialogFragment extends DialogFragment {
         this.activity = (AbstractWalletActivity) activity;
         this.application = (WalletApplication) activity.getApplication();
         this.wallet = application.getWallet();
+        this.pinRetryController = new PinRetryController(activity);
     }
 
     @Override
@@ -82,7 +86,7 @@ public class UnlockWalletDialogFragment extends DialogFragment {
         final View view = LayoutInflater.from(activity).inflate(R.layout.unlock_wallet_dialog, null);
 
         pinView = (EditText) view.findViewById(R.id.pin);
-        badPinView = view.findViewById(R.id.bad_pin);
+        badPinView = (TextView) view.findViewById(R.id.bad_pin);
         unlockButton = (Button) view.findViewById(R.id.unlock);
 
         pinView.addTextChangedListener(privateKeyPasswordListener);
@@ -140,7 +144,11 @@ public class UnlockWalletDialogFragment extends DialogFragment {
         }
     };
 
-    private void checkPassword(String password) {
+    private void checkPassword(final String password) {
+        if (pinRetryController.isLocked()) {
+            return;
+        }
+
         unlockButton.setEnabled(false);
         unlockButton.setText(getText(R.string.encrypt_keys_dialog_state_decrypting));
         pinView.setEnabled(false);
@@ -148,6 +156,7 @@ public class UnlockWalletDialogFragment extends DialogFragment {
 
             @Override
             protected void onSuccess() {
+                pinRetryController.successfulAttempt();
                 WalletLock.getInstance().setWalletLocked(false);
                 dismissAllowingStateLoss();
             }
@@ -157,6 +166,9 @@ public class UnlockWalletDialogFragment extends DialogFragment {
                 unlockButton.setEnabled(true);
                 unlockButton.setText(getText(R.string.wallet_lock_unlock));
                 pinView.setEnabled(true);
+                pinRetryController.failedAttempt(password);
+                badPinView.setText(getString(R.string.wallet_lock_wrong_pin,
+                        pinRetryController.getRemainingAttemptsMessage()));
                 badPinView.setVisibility(View.VISIBLE);
             }
         }.checkPassword(wallet, password);
