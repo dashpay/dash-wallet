@@ -14,6 +14,7 @@ import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import retrofit2.Call;
+import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.moshi.MoshiConverterFactory;
@@ -24,6 +25,7 @@ public class UpholdClient {
     private final UpholdService service;
 
     private String accessToken;
+    private UpholdCard dashCard;
 
     private Interceptor headerInterceptor = new Interceptor() {
 
@@ -68,8 +70,7 @@ public class UpholdClient {
             public void onResponse(Call<AccessToken> call, Response<AccessToken> response) {
                 if (response.isSuccessful()) {
                     accessToken = response.body().getAccessToken();
-                    getCards(callback);
-
+                    getCards(callback, null);
                 } else {
                     callback.onError(new Exception(response.message()));
                 }
@@ -82,19 +83,22 @@ public class UpholdClient {
         });
     }
 
-    public void getCards(final Callback<String> callback) {
+    public void getCards(final Callback<String> callback, final Callback<UpholdCard> getDashCardCb) {
         service.getCards().enqueue(new retrofit2.Callback<List<UpholdCard>>() {
             @Override
             public void onResponse(Call<List<UpholdCard>> call, Response<List<UpholdCard>> response) {
                 if (response.isSuccessful()) {
-                    UpholdCard dashCard = getDashCard(response.body());
+                    dashCard = getDashCard(response.body());
                     if (dashCard == null) {
-                        createDashCard(callback);
+                        createDashCard(callback, getDashCardCb);
                     } else {
                         if (dashCard.getAddress().getCryptoAddress() == null) {
                             createDashAddress(dashCard.getId());
                         }
                         callback.onSuccess(dashCard.getId());
+                        if (getDashCardCb != null) {
+                            getDashCardCb.onSuccess(dashCard);
+                        }
                         //TODO: Store Dash Card
                         Log.d("Dash Card", dashCard.toString());
                     }
@@ -110,7 +114,7 @@ public class UpholdClient {
         });
     }
 
-    private void createDashCard(final Callback<String> callback) {
+    private void createDashCard(final Callback<String> callback, final Callback<UpholdCard> getDashCardCb) {
         Map<String, String> body = new HashMap<>();
         body.put("label", "Dash Card");
         body.put("currency", "DASH");
@@ -118,9 +122,13 @@ public class UpholdClient {
             @Override
             public void onResponse(Call<UpholdCard> call, Response<UpholdCard> response) {
                 if (response.isSuccessful()) {
-                    String dashCardId = response.body().getId();
+                    dashCard = response.body();
+                    String dashCardId = dashCard.getId();
                     callback.onSuccess(dashCardId);
                     createDashAddress(dashCardId);
+                    if (getDashCardCb != null) {
+                        getDashCardCb.onSuccess(response.body());
+                    }
                 } else {
                     //TODO: Handle error
                 }
@@ -159,9 +167,92 @@ public class UpholdClient {
         return null;
     }
 
+    public void getDashBalance(final Callback<String> callback) {
+        getCards(new Callback<String>() {
+            @Override
+            public void onSuccess(String data) {
+
+            }
+
+            @Override
+            public void onError(Exception e) {
+
+            }
+        }, new Callback<UpholdCard>() {
+            @Override
+            public void onSuccess(UpholdCard data) {
+
+                callback.onSuccess(data.getBalance());
+            }
+
+            @Override
+            public void onError(Exception e) {
+
+            }
+        });
+    }
+
+    public void createDashWithdrawalTrasaction(String amount, String address,
+                                               final Callback<UpholdTransaction> callback) { //TODO: Change amount type?
+        HashMap<String, Object> body = new HashMap<>();
+        HashMap<String, String> denomination = new HashMap<>();
+        denomination.put("amount", amount);
+        denomination.put("currency", "DASH");
+        body.put("denomination", denomination);
+        body.put("destination", address);
+
+        service.createTransaction(dashCard.getId(), body).enqueue(new retrofit2.Callback<UpholdTransaction>() {
+            @Override
+            public void onResponse(Call<UpholdTransaction> call, Response<UpholdTransaction> response) {
+                if (response.isSuccessful()) {
+                    callback.onSuccess(response.body());
+                } else {
+                    callback.onError(new Exception(response.errorBody().toString()));
+                }
+            }
+
+            @Override
+            public void onFailure(Call<UpholdTransaction> call, Throwable t) {
+                callback.onError(new Exception(t));
+            }
+        });
+    }
+
+    public void commitTransaction(String txId, final Callback<Object> callback) {
+        service.commitTransaction(dashCard.getId(), txId).enqueue(new retrofit2.Callback<Object>() {
+            @Override
+            public void onResponse(Call call, Response response) {
+                if (response.isSuccessful()) {
+                    callback.onSuccess(null);
+                } else {
+                    callback.onError(new Exception(""));
+                }
+            }
+
+            @Override
+            public void onFailure(Call call, Throwable t) {
+                callback.onError(new Exception(t));
+            }
+        });
+    }
+
     public interface Callback<T> {
         void onSuccess(T data);
         void onError(Exception e);
     }
+
+    public void setAccessToken(String accessToken) {
+        this.accessToken = accessToken;
+    }
+
+    public String getAccessToken() {
+        return accessToken;
+    }
+
+    public UpholdCard getDashCard() {
+        return dashCard;
+    }
+
+
 
 }

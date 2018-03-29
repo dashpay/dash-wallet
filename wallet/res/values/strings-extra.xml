@@ -35,4 +35,10 @@
 
 	<string name="buy_dash_activity_title">Buy Dash</string>
 
+	<string name="transfer_from_external_account_title">Transfer Dash to this wallet</string>
+	<string name="transfer_from_external_account_message">You have %1$s Dash in your %2$s account. Do you want to transfer this value to this wallet?</string>
+
+	<string name="transfer_from_external_account_confirm_title">Confirm transaction</string>
+	<string name="transfer_from_external_account_confirm_message">You are transferring a total of %1$s Dash (%2$s base amount + %3$s fee) from your %4$s account to this wallet. Do you want to confirm this transaction?</string>
+
 </resources>

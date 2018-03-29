@@ -125,7 +125,7 @@ public class WebViewActivity extends AppCompatActivity {
                 UpholdClient.getInstance().getAccessToken(code, new UpholdClient.Callback<String>() {
                     @Override
                     public void onSuccess(String dashCardId) {
-                        //storeUpholdAccessToken(accessToken);
+                        storeUpholdAccessToken(UpholdClient.getInstance().getAccessToken());
                         String url = "https://sandbox.uphold.com/dashboard/cards/" + dashCardId + "/add";
                         webView.loadUrl(url);
                         //finish();

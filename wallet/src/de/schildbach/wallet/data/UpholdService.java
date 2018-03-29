@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import retrofit2.Call;
+import retrofit2.Response;
 import retrofit2.http.Body;
 import retrofit2.http.Field;
 import retrofit2.http.FormUrlEncoded;
@@ -28,5 +29,11 @@ public interface UpholdService {
 
     @POST("v0/me/cards/{id}/addresses")
     Call<UpholdCryptoCardAddress> createCardAddress(@Path("id") String cardId, @Body Map<String, String> body);
+
+    @POST("v0/me/cards/{cardId}/transactions")
+    Call<UpholdTransaction> createTransaction(@Path("cardId") String cardId, @Body Map<String, Object> body);
+
+    @POST("v0/me/cards/{cardId}/transactions/{txId}/commit")
+    Call<Object> commitTransaction(@Path("cardId") String cardId, @Path("txId") String txId);
 
 }
