@@ -118,17 +118,17 @@ public class WebViewActivity extends AppCompatActivity {
      */
     private boolean handleUrlChange(String url) {
         Log.d("Cookies URL", url);
-        //TODO: Handle Registration User Case
         if (url.contains(Constants.UPHOLD_AUTH_REDIRECT_URL)) {
             Uri uri = Uri.parse(url);
             String code = uri.getQueryParameter("code");
             if (code != null) {
                 UpholdClient.getInstance().getAccessToken(code, new UpholdClient.Callback<String>() {
                     @Override
-                    public void onSuccess(String accessToken) {
-                        storeUpholdAccessToken(accessToken);
-                        Toast.makeText(WebViewActivity.this, accessToken, Toast.LENGTH_SHORT).show();
-                        finish();
+                    public void onSuccess(String dashCardId) {
+                        //storeUpholdAccessToken(accessToken);
+                        String url = "https://sandbox.uphold.com/dashboard/cards/" + dashCardId + "/add";
+                        webView.loadUrl(url);
+                        //finish();
                     }
 
                     @Override

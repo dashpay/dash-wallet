@@ -68,18 +68,8 @@ public class UpholdClient {
             public void onResponse(Call<AccessToken> call, Response<AccessToken> response) {
                 if (response.isSuccessful()) {
                     accessToken = response.body().getAccessToken();
-                    getCards(new Callback<List<UpholdCard>>() {
-                        @Override
-                        public void onSuccess(List<UpholdCard> cards) {
+                    getCards(callback);
 
-                        }
-
-                        @Override
-                        public void onError(Exception e) {
-                            e.printStackTrace();
-                        }
-                    });
-                    callback.onSuccess(accessToken);
                 } else {
                     callback.onError(new Exception(response.message()));
                 }
@@ -92,20 +82,19 @@ public class UpholdClient {
         });
     }
 
-    public void getCards(final Callback<List<UpholdCard>> callback) {
+    public void getCards(final Callback<String> callback) {
         service.getCards().enqueue(new retrofit2.Callback<List<UpholdCard>>() {
             @Override
             public void onResponse(Call<List<UpholdCard>> call, Response<List<UpholdCard>> response) {
                 if (response.isSuccessful()) {
-                    callback.onSuccess(response.body());
-
                     UpholdCard dashCard = getDashCard(response.body());
                     if (dashCard == null) {
-                        createDashCard();
+                        createDashCard(callback);
                     } else {
                         if (dashCard.getAddress().getCryptoAddress() == null) {
                             createDashAddress(dashCard.getId());
                         }
+                        callback.onSuccess(dashCard.getId());
                         //TODO: Store Dash Card
                         Log.d("Dash Card", dashCard.toString());
                     }
@@ -121,7 +110,7 @@ public class UpholdClient {
         });
     }
 
-    private void createDashCard() {
+    private void createDashCard(final Callback<String> callback) {
         Map<String, String> body = new HashMap<>();
         body.put("label", "Dash Card");
         body.put("currency", "DASH");
@@ -129,7 +118,9 @@ public class UpholdClient {
             @Override
             public void onResponse(Call<UpholdCard> call, Response<UpholdCard> response) {
                 if (response.isSuccessful()) {
-                    createDashAddress(response.body().getId());
+                    String dashCardId = response.body().getId();
+                    callback.onSuccess(dashCardId);
+                    createDashAddress(dashCardId);
                 } else {
                     //TODO: Handle error
                 }
