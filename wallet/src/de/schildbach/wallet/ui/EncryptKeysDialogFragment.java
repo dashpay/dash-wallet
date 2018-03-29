@@ -31,6 +31,7 @@ import com.google.common.base.Strings;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.WalletLock;
+import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
@@ -71,6 +72,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
     private AbstractWalletActivity activity;
     private WalletApplication application;
     private Wallet wallet;
+    private PinRetryController pinRetryController;
 
     @Nullable
     private AlertDialog dialog;
@@ -79,6 +81,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
     private EditText oldPasswordView;
     private EditText newPasswordView;
     private View badPasswordView;
+    private TextView attemptsRemainingTextView;
     private TextView passwordStrengthView;
     private CheckBox showView;
     private Button positiveButton, negativeButton;
@@ -99,6 +102,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         @Override
         public void onTextChanged(final CharSequence s, final int start, final int before, final int count) {
             badPasswordView.setVisibility(View.INVISIBLE);
+            attemptsRemainingTextView.setVisibility(View.GONE);
             updateView();
         }
 
@@ -118,6 +122,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         this.activity = (AbstractWalletActivity) activity;
         this.application = (WalletApplication) activity.getApplication();
         this.wallet = application.getWallet();
+        this.pinRetryController = new PinRetryController(getActivity());
     }
 
     @Override
@@ -142,6 +147,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         newPasswordView.setText(null);
 
         badPasswordView = view.findViewById(R.id.encrypt_keys_dialog_bad_password);
+        attemptsRemainingTextView = (TextView) view.findViewById(R.id.pin_attempts);
 
         passwordStrengthView = (TextView) view.findViewById(R.id.encrypt_keys_dialog_password_strength);
 
@@ -261,10 +267,15 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                                     wallet.decrypt(oldKey);
 
                                     state = State.DONE;
+                                    pinRetryController.successfulAttempt();
                                     log.info("wallet successfully decrypted");
                                 } catch (final KeyCrypterException x) {
                                     log.info("wallet decryption failed: " + x.getMessage());
+                                    pinRetryController.failedAttempt(oldPassword);
                                     badPasswordView.setVisibility(View.VISIBLE);
+                                    attemptsRemainingTextView.setVisibility(View.VISIBLE);
+                                    attemptsRemainingTextView.setText(pinRetryController.getRemainingAttemptsMessage());
+
                                     state = State.INPUT;
                                     oldPasswordView.requestFocus();
                                 }
