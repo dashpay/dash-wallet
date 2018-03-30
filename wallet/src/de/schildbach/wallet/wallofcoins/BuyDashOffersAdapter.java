@@ -13,8 +13,6 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.TextView;
 
-import com.bumptech.glide.Glide;
-
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.List;
@@ -35,12 +33,12 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
     private String offerAmount;
     private boolean incremented;
 
-    public BuyDashOffersAdapter(Context context, GetOffersResp getOffersResp,String offerAmount,
+    public BuyDashOffersAdapter(Context context, GetOffersResp getOffersResp, String offerAmount,
                                 AdapterView.OnItemSelectedListener onItemSelectedListener) {
         this.context = context;
         this.singleDepositBeenList = getOffersResp.singleDeposit;
         this.doubleDeposit = getOffersResp.doubleDeposit;
-        if(getOffersResp.multipleBanks!=null && doubleDeposit!=null)
+        if (getOffersResp.multipleBanks != null && doubleDeposit != null)
             this.doubleDeposit.addAll(getOffersResp.multipleBanks);
         this.onItemSelectedListener = onItemSelectedListener;
         this.incremented = getOffersResp.incremented;
@@ -76,29 +74,17 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
             vholder.binding.setItem(bean);
 
             if (getNumAmount(bean.deposit.amount) >= 200) {
-                vholder.binding.tvItrmOffer2.setText(context.getString(R.string.dotUnicode, bean.amount.dots, GenericUtils.currencySymbol(bean.deposit.currency), getNumAmount(bean.deposit.amount) / getNumAmount(bean.amount.DASH)));
+                vholder.binding.tvItrmOffer2.setText(context.getString(R.string.dotUnicode, bean.amount.dots,
+                        GenericUtils.currencySymbol(bean.deposit.currency),
+                        getNumAmount(bean.deposit.amount) / getNumAmount(bean.amount.DASH)));
             } else {
                 vholder.binding.tvItrmOffer2.setText(context.getString(R.string.dotUnicodeNoRate, bean.amount.dots));
             }
 
-            if(incremented){
+            if (incremented) {
                 vholder.binding.txtAmount.setVisibility(View.VISIBLE);
             } else {
                 vholder.binding.txtAmount.setVisibility(View.INVISIBLE);
-            }
-            if (bean.bankLogo != null
-                    && !bean.bankLogo.equals("")) {
-                Glide.with(context)
-                        .load(bean.bankLogo)
-                        .placeholder(R.drawable.ic_account_balance_black_24dp)
-                        .error(R.drawable.ic_account_balance_black_24dp)
-                        .into(vholder.binding.ivOffer);
-            } else {
-                Glide.with(context)
-                        .load(bean.bankIcon)
-                        .placeholder(R.drawable.ic_account_balance_black_24dp)
-                        .error(R.drawable.ic_account_balance_black_24dp)
-                        .into(vholder.binding.ivOffer);
             }
 
 
@@ -151,21 +137,6 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
             final VHolderDouble1 vholder = (VHolderDouble1) holder;
             vholder.binding.setItem(bean);
 
-            if (bean.bankLogo != null
-                    && !bean.bankLogo.equals("")) {
-                Glide.with(context)
-                        .load(bean.bankLogo)
-                        .placeholder(R.drawable.ic_account_balance_black_24dp)
-                        .error(R.drawable.ic_account_balance_black_24dp)
-                        .into(vholder.binding.ivOffer);
-            } else {
-                Glide.with(context)
-                        .load(bean.bankIcon)
-                        .placeholder(R.drawable.ic_account_balance_black_24dp)
-                        .error(R.drawable.ic_account_balance_black_24dp)
-                        .into(vholder.binding.ivOffer);
-            }
-
             if (getNumAmount(bean.deposit.amount) >= 200) {
                 vholder.binding.tvItrmOffer2.setText(context.getString(R.string.dotUnicode, bean.amount.dots, GenericUtils.currencySymbol(bean.deposit.currency), getNumAmount(bean.deposit.amount) / getNumAmount(bean.amount.DASH)));
             } else {
@@ -205,7 +176,7 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
                 }
             } else {
                 more.setText("Best Value Options: More Dash for $" +
-                        String.format("%.2f",Double.parseDouble(offerAmount)) + " Cash");
+                        String.format("%.2f", Double.parseDouble(offerAmount)) + " Cash");
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 more.setTextColor(context.getResources().getColor(R.color.colorPrimary, context.getTheme()));
@@ -299,4 +270,5 @@ public class BuyDashOffersAdapter extends RecyclerView.Adapter<RecyclerView.View
             this.binding = binding;
         }
     }
+
 }

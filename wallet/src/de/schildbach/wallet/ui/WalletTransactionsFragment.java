@@ -91,7 +91,7 @@ import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Qr;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet.util.WalletUtils;
-import de.schildbach.wallet.wallofcoins.buydash.BuyDashActivity;
+import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseActivity;
 import de.schildbach.wallet_test.R;
 
 /**
@@ -452,7 +452,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
                 @Override
                 public void onClick(View v) {
-                    startActivity(new Intent(activity, BuyDashActivity.class));
+                    //startActivity(new Intent(activity, BuyDashActivity.class));
+                    startActivity(new Intent(activity, BuyDashBaseActivity.class));
                 }
             });
         } else {

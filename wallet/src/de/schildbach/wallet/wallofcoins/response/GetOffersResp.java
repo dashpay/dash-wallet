@@ -148,7 +148,7 @@ public class GetOffersResp {
 
             for (String s : args) {
                 try {
-                    amount += NumberFormat.getNumberInstance(Locale.getDefault()).parse(s).doubleValue();
+                    amount += NumberFormat.getNumberInstance(Locale.getDefault()).parse(s.replaceAll(",","")).doubleValue();
                 } catch (ParseException e) {
                     e.printStackTrace();
                 }
