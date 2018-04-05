@@ -232,6 +232,6 @@ public final class Constants {
 
     //Wallet Lock Preferences
     public static final String WALLET_LOCK_PREFS_NAME = "wallet_lock_prefs";
-    public static final String WALLET_LOCK_PREFS_INITAL_DIALOG_DISMISSED = "wallet_lock_prefs_dialog_dismissed";
+    public static final String WALLET_LOCK_PREFS_INITIAL_DIALOG_DISMISSED = "wallet_lock_prefs_dialog_dismissed";
 
 }

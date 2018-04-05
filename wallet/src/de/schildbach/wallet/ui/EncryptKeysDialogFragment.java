@@ -222,23 +222,30 @@ public class EncryptKeysDialogFragment extends DialogFragment {
     }
 
     private void updateEncryptionDialogPreferences() {
-        SharedPreferences prefs = getActivity().getSharedPreferences(Constants.WALLET_LOCK_PREFS_NAME,
-                Context.MODE_PRIVATE);
-        prefs.edit().putBoolean(Constants.WALLET_LOCK_PREFS_INITAL_DIALOG_DISMISSED, true).apply();
+        if (getActivity() != null) {
+            SharedPreferences prefs = getActivity().getSharedPreferences(Constants.WALLET_LOCK_PREFS_NAME,
+                    Context.MODE_PRIVATE);
+            prefs.edit().putBoolean(Constants.WALLET_LOCK_PREFS_INITIAL_DIALOG_DISMISSED, true).apply();
+        }
     }
 
     private void handleGo() {
         final String oldPassword = Strings.emptyToNull(oldPasswordView.getText().toString().trim());
         final String newPassword = Strings.emptyToNull(newPasswordView.getText().toString().trim());
 
-        if (oldPassword != null && newPassword != null)
+        if (oldPassword != null && newPassword == null) {
+            state = State.INPUT;
+            newPasswordView.requestFocus();
+            return;
+        }
+
+        if (oldPassword != null) {
             log.info("changing spending password");
-        else if (newPassword != null) {
+        } else if (newPassword != null) {
             log.info("setting spending password");
-        } else if (oldPassword != null)
-            log.info("removing spending password");
-        else
+        } else {
             throw new IllegalStateException();
+        }
 
         if (wallet.isEncrypted() && pinRetryController.isLocked()) {
             return;
@@ -246,6 +253,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
 
         state = State.CRYPTING;
         updateView();
+
 
         backgroundHandler.post(new Runnable() {
             @Override
@@ -256,7 +264,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
 
                 // For the new key, we create a new key crypter according to the desired parameters.
                 final KeyCrypterScrypt keyCrypter = new KeyCrypterScrypt(application.scryptIterationsTarget());
-                final KeyParameter newKey = newPassword != null ? keyCrypter.deriveKey(newPassword) : null;
+                final KeyParameter newKey = keyCrypter.deriveKey(newPassword);
 
                 handler.post(new Runnable() {
                     @Override
@@ -354,17 +362,17 @@ public class EncryptKeysDialogFragment extends DialogFragment {
 
         if (state == State.INPUT) {
             if (wallet.isEncrypted()) {
-                positiveButton.setText(hasPassword ? R.string.button_edit : R.string.button_remove);
-                positiveButton.setEnabled(hasOldPassword);
+                positiveButton.setText(R.string.button_edit);
+                positiveButton.setEnabled(hasOldPassword && hasPassword);
             } else {
                 positiveButton.setText(R.string.button_set);
                 positiveButton.setEnabled(hasPassword);
             }
 
+
             negativeButton.setEnabled(true);
         } else if (state == State.CRYPTING) {
-            positiveButton.setText(newPasswordView.getText().toString().trim().isEmpty()
-                    ? R.string.encrypt_keys_dialog_state_decrypting : R.string.encrypt_keys_dialog_state_encrypting);
+            positiveButton.setText(R.string.encrypt_keys_dialog_state_encrypting);
             positiveButton.setEnabled(false);
             negativeButton.setEnabled(false);
         } else if (state == State.DONE) {

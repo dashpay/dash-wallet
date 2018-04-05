@@ -24,8 +24,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
@@ -34,8 +32,6 @@ import java.util.List;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
-import org.bitcoinj.crypto.MnemonicCode;
-import org.bitcoinj.crypto.MnemonicException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 
@@ -55,7 +51,6 @@ import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.Io;
-import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -64,6 +59,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnCancelListener;
 import android.content.DialogInterface.OnClickListener;
@@ -952,6 +948,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     public void restoreWallet(final Wallet wallet) throws IOException {
         application.replaceWallet(wallet);
+        getSharedPreferences(Constants.WALLET_LOCK_PREFS_NAME, Context.MODE_PRIVATE).edit().clear().commit();
 
         config.disarmBackupReminder();
 
@@ -970,7 +967,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void checkWalletEncryptionDialog() {
         boolean initialEncryptionDialogDismissed = walletLockPreferences
-                .getBoolean(Constants.WALLET_LOCK_PREFS_INITAL_DIALOG_DISMISSED, false);
+                .getBoolean(Constants.WALLET_LOCK_PREFS_INITIAL_DIALOG_DISMISSED, false);
 
         if (!wallet.isEncrypted() && !initialEncryptionDialogDismissed) {
             handleEncryptKeys();
