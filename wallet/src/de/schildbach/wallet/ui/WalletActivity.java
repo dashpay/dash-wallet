@@ -403,6 +403,20 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     public void handleBackupWallet() {
+        //Only allow to backup when wallet is unlocked
+        final WalletLock walletLock = WalletLock.getInstance();
+        if (WalletLock.getInstance().isWalletLocked(wallet)) {
+            UnlockWalletDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
+                @Override
+                public void onDismiss(DialogInterface dialog) {
+                    if (!walletLock.isWalletLocked(wallet)) {
+                        handleBackupWallet();
+                    }
+                }
+            });
+            return;
+        }
+
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
             BackupWalletDialogFragment.show(getFragmentManager());

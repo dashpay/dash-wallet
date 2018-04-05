@@ -240,6 +240,10 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         else
             throw new IllegalStateException();
 
+        if (wallet.isEncrypted() && pinRetryController.isLocked()) {
+            return;
+        }
+
         state = State.CRYPTING;
         updateView();
 

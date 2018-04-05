@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet_test.R;
 
 import static java.lang.Math.pow;
@@ -103,12 +104,27 @@ public class PinRetryController {
         dialogBuilder.setNegativeButton(R.string.wallet_lock_reset, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-
+                showResetWalletDialog();
             }
         });
         dialogBuilder.setPositiveButton(android.R.string.ok, null);
-        dialogBuilder.create().show();
+        dialogBuilder.show();
 
+    }
+
+    private void showResetWalletDialog() {
+        AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(context);
+        dialogBuilder.setTitle(R.string.wallet_lock_reset_wallet_title);
+        dialogBuilder.setMessage(R.string.wallet_lock_reset_wallet_message);
+        //Inverting dialog answers to prevent accidental wallet reset
+        dialogBuilder.setNegativeButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                WalletApplication.getInstance().clearDataAndExit();
+            }
+        });
+        dialogBuilder.setPositiveButton(android.R.string.no, null);
+        dialogBuilder.show();
     }
 
     public String getRemainingAttemptsMessage() {
