@@ -1032,6 +1032,10 @@ public final class SendCoinsFragment extends Fragment {
         attemptsRemainingTextView.setVisibility(View.GONE);
         final String pin = privateKeyPasswordView.getText().toString().trim();
 
+        if (pinRetryController.isLocked()) {
+            return;
+        }
+
         if (wallet.isEncrypted()) {
             new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
                 @Override
@@ -1044,7 +1048,7 @@ public final class SendCoinsFragment extends Fragment {
 
             setState(State.DECRYPTING);
         } else {
-            signAndSendPayment(null);
+            signAndSendPayment(null, pin);
         }
     }
 
