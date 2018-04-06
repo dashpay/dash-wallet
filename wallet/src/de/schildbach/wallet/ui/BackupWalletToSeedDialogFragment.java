@@ -48,6 +48,7 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.send.DecryptSeedTask;
 import de.schildbach.wallet.ui.send.DeriveKeyTask;
 import de.schildbach.wallet.util.KeyboardUtil;
@@ -68,6 +69,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment {
     private AbstractWalletActivity activity;
     private WalletApplication application;
     private Wallet wallet;
+    private PinRetryController pinRetryController;
 
     @Nullable
     private AlertDialog dialog;
@@ -75,7 +77,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment {
     private TextView seedView;
     private View privateKeyPasswordViewGroup;
     private EditText privateKeyPasswordView;
-    private View privateKeyBadPasswordView;
+    private TextView privateKeyBadPasswordView;
     private View seedViewGroup;
     private Handler backgroundHandler;
     private HandlerThread backgroundThread;
@@ -91,6 +93,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment {
         this.activity = (AbstractWalletActivity) activity;
         this.application = (WalletApplication) activity.getApplication();
         this.wallet = application.getWallet();
+        this.pinRetryController = new PinRetryController(activity);
     }
 
     @Override
@@ -100,9 +103,8 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment {
         seedView = (TextView) view.findViewById(R.id.backup_wallet_dialog_seed);
         privateKeyPasswordViewGroup = view.findViewById(R.id.backup_wallet_seed_private_key_password_group);
         privateKeyPasswordView = (EditText) view.findViewById(R.id.backup_wallet_seed_private_key_password);
-        privateKeyBadPasswordView = view.findViewById(R.id.backup_wallet_seed_private_key_bad_password);
+        privateKeyBadPasswordView = (TextView) view.findViewById(R.id.backup_wallet_seed_private_key_bad_password);
         showMnemonicSeedButton = (Button) view.findViewById(R.id.backup_wallet_seed_private_key_enter);
-
         seedViewGroup = view.findViewById(R.id.backup_wallet_seed_group);
 
         privateKeyPasswordViewGroup.setVisibility(wallet.isEncrypted() ? View.VISIBLE : View.GONE);
@@ -142,31 +144,6 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment {
         super.onDismiss(dialog);
     }
 
-    private void handleGo() {
-        /*final String password = seedView.getText().toString().trim();
-        final String passwordAgain = passwordAgainView.getText().toString().trim();
-
-        if (passwordAgain.equals(password)) {
-            seedView.setText(null); // get rid of it asap
-            passwordAgainView.setText(null);
-
-            backupWallet(password);
-
-            dismiss();
-
-            application.getConfiguration().disarmBackupReminder();
-        } else {
-            passwordMismatchView.setVisibility(View.VISIBLE);
-        }*/
-    }
-
-    private boolean isPasswordPlausible() {
-        if (!wallet.isEncrypted())
-            return true;
-
-        return !privateKeyPasswordView.getText().toString().trim().isEmpty();
-    }
-
     private final TextWatcher privateKeyPasswordListener = new TextWatcher() {
         @Override
         public void onTextChanged(final CharSequence s, final int start, final int before, final int count) {
@@ -183,12 +160,6 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment {
         }
     };
 
-    private void updateView() {
-        //if(isPasswordPlausible()) {
-        //handleDecrypt();
-        //}
-    }
-
     private void showMnemonicSeed(final DeterministicSeed seed) {
         StringBuilder wordlist = new StringBuilder(255);
 
@@ -202,39 +173,50 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment {
     }
 
     private void handleDecryptPIN() {
-
-
         if (wallet.isEncrypted()) {
+
+            if (pinRetryController.isLocked()) {
+                return;
+            }
+
             showMnemonicSeedButton.setEnabled(false);
             showMnemonicSeedButton.setText(getText(R.string.encrypt_keys_dialog_state_decrypting));
             privateKeyPasswordView.setEnabled(false);
+
+            final String pin = privateKeyPasswordView.getText().toString().trim();
+
             new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
                 @Override
                 protected void onSuccess(final KeyParameter encryptionKey, final boolean wasChanged) {
                     privateKeyBadPasswordView.setVisibility(View.INVISIBLE);
-                    handleDecryptSeed(encryptionKey);
+                    handleDecryptSeed(encryptionKey, pin);
                 }
-            }.deriveKey(wallet, privateKeyPasswordView.getText().toString().trim());
+            }.deriveKey(wallet, pin);
 
         } else {
 
         }
     }
 
-    private void handleDecryptSeed(final KeyParameter encryptionKey) {
-
-
+    private void handleDecryptSeed(final KeyParameter encryptionKey, final String pin) {
         if (wallet.isEncrypted()) {
+            if (pinRetryController.isLocked()) {
+                return;
+            }
             showMnemonicSeedButton.setEnabled(false);
             new DecryptSeedTask(backgroundHandler) {
                 @Override
                 protected void onSuccess(final DeterministicSeed seed) {
+                    pinRetryController.successfulAttempt();
                     showPasswordViewGroup(false);
                     showMnemonicSeed(seed);
                 }
 
                 protected void onBadPassphrase() {
+                    pinRetryController.failedAttempt(pin);
                     privateKeyBadPasswordView.setVisibility(View.VISIBLE);
+                    privateKeyBadPasswordView.setText(getString(R.string.wallet_lock_wrong_pin,
+                            pinRetryController.getRemainingAttemptsMessage()));
                     privateKeyPasswordView.setEnabled(true);
                     privateKeyPasswordView.requestFocus();
                     showMnemonicSeedButton.setText(getText(R.string.backup_wallet_to_seed_show_recovery_phrase));
