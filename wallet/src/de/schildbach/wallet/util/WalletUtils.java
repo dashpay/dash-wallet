@@ -46,6 +46,7 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.MnemonicCode;
 import org.bitcoinj.crypto.MnemonicException;
 import org.bitcoinj.script.Script;
@@ -57,9 +58,13 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
 
 import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.ui.EncryptNewKeyChainFragment;
 
+import android.provider.ContactsContract;
+import android.app.FragmentManager;
 import android.text.Editable;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
@@ -182,8 +187,6 @@ public class WalletUtils {
         try {
             final Wallet wallet = new WalletProtobufSerializer().readWallet(is, true, null);
 
-            wallet.addKeyChain(DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH);
-
             if (!wallet.getParams().equals(expectedNetworkParameters))
                 throw new IOException("bad wallet backup network parameters: " + wallet.getParams().getId());
             if (!wallet.isConsistent())
@@ -230,7 +233,6 @@ public class WalletUtils {
 
         // create non-HD wallet
         final KeyChainGroup group = new KeyChainGroup(expectedNetworkParameters);
-        group.addAndActivateHDChain(new DeterministicKeyChain(group.getActiveKeyChain().getSeed(), DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH));
 
         group.importKeys(WalletUtils.readKeys(keyReader, expectedNetworkParameters));
         return new Wallet(expectedNetworkParameters, group);
@@ -358,5 +360,15 @@ public class WalletUtils {
 
     public static boolean isPayToManyTransaction(final Transaction transaction) {
         return transaction.getOutputs().size() > 20;
+    }
+
+    public static void upgradeWalletKeyChains(FragmentManager fm, Wallet wallet, ImmutableList<ChildNumber> path) {
+        if (!wallet.hasKeyChain(path)) {
+            if (wallet.isEncrypted()) {
+                EncryptNewKeyChainFragment.show(fm, path);
+            } else {
+                wallet.addKeyChain(path);
+            }
+        }
     }
 }

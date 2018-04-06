@@ -32,6 +32,7 @@ import java.util.List;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 
@@ -538,6 +539,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     restorePrivateKeysFromBase58(file);
                 else if (Crypto.OPENSSL_FILE_FILTER.accept(file))
                     restoreWalletFromEncrypted(file, password);
+
+                WalletUtils.upgradeWalletKeyChains(getFragmentManager(), wallet, DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH);
+                application.saveWallet();
             }
         });
         dialog.setNegativeButton(R.string.button_cancel, new OnClickListener() {
@@ -675,6 +679,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             public void onClick(final DialogInterface dialog, final int id) {
                 startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
                 finish();
+                finish();
             }
         });
         dialog.setNegativeButton(R.string.button_dismiss, null);
@@ -682,6 +687,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void checkAlerts() {
+
+        WalletUtils.upgradeWalletKeyChains(getFragmentManager(), wallet, DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH);
+        application.saveWallet();
+
         final PackageInfo packageInfo = getWalletApplication().packageInfo();
         final int versionNameSplit = packageInfo.versionName.indexOf('-');
         final HttpUrl.Builder url = HttpUrl

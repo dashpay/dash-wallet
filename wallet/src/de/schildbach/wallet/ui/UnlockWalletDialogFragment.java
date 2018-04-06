@@ -61,15 +61,15 @@ public class UnlockWalletDialogFragment extends DialogFragment {
         dialogFragment.show(fm, FRAGMENT_TAG);
     }
 
-    private AbstractWalletActivity activity;
-    private WalletApplication application;
-    private Handler backgroundHandler;
-    private Wallet wallet;
-    private PinRetryController pinRetryController;
+    protected AbstractWalletActivity activity;
+    protected WalletApplication application;
+    protected Handler backgroundHandler;
+    protected Wallet wallet;
+    protected PinRetryController pinRetryController;
 
-    private EditText pinView;
-    private TextView badPinView;
-    private Button unlockButton;
+    protected EditText pinView;
+    protected TextView badPinView;
+    protected Button unlockButton;
 
     @Override
     public void onAttach(final Activity activity) {
@@ -144,7 +144,7 @@ public class UnlockWalletDialogFragment extends DialogFragment {
         }
     };
 
-    private void checkPassword(final String password) {
+    protected void checkPassword(final String password) {
         if (pinRetryController.isLocked()) {
             return;
         }
