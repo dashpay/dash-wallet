@@ -323,7 +323,7 @@ public class WalletApplication extends Application implements Application.Activi
                 throw new Error("bad wallet network parameters: " + wallet.getParams().getId());
         } else {
             wallet = new Wallet(Constants.NETWORK_PARAMETERS);
-            wallet.addKeyChain(DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH);
+            wallet.addKeyChain(Constants.BIP44_PATH);
 
             saveWallet();
             backupWallet();
@@ -345,7 +345,7 @@ public class WalletApplication extends Application implements Application.Activi
             if (!wallet.isConsistent())
                 throw new Error("inconsistent backup");
 
-            wallet.addKeyChain(DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH);
+            wallet.addKeyChain(Constants.BIP44_PATH);
 
             resetBlockchain();
 

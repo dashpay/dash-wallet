@@ -58,13 +58,9 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 
 import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableList;
 
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.ui.EncryptNewKeyChainFragment;
 
-import android.provider.ContactsContract;
-import android.app.FragmentManager;
 import android.text.Editable;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
@@ -204,7 +200,7 @@ public class WalletUtils {
             DeterministicSeed seed =  new DeterministicSeed(words, null,"", Constants.EARLIEST_HD_SEED_CREATION_TIME);
             KeyChainGroup group = new KeyChainGroup(Constants.NETWORK_PARAMETERS, seed);
 
-            group.addAndActivateHDChain(new DeterministicKeyChain(seed, DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH));
+            group.addAndActivateHDChain(new DeterministicKeyChain(seed, Constants.BIP44_PATH));
 
             final Wallet wallet = new Wallet(Constants.NETWORK_PARAMETERS, group);//new WalletProtobufSerializer().readWallet(is, true, null);
 
@@ -360,15 +356,5 @@ public class WalletUtils {
 
     public static boolean isPayToManyTransaction(final Transaction transaction) {
         return transaction.getOutputs().size() > 20;
-    }
-
-    public static void upgradeWalletKeyChains(FragmentManager fm, Wallet wallet, ImmutableList<ChildNumber> path) {
-        if (!wallet.hasKeyChain(path)) {
-            if (wallet.isEncrypted()) {
-                EncryptNewKeyChainFragment.show(fm, path);
-            } else {
-                wallet.addKeyChain(path);
-            }
-        }
     }
 }

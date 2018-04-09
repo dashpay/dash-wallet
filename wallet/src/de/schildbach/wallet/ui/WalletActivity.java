@@ -32,11 +32,13 @@ import java.util.List;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
 import com.squareup.okhttp.HttpUrl;
 
 import de.schildbach.wallet.Configuration;
@@ -52,6 +54,7 @@ import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.Io;
+import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -60,6 +63,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.FragmentManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnCancelListener;
@@ -214,6 +218,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @Override
     protected void onStart() {
         super.onStart();
+        //Add BIP44 support if missing
+        upgradeWalletKeyChains(Constants.BIP44_PATH);
+        //Add spending PIN if missing
         checkWalletEncryptionDialog();
     }
 
@@ -540,8 +547,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 else if (Crypto.OPENSSL_FILE_FILTER.accept(file))
                     restoreWalletFromEncrypted(file, password);
 
-                WalletUtils.upgradeWalletKeyChains(getFragmentManager(), wallet, DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH);
-                application.saveWallet();
+                upgradeWalletKeyChains(Constants.BIP44_PATH);
             }
         });
         dialog.setNegativeButton(R.string.button_cancel, new OnClickListener() {
@@ -687,9 +693,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void checkAlerts() {
-
-        WalletUtils.upgradeWalletKeyChains(getFragmentManager(), wallet, DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH);
-        application.saveWallet();
 
         final PackageInfo packageInfo = getWalletApplication().packageInfo();
         final int versionNameSplit = packageInfo.versionName.indexOf('-');
@@ -1062,6 +1065,33 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private void handleDisconnect() {
         getWalletApplication().stopBlockchainService();
         finish();
+    }
+
+    public void upgradeWalletKeyChains(ImmutableList<ChildNumber> path) {
+
+        if (!wallet.hasKeyChain(path)) {
+            if (wallet.isEncrypted()) {
+                EncryptNewKeyChainDialogFragment.show(getFragmentManager(), path);
+            } else {
+                //
+                // Tell the user that the wallet is being upgraded (BIP44)
+                // and they will have to enter a PIN.  The PIN will be requested
+                // a separate method.
+                //
+                final DialogBuilder dialogBuilder = new DialogBuilder(this);
+                dialogBuilder.setTitle(R.string.encrypt_new_key_chain_dialog_title);
+
+                String message = getString(R.string.encrypt_new_key_chain_dialog_message) + "\n\n" +
+                        getString(R.string.pin_code_required_dialog_message);
+                dialogBuilder.setMessage(message);
+                dialogBuilder.setCancelable(false);
+                dialogBuilder.setPositiveButton(android.R.string.ok, null);
+
+                dialogBuilder.show();
+                wallet.addKeyChain(path);
+            }
+            application.saveWallet();
+        }
     }
 
 }

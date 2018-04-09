@@ -1,6 +1,5 @@
 package de.schildbach.wallet.ui;
 
-import android.app.Activity;
 import android.app.Dialog;
 import android.app.FragmentManager;
 import android.content.DialogInterface;
@@ -22,24 +21,38 @@ import de.schildbach.wallet_test.R;
  * Created by Hash Engineering on 4/5/2018.
  */
 
-public class EncryptNewKeyChainFragment extends UnlockWalletDialogFragment {
-    private static final String FRAGMENT_TAG = EncryptNewKeyChainFragment.class.getName();
+public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment {
+    private static final String FRAGMENT_TAG = EncryptNewKeyChainDialogFragment.class.getName();
 
-    private DialogInterface.OnDismissListener onDismissListener;
     private ImmutableList<ChildNumber> path;
 
     public static void show(FragmentManager fm, ImmutableList<ChildNumber> path) {
-        EncryptNewKeyChainFragment dialogFragment = new EncryptNewKeyChainFragment();
-        dialogFragment.path = path;
-        dialogFragment.show(fm, FRAGMENT_TAG);
+        show(fm, null, path);
     }
 
     public static void show(FragmentManager fm, DialogInterface.OnDismissListener onDismissListener, ImmutableList<ChildNumber> path) {
-        EncryptNewKeyChainFragment dialogFragment = new EncryptNewKeyChainFragment();
+        EncryptNewKeyChainDialogFragment dialogFragment = new EncryptNewKeyChainDialogFragment();
         dialogFragment.path = path;
         dialogFragment.onDismissListener = onDismissListener;
         dialogFragment.show(fm, FRAGMENT_TAG);
     }
+
+    public EncryptNewKeyChainDialogFragment()
+    {
+        this.dialogTitle = R.string.encrypt_new_key_chain_dialog_title;
+        this.dialogFragmentId = R.layout.encrypt_new_key_chain_dialog;
+    }
+
+    public Dialog onCreateDialog(final Bundle savedInstanceState)
+    {
+        Dialog dialog = super.onCreateDialog(savedInstanceState);
+        String message = getString(R.string.encrypt_new_key_chain_dialog_message) + "\n\n" +
+                getString(R.string.encrypt_new_key_chain_enter_pin_dialog_message) + "\n\n" +
+                getString(R.string.pin_code_required_dialog_message);
+        messageTextView.setText(message);
+        return dialog;
+    }
+
     @Override
     protected void checkPassword(final String password) {
         if (pinRetryController.isLocked()) {
