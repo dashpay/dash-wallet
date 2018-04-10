@@ -117,7 +117,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private WalletApplication application;
     private Configuration config;
     private Wallet wallet;
-    private SharedPreferences walletLockPreferences;
 
     private DrawerLayout viewDrawer;
     private View viewFakeForSafetySubmenu;
@@ -135,7 +134,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         application = getWalletApplication();
         config = application.getConfiguration();
         wallet = application.getWallet();
-        walletLockPreferences = getSharedPreferences(Constants.WALLET_LOCK_PREFS_NAME, MODE_PRIVATE);
 
         setContentView(R.layout.wallet_activity_onepane_vertical);
 
@@ -976,10 +974,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void checkWalletEncryptionDialog() {
-        boolean initialEncryptionDialogDismissed = walletLockPreferences
-                .getBoolean(Constants.WALLET_LOCK_PREFS_INITIAL_DIALOG_DISMISSED, false);
-
-        if (!wallet.isEncrypted() && !initialEncryptionDialogDismissed) {
+        if (!wallet.isEncrypted()) {
             handleEncryptKeys();
         }
     }
