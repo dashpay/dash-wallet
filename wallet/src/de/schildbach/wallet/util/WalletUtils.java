@@ -202,7 +202,7 @@ public class WalletUtils {
 
             group.addAndActivateHDChain(new DeterministicKeyChain(seed, Constants.BIP44_PATH));
 
-            final Wallet wallet = new Wallet(Constants.NETWORK_PARAMETERS, group);//new WalletProtobufSerializer().readWallet(is, true, null);
+            final Wallet wallet = new Wallet(Constants.NETWORK_PARAMETERS, group);
 
             if (!wallet.getParams().equals(expectedNetworkParameters))
                 throw new IOException("bad wallet backup network parameters: " + wallet.getParams().getId());
@@ -210,13 +210,7 @@ public class WalletUtils {
                 throw new IOException("inconsistent wallet backup");
 
             return wallet;
-        } /*catch (final MnemonicException.MnemonicLengthException x) {
-            throw new IOException("Mnemonic Seed has the incorrect number of words", x);
-        } catch (final MnemonicException.MnemonicChecksumException x) {
-            throw new IOException("Mnemonic Seed has the incorrect checksum", x);
-        } catch (final MnemonicException.MnemonicWordException x) {
-            throw new IOException("Mnemonic Seed has an invalid word", x);
-        }*/
+        }
         finally {
 
         }
