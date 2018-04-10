@@ -218,10 +218,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @Override
     protected void onStart() {
         super.onStart();
-        //Add BIP44 support if missing
+        //Add BIP44 support and PIN if missing
         upgradeWalletKeyChains(Constants.BIP44_PATH);
-        //Add spending PIN if missing
-        checkWalletEncryptionDialog();
     }
 
     @Override
@@ -1067,16 +1065,20 @@ public final class WalletActivity extends AbstractBindServiceActivity
         finish();
     }
 
-    public void upgradeWalletKeyChains(ImmutableList<ChildNumber> path) {
+    public void upgradeWalletKeyChains(final ImmutableList<ChildNumber> path) {
 
         if (!wallet.hasKeyChain(path)) {
             if (wallet.isEncrypted()) {
                 EncryptNewKeyChainDialogFragment.show(getFragmentManager(), path);
             } else {
                 //
+                // Upgrade the wallet now
+                //
+                wallet.addKeyChain(path);
+                application.saveWallet();
+                //
                 // Tell the user that the wallet is being upgraded (BIP44)
-                // and they will have to enter a PIN.  The PIN will be requested
-                // a separate method.
+                // and they will have to enter a PIN.
                 //
                 final DialogBuilder dialogBuilder = new DialogBuilder(this);
                 dialogBuilder.setTitle(R.string.encrypt_new_key_chain_dialog_title);
@@ -1086,11 +1088,19 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 dialogBuilder.setMessage(message);
                 dialogBuilder.setCancelable(false);
                 dialogBuilder.setPositiveButton(android.R.string.ok, null);
+                dialogBuilder.setPositiveButton(R.string.wallet_options_encrypt_keys_set,
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(final DialogInterface dialog, final int which) {
+                                checkWalletEncryptionDialog();
+                            }
+                        });
 
                 dialogBuilder.show();
-                wallet.addKeyChain(path);
             }
-            application.saveWallet();
+        }
+        else {
+            checkWalletEncryptionDialog();
         }
     }
 

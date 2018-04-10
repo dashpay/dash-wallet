@@ -41,7 +41,7 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
     public UnlockWalletDialogFragment()
     {
         this.dialogTitle = R.string.wallet_lock_unlock_wallet;
-        this.dialogFragmentId = R.layout.unlock_wallet_dialog;
+        this.dialogLayout = R.layout.unlock_wallet_dialog;
     }
 
     protected void checkPassword(final String password) {
