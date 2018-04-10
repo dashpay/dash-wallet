@@ -235,7 +235,6 @@ public final class Constants {
 
     //Wallet Lock Preferences
     public static final String WALLET_LOCK_PREFS_NAME = "wallet_lock_prefs";
-    public static final String WALLET_LOCK_PREFS_INITIAL_DIALOG_DISMISSED = "wallet_lock_prefs_dialog_dismissed";
 
     //BIP44 Support
     public static final ImmutableList<ChildNumber> BIP44_PATH = TEST ? DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET : DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH;

@@ -209,7 +209,6 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         showView.setOnCheckedChangeListener(null);
 
         wipePasswords();
-        updateEncryptionDialogPreferences();
 
         super.onDismiss(dialog);
     }
@@ -219,14 +218,6 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         backgroundThread.getLooper().quit();
 
         super.onDestroy();
-    }
-
-    private void updateEncryptionDialogPreferences() {
-        if (getActivity() != null) {
-            SharedPreferences prefs = getActivity().getSharedPreferences(Constants.WALLET_LOCK_PREFS_NAME,
-                    Context.MODE_PRIVATE);
-            prefs.edit().putBoolean(Constants.WALLET_LOCK_PREFS_INITIAL_DIALOG_DISMISSED, true).apply();
-        }
     }
 
     private void handleGo() {
