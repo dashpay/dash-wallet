@@ -4,7 +4,10 @@ import android.app.Dialog;
 import android.app.FragmentManager;
 import android.content.DialogInterface;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 
 import com.google.common.collect.ImmutableList;
 
@@ -40,6 +43,12 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
     public EncryptNewKeyChainDialogFragment() {
         this.dialogTitle = R.string.encrypt_new_key_chain_dialog_title;
         this.dialogLayout = R.layout.encrypt_new_key_chain_dialog;
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+        setCancelable(false);
+        return super.onCreateView(inflater, container, savedInstanceState);
     }
 
     public Dialog onCreateDialog(final Bundle savedInstanceState) {
