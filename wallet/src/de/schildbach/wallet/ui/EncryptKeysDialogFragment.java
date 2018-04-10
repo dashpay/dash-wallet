@@ -53,6 +53,7 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -135,6 +136,12 @@ public class EncryptKeysDialogFragment extends DialogFragment {
     }
 
     @Override
+    public View onCreateView(LayoutInflater inflater, @android.support.annotation.Nullable ViewGroup container, Bundle savedInstanceState) {
+        setCancelable(false);
+        return super.onCreateView(inflater, container, savedInstanceState);
+    }
+
+    @Override
     public Dialog onCreateDialog(final Bundle savedInstanceState) {
         final View view = LayoutInflater.from(activity).inflate(R.layout.encrypt_keys_dialog, null);
 
@@ -157,7 +164,6 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         builder.setTitle(R.string.encrypt_keys_dialog_title);
         builder.setView(view);
         builder.setPositiveButton(R.string.button_ok, null); // dummy, just to make it show
-        builder.setNegativeButton(R.string.button_cancel, null);
         builder.setCancelable(false);
 
         final AlertDialog dialog = builder.create();
@@ -209,7 +215,6 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         showView.setOnCheckedChangeListener(null);
 
         wipePasswords();
-        updateEncryptionDialogPreferences();
 
         super.onDismiss(dialog);
     }
@@ -219,14 +224,6 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         backgroundThread.getLooper().quit();
 
         super.onDestroy();
-    }
-
-    private void updateEncryptionDialogPreferences() {
-        if (getActivity() != null) {
-            SharedPreferences prefs = getActivity().getSharedPreferences(Constants.WALLET_LOCK_PREFS_NAME,
-                    Context.MODE_PRIVATE);
-            prefs.edit().putBoolean(Constants.WALLET_LOCK_PREFS_INITIAL_DIALOG_DISMISSED, true).apply();
-        }
     }
 
     private void handleGo() {
