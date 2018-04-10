@@ -52,7 +52,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/wallet_lock_unlock" />
+            android:text="@string/encrypt_new_key_chain_upgrade_button" />
 
     </LinearLayout>
 

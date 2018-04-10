@@ -37,14 +37,12 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
         dialogFragment.show(fm, FRAGMENT_TAG);
     }
 
-    public EncryptNewKeyChainDialogFragment()
-    {
+    public EncryptNewKeyChainDialogFragment() {
         this.dialogTitle = R.string.encrypt_new_key_chain_dialog_title;
-        this.dialogFragmentId = R.layout.encrypt_new_key_chain_dialog;
+        this.dialogLayout = R.layout.encrypt_new_key_chain_dialog;
     }
 
-    public Dialog onCreateDialog(final Bundle savedInstanceState)
-    {
+    public Dialog onCreateDialog(final Bundle savedInstanceState) {
         Dialog dialog = super.onCreateDialog(savedInstanceState);
         String message = getString(R.string.encrypt_new_key_chain_dialog_message) + "\n\n" +
                 getString(R.string.encrypt_new_key_chain_enter_pin_dialog_message) + "\n\n" +
@@ -113,7 +111,7 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
                 protected void onSuccess(final DeterministicSeed seed) {
                     pinRetryController.successfulAttempt();
 
-                    handleCreateKeyChainAndAdd(seed, path, encryptionKey);
+                    handleAddKeyChain(seed, path, encryptionKey);
                 }
 
                 protected void onBadPassphrase() {
@@ -125,8 +123,7 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
 
         }
     }
-    protected void handleCreateKeyChainAndAdd(DeterministicSeed seed, ImmutableList<ChildNumber> path, final KeyParameter encryptionKey)
-    {
+    protected void handleAddKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, final KeyParameter encryptionKey) {
         DeterministicKeyChain keyChain = new DeterministicKeyChain(seed, path);
         DeterministicKeyChain encryptedKeyChain = keyChain.toEncrypted(application.getWallet().getKeyCrypter(), encryptionKey);
         application.getWallet().addAndActivateHDChain(encryptedKeyChain);

@@ -43,14 +43,8 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
     protected Button unlockButton;
     protected TextView messageTextView;
 
-    protected int dialogFragmentId;
+    protected int dialogLayout;
     protected int dialogTitle;
-
-    AbstractPINDialogFragment()
-    {
-        super();
-
-    }
 
     @Override
     public void onAttach(final Activity activity) {
@@ -64,7 +58,7 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
 
     @Override
     public Dialog onCreateDialog(final Bundle savedInstanceState) {
-        final View view = LayoutInflater.from(activity).inflate(dialogFragmentId, null);
+        final View view = LayoutInflater.from(activity).inflate(dialogLayout, null);
 
         pinView = (EditText) view.findViewById(R.id.pin);
         badPinView = (TextView) view.findViewById(R.id.bad_pin);
