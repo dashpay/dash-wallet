@@ -16,7 +16,7 @@
 	<string name="export_keys_dialog_title_to_seed">View recovery phrase</string>
 	<string name="import_keys_dialog_title_from_seed">Restore from recovery phrase</string>
 	<string name="backup_to_seed_wallet_dialog_message">This is your recovery phrase.  Please write it down.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">DO NOT let anyone see your recovery phrase or they can spend your Dash.  This phrase is not compatible with other Dash Software.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">DO NOT let anyone see your recovery phrase or they can spend your Dash.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Your wallet is protected by a spending PIN.  Enter your PIN and press Show to view your recovery phrase.</string>
     <string name="import_keys_from_seed_dialog_message">Enter your recovery phrase here.</string>
 	<string name="import_export_keys_dialog_password_phrase">Recovery phrase goes here.</string>
@@ -48,19 +48,16 @@
 	<string name="wallet_lock_wrong_pin">Wrong PIN! %s</string>
 
 	<plurals name="wallet_lock_attempts_remaining">
-		<item quantity="zero">%d attempts remaining</item>
 		<item quantity="one">%d attempt remaining</item>
 		<item quantity="other">%d attempts remaining</item>
 	</plurals>
 
 	<plurals name="minute">
-		<item quantity="zero">minutes</item>
 		<item quantity="one">minute</item>
 		<item quantity="other">minutes</item>
 	</plurals>
 	
 	<plurals name="hour">
-		<item quantity="zero">hours</item>
 		<item quantity="one">hour</item>
 		<item quantity="other">hours</item>
 	</plurals>
