@@ -8,34 +8,65 @@
 	<string name="transaction_row_message_received_instantx_lock_request">Este pago enviado por InstantSend está a la espera de verificación por la red de Dash.</string>
 	<string name="transaction_row_message_received_instantx_locked">Este pago enviado por InstantSend ha sido verificado por la red de Dash.</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">InstantSend no confirmado</string>
-	<string name="transaction_row_message_received_instantx_locked2">InstantSend Confirmado</string>
+	<string name="transaction_row_message_received_instantx_locked2">InstantSend confirmado</string>
 
-	<string name="wallet_options_disconnect">Desconexión</string>
+	<string name="wallet_options_disconnect">Desconectar</string>
 
-	<string name="network_monitor_masternodes_title">Nodos Maestros</string>
+	<string name="network_monitor_masternodes_title">Masternodes</string>
 	<string name="export_keys_dialog_title_to_seed">Ver frase de recuperación</string>
-	<string name="import_keys_dialog_title_from_seed">Restablecer frase de recuperación</string>
+	<string name="import_keys_dialog_title_from_seed">Restablecer billetera con frase de recuperación</string>
 	<string name="backup_to_seed_wallet_dialog_message">Esta es tu frase de recuperación. Por favor anótala.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">NO DEJES a nadie ver tu frase de recuperación o podrán gastar tus Dash. Esta frase no es compatible con otros softwares Dash.</string>
-	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Tu billetera está protegida por un PIN de gasto. Introduce tu PIN y presiona Mostrar para ver tu frase de recuperación.</string>
-	<string name="import_keys_from_seed_dialog_message">Introduce tu frase de recuperación aqui.</string>
-	<string name="import_export_keys_dialog_password_phrase">Aqui va la frase de recuperación.</string>
-	<string name="preferences_report_issue_summary">Reune información sobre tu problema y envía por email tu reporte a los desarrolladores.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">NO DEJES a nadie ver tu frase de recuperación o podrán gastar tus Dash.</string>
+	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Tu billetera está protegida por un PIN. Introduce tu PIN y presiona Mostrar para ver tu frase de recuperación.</string>
+    <string name="import_keys_from_seed_dialog_message">Introduce tu frase de recuperación aqui.</string>
+	<string name="import_export_keys_dialog_password_phrase">La frase de recuperación va aquí.</string>
+	<string name="preferences_report_issue_summary">Reúne información sobre tu problema y envía un email a los desarrolladores con tu reporte.</string>
 	<string name="navigation_configuration">Configuración</string>
-	<string name="button_copy_address">Pegar dirección</string>
-	<string name="request_coins_clipboard_address_msg">Dirección Dash pegada al portapapeles</string>
+    <string name="button_copy_address">Copiar dirección</string>
+	<string name="request_coins_clipboard_address_msg">Dirección Dash copiada en el portapapeles</string>
 	<string name="backup_wallet_to_seed_show_recovery_phrase">Mostrar</string>
-	<string name="restore_wallet_from_invalid_seed_warning_message">%ses una palabra inválida.</string>
-
+	<string name="restore_wallet_from_invalid_seed_warning_message">%s es una palabra inválida.</string>
 
 	<string name="send_coins_options_fee_category_zero">Sin comisión</string>
-	<string name="send_coins_fragment_hint_fee_zero">No pagar comisión. Usa \"Sin comisión\", solo si no te importa el tiempo de confirmación.</string>
+	<string name="send_coins_fragment_hint_fee_zero">No se pagará ninguna comisión. Usa \"Sin comisión\", solo si no te importa el tiempo de confirmación.</string>
+
+	<string name="wallet_uri_handler_public_key_request_dialog_msg">La aplicación %s le gustaría recibir tu Llave Pública Maestra. Esto puede ser usado para realizar un seguimiento de tu billetera, esto no puede ser usado para mover tus Dash.</string>
+	<string name="wallet_uri_handler_address_request_dialog_msg">La aplicación %s está solicitando una dirección para que pueda pagarte. ¿Te gustaría autorizar esto?</string>
 
 	<string name="wallet_lock_unlock">Desbloquear</string>
 	<string name="wallet_lock_unlock_wallet">Desbloquear billetera</string>
 	<string name="wallet_lock_unlock_to_see_txs_title">Billetera bloqueada.</string>
-	<string name="wallet_lock_unlock_to_see_txs_txt">Toque el ícono de candado arriba para desbloquear tu billetera y ver el historial de transacciones.</string>
-	<string name="wallet_lock_unlock_dialog_title">Desbloquee para ver tu saldo</string>
-	<string name="wallet_lock_unlock_dialog_message">Tu billetera está protegida por un PIN de gasto. Introduce tu PIN y presiona Desbloquear para ver tu saldo.</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">Toque el ícono de candado de arriba para desbloquear tu billetera y ver el historial de transacciones.</string>
+	<string name="wallet_lock_unlock_dialog_title">Desbloquea tu billetera</string>
+	<string name="wallet_lock_unlock_dialog_message">Tu billetera está protegida por un PIN. Ingresa tu PIN y presiona Desbloquear para continuar.</string>
+	<string name="wallet_lock_reset_wallet_title">Reiniciar billetera</string>
+	<string name="wallet_lock_reset_wallet_message">¿Estás seguro? Toda los datos almacenados serán borrados y tu billetera solo será recuperable por un archivo de respaldo o frase de recuperación.</string>
+
+	<string name="wallet_lock_wallet_disabled">Billetera deshabilitada</string>
+	<string name="wallet_lock_try_again">Intente nuevamente en %1$d %2$s</string>
+	<string name="wallet_lock_reset">Reiniciar</string>
+	<string name="wallet_lock_wrong_pin">¡PIN incorrecto! %s</string>
+
+	<plurals name="wallet_lock_attempts_remaining">
+		<item quantity="one">%d intento restante</item>
+		<item quantity="other">%d intentos restantes</item>
+	</plurals>
+
+	<plurals name="minute">
+		<item quantity="one">minuto</item>
+		<item quantity="other">minutos</item>
+	</plurals>
+	
+	<plurals name="hour">
+		<item quantity="one">hora</item>
+		<item quantity="other">horas</item>
+	</plurals>
+
+	<string name="encrypt_new_key_chain_upgrade_button">Actualizar</string>
+	<string name="encrypt_new_key_chain_dialog_title">Actualiza tu billetera</string>
+	<string name="encrypt_new_key_chain_dialog_message">Tu billetera será actualizada para admitir la importación y exportación a otras aplicaciones.</string>
+	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Debes ingresar tu PIN para finalizar el proceso de actualización.</string>
+	<string name="pin_code_required_dialog_message">Esta aplicación ahora requiere un PIN para gastos y también para ver su saldo y transacciones.</string>
+
 
 </resources>
