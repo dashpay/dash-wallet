@@ -33,7 +33,6 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
 import org.bitcoinj.crypto.ChildNumber;
-import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 
@@ -51,10 +50,10 @@ import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.preference.PreferenceActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
+import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.Io;
-import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -63,14 +62,12 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.FragmentManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnCancelListener;
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -106,7 +103,9 @@ import android.widget.TextView;
  * @author Andreas Schildbach
  */
 public final class WalletActivity extends AbstractBindServiceActivity
-        implements ActivityCompat.OnRequestPermissionsResultCallback, NavigationView.OnNavigationItemSelectedListener, WalletLock.OnLockChangeListener {
+        implements ActivityCompat.OnRequestPermissionsResultCallback,
+        NavigationView.OnNavigationItemSelectedListener,
+        WalletLock.OnLockChangeListener, UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener {
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
     private static final int DIALOG_RESTORE_WALLET = 2;
@@ -162,6 +161,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
         MaybeMaintenanceFragment.add(getFragmentManager());
 
         initView();
+
+        //Prevent showing dialog twice or more when activity is recreated (e.g: rotating device, etc)
+        if (savedInstanceState == null) {
+            //Add BIP44 support and PIN if missing
+            upgradeWalletKeyChains(Constants.BIP44_PATH);
+        }
     }
 
     private void initView() {
@@ -211,13 +216,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 handleScan();
             }
         });
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        //Add BIP44 support and PIN if missing
-        upgradeWalletKeyChains(Constants.BIP44_PATH);
     }
 
     @Override
@@ -1075,28 +1073,18 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 // Tell the user that the wallet is being upgraded (BIP44)
                 // and they will have to enter a PIN.
                 //
-                final DialogBuilder dialogBuilder = new DialogBuilder(this);
-                dialogBuilder.setTitle(R.string.encrypt_new_key_chain_dialog_title);
-
-                String message = getString(R.string.encrypt_new_key_chain_dialog_message) + "\n\n" +
-                        getString(R.string.pin_code_required_dialog_message);
-                dialogBuilder.setMessage(message);
-                dialogBuilder.setCancelable(false);
-                dialogBuilder.setPositiveButton(android.R.string.ok, null);
-                dialogBuilder.setPositiveButton(R.string.wallet_options_encrypt_keys_set,
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(final DialogInterface dialog, final int which) {
-                                checkWalletEncryptionDialog();
-                            }
-                        });
-
-                dialogBuilder.show();
+                UpgradeWalletDisclaimerDialog.show(getFragmentManager());
             }
         }
         else {
             checkWalletEncryptionDialog();
         }
+    }
+
+    //BIP44 Wallet Upgrade Dialog Dismissed (Ok button pressed)
+    @Override
+    public void onUpgradeConfirmed() {
+        checkWalletEncryptionDialog();
     }
 
 }
