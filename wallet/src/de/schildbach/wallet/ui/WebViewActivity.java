@@ -78,7 +78,7 @@ public class WebViewActivity extends AppCompatActivity {
 
         Intent intent = getIntent();
         url = intent.getStringExtra(WEBVIEW_URL);
-        if (url != null) {
+        if (savedInstanceState == null && url != null) {
             webView.loadUrl(url);
         }
 
@@ -106,8 +106,6 @@ public class WebViewActivity extends AppCompatActivity {
         super.onResume();
         if (confirmationUrl != null) {
             webView.loadUrl(confirmationUrl);
-        } else if (url != null) {
-            webView.loadUrl(url);
         }
     }
 
