@@ -1,9 +1,11 @@
 package de.schildbach.wallet.ui;
 
 import android.annotation.SuppressLint;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.ActionBar;
@@ -28,8 +30,8 @@ public class WebViewActivity extends AppCompatActivity {
     public static final String ACTIVITY_TITLE = "activity_title";
 
     private WebView webView;
-    private String url;
     private String confirmationUrl;
+    private ProgressDialog loadingDialog;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -45,15 +47,14 @@ public class WebViewActivity extends AppCompatActivity {
             actionBar.setDisplayShowHomeEnabled(true);
         }
 
+        loadingDialog = new ProgressDialog(this);
+        loadingDialog.setIndeterminate(true);
+        loadingDialog.setCancelable(false);
+        loadingDialog.setMessage(getString(R.string.loading));
+
         webView = (WebView) findViewById(R.id.webview);
         webView.getSettings().setJavaScriptEnabled(true);
-        webView.setWebChromeClient(new WebChromeClient() {
-            public void onProgressChanged(WebView view, int progress) {
-                // Activities and WebViews measure progress with different scales.
-                // The progress meter will automatically disappear when we reach 100%
-                WebViewActivity.this.setProgress(progress * 1000);
-            }
-        });
+
         webView.setWebViewClient(new WebViewClient() {
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                 Toast.makeText(WebViewActivity.this, "Oh no! " + description, Toast.LENGTH_SHORT).show();
@@ -66,19 +67,30 @@ public class WebViewActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-                String cookies = CookieManager.getInstance().getCookie(url);
-                Log.d("Cookies. Finshed: ", url);
-                if (cookies != null) {
-                    Log.d("Fresh Cookies", cookies);
-                }
+            public void doUpdateVisitedHistory(WebView view, String url, boolean isReload) {
+                super.doUpdateVisitedHistory(view, url, isReload);
+                webView.scrollTo(0, 0);
             }
+
+            @Override
+            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                loadingDialog.show();
+                super.onPageStarted(view, url, favicon);
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                loadingDialog.hide();
+                super.onPageFinished(view, url);
+            }
+
         });
 
         Intent intent = getIntent();
-        url = intent.getStringExtra(WEBVIEW_URL);
-        if (savedInstanceState == null && url != null) {
+        String url = intent.getStringExtra(WEBVIEW_URL);
+        if (savedInstanceState != null) {
+            webView.restoreState(savedInstanceState);
+        } else if (url != null) {
             webView.loadUrl(url);
         }
 
@@ -86,6 +98,18 @@ public class WebViewActivity extends AppCompatActivity {
         if (title != null && actionBar != null) {
             actionBar.setTitle(title);
         }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        webView.saveState(outState);
+    }
+
+    @Override
+    protected void onDestroy() {
+        loadingDialog.dismiss();
+        super.onDestroy();
     }
 
     /**
@@ -115,6 +139,12 @@ public class WebViewActivity extends AppCompatActivity {
      * @return
      */
     private boolean handleUrlChange(String url) {
+        //Prevent leaving Uphold website from WebView
+        if (!(url.contains("dash.org") || url.contains("uphold.com"))) {
+            Log.d("GB1", "Url change blocked for " + url);
+            return true;
+        }
+
         Log.d("Cookies URL", url);
         if (url.contains(Constants.UPHOLD_AUTH_REDIRECT_URL)) {
             Uri uri = Uri.parse(url);
