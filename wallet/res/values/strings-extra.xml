@@ -42,5 +42,6 @@
 	<string name="transfer_from_external_account_confirm_message">You are transferring a total of %1$s Dash (%2$s base amount + %3$s fee) from your %4$s account to this wallet. Do you want to confirm this transaction?</string>
 
 	<string name="loading">Loading…</string>
+	<string name="loading_error">An error occurred. Please try again later.</string>
 
 </resources>

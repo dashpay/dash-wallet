@@ -1,10 +1,31 @@
+/*
+ * Copyright 2011-2015 the original author or authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package de.schildbach.wallet.ui;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
+import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
@@ -13,8 +34,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.MenuItem;
-import android.webkit.CookieManager;
-import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
@@ -22,7 +41,6 @@ import android.widget.Toast;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.UpholdClient;
 import de.schildbach.wallet_test.R;
-
 
 public class WebViewActivity extends AppCompatActivity {
 
@@ -32,6 +50,8 @@ public class WebViewActivity extends AppCompatActivity {
     private WebView webView;
     private String confirmationUrl;
     private ProgressDialog loadingDialog;
+    private int retryCount = 0;
+    private static final int MAX_RETRY = 3;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -57,8 +77,13 @@ public class WebViewActivity extends AppCompatActivity {
 
         webView.setWebViewClient(new WebViewClient() {
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-                Toast.makeText(WebViewActivity.this, "Oh no! " + description, Toast.LENGTH_SHORT).show();
-                //TODO: Error Handling
+                if (retryCount < MAX_RETRY) {
+                    webView.reload();
+                    retryCount++;
+                } else {
+                    webView.loadUrl("about:blank");
+                    showLoadingErrorAlert();
+                }
             }
 
             @Override
@@ -92,6 +117,9 @@ public class WebViewActivity extends AppCompatActivity {
             webView.restoreState(savedInstanceState);
         } else if (url != null) {
             webView.loadUrl(url);
+        } else if (intent.getDataString() != null) {
+            //Confirmation URL
+            webView.loadUrl(intent.getDataString());
         }
 
         String title = intent.getStringExtra(ACTIVITY_TITLE);
@@ -107,30 +135,42 @@ public class WebViewActivity extends AppCompatActivity {
     }
 
     @Override
+    public void finish() {
+        if (isTaskRoot()) {
+            PackageManager packageManager = getPackageManager();
+            startActivity(packageManager.getLaunchIntentForPackage(getApplication().getPackageName()));
+        }
+        super.finish();
+    }
+
+    @Override
     protected void onDestroy() {
         loadingDialog.dismiss();
         super.onDestroy();
     }
 
-    /**
-     * TODO: Java Doc
-     * @param intent
-     */
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         confirmationUrl = intent.getDataString();
-    }
-
-    /**
-     * TODO: Java Doc
-     */
-    @Override
-    protected void onResume() {
-        super.onResume();
         if (confirmationUrl != null) {
             webView.loadUrl(confirmationUrl);
+            confirmationUrl = null;
         }
+    }
+
+    private void showLoadingErrorAlert() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setCancelable(false);
+        builder.setMessage(R.string.loading_error);
+        builder.setPositiveButton(android.R.string.ok, null);
+        Dialog dialog = builder.show();
+        dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                finish();
+            }
+        });
     }
 
     /**
@@ -156,7 +196,6 @@ public class WebViewActivity extends AppCompatActivity {
                         storeUpholdAccessToken(UpholdClient.getInstance().getAccessToken());
                         String url = "https://sandbox.uphold.com/dashboard/cards/" + dashCardId + "/add";
                         webView.loadUrl(url);
-                        //finish();
                     }
 
                     @Override
@@ -164,7 +203,6 @@ public class WebViewActivity extends AppCompatActivity {
                         Toast.makeText(WebViewActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 });
-                //TODO: Move the code to a better place?
                 return true;
             } else {
                 //TODO: Handle Error

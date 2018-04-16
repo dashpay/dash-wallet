@@ -1021,7 +1021,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void startBuyDashActivity() {
         Intent intent = new Intent(this, WebViewActivity.class);
-        intent.putExtra(WebViewActivity.WEBVIEW_URL, "https://sandbox.uphold.com/authorize/dfb85d44118d6ca2b3e070d434da6e9102a3c7d9?scope=accounts:read%20cards:read%20cards:write%20transactions:deposit%20transactions:read%20transactions:transfer:application%20transactions:transfer:others%20transactions:transfer:self%20transactions:withdraw%20transactions:commit:otp%20user:read&state=somehash");
+        //intent.putExtra(WebViewActivity.WEBVIEW_URL, "https://sandbox.uphold.com/authorize/dfb85d44118d6ca2b3e070d434da6e9102a3c7d9?scope=accounts:read%20cards:read%20cards:write%20transactions:deposit%20transactions:read%20transactions:transfer:application%20transactions:transfer:others%20transactions:transfer:self%20transactions:withdraw%20transactions:commit:otp%20user:read&state=somehash");
+        intent.putExtra(WebViewActivity.WEBVIEW_URL, "https://www.haeloruaroeucao.coooom");
         intent.putExtra(WebViewActivity.ACTIVITY_TITLE, getString(R.string.buy_dash_activity_title));
         startActivity(intent);
     }
