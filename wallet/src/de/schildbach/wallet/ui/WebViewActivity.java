@@ -32,7 +32,6 @@ import android.os.Bundle;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.MenuItem;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -174,18 +173,18 @@ public class WebViewActivity extends AppCompatActivity {
     }
 
     /**
-     * TODO: Java Doc.
-     * @param url
-     * @return
+     * Prevents loading unrelated URLs and extracts authorization code from Login flow to
+     * get access token from it.
+     *
+     * @param url that is going to be loaded next.
+     * @return <code>true</code> to prevent url change, false to continue.
      */
     private boolean handleUrlChange(String url) {
         //Prevent leaving Uphold website from WebView
         if (!(url.contains("dash.org") || url.contains("uphold.com"))) {
-            Log.d("GB1", "Url change blocked for " + url);
             return true;
         }
 
-        Log.d("Cookies URL", url);
         if (url.contains(Constants.UPHOLD_AUTH_REDIRECT_URL)) {
             Uri uri = Uri.parse(url);
             String code = uri.getQueryParameter("code");
@@ -200,12 +199,12 @@ public class WebViewActivity extends AppCompatActivity {
 
                     @Override
                     public void onError(Exception e) {
-                        Toast.makeText(WebViewActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                        showLoadingErrorAlert();
                     }
                 });
                 return true;
             } else {
-                //TODO: Handle Error
+                showLoadingErrorAlert();
             }
         }
         return false;
