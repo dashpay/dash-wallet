@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="10dp">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/btnContinue"
+        android:fillViewport="true"
+        android:scrollbars="none">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/txtViewMsg"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:text="@string/verify_details_msg"
+                android:textColor="@color/text_color_black"
+                android:textSize="@dimen/text_size_top_msg" />
+
+            <TextView
+                android:id="@+id/txtViewLabelMobile"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/txtViewMsg"
+                android:layout_marginTop="20dp"
+                android:text="@string/account_1"
+                android:textColor="@color/text_color_black"
+                android:textSize="@dimen/text_size_edt_label" />
+
+
+            <EditText
+                android:id="@+id/edtViewAcc"
+                style="@style/styleEdt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/txtViewLabelMobile"
+                android:layout_marginBottom="4dp"
+                android:layout_marginTop="4dp"
+                android:enabled="false"
+                android:singleLine="true" />
+
+            <TextView
+                android:id="@+id/txtViewPriceLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/edtViewAcc"
+                android:layout_marginTop="10dp"
+                android:text="@string/currentprice"
+                android:textColor="@color/text_color_black"
+                android:textSize="@dimen/text_size_edt_label" />
+
+            <EditText
+                android:id="@+id/edtViewPrice"
+                style="@style/styleEdt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/txtViewPriceLabel"
+                android:layout_marginBottom="4dp"
+                android:layout_marginTop="4dp"
+                android:enabled="false"
+                android:singleLine="true" />
+
+            <TextView
+                android:id="@+id/txtViewEmailLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/edtViewPrice"
+                android:layout_marginTop="10dp"
+                android:text="@string/email"
+                android:textColor="@color/text_color_black"
+                android:textSize="@dimen/text_size_edt_label" />
+
+            <EditText
+                android:id="@+id/edtViewEmail"
+                style="@style/styleEdt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/txtViewEmailLabel"
+                android:layout_marginBottom="4dp"
+                android:layout_marginTop="4dp"
+                android:enabled="false"
+                android:singleLine="true" />
+
+            <TextView
+                android:id="@+id/txtViewEmailInstru"
+                style="@style/styleInstrucText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/edtViewEmail"
+                android:gravity="center_horizontal"
+                android:text="@string/our_team_will_use_this_email_to_contact_you" />
+
+            <TextView
+                android:id="@+id/txtViewPhoneLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/txtViewEmailInstru"
+                android:layout_marginTop="10dp"
+                android:text="@string/hint_phone"
+                android:textColor="@color/text_color_black"
+                android:textSize="@dimen/text_size_edt_label" />
+
+            <EditText
+                android:id="@+id/edtViewPhone"
+                style="@style/styleEdt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/txtViewPhoneLabel"
+                android:layout_marginBottom="4dp"
+                android:layout_marginTop="4dp"
+                android:enabled="false"
+                android:singleLine="true" />
+
+        </RelativeLayout>
+    </ScrollView>
+
+    <Button
+        android:id="@+id/btnContinue"
+        style="@style/styleBtn"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginEnd="20dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="10dp"
+        android:text="@string/action_verify_phone" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:visibility="gone" />
+</RelativeLayout>

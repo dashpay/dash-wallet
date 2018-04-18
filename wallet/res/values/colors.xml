@@ -49,4 +49,11 @@
     <color name="scan_result_view">#b0000000</color>
     <color name="scan_result_dots">#c099cc00</color>
 
+    <!--selling wizard-->
+    <color name="text_color_black">#1f1f1f</color>
+    <color name="text_color_border">#CCCCCC</color>
+    <color name="instruct_text_color">#737373</color>
+    <color name="edt_text_color">#737373</color>
+    <color name="colorPrimaryDarkAlpha">#cc1961a0</color>
+    <color name="color_blue_light">#4590ca</color>
 </resources>

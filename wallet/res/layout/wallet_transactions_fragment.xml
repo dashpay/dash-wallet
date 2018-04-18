@@ -2,17 +2,17 @@
 <ViewAnimator xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/wallet_transactions_group"
     android:layout_width="match_parent"
-    android:layout_height="match_parent" >
+    android:layout_height="match_parent">
 
     <ProgressBar
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center" />
+
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-         android:layout_gravity="center"
-        >
+        android:layout_gravity="center">
 
         <TextView
             android:id="@+id/wallet_transactions_empty"
@@ -28,19 +28,30 @@
             android:id="@+id/buy_dash_with_cash"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_centerHorizontal="true"
             android:layout_below="@+id/wallet_transactions_empty"
+            android:layout_centerHorizontal="true"
             android:drawableLeft="@drawable/ic_menu_sell_dash"
             android:drawablePadding="4dp"
             android:text="@string/buy_dash_with_cash" />
+
+        <Button
+            android:id="@+id/sell_dash_with_cash"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/buy_dash_with_cash"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="10dp"
+            android:drawableLeft="@drawable/ic_menu_sell_dash"
+            android:drawablePadding="4dp"
+            android:text="@string/sell_dash_for_cash" />
     </RelativeLayout>
+
     <android.support.v7.widget.RecyclerView
         android:id="@+id/wallet_transactions_list"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:scrollbars="vertical"
-        android:animateLayoutChanges="false"/>
-
+        android:animateLayoutChanges="false"
+        android:scrollbars="vertical" />
 
 
 </ViewAnimator>

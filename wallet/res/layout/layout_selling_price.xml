@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="10dp">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/btnContinue"
+        android:scrollbars="none">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/txtViewMsg"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:text="@string/how_much_do_you_want_per_pivx"
+                android:textColor="@color/text_color_black"
+                android:textSize="@dimen/text_size_top_msg" />
+
+
+            <TextView
+                android:id="@+id/txtViewPriceLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/txtViewMsg"
+                android:layout_marginTop="20dp"
+                android:text="@string/price_per_coin"
+                android:textColor="@color/text_color_black"
+                android:textSize="@dimen/text_size_edt_label" />
+
+
+            <android.support.v7.widget.AppCompatCheckBox
+                android:id="@+id/chkBoxdynamicPricing"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/txtViewPriceLabel"
+                android:layout_marginTop="@dimen/dimen_8dp"
+                android:text="@string/use_dynamic_pricing" />
+
+            <LinearLayout
+                android:id="@+id/layoutStaticPrice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/chkBoxdynamicPricing"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/txtViewSPLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/static_price_lbl"
+                    android:textColor="@color/text_color_black"
+                    android:textSize="@dimen/text_size_edt_label" />
+
+                <EditText
+                    android:id="@+id/edtViewStaticPrice"
+                    style="@style/styleEdt"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginTop="4dp"
+                    android:inputType="numberDecimal" />
+            </LinearLayout>
+
+            <RelativeLayout
+                android:id="@+id/layoutDynamicPrice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/layoutStaticPrice"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/txtViewPMLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/primary_market_lbl"
+                    android:textColor="@color/text_color_black"
+                    android:textSize="@dimen/text_size_edt_label" />
+
+                <RelativeLayout
+                    android:id="@+id/layoutSP"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_below="@+id/txtViewPMLabel"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginTop="4dp"
+                    android:background="@drawable/border_selling_edttxt">
+
+                    <android.support.v7.widget.AppCompatSpinner
+                        android:id="@+id/sp_primary_market"
+                        android:layout_width="match_parent"
+                        android:layout_height="34dp" />
+                </RelativeLayout>
+
+
+                <TextView
+                    android:id="@+id/txtViewSMLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/layoutSP"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/secondary_market_lbl"
+                    android:textColor="@color/text_color_black"
+                    android:textSize="@dimen/text_size_edt_label" />
+
+                <RelativeLayout
+                    android:id="@+id/layoutPM"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_below="@+id/txtViewSMLabel"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginTop="4dp"
+                    android:background="@drawable/border_selling_edttxt">
+
+                    <android.support.v7.widget.AppCompatSpinner
+                        android:id="@+id/sp_secondary_market"
+                        android:layout_width="match_parent"
+                        android:layout_height="34dp"
+                        android:layout_alignParentStart="true" />
+                </RelativeLayout>
+
+                <TextView
+                    android:id="@+id/txtViewMPLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/layoutPM"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/minimum_payment_lbl"
+                    android:textColor="@color/text_color_black"
+                    android:textSize="@dimen/text_size_edt_label" />
+
+                <EditText
+                    android:id="@+id/edtViewMinPayment"
+                    style="@style/styleEdt"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/txtViewMPLabel"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginTop="4dp"
+                    android:inputType="numberDecimal" />
+
+
+                <TextView
+                    android:id="@+id/txtViewMaxPLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/edtViewMinPayment"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/maximum_payment_lbl"
+                    android:textColor="@color/text_color_black"
+                    android:textSize="@dimen/text_size_edt_label" />
+
+                <EditText
+                    android:id="@+id/edtViewMaxPayment"
+                    style="@style/styleEdt"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/txtViewMaxPLabel"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginTop="4dp"
+                    android:inputType="numberDecimal" />
+
+
+                <TextView
+                    android:id="@+id/txtViewSellerPriceLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/edtViewMaxPayment"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/seller_fee_lbl"
+                    android:textColor="@color/text_color_black"
+                    android:textSize="@dimen/text_size_edt_label" />
+
+                <EditText
+                    android:id="@+id/edtViewSellerPrice"
+                    style="@style/styleEdt"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/txtViewSellerPriceLabel"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginTop="4dp"
+                    android:inputType="numberDecimal" />
+            </RelativeLayout>
+        </RelativeLayout>
+    </ScrollView>
+
+    <Button
+        android:id="@+id/btnContinue"
+        style="@style/styleBtn"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginEnd="20dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="10dp"
+        android:text="@string/action_continue" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:visibility="gone" />
+</RelativeLayout>

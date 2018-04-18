@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="10dp">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/btnContinue"
+        android:fillViewport="true"
+        android:scrollbars="none">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/txtViewMsg"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:text="@string/phone_and_email_msg"
+                android:textColor="@color/text_color_black"
+                android:textSize="@dimen/text_size_top_msg" />
+
+            <TextView
+                android:id="@+id/txtViewLabelMobile"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/txtViewMsg"
+                android:layout_marginTop="20dp"
+                android:text="@string/mobile_include_area_code"
+                android:textColor="@color/text_color_black"
+                android:textSize="@dimen/text_size_edt_label" />
+
+            <RelativeLayout
+                android:id="@+id/layouMobile"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_below="@+id/txtViewLabelMobile"
+                android:layout_marginBottom="4dp"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/border_selling_edttxt"
+                android:padding="4dp">
+
+                <Spinner
+                    android:id="@+id/sp_country"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_horizontal" />
+
+                <EditText
+                    android:id="@+id/edtViewMobile"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_toEndOf="@+id/sp_country"
+                    android:background="@null"
+                    android:hint="@string/mobile_include_area_code"
+                    android:inputType="number"
+                    android:singleLine="true"
+                    android:textColor="@color/edt_text_color" />
+            </RelativeLayout>
+
+            <TextView
+                android:id="@+id/txtViewMobileInstru"
+                style="@style/styleInstrucText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/layouMobile"
+                android:gravity="center_horizontal"
+                android:text="@string/sms_messages_will_be_sent_here_to_verify_payments" />
+
+
+            <TextView
+                android:id="@+id/txtViewEmailLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/txtViewMobileInstru"
+                android:layout_marginTop="20dp"
+                android:text="@string/email"
+                android:textColor="@color/text_color_black"
+                android:textSize="@dimen/text_size_edt_label" />
+
+            <EditText
+                android:id="@+id/edtViewEmail"
+                style="@style/styleEdt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/txtViewEmailLabel"
+                android:layout_marginBottom="4dp"
+                android:layout_marginTop="4dp"
+                android:hint="@string/email"
+                android:inputType="textEmailAddress"
+                android:singleLine="true" />
+
+            <TextView
+                android:id="@+id/txtViewEmailInstru"
+                style="@style/styleInstrucText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/edtViewEmail"
+                android:gravity="center_horizontal"
+                android:text="@string/our_team_will_use_this_email_to_contact_you" />
+
+
+            <RelativeLayout
+                android:id="@+id/layoutPass"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/txtViewEmailInstru">
+
+                <TextView
+                    android:id="@+id/txtViewConfirmEmailLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+
+                    android:layout_marginTop="20dp"
+                    android:text="@string/confirm_email"
+                    android:textColor="@color/text_color_black"
+                    android:textSize="@dimen/text_size_edt_label" />
+
+                <EditText
+                    android:id="@+id/edtViewConfirmEmail"
+                    style="@style/styleEdt"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/txtViewConfirmEmailLabel"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginTop="4dp"
+                    android:hint="@string/confirm_email"
+                    android:inputType="textEmailAddress"
+                    android:singleLine="true" />
+
+                <TextView
+                    android:id="@+id/txtViewPassLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/edtViewConfirmEmail"
+                    android:layout_marginTop="20dp"
+                    android:text="@string/password"
+                    android:textColor="@color/text_color_black"
+                    android:textSize="@dimen/text_size_edt_label" />
+
+                <EditText
+                    android:id="@+id/edtViewPass"
+                    style="@style/styleEdt"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/txtViewPassLabel"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginTop="4dp"
+                    android:hint="@string/password"
+                    android:inputType="textPassword"
+                    android:singleLine="true" />
+
+                <TextView
+                    android:id="@+id/txtViewPassInstru"
+                    style="@style/styleInstrucText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/edtViewPass"
+                    android:gravity="center_horizontal"
+                    android:text="@string/a_password_is_needed_to_view_and_alter_your_ad_details" />
+            </RelativeLayout>
+        </RelativeLayout>
+    </ScrollView>
+
+    <Button
+        android:id="@+id/btnContinue"
+        style="@style/styleBtn"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginEnd="20dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="10dp"
+        android:text="@string/action_continue" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:visibility="gone" />
+</RelativeLayout>

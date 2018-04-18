@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="10dp">
+
+
+    <TextView
+        android:id="@+id/txtViewMsg"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/text_above_phone"
+        android:textColor="@color/text_color_black"
+        android:gravity="center_horizontal"
+        android:textSize="@dimen/text_size_top_msg" />
+
+    <EditText
+        android:id="@+id/editViewPhone"
+        style="@style/styleEdt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/txtViewMsg"
+        android:layout_gravity="bottom"
+        android:layout_marginTop="20dp"
+        android:enabled="true"
+        android:hint="@string/hint_phone"
+        android:inputType="number"
+        android:maxLength="10"
+        android:singleLine="true" />
+
+
+    <Button
+        android:id="@+id/btnContinue"
+        style="@style/styleBtn"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_below="@+id/editViewPhone"
+        android:layout_marginEnd="20dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="10dp"
+        android:text="@string/action_continue" />
+
+</RelativeLayout>

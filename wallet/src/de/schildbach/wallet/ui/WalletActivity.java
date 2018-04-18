@@ -17,49 +17,6 @@
 
 package de.schildbach.wallet.ui;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedList;
-import java.util.List;
-
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.VersionedChecksummedBytes;
-import org.bitcoinj.crypto.MnemonicCode;
-import org.bitcoinj.crypto.MnemonicException;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.Wallet.BalanceType;
-
-import com.google.common.base.Charsets;
-import com.squareup.okhttp.HttpUrl;
-
-import de.schildbach.wallet.Configuration;
-import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
-import de.schildbach.wallet.ui.InputParser.StringInputParser;
-import de.schildbach.wallet.ui.preference.PreferenceActivity;
-import de.schildbach.wallet.ui.send.SendCoinsActivity;
-import de.schildbach.wallet.ui.send.SweepWalletActivity;
-import de.schildbach.wallet.util.CrashReporter;
-import de.schildbach.wallet.util.Crypto;
-import de.schildbach.wallet.util.Io;
-import de.schildbach.wallet.util.KeyboardUtil;
-import de.schildbach.wallet.util.Nfc;
-import de.schildbach.wallet.util.WalletUtils;
-import de.schildbach.wallet.wallofcoins.buydash.BuyDashActivity;
-import de.schildbach.wallet_test.R;
-
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -99,6 +56,45 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
+
+import com.google.common.base.Charsets;
+import com.squareup.okhttp.HttpUrl;
+
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.Wallet.BalanceType;
+
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedList;
+import java.util.List;
+
+import de.schildbach.wallet.Configuration;
+import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
+import de.schildbach.wallet.ui.InputParser.StringInputParser;
+import de.schildbach.wallet.ui.preference.PreferenceActivity;
+import de.schildbach.wallet.ui.send.SendCoinsActivity;
+import de.schildbach.wallet.ui.send.SweepWalletActivity;
+import de.schildbach.wallet.util.CrashReporter;
+import de.schildbach.wallet.util.Crypto;
+import de.schildbach.wallet.util.Io;
+import de.schildbach.wallet.util.Nfc;
+import de.schildbach.wallet.util.WalletUtils;
+import de.schildbach.wallet.wallofcoins.buydash.BuyDashActivity;
+import de.schildbach.wallet.wallofcoins.selling_wizard.SellingBaseActivity;
+import de.schildbach.wallet_test.R;
 
 /**
  * @author Andreas Schildbach
@@ -366,9 +362,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
 				HelpDialogFragment.page(getFragmentManager(), R.string.help_safety);
 				return true;
 */
-        case R.id.wallet_options_report_issue:
-            handleReportIssue();
-            return true;
+            case R.id.wallet_options_report_issue:
+                handleReportIssue();
+                return true;
 
             case R.id.wallet_options_help:
                 HelpDialogFragment.page(getFragmentManager(), R.string.help_wallet);
@@ -407,10 +403,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
                     REQUEST_CODE_RESTORE_WALLET);
     }
+
     public void handleBackupWalletToSeed() {
         //if (ContextCompat.checkSelfPermission(this,
         //        Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
-            BackupWalletToSeedDialogFragment.show(getFragmentManager());
+        BackupWalletToSeedDialogFragment.show(getFragmentManager());
         //else
         //    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
         //            REQUEST_CODE_BACKUP_WALLET);
@@ -670,7 +667,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         url.addQueryParameter("current", Integer.toString(packageInfo.versionCode));
 
 		/*new HttpGetThread(url.build(), application.httpUserAgent()) {
-			@Override
+            @Override
 			protected void handleLine(final String line, final long serverTime) {
 				final int serverVersionCode = Integer.parseInt(line.split("\\s+")[0]);
 
@@ -1015,14 +1012,21 @@ public final class WalletActivity extends AbstractBindServiceActivity
             handleDisconnect();
         } else if (id == R.id.nav_report_issue) {
             handleReportIssue();
+        } else if (id == R.id.nav_sell_piv) {
+            startActivity(new Intent(this, SellingBaseActivity.class));
         }
-
         viewDrawer.closeDrawer(GravityCompat.START);
         return true;
     }
+
     //Dash Specific
     private void handleDisconnect() {
         getWalletApplication().stopBlockchainService();
         finish();
     }
 }
+
+
+
+
+

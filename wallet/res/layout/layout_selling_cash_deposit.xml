@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="10dp">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/btnContinue"
+        android:fillViewport="true"
+        android:scrollbars="none">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/txtViewMsg"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:text="@string/only_qualified"
+                android:textColor="@color/text_color_black"
+                android:textSize="@dimen/text_size_top_msg" />
+
+            <TextView
+                android:id="@+id/txtViewLabelMobile"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/txtViewMsg"
+                android:layout_marginTop="20dp"
+                android:text="@string/select_your_bank_or_payment_destination"
+                android:textColor="@color/text_color_black"
+                android:textSize="@dimen/text_size_edt_label" />
+
+            <RelativeLayout
+                android:id="@+id/layoutBanklist"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_below="@+id/txtViewLabelMobile"
+                android:background="@drawable/border_selling_edttxt">
+
+                <android.support.v7.widget.AppCompatSpinner
+                    android:id="@+id/sp_banks"
+                    android:layout_width="match_parent"
+                    android:layout_height="34dp" />
+            </RelativeLayout>
+
+
+            <RelativeLayout
+                android:id="@+id/layoutAccDetails"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/layoutBanklist"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/txtViewNameLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+
+                    android:layout_marginTop="20dp"
+                    android:text="@string/name_on_account2"
+                    android:textColor="@color/text_color_black"
+                    android:textSize="@dimen/text_size_edt_label" />
+
+                <EditText
+                    android:id="@+id/edtViewHolderName"
+                    style="@style/styleEdt"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/txtViewNameLabel"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginTop="4dp"
+                    android:hint="@string/name_on_account2"
+                    android:inputType="text" />
+
+
+                <TextView
+                    android:id="@+id/txtViewAccLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/edtViewHolderName"
+                    android:layout_marginTop="20dp"
+                    android:text="@string/account"
+                    android:textColor="@color/text_color_black"
+                    android:textSize="@dimen/text_size_edt_label" />
+
+                <EditText
+                    android:id="@+id/edtViewAcc"
+                    style="@style/styleEdt"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/txtViewAccLabel"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginTop="4dp"
+                    android:hint="@string/account"
+                    android:inputType="number" />
+
+                <TextView
+                    android:id="@+id/txtViewConfirmAccLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/edtViewAcc"
+                    android:layout_marginTop="20dp"
+                    android:text="@string/confirm_account"
+                    android:textColor="@color/text_color_black"
+                    android:textSize="@dimen/text_size_edt_label" />
+
+                <EditText
+                    android:id="@+id/edtViewConfirmAcc"
+                    style="@style/styleEdt"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/txtViewConfirmAccLabel"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginTop="4dp"
+                    android:hint="@string/confirm_account"
+                    android:inputType="number" />
+            </RelativeLayout>
+        </RelativeLayout>
+    </ScrollView>
+
+    <Button
+        android:id="@+id/btnContinue"
+        style="@style/styleBtn"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginEnd="20dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="10dp"
+        android:text="@string/action_continue" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:visibility="gone" />
+</RelativeLayout>

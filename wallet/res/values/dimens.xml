@@ -30,4 +30,10 @@
     <dimen name="dimen_12dp">12dp</dimen>
     <dimen name="size_5dp">5dp</dimen>
 
+    <!--Selling wizard-->
+    <dimen name="text_size_instruct">16sp</dimen>
+    <dimen name="text_size_edt">16sp</dimen>
+    <dimen name="text_size_edt_label">16sp</dimen>
+    <dimen name="text_size_top_msg">16sp</dimen>
+    <dimen name="text_size_notice">14sp</dimen>
 </resources>
