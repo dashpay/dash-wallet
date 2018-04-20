@@ -126,6 +126,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private static final int REQUEST_CODE_BACKUP_WALLET = 1;
     private static final int REQUEST_CODE_RESTORE_WALLET = 2;
 
+    private boolean isRestoringBackup;
+
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -165,7 +167,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         //Prevent showing dialog twice or more when activity is recreated (e.g: rotating device, etc)
         if (savedInstanceState == null) {
             //Add BIP44 support and PIN if missing
-            upgradeWalletKeyChains(Constants.BIP44_PATH);
+            upgradeWalletKeyChains(Constants.BIP44_PATH, false);
         }
     }
 
@@ -448,6 +450,15 @@ public final class WalletActivity extends AbstractBindServiceActivity
         EncryptKeysDialogFragment.show(getFragmentManager());
     }
 
+    public void handleEncryptKeysRestoredWallet() {
+        EncryptKeysDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                resetBlockchain();
+            }
+        });
+    }
+
     private void handleReportIssue() {
         final ReportIssueDialogBuilder dialog = new ReportIssueDialogBuilder(this,
                 R.string.report_issue_dialog_title_issue, R.string.report_issue_dialog_message_issue) {
@@ -540,8 +551,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     restorePrivateKeysFromBase58(file);
                 else if (Crypto.OPENSSL_FILE_FILTER.accept(file))
                     restoreWalletFromEncrypted(file, password);
-
-                upgradeWalletKeyChains(Constants.BIP44_PATH);
             }
         });
         dialog.setNegativeButton(R.string.button_cancel, new OnClickListener() {
@@ -957,7 +966,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
         getSharedPreferences(Constants.WALLET_LOCK_PREFS_NAME, Context.MODE_PRIVATE).edit().clear().commit();
 
         config.disarmBackupReminder();
+        this.wallet = application.getWallet();
+        upgradeWalletKeyChains(Constants.BIP44_PATH, true);
+    }
 
+    private void resetBlockchain() {
+        isRestoringBackup = false;
         final DialogBuilder dialog = new DialogBuilder(this);
         dialog.setTitle(R.string.restore_wallet_dialog_success);
         dialog.setMessage(getString(R.string.restore_wallet_dialog_success_replay));
@@ -974,6 +988,15 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private void checkWalletEncryptionDialog() {
         if (!wallet.isEncrypted()) {
             handleEncryptKeys();
+        }
+    }
+
+    private void checkRestoredWalletEncryptionDialog() {
+        if (!wallet.isEncrypted()) {
+            handleEncryptKeysRestoredWallet();
+        }
+        else {
+            resetBlockchain();
         }
     }
 
@@ -1058,11 +1081,19 @@ public final class WalletActivity extends AbstractBindServiceActivity
         finish();
     }
 
-    public void upgradeWalletKeyChains(final ImmutableList<ChildNumber> path) {
+    public void upgradeWalletKeyChains(final ImmutableList<ChildNumber> path, final boolean restoreBackup) {
 
+        isRestoringBackup = restoreBackup;
         if (!wallet.hasKeyChain(path)) {
             if (wallet.isEncrypted()) {
-                EncryptNewKeyChainDialogFragment.show(getFragmentManager(), path);
+                EncryptNewKeyChainDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
+                    @Override
+                    public void onDismiss(DialogInterface dialog) {
+                        if(isRestoringBackup) {
+                            resetBlockchain();
+                        }
+                    }
+                }, path);
             } else {
                 //
                 // Upgrade the wallet now
@@ -1077,14 +1108,23 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
         }
         else {
-            checkWalletEncryptionDialog();
+            if(restoreBackup) {
+                checkRestoredWalletEncryptionDialog();
+            }
+            else
+                checkWalletEncryptionDialog();
         }
     }
 
     //BIP44 Wallet Upgrade Dialog Dismissed (Ok button pressed)
     @Override
     public void onUpgradeConfirmed() {
-        checkWalletEncryptionDialog();
+        if(isRestoringBackup) {
+            checkRestoredWalletEncryptionDialog();
+        }
+        else {
+            checkWalletEncryptionDialog();
+        }
     }
 
 }
