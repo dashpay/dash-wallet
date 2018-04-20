@@ -65,8 +65,16 @@ import android.widget.TextView;
 public class EncryptKeysDialogFragment extends DialogFragment {
     private static final String FRAGMENT_TAG = EncryptKeysDialogFragment.class.getName();
 
+    protected DialogInterface.OnDismissListener onDismissListener;
+
     public static void show(final FragmentManager fm) {
         final DialogFragment newFragment = new EncryptKeysDialogFragment();
+        newFragment.show(fm, FRAGMENT_TAG);
+    }
+
+    public static void show(final FragmentManager fm, DialogInterface.OnDismissListener onDismissListener) {
+        final EncryptKeysDialogFragment newFragment = new EncryptKeysDialogFragment();
+        newFragment.onDismissListener = onDismissListener;
         newFragment.show(fm, FRAGMENT_TAG);
     }
 
@@ -215,6 +223,10 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         showView.setOnCheckedChangeListener(null);
 
         wipePasswords();
+
+        if (onDismissListener != null) {
+            onDismissListener.onDismiss(dialog);
+        }
 
         super.onDismiss(dialog);
     }
