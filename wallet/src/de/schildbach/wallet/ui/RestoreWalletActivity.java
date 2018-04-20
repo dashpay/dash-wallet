@@ -24,14 +24,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
+import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
 
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet.util.WalletUtils;
@@ -52,7 +55,8 @@ import android.widget.EditText;
 /**
  * @author Andreas Schildbach
  */
-public final class RestoreWalletActivity extends AbstractWalletActivity {
+public final class RestoreWalletActivity extends AbstractWalletActivity
+        implements UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener {
     private static final int DIALOG_RESTORE_WALLET = 0;
 
     private WalletApplication application;
@@ -61,6 +65,11 @@ public final class RestoreWalletActivity extends AbstractWalletActivity {
     private ContentResolver contentResolver;
 
     private Uri backupFileUri;
+
+    enum State {
+        INPUT, UPGRADE, PINSET, DONE;
+    }
+    State state = State.INPUT;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -186,23 +195,11 @@ public final class RestoreWalletActivity extends AbstractWalletActivity {
 
     private void restoreWallet(final Wallet wallet) throws IOException {
         application.replaceWallet(wallet);
+        this.wallet = application.getWallet();
 
         config.disarmBackupReminder();
 
-        final DialogBuilder dialog = new DialogBuilder(this);
-        final StringBuilder message = new StringBuilder();
-        message.append(getString(R.string.restore_wallet_dialog_success));
-        message.append("\n\n");
-        message.append(getString(R.string.restore_wallet_dialog_success_replay));
-        dialog.setMessage(message);
-        dialog.setNeutralButton(R.string.button_ok, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(final DialogInterface dialog, final int id) {
-                getWalletApplication().resetBlockchain();
-                finish();
-            }
-        });
-        dialog.show();
+        upgradeWalletKeyChains(Constants.BIP44_PATH);
     }
 
     private class FinishListener implements DialogInterface.OnClickListener, DialogInterface.OnCancelListener {
@@ -218,4 +215,81 @@ public final class RestoreWalletActivity extends AbstractWalletActivity {
     }
 
     private final FinishListener finishListener = new FinishListener();
+
+    private void upgradeWalletKeyChains(final ImmutableList<ChildNumber> path) {
+
+        state = State.UPGRADE;
+        if (!wallet.hasKeyChain(path)) {
+            if (wallet.isEncrypted()) {
+                state = State.PINSET;
+                EncryptNewKeyChainDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
+                    @Override
+                    public void onDismiss(DialogInterface dialog) {
+                        onUpgradeConfirmed();
+                    }
+                }, path);
+            } else {
+                //
+                // Upgrade the wallet now
+                //
+                wallet.addKeyChain(path);
+                application.saveWallet();
+                //
+                // Tell the user that the wallet is being upgraded (BIP44)
+                // and they will have to enter a PIN.
+                //
+                UpgradeWalletDisclaimerDialog.show(getFragmentManager());
+            }
+        }
+        else {
+            checkWalletEncryptionDialog();
+        }
+    }
+
+    //BIP44 Wallet Upgrade Dialog Dismissed (Ok button pressed)
+    @Override
+    public void onUpgradeConfirmed() {
+        if(state == State.PINSET) {
+            resetBlockchain();
+        }
+        if(state == State.UPGRADE) {
+            checkWalletEncryptionDialog();
+        }
+    }
+
+    private void resetBlockchain() {
+        state = State.DONE;
+        final DialogBuilder dialog = new DialogBuilder(this);
+        final StringBuilder message = new StringBuilder();
+        message.append(getString(R.string.restore_wallet_dialog_success));
+        message.append("\n\n");
+        message.append(getString(R.string.restore_wallet_dialog_success_replay));
+        dialog.setMessage(message);
+        dialog.setNeutralButton(R.string.button_ok, new OnClickListener() {
+            @Override
+            public void onClick(final DialogInterface dialog, final int id) {
+                getWalletApplication().resetBlockchain();
+                finish();
+            }
+        });
+        dialog.show();
+    }
+
+    private void checkWalletEncryptionDialog() {
+        state = State.PINSET;
+        if (!wallet.isEncrypted()) {
+            handleEncryptKeys();
+        } else {
+            onUpgradeConfirmed();
+        }
+    }
+
+    public void handleEncryptKeys() {
+        EncryptKeysDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                onUpgradeConfirmed();
+            }
+        });
+    }
 }
