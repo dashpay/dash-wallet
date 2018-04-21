@@ -1069,7 +1069,7 @@ public final class SendCoinsFragment extends Fragment {
         ixCoinSelector.setUsingInstantX(sendRequest.useInstantSend);
         sendRequest.coinSelector = ixCoinSelector;
         sendRequest.emptyWallet = paymentIntent.mayEditAmount()
-                && finalAmount.equals(wallet.getBalance(BalanceType.AVAILABLE));
+                && finalAmount.equals(wallet.getBalance(BalanceType.ESTIMATED));
         sendRequest.feePerKb = fees.get(feeCategory);
         sendRequest.feePerKb = sendRequest.useInstantSend ? TransactionLockRequest.MIN_FEE: sendRequest.feePerKb;
         sendRequest.memo = paymentIntent.memo;
@@ -1248,7 +1248,7 @@ public final class SendCoinsFragment extends Fragment {
                 }
             });
         } else {
-            final Coin available = wallet.getBalance(BalanceType.AVAILABLE);
+            final Coin available = wallet.getBalance(BalanceType.ESTIMATED);
             amountCalculatorLink.setBtcAmount(available);
 
             updateView();
@@ -1280,7 +1280,7 @@ public final class SendCoinsFragment extends Fragment {
                     sendRequest.coinSelector = ixCoinSelector;
                     sendRequest.signInputs = false;
                     sendRequest.emptyWallet = paymentIntent.mayEditAmount()
-                            && amount.equals(wallet.getBalance(BalanceType.AVAILABLE));
+                            && amount.equals(wallet.getBalance(BalanceType.ESTIMATED));
                     sendRequest.feePerKb = fees.get(feeCategory);
                     sendRequest.feePerKb = sendRequest.useInstantSend ? TransactionLockRequest.MIN_FEE: sendRequest.feePerKb;
 
