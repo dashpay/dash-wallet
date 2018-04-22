@@ -24,8 +24,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
@@ -34,27 +32,28 @@ import java.util.List;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
-import org.bitcoinj.crypto.MnemonicCode;
-import org.bitcoinj.crypto.MnemonicException;
+import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
 import com.squareup.okhttp.HttpUrl;
 
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.preference.PreferenceActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
+import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.Io;
-import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -63,6 +62,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnCancelListener;
 import android.content.DialogInterface.OnClickListener;
@@ -103,7 +103,9 @@ import android.widget.TextView;
  * @author Andreas Schildbach
  */
 public final class WalletActivity extends AbstractBindServiceActivity
-        implements ActivityCompat.OnRequestPermissionsResultCallback, NavigationView.OnNavigationItemSelectedListener {
+        implements ActivityCompat.OnRequestPermissionsResultCallback,
+        NavigationView.OnNavigationItemSelectedListener,
+        WalletLock.OnLockChangeListener, UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener {
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
     private static final int DIALOG_RESTORE_WALLET = 2;
@@ -123,6 +125,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private static final int REQUEST_CODE_SCAN = 0;
     private static final int REQUEST_CODE_BACKUP_WALLET = 1;
     private static final int REQUEST_CODE_RESTORE_WALLET = 2;
+
+    private boolean isRestoringBackup;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -159,6 +163,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
         MaybeMaintenanceFragment.add(getFragmentManager());
 
         initView();
+
+        //Prevent showing dialog twice or more when activity is recreated (e.g: rotating device, etc)
+        if (savedInstanceState == null) {
+            //Add BIP44 support and PIN if missing
+            upgradeWalletKeyChains(Constants.BIP44_PATH, false);
+        }
     }
 
     private void initView() {
@@ -311,6 +321,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         getMenuInflater().inflate(R.menu.wallet_options, menu);
 
+        MenuItem walletLockMenuItem = menu.findItem(R.id.wallet_options_lock);
+        walletLockMenuItem.setVisible(WalletLock.getInstance().isWalletLocked(wallet));
+
         return true;
     }
 
@@ -365,9 +378,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
 				HelpDialogFragment.page(getFragmentManager(), R.string.help_safety);
 				return true;
 */
-        case R.id.wallet_options_report_issue:
-            handleReportIssue();
-            return true;
+            case R.id.wallet_options_report_issue:
+                handleReportIssue();
+                return true;
 
             case R.id.wallet_options_help:
                 HelpDialogFragment.page(getFragmentManager(), R.string.help_wallet);
@@ -390,6 +403,20 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     public void handleBackupWallet() {
+        //Only allow to backup when wallet is unlocked
+        final WalletLock walletLock = WalletLock.getInstance();
+        if (WalletLock.getInstance().isWalletLocked(wallet)) {
+            UnlockWalletDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
+                @Override
+                public void onDismiss(DialogInterface dialog) {
+                    if (!walletLock.isWalletLocked(wallet)) {
+                        handleBackupWallet();
+                    }
+                }
+            });
+            return;
+        }
+
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
             BackupWalletDialogFragment.show(getFragmentManager());
@@ -409,7 +436,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     public void handleBackupWalletToSeed() {
         //if (ContextCompat.checkSelfPermission(this,
         //        Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
-            BackupWalletToSeedDialogFragment.show(getFragmentManager());
+        BackupWalletToSeedDialogFragment.show(getFragmentManager());
         //else
         //    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
         //            REQUEST_CODE_BACKUP_WALLET);
@@ -421,6 +448,15 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     public void handleEncryptKeys() {
         EncryptKeysDialogFragment.show(getFragmentManager());
+    }
+
+    public void handleEncryptKeysRestoredWallet() {
+        EncryptKeysDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                resetBlockchain();
+            }
+        });
     }
 
     private void handleReportIssue() {
@@ -652,6 +688,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             public void onClick(final DialogInterface dialog, final int id) {
                 startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
                 finish();
+                finish();
             }
         });
         dialog.setNegativeButton(R.string.button_dismiss, null);
@@ -659,6 +696,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void checkAlerts() {
+
         final PackageInfo packageInfo = getWalletApplication().packageInfo();
         final int versionNameSplit = packageInfo.versionName.indexOf('-');
         final HttpUrl.Builder url = HttpUrl
@@ -925,9 +963,15 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     public void restoreWallet(final Wallet wallet) throws IOException {
         application.replaceWallet(wallet);
+        getSharedPreferences(Constants.WALLET_LOCK_PREFS_NAME, Context.MODE_PRIVATE).edit().clear().commit();
 
         config.disarmBackupReminder();
+        this.wallet = application.getWallet();
+        upgradeWalletKeyChains(Constants.BIP44_PATH, true);
+    }
 
+    private void resetBlockchain() {
+        isRestoringBackup = false;
         final DialogBuilder dialog = new DialogBuilder(this);
         dialog.setTitle(R.string.restore_wallet_dialog_success);
         dialog.setMessage(getString(R.string.restore_wallet_dialog_success_replay));
@@ -939,6 +983,21 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
         });
         dialog.show();
+    }
+
+    private void checkWalletEncryptionDialog() {
+        if (!wallet.isEncrypted()) {
+            handleEncryptKeys();
+        }
+    }
+
+    private void checkRestoredWalletEncryptionDialog() {
+        if (!wallet.isEncrypted()) {
+            handleEncryptKeysRestoredWallet();
+        }
+        else {
+            resetBlockchain();
+        }
     }
 
     @Override
@@ -1021,4 +1080,51 @@ public final class WalletActivity extends AbstractBindServiceActivity
         getWalletApplication().stopBlockchainService();
         finish();
     }
+
+    public void upgradeWalletKeyChains(final ImmutableList<ChildNumber> path, final boolean restoreBackup) {
+
+        isRestoringBackup = restoreBackup;
+        if (!wallet.hasKeyChain(path)) {
+            if (wallet.isEncrypted()) {
+                EncryptNewKeyChainDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
+                    @Override
+                    public void onDismiss(DialogInterface dialog) {
+                        if(isRestoringBackup) {
+                            resetBlockchain();
+                        }
+                    }
+                }, path);
+            } else {
+                //
+                // Upgrade the wallet now
+                //
+                wallet.addKeyChain(path);
+                application.saveWallet();
+                //
+                // Tell the user that the wallet is being upgraded (BIP44)
+                // and they will have to enter a PIN.
+                //
+                UpgradeWalletDisclaimerDialog.show(getFragmentManager());
+            }
+        }
+        else {
+            if(restoreBackup) {
+                checkRestoredWalletEncryptionDialog();
+            }
+            else
+                checkWalletEncryptionDialog();
+        }
+    }
+
+    //BIP44 Wallet Upgrade Dialog Dismissed (Ok button pressed)
+    @Override
+    public void onUpgradeConfirmed() {
+        if(isRestoringBackup) {
+            checkRestoredWalletEncryptionDialog();
+        }
+        else {
+            checkWalletEncryptionDialog();
+        }
+    }
+
 }
