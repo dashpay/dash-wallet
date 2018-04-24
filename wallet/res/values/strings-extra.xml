@@ -33,15 +33,17 @@
 	<string name="wallet_uri_handler_public_key_request_dialog_msg">Application %s would like to receive your Master Public Key.  This can be used to keep track of your wallet, this can not be used to move your Dash.</string>
 	<string name="wallet_uri_handler_address_request_dialog_msg">Application %s is requesting an address so it can pay you.  Would you like to authorize this?</string>
 
-	<string name="buy_dash_activity_title">Buy Dash</string>
-
-	<string name="transfer_from_external_account_title">Transfer Dash to this wallet</string>
-	<string name="transfer_from_external_account_message">You have %1$s Dash in your %2$s account. Do you want to transfer this value to this wallet?</string>
-
-	<string name="transfer_from_external_account_confirm_title">Confirm transaction</string>
-	<string name="transfer_from_external_account_confirm_message">You are transferring a total of %1$s Dash (%2$s base amount + %3$s fee) from your %4$s account to this wallet. Do you want to confirm this transaction?</string>
-
+	<string name="uphold_buy_dash_activity_title">Buy Dash with Uphold</string>
+	<string name="uphold_transfer_from_external_account_title">Transfer Dash to this wallet</string>
+	<string name="uphold_transfer_from_external_account_message">You have &lt;b>%1$s Dash&lt;/b> in your Uphold account. Do you want to &lt;u>transfer this value to this wallet&lt;/u>?</string>
+	<string name="uphold_transfer_from_external_account_confirm_title">Confirm transaction</string>
+	<string name="uphold_transfer_from_external_account_confirm_message">You are transferring a total of %1$s Dash (%2$s base amount + %3$s fee) from your %4$s account to this wallet. Do you want to confirm this transaction?</string>
+	<string name="uphold_transfer_from_external_account_instructions">Enter the amount to transfer below:</string>
+	<string name="uphold_otp_dialog_title">Enter the code sent to you via SMS below:</string>
+	<string name="uphold_enter_otp_code">Enter the code sent to you via SMS below:</string>
+	<string name="uphold_transfer">Transfer</string>
 	<string name="loading">Loading…</string>
 	<string name="loading_error">An error occurred. Please try again later.</string>
+	<string name="dash_available">&lt;u>%1$s Dash available&lt;/u></string>
 
 </resources>

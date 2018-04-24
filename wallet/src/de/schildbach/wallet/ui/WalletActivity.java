@@ -24,8 +24,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
@@ -34,8 +32,6 @@ import java.util.List;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
-import org.bitcoinj.crypto.MnemonicCode;
-import org.bitcoinj.crypto.MnemonicException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 
@@ -54,7 +50,6 @@ import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.Io;
-import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -1012,17 +1007,15 @@ public final class WalletActivity extends AbstractBindServiceActivity
         } else if (id == R.id.nav_report_issue) {
             handleReportIssue();
         } else if (id == R.id.nav_buy_dash) {
-            startBuyDashActivity();
+            startUpholdActivity();
         }
 
         viewDrawer.closeDrawer(GravityCompat.START);
         return true;
     }
 
-    private void startBuyDashActivity() {
-        Intent intent = new Intent(this, WebViewActivity.class);
-        intent.putExtra(WebViewActivity.WEBVIEW_URL, "https://sandbox.uphold.com/authorize/dfb85d44118d6ca2b3e070d434da6e9102a3c7d9?scope=accounts:read%20cards:read%20cards:write%20transactions:deposit%20transactions:read%20transactions:transfer:application%20transactions:transfer:others%20transactions:transfer:self%20transactions:withdraw%20transactions:commit:otp%20user:read&state=somehash");
-        intent.putExtra(WebViewActivity.ACTIVITY_TITLE, getString(R.string.buy_dash_activity_title));
+    private void startUpholdActivity() {
+        Intent intent = new Intent(this, UpholdActivity.class);
         startActivity(intent);
     }
 

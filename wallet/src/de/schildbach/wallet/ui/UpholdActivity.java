@@ -21,10 +21,8 @@ import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.net.Uri;
@@ -35,19 +33,15 @@ import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.Toast;
 
-import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.UpholdClient;
 import de.schildbach.wallet_test.R;
 
-public class WebViewActivity extends AppCompatActivity {
+public class UpholdActivity extends AppCompatActivity {
 
-    public static final String WEBVIEW_URL = "webview_url";
-    public static final String ACTIVITY_TITLE = "activity_title";
+    private static final String INITIAL_URL = "https://sandbox.uphold.com/authorize/dfb85d44118d6ca2b3e070d434da6e9102a3c7d9?scope=accounts:read%20cards:read%20cards:write%20transactions:deposit%20transactions:read%20transactions:transfer:application%20transactions:transfer:others%20transactions:transfer:self%20transactions:withdraw%20transactions:commit:otp%20user:read&state=somehash";
 
     private WebView webView;
-    private String confirmationUrl;
     private ProgressDialog loadingDialog;
     private int retryCount = 0;
     private static final int MAX_RETRY = 3;
@@ -111,19 +105,17 @@ public class WebViewActivity extends AppCompatActivity {
         });
 
         Intent intent = getIntent();
-        String url = intent.getStringExtra(WEBVIEW_URL);
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState);
-        } else if (url != null) {
-            webView.loadUrl(url);
         } else if (intent.getDataString() != null) {
             //Confirmation URL
             webView.loadUrl(intent.getDataString());
+        } else {
+            webView.loadUrl(INITIAL_URL);
         }
 
-        String title = intent.getStringExtra(ACTIVITY_TITLE);
-        if (title != null && actionBar != null) {
-            actionBar.setTitle(title);
+        if (actionBar != null) {
+            actionBar.setTitle(R.string.uphold_buy_dash_activity_title);
         }
     }
 
@@ -151,10 +143,9 @@ public class WebViewActivity extends AppCompatActivity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        confirmationUrl = intent.getDataString();
+        String confirmationUrl = intent.getDataString();
         if (confirmationUrl != null) {
             webView.loadUrl(confirmationUrl);
-            confirmationUrl = null;
         }
     }
 
@@ -185,20 +176,19 @@ public class WebViewActivity extends AppCompatActivity {
             return true;
         }
 
-        if (url.contains(Constants.UPHOLD_AUTH_REDIRECT_URL)) {
+        if (url.contains(UpholdClient.UPHOLD_AUTH_REDIRECT_URL)) {
             Uri uri = Uri.parse(url);
             String code = uri.getQueryParameter("code");
             if (code != null) {
-                UpholdClient.getInstance().getAccessToken(code, new UpholdClient.Callback<String>() {
+                UpholdClient.getInstance(this).getAccessToken(code, new UpholdClient.Callback<String>() {
                     @Override
                     public void onSuccess(String dashCardId) {
-                        storeUpholdAccessToken(UpholdClient.getInstance().getAccessToken());
                         String url = "https://sandbox.uphold.com/dashboard/cards/" + dashCardId + "/add";
                         webView.loadUrl(url);
                     }
 
                     @Override
-                    public void onError(Exception e) {
+                    public void onError(Exception e, boolean otpRequired) {
                         showLoadingErrorAlert();
                     }
                 });
@@ -208,11 +198,6 @@ public class WebViewActivity extends AppCompatActivity {
             }
         }
         return false;
-    }
-
-    private void storeUpholdAccessToken(String accessToken) {
-        SharedPreferences prefs = getSharedPreferences(Constants.UPHOLD_PREFS, Context.MODE_PRIVATE);
-        prefs.edit().putString(Constants.UPHOLD_ACCESS_TOKEN, accessToken).apply();
     }
 
     @Override

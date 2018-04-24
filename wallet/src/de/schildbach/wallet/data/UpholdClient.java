@@ -1,20 +1,39 @@
+/*
+ * Copyright 2014-2015 the original author or authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package de.schildbach.wallet.data;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Log;
 
 import com.squareup.moshi.Moshi;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import de.schildbach.wallet.Constants;
+import de.schildbach.wallet_test.BuildConfig;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import retrofit2.Call;
-import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.moshi.MoshiConverterFactory;
@@ -23,25 +42,42 @@ public class UpholdClient {
 
     private static UpholdClient instance;
     private final UpholdService service;
-
+    private final SharedPreferences prefs;
     private String accessToken;
+    private String otpToken;
     private UpholdCard dashCard;
+
+    public static final String UPHOLD_AUTH_REDIRECT_URL = "www.dash.org";
+    private static final String UPHOLD_CLIENT_ID = "dfb85d44118d6ca2b3e070d434da6e9102a3c7d9";
+    private static final String UPHOLD_CLIENT_SECRET = "fdb513ff0dd2672a23875816d31354076fc5372e";
+    private static final String UPHOLD_PREFS = "uphold_prefs";
+    private static final String UPHOLD_ACCESS_TOKEN = "access_token";
+    private static final String UPHOLD_BASE_URL = BuildConfig.DEBUG ?
+            "https://api-sandbox.uphold.com/" : "https://api.uphold.com/";
+    private static final String OTP_REQUIRED_KEY = "OTP-Token";
+    private static final String OTP_REQUIRED_VALUE = "required";
 
     private Interceptor headerInterceptor = new Interceptor() {
 
         @Override
         public okhttp3.Response intercept(Chain chain) throws IOException {
             if (accessToken != null) {
-                Request request = chain.request().newBuilder()
-                        .addHeader("Authorization", "Bearer " + accessToken).build();
-                return chain.proceed(request);
+                Request.Builder requestBuilder = chain.request().newBuilder();
+                requestBuilder.addHeader("Authorization", "Bearer " + accessToken);
+                if (otpToken != null) {
+                    requestBuilder.addHeader("OTP-Token", otpToken);
+                }
+                return chain.proceed(requestBuilder.build());
             }
             return chain.proceed(chain.request());
         }
 
     };
 
-    private UpholdClient() {
+    private UpholdClient(Context context) {
+        this.prefs = context.getSharedPreferences(UPHOLD_PREFS, Context.MODE_PRIVATE);
+        this.accessToken = getStoredAccessToken();
+
         //TODO: Parametrize baseURL according to ENV
         OkHttpClient okClient = new OkHttpClient.Builder().addInterceptor(headerInterceptor).build();
 
@@ -49,41 +85,51 @@ public class UpholdClient {
 
         Retrofit retrofit = new Retrofit.Builder()
                 .client(okClient)
-                .baseUrl("https://api-sandbox.uphold.com/")
+                .baseUrl(UPHOLD_BASE_URL)
                 .addConverterFactory(MoshiConverterFactory.create(moshi))
                 .build();
 
         this.service = retrofit.create(UpholdService.class);
+
     }
 
-    public static UpholdClient getInstance() {
+    public static UpholdClient getInstance(Context context) {
         if (instance == null) {
-            instance = new UpholdClient();
+            instance = new UpholdClient(context);
         }
         return instance;
     }
 
     public void getAccessToken(String code, final Callback<String> callback) {
-        service.getAccessToken(Constants.UPHOLD_CLIENT_ID, Constants.UPHOLD_CLIENT_SECRET, code,
+        service.getAccessToken(UPHOLD_CLIENT_ID, UPHOLD_CLIENT_SECRET, code,
                 "authorization_code").enqueue(new retrofit2.Callback<AccessToken>() {
             @Override
             public void onResponse(Call<AccessToken> call, Response<AccessToken> response) {
                 if (response.isSuccessful()) {
                     accessToken = response.body().getAccessToken();
+                    storeAccessToken();
                     getCards(callback, null);
                 } else {
-                    callback.onError(new Exception(response.message()));
+                    callback.onError(new Exception(response.message()), false);
                 }
             }
 
             @Override
             public void onFailure(Call<AccessToken> call, Throwable t) {
-                callback.onError(new Exception(t));
+                callback.onError(new Exception(t), false);
             }
         });
     }
 
-    public void getCards(final Callback<String> callback, final Callback<UpholdCard> getDashCardCb) {
+    private void storeAccessToken() {
+        prefs.edit().putString(UPHOLD_ACCESS_TOKEN, accessToken).apply();
+    }
+
+    private String getStoredAccessToken() {
+        return prefs.getString(UPHOLD_ACCESS_TOKEN, null);
+    }
+
+    private void getCards(final Callback<String> callback, final Callback<UpholdCard> getDashCardCb) {
         service.getCards().enqueue(new retrofit2.Callback<List<UpholdCard>>() {
             @Override
             public void onResponse(Call<List<UpholdCard>> call, Response<List<UpholdCard>> response) {
@@ -99,17 +145,15 @@ public class UpholdClient {
                         if (getDashCardCb != null) {
                             getDashCardCb.onSuccess(dashCard);
                         }
-                        //TODO: Store Dash Card
-                        Log.d("Dash Card", dashCard.toString());
                     }
                 } else {
-                    callback.onError(new Exception(response.message()));
+                    callback.onError(new Exception(response.message()), false);
                 }
             }
 
             @Override
             public void onFailure(Call<List<UpholdCard>> call, Throwable t) {
-                callback.onError(new Exception(t));
+                callback.onError(new Exception(t), false);
             }
         });
     }
@@ -132,7 +176,6 @@ public class UpholdClient {
                 } else {
                     //TODO: Handle error
                 }
-                Log.d("Response", response.toString());
             }
 
             @Override
@@ -153,7 +196,7 @@ public class UpholdClient {
 
             @Override
             public void onFailure(Call<UpholdCryptoCardAddress> call, Throwable t) {
-                t.printStackTrace();
+                //TODO: Handle error
             }
         });
     }
@@ -167,7 +210,7 @@ public class UpholdClient {
         return null;
     }
 
-    public void getDashBalance(final Callback<String> callback) {
+    public void getDashBalance(final Callback<BigDecimal> callback) {
         getCards(new Callback<String>() {
             @Override
             public void onSuccess(String data) {
@@ -175,25 +218,24 @@ public class UpholdClient {
             }
 
             @Override
-            public void onError(Exception e) {
+            public void onError(Exception e, boolean otpRequired) {
 
             }
         }, new Callback<UpholdCard>() {
             @Override
             public void onSuccess(UpholdCard data) {
-
-                callback.onSuccess(data.getBalance());
+                callback.onSuccess(new BigDecimal(data.getBalance()));
             }
 
             @Override
-            public void onError(Exception e) {
+            public void onError(Exception e, boolean otpRequired) {
 
             }
         });
     }
 
-    public void createDashWithdrawalTrasaction(String amount, String address,
-                                               final Callback<UpholdTransaction> callback) { //TODO: Change amount type?
+    public void createDashWithdrawalTransaction(String amount, String address,
+                                                final Callback<UpholdTransaction> callback) {
         HashMap<String, Object> body = new HashMap<>();
         HashMap<String, String> denomination = new HashMap<>();
         denomination.put("amount", amount);
@@ -207,13 +249,14 @@ public class UpholdClient {
                 if (response.isSuccessful()) {
                     callback.onSuccess(response.body());
                 } else {
-                    callback.onError(new Exception(response.errorBody().toString()));
+                    boolean otpRequired = OTP_REQUIRED_VALUE.equals(response.headers().get(OTP_REQUIRED_KEY));
+                    callback.onError(new Exception(response.errorBody().toString()), otpRequired);
                 }
             }
 
             @Override
             public void onFailure(Call<UpholdTransaction> call, Throwable t) {
-                callback.onError(new Exception(t));
+                callback.onError(new Exception(t), false);
             }
         });
     }
@@ -225,34 +268,25 @@ public class UpholdClient {
                 if (response.isSuccessful()) {
                     callback.onSuccess(null);
                 } else {
-                    callback.onError(new Exception(""));
+                    boolean otpRequired = OTP_REQUIRED_VALUE.equals(response.headers().get(OTP_REQUIRED_KEY));
+                    callback.onError(new Exception(response.errorBody().toString()), otpRequired);
                 }
             }
 
             @Override
             public void onFailure(Call call, Throwable t) {
-                callback.onError(new Exception(t));
+                callback.onError(new Exception(t), false);
             }
         });
     }
 
+    public void setOtpToken(String otpToken) {
+        this.otpToken = otpToken;
+    }
+
     public interface Callback<T> {
         void onSuccess(T data);
-        void onError(Exception e);
+        void onError(Exception e, boolean otpRequired);
     }
-
-    public void setAccessToken(String accessToken) {
-        this.accessToken = accessToken;
-    }
-
-    public String getAccessToken() {
-        return accessToken;
-    }
-
-    public UpholdCard getDashCard() {
-        return dashCard;
-    }
-
-
 
 }

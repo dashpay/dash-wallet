@@ -200,8 +200,8 @@
             </intent-filter>
 
         </activity>
-        <activity android:name="de.schildbach.wallet.ui.WebViewActivity"
-            android:label="@string/buy_dash_activity_title"
+        <activity android:name="de.schildbach.wallet.ui.UpholdActivity"
+            android:label="@string/uphold_buy_dash_activity_title"
             android:launchMode="singleTop"
             android:theme="@style/My.Theme.ChildActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize">

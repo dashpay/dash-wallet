@@ -230,11 +230,4 @@ public final class Constants {
 
     public static boolean ENABLE_ZERO_FEES = TEST; //Enable Zero Fee's on TestNet only.
 
-    /** Uphold Integration Values **/
-    public static final String UPHOLD_AUTH_REDIRECT_URL = "www.dash.org";
-    public static final String UPHOLD_CLIENT_ID = "dfb85d44118d6ca2b3e070d434da6e9102a3c7d9";
-    public static final String UPHOLD_CLIENT_SECRET = "fdb513ff0dd2672a23875816d31354076fc5372e";
-    public static final String UPHOLD_PREFS = "uphold_prefs";
-    public static final String UPHOLD_ACCESS_TOKEN = "access_token";
-
 }

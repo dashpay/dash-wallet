@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -44,29 +45,24 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.UpholdClient;
-import de.schildbach.wallet.data.UpholdTransaction;
 import de.schildbach.wallet.ui.TransactionsAdapter.Warning;
 import de.schildbach.wallet.ui.send.RaiseFeeDialogFragment;
 import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Qr;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
-import de.schildbach.wallet.util.Toast;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Fragment;
 import android.app.LoaderManager;
 import android.app.LoaderManager.LoaderCallbacks;
-import android.app.ProgressDialog;
 import android.app.admin.DevicePolicyManager;
 import android.content.AsyncTaskLoader;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.Loader;
@@ -430,6 +426,13 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
     }
 
     @Override
+    public void onInfoClicked(TransactionsAdapter.Info info) {
+        if (info.getData() instanceof BigDecimal) {
+            showTransferFromUpholdAccountDialog(info);
+        }
+    }
+
+    @Override
     public Loader<List<Transaction>> onCreateLoader(final int id, final Bundle args) {
         return new TransactionsLoader(activity, wallet, (Direction) args.getSerializable(ARG_DIRECTION));
     }
@@ -613,97 +616,33 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
     }
 
     private void checkUpholdBalance() {
-        SharedPreferences prefs = getActivity().getSharedPreferences(Constants.UPHOLD_PREFS, Context.MODE_PRIVATE);
-        String upholdAccessToken = prefs.getString(Constants.UPHOLD_ACCESS_TOKEN, "");
-
-        if (upholdAccessToken.isEmpty()) {
-            return;
-        }
-
-        final ProgressDialog progressDialog = new ProgressDialog(getActivity());
-        progressDialog.show();
-
-        UpholdClient upholdClient = UpholdClient.getInstance();
-        upholdClient.setAccessToken(upholdAccessToken);
-        upholdClient.getDashBalance(new UpholdClient.Callback<String>() {
+        UpholdClient.getInstance(getActivity()).getDashBalance(new UpholdClient.Callback<BigDecimal>() {
             @Override
-            public void onSuccess(String balance) {
-                progressDialog.dismiss();
-                if (Double.valueOf(balance) > 0) {
-                    showTransferFundsFromExternalAccountDialog(balance, "Uphold");
+            public void onSuccess(final BigDecimal balance) {
+                if (balance.compareTo(BigDecimal.ZERO) > 0) {
+                    final String infoText = getString(R.string.uphold_transfer_from_external_account_message, balance);
+                    adapter.addInfo(new TransactionsAdapter.Info<>(infoText, balance));
                 }
             }
 
             @Override
-            public void onError(Exception e) {
-                progressDialog.dismiss();
-                new Toast(getActivity()).toast("Error");
+            public void onError(Exception e, boolean otpRequired) {
+
             }
         });
     }
 
-    private void showTransferFundsFromExternalAccountDialog(String balance, String provider) {
-        final ProgressDialog progressDialog = new ProgressDialog(getActivity());
-        progressDialog.setIndeterminate(true);
-        progressDialog.show();
-
-        AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(getActivity());
-        dialogBuilder.setTitle(R.string.transfer_from_external_account_title);
-        dialogBuilder.setMessage(getString(R.string.transfer_from_external_account_message, balance, provider));
-        dialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                UpholdClient.getInstance().createDashWithdrawalTrasaction("0.1",
-                        wallet.currentReceiveAddress().toString(), new UpholdClient.Callback<UpholdTransaction>() {
+    private void showTransferFromUpholdAccountDialog(final TransactionsAdapter.Info<BigDecimal> info) {
+        BigDecimal balance = info.getData();
+        UpholdTransferToWalletDialog.show(getFragmentManager(), balance,
+                wallet.currentReceiveAddress().toString(),
+                new UpholdTransferToWalletDialog.OnTransferListener() {
                     @Override
-                    public void onSuccess(UpholdTransaction transaction) {
-                        progressDialog.dismiss();
-                        commitUpholdTransaction(transaction);
-                    }
-
-                    @Override
-                    public void onError(Exception e) {
-                        progressDialog.dismiss();
-                        new Toast(getActivity()).toast("Error");
+                    public void onTransfer() {
+                        adapter.removeInfo(info);
+                        checkUpholdBalance();
                     }
                 });
-            }
-        });
-
-        dialogBuilder.setNegativeButton(android.R.string.no, null);
-        dialogBuilder.show();
     }
 
-    private void commitUpholdTransaction(final UpholdTransaction transaction) {
-        final ProgressDialog progressDialog = new ProgressDialog(getActivity());
-        progressDialog.setIndeterminate(true);
-        progressDialog.show();
-
-        AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(getActivity());
-        dialogBuilder.setTitle(R.string.transfer_from_external_account_confirm_title);
-        dialogBuilder.setMessage(getString(R.string.transfer_from_external_account_confirm_message,
-                transaction.getOrigin().getAmount(), transaction.getOrigin().getBase(),
-                transaction.getOrigin().getFee(), "Uphold"));
-        dialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                UpholdClient.getInstance().commitTransaction(transaction.getId(), new UpholdClient.Callback<Object>() {
-                    @Override
-                    public void onSuccess(Object data) {
-                        progressDialog.dismiss();
-                        new Toast(getActivity()).toast("Success");
-                    }
-
-                    @Override
-                    public void onError(Exception e) {
-                        progressDialog.dismiss();
-                        new Toast(getActivity()).toast("Error");
-                    }
-                });
-            }
-        });
-
-        dialogBuilder.setNegativeButton(android.R.string.no, null);
-        dialogBuilder.show();
-    }
 }
