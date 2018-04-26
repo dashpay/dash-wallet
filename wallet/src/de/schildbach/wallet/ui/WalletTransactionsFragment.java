@@ -443,7 +443,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
         adapter.replace(transactions);
 
-        if (transactions.isEmpty()) {
+        if (adapter.isEmpty()) {
             viewGroup.setDisplayedChild(1);
 
             final SpannableStringBuilder emptyText = new SpannableStringBuilder(
@@ -622,12 +622,16 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
                 if (balance.compareTo(BigDecimal.ZERO) > 0) {
                     final String infoText = getString(R.string.uphold_transfer_from_external_account_message, balance);
                     adapter.addInfo(new TransactionsAdapter.Info<>(infoText, balance));
+                    //Check if is displaying empty screen and show list instead
+                    if (viewGroup.getDisplayedChild() == 1) {
+                        viewGroup.setDisplayedChild(2);
+                    }
                 }
             }
 
             @Override
             public void onError(Exception e, boolean otpRequired) {
-
+                //TODO: Handle error.
             }
         });
     }

@@ -79,9 +79,9 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private final OnClickListener onClickListener;
 
     private final List<Transaction> transactions = new ArrayList<Transaction>();
+    private final List<Info> infoList = new ArrayList<>();
     private MonetaryFormat format;
     private Warning warning;
-    private List<Info> infoList;
 
     private long selectedItemId = RecyclerView.NO_ID;
 
@@ -207,7 +207,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             count++;
         }
 
-        if (infoList != null && !infoList.isEmpty()) {
+        if (!infoList.isEmpty()) {
             count += infoList.size();
         }
 
@@ -228,8 +228,13 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             }
         }
 
-        if (infoList != null && !infoList.isEmpty() && position >= infoList.size()) {
-            position -= infoList.size();
+        if (!infoList.isEmpty()) {
+            if (position == 0) {
+                return 0;
+            }
+            if (position >= infoList.size()) {
+                position -= infoList.size();
+            }
         }
 
         return WalletUtils.longHash(transactions.get(position).getHash());
@@ -240,7 +245,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         int index = (warning != null) ? position - 1 : position;
         if (position == 0 && warning != null) {
             return VIEW_TYPE_WARNING;
-        } else if (infoList != null && !infoList.isEmpty() && index < infoList.size()) {
+        } else if (!infoList.isEmpty() && index < infoList.size()) {
             return VIEW_TYPE_INFO;
         } else {
             return VIEW_TYPE_TRANSACTION;
@@ -279,7 +284,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             final long itemId = getItemId(position);
             transactionHolder.itemView.setActivated(itemId == selectedItemId);
 
-            final Transaction tx = transactions.get(position - (warning != null ? 1 : 0) - (infoList != null ? infoList.size() : 0));
+            final Transaction tx = transactions.get(position - (warning != null ? 1 : 0) - infoList.size());
             transactionHolder.bind(tx);
 
             transactionHolder.itemView.setOnClickListener(new View.OnClickListener() {
@@ -331,6 +336,10 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 });
             }
         }
+    }
+
+    public boolean isEmpty() {
+        return transactions.isEmpty() && infoList.isEmpty();
     }
 
     public interface OnClickListener {
@@ -704,10 +713,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     }
 
     public void addInfo(Info info) {
-        if (infoList == null) {
-            infoList = new ArrayList<>();
-        }
-
         if (!infoList.contains(info)) {
             infoList.add(info);
         }
@@ -715,9 +720,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     }
 
     public void removeInfo(Info info) {
-        if (infoList != null) {
-            infoList.remove(info);
-        }
+        infoList.remove(info);
     }
 
     public static class Info<T> {
