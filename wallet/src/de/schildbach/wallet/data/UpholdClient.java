@@ -23,6 +23,9 @@ import android.util.Log;
 
 import com.squareup.moshi.Moshi;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -269,6 +272,16 @@ public class UpholdClient {
                     callback.onSuccess(null);
                 } else {
                     boolean otpRequired = OTP_REQUIRED_VALUE.equals(response.headers().get(OTP_REQUIRED_KEY));
+                    //Check for invalid token error
+                    if (!otpRequired && otpToken != null) {
+                        try {
+                            JSONObject errorBody = new JSONObject(response.errorBody().string());
+                            otpRequired = errorBody.getJSONObject("errors").has("token");
+                            otpToken = null;
+                        } catch (Exception e) {
+                            //No invalid token error found
+                        }
+                    }
                     callback.onError(new Exception(response.errorBody().toString()), otpRequired);
                 }
             }
