@@ -25,6 +25,7 @@
             android:layout_height="wrap_content"
             android:inputType="number"
             android:textSize="@dimen/font_size_large"
+            android:maxLength="7"
             tools:ignore="TextFields" />
 
     </LinearLayout>

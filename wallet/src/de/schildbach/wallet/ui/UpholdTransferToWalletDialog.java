@@ -131,7 +131,7 @@ public class UpholdTransferToWalletDialog extends DialogFragment {
                 return;
             }
             BigDecimal value = new BigDecimal(s.toString());
-            boolean valid = value.compareTo(BigDecimal.ZERO) == 1 && value.compareTo(balance) == -1;
+            boolean valid = value.compareTo(BigDecimal.ZERO) == 1 && value.compareTo(balance) <= 0;
             transferButton.setEnabled(valid);
         }
 

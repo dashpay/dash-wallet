@@ -23,7 +23,6 @@ import android.util.Log;
 
 import com.squareup.moshi.Moshi;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -270,6 +269,7 @@ public class UpholdClient {
             public void onResponse(Call call, Response response) {
                 if (response.isSuccessful()) {
                     callback.onSuccess(null);
+                    otpToken = null;
                 } else {
                     boolean otpRequired = OTP_REQUIRED_VALUE.equals(response.headers().get(OTP_REQUIRED_KEY));
                     //Check for invalid token error
