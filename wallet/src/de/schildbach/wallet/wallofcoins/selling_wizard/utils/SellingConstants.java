@@ -6,13 +6,13 @@ package de.schildbach.wallet.wallofcoins.selling_wizard.utils;
 
 public class SellingConstants {
 
-    public static String TOKEN_ID = "tokenId";
-    public static String DEVICE_CODE = "deviceCode";
-    public static String DEVICE_ID = "deviceID";
-    public static String LOGGED_IN_PHONE = "phoneNum";
-    public static String LOGGED_IN_EMAIL = "loggedemail";
-    public static String ADDRESS_DETAILS_VO = "address_details_vo";
-    public static String VERIFICATION_CODE = "code";
-    public static String PHONE_NUMBER = "phone_number";
-    public static String ADDRESS_ID = "address_id";
+    public static String PREF_TOKEN_ID = "tokenId";
+    public static String PREF_DEVICE_CODE = "deviceCode";
+    public static String PREF_DEVICE_ID = "deviceID";
+    public static String PREF_LOGGED_IN_PHONE = "phoneNum";
+    public static String PREF_LOGGED_IN_EMAIL = "loggedemail";
+    public static String ARGUMENT_ADDRESS_DETAILS_VO = "ARGUMENT_ADDRESS_DETAILS_VO";
+    public static String ARGUMENT_VERIFICATION_CODE = "ARGUMENT_VERIFICATION_CODE";
+    public static String ARGUMENT_PHONE_NUMBER = "ARGUMENT_PHONE_NUMBER";
+    public static String ARGUMENT_ADDRESS_ID = "address_id";
 }

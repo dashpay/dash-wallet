@@ -16,7 +16,6 @@ import de.schildbach.wallet.wallofcoins.selling_wizard.SellingBaseActivity;
 import de.schildbach.wallet.wallofcoins.selling_wizard.SellingBaseFragment;
 import de.schildbach.wallet_test.R;
 
-
 /**
  * Created by  on 11-Apr-18.
  */
@@ -24,11 +23,12 @@ import de.schildbach.wallet_test.R;
 public class InstructionFragment extends SellingBaseFragment implements View.OnClickListener {
 
     private View rootView;
-    private EditText edtViewCurrRate;
-    private Button btnEditRate;
-    private TextView txtViewCancle, txtViewSave, txtViewEditCurrRate, txtViewBankName, txtViewNewPass, txtViewAccNum, txtViewPivAvail,
-            txtViewAdvancedOption;
-    private LinearLayout layoutCancel;
+    private EditText edit_current_rate;
+    private Button button_edit_rate;
+    private TextView text_cancle, text_save, text_edit_current_rate, text_bank_name,
+            text_holder_name, text_acc_number, text_piv_avail,
+            text_advanced_option;
+    private LinearLayout layout_cancel;
 
     @Override
     public void onAttach(Context context) {
@@ -40,7 +40,7 @@ public class InstructionFragment extends SellingBaseFragment implements View.OnC
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         if (rootView == null) {
-            rootView = inflater.inflate(R.layout.layout_selling_instruction, container, false);
+            rootView = inflater.inflate(R.layout.fragment_selling_instruction, container, false);
             init();
             setListeners();
             setTopbar();
@@ -51,29 +51,29 @@ public class InstructionFragment extends SellingBaseFragment implements View.OnC
 
     private void init() {
 
-        txtViewCancle = (TextView) rootView.findViewById(R.id.txtViewCancle);
-        txtViewBankName = (TextView) rootView.findViewById(R.id.txtViewBankName);
-        txtViewNewPass = (TextView) rootView.findViewById(R.id.txtViewNewPass);
-        txtViewAccNum = (TextView) rootView.findViewById(R.id.txtViewAccNum);
-        txtViewPivAvail = (TextView) rootView.findViewById(R.id.txtViewPivAvail);
-        edtViewCurrRate = (EditText) rootView.findViewById(R.id.edtViewCurrRate);
-        txtViewAdvancedOption = (TextView) rootView.findViewById(R.id.txtViewAdvancedOption);
+        text_cancle = (TextView) rootView.findViewById(R.id.text_cancle);
+        text_bank_name = (TextView) rootView.findViewById(R.id.text_bank_name);
+        text_holder_name = (TextView) rootView.findViewById(R.id.text_holder_name);
+        text_acc_number = (TextView) rootView.findViewById(R.id.text_acc_number);
+        text_piv_avail = (TextView) rootView.findViewById(R.id.text_piv_avail);
+        edit_current_rate = (EditText) rootView.findViewById(R.id.edit_current_rate);
+        text_advanced_option = (TextView) rootView.findViewById(R.id.text_advanced_option);
 
-        btnEditRate = (Button) rootView.findViewById(R.id.btnEditRate);
+        button_edit_rate = (Button) rootView.findViewById(R.id.button_edit_rate);
 
-        txtViewCancle = (TextView) rootView.findViewById(R.id.txtViewCancle);
-        txtViewSave = (TextView) rootView.findViewById(R.id.txtViewSave);
-        txtViewEditCurrRate = (TextView) rootView.findViewById(R.id.txtViewEditCurrRate);
-        layoutCancel = (LinearLayout) rootView.findViewById(R.id.layoutCancel);
+        text_cancle = (TextView) rootView.findViewById(R.id.text_cancle);
+        text_save = (TextView) rootView.findViewById(R.id.text_save);
+        text_edit_current_rate = (TextView) rootView.findViewById(R.id.text_edit_current_rate);
+        layout_cancel = (LinearLayout) rootView.findViewById(R.id.layout_cancel);
     }
 
     private void setListeners() {
-        btnEditRate.setOnClickListener(this);
+        button_edit_rate.setOnClickListener(this);
 
-        txtViewCancle.setOnClickListener(this);
-        txtViewSave.setOnClickListener(this);
-        txtViewEditCurrRate.setOnClickListener(this);
-        txtViewAdvancedOption.setOnClickListener(this);
+        text_cancle.setOnClickListener(this);
+        text_save.setOnClickListener(this);
+        text_edit_current_rate.setOnClickListener(this);
+        text_advanced_option.setOnClickListener(this);
 
     }
 
@@ -86,37 +86,55 @@ public class InstructionFragment extends SellingBaseFragment implements View.OnC
     public void onClick(View view) {
 
         switch (view.getId()) {
-            case R.id.btnEditRate:
+            case R.id.button_edit_rate:
 
                 break;
-            case R.id.txtViewAdvancedOption:
+            case R.id.text_advanced_option:
                 showOptionsDialog();
                 break;
 
-            case R.id.txtViewSave:
-                layoutCancel.setVisibility(View.GONE);
-                txtViewEditCurrRate.setVisibility(View.VISIBLE);
+            case R.id.text_save:
+                edit_current_rate.setEnabled(false);
+                layout_cancel.setVisibility(View.GONE);
+                text_edit_current_rate.setVisibility(View.VISIBLE);
                 break;
-            case R.id.txtViewCancle:
-                layoutCancel.setVisibility(View.GONE);
-                txtViewEditCurrRate.setVisibility(View.VISIBLE);
+            case R.id.text_cancle:
+                layout_cancel.setVisibility(View.GONE);
+                text_edit_current_rate.setVisibility(View.VISIBLE);
                 break;
-            case R.id.txtViewEditCurrRate:
-                edtViewCurrRate.setEnabled(true);
-                layoutCancel.setVisibility(View.VISIBLE);
-                txtViewEditCurrRate.setVisibility(View.GONE);
+            case R.id.text_edit_current_rate:
+                edit_current_rate.setEnabled(true);
+                layout_cancel.setVisibility(View.VISIBLE);
+                text_edit_current_rate.setVisibility(View.GONE);
                 break;
         }
     }
 
     private void showOptionsDialog() {
         final Dialog dialog = new Dialog(mContext);
-        dialog.setContentView(R.layout.layout_selling_options_dialog);
+        dialog.setContentView(R.layout.dialog_selling_options);
 
 
-        EditText edtViewMinPayment, edtViewMaxPayment;
-        edtViewMinPayment = (EditText) dialog.findViewById(R.id.edtViewMinPayment);
-        edtViewMaxPayment = (EditText) dialog.findViewById(R.id.edtViewMaxPayment);
+        EditText edit_min_payment, edit_max_payment;
+        edit_min_payment = (EditText) dialog.findViewById(R.id.edit_min_payment);
+        edit_max_payment = (EditText) dialog.findViewById(R.id.edit_max_payment);
+
+        Button button_cancle, button_save;
+
+        button_cancle = (Button) dialog.findViewById(R.id.button_cancle);
+        button_save = (Button) dialog.findViewById(R.id.button_save);
+        button_cancle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                dialog.dismiss();
+            }
+        });
+        button_save.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                dialog.dismiss();
+            }
+        });
         dialog.show();
     }
 

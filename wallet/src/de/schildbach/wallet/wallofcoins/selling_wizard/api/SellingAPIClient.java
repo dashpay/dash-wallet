@@ -18,8 +18,8 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
+import de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp;
 import de.schildbach.wallet.wallofcoins.response.PayFieldsDeserializer;
-import de.schildbach.wallet.wallofcoins.selling_wizard.models.GetReceivingOptionsResp;
 import de.schildbach.wallet_test.BuildConfig;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;

@@ -95,7 +95,7 @@ public class BuyDashBaseActivity extends AppCompatActivity implements SharedPref
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setContentView(R.layout.layout_buy_dash_activity);
+        setContentView(R.layout.activity_base_buy_dash);
         init();
         setListners();
         if (!TextUtils.isEmpty(buyDashPref.getAuthToken())) {

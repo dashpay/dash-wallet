@@ -11,31 +11,29 @@
         android:orientation="vertical">
 
         <TextView
-            android:id="@+id/txtViewMsg"
+            android:id="@+id/text_msg"
+            style="@style/StyleHeader"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
-            android:text="@string/verification_code_msg"
-            android:textColor="@color/text_color_black"
-            android:textSize="14sp" />
+            android:text="@string/verification_code_msg" />
 
 
         <TextView
-            android:id="@+id/txtViewPriceLabel"
+            android:id="@+id/text_price_label"
+            style="@style/StyleTextLabel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/txtViewMsg"
+            android:layout_below="@+id/text_msg"
             android:layout_marginTop="20dp"
-            android:text="@string/code"
-            android:textColor="@color/text_color_black"
-            android:textSize="@dimen/text_size_edt_label" />
+            android:text="@string/code" />
 
         <EditText
-            android:id="@+id/edtViewCode"
-            style="@style/styleEdt"
+            android:id="@+id/edit_code"
+            style="@style/StyleEdit"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/txtViewPriceLabel"
+            android:layout_below="@+id/text_price_label"
             android:layout_marginBottom="4dp"
             android:layout_marginTop="4dp"
             android:hint="@string/code"
@@ -44,26 +42,28 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/edtViewCode"
+            android:layout_below="@+id/edit_code"
             android:layout_marginEnd="20dp"
             android:layout_marginStart="20dp"
             android:layout_marginTop="20dp"
             android:orientation="horizontal">
 
             <Button
-                android:id="@+id/btnVerifyAdd"
-                style="@style/styleBtn"
+                android:id="@+id/button_verify_add"
+                style="@style/StyleButton"
                 android:layout_width="0dp"
                 android:layout_height="40dp"
                 android:layout_marginEnd="4dp"
+                android:layout_marginRight="4dp"
                 android:layout_weight="1"
                 android:text="@string/text_create_ad" />
 
             <Button
-                android:id="@+id/btnResendOtp"
-                style="@style/styleBtn"
+                android:id="@+id/button_resend_otp"
+                style="@style/StyleButton"
                 android:layout_width="0dp"
                 android:layout_height="40dp"
+                android:layout_marginLeft="4dp"
                 android:layout_marginStart="4dp"
                 android:layout_weight="1"
                 android:text="@string/resend_otp" />

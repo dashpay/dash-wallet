@@ -15,7 +15,7 @@
 
     <EditText
         android:id="@+id/edtViewEmail"
-        style="@style/styleEdt"
+        style="@style/StyleEdit"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@+id/txtViewMsg"
@@ -39,7 +39,7 @@
 
     <Button
         android:id="@+id/btnContinue"
-        style="@style/styleBtn"
+        style="@style/StyleButton"
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:layout_below="@+id/tv_skip_email"

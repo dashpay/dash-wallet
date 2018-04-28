@@ -76,7 +76,7 @@ public class BuyDashLocationFragment extends BuyDashBaseFragment implements View
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container, final Bundle savedInstanceState) {
 
         if (rootView == null) {
-            rootView = inflater.inflate(R.layout.layout_buy_dash_location, container, false);
+            rootView = inflater.inflate(R.layout.fragment_buy_dash_location, container, false);
             init();
             setListeners();
 

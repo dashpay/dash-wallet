@@ -8,7 +8,7 @@
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@+id/btnContinue"
+        android:layout_above="@+id/button_continue"
         android:fillViewport="true"
         android:scrollbars="none">
 
@@ -18,103 +18,98 @@
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/txtViewMsg"
+                android:id="@+id/text_msg"
+                style="@style/StyleHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_horizontal"
-                android:text="@string/verify_details_msg"
-                android:textColor="@color/text_color_black"
-                android:textSize="@dimen/text_size_top_msg" />
+                android:text="@string/verify_details_msg" />
 
             <TextView
-                android:id="@+id/txtViewLabelMobile"
+                android:id="@+id/text_mobile_label"
+                style="@style/StyleTextLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewMsg"
+                android:layout_below="@+id/text_msg"
                 android:layout_marginTop="20dp"
-                android:text="@string/account_1"
-                android:textColor="@color/text_color_black"
-                android:textSize="@dimen/text_size_edt_label" />
+                android:text="@string/account_1" />
 
 
             <EditText
-                android:id="@+id/edtViewAcc"
-                style="@style/styleEdt"
+                android:id="@+id/edit_account"
+                style="@style/StyleEdit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewLabelMobile"
+                android:layout_below="@+id/text_mobile_label"
                 android:layout_marginBottom="4dp"
                 android:layout_marginTop="4dp"
                 android:enabled="false"
                 android:singleLine="true" />
 
             <TextView
-                android:id="@+id/txtViewPriceLabel"
+                android:id="@+id/text_price_label"
+                style="@style/StyleTextLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/edtViewAcc"
+                android:layout_below="@+id/edit_account"
                 android:layout_marginTop="10dp"
-                android:text="@string/currentprice"
-                android:textColor="@color/text_color_black"
-                android:textSize="@dimen/text_size_edt_label" />
+                android:text="@string/currentprice" />
 
             <EditText
-                android:id="@+id/edtViewPrice"
-                style="@style/styleEdt"
+                android:id="@+id/edit_price"
+                style="@style/StyleEdit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewPriceLabel"
+                android:layout_below="@+id/text_price_label"
                 android:layout_marginBottom="4dp"
                 android:layout_marginTop="4dp"
                 android:enabled="false"
                 android:singleLine="true" />
 
             <TextView
-                android:id="@+id/txtViewEmailLabel"
+                android:id="@+id/text_email_label"
+                style="@style/StyleTextLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/edtViewPrice"
+                android:layout_below="@+id/edit_price"
                 android:layout_marginTop="10dp"
-                android:text="@string/email"
-                android:textColor="@color/text_color_black"
-                android:textSize="@dimen/text_size_edt_label" />
+                android:text="@string/email" />
 
             <EditText
-                android:id="@+id/edtViewEmail"
-                style="@style/styleEdt"
+                android:id="@+id/edit_email"
+                style="@style/StyleEdit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewEmailLabel"
+                android:layout_below="@+id/text_email_label"
                 android:layout_marginBottom="4dp"
                 android:layout_marginTop="4dp"
                 android:enabled="false"
                 android:singleLine="true" />
 
             <TextView
-                android:id="@+id/txtViewEmailInstru"
-                style="@style/styleInstrucText"
+                android:id="@+id/text_email_instruction"
+                style="@style/StyleInstrucText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/edtViewEmail"
+                android:layout_below="@+id/edit_email"
                 android:gravity="center_horizontal"
                 android:text="@string/our_team_will_use_this_email_to_contact_you" />
 
             <TextView
-                android:id="@+id/txtViewPhoneLabel"
+                android:id="@+id/text_phone_label"
+                style="@style/StyleTextLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewEmailInstru"
+                android:layout_below="@+id/text_email_instruction"
                 android:layout_marginTop="10dp"
-                android:text="@string/hint_phone"
-                android:textColor="@color/text_color_black"
-                android:textSize="@dimen/text_size_edt_label" />
+                android:text="@string/hint_phone" />
 
             <EditText
-                android:id="@+id/edtViewPhone"
-                style="@style/styleEdt"
+                android:id="@+id/edit_phone"
+                style="@style/StyleEdit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewPhoneLabel"
+                android:layout_below="@+id/text_phone_label"
                 android:layout_marginBottom="4dp"
                 android:layout_marginTop="4dp"
                 android:enabled="false"
@@ -124,8 +119,8 @@
     </ScrollView>
 
     <Button
-        android:id="@+id/btnContinue"
-        style="@style/styleBtn"
+        android:id="@+id/button_continue"
+        style="@style/StyleButton"
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:layout_alignParentBottom="true"

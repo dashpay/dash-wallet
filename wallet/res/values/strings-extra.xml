@@ -162,7 +162,7 @@
     <string name="network_not_avaialable">Please check internet connection</string>
     <string name="offerid_not_available">Offerid not available</string>
 
-    <!-- Selling wizard-->
+       <!-- Selling wizard-->
     <string name="title_selling">Sell Your Dash</string>
     <string name="title_price">Price</string>
     <string name="title_verify_selling_details">Verify Selling Details</string>
@@ -206,7 +206,7 @@
     <string name="account_1">Account</string>
     <string name="currentprice">CurrentPrice</string>
     <string name="action_verify_phone">Verify Phone</string>
-    <string name="verification_code_msg">The Mobile phone (239) 777-6543 will receive a verification code within 10 seconds. When you receive the code, input it below.</string>
+    <string name="verification_code_msg">The Mobile phone %s will receive a verification code within 10 seconds. When you receive the code, input it below.</string>
     <string name="code">Code</string>
     <string name="primary_market_lbl">Primary Market:</string>
     <string name="secondary_market_lbl">Secondary Market:</string>
@@ -249,6 +249,9 @@ Should you need to cancel this request, Wall of Coins staff will need to do this
     <string name="maximum_deposit_payment_amount">Maximum deposit payment amount.</string>
     <string name="offer_these_coins_to_buyers">Offer these coins to buyers?</string>
     <string name="title_advanced_options">Advanced Options</string>
+    <string name="action_save">Save</string>
+    <string name="action_cancle">Cancle</string>
+    <string name="enter_min_payment">Please enter minimum payment</string>
+    <string name="enter_max_payment">Please enter maximum payment</string>
     <string name="title_address">Address</string>
-    <string name="pivx_wallet_name">Dash Wallet (Android)</string>
 </resources>

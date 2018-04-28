@@ -41,7 +41,7 @@ public class BuyDashZipFragment extends BuyDashBaseFragment implements View.OnCl
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         if (rootView == null) {
-            rootView = inflater.inflate(R.layout.layout_buy_dash_zip, container, false);
+            rootView = inflater.inflate(R.layout.fragment_buy_dash_zip, container, false);
             init();
             setListeners();
             return rootView;

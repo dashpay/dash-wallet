@@ -33,7 +33,7 @@ public class PhoneListAdapter extends RecyclerView.Adapter<PhoneListAdapter.MyVi
     @Override
     public PhoneListAdapter.MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View itemView = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.layout_phone_list_adapter_items, parent, false);
+                .inflate(R.layout.item_buy_dash_phone_list, parent, false);
 
         return new MyViewHolder(itemView);
     }

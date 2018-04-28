@@ -5,24 +5,24 @@
 
 
     <android.support.v7.widget.RecyclerView
-        android:id="@+id/recyclerViewPhoneList"
+        android:id="@+id/recycler_phone_list"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@+id/layoutBottom"
+        android:layout_above="@+id/layout_bottom"
         android:layout_alignParentTop="true"
         android:padding="10dp" />
 
 
     <TextView
-        android:id="@+id/txtViewNoData"
+        android:id="@+id/text_no_data"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
         android:text="@string/no_phones_available"
-        android:textSize="14sp" />
+        android:textSize="@dimen/text_size_no_data" />
 
     <LinearLayout
-        android:id="@+id/layoutBottom"
+        android:id="@+id/layout_bottom"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
@@ -30,19 +30,17 @@
         android:padding="10dp">
 
         <Button
-            android:id="@+id/btnSignUp"
-            style="@style/styleBtn"
+            android:id="@+id/button_sign_up"
+            style="@style/StyleButton"
             android:layout_width="match_parent"
             android:layout_height="40dp"
-            android:layout_above="@+id/btnExistingSignIn"
             android:text="@string/wallofcoins_sign_up" />
 
         <Button
-            android:id="@+id/btnExistingSignIn"
-            style="@style/styleBtn"
+            android:id="@+id/button_existing_sign_in"
+            style="@style/StyleButton"
             android:layout_width="match_parent"
             android:layout_height="40dp"
-            android:layout_alignParentBottom="true"
             android:layout_marginTop="6dp"
             android:text="@string/existing_wallofcoins_account_sign_in" />
     </LinearLayout>

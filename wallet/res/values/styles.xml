@@ -259,35 +259,46 @@
     </style>
 
 
-    <style name="styleInstrucText">
+    <style name="StyleInstrucText">
         <item name="android:textColor">@color/instruct_text_color</item>
         <item name="android:textSize">@dimen/text_size_instruct</item>
     </style>
 
-    <style name="styleEdt">
+    <style name="StyleEdit">
         <item name="android:textColor">@color/edt_text_color</item>
         <item name="android:textSize">@dimen/text_size_edt</item>
         <item name="android:singleLine">true</item>
         <item name="android:background">@drawable/border_selling_edttxt</item>
         <item name="android:paddingTop">6dp</item>
         <item name="android:paddingBottom">6dp</item>
-        <item name="android:paddingStart">6dp</item>
-        <item name="android:paddingEnd">6dp</item>
+        <item name="android:paddingLeft">6dp</item>
+        <item name="android:paddingRight">6dp</item>
     </style>
 
-    <style name="styleEdtNoBorder">
+    <style name="StyleEditNoBorder">
         <item name="android:textColor">@color/edt_text_color</item>
         <item name="android:textSize">@dimen/text_size_edt</item>
         <item name="android:paddingTop">6dp</item>
         <item name="android:paddingBottom">6dp</item>
-        <item name="android:paddingStart">6dp</item>
+        <item name="android:paddingLeft">6dp</item>
+        <item name="android:paddingRight">6dp</item>
         <item name="android:background">@null</item>
-        <item name="android:paddingEnd">6dp</item>
     </style>
-    <style name="styleBtn">
+
+    <style name="StyleButton">
         <item name="android:textColor">@color/white</item>
         <item name="android:textSize">16sp</item>
         <item name="android:background">@drawable/selector_selling_btn</item>
         <item name="android:textAllCaps">false</item>
+    </style>
+
+    <style name="StyleHeader">
+        <item name="android:textColor">@color/text_color_black</item>
+        <item name="android:textSize">@dimen/text_size_top_msg</item>
+    </style>
+
+    <style name="StyleTextLabel">
+        <item name="android:textColor">@color/text_color_black</item>
+        <item name="android:textSize">@dimen/text_size_label</item>
     </style>
 </resources>

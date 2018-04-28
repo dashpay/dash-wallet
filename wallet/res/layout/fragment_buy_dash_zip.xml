@@ -8,7 +8,7 @@
     <include
         android:id="@+id/layoutToolbar"
         android:visibility="gone"
-        layout="@layout/layout_buy_dash_top" />
+        layout="@layout/partial_buy_dash_top" />
 
     <LinearLayout
         android:id="@+id/layout_zip"

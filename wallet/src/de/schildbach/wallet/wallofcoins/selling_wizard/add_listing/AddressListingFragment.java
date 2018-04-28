@@ -44,7 +44,7 @@ public class AddressListingFragment extends SellingBaseFragment {
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         if (rootView == null) {
-            rootView = inflater.inflate(R.layout.layout_selling_address_listing, container, false);
+            rootView = inflater.inflate(R.layout.fragment_selling_address_listing, container, false);
             init();
             setListeners();
             setTopbar();

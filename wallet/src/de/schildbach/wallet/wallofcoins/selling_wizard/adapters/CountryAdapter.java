@@ -53,17 +53,17 @@ public class CountryAdapter extends ArrayAdapter<CountryData.CountriesBean> {
     public View getCustomView(int position, View convertView, ViewGroup parent) {
 
         /********** Inflate spinner_rows.xml file for each row ( Defined below ) ************/
-        View row = inflater.inflate(R.layout.layout_selling_spinner_row_country, parent, false);
+        View row = inflater.inflate(R.layout.item_selling_country, parent, false);
 
         /***** Get each Model object from Arraylist ********/
         CountryData.CountriesBean bean = data.get(position);
 
-        TextView label = (TextView) row.findViewById(R.id.tv_country);
-        ImageView ivCountry = (ImageView) row.findViewById(R.id.iv_country);
+        TextView text_country = (TextView) row.findViewById(R.id.text_country);
+        ImageView image_country = (ImageView) row.findViewById(R.id.image_country);
 
-        label.setText(bean.name + " (" + bean.code + ")");
-        ivCountry.setImageResource(R.drawable.flags);
-        ivCountry.setScaleType(ImageView.ScaleType.MATRIX);
+        text_country.setText(bean.name + " (" + bean.code + ")");
+        image_country.setImageResource(R.drawable.flags);
+        image_country.setScaleType(ImageView.ScaleType.MATRIX);
 
         Drawable drawable = activity.getResources().getDrawable(R.drawable.flags);
 
@@ -74,7 +74,7 @@ public class CountryAdapter extends ArrayAdapter<CountryData.CountriesBean> {
         int top = (bean.top * height) / 266;
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            ivCountry.drawableHotspotChanged(left, top);
+            image_country.drawableHotspotChanged(left, top);
         }
         return row;
     }

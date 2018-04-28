@@ -36,4 +36,6 @@
     <dimen name="text_size_edt_label">16sp</dimen>
     <dimen name="text_size_top_msg">16sp</dimen>
     <dimen name="text_size_notice">14sp</dimen>
+    <dimen name="text_size_no_data">14sp</dimen>
+    <dimen name="text_size_label">16sp</dimen>
 </resources>

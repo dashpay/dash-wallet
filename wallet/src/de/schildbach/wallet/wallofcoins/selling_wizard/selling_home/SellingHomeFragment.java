@@ -38,7 +38,7 @@ public class SellingHomeFragment extends SellingBaseFragment implements View.OnC
 
 
     private View rootView;
-    private Button btnSignHere, btn_list, btn_sign_out_woc, btnSellPiv;
+    private Button button_sign_here, button_list, button_sign_out_woc, button_sell_piv;
     private final String TAG = "SellingHomeFragment";
     private LinearLayout layout_sign_out, layout_sign_in;
     private TextView text_message_sign_out;
@@ -54,7 +54,7 @@ public class SellingHomeFragment extends SellingBaseFragment implements View.OnC
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         if (rootView == null) {
-            rootView = inflater.inflate(R.layout.layout_selling_home, container, false);
+            rootView = inflater.inflate(R.layout.fragment_selling_home, container, false);
             init();
             setListeners();
             setTopbar();
@@ -64,22 +64,22 @@ public class SellingHomeFragment extends SellingBaseFragment implements View.OnC
     }
 
     private void init() {
-        btnSignHere = (Button) rootView.findViewById(R.id.btnSignHere);
-        btn_list = (Button) rootView.findViewById(R.id.btn_list);
-        btn_sign_out_woc = (Button) rootView.findViewById(R.id.btn_sign_out_woc);
+        button_sign_here = (Button) rootView.findViewById(R.id.button_sign_here);
+        button_list = (Button) rootView.findViewById(R.id.button_list);
+        button_sign_out_woc = (Button) rootView.findViewById(R.id.button_sign_out_woc);
         progressBar = (ProgressBar) rootView.findViewById(R.id.progressBar);
         text_message_sign_out = (TextView) rootView.findViewById(R.id.text_message_sign_out);
 
         layout_sign_out = (LinearLayout) rootView.findViewById(R.id.layout_sign_out);
         layout_sign_in = (LinearLayout) rootView.findViewById(R.id.layout_sign_in);
-        btnSellPiv = (Button) rootView.findViewById(R.id.btnSellPiv);
+        button_sell_piv = (Button) rootView.findViewById(R.id.button_sell_piv);
     }
 
     private void setListeners() {
-        btnSignHere.setOnClickListener(this);
-        btn_list.setOnClickListener(this);
-        btn_sign_out_woc.setOnClickListener(this);
-        btnSellPiv.setOnClickListener(this);
+        button_sign_here.setOnClickListener(this);
+        button_list.setOnClickListener(this);
+        button_sign_out_woc.setOnClickListener(this);
+        button_sell_piv.setOnClickListener(this);
     }
 
     private void setTopbar() {
@@ -91,12 +91,12 @@ public class SellingHomeFragment extends SellingBaseFragment implements View.OnC
     public void onResume() {
         super.onResume();
         setTopbar();
-        if (!TextUtils.isEmpty(SharedPreferenceUtil.getString(SellingConstants.TOKEN_ID, ""))) {
+        if (!TextUtils.isEmpty(SharedPreferenceUtil.getString(SellingConstants.PREF_TOKEN_ID, ""))) {
             layout_sign_out.setVisibility(View.VISIBLE);
             layout_sign_in.setVisibility(View.GONE);
-            WOCLogUtil.showLogError("------------", SharedPreferenceUtil.getString(SellingConstants.LOGGED_IN_PHONE, ""));
+            WOCLogUtil.showLogError("------------", SharedPreferenceUtil.getString(SellingConstants.PREF_LOGGED_IN_PHONE, ""));
             text_message_sign_out.setText(mContext.getString(R.string.wallet_is_signed_msg,
-                    SharedPreferenceUtil.getString(SellingConstants.LOGGED_IN_PHONE, "")));
+                    SharedPreferenceUtil.getString(SellingConstants.PREF_LOGGED_IN_PHONE, "")));
         } else {
             layout_sign_out.setVisibility(View.GONE);
             layout_sign_in.setVisibility(View.VISIBLE);
@@ -107,24 +107,24 @@ public class SellingHomeFragment extends SellingBaseFragment implements View.OnC
     public void onClick(View view) {
 
         switch (view.getId()) {
-            case R.id.btnSignHere:
+            case R.id.button_sign_here:
                 ((SellingBaseActivity) mContext).replaceFragment(new PhoneListFragment(),
                         true, true);
                 break;
-            case R.id.btn_list:
+            case R.id.button_list:
                 ((SellingBaseActivity) mContext).replaceFragment(new AddressListingFragment(),
                         true, true);
                 break;
-            case R.id.btn_sign_out_woc:
+            case R.id.button_sign_out_woc:
                 deleteAuthCall();
                 break;
-            case R.id.btnSellPiv:
-                if (!TextUtils.isEmpty(SharedPreferenceUtil.getString(SellingConstants.TOKEN_ID, "")))
-                    ((SellingBaseActivity) mContext).replaceFragment(new ContactDetailsFragment(),
-                            true, true);
-                else
+            case R.id.button_sell_piv:
+                //if (!TextUtils.isEmpty(SharedPreferenceUtil.getString(SellingConstants.TOKEN_ID, "")))
+                ((SellingBaseActivity) mContext).replaceFragment(new ContactDetailsFragment(),
+                        true, true);
+               /* else
                     showToast("Please Sign in first");
-                    break;
+                    break;*/
 
         }
     }
@@ -134,7 +134,7 @@ public class SellingHomeFragment extends SellingBaseFragment implements View.OnC
      */
     public void deleteAuthCall() {
         if (NetworkUtil.isOnline(mContext)) {
-            final String phone = SharedPreferenceUtil.getString(SellingConstants.LOGGED_IN_PHONE, "");
+            final String phone = SharedPreferenceUtil.getString(SellingConstants.PREF_LOGGED_IN_PHONE, "");
             progressBar.setVisibility(View.VISIBLE);
             SellingAPIClient.createService(interceptor, mContext)
                     .deleteAuth(phone, getString(R.string.WALLOFCOINS_PUBLISHER_ID))
@@ -144,10 +144,10 @@ public class SellingHomeFragment extends SellingBaseFragment implements View.OnC
                             Log.d(TAG, "onResponse: response code==>>" + response.code());
                             progressBar.setVisibility(View.GONE);
                             if (response.code() < 299) {
-                                SharedPreferenceUtil.putValue(SellingConstants.LOGGED_IN_PHONE, "");
-                                SharedPreferenceUtil.putValue(SellingConstants.TOKEN_ID, "");
-                                SharedPreferenceUtil.putValue(SellingConstants.DEVICE_ID, "");
-                                SharedPreferenceUtil.putValue(SellingConstants.DEVICE_CODE, "");
+                                SharedPreferenceUtil.putValue(SellingConstants.PREF_LOGGED_IN_PHONE, "");
+                                SharedPreferenceUtil.putValue(SellingConstants.PREF_TOKEN_ID, "");
+                                SharedPreferenceUtil.putValue(SellingConstants.PREF_DEVICE_ID, "");
+                                SharedPreferenceUtil.putValue(SellingConstants.PREF_DEVICE_CODE, "");
 
                                 showToast(mContext.getString(R.string.alert_sign_out));
                                 layout_sign_in.setVisibility(View.VISIBLE);

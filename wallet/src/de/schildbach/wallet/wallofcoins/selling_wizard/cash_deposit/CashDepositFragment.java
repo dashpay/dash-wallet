@@ -41,14 +41,14 @@ public class CashDepositFragment extends SellingBaseFragment implements View.OnC
 
 
     private View rootView;
-    private Button btnContinue;
-    private EditText edtViewHolderName, edtViewAcc, edtViewConfirmAcc;
+    private Button button_continue;
+    private EditText edit_holder_name, edit_account_number, edit_confirm_account_number;
     private final String TAG = "CashDepositFragment";
-    private AppCompatSpinner sp_banks;
+    private AppCompatSpinner spinner_banks;
     private ProgressBar progressBar;
-    private String bankId = "";
+    private String mBankId = "";
     private List<GetReceivingOptionsResp> bankList;
-    private RelativeLayout layoutAccDetails;
+    private RelativeLayout layout_acc_details;
     private AddressVo addressVo;
 
     @Override
@@ -61,7 +61,7 @@ public class CashDepositFragment extends SellingBaseFragment implements View.OnC
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         if (rootView == null) {
-            rootView = inflater.inflate(R.layout.layout_selling_cash_deposit, container, false);
+            rootView = inflater.inflate(R.layout.fragment_selling_cash_deposit, container, false);
             init();
             setListeners();
             setTopbar();
@@ -74,29 +74,29 @@ public class CashDepositFragment extends SellingBaseFragment implements View.OnC
 
     private void init() {
 
-        edtViewHolderName = (EditText) rootView.findViewById(R.id.edtViewHolderName);
-        edtViewAcc = (EditText) rootView.findViewById(R.id.edtViewAcc);
-        edtViewConfirmAcc = (EditText) rootView.findViewById(R.id.edtViewConfirmAcc);
-        sp_banks = (AppCompatSpinner) rootView.findViewById(R.id.sp_banks);
-        btnContinue = (Button) rootView.findViewById(R.id.btnContinue);
+        edit_holder_name = (EditText) rootView.findViewById(R.id.edit_holder_name);
+        edit_account_number = (EditText) rootView.findViewById(R.id.edit_account_number);
+        edit_confirm_account_number = (EditText) rootView.findViewById(R.id.edit_confirm_account_number);
+        spinner_banks = (AppCompatSpinner) rootView.findViewById(R.id.spinner_banks);
+        button_continue = (Button) rootView.findViewById(R.id.button_continue);
         progressBar = (ProgressBar) rootView.findViewById(R.id.progressBar);
-        layoutAccDetails = (RelativeLayout) rootView.findViewById(R.id.layoutAccDetails);
+        layout_acc_details = (RelativeLayout) rootView.findViewById(R.id.layout_acc_details);
 
         bankList = new ArrayList<>();
     }
 
     private void setListeners() {
-        btnContinue.setOnClickListener(this);
-        sp_banks.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        button_continue.setOnClickListener(this);
+        spinner_banks.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int position, long l) {
                 if (position == 0) {
-                    layoutAccDetails.setVisibility(View.GONE);
-                    bankId = "";
+                    layout_acc_details.setVisibility(View.GONE);
+                    mBankId = "";
                     return;
                 }
-                layoutAccDetails.setVisibility(View.VISIBLE);
-                bankId = "" + bankList.get(position).id;
+                layout_acc_details.setVisibility(View.VISIBLE);
+                mBankId = "" + bankList.get(position).id;
             }
 
             @Override
@@ -115,23 +115,23 @@ public class CashDepositFragment extends SellingBaseFragment implements View.OnC
 
     private boolean isValidDetails() {
         String acc, confirmAcc;
-        acc = edtViewAcc.getText().toString().trim();
-        confirmAcc = edtViewConfirmAcc.getText().toString().trim();
+        acc = edit_account_number.getText().toString().trim();
+        confirmAcc = edit_confirm_account_number.getText().toString().trim();
 
-        if (bankId.isEmpty()) {
+        if (mBankId.isEmpty()) {
             showToast(getString(R.string.please_select_bank));
             return false;
-        } else if (edtViewHolderName.getText().toString().trim().isEmpty()) {
+        } else if (edit_holder_name.getText().toString().trim().isEmpty()) {
             showToast(getString(R.string.please_enter_holder));
-            edtViewHolderName.requestFocus();
+            edit_holder_name.requestFocus();
             return false;
         } else if (acc.isEmpty()) {
             showToast(getString(R.string.please_enter_acc_no));
-            edtViewAcc.requestFocus();
+            edit_account_number.requestFocus();
             return false;
         } else if (confirmAcc.isEmpty()) {
             showToast(getString(R.string.please_enter_conf_acc_no));
-            edtViewConfirmAcc.requestFocus();
+            edit_confirm_account_number.requestFocus();
             return false;
         } else if (!acc.equalsIgnoreCase(confirmAcc)) {
             showToast(getString(R.string.acc_not_matched));
@@ -183,7 +183,7 @@ public class CashDepositFragment extends SellingBaseFragment implements View.OnC
 
         if (getArguments() != null) {
             addressVo = (AddressVo)
-                    getArguments().getSerializable(SellingConstants.ADDRESS_DETAILS_VO);
+                    getArguments().getSerializable(SellingConstants.ARGUMENT_ADDRESS_DETAILS_VO);
         }
     }
 
@@ -207,7 +207,7 @@ public class CashDepositFragment extends SellingBaseFragment implements View.OnC
         }
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(mContext, android.R.layout.simple_spinner_dropdown_item, names);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        sp_banks.setAdapter(adapter);
+        spinner_banks.setAdapter(adapter);
 
     }
 
@@ -223,10 +223,10 @@ public class CashDepositFragment extends SellingBaseFragment implements View.OnC
     public void onClick(View view) {
 
         switch (view.getId()) {
-            case R.id.btnContinue:
+            case R.id.button_continue:
                 if (isValidDetails()) {
                     Bundle bundle = new Bundle();
-                    bundle.putSerializable(SellingConstants.ADDRESS_DETAILS_VO, getSellingDetails());
+                    bundle.putSerializable(SellingConstants.ARGUMENT_ADDRESS_DETAILS_VO, getSellingDetails());
                     PriceFragment fragment = new PriceFragment();
                     fragment.setArguments(bundle);
                     ((SellingBaseActivity) mContext).replaceFragment(fragment,
@@ -237,10 +237,10 @@ public class CashDepositFragment extends SellingBaseFragment implements View.OnC
     }
 
     private AddressVo getSellingDetails() {
-        addressVo.setName(edtViewHolderName.getText().toString().trim());
-        addressVo.setNumber(edtViewAcc.getText().toString().trim());
-        addressVo.setNumber2(edtViewConfirmAcc.getText().toString().trim());
-        addressVo.setBankBusiness(bankId);
+        addressVo.setName(edit_holder_name.getText().toString().trim());
+        addressVo.setNumber(edit_account_number.getText().toString().trim());
+        addressVo.setNumber2(edit_confirm_account_number.getText().toString().trim());
+        addressVo.setBankBusiness(mBankId);
         return addressVo;
     }
 }

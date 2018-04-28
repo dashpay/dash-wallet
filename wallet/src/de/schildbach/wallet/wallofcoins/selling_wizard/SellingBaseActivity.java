@@ -12,10 +12,9 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import de.schildbach.wallet.wallofcoins.BuyDashPref;
+import de.schildbach.wallet.wallofcoins.buyingwizard.utils.FragmentUtils;
 import de.schildbach.wallet.wallofcoins.selling_wizard.selling_home.SellingHomeFragment;
-import de.schildbach.wallet.wallofcoins.selling_wizard.utils.FragmentUtils;
 import de.schildbach.wallet_test.R;
-
 
 /**
  * Created by  on 03-Apr-18.
@@ -27,14 +26,14 @@ public class SellingBaseActivity extends AppCompatActivity implements View.OnCli
     private FragmentManager fragmentManager;
     private FragmentTransaction fragmentTransaction;
     public BuyDashPref buyDashPref;
-    private ImageView imgViewToolbarBack;
-    private TextView txtViewToolbarTitle;
+    private ImageView image_toolbar_back;
+    private TextView text_toolbar_title;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setContentView(R.layout.layout_base_selling_wizard);
+        setContentView(R.layout.activity_base_selling_wizard);
         init();
         setListners();
         replaceFragment(new SellingHomeFragment(), true, false);
@@ -43,13 +42,13 @@ public class SellingBaseActivity extends AppCompatActivity implements View.OnCli
 
     private void init() {
         fragmentManager = getSupportFragmentManager();
-        imgViewToolbarBack = (ImageView) findViewById(R.id.imgViewToolbarBack);
-        txtViewToolbarTitle = (TextView) findViewById(R.id.txtViewToolbarTitle);
+        image_toolbar_back = (ImageView) findViewById(R.id.image_toolbar_back);
+        text_toolbar_title = (TextView) findViewById(R.id.text_toolbar_title);
 
     }
 
     private void setListners() {
-        imgViewToolbarBack.setOnClickListener(this);
+        image_toolbar_back.setOnClickListener(this);
     }
 
     public void replaceFragment(Fragment fragment, boolean withAnimation, boolean withBackStack) {
@@ -58,14 +57,14 @@ public class SellingBaseActivity extends AppCompatActivity implements View.OnCli
         if (withAnimation)
             fragmentTransaction.setCustomAnimations(R.anim.activity_in, R.anim.activity_out, R.anim.activity_backin, R.anim.activity_back_out);
         if (withBackStack)
-            fragmentTransaction.replace(R.id.containerSellingBase, fragment).addToBackStack(fragment.getClass().getName());
+            fragmentTransaction.replace(R.id.container_selling_base, fragment).addToBackStack(fragment.getClass().getName());
         else
-            fragmentTransaction.replace(R.id.containerSellingBase, fragment);
+            fragmentTransaction.replace(R.id.container_selling_base, fragment);
         fragmentTransaction.commitAllowingStateLoss();
     }
 
     public void setTopbarTitle(String msg) {
-        txtViewToolbarTitle.setText(msg);
+        text_toolbar_title.setText(msg);
     }
 
     public void finishBaseActivity() {
@@ -96,7 +95,7 @@ public class SellingBaseActivity extends AppCompatActivity implements View.OnCli
     public void onClick(View view) {
         switch (view.getId()) {
 
-            case R.id.imgViewToolbarBack:
+            case R.id.image_toolbar_back:
                 popBackDirect();
                 break;
 

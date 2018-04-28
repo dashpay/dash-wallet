@@ -30,7 +30,7 @@ public class GetReceivingOptionsResp {
     public String icon;
     public String iconHq;
     public String country;
-    public GetReceivingOptionsResp.PayFieldsBeanX payFields;
+    public de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp.PayFieldsBeanX payFields;
 
 
     public static class PayFieldsBeanX {
@@ -44,9 +44,9 @@ public class GetReceivingOptionsResp {
 
         public String trigger;
         @SerializedName("payFields")
-        public List<GetReceivingOptionsResp.PayFieldsBeanX.PayFieldsBean> payFieldsX;
-        public List<GetReceivingOptionsResp.PayFieldsBeanX.PayFieldsBean> confirmFields;
-        public List<GetReceivingOptionsResp.PayFieldsBeanX.PayFieldsBean> dynamicFields;
+        public List<de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp.PayFieldsBeanX.PayFieldsBean> payFieldsX;
+        public List<de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp.PayFieldsBeanX.PayFieldsBean> confirmFields;
+        public List<de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp.PayFieldsBeanX.PayFieldsBean> dynamicFields;
         public Boolean payFieldsB;
 
         public static class PayFieldsBean {

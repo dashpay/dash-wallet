@@ -8,7 +8,7 @@
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@+id/btnContinue"
+        android:layout_above="@+id/button_continue"
         android:fillViewport="true"
         android:scrollbars="none">
 
@@ -18,46 +18,44 @@
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/txtViewMsg"
+                android:id="@+id/text_msg"
+                style="@style/StyleHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_horizontal"
-                android:text="@string/phone_and_email_msg"
-                android:textColor="@color/text_color_black"
-                android:textSize="@dimen/text_size_top_msg" />
+                android:text="@string/phone_and_email_msg" />
 
             <TextView
-                android:id="@+id/txtViewLabelMobile"
+                android:id="@+id/text_mobile_label"
+                style="@style/StyleTextLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewMsg"
+                android:layout_below="@+id/text_msg"
                 android:layout_marginTop="20dp"
-                android:text="@string/mobile_include_area_code"
-                android:textColor="@color/text_color_black"
-                android:textSize="@dimen/text_size_edt_label" />
+                android:text="@string/mobile_include_area_code" />
 
             <RelativeLayout
-                android:id="@+id/layouMobile"
+                android:id="@+id/layout_mobile"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_alignParentStart="true"
-                android:layout_below="@+id/txtViewLabelMobile"
+                android:layout_below="@+id/text_mobile_label"
                 android:layout_marginBottom="4dp"
                 android:layout_marginTop="4dp"
                 android:background="@drawable/border_selling_edttxt"
                 android:padding="4dp">
 
                 <Spinner
-                    android:id="@+id/sp_country"
+                    android:id="@+id/spinner_country"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="center_horizontal" />
 
                 <EditText
-                    android:id="@+id/edtViewMobile"
+                    android:id="@+id/edit_mobile"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_toEndOf="@+id/sp_country"
+                    android:layout_toEndOf="@+id/spinner_country"
                     android:background="@null"
                     android:hint="@string/mobile_include_area_code"
                     android:inputType="number"
@@ -66,31 +64,30 @@
             </RelativeLayout>
 
             <TextView
-                android:id="@+id/txtViewMobileInstru"
-                style="@style/styleInstrucText"
+                android:id="@+id/text_mobile_instruction"
+                style="@style/StyleInstrucText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/layouMobile"
+                android:layout_below="@+id/layout_mobile"
                 android:gravity="center_horizontal"
                 android:text="@string/sms_messages_will_be_sent_here_to_verify_payments" />
 
 
             <TextView
-                android:id="@+id/txtViewEmailLabel"
+                android:id="@+id/text_email_label"
+                style="@style/StyleTextLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewMobileInstru"
+                android:layout_below="@+id/text_mobile_instruction"
                 android:layout_marginTop="20dp"
-                android:text="@string/email"
-                android:textColor="@color/text_color_black"
-                android:textSize="@dimen/text_size_edt_label" />
+                android:text="@string/email" />
 
             <EditText
-                android:id="@+id/edtViewEmail"
-                style="@style/styleEdt"
+                android:id="@+id/edit_email"
+                style="@style/StyleEdit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewEmailLabel"
+                android:layout_below="@+id/text_email_label"
                 android:layout_marginBottom="4dp"
                 android:layout_marginTop="4dp"
                 android:hint="@string/email"
@@ -98,37 +95,35 @@
                 android:singleLine="true" />
 
             <TextView
-                android:id="@+id/txtViewEmailInstru"
-                style="@style/styleInstrucText"
+                android:id="@+id/text_email_Instruction"
+                style="@style/StyleInstrucText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/edtViewEmail"
+                android:layout_below="@+id/edit_email"
                 android:gravity="center_horizontal"
                 android:text="@string/our_team_will_use_this_email_to_contact_you" />
 
 
             <RelativeLayout
-                android:id="@+id/layoutPass"
+                android:id="@+id/layout_password"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewEmailInstru">
+                android:layout_below="@+id/text_email_Instruction">
 
                 <TextView
-                    android:id="@+id/txtViewConfirmEmailLabel"
+                    android:id="@+id/text_confirm_email_label"
+                    style="@style/StyleTextLabel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-
                     android:layout_marginTop="20dp"
-                    android:text="@string/confirm_email"
-                    android:textColor="@color/text_color_black"
-                    android:textSize="@dimen/text_size_edt_label" />
+                    android:text="@string/confirm_email" />
 
                 <EditText
-                    android:id="@+id/edtViewConfirmEmail"
-                    style="@style/styleEdt"
+                    android:id="@+id/edit_confirm_email"
+                    style="@style/StyleEdit"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_below="@+id/txtViewConfirmEmailLabel"
+                    android:layout_below="@+id/text_confirm_email_label"
                     android:layout_marginBottom="4dp"
                     android:layout_marginTop="4dp"
                     android:hint="@string/confirm_email"
@@ -136,21 +131,20 @@
                     android:singleLine="true" />
 
                 <TextView
-                    android:id="@+id/txtViewPassLabel"
+                    android:id="@+id/text_password_label"
+                    style="@style/StyleTextLabel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_below="@+id/edtViewConfirmEmail"
+                    android:layout_below="@+id/edit_confirm_email"
                     android:layout_marginTop="20dp"
-                    android:text="@string/password"
-                    android:textColor="@color/text_color_black"
-                    android:textSize="@dimen/text_size_edt_label" />
+                    android:text="@string/password" />
 
                 <EditText
-                    android:id="@+id/edtViewPass"
-                    style="@style/styleEdt"
+                    android:id="@+id/edit_password"
+                    style="@style/StyleEdit"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_below="@+id/txtViewPassLabel"
+                    android:layout_below="@+id/text_password_label"
                     android:layout_marginBottom="4dp"
                     android:layout_marginTop="4dp"
                     android:hint="@string/password"
@@ -158,11 +152,11 @@
                     android:singleLine="true" />
 
                 <TextView
-                    android:id="@+id/txtViewPassInstru"
-                    style="@style/styleInstrucText"
+                    android:id="@+id/text_password_instruction"
+                    style="@style/StyleInstrucText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_below="@+id/edtViewPass"
+                    android:layout_below="@+id/edit_password"
                     android:gravity="center_horizontal"
                     android:text="@string/a_password_is_needed_to_view_and_alter_your_ad_details" />
             </RelativeLayout>
@@ -170,8 +164,8 @@
     </ScrollView>
 
     <Button
-        android:id="@+id/btnContinue"
-        style="@style/styleBtn"
+        android:id="@+id/button_continue"
+        style="@style/StyleButton"
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:layout_alignParentBottom="true"

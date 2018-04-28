@@ -14,7 +14,7 @@
             android:layout_height="wrap_content">
 
             <TextView
-                android:id="@+id/txtViewInstrLabel"
+                android:id="@+id/text_instruction_label"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="10dp"
@@ -25,20 +25,19 @@
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/txtViewMsg"
+                android:id="@+id/text_msg"
+                style="@style/StyleHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewInstrLabel"
+                android:layout_below="@+id/text_instruction_label"
                 android:gravity="center_horizontal"
-                android:text="@string/you_will_receive_an_sms_text_message_with_every_deposit"
-                android:textColor="@color/text_color_black"
-                android:textSize="@dimen/text_size_top_msg" />
+                android:text="@string/you_will_receive_an_sms_text_message_with_every_deposit" />
 
             <TextView
-                android:id="@+id/txtViewSendPivToLabel"
+                android:id="@+id/text_send_piv_to_label"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewMsg"
+                android:layout_below="@+id/text_msg"
                 android:layout_marginBottom="10dp"
                 android:layout_marginTop="10dp"
                 android:gravity="center_horizontal"
@@ -48,10 +47,10 @@
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/txtViewNoneAvailable"
+                android:id="@+id/text_none_available"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewSendPivToLabel"
+                android:layout_below="@+id/text_send_piv_to_label"
                 android:layout_marginBottom="10dp"
                 android:gravity="center_horizontal"
                 android:text="@string/none_available"
@@ -60,18 +59,18 @@
                 android:textStyle="bold" />
 
             <ImageView
-                android:id="@+id/imgViewQRCode"
+                android:id="@+id/image_qr_code"
                 android:layout_width="130dp"
                 android:layout_height="130dp"
-                android:layout_below="@+id/txtViewNoneAvailable"
+                android:layout_below="@+id/text_none_available"
                 android:layout_centerHorizontal="true"
                 android:src="@drawable/download" />
 
             <TextView
-                android:id="@+id/txtViewPUT"
+                android:id="@+id/text_public"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/imgViewQRCode"
+                android:layout_below="@+id/image_qr_code"
                 android:layout_marginBottom="10dp"
                 android:layout_marginTop="10dp"
                 android:gravity="center_horizontal"
@@ -81,20 +80,19 @@
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/txtViewBankNameLabel"
+                android:id="@+id/text_bank_name_label"
+                style="@style/StyleTextLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewPUT"
+                android:layout_below="@+id/text_public"
                 android:layout_marginTop="20dp"
-                android:text="@string/bank_name"
-                android:textColor="@color/text_color_black"
-                android:textSize="@dimen/text_size_edt_label" />
+                android:text="@string/bank_name" />
 
             <TextView
-                android:id="@+id/txtViewBankName"
+                android:id="@+id/text_bank_name"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewBankNameLabel"
+                android:layout_below="@+id/text_bank_name_label"
                 android:layout_marginBottom="4dp"
                 android:layout_marginTop="4dp"
                 android:text="Bank of America"
@@ -102,94 +100,90 @@
 
 
             <TextView
-                android:id="@+id/txtViewNameLabel"
+                android:id="@+id/text_name_label"
+                style="@style/StyleTextLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewBankName"
+                android:layout_below="@+id/text_bank_name"
                 android:layout_marginTop="20dp"
-                android:text="@string/name_on_account2"
-                android:textColor="@color/text_color_black"
-                android:textSize="@dimen/text_size_edt_label" />
+                android:text="@string/name_on_account2" />
 
             <TextView
-                android:id="@+id/txtViewNewPass"
+                android:id="@+id/text_holder_name"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewNameLabel"
+                android:layout_below="@+id/text_name_label"
                 android:layout_marginBottom="4dp"
                 android:layout_marginTop="4dp"
                 android:text="test"
                 android:textSize="@dimen/text_size_notice" />
 
             <TextView
-                android:id="@+id/txtViewAccNumLabel"
+                android:id="@+id/text_acc_num_label"
+                style="@style/StyleTextLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewNewPass"
+                android:layout_below="@+id/text_holder_name"
                 android:layout_marginTop="20dp"
-                android:text="@string/account_number"
-                android:textColor="@color/text_color_black"
-                android:textSize="@dimen/text_size_edt_label" />
+                android:text="@string/account_number" />
 
             <TextView
-                android:id="@+id/txtViewAccNum"
+                android:id="@+id/text_acc_number"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewAccNumLabel"
+                android:layout_below="@+id/text_acc_num_label"
                 android:layout_marginBottom="4dp"
                 android:layout_marginTop="4dp"
                 android:text="123456789"
                 android:textSize="@dimen/text_size_notice" />
 
             <TextView
-                android:id="@+id/txtViewPivAvailLabel"
+                android:id="@+id/text_piv_avail_label"
+                style="@style/StyleTextLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewAccNum"
+                android:layout_below="@+id/text_acc_number"
                 android:layout_marginTop="20dp"
-                android:text="@string/piv_available"
-                android:textColor="@color/text_color_black"
-                android:textSize="@dimen/text_size_edt_label" />
+                android:text="@string/piv_available" />
 
             <TextView
-                android:id="@+id/txtViewPivAvail"
+                android:id="@+id/text_piv_avail"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_alignParentStart="true"
-                android:layout_below="@+id/txtViewPivAvailLabel"
+                android:layout_below="@+id/text_piv_avail_label"
                 android:text="2.0"
                 android:textSize="@dimen/text_size_notice" />
 
             <TextView
-                android:id="@+id/txtViewCurrRateLabel"
+                android:id="@+id/text_current_rate_label"
+                style="@style/StyleTextLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewPivAvail"
+                android:layout_below="@+id/text_piv_avail"
                 android:layout_marginTop="20dp"
-                android:text="@string/your_current_rate"
-                android:textColor="@color/text_color_black"
-                android:textSize="@dimen/text_size_edt_label" />
+                android:text="@string/your_current_rate" />
 
             <EditText
-                android:id="@+id/edtViewCurrRate"
-                style="@style/styleEdt"
+                android:id="@+id/edit_current_rate"
+                style="@style/StyleEdit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/txtViewCurrRateLabel"
+                android:layout_below="@id/text_current_rate_label"
                 android:layout_marginBottom="4dp"
                 android:layout_marginTop="4dp"
-                android:text="$25"
+                android:layout_toStartOf="@+id/layout_edit_current_rate"
                 android:enabled="false"
-                android:layout_toStartOf="@+id/layoutEditCurrRate"
                 android:hint="@string/your_current_rate"
-                android:inputType="numberDecimal" />
+                android:inputType="numberDecimal"
+                android:text="$25" />
 
             <LinearLayout
-                android:id="@+id/layoutEditCurrRate"
+                android:id="@+id/layout_edit_current_rate"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
-                android:layout_below="@id/txtViewCurrRateLabel"
+                android:layout_below="@id/text_current_rate_label"
                 android:layout_marginBottom="4dp"
                 android:layout_marginTop="4dp"
                 android:gravity="center_vertical"
@@ -198,10 +192,12 @@
 
 
                 <TextView
-                    android:id="@+id/txtViewEditCurrRate"
+                    android:id="@+id/text_edit_current_rate"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="2dp"
+                    android:layout_marginLeft="4dp"
+                    android:layout_marginRight="2dp"
                     android:layout_marginStart="4dp"
                     android:background="@drawable/selector_edit_btn"
                     android:padding="6dp"
@@ -210,15 +206,16 @@
                     android:visibility="visible" />
 
                 <LinearLayout
-                    android:id="@+id/layoutCancel"
+                    android:id="@+id/layout_cancel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:visibility="gone">
 
                     <TextView
-                        android:id="@+id/txtViewSave"
+                        android:id="@+id/text_save"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginLeft="4dp"
                         android:layout_marginStart="4dp"
                         android:background="@drawable/selector_edit_btn"
                         android:padding="6dp"
@@ -227,36 +224,38 @@
                         android:visibility="visible" />
 
                     <TextView
-                        android:id="@+id/txtViewCancle"
+                        android:id="@+id/text_cancle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="2dp"
+                        android:layout_marginLeft="4dp"
+                        android:layout_marginRight="2dp"
                         android:layout_marginStart="4dp"
                         android:background="@drawable/border_selling_edttxt"
                         android:padding="6dp"
                         android:text="Cancle"
-                        android:textColor="@color/text_color_black"
+                        android:textColor="@color/bgBlackX"
                         android:visibility="visible" />
                 </LinearLayout>
             </LinearLayout>
 
 
             <Button
-                android:id="@+id/btnEditRate"
-                style="@style/styleBtn"
+                android:id="@+id/button_edit_rate"
+                style="@style/StyleButton"
                 android:layout_width="match_parent"
                 android:layout_height="40dp"
-                android:layout_below="@+id/layoutEditCurrRate"
+                android:layout_below="@+id/layout_edit_current_rate"
                 android:layout_margin="4dp"
                 android:text="@string/edit_your_current_rate"
                 android:textAllCaps="false"
                 android:visibility="visible" />
 
             <TextView
-                android:id="@+id/txtViewAdvancedOption"
+                android:id="@+id/text_advanced_option"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/btnEditRate"
+                android:layout_below="@+id/button_edit_rate"
                 android:layout_marginBottom="10dp"
                 android:layout_marginTop="10dp"
                 android:gravity="center_horizontal"
@@ -266,10 +265,10 @@
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/txtViewVeriNoticelbl"
+                android:id="@+id/text_veri_notice_label"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewAdvancedOption"
+                android:layout_below="@+id/text_advanced_option"
                 android:layout_marginBottom="10dp"
                 android:layout_marginTop="10dp"
                 android:gravity="center_horizontal"
@@ -279,10 +278,10 @@
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/txtViewVeriNotice"
+                android:id="@+id/text_veri_notice"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewVeriNoticelbl"
+                android:layout_below="@+id/text_veri_notice_label"
                 android:layout_marginBottom="10dp"
                 android:layout_marginTop="10dp"
                 android:gravity="center_horizontal"
@@ -291,10 +290,10 @@
                 android:textSize="@dimen/text_size_notice" />
 
             <TextView
-                android:id="@+id/txtViewTranNoticelbl"
+                android:id="@+id/text_tran_notice_label"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewVeriNotice"
+                android:layout_below="@+id/text_veri_notice"
                 android:layout_marginBottom="10dp"
                 android:layout_marginTop="10dp"
                 android:gravity="center_horizontal"
@@ -304,10 +303,10 @@
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/txtViewTranNotice"
+                android:id="@+id/text_tran_notice"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewTranNoticelbl"
+                android:layout_below="@+id/text_tran_notice_label"
                 android:layout_marginTop="10dp"
                 android:gravity="center_horizontal"
                 android:text="@string/notice1"
@@ -315,20 +314,20 @@
                 android:textSize="@dimen/text_size_notice" />
 
             <TextView
-                android:id="@+id/txtViewTranNotice2"
+                android:id="@+id/text_tran_notice2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewTranNotice"
+                android:layout_below="@+id/text_tran_notice"
                 android:gravity="center_horizontal"
                 android:text="@string/notice2"
                 android:textColor="@color/edt_text_color"
                 android:textSize="@dimen/text_size_notice" />
 
             <TextView
-                android:id="@+id/txtViewTranNotice4"
+                android:id="@+id/text_tran_notice4"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewTranNotice2"
+                android:layout_below="@+id/text_tran_notice2"
                 android:layout_marginBottom="10dp"
                 android:layout_marginTop="10dp"
                 android:gravity="center_horizontal"

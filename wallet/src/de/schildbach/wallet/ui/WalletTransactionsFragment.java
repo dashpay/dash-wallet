@@ -181,6 +181,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         emptyView = (TextView) view.findViewById(R.id.wallet_transactions_empty);
         btnBuyDash = (Button) view.findViewById(R.id.buy_dash_with_cash);
         sell_dash_with_cash= (Button) view.findViewById(R.id.sell_dash_with_cash);
+        sell_dash_with_cash.setVisibility(View.GONE);
         recyclerView = (RecyclerView) view.findViewById(R.id.wallet_transactions_list);
         recyclerView.setHasFixedSize(true);
         recyclerView.setLayoutManager(new LinearLayoutManager(activity));

@@ -5,7 +5,7 @@
     android:orientation="vertical">
 
     <RelativeLayout
-        android:id="@+id/layoutTop"
+        android:id="@+id/layout_top"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/colorPrimary"
@@ -14,7 +14,7 @@
         android:paddingTop="5dp">
 
         <ImageView
-            android:id="@+id/imgViewToolbarBack"
+            android:id="@+id/image_toolbar_back"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
@@ -26,7 +26,7 @@
             android:src="@drawable/ic_arrow_back_white_24dp" />
 
         <TextView
-            android:id="@+id/txtViewToolbarTitle"
+            android:id="@+id/text_toolbar_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerHorizontal="true"
@@ -85,7 +85,7 @@
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/layoutTop">
+        android:layout_below="@+id/layout_top">
 
         <TextView
             android:id="@+id/toolbar_message"

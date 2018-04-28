@@ -55,7 +55,7 @@ public class PhoneListFragment extends BuyDashBaseFragment implements View.OnCli
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         if (rootView == null) {
-            rootView = inflater.inflate(R.layout.layout_phone_list, container, false);
+            rootView = inflater.inflate(R.layout.fragment_buy_dash_phone_list, container, false);
             init();
             setListeners();
             setPhoneList();

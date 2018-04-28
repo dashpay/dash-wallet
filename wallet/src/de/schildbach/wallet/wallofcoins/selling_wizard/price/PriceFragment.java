@@ -22,12 +22,12 @@ import java.util.ArrayList;
 import de.schildbach.wallet.wallofcoins.buyingwizard.utils.NetworkUtil;
 import de.schildbach.wallet.wallofcoins.selling_wizard.SellingBaseActivity;
 import de.schildbach.wallet.wallofcoins.selling_wizard.SellingBaseFragment;
+import de.schildbach.wallet.wallofcoins.selling_wizard.advanced_options.AdvanceOptionsFragment;
 import de.schildbach.wallet.wallofcoins.selling_wizard.api.RetrofitErrorUtil;
 import de.schildbach.wallet.wallofcoins.selling_wizard.api.SellingAPIClient;
 import de.schildbach.wallet.wallofcoins.selling_wizard.models.AddressVo;
 import de.schildbach.wallet.wallofcoins.selling_wizard.models.MarketsVo;
 import de.schildbach.wallet.wallofcoins.selling_wizard.utils.SellingConstants;
-import de.schildbach.wallet.wallofcoins.selling_wizard.verify_details.VerifySellingDetailsFragment;
 import de.schildbach.wallet_test.R;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -41,15 +41,15 @@ public class PriceFragment extends SellingBaseFragment implements View.OnClickLi
 
 
     private View rootView;
-    private Button btnContinue;
-    private EditText edtViewStaticPrice, edtViewMinPayment, edtViewMaxPayment, edtViewSellerPrice;
+    private Button button_continue;
+    private EditText edit_static_price, edit_min_payment, edit_max_payment, edit_seller_price;
     private final String TAG = "PriceFragment";
     private ProgressBar progressBar;
     private AddressVo addressVo;
-    private AppCompatSpinner sp_primary_market, sp_secondary_market;
-    private AppCompatCheckBox chkBoxdynamicPricing;
-    private LinearLayout layoutStaticPrice;
-    private RelativeLayout layoutDynamicPrice;
+    private AppCompatSpinner spinner_primary_market, spinner_secondary_market;
+    private AppCompatCheckBox chekbox_dynamic_pricing;
+    private LinearLayout layout_static_price;
+    private RelativeLayout layout_dynamic_price;
     private ArrayList<MarketsVo> marketsVoArrayList;
 
     @Override
@@ -62,7 +62,7 @@ public class PriceFragment extends SellingBaseFragment implements View.OnClickLi
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         if (rootView == null) {
-            rootView = inflater.inflate(R.layout.layout_selling_price, container, false);
+            rootView = inflater.inflate(R.layout.fragment_selling_price, container, false);
             init();
             setListeners();
             setTopbar();
@@ -74,38 +74,38 @@ public class PriceFragment extends SellingBaseFragment implements View.OnClickLi
 
     private void init() {
 
-        edtViewStaticPrice = (EditText) rootView.findViewById(R.id.edtViewStaticPrice);
-        edtViewMinPayment = (EditText) rootView.findViewById(R.id.edtViewMinPayment);
-        edtViewMaxPayment = (EditText) rootView.findViewById(R.id.edtViewMaxPayment);
-        edtViewSellerPrice = (EditText) rootView.findViewById(R.id.edtViewSellerPrice);
-        chkBoxdynamicPricing = (AppCompatCheckBox) rootView.findViewById(R.id.chkBoxdynamicPricing);
+        edit_static_price = (EditText) rootView.findViewById(R.id.edit_static_price);
+        edit_min_payment = (EditText) rootView.findViewById(R.id.edit_min_payment);
+        edit_max_payment = (EditText) rootView.findViewById(R.id.edit_max_payment);
+        edit_seller_price = (EditText) rootView.findViewById(R.id.edit_seller_price);
+        chekbox_dynamic_pricing = (AppCompatCheckBox) rootView.findViewById(R.id.chekbox_dynamic_pricing);
 
-        sp_primary_market = (AppCompatSpinner) rootView.findViewById(R.id.sp_primary_market);
-        sp_secondary_market = (AppCompatSpinner) rootView.findViewById(R.id.sp_secondary_market);
+        spinner_primary_market = (AppCompatSpinner) rootView.findViewById(R.id.spinner_primary_market);
+        spinner_secondary_market = (AppCompatSpinner) rootView.findViewById(R.id.spinner_secondary_market);
 
-        btnContinue = (Button) rootView.findViewById(R.id.btnContinue);
+        button_continue = (Button) rootView.findViewById(R.id.button_continue);
         progressBar = (ProgressBar) rootView.findViewById(R.id.progressBar);
 
-        layoutStaticPrice = (LinearLayout) rootView.findViewById(R.id.layoutStaticPrice);
-        layoutDynamicPrice = (RelativeLayout) rootView.findViewById(R.id.layoutDynamicPrice);
+        layout_static_price = (LinearLayout) rootView.findViewById(R.id.layout_static_price);
+        layout_dynamic_price = (RelativeLayout) rootView.findViewById(R.id.layout_dynamic_price);
 
         marketsVoArrayList = new ArrayList<>();
 
     }
 
     private void setListeners() {
-        btnContinue.setOnClickListener(this);
-        chkBoxdynamicPricing.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        button_continue.setOnClickListener(this);
+        chekbox_dynamic_pricing.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
                 if (isChecked) {
                     if (marketsVoArrayList.size() == 0)
                         getMarkes();
-                    layoutStaticPrice.setVisibility(View.GONE);
-                    layoutDynamicPrice.setVisibility(View.VISIBLE);
+                    layout_static_price.setVisibility(View.GONE);
+                    layout_dynamic_price.setVisibility(View.VISIBLE);
                 } else {
-                    layoutDynamicPrice.setVisibility(View.GONE);
-                    layoutStaticPrice.setVisibility(View.VISIBLE);
+                    layout_dynamic_price.setVisibility(View.GONE);
+                    layout_static_price.setVisibility(View.VISIBLE);
                 }
             }
         });
@@ -121,7 +121,7 @@ public class PriceFragment extends SellingBaseFragment implements View.OnClickLi
 
         if (getArguments() != null) {
             addressVo = (AddressVo)
-                    getArguments().getSerializable(SellingConstants.ADDRESS_DETAILS_VO);
+                    getArguments().getSerializable(SellingConstants.ARGUMENT_ADDRESS_DETAILS_VO);
         }
     }
 
@@ -135,38 +135,61 @@ public class PriceFragment extends SellingBaseFragment implements View.OnClickLi
     public void onClick(View view) {
 
         switch (view.getId()) {
-            case R.id.btnContinue:
-                if (chkBoxdynamicPricing.isChecked()) {
-                    if (isValidDetails()) {
+            case R.id.button_continue:
+                //if (chkBoxdynamicPricing.isChecked()) {
+                    /*if (isValidDetails()) {
                         Bundle bundle = new Bundle();
                         bundle.putSerializable(SellingConstants.ADDRESS_DETAILS_VO, getSellingDetails());
                         VerifySellingDetailsFragment fragment = new VerifySellingDetailsFragment();
                         fragment.setArguments(bundle);
 
                         ((SellingBaseActivity) mContext).replaceFragment(fragment, true, true);
-                    }
-                }
+                    }*/
+                   // if (isValidDetails()) {
+
+                        if (isValid())
+                        {
+                            Bundle bundle = new Bundle();
+                            bundle.putSerializable(SellingConstants.ARGUMENT_ADDRESS_DETAILS_VO, getSellingDetails());
+                            AdvanceOptionsFragment fragment = new AdvanceOptionsFragment();
+                            fragment.setArguments(bundle);
+
+                            ((SellingBaseActivity) mContext).replaceFragment(fragment, true, true);
+                        }
+
+                    //}
+
+               // }
+
                 break;
         }
     }
-
+    private boolean isValid()
+    {
+        if (edit_static_price.getText().toString().trim().isEmpty()) {
+            showToast(getString(R.string.enter_price));
+            edit_static_price.requestFocus();
+            return false;
+        }
+        return true;
+    }
     private boolean isValidDetails() {
 
-        if (chkBoxdynamicPricing.isChecked()) {
-            if (sp_primary_market.getSelectedItemPosition() == 0) {
+        if (chekbox_dynamic_pricing.isChecked()) {
+            if (spinner_primary_market.getSelectedItemPosition() == 0) {
                 showToast(getString(R.string.primary_empty));
                 return false;
-            } else if (sp_secondary_market.getSelectedItemPosition() == 0) {
+            } else if (spinner_secondary_market.getSelectedItemPosition() == 0) {
                 showToast(getString(R.string.secondary_empty));
                 return false;
-            } else if (sp_primary_market.getSelectedItemPosition() == sp_secondary_market.getSelectedItemPosition()) {
+            } else if (spinner_primary_market.getSelectedItemPosition() == spinner_secondary_market.getSelectedItemPosition()) {
                 showToast(getString(R.string.error_primary_secondry_same));
                 return false;
             }
         } else {
-            if (edtViewStaticPrice.getText().toString().trim().isEmpty()) {
+            if (edit_static_price.getText().toString().trim().isEmpty()) {
                 showToast(getString(R.string.all_field_required));
-                edtViewStaticPrice.requestFocus();
+                edit_static_price.requestFocus();
                 return false;
             }
         }
@@ -178,16 +201,16 @@ public class PriceFragment extends SellingBaseFragment implements View.OnClickLi
 
         addressVo.setDynamicPrice(true);
 
-        if (chkBoxdynamicPricing.isChecked()) {
+        if (chekbox_dynamic_pricing.isChecked()) {
             int priMarketPos, secMarketPos;
-            priMarketPos = sp_primary_market.getSelectedItemPosition();
-            secMarketPos = sp_secondary_market.getSelectedItemPosition();
+            priMarketPos = spinner_primary_market.getSelectedItemPosition();
+            secMarketPos = spinner_secondary_market.getSelectedItemPosition();
             addressVo.setPrimaryMarket(marketsVoArrayList.get(priMarketPos - 1).getId());
             addressVo.setSecondaryMarket(marketsVoArrayList.get(secMarketPos - 1).getId());
 
-            addressVo.setSellerFee(edtViewSellerPrice.getText().toString().trim());
-            addressVo.setMinPayment(edtViewMinPayment.getText().toString().trim());
-            addressVo.setMaxPayment(edtViewMaxPayment.getText().toString().trim());
+            addressVo.setSellerFee(edit_seller_price.getText().toString().trim());
+            addressVo.setMinPayment(edit_min_payment.getText().toString().trim());
+            addressVo.setMaxPayment(edit_max_payment.getText().toString().trim());
 
         } else {
 
@@ -198,7 +221,7 @@ public class PriceFragment extends SellingBaseFragment implements View.OnClickLi
             addressVo.setMinPayment(null);
             addressVo.setMaxPayment(null);
         }
-        addressVo.setCurrentPrice(edtViewStaticPrice.getText().toString().trim());
+        addressVo.setCurrentPrice(edit_static_price.getText().toString().trim());
         return addressVo;
     }
 
@@ -241,10 +264,10 @@ public class PriceFragment extends SellingBaseFragment implements View.OnClickLi
 
         ArrayAdapter<String> primaryAdapter = new ArrayAdapter<String>(mContext, android.R.layout.simple_spinner_dropdown_item, primaryList);
         primaryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        sp_primary_market.setAdapter(primaryAdapter);
+        spinner_primary_market.setAdapter(primaryAdapter);
 
         ArrayAdapter<String> secondaryAdapter = new ArrayAdapter<String>(mContext, android.R.layout.simple_spinner_dropdown_item, secondaryList);
         secondaryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        sp_secondary_market.setAdapter(secondaryAdapter);
+        spinner_secondary_market.setAdapter(secondaryAdapter);
     }
 }

@@ -31,6 +31,7 @@
     <item
         android:id="@+id/nav_sell_piv"
         android:icon="@drawable/ic_menu_sell_dash"
+        android:visible="false"
         android:title="@string/title_selling" />
 
     <!--</group>-->

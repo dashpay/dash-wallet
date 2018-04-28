@@ -5,7 +5,7 @@
     android:padding="10dp">
 
     <TextView
-        android:id="@+id/txtViewTitle"
+        android:id="@+id/text_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
@@ -15,83 +15,81 @@
         android:textStyle="bold" />
 
     <CheckBox
-        android:id="@+id/chkBox"
+        android:id="@+id/checkbox"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/txtViewTitle"
+        android:layout_below="@+id/text_title"
         android:layout_marginTop="20dp"
         android:checked="true"
         android:text="@string/offer_these_coins_to_buyers" />
 
     <TextView
-        android:id="@+id/txtViewMPLabel"
+        android:id="@+id/text_mp_label"
+        style="@style/StyleTextLabel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/chkBox"
+        android:layout_below="@+id/checkbox"
         android:layout_marginTop="10dp"
-        android:text="@string/minimum_deposit_payment_amount_for_buyers"
-        android:textColor="@color/text_color_black"
-        android:textSize="@dimen/text_size_edt_label" />
+        android:text="@string/minimum_deposit_payment_amount_for_buyers" />
 
     <EditText
-        android:id="@+id/edtViewMinPayment"
-        style="@style/styleEdt"
+        android:id="@+id/edit_min_payment"
+        style="@style/StyleEdit"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/txtViewMPLabel"
+        android:layout_below="@+id/text_mp_label"
         android:layout_marginBottom="4dp"
         android:layout_marginTop="4dp"
-        android:inputType="numberDecimal"
-        android:text="0" />
+        android:hint="0"
+        android:inputType="numberDecimal" />
 
 
     <TextView
-        android:id="@+id/txtViewMaxPLabel"
+        android:id="@+id/text_max_label"
+        style="@style/StyleTextLabel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/edtViewMinPayment"
+        android:layout_below="@+id/edit_min_payment"
         android:layout_marginTop="10dp"
-        android:text="@string/maximum_deposit_payment_amount"
-        android:textColor="@color/text_color_black"
-        android:textSize="@dimen/text_size_edt_label" />
+        android:text="@string/maximum_deposit_payment_amount" />
 
     <EditText
-        android:id="@+id/edtViewMaxPayment"
-        style="@style/styleEdt"
+        android:id="@+id/edit_max_payment"
+        style="@style/StyleEdit"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/txtViewMaxPLabel"
+        android:layout_below="@+id/text_max_label"
         android:layout_marginBottom="4dp"
         android:layout_marginTop="4dp"
-        android:inputType="numberDecimal"
-        android:text="0" />
+        android:hint="0"
+        android:inputType="numberDecimal" />
 
     <LinearLayout
-        android:id="@+id/layoutCancel"
+        android:id="@+id/layout_cancel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/edtViewMaxPayment"
+        android:layout_below="@+id/edit_max_payment"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="10dp">
 
         <Button
-            android:id="@+id/btnCancle"
+            android:id="@+id/button_cancle"
             android:layout_width="wrap_content"
             android:layout_height="40dp"
             android:layout_marginEnd="4dp"
             android:background="@drawable/border_selling_edttxt"
-            android:text="Cancle"
-            android:textColor="@color/text_color_black"
+            android:text="@string/action_cancle"
+            android:textColor="@color/bgBlackX"
             android:visibility="visible" />
 
         <Button
-            android:id="@+id/btnSave"
+            android:id="@+id/button_save"
             android:layout_width="wrap_content"
             android:layout_height="40dp"
             android:layout_marginStart="4dp"
             android:background="@drawable/selector_edit_btn"
             android:padding="6dp"
-            android:text="Save"
+            android:text="@string/action_save"
             android:textColor="@color/white"
             android:visibility="visible" />
 

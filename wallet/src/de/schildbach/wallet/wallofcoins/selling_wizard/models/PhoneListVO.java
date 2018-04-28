@@ -10,6 +10,7 @@ public class PhoneListVO implements Serializable {
 
     private String phoneNumber = "";
     private String deviceId = "";
+    private String emailId="";
 
 
     public String getDeviceId() {

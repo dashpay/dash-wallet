@@ -32,7 +32,6 @@ import de.schildbach.wallet_test.R;
 import okhttp3.Interceptor;
 import okhttp3.Request;
 
-
 /**
  * Created by  on 03-Apr-18.
  */
@@ -96,13 +95,13 @@ public class SellingBaseFragment extends Fragment {
     @SuppressLint("HardwareIds")
     protected String getDeviceCode(Context context) {
 
-        String deviceUID = SharedPreferenceUtil.getString(SellingConstants.DEVICE_CODE, "");
+        String deviceUID = SharedPreferenceUtil.getString(SellingConstants.PREF_DEVICE_CODE, "");
         if (TextUtils.isEmpty(deviceUID)) {
             String deviceID;
             deviceID = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
             byte[] data = (deviceID + deviceID + deviceID).getBytes(Charsets.UTF_8);
             deviceUID = Base64.encodeToString(data, Base64.DEFAULT).substring(0, 39);
-            SharedPreferenceUtil.putValue(SellingConstants.DEVICE_CODE, deviceUID);
+            SharedPreferenceUtil.putValue(SellingConstants.PREF_DEVICE_CODE, deviceUID);
         }
 
         return deviceUID;
@@ -155,9 +154,9 @@ public class SellingBaseFragment extends Fragment {
             Request original = chain.request();
             // Request customization: add request headers
             Request.Builder requestBuilder = original.newBuilder();
-            if (!TextUtils.isEmpty(SharedPreferenceUtil.getString(SellingConstants.TOKEN_ID, ""))) {
+            if (!TextUtils.isEmpty(SharedPreferenceUtil.getString(SellingConstants.PREF_TOKEN_ID, ""))) {
                 requestBuilder.addHeader(SellingApiConstants.KEY_HEADER_AUTH_TOKEN,
-                        SharedPreferenceUtil.getString(SellingConstants.TOKEN_ID, ""));
+                        SharedPreferenceUtil.getString(SellingConstants.PREF_TOKEN_ID, ""));
             }
             requestBuilder.addHeader(SellingApiConstants.KEY_HEADER_PUBLISHER_ID,
                     SellingApiConstants.WALLOFCOINS_PUBLISHER_ID);

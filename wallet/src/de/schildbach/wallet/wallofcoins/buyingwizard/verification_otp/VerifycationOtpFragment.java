@@ -68,7 +68,7 @@ public class VerifycationOtpFragment extends BuyDashBaseFragment implements View
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         if (rootView == null) {
-            rootView = inflater.inflate(R.layout.layout_verification_otp, container, false);
+            rootView = inflater.inflate(R.layout.fragment_buy_dash_verification_otp, container, false);
             init();
             setListeners();
             handleArgs();

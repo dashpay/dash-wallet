@@ -55,7 +55,7 @@ public class BuyDashPaymentCenterFragment extends BuyDashBaseFragment implements
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         if (rootView == null) {
-            rootView = inflater.inflate(R.layout.layout_buy_dash_payment_center, container, false);
+            rootView = inflater.inflate(R.layout.fragment_buy_dash_payment_center, container, false);
             init();
             setListeners();
             getReceivingOptions();

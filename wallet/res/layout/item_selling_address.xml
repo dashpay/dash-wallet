@@ -12,7 +12,7 @@
         android:textStyle="bold" />
 
     <TextView
-        android:id="@+id/txtViewCurrentPrice"
+        android:id="@+id/text_current_price"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"

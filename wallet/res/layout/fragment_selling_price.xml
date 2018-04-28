@@ -7,7 +7,7 @@
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@+id/btnContinue"
+        android:layout_above="@+id/button_continue"
         android:scrollbars="none">
 
         <RelativeLayout
@@ -16,69 +16,71 @@
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/txtViewMsg"
+                android:id="@+id/text_msg"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_horizontal"
                 android:text="@string/how_much_do_you_want_per_pivx"
-                android:textColor="@color/text_color_black"
-                android:textSize="@dimen/text_size_top_msg" />
+                style="@style/StyleHeader" />
 
 
             <TextView
-                android:id="@+id/txtViewPriceLabel"
+                android:id="@+id/text_price_label"
+                style="@style/StyleTextLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewMsg"
+                android:layout_below="@+id/text_msg"
                 android:layout_marginTop="20dp"
                 android:text="@string/price_per_coin"
-                android:textColor="@color/text_color_black"
-                android:textSize="@dimen/text_size_edt_label" />
+              />
 
 
             <android.support.v7.widget.AppCompatCheckBox
-                android:id="@+id/chkBoxdynamicPricing"
+                android:id="@+id/chekbox_dynamic_pricing"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/txtViewPriceLabel"
+                android:layout_below="@+id/text_price_label"
                 android:layout_marginTop="@dimen/dimen_8dp"
+                android:visibility="gone"
                 android:text="@string/use_dynamic_pricing" />
 
             <LinearLayout
-                android:id="@+id/layoutStaticPrice"
+                android:id="@+id/layout_static_price"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/chkBoxdynamicPricing"
+                android:layout_below="@+id/chekbox_dynamic_pricing"
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/txtViewSPLabel"
+                    android:id="@+id/text_static_price_label"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:text="@string/static_price_lbl"
+                    android:visibility="gone"
                     android:textColor="@color/text_color_black"
                     android:textSize="@dimen/text_size_edt_label" />
 
                 <EditText
-                    android:id="@+id/edtViewStaticPrice"
-                    style="@style/styleEdt"
+                    android:id="@+id/edit_static_price"
+                    style="@style/StyleEdit"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
                     android:layout_marginTop="4dp"
+                    android:hint="@string/dollar_sign"
                     android:inputType="numberDecimal" />
             </LinearLayout>
 
             <RelativeLayout
-                android:id="@+id/layoutDynamicPrice"
+                android:id="@+id/layout_dynamic_price"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/layoutStaticPrice"
+                android:layout_below="@+id/layout_static_price"
                 android:visibility="gone">
 
                 <TextView
-                    android:id="@+id/txtViewPMLabel"
+                    android:id="@+id/text_primary_market_label"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
@@ -87,107 +89,107 @@
                     android:textSize="@dimen/text_size_edt_label" />
 
                 <RelativeLayout
-                    android:id="@+id/layoutSP"
+                    android:id="@+id/layout_sp"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_alignParentStart="true"
-                    android:layout_below="@+id/txtViewPMLabel"
+                    android:layout_below="@+id/text_primary_market_label"
                     android:layout_marginBottom="4dp"
                     android:layout_marginTop="4dp"
                     android:background="@drawable/border_selling_edttxt">
 
                     <android.support.v7.widget.AppCompatSpinner
-                        android:id="@+id/sp_primary_market"
+                        android:id="@+id/spinner_primary_market"
                         android:layout_width="match_parent"
                         android:layout_height="34dp" />
                 </RelativeLayout>
 
 
                 <TextView
-                    android:id="@+id/txtViewSMLabel"
+                    android:id="@+id/text_sec_market_label"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_below="@+id/layoutSP"
+                    android:layout_below="@+id/layout_sp"
                     android:layout_marginTop="10dp"
                     android:text="@string/secondary_market_lbl"
                     android:textColor="@color/text_color_black"
                     android:textSize="@dimen/text_size_edt_label" />
 
                 <RelativeLayout
-                    android:id="@+id/layoutPM"
+                    android:id="@+id/layout_pm"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_alignParentStart="true"
-                    android:layout_below="@+id/txtViewSMLabel"
+                    android:layout_below="@+id/text_sec_market_label"
                     android:layout_marginBottom="4dp"
                     android:layout_marginTop="4dp"
                     android:background="@drawable/border_selling_edttxt">
 
                     <android.support.v7.widget.AppCompatSpinner
-                        android:id="@+id/sp_secondary_market"
+                        android:id="@+id/spinner_secondary_market"
                         android:layout_width="match_parent"
                         android:layout_height="34dp"
                         android:layout_alignParentStart="true" />
                 </RelativeLayout>
 
                 <TextView
-                    android:id="@+id/txtViewMPLabel"
+                    android:id="@+id/text_minimum_payment_label"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_below="@+id/layoutPM"
+                    android:layout_below="@+id/layout_pm"
                     android:layout_marginTop="10dp"
                     android:text="@string/minimum_payment_lbl"
                     android:textColor="@color/text_color_black"
                     android:textSize="@dimen/text_size_edt_label" />
 
                 <EditText
-                    android:id="@+id/edtViewMinPayment"
-                    style="@style/styleEdt"
+                    android:id="@+id/edit_min_payment"
+                    style="@style/StyleEdit"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_below="@+id/txtViewMPLabel"
+                    android:layout_below="@+id/text_minimum_payment_label"
                     android:layout_marginBottom="4dp"
                     android:layout_marginTop="4dp"
                     android:inputType="numberDecimal" />
 
 
                 <TextView
-                    android:id="@+id/txtViewMaxPLabel"
+                    android:id="@+id/text_max_payment_label"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_below="@+id/edtViewMinPayment"
+                    android:layout_below="@+id/edit_min_payment"
                     android:layout_marginTop="10dp"
                     android:text="@string/maximum_payment_lbl"
                     android:textColor="@color/text_color_black"
                     android:textSize="@dimen/text_size_edt_label" />
 
                 <EditText
-                    android:id="@+id/edtViewMaxPayment"
-                    style="@style/styleEdt"
+                    android:id="@+id/edit_max_payment"
+                    style="@style/StyleEdit"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_below="@+id/txtViewMaxPLabel"
+                    android:layout_below="@+id/text_max_payment_label"
                     android:layout_marginBottom="4dp"
                     android:layout_marginTop="4dp"
                     android:inputType="numberDecimal" />
 
 
                 <TextView
-                    android:id="@+id/txtViewSellerPriceLabel"
+                    android:id="@+id/text_seller_price_pabel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_below="@+id/edtViewMaxPayment"
+                    android:layout_below="@+id/edit_max_payment"
                     android:layout_marginTop="10dp"
                     android:text="@string/seller_fee_lbl"
                     android:textColor="@color/text_color_black"
                     android:textSize="@dimen/text_size_edt_label" />
 
                 <EditText
-                    android:id="@+id/edtViewSellerPrice"
-                    style="@style/styleEdt"
+                    android:id="@+id/edit_seller_price"
+                    style="@style/StyleEdit"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_below="@+id/txtViewSellerPriceLabel"
+                    android:layout_below="@+id/text_seller_price_pabel"
                     android:layout_marginBottom="4dp"
                     android:layout_marginTop="4dp"
                     android:inputType="numberDecimal" />
@@ -196,8 +198,8 @@
     </ScrollView>
 
     <Button
-        android:id="@+id/btnContinue"
-        style="@style/styleBtn"
+        android:id="@+id/button_continue"
+        style="@style/StyleButton"
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:layout_alignParentBottom="true"
