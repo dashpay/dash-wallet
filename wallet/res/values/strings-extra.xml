@@ -162,7 +162,7 @@
     <string name="network_not_avaialable">Please check internet connection</string>
     <string name="offerid_not_available">Offerid not available</string>
 
-       <!-- Selling wizard-->
+    <!-- Selling wizard-->
     <string name="title_selling">Sell Your Dash</string>
     <string name="title_price">Price</string>
     <string name="title_verify_selling_details">Verify Selling Details</string>

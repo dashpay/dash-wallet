@@ -92,7 +92,7 @@ import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
-import de.schildbach.wallet.wallofcoins.buydash.BuyDashActivity;
+import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseActivity;
 import de.schildbach.wallet.wallofcoins.selling_wizard.SellingBaseActivity;
 import de.schildbach.wallet_test.R;
 
@@ -1003,7 +1003,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             startActivity(new Intent(this, NetworkMonitorActivity.class));
 
         } else if (id == R.id.nav_buy_dash_with_cash) {
-            startActivity(new Intent(this, BuyDashActivity.class));
+            startActivity(new Intent(this, BuyDashBaseActivity.class));
         } else if (id == R.id.nav_safety) {
             openContextMenu(viewFakeForSafetySubmenu);
         } else if (id == R.id.nav_settings) {

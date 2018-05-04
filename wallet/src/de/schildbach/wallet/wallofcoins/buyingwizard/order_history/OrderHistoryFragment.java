@@ -143,12 +143,9 @@ public class OrderHistoryFragment extends BuyDashBaseFragment implements SharedP
                                     manageOrderList(response.body(), false);
                                 }
                             } else {
-                                //hideViewExcept(binding.layoutLocation);
                                 navigateToLocationScreen();
                             }
                         } else if (response.code() == 403) {
-                            //hideViewExcept(binding.layoutLocation);
-                            //((BuyDashBaseActivity)mContext).popBackAllFragmentsExcept("de.schildbach.wallet.wallofcoins.buyingwizard.buy_dash_location.BuyDashLocationFragment");
                             ((BuyDashBaseActivity) mContext).removeAllFragmentFromStack();
                             navigateToLocationScreen();
                         }
@@ -243,7 +240,6 @@ public class OrderHistoryFragment extends BuyDashBaseFragment implements SharedP
             rv_order_list.setLayoutManager(linearLayoutManager);
             rv_order_list.setAdapter(new OrderListAdapter(mContext, orderList, fragment, ((BuyDashBaseActivity) mContext).buyDashPref));
         } else {
-            //hideViewExcept(binding.layoutLocation);
             navigateToLocationScreen();
         }
     }
@@ -334,50 +330,6 @@ public class OrderHistoryFragment extends BuyDashBaseFragment implements SharedP
             myRunnable = new MyRunnable(textDepositeDue, handler, dueDateTime, countdownInterval);
             handler.postDelayed(myRunnable, 0);
         }
-
-        /*final Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-                handler.postDelayed(this, countdownInterval);
-                try {
-                    SimpleDateFormat dateFormat = new SimpleDateFormat(
-                            "yyyy-MM-dd HH:mm:ss");
-                    dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-                    // Here Set your Event Date
-                    Date eventDate = dateFormat.parse(dueDateTime.replace("T", " ").substring(0, 19));
-                    Date currentDate = new Date();
-                    if (!currentDate.after(eventDate)) {
-                        long diff = eventDate.getTime()
-                                - currentDate.getTime();
-                        long hours = diff / (60 * 60 * 1000);
-                        diff -= hours * (60 * 60 * 1000);
-                        long minutes = diff / (60 * 1000);
-                        diff -= minutes * (60 * 1000);
-                        long seconds = diff / 1000;
-
-                        if (hours > 0) {
-                            textDepositeDue.setText("Deposit Due: " + hours + " hours " + minutes + " minutes");
-                            countdownInterval = 60 * 1000;
-                        } else {
-                            if (minutes < 10) {
-                                textDepositeDue.setTextColor(Color.parseColor("#DD0000"));
-                            } else {
-                                textDepositeDue.setTextColor(Color.parseColor("#000000"));
-                            }
-                            textDepositeDue.setText("Deposit Due: " + minutes + " minutes " + seconds + " seconds");
-                            countdownInterval = 1000;
-                        }
-                    } else {
-                        textDepositeDue.setText("Deposit Due: 0 minutes 0 seconds");
-                        handler.removeMessages(0);
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        };*/
-        //handler.postDelayed(runnable, 0);
-
 
     }
 

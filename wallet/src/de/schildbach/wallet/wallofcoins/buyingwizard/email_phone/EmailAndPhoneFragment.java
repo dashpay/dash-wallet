@@ -161,7 +161,6 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                     email = edit_buy_dash_email.getText().toString();
                     linear_phone.setVisibility(View.VISIBLE);
                     linear_email.setVisibility(View.GONE);
-                    // hideViewExcept(binding.linearPhone);
                 } else {
                     Toast.makeText(mContext, R.string.alert_enter_valid_email, Toast.LENGTH_LONG).show();
                 }
@@ -355,7 +354,6 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
 
                     if (code >= 400 && response.body() == null) {
                         try {
-                            //BuyDashErrorResp buyDashErrorResp = new Gson().fromJson(response.errorBody().string(), BuyDashErrorResp.class);
                             if (!TextUtils.isEmpty(password)) {
                                 showAlertPasswordDialog();
                             } else {
@@ -371,7 +369,6 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                     if (!TextUtils.isEmpty(response.body().token)) {
                         ((BuyDashBaseActivity) mContext).buyDashPref.setAuthToken(response.body().token);
                     }
-                    //hideViewExcept(null);
                     if (!TextUtils.isEmpty(password) && TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getDeviceId())) {
                         getDevice();
                     } else {
@@ -432,21 +429,13 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                         ((BuyDashBaseActivity) mContext).buyDashPref.setAuthToken(createHoldResp.token);
                     }
                     navigateToVerifyOtp(createHoldResp.__PURCHASE_CODE);
-                    //hideViewExcept(binding.layoutVerifyOtp);
-                    //clearForm((ViewGroup) binding.getRoot());
-                    //binding.etOtp.setText(createHoldResp.__PURCHASE_CODE);
 
                 } else if (null != response.errorBody()) {
                     if (response.code() == 403 && TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getAuthToken())) {
 
-                      /*  String token = credentilasPref.getAuthTokenFromPhoneNum(phone_no);
-                        ((BuyDashBaseActivity) mContext).buyDashPref.setAuthToken(token);
-                        getHolds();*/
                         layout_hold.setVisibility(View.VISIBLE);
                         linear_email.setVisibility(View.GONE);
                         linear_phone.setVisibility(View.GONE);
-                        //hideViewExcept(binding.layoutHold);
-                        //clearForm((ViewGroup) binding.getRoot());
                     } else if (response.code() == 403 && !TextUtils.isEmpty(((BuyDashBaseActivity) mContext).buyDashPref.getAuthToken())) {
                         getHolds();
                     } else if (response.code() == 400) {
@@ -456,8 +445,6 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                             layout_hold.setVisibility(View.VISIBLE);
                             linear_email.setVisibility(View.GONE);
                             linear_phone.setVisibility(View.GONE);
-                            // hideViewExcept(binding.layoutHold);
-                            //clearForm((ViewGroup) binding.getRoot());
                         }
                     } else {
                         try {
@@ -468,8 +455,6 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                             e.printStackTrace();
                         }
                     }
-                } else {
-                    //clearForm((ViewGroup) binding.getRoot());
                 }
             }
 
@@ -511,11 +496,9 @@ public class EmailAndPhoneFragment extends BuyDashBaseFragment implements View.O
                             }
                         }
                         if (holdCount == 0) {
-                            //getOrderList(false);
                             navigateToOrderList(false);
                         }
                     } else {
-                        //getOrderList(false);
                         navigateToOrderList(false);
                     }
                 }
