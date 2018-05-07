@@ -35,6 +35,7 @@ import org.bitcoinj.core.ScriptException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Transaction.Purpose;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
+import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
@@ -639,9 +640,14 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
     }
 
     private void showTransferFromUpholdAccountDialog(final TransactionsAdapter.Info<BigDecimal> info) {
+        Configuration config = ((WalletApplication) (getActivity().getApplication())).getConfiguration();
+        String currencyCode = config.getFormat().code();
+        MonetaryFormat inputFormat = config.getMaxPrecisionFormat();
+        MonetaryFormat hintFormat = config.getFormat();
+
         BigDecimal balance = info.getData();
         UpholdTransferToWalletDialog.show(getFragmentManager(), balance,
-                wallet.currentReceiveAddress().toString(),
+                wallet.currentReceiveAddress().toString(), currencyCode, inputFormat, hintFormat,
                 new UpholdTransferToWalletDialog.OnTransferListener() {
                     @Override
                     public void onTransfer() {

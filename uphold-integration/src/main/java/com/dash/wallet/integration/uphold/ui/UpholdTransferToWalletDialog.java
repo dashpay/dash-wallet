@@ -37,6 +37,7 @@ import com.dash.wallet.integration.R;
 import com.dash.wallet.integration.uphold.data.UpholdClient;
 import com.dash.wallet.integration.uphold.data.UpholdTransaction;
 
+import org.bitcoinj.utils.MonetaryFormat;
 import org.dash.wallet.common.ui.CurrencyAmountView;
 import org.dash.wallet.common.ui.DialogBuilder;
 
@@ -49,41 +50,47 @@ public class UpholdTransferToWalletDialog extends DialogFragment {
     private static final String ARGS_BALANCE = "args_balance";
     private static final String ARGS_RECEIVING_ADDRESS = "args_receiving_address";
 
-    private Button transferButton;
     private BigDecimal balance;
-    private OnTransferListener onTransferListener;
     private String receivingAddress;
+    private String currencyCode;
+    private MonetaryFormat inputFormat;
+    private MonetaryFormat hintFormat;
+    private OnTransferListener onTransferListener;
+    private Button transferButton;
     private UpholdTransaction transaction;
 
-    public static void show(final FragmentManager fm, BigDecimal balance, String receivingAddress,
+    public static void show(final FragmentManager fm,
+                            BigDecimal balance,
+                            String receivingAddress,
+                            String currencyCode,
+                            MonetaryFormat inputFormat,
+                            MonetaryFormat hintFormat,
                             OnTransferListener onTransferListener) {
-        final UpholdTransferToWalletDialog dialogFragment = new UpholdTransferToWalletDialog();
-        dialogFragment.onTransferListener = onTransferListener;
 
-        Bundle args = new Bundle();
-        args.putSerializable(ARGS_BALANCE, balance);
-        args.putSerializable(ARGS_RECEIVING_ADDRESS, receivingAddress);
-        dialogFragment.setArguments(args);
+        final UpholdTransferToWalletDialog dialog = new UpholdTransferToWalletDialog();
 
-        dialogFragment.show(fm, FRAGMENT_TAG);
+        dialog.balance = balance;
+        dialog.receivingAddress = receivingAddress;
+        dialog.currencyCode = currencyCode;
+        dialog.inputFormat = inputFormat;
+        dialog.hintFormat = hintFormat;
+        dialog.onTransferListener = onTransferListener;
+
+        dialog.show(fm, FRAGMENT_TAG);
     }
 
     @Override
     public Dialog onCreateDialog(final Bundle savedInstanceState) {
+        setRetainInstance(true);
         Activity activity = getActivity();
         View view = LayoutInflater.from(activity).inflate(R.layout.transfer_from_external_account_dialog, null);
-        balance = (BigDecimal) getArguments().getSerializable(ARGS_BALANCE);
-        receivingAddress = (String) getArguments().getSerializable(ARGS_RECEIVING_ADDRESS);
 
         final CurrencyAmountView dashAmountView = (CurrencyAmountView) view.findViewById(R.id.send_coins_amount_dash);
-        //TODO: pass as argument
-        /* * /
-        dashAmountView.setCurrencySymbol(config.getFormat().code());
-        dashAmountView.setInputFormat(config.getMaxPrecisionFormat());
-        dashAmountView.setHintFormat(config.getFormat());
+        dashAmountView.setCurrencySymbol(currencyCode);
+        dashAmountView.setInputFormat(inputFormat);
+        dashAmountView.setHintFormat(hintFormat);
         dashAmountView.getTextView().setText(balance.toString());
         dashAmountView.getTextView().addTextChangedListener(dashAmountTextWatcher);
-        /* */
 
         TextView hintView = (TextView) view.findViewById(R.id.hint);
         hintView.setText(Html.fromHtml(getString(R.string.dash_available, balance)));
