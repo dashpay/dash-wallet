@@ -43,7 +43,7 @@ import com.google.common.io.BaseEncoding;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.util.Bluetooth;
-import de.schildbach.wallet.util.GenericUtils;
+import org.dash.wallet.common.util.GenericUtils;
 
 import android.os.Parcel;
 import android.os.Parcelable;

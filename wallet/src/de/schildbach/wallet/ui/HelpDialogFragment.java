@@ -24,6 +24,8 @@ import android.app.FragmentManager;
 import android.os.Bundle;
 import android.text.Html;
 
+import org.dash.wallet.common.ui.DialogBuilder;
+
 /**
  * @author Andreas Schildbach
  */

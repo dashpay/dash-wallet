@@ -29,6 +29,7 @@ import java.util.ArrayList;
 
 import javax.annotation.Nullable;
 
+import org.dash.wallet.common.ui.DialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

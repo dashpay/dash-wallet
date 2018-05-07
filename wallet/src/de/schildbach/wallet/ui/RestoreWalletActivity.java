@@ -26,6 +26,7 @@ import java.io.InputStreamReader;
 
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
+import org.dash.wallet.common.ui.DialogBuilder;
 
 import com.google.common.base.Charsets;
 

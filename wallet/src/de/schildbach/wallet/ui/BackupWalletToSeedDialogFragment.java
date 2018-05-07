@@ -39,6 +39,7 @@ import android.widget.TextView;
 
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.ui.DialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.params.KeyParameter;

@@ -200,7 +200,7 @@
             </intent-filter>
 
         </activity>
-        <activity android:name="de.schildbach.wallet.ui.UpholdActivity"
+        <activity android:name="com.dash.wallet.integration.uphold.ui.UpholdActivity"
             android:label="@string/uphold_buy_dash_activity_title"
             android:launchMode="singleTop"
             android:theme="@style/My.Theme.ChildActivity"

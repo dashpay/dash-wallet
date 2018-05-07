@@ -65,6 +65,8 @@ import android.text.SpannableStringBuilder;
 import android.text.format.DateUtils;
 import android.text.style.TypefaceSpan;
 
+import static org.dash.wallet.common.Constants.CHAR_THIN_SPACE;
+
 /**
  * @author Andreas Schildbach
  */
@@ -75,11 +77,11 @@ public class WalletUtils {
 
     public static Editable formatAddress(@Nullable final String prefix, final Address address, final int groupSize,
             final int lineSize) {
-        return formatHash(prefix, address.toBase58(), groupSize, lineSize, Constants.CHAR_THIN_SPACE);
+        return formatHash(prefix, address.toBase58(), groupSize, lineSize, CHAR_THIN_SPACE);
     }
 
     public static Editable formatHash(final String address, final int groupSize, final int lineSize) {
-        return formatHash(null, address, groupSize, lineSize, Constants.CHAR_THIN_SPACE);
+        return formatHash(null, address, groupSize, lineSize, CHAR_THIN_SPACE);
     }
 
     public static long longHash(final Sha256Hash hash) {

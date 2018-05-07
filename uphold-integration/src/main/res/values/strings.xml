@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_buy_dash_activity_title">Buy Dash with Uphold</string>
+    <string name="uphold_transfer_from_external_account_title">Transfer Dash to this wallet</string>
+    <string name="uphold_transfer_from_external_account_message">You have &lt;b>%1$s Dash&lt;/b> in your Uphold account. Do you want to &lt;u>transfer this value to this wallet&lt;/u>?</string>
+    <string name="uphold_transfer_from_external_account_confirm_title">Confirm transaction</string>
+    <string name="uphold_transfer_from_external_account_confirm_message">You are transferring a total of %1$s Dash (%2$s base amount + %3$s fee) from your %4$s account to this wallet. Do you want to confirm this transaction?</string>
+    <string name="uphold_transfer_from_external_account_instructions">Enter the amount to transfer below:</string>
+    <string name="uphold_otp_dialog_title">Enter the code sent to you via SMS below:</string>
+    <string name="uphold_enter_otp_code">Enter the code sent to you via SMS below:</string>
+    <string name="uphold_transfer">Transfer</string>
+
+</resources>

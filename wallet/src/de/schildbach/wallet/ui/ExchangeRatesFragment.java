@@ -21,6 +21,7 @@ import javax.annotation.Nullable;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.ui.CurrencyTextView;
 
 import com.google.common.base.Strings;
 

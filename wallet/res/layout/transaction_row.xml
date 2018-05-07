@@ -81,7 +81,7 @@
 				android:singleLine="true"
 				android:textStyle="bold" />
 
-			<de.schildbach.wallet.ui.CurrencyTextView
+			<org.dash.wallet.common.ui.CurrencyTextView
 				android:id="@+id/transaction_row_value"
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
@@ -130,7 +130,7 @@
 				android:text="@string/transaction_row_fee"
 				android:textColor="@color/fg_insignificant" />
 
-			<de.schildbach.wallet.ui.CurrencyTextView
+			<org.dash.wallet.common.ui.CurrencyTextView
 				android:id="@+id/transaction_row_fee"
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
@@ -153,7 +153,7 @@
 				android:layout_marginRight="8dp"
 				android:layout_weight="1" />
 
-			<de.schildbach.wallet.ui.CurrencyTextView
+			<org.dash.wallet.common.ui.CurrencyTextView
 				android:id="@+id/transaction_row_fiat"
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"

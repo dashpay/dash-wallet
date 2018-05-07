@@ -27,6 +27,7 @@ import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.ui.CurrencyAmountView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

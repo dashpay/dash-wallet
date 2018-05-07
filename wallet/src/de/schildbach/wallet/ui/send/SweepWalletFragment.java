@@ -60,12 +60,12 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.DynamicFeeLoader;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
-import de.schildbach.wallet.ui.DialogBuilder;
+import org.dash.wallet.common.ui.DialogBuilder;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
 import de.schildbach.wallet.ui.ScanActivity;
 import de.schildbach.wallet.ui.TransactionsAdapter;
-import de.schildbach.wallet.util.MonetarySpannable;
+import org.dash.wallet.common.util.MonetarySpannable;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 

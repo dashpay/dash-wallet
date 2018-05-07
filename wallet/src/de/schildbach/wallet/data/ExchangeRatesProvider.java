@@ -44,7 +44,7 @@ import com.squareup.okhttp.Response;
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.util.GenericUtils;
+import org.dash.wallet.common.util.GenericUtils;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;

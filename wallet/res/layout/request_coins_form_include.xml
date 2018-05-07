@@ -25,7 +25,7 @@
 		android:orientation="horizontal"
 		android:showDividers="middle" >
 
-		<de.schildbach.wallet.ui.CurrencyAmountView
+		<org.dash.wallet.common.ui.CurrencyAmountView
 			android:id="@+id/request_coins_amount_btc"
 			android:layout_width="0px"
 			android:layout_height="wrap_content"
@@ -38,9 +38,9 @@
 				android:imeOptions="flagNoExtractUi"
 				android:textSize="@dimen/font_size_large"
 				tools:ignore="TextFields" />
-		</de.schildbach.wallet.ui.CurrencyAmountView>
+		</org.dash.wallet.common.ui.CurrencyAmountView>
 
-		<de.schildbach.wallet.ui.CurrencyAmountView
+		<org.dash.wallet.common.ui.CurrencyAmountView
 			android:id="@+id/request_coins_amount_local"
 			android:layout_width="0px"
 			android:layout_height="wrap_content"
@@ -53,7 +53,7 @@
 				android:imeOptions="flagNoExtractUi"
 				android:textSize="@dimen/font_size_large"
 				tools:ignore="TextFields" />
-		</de.schildbach.wallet.ui.CurrencyAmountView>
+		</org.dash.wallet.common.ui.CurrencyAmountView>
 	</LinearLayout>
 
 	<CheckBox

@@ -34,7 +34,9 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
+import org.dash.wallet.common.ui.DialogBuilder;
 
+import com.dash.wallet.integration.uphold.ui.UpholdActivity;
 import com.google.common.base.Charsets;
 import com.squareup.okhttp.HttpUrl;
 
