@@ -8,7 +8,7 @@ public class UpholdCard {
     private UpholdCardAddress address;
     private String available;
     private String balance;
-    private String currency; //TODO: Consider using Enum or a different type
+    private String currency;
     private String label;
     private String lastTransactionAt;
     private List<UpholdBankAccount> wire;

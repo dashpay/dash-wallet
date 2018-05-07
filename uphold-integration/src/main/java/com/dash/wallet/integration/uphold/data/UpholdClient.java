@@ -21,6 +21,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
+import com.dash.wallet.integration.BuildConfig;
 import com.squareup.moshi.Moshi;
 
 import org.json.JSONObject;
@@ -54,10 +55,6 @@ public class UpholdClient {
     private static final String UPHOLD_PREFS = "uphold_prefs";
     private static final String UPHOLD_ACCESS_TOKEN = "access_token";
 
-    //TODO: Pass debug as argument on "init"
-    //private static final String UPHOLD_BASE_URL = BuildConfig.DEBUG ?
-    //            "https://api-sandbox.uphold.com/" : "https://api.uphold.com/";
-    private static final String UPHOLD_BASE_URL = "https://api-sandbox.uphold.com/";
     private static final String OTP_REQUIRED_KEY = "OTP-Token";
     private static final String OTP_REQUIRED_VALUE = "required";
 
@@ -82,14 +79,14 @@ public class UpholdClient {
         this.prefs = context.getSharedPreferences(UPHOLD_PREFS, Context.MODE_PRIVATE);
         this.accessToken = getStoredAccessToken();
 
-        //TODO: Parametrize baseURL according to ENV
+        String baseUrl = BuildConfig.DEBUG ? "https://api-sandbox.uphold.com/" : "https://api.uphold.com/";
         OkHttpClient okClient = new OkHttpClient.Builder().addInterceptor(headerInterceptor).build();
 
         Moshi moshi = new Moshi.Builder().add(new UpholdCardAddressAdapter()).build();
 
         Retrofit retrofit = new Retrofit.Builder()
                 .client(okClient)
-                .baseUrl(UPHOLD_BASE_URL)
+                .baseUrl(baseUrl)
                 .addConverterFactory(MoshiConverterFactory.create(moshi))
                 .build();
 

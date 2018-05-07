@@ -633,7 +633,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
             @Override
             public void onError(Exception e, boolean otpRequired) {
-                //TODO: Handle error.
+
             }
         });
     }

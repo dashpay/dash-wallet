@@ -14,6 +14,8 @@ android {
 
     }
 
+    publishNonDefault true
+
     buildTypes {
         release {
             minifyEnabled false
@@ -36,5 +38,6 @@ dependencies {
     compile 'com.squareup.retrofit2:retrofit:2.3.0'
     compile 'com.squareup.retrofit2:converter-moshi:2.3.0'
 
-    compile project(':common')
+    debugCompile project(path: ':common', configuration: 'debug')
+    releaseCompile project(path: ':common', configuration: 'release')
 }
