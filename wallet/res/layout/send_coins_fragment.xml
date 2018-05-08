@@ -183,6 +183,7 @@
 		android:divider="@drawable/divider_field"
 		android:orientation="horizontal"
 		android:showDividers="middle"
+		tools:visibility="visible"
 		android:visibility="gone" >
 
 		<EditText
@@ -203,8 +204,22 @@
 			android:text="@string/private_key_bad_password"
 			android:textColor="@color/fg_error"
 			android:textStyle="bold"
+			tools:visibility="visible"
 			android:visibility="invisible" />
+
 	</LinearLayout>
+
+	<TextView
+		tools:visibility="visible"
+		tools:text="6 attempts remaining"
+		android:id="@+id/pin_attempts"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginBottom="@dimen/list_entry_padding_vertical"
+		android:layout_marginLeft="@dimen/list_entry_padding_horizontal_lax"
+		android:textColor="@color/fg_error"
+		android:textStyle="bold"
+		android:visibility="gone" />
 
 	<TextView
 		android:id="@+id/send_coins_direct_payment_message"

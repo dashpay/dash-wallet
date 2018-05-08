@@ -16,13 +16,13 @@
 	<string name="export_keys_dialog_title_to_seed">Ver frase de recuperação</string>
 	<string name="import_keys_dialog_title_from_seed">Restaurar a partir da frase de recuperação</string>
 	<string name="backup_to_seed_wallet_dialog_message">Esta é a sua frase de recuperação. Por favor, anote isso.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">NÃO deixe ninguém ver sua frase de recuperação ou poderão gastar seu Dash. Esta frase não é compatível com outros Softwares Dash.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">NÃO deixe ninguém ver sua frase de recuperação ou poderão gastar seu Dash.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Sua carteira é protegida por um PIN. Digite seu PIN e pressione Mostrar para ver sua frase de recuperação.</string>
-	<string name="import_keys_from_seed_dialog_message">Digite sua frase de recuperação aqui.</string>
+    <string name="import_keys_from_seed_dialog_message">Digite sua frase de recuperação aqui.</string>
 	<string name="import_export_keys_dialog_password_phrase">A frase de recuperação vai aqui.</string>
 	<string name="preferences_report_issue_summary">Coletar informações sobre seu problema e enviar seu relatório por e-mail para os desenvolvedores.</string>
 	<string name="navigation_configuration">Configuração</string>
-	<string name="button_copy_address">Copiar endereço</string>
+    <string name="button_copy_address">Copiar endereço</string>
 	<string name="request_coins_clipboard_address_msg">Endereço Dash copiado para a área de transferência</string>
 	<string name="backup_wallet_to_seed_show_recovery_phrase">Mostrar</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%sé uma palavra inválida.</string>
@@ -30,6 +30,42 @@
 	<string name="send_coins_options_fee_category_zero">Sem Taxa</string>
 	<string name="send_coins_fragment_hint_fee_zero">Nenhuma taxa será paga. Use \'sem taxa\' somente se você não se importa com o tempo de confirmação.</string>
 
-	<string name="uphold_buy_dash_activity_title">Comprar Dash</string>
+	<string name="wallet_uri_handler_public_key_request_dialog_msg">A App %s gostaria de receber sua Chave Pública Mestre. Isso pode ser usado para monitorar sua carteira, isso não pode ser usado para mover seus Dash.</string>
+	<string name="wallet_uri_handler_address_request_dialog_msg">A App %s está solicitando um endereço para te pagar. Deseja autorizar?</string>
+
+	<string name="wallet_lock_unlock">Desbloquear</string>
+	<string name="wallet_lock_unlock_wallet">Desbloquear carteira</string>
+	<string name="wallet_lock_unlock_to_see_txs_title">Carteira bloqueada.</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">Toque o ícone de cadeado acima para desbloquear a sua carteira e ver o histórico de transações.</string>
+	<string name="wallet_lock_unlock_dialog_title">Desbloqueie sua carteira</string>
+	<string name="wallet_lock_unlock_dialog_message">Sua carteira é protegida por um PIN. Insira o seu PIN e pressione Desbloquear para continuar.</string>
+	<string name="wallet_lock_reset_wallet_title">Resetar carteira</string>
+	<string name="wallet_lock_reset_wallet_message">Tem certeza? Todo os dados serão apagados e sua carteira somente será recuperável por um arquivo de backup ou frase de recuperação.</string>
+
+	<string name="wallet_lock_wallet_disabled">Carteira desabilitada</string>
+	<string name="wallet_lock_try_again">Tente novamente em %1$d %2$s</string>
+	<string name="wallet_lock_reset">Resetar</string>
+	<string name="wallet_lock_wrong_pin">PIN incorreto! %s</string>
+
+	<plurals name="wallet_lock_attempts_remaining">
+		<item quantity="one">%d tentativa restante</item>
+		<item quantity="other">%d tentativas restantes</item>
+	</plurals>
+
+	<plurals name="minute">
+		<item quantity="one">minuto</item>
+		<item quantity="other">minutos</item>
+	</plurals>
+	
+	<plurals name="hour">
+		<item quantity="one">hora</item>
+		<item quantity="other">horas</item>
+	</plurals>
+
+	<string name="encrypt_new_key_chain_upgrade_button">Atualizar</string>
+	<string name="encrypt_new_key_chain_dialog_title">Atualize sua carteira</string>
+	<string name="encrypt_new_key_chain_dialog_message">Sua carteira será atualizada para suportar importação e exportação para mais aplicativos.</string>
+	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Você deve inserir seu PIN para finalizar o processo de atualização.</string>
+	<string name="pin_code_required_dialog_message">Este app agora requer um PIN para gastos e também para ver seu saldo e transações.</string>
 
 </resources>

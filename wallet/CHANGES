@@ -1,4 +1,10 @@
 Dash Wallet
+v5.18
+* Lock Feature - for security and privacy
+* BIP44 support
+* Use latest DASH price for exchange rates
+* Allow sending coins from 0-conf transactions
+
 v5.17.6
 * Fix crashing keyboard bug
 * Prevent activating exchange rates from exchange rates activity
