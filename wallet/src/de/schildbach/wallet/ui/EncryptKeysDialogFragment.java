@@ -340,7 +340,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
     }
 
     private void updateView() {
-        if (dialog == null)
+        if (dialog == null || getActivity() == null || !isAdded())
             return;
 
         final boolean hasOldPassword = !oldPasswordView.getText().toString().trim().isEmpty();
