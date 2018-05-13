@@ -15,15 +15,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.dash.wallet.integration.uphold.data;
+package org.dash.wallet.integration.uphold.data;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
-import com.dash.wallet.integration.BuildConfig;
 import com.squareup.moshi.Moshi;
 
+import org.dash.wallet.integration.uphold.BuildConfig;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -91,7 +91,6 @@ public class UpholdClient {
                 .build();
 
         this.service = retrofit.create(UpholdService.class);
-
     }
 
     public static UpholdClient getInstance(Context context) {

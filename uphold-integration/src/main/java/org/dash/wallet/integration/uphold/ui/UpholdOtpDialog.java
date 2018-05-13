@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.dash.wallet.integration.uphold.ui;
+package org.dash.wallet.integration.uphold.ui;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -29,8 +29,8 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
-import com.dash.wallet.integration.R;
-import com.dash.wallet.integration.uphold.data.UpholdClient;
+import org.dash.wallet.integration.uphold.R;
+import org.dash.wallet.integration.uphold.data.UpholdClient;
 
 import org.dash.wallet.common.ui.DialogBuilder;
 

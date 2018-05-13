@@ -1,4 +1,4 @@
-package com.dash.wallet.integration.uphold.data;
+package org.dash.wallet.integration.uphold.data;
 
 public class UpholdBankAccount {
 

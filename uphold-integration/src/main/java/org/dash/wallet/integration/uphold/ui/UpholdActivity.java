@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.dash.wallet.integration.uphold.ui;
+package org.dash.wallet.integration.uphold.ui;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
@@ -34,9 +34,8 @@ import android.view.MenuItem;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-import com.dash.wallet.integration.R;
-import com.dash.wallet.integration.uphold.data.UpholdClient;
-
+import org.dash.wallet.integration.uphold.R;
+import org.dash.wallet.integration.uphold.data.UpholdClient;
 
 public class UpholdActivity extends AppCompatActivity {
 

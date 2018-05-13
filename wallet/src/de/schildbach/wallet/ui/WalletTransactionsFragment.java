@@ -95,8 +95,8 @@ import android.widget.PopupMenu.OnMenuItemClickListener;
 import android.widget.TextView;
 import android.widget.ViewAnimator;
 
-import com.dash.wallet.integration.uphold.data.UpholdClient;
-import com.dash.wallet.integration.uphold.ui.UpholdTransferToWalletDialog;
+import org.dash.wallet.integration.uphold.data.UpholdClient;
+import org.dash.wallet.integration.uphold.ui.UpholdTransferToWalletDialog;
 
 /**
  * @author Andreas Schildbach

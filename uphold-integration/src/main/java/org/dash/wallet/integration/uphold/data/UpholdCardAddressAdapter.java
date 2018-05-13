@@ -1,4 +1,4 @@
-package com.dash.wallet.integration.uphold.data;
+package org.dash.wallet.integration.uphold.data;
 
 import com.squareup.moshi.FromJson;
 
