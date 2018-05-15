@@ -13,12 +13,6 @@
         android:layout_marginRight="@dimen/list_entry_padding_horizontal_lax"
         android:orientation="vertical" >
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/list_entry_padding_vertical"
-            android:text="@string/uphold_enter_otp_code" />
-
         <EditText
             android:id="@+id/otp_code"
             android:layout_width="180dp"

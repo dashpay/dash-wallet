@@ -47,8 +47,6 @@ import java.math.BigDecimal;
 public class UpholdTransferToWalletDialog extends DialogFragment {
 
     private static final String FRAGMENT_TAG = UpholdTransferToWalletDialog.class.getName();
-    private static final String ARGS_BALANCE = "args_balance";
-    private static final String ARGS_RECEIVING_ADDRESS = "args_receiving_address";
 
     private BigDecimal balance;
     private String receivingAddress;
