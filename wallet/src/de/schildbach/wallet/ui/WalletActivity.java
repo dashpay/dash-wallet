@@ -935,7 +935,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
         try {
             is = new FileInputStream(file);
             restoreWallet(WalletUtils.restorePrivateKeysFromBase58(is, Constants.NETWORK_PARAMETERS));
-
+            //remind user to backup since the key backup file does not have an HD seed
+            //Each time the user restores this backup file a new HD seed will be generated
+            config.armBackupReminder();
+            config.armBackupSeedReminder();
             log.info("successfully restored unencrypted private keys: {}", file);
         } catch (final IOException x) {
             final DialogBuilder dialog = DialogBuilder.warn(this, R.string.import_export_keys_dialog_failure_title);
@@ -1089,9 +1092,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 EncryptNewKeyChainDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
                     @Override
                     public void onDismiss(DialogInterface dialog) {
-                        if(isRestoringBackup) {
-                            resetBlockchain();
-                        }
+                        BackupWalletToSeedDialogFragment.show(getFragmentManager(), true, new DialogInterface.OnDismissListener() {
+                            @Override
+                            public void onDismiss(DialogInterface dialog) {
+                                if(isRestoringBackup)
+                                    resetBlockchain();
+                            }
+                        });
                     }
                 }, path);
             } else {

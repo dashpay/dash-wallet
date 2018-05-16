@@ -68,6 +68,8 @@ public class Configuration {
     private static final String PREFS_KEY_CHANGE_LOG_VERSION = "change_log_version";
     public static final String PREFS_KEY_REMIND_BACKUP = "remind_backup";
     private static final String PREFS_KEY_LAST_BACKUP = "last_backup";
+    public static final String PREFS_KEY_REMIND_BACKUP_SEED = "remind_backup_seed";
+    private static final String PREFS_KEY_LAST_BACKUP_SEED = "last_backup_seed";
     public static final String PREFS_KEY_INSTANTX_ENABLED = "labs_instantx_enabled";
     public static final String PREFS_KEY_LITE_MODE = "labs_lite_mode";
 
@@ -165,7 +167,9 @@ public class Configuration {
     public boolean remindBackup() {
         return prefs.getBoolean(PREFS_KEY_REMIND_BACKUP, true);
     }
-
+    public boolean remindBackupSeed() {
+        return prefs.getBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true);
+    }
     public long getLastBackupTime() {
         return prefs.getLong(PREFS_KEY_LAST_BACKUP, 0);
     }
@@ -177,6 +181,19 @@ public class Configuration {
     public void disarmBackupReminder() {
         prefs.edit().putBoolean(PREFS_KEY_REMIND_BACKUP, false)
                 .putLong(PREFS_KEY_LAST_BACKUP, System.currentTimeMillis()).apply();
+    }
+
+    public long getLastBackupSeedTime() {
+        return prefs.getLong(PREFS_KEY_LAST_BACKUP_SEED, 0);
+    }
+
+    public void armBackupSeedReminder() {
+        prefs.edit().putBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true).apply();
+    }
+
+    public void disarmBackupSeedReminder() {
+        prefs.edit().putBoolean(PREFS_KEY_REMIND_BACKUP_SEED, false)
+                .putLong(PREFS_KEY_LAST_BACKUP_SEED, System.currentTimeMillis()).apply();
     }
 
     public boolean getDisclaimerEnabled() {

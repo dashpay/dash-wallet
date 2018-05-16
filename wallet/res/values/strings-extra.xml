@@ -67,6 +67,7 @@
 	<string name="encrypt_new_key_chain_dialog_message">Your wallet will be upgraded to support importing from and exporting to more apps.</string>
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">You must enter your PIN to finish the upgrade process.</string>
 	<string name="pin_code_required_dialog_message">This app now requires a PIN to spend and view the balance and transactions.</string>
+    <string name="backup_wallet_seed_private_key_written_down_box">I have written down the recovery phrase</string>
 
 
 </resources>

@@ -216,6 +216,11 @@ public class CrashReporter {
         report.append("Time of backup: "
                 + (lastBackupTime > 0 ? String.format(Locale.US, "%tF %tT %tZ", calendar, calendar, calendar) : "none")
                 + "\n");
+        final long lastBackupSeedTime = configuration.getLastBackupSeedTime();
+        calendar.setTimeInMillis(lastBackupTime);
+        report.append("Time of seed backup: "
+                + (lastBackupSeedTime > 0 ? String.format(Locale.US, "%tF %tT %tZ", calendar, calendar, calendar) : "none")
+                + "\n");
         report.append("Network: " + Constants.NETWORK_PARAMETERS.getId() + "\n");
         final Wallet wallet = application.getWallet();
         report.append("Encrypted: " + wallet.isEncrypted() + "\n");

@@ -225,7 +225,12 @@ public final class RestoreWalletActivity extends AbstractWalletActivity
                 EncryptNewKeyChainDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
                     @Override
                     public void onDismiss(DialogInterface dialog) {
-                        onUpgradeConfirmed();
+                        BackupWalletToSeedDialogFragment.show(getFragmentManager(), true, new DialogInterface.OnDismissListener() {
+                            @Override
+                            public void onDismiss(DialogInterface dialog) {
+                                onUpgradeConfirmed();
+                            }
+                        });
                     }
                 }, path);
             } else {

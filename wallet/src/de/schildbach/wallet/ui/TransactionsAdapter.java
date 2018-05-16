@@ -65,7 +65,7 @@ import android.widget.TextView;
  */
 public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     public enum Warning {
-        BACKUP, STORAGE_ENCRYPTION
+        BACKUP, BACKUP_SEED, STORAGE_ENCRYPTION
     }
 
     private final Context context;
@@ -280,7 +280,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         } else if (holder instanceof WarningViewHolder) {
             final WarningViewHolder warningHolder = (WarningViewHolder) holder;
 
-            if (warning == Warning.BACKUP) {
+            if (warning == Warning.BACKUP || warning == Warning.BACKUP_SEED) {
                 if (transactions.size() == 1) {
                     warningHolder.messageView.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0);
                     warningHolder.messageView

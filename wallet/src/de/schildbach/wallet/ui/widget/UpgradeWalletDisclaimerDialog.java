@@ -17,6 +17,8 @@
 
 package de.schildbach.wallet.ui.widget;
 
+import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.app.FragmentManager;
@@ -27,6 +29,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import de.schildbach.wallet.ui.BackupWalletToSeedDialogFragment;
 import de.schildbach.wallet.ui.DialogBuilder;
 import de.schildbach.wallet_test.R;
 
@@ -55,13 +58,21 @@ public class UpgradeWalletDisclaimerDialog extends DialogFragment {
         dialogBuilder.setMessage(message);
         dialogBuilder.setCancelable(false);
         dialogBuilder.setPositiveButton(android.R.string.ok, null);
-        dialogBuilder.setPositiveButton(R.string.wallet_options_encrypt_keys_set,
+
+        String buttonText = getString(R.string.export_keys_dialog_title_to_seed) + " / " + getString(R.string.wallet_options_encrypt_keys_set);
+        dialogBuilder.setPositiveButton(buttonText,
                 new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(final DialogInterface dialog, final int which) {
-                        if (getActivity() instanceof OnUpgradeConfirmedListener) {
-                            ((OnUpgradeConfirmedListener) getActivity()).onUpgradeConfirmed();
-                        }
+                        BackupWalletToSeedDialogFragment.show(getFragmentManager(), true, new DialogInterface.OnDismissListener() {
+                            @Override
+                            public void onDismiss(DialogInterface dialog) {
+                                Activity activity = ((AlertDialog)dialog).getOwnerActivity();
+                                if (activity instanceof OnUpgradeConfirmedListener) {
+                                    ((OnUpgradeConfirmedListener) activity).onUpgradeConfirmed();
+                                }
+                            }
+                        });
                     }
                 });
 

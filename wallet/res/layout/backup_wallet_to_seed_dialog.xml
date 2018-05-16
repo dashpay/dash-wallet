@@ -138,6 +138,12 @@
                 android:textColor="@color/fg_less_significant"
                 android:textSize="@dimen/font_size_small" />
 
+            <CheckBox
+                android:id="@+id/backup_wallet_seed_private_key_written_down"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/backup_wallet_seed_private_key_written_down_box" />
+
             <!--TextView
                 android:id="@+id/backup_wallet_dialog_warning_encrypted"
                 android:layout_width="match_parent"

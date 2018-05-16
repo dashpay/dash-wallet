@@ -426,6 +426,10 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
             ((WalletActivity) activity).handleBackupWallet();
             break;
 
+        case BACKUP_SEED:
+            ((WalletActivity) activity).handleBackupWalletToSeed();
+            break;
+
         case STORAGE_ENCRYPTION:
             startActivity(new Intent(Settings.ACTION_SECURITY_SETTINGS));
             break;
@@ -612,7 +616,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
     }
     @Override
     public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences, final String key) {
-        if (Configuration.PREFS_KEY_BTC_PRECISION.equals(key) || Configuration.PREFS_KEY_REMIND_BACKUP.equals(key))
+        if (Configuration.PREFS_KEY_BTC_PRECISION.equals(key) || Configuration.PREFS_KEY_REMIND_BACKUP.equals(key) ||
+                Configuration.PREFS_KEY_REMIND_BACKUP_SEED.equals(key))
             updateView();
     }
 
@@ -623,6 +628,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
     private Warning warning() {
         final int storageEncryptionStatus = devicePolicyManager.getStorageEncryptionStatus();
+        if (config.remindBackupSeed())
+            return Warning.BACKUP_SEED;
         if (config.remindBackup())
             return Warning.BACKUP;
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
