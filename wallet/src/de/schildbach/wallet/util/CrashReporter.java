@@ -217,7 +217,7 @@ public class CrashReporter {
                 + (lastBackupTime > 0 ? String.format(Locale.US, "%tF %tT %tZ", calendar, calendar, calendar) : "none")
                 + "\n");
         final long lastBackupSeedTime = configuration.getLastBackupSeedTime();
-        calendar.setTimeInMillis(lastBackupTime);
+        calendar.setTimeInMillis(lastBackupSeedTime);
         report.append("Time of seed backup: "
                 + (lastBackupSeedTime > 0 ? String.format(Locale.US, "%tF %tT %tZ", calendar, calendar, calendar) : "none")
                 + "\n");
