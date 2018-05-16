@@ -170,7 +170,9 @@ public class WalletUtils {
         } catch (final IOException x) {
             try {
                 is.reset();
-                return restorePrivateKeysFromBase58(is, expectedNetworkParameters);
+                Wallet wallet = restorePrivateKeysFromBase58(is, expectedNetworkParameters);
+                wallet.upgradeToDeterministic(null); //this will result in a different HD seed each time
+                return wallet;
             } catch (final IOException x2) {
                 throw new IOException(
                         "cannot read protobuf (" + x.getMessage() + ") or base58 (" + x2.getMessage() + ")", x);
