@@ -38,8 +38,7 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
         dialogFragment.show(fm, FRAGMENT_TAG);
     }
 
-    public UnlockWalletDialogFragment()
-    {
+    public UnlockWalletDialogFragment() {
         this.dialogTitle = R.string.wallet_lock_unlock_wallet;
         this.dialogLayout = R.layout.unlock_wallet_dialog;
     }
@@ -56,20 +55,24 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
 
             @Override
             protected void onSuccess() {
-                pinRetryController.successfulAttempt();
-                WalletLock.getInstance().setWalletLocked(false);
-                dismissAllowingStateLoss();
+                if (getActivity() != null && isAdded()) {
+                    pinRetryController.successfulAttempt();
+                    WalletLock.getInstance().setWalletLocked(false);
+                    dismissAllowingStateLoss();
+                }
             }
 
             @Override
             protected void onBadPassword() {
-                unlockButton.setEnabled(true);
-                unlockButton.setText(getText(R.string.wallet_lock_unlock));
-                pinView.setEnabled(true);
-                pinRetryController.failedAttempt(password);
-                badPinView.setText(getString(R.string.wallet_lock_wrong_pin,
-                        pinRetryController.getRemainingAttemptsMessage()));
-                badPinView.setVisibility(View.VISIBLE);
+                if (getActivity() != null && isAdded()) {
+                    unlockButton.setEnabled(true);
+                    unlockButton.setText(getText(R.string.wallet_lock_unlock));
+                    pinView.setEnabled(true);
+                    pinRetryController.failedAttempt(password);
+                    badPinView.setText(getString(R.string.wallet_lock_wrong_pin,
+                            pinRetryController.getRemainingAttemptsMessage()));
+                    badPinView.setVisibility(View.VISIBLE);
+                }
             }
         }.checkPassword(wallet, password);
     }
