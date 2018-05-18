@@ -216,7 +216,7 @@
     <string name="encrypt_keys_dialog_message">Míňanie z vašej peňaženky bude chránené zvoleným PIN-om.</string>
     <string name="encrypt_keys_dialog_warning">Dôležité: Zapamätajte si Váš PIN a nepoužívajte bežné čísla (napr. rok narodenia).</string>
     <string name="encrypt_keys_dialog_password_old">Starý PIN</string>
-    <string name="encrypt_keys_dialog_password_strength_weak">týždeň</string>
+    <string name="encrypt_keys_dialog_password_strength_weak">slabé</string>
     <string name="encrypt_keys_dialog_password_strength_fair">férové</string>
     <string name="encrypt_keys_dialog_password_strength_good">dobré</string>
     <string name="encrypt_keys_dialog_password_strength_strong">silné</string>

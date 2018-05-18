@@ -16,7 +16,7 @@
 	<string name="export_keys_dialog_title_to_seed">查看恢復詞組</string>
 	<string name="import_keys_dialog_title_from_seed">從恢復詞組中復原</string>
 	<string name="backup_to_seed_wallet_dialog_message">這是你的恢復詞組。 請寫下來。</string>
-	<string name="backup_wallet_to_seed_dialog_warning">不要讓任何人看到你的恢復詞組，否則他們可以花你達世幣。這個詞組與其他達世幣軟件不兼容。</string>
+	<string name="backup_wallet_to_seed_dialog_warning">不要讓任何人看到你的恢復詞組，否則他們可以花你達世幣。</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">您的錢包受個人密碼保護。輸入您的PIN碼並按 顯示 查看您的恢復詞組。</string>
 	<string name="import_keys_from_seed_dialog_message">在這裡輸入你的恢復詞組。</string>
 	<string name="import_export_keys_dialog_password_phrase">恢復詞組在這裡。</string>
@@ -27,8 +27,43 @@
 	<string name="backup_wallet_to_seed_show_recovery_phrase">顯示</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%s是一個無效的詞語。</string>
 
-
 	<string name="send_coins_options_fee_category_zero">不支付交易費用</string>
 	<string name="send_coins_fragment_hint_fee_zero">不支付任何交易費用。 只有在你不關心確認時間的情況下才使用“不支付交易費用”。</string>
+
+	<string name="wallet_uri_handler_public_key_request_dialog_msg">應用程式 %s 想要獲得您的主公鑰。 這可以用來跟踪你的錢包，但這不能用來移動你的達世幣。</string>
+	<string name="wallet_uri_handler_address_request_dialog_msg">應用程式 %s 正在請求一個位址，以便它能支付給你。 你想授權嗎?</string>
+
+	<string name="wallet_lock_unlock">解鎖</string>
+	<string name="wallet_lock_unlock_wallet">解鎖錢包</string>
+	<string name="wallet_lock_unlock_to_see_txs_title">錢包己被鎖上</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">點擊上面的鎖定圖標解鎖你的錢包並查看交易記錄。</string>
+	<string name="wallet_lock_unlock_dialog_title">解鎖你的錢包</string>
+	<string name="wallet_lock_unlock_dialog_message">您的錢包受個人密碼保護。輸入您的PIN碼並按 解鎖以繼續。</string>
+	<string name="wallet_lock_reset_wallet_title">重置錢包</string>
+	<string name="wallet_lock_reset_wallet_message">你確定嗎? 所有存儲的數據將被刪除，您的錢包只能通過備份文件或恢復種子來進行恢復。</string>
+
+	<string name="wallet_lock_wallet_disabled">錢包被禁用</string>
+	<string name="wallet_lock_try_again">請在 %1$d %2$s 後再試</string>
+	<string name="wallet_lock_reset">重設</string>
+	<string name="wallet_lock_wrong_pin">錯誤的 PIN碼! %s</string>
+
+	<plurals name="wallet_lock_attempts_remaining">
+		<item quantity="other">剩餘%d 次嘗試機會</item>
+	</plurals>
+
+	<plurals name="minute">
+		<item quantity="other">分鐘</item>
+	</plurals>
+	
+	<plurals name="hour">
+		<item quantity="other">小時</item>
+	</plurals>
+
+	<string name="encrypt_new_key_chain_upgrade_button">升級</string>
+	<string name="encrypt_new_key_chain_dialog_title">升級你的錢包</string>
+	<string name="encrypt_new_key_chain_dialog_message">您的錢包將升級為支援從更多的應用程式導入和導出功能。</string>
+	<string name="encrypt_new_key_chain_enter_pin_dialog_message">您必須輸入PIN碼才能完成升級過程。</string>
+	<string name="pin_code_required_dialog_message">這個程序現在需要一個PIN碼來發送交易和查看餘額。</string>
+
 
 </resources>

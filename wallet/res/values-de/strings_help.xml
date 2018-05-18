@@ -4,7 +4,7 @@
     <string name="help_wallet">
 <![CDATA[
 		<p>
-			Im linken oberen Teil des Bildschirms wird Dein aktuelles Guthaben in Dash und einer ausgewählten Währung angezeigt.
+			Im rechten oberen Teil des Bildschirms wird Dein aktuelles Guthaben in Dash und einer ausgewählten Währung angezeigt.
 			Mit einem Tap darauf gelangst Du in die Liste der verfügbaren Währungen, ein weiterer Tap auf eine dieser Währungen setzt sie als Standardwährung fest.
 		</p>
 		<p>

@@ -1,35 +1,78 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-
 	<string name="send_coins_fragment_instantx_enable">Использовать InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Этот платёж InstantSend пока ещё не выполнен.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Этот платёж InstantSend ожидает проверки сетью Dash.</string>
-	<string name="transaction_row_message_own_instantx_locked">Транзакция InstantSend отправлена (защищена).</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Этот платёж InstantSend ожидает проверки сетью Dash.</string>
-	<string name="transaction_row_message_received_instantx_locked">Этот платёж InstantSend проверен сетью Dash.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">Этот платёж InstantSend ожидает проверки сетью Дэш.</string>
+	<string name="transaction_row_message_own_instantx_locked">Транзакция InstantSend отправлена (подтверждена).</string>
+	<string name="transaction_row_message_received_instantx_lock_request">Этот платёж InstantSend ожидает проверки сетью Дэш.</string>
+	<string name="transaction_row_message_received_instantx_locked">Этот платёж InstantSend проверен сетью Дэш.</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">Неподтверждённый InstantSend</string>
-	<string name="transaction_row_message_received_instantx_locked2">Защищённый InstantSend</string>
+	<string name="transaction_row_message_received_instantx_locked2">Подтверждённый InstantSend</string>
 
 	<string name="wallet_options_disconnect">Отключить</string>
 
 	<string name="network_monitor_masternodes_title">Мастерноды</string>
-	<string name="export_keys_dialog_title_to_seed">Посмотреть фразу восстановления</string>
-	<string name="import_keys_dialog_title_from_seed">Восстановить из фразы восстановления</string>
+	<string name="export_keys_dialog_title_to_seed">Посмотреть ключевую фразу</string>
+	<string name="import_keys_dialog_title_from_seed">Восстановить из ключевой фразы</string>
 	<string name="backup_to_seed_wallet_dialog_message">Это ваша фраза восстановления. Пожалуйста, запишите и сохраните её.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">НЕ ПОЗВОЛЯЙТЕ никому увидеть вашу фразу восстановления, так как это позволит им заполучить ваши Dash. Эта фраза не совместима с другим ПО Dash.</string>
-	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Ваш кошелёк защищён ПИН-кодом. Введите свой ПИН и нажмите Показать для просмотра фразы восстановления.</string>
-    <string name="import_keys_from_seed_dialog_message">Введите свою фразу восстановления.</string>
-	<string name="import_export_keys_dialog_password_phrase">Вот ваша фраза восстановления.</string>
-	<string name="preferences_report_issue_summary">Соберите подробности о вашей проблеме и отправьте их на E-mail разработчиков.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">НЕ РАСКРЫВАЙТЕ никому свою ключевую фразу: она даёт доступ ко всем вашим средствам.</string>
+	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Ваш кошелёк защищён ПИН-кодом. Введите свой ПИН и нажмите \"Показать\" для просмотра ключевой фразы.</string>
+    <string name="import_keys_from_seed_dialog_message">Введите свою ключевую фразу.</string>
+	<string name="import_export_keys_dialog_password_phrase">Ваша ключевая фраза.</string>
+	<string name="preferences_report_issue_summary">Изложите в подробностях вашу проблему и отправьте на электронный адрес разработчиков.</string>
 	<string name="navigation_configuration">Конфигурация</string>
     <string name="button_copy_address">Скопировать адрес</string>
 	<string name="request_coins_clipboard_address_msg">Адрес скопирован в буфер обмена</string>
 	<string name="backup_wallet_to_seed_show_recovery_phrase">Показать</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%s - это неправильное слово.</string>
 
+	<string name="send_coins_options_fee_category_zero">Бесплатно</string>
+	<string name="send_coins_fragment_hint_fee_zero">Без комиссии. Используйте эту опцию только если вас не волнует время прохождения транзакции.</string>
 
+	<string name="wallet_uri_handler_public_key_request_dialog_msg">Приложение %s просит вас предоставить свой публичный мастер-ключ. Этот ключ может быть использован для слежения за вашим кошельком, но его нельзя использовать для перемещения ваших средств.</string>
+	<string name="wallet_uri_handler_address_request_dialog_msg">Приложение %s запрашивает адрес чтобы заплатить вам. Вы разрешаете это?</string>
 
+	<string name="wallet_lock_unlock">Открыть</string>
+	<string name="wallet_lock_unlock_wallet">Открыть кошелёк</string>
+	<string name="wallet_lock_unlock_to_see_txs_title">Кошелёк закрыт</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">Коснитесь иконки сверху, чтобы открыть свой кошелёк и увидеть историю транзакций.</string>
+	<string name="wallet_lock_unlock_dialog_title">Открыть ваш кошелёк</string>
+	<string name="wallet_lock_unlock_dialog_message">Ваш кошелёк защищён ПИН-кодом. Введите свой ПИН-код и нажмите \"Открыть\".</string>
+	<string name="wallet_lock_reset_wallet_title">Сброс кошелька</string>
+	<string name="wallet_lock_reset_wallet_message">Вы уверены? Вся сохранённая информация будет удалена и восстановить ваш кошелёк можно будет только с помощью файла восстановления или ключевой фразы.</string>
+
+	<string name="wallet_lock_wallet_disabled">Кошелёк отключён</string>
+	<string name="wallet_lock_try_again">Попробуйте снова через %1$d%2$s</string>
+	<string name="wallet_lock_reset">Сброс</string>
+	<string name="wallet_lock_wrong_pin">Неправильный ПИН-код! %s</string>
+
+	<plurals name="wallet_lock_attempts_remaining">
+		<item quantity="one">Осталось попыток: %d</item>
+		<item quantity="few">Осталось попыток: %d</item>
+		<item quantity="many">Осталось попыток: %d</item>
+		<item quantity="other">Осталось попыток: %d</item>
+	</plurals>
+
+	<plurals name="minute">
+		<item quantity="one">мин</item>
+		<item quantity="few">мин</item>
+		<item quantity="many">мин</item>
+		<item quantity="other">мин</item>
+	</plurals>
+	
+	<plurals name="hour">
+		<item quantity="one">ч</item>
+		<item quantity="few">ч</item>
+		<item quantity="many">ч</item>
+		<item quantity="other">ч</item>
+	</plurals>
+
+	<string name="encrypt_new_key_chain_upgrade_button">Апгрейд</string>
+	<string name="encrypt_new_key_chain_dialog_title">Апгрейд вашего кошелька</string>
+	<string name="encrypt_new_key_chain_dialog_message">Ваш кошелёк получит апгрейд чтобы поддерживать обмен данными с другими приложениями.</string>
+	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Вам необходимо ввести свой ПИН-код для завершения процедуры апгрейда.</string>
+	<string name="pin_code_required_dialog_message">Это приложение требует ПИН-код для проведения транзакций и просмотра истории платежей.</string>
 
 
 </resources>

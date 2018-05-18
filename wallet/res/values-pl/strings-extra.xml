@@ -16,7 +16,7 @@
 	<string name="export_keys_dialog_title_to_seed">Pokaż frazę odzyskiwania portfela</string>
 	<string name="import_keys_dialog_title_from_seed">Przywróć z frazy odzyskiwania portfela.</string>
 	<string name="backup_to_seed_wallet_dialog_message">To jest twoja fraza odzyskiwania portfela. Proszę zapisz ją.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">NIE POZWÓL by ktoś zobaczył frazę odzyskiwania portfela. W przeciwnym razie możesz stracić swoje monety. Niniejsza fraza nie jest kompatybilne z innym oprogramowaniem Dash.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">Nie pozwól aby ktoś zobaczył twoje słowa odzyskania portfela jako że będą mogli wydać twoje monety.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Twój portfel jest zabezpieczony PINem przed wydaniem środków. Wpisz PIN aby zobaczyć twoje frazy odzyskiwania portfela.</string>
 	<string name="import_keys_from_seed_dialog_message">Tutaj wpisz frazę odzyskiwania portfela.</string>
 	<string name="import_export_keys_dialog_password_phrase">Miejsce na frazę odzyskiwania portfela.</string>
@@ -29,5 +29,50 @@
 
 	<string name="send_coins_options_fee_category_zero">Bez opłaty</string>
 	<string name="send_coins_fragment_hint_fee_zero">Żadna opłata nie będzie uiszczona. Używaj tej opcji tylko wtedy kiedy nie zależy ci na czasie potwierdzenia transakcji.</string>
+
+	<string name="wallet_uri_handler_public_key_request_dialog_msg">Aplikacja %schce otrzymać twój Główny Klucz Publiczny. Informacja ta może być użyta aby śledzić twój portfel, jednakże nie może zostać użyta aby ruszyć twoje monety Dash.</string>
+	<string name="wallet_uri_handler_address_request_dialog_msg">Aplikacja %s żąda adersu aby móc ci zapłacić. Czy chcesz pozwolic na tą autoryzację?</string>
+
+	<string name="wallet_lock_unlock">Odblokuj</string>
+	<string name="wallet_lock_unlock_wallet">Odblokuj portfel</string>
+	<string name="wallet_lock_unlock_to_see_txs_title">Portfel zablokowany</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">Dotknij ikonę kłódki powyżej aby odblokować twój portfel i zobaczyć historię transakcji.</string>
+	<string name="wallet_lock_unlock_dialog_title">Odblokuj swój portfel</string>
+	<string name="wallet_lock_unlock_dialog_message">Twój portfel jest chroniony poprzez PIN, wpisz swój PIN i wciśnij Odblokuj aby kontynuować. </string>
+	<string name="wallet_lock_reset_wallet_title">Zrestartuj portfel</string>
+	<string name="wallet_lock_reset_wallet_message">Czy jesteś pewien? Wszystkie dane zostaną usunięte i będziesz mógł odzyskać twój portfel tylko z kopii zapasowej lub ziarna.</string>
+
+	<string name="wallet_lock_wallet_disabled">Portfel zdeaktywowany</string>
+	<string name="wallet_lock_try_again">Spróbuj raz jeszcze w %1$d%2$s</string>
+	<string name="wallet_lock_reset">Resetuj</string>
+	<string name="wallet_lock_wrong_pin">Zły PIN %s</string>
+
+	<plurals name="wallet_lock_attempts_remaining">
+		<item quantity="one">pozostała %d próba</item>
+		<item quantity="few">pozostały %d próby</item>
+		<item quantity="many">pozostało %d prób</item>
+		<item quantity="other">pozostało %d prób</item>
+	</plurals>
+
+	<plurals name="minute">
+		<item quantity="one">minuta</item>
+		<item quantity="few">minuty</item>
+		<item quantity="many">minut</item>
+		<item quantity="other">minut</item>
+	</plurals>
+	
+	<plurals name="hour">
+		<item quantity="one">godzina</item>
+		<item quantity="few">godziny</item>
+		<item quantity="many">godzin</item>
+		<item quantity="other">godzin</item>
+	</plurals>
+
+	<string name="encrypt_new_key_chain_upgrade_button">Aktualizuj</string>
+	<string name="encrypt_new_key_chain_dialog_title">Aktualizuj swój portfel</string>
+	<string name="encrypt_new_key_chain_dialog_message">Twój portfel zostanie zaktualizowany aby wspomóc importowanie z oraz eksportowanie do innych aplikacji.</string>
+	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Musisz wpisac swój PIN aby dokończyć proces aktualizacji.</string>
+	<string name="pin_code_required_dialog_message">Ta aplikacja obecnie wymaga PIN aby móc wydawać oraz wyświetlić saldo konta i transakcji.</string>
+
 
 </resources>

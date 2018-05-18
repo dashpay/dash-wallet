@@ -16,7 +16,7 @@
 	<string name="export_keys_dialog_title_to_seed">Zobraziť frázu pre obnovenie</string>
 	<string name="import_keys_dialog_title_from_seed">Obnoviť z frázy pre obnovenie</string>
 	<string name="backup_to_seed_wallet_dialog_message">Toto je Vaša fráza pre obnovenie. Zapíšte si ju.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">NENECHÁVAJTE nikoho aby videl Vašu frázu pre obnovenie, inak môžu minúť Vaše Dash. Táto fráza nie je kompatibilná s iným softvérom Dash.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">NENECHÁVAJTE nikoho aby videl Vašu frázu pre obnovenie, inak môžu minúť Vaše Dash.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Vaša peňaženka je chránená PIN-om pre míňanie. Vložte Vás PIN a stlačte \"Ukázať\" pre zobrazenie frázy pre obnovenie.</string>
 	<string name="import_keys_from_seed_dialog_message">Sem vložte Vašu frázu pre obnovenie.</string>
 	<string name="import_export_keys_dialog_password_phrase">Fráza pre obnovenie patrí sem.</string>
@@ -27,8 +27,52 @@
 	<string name="backup_wallet_to_seed_show_recovery_phrase">Ukázať</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%s nie je platné slovo.</string>
 
-
 	<string name="send_coins_options_fee_category_zero">Bez poplatku</string>
 	<string name="send_coins_fragment_hint_fee_zero">Nebude zaplatený žiadny poplatok. Používajte \"Bez poplatku\", iba ak Vám nezáleží na čase potvrdenia.</string>
+
+	<string name="wallet_uri_handler_public_key_request_dialog_msg">Aplikácia %s by chcela získať Váš hlavný verejný kľúč. Ten môže byť použitý na sledovanie peňaženky, ale nedá sa použiť na presun Vašich Dash.</string>
+	<string name="wallet_uri_handler_address_request_dialog_msg">Aplikácia %s požaduje adresu, aby vám mohla zaplatiť. Chcete túto akciu povoliť?</string>
+
+	<string name="wallet_lock_unlock">Odomknúť</string>
+	<string name="wallet_lock_unlock_wallet">Odomknúť peňaženku</string>
+	<string name="wallet_lock_unlock_to_see_txs_title">Peňaženka odomknutá.</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">Ak chcete odomknúť Vašu peňaženku a zobraziť históriu transakcií, klepnite na ikonu zámku.</string>
+	<string name="wallet_lock_unlock_dialog_title">Odomknúť Vašu peňaženku</string>
+	<string name="wallet_lock_unlock_dialog_message">Vaša peňaženka je chránená PIN-om pre míňanie. Pre pokračovanie zadajte Váš PIN a stlačte Odomknúť.</string>
+	<string name="wallet_lock_reset_wallet_title">Resetovať peňaženku</string>
+	<string name="wallet_lock_reset_wallet_message">Ste si istý? Všetky uložené údaje budú vymazané a Vaša peňaženka bude obnoviteľná iba pomocou záložného súboru, alebo frázou pre obnovenie.</string>
+
+	<string name="wallet_lock_wallet_disabled">Peňaženka neaktívna</string>
+	<string name="wallet_lock_try_again">Skúste znova za %1$d %2$s</string>
+	<string name="wallet_lock_reset">Reset</string>
+	<string name="wallet_lock_wrong_pin">Chybný PIN! %s</string>
+
+	<plurals name="wallet_lock_attempts_remaining">
+		<item quantity="one">Zostáva %d pokus</item>
+		<item quantity="few">Zostávajú %d pokusy</item>
+		<item quantity="many">Zostáva %d pokusov</item>
+		<item quantity="other">Zostáva %d pokusov</item>
+	</plurals>
+
+	<plurals name="minute">
+		<item quantity="one">minúta</item>
+		<item quantity="few">minúty</item>
+		<item quantity="many">minút</item>
+		<item quantity="other">minút</item>
+	</plurals>
+	
+	<plurals name="hour">
+		<item quantity="one">hodina</item>
+		<item quantity="few">hodiny</item>
+		<item quantity="many">hodín</item>
+		<item quantity="other">hodín</item>
+	</plurals>
+
+	<string name="encrypt_new_key_chain_upgrade_button">Aktualizovať</string>
+	<string name="encrypt_new_key_chain_dialog_title">Aktualizovať Vašu peňaženku</string>
+	<string name="encrypt_new_key_chain_dialog_message">Vaša peňaženka bude inovovaná aby podporovala import z a do viacero aplikácií.</string>
+	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Pre dokončenie aktualizácie musíte zadať Vás PIN.</string>
+	<string name="pin_code_required_dialog_message">Táto aplikácia teraz vyžaduje PIN pre míňanie a zobrazenie zostatku a transakcií.</string>
+
 
 </resources>

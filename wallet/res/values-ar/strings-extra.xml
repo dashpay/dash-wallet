@@ -1,34 +1,84 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-	<string name="send_coins_fragment_instantx_enable">استخدام الإرسال الفوري</string>
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">لم يتم إرسال هذا الدفع الفوري بعد.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">هذا الدفع الفوري ينتظر الدفع التحقق من قبل شبكة داش.</string>
-	<string name="transaction_row_message_own_instantx_locked">إرسال المعاملة الفورية (مغلق)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">هذا الدفع الفوري ينتظر الدفع التحقق من قبل شبكة داش.</string>
-	<string name="transaction_row_message_received_instantx_locked">تم التحقق من عملية الدفع الفوري هذه بواسطة شبكة داش.</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">إرسال فوري غير مؤكد</string>
-	<string name="transaction_row_message_received_instantx_locked2">إرسال الرسائل الفورية المقفلة</string>
+	<string name="send_coins_fragment_instantx_enable">إستخدم الإرسال الفوري</string>
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">لم تتم معاملة هذا الإرسال الفوري بعد .</string>
+	<string name="transaction_row_message_own_instantx_lock_request">هذا الإرسال الفوري ينتظر التحقق من قبل شبكة داش.</string>
+	<string name="transaction_row_message_own_instantx_locked">عملية إرسال الفوري (مغلق)</string>
+	<string name="transaction_row_message_received_instantx_lock_request">هذا الإرسال الفوري ينتظر التحقق من قبل شبكة داش.</string>
+	<string name="transaction_row_message_received_instantx_locked">تم التحقق من عملية الإرسال الفوري من قبل شبكة داش.</string>
+	<string name="transaction_row_message_received_unconfirmed_instantx">الإرسال الفوري غير مؤكد</string>
+	<string name="transaction_row_message_received_instantx_locked2">الإرسال الفوري مغلق</string>
 
-	<string name="wallet_options_disconnect">قطع الاتصال</string>
+	<string name="wallet_options_disconnect">إنقطع الاتصال</string>
 
-	<string name="network_monitor_masternodes_title">العقد الرئيسية</string>
-	<string name="export_keys_dialog_title_to_seed">عرض عبارة الاسترداد</string>
-	<string name="import_keys_dialog_title_from_seed">استعادة من عبارة الاسترداد</string>
-	<string name="backup_to_seed_wallet_dialog_message">هذه عبارة الاسترداد. يرجى الكتابة عليه.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">لا تدع أي شخص يرى عبارة الاسترداد أو أنها يمكن أن تنفق داش الخاص بك. هذه العبارة غير متوافقة مع برامج داش الأخرى.</string>
+	<string name="network_monitor_masternodes_title">ماسترنود</string>
+	<string name="export_keys_dialog_title_to_seed">إظهار جملة الإسترجاع الخاصة بك </string>
+	<string name="import_keys_dialog_title_from_seed">إسترجاع من جملة الإسرجاع الخاصة بك </string>
+	<string name="backup_to_seed_wallet_dialog_message">هذه هي جملة الإسترجاع الخاصة بك . يرجى الكتابة عليه.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">لا تترك أي أحد ان يرى جملة الإسترجاع الخاصة بك أو سوف يتمكنون من إستعمال داش الذي تملك.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">محفظتك محمي من قبل بين الإنفاق. أدخل رقم التعريف الشخصي واضغط على عرض لعرض عبارة الاسترداد.</string>
-	<string name="import_keys_from_seed_dialog_message">أدخل عبارة الاسترداد هنا.</string>
-	<string name="import_export_keys_dialog_password_phrase">العبارة الانتعاش يذهب هنا.</string>
-	<string name="preferences_report_issue_summary">جمع المعلومات حول مشكلتك والبريد الإلكتروني تقريرك للمطورين.</string>
-	<string name="navigation_configuration">ترتيب</string>
-	<string name="button_copy_address">نسخ عنوان</string>
-	<string name="request_coins_clipboard_address_msg">تم نسخ عنوان داش إلى الحافظة</string>
-	<string name="backup_wallet_to_seed_show_recovery_phrase">تبين</string>
-	<string name="restore_wallet_from_invalid_seed_warning_message">%s هي كلمة غير صالحة.</string>
+    <string name="import_keys_from_seed_dialog_message">أدخل جملة الإسترجاع الخاصة بك هنا.</string>
+	<string name="import_export_keys_dialog_password_phrase">جملة الإسترجاع تذهب هنا.</string>
+	<string name="preferences_report_issue_summary">جمع معلومات حول مشكلتك وإرسالها إلى البريد الإلكتروني للمطورين.</string>
+	<string name="navigation_configuration">الإعدادات</string>
+    <string name="button_copy_address">نسخ العنوان</string>
+	<string name="request_coins_clipboard_address_msg">تم نسخ عنوان داش</string>
+	<string name="backup_wallet_to_seed_show_recovery_phrase">إظهار</string>
+	<string name="restore_wallet_from_invalid_seed_warning_message">%s هي كلمة غير صالحة. </string>
 
+	<string name="send_coins_options_fee_category_zero">بدون رسوم </string>
+	<string name="send_coins_fragment_hint_fee_zero">لن يتم دفع أي رسوم. إستخدم \"بدون رسوم\" إلا إذا كنت لا تهتم لوقت التأكيد.</string>
 
-	<string name="send_coins_options_fee_category_zero">بدون رسوم</string>
-	<string name="send_coins_fragment_hint_fee_zero">لن يتم دفع أي رسوم. استخدام \"أي رسوم\" إلا إذا كنت لا تهتم وقت التأكيد.</string>
+	<string name="wallet_uri_handler_public_key_request_dialog_msg">تطبيق %s سوف يستلم مفتاحك العمومي الرئيسي. هذا يمكن أن تستخدم لتتبع محفظتك ، وهذا لا يمكن أن تستخدم لتحريك داش الخاص بك.</string>
+	<string name="wallet_uri_handler_address_request_dialog_msg">تطبيق %s يطلب عنوانًا حتى يمكنه الدفع لك. هل ترغب في اعتماد هذا؟</string>
+
+	<string name="wallet_lock_unlock">فتح </string>
+	<string name="wallet_lock_unlock_wallet">فتح المحفظة</string>
+	<string name="wallet_lock_unlock_to_see_txs_title">قفل المحفظة</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">انقر على رمز القفل أعلاه لإلغاء قفل محفظتك والاطلاع على سجل المعاملات.</string>
+	<string name="wallet_lock_unlock_dialog_title">إفتح محفظتك</string>
+	<string name="wallet_lock_unlock_dialog_message">محفظتك محمية برقم سري . إدخل رقمك السري و إضغط على فتح للمتابعة.</string>
+	<string name="wallet_lock_reset_wallet_title">إعادة ظبط المحفظة</string>
+	<string name="wallet_lock_reset_wallet_message">هل أنت واثق؟ سيتم حذف جميع البيانات المخزنة وستكون محفظتك قابلة للاسترداد فقط من خلال ملف النسخ الاحتياطي أو بجملة الإسترجاع الخلصة بك.</string>
+
+	<string name="wallet_lock_wallet_disabled">المحفظة معطلة</string>
+	<string name="wallet_lock_try_again">أعد المحاولة %1$d%2$s</string>
+	<string name="wallet_lock_reset">إعادة ضبط</string>
+	<string name="wallet_lock_wrong_pin">الرقم السري خطأ %s</string>
+
+	<plurals name="wallet_lock_attempts_remaining">
+		<item quantity="zero">%dالمحاولات المتبقية</item>
+		<item quantity="one">%dالمحاولات المتبقية</item>
+		<item quantity="two">%dالمحاولات المتبقية</item>
+		<item quantity="few">%dالمحاولات المتبقية</item>
+		<item quantity="many">%dالمحاولات المتبقية</item>
+		<item quantity="other">%dالمحاولات المتبقية</item>
+	</plurals>
+
+	<plurals name="minute">
+		<item quantity="zero">دقائق</item>
+		<item quantity="one">دقائق</item>
+		<item quantity="two">دقائق</item>
+		<item quantity="few">دقائق</item>
+		<item quantity="many">دقائق</item>
+		<item quantity="other">دقائق</item>
+	</plurals>
+	
+	<plurals name="hour">
+		<item quantity="zero">ساعات</item>
+		<item quantity="one">ساعات</item>
+		<item quantity="two">ساعات</item>
+		<item quantity="few">ساعات</item>
+		<item quantity="many">ساعات</item>
+		<item quantity="other">ساعات</item>
+	</plurals>
+
+	<string name="encrypt_new_key_chain_upgrade_button">تحديث</string>
+	<string name="encrypt_new_key_chain_dialog_title">تحديث محفظتك </string>
+	<string name="encrypt_new_key_chain_dialog_message">ستتم تحديث محفظتك لدعم الاستيراد والتصدير إلى المزيد من التطبيقات.</string>
+	<string name="encrypt_new_key_chain_enter_pin_dialog_message">يجب عليك إدخال الرقم السري الخاص بك لإنهاء عملية التحديث.</string>
+	<string name="pin_code_required_dialog_message">يتطلب هذا التطبيق الآن الرقم السري لإنفاق وعرض الرصيد والمعاملات.</string>
+
 
 </resources>

@@ -16,7 +16,7 @@
 	<string name="export_keys_dialog_title_to_seed">Voir la phase de récupération</string>
 	<string name="import_keys_dialog_title_from_seed">Restaurer de la phrase de récupération</string>
 	<string name="backup_to_seed_wallet_dialog_message">Ceci est votre phrase de récupération. S\'il vous plaît écrivez-le.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">Ne laissez personne voir votre phrase de récupération parce que ils peuvent dépenser votre Dash. Cette phrase n\'est pas compatible avec d\'autres logiciels Dash.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">Ne laissez PERSONNE voir votre phrase de récupération. Quelqu\'un qui la connaîtrait pourrait dépenser vos dashs.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Votre portefeuille est protégé par un code PIN de dépenses. Entrez votre code PIN et appuyez sur Afficher pour afficher votre phrase de récupération.</string>
 	<string name="import_keys_from_seed_dialog_message">Entrez votre phrase de récupération ici.</string>
 	<string name="import_export_keys_dialog_password_phrase">La phrase de récupération va ici.</string>
@@ -29,5 +29,44 @@
 
 	<string name="send_coins_options_fee_category_zero">Sans frais</string>
 	<string name="send_coins_fragment_hint_fee_zero">Aucuns frais ne seront payés. Utilisez “Sans frais” si le temps de confirmation ne vous importe pas.</string>
+
+	<string name="wallet_uri_handler_public_key_request_dialog_msg">L\'application %s souhaiterait recevoir votre clé publique maîtresse. Elle peut être utilisée pour suivre l\'évolution de votre portefeuille, mais pas pour déplacer vos fonds Dash.</string>
+	<string name="wallet_uri_handler_address_request_dialog_msg">L\'application %s réclame une adresse pour vous payer. Donnez-vous votre autorisation ?</string>
+
+	<string name="wallet_lock_unlock">Déverrouiller</string>
+	<string name="wallet_lock_unlock_wallet">Déverrouiller le portefeuille</string>
+	<string name="wallet_lock_unlock_to_see_txs_title">Portefeuille verrouillé.</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">Touchez l\'icône de cadenas, ci-dessus, pour déverrouiller votre portefeuille et voir votre historique de transactions.</string>
+	<string name="wallet_lock_unlock_dialog_title">Déverrouiller votre portefeuille</string>
+	<string name="wallet_lock_unlock_dialog_message">Votre portefeuille est protégé par un code PIN pour les dépenses. Saisissez votre code PIN et appuyez sur Déverrouiller pour continuer.</string>
+	<string name="wallet_lock_reset_wallet_title">Réinitialiser le portefeuille</string>
+	<string name="wallet_lock_reset_wallet_message">Êtes-vous certain de vouloir réinitialiser ? Toutes les données stockées seront effacées, et votre portefeuille ne sera récupérable qu\'avec une sauvegarde ou une \"graine\" de restauration.</string>
+
+	<string name="wallet_lock_wallet_disabled">Portefeuille désactivé</string>
+	<string name="wallet_lock_try_again">Veuillez réessayer dans %1$d %2$s</string>
+	<string name="wallet_lock_reset">Réinitialiser</string>
+	<string name="wallet_lock_wrong_pin">Mauvais code PIN ! %s</string>
+
+	<plurals name="wallet_lock_attempts_remaining">
+		<item quantity="one">%d tentative restante</item>
+		<item quantity="other">%d attempts remaining</item>
+	</plurals>
+
+	<plurals name="minute">
+		<item quantity="one">minute</item>
+		<item quantity="other">minutes</item>
+	</plurals>
+	
+	<plurals name="hour">
+		<item quantity="one">heure</item>
+		<item quantity="other">heures</item>
+	</plurals>
+
+	<string name="encrypt_new_key_chain_upgrade_button">Mise à jour</string>
+	<string name="encrypt_new_key_chain_dialog_title">Mettre à jour votre portefeuille</string>
+	<string name="encrypt_new_key_chain_dialog_message">Votre portefeuille sera mis à jour pour permettre l\'import et l\'export avec davantage d\'applications.</string>
+	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Vous devez saisir votre code PIN pour terminer la mise à jour.</string>
+	<string name="pin_code_required_dialog_message">Cette application demande un code PIN pour dépenser les fonds et pour afficher le solde et les transactions.</string>
+
 
 </resources>

@@ -2,7 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">Portfel został zresetowany,\njego odtworzenie zajmie trochę czasu.</string>
-    <string name="wallet_disclaimer_fragment_remind_safety">Używaj na własne ryzyko. Przeczytaj &lt;u&gt;instrukcje bezpieczeństwa&lt;/u&gt;.</string>
+    <string name="wallet_disclaimer_fragment_remind_safety">Używaj na własne ryzyko. Przeczytaj &lt;u&gt;instrukcję bezpieczeństwa&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">Musisz zrobić &lt;u&gt;kopię zapasową&lt;/u&gt; swojego portfela!</string>
     <string name="blockchain_state_progress_hours">%1$s, przestarzały o %2$d godzin</string>
     <string name="blockchain_state_progress_days">%1$s, przestarzały o %2$d dni</string>
