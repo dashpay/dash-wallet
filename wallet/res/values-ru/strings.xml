@@ -294,7 +294,7 @@
     <string name="about_category_credits">Это приложение использует...</string>
     <string name="about_credits_bitcoinj_title">dashj %s, версия протокола Дэш</string>
     <string name="about_credits_zxing_title">ZXing, библиотеку по работе с QR-кодами</string>
-    <string name="about_credits_icon_title">Это приложение использует иконку от \\'bitboy\\'</string>
+    <string name="about_credits_icon_title">Это приложение использует иконку от \'bitboy\'</string>
     <string name="about_credits_scrypt_title">Scrypt, в реализации от Will Glozer и Colin Percival</string>
     <string name="about_market_app_title">Страница Google Play</string>
     <string name="about_market_app_summary">Напишите отзыв или оцените приложение</string>
