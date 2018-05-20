@@ -630,7 +630,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         final int storageEncryptionStatus = devicePolicyManager.getStorageEncryptionStatus();
         if (config.remindBackupSeed())
             return Warning.BACKUP_SEED;
-        if (config.remindBackup())
+        if (Constants.SUPPORT_BOTH_BACKUP_WARNINGS && config.remindBackup())
             return Warning.BACKUP;
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
                 && (storageEncryptionStatus == DevicePolicyManager.ENCRYPTION_STATUS_INACTIVE

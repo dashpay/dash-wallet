@@ -238,4 +238,7 @@ public final class Constants {
 
     //BIP44 Support
     public static final ImmutableList<ChildNumber> BIP44_PATH = TEST ? DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET : DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH;
+
+    //Backup Warnings (true = both seed and backup file, false = seed only)
+    public static final boolean SUPPORT_BOTH_BACKUP_WARNINGS = false;
 }
