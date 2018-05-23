@@ -1092,13 +1092,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 EncryptNewKeyChainDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
                     @Override
                     public void onDismiss(DialogInterface dialog) {
-                        BackupWalletToSeedDialogFragment.show(getFragmentManager(), true, new DialogInterface.OnDismissListener() {
-                            @Override
-                            public void onDismiss(DialogInterface dialog) {
-                                if(isRestoringBackup)
-                                    resetBlockchain();
-                            }
-                        });
+                        BackupWalletToSeedDialogFragment.show(getFragmentManager(), true);
                     }
                 }, path);
             } else {
