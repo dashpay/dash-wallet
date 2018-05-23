@@ -30,9 +30,11 @@ import android.os.HandlerThread;
 import android.os.Process;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -53,6 +55,7 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.send.DecryptSeedTask;
 import de.schildbach.wallet.ui.send.DeriveKeyTask;
+import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet_test.R;
 
@@ -63,18 +66,22 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
         implements SharedPreferences.OnSharedPreferenceChangeListener {
 
     private static final String FRAGMENT_TAG = BackupWalletToSeedDialogFragment.class.getName();
+    private static final String ARGS_IS_UPGRADING = "is_upgrading";
 
     public static void show(final FragmentManager fm) {
         final BackupWalletToSeedDialogFragment newFragment = new BackupWalletToSeedDialogFragment();
-        newFragment.isUpgrading = false;
-        newFragment.onDismissListener = null;
+        Bundle args = new Bundle();
+        args.putBoolean(ARGS_IS_UPGRADING, false);
+        newFragment.setArguments(args);
         newFragment.show(fm, FRAGMENT_TAG);
     }
 
-    public static void show(final FragmentManager fm, boolean isUpgrading, DialogInterface.OnDismissListener onDismissListener) {
+    public static void show(final FragmentManager fm, boolean isUpgrading) {
         final BackupWalletToSeedDialogFragment newFragment = new BackupWalletToSeedDialogFragment();
-        newFragment.isUpgrading = isUpgrading;
-        newFragment.onDismissListener = onDismissListener;
+
+        Bundle args = new Bundle();
+        args.putBoolean(ARGS_IS_UPGRADING, isUpgrading);
+        newFragment.setArguments(args);
         newFragment.show(fm, FRAGMENT_TAG);
     }
 
@@ -83,8 +90,6 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
     private Wallet wallet;
     private PinRetryController pinRetryController;
     private Configuration config;
-    private boolean isUpgrading;
-    private DialogInterface.OnDismissListener onDismissListener;
 
     @Nullable
     private AlertDialog dialog;
@@ -96,7 +101,6 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
     private View seedViewGroup;
     private Handler backgroundHandler;
     private HandlerThread backgroundThread;
-    private CheckBox showView;
     private CheckBox writtenDown;
     private Button showMnemonicSeedButton;
 
@@ -148,9 +152,20 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
         final DialogBuilder builder = new DialogBuilder(activity);
         builder.setTitle(R.string.export_keys_dialog_title);
         builder.setView(view);
-        builder.setPositiveButton(R.string.button_ok, null);
         builder.setCancelable(false);
-
+        builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                if (writtenDown.isChecked()) {
+                    config.disarmBackupSeedReminder();
+                }
+                privateKeyPasswordView.removeTextChangedListener(privateKeyPasswordListener);
+                if (getArguments().getBoolean(ARGS_IS_UPGRADING, false)
+                        && activity instanceof UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener) {
+                    ((UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener) activity).onUpgradeConfirmed();
+                }
+            }
+        });
         return builder.create();
     }
 
@@ -169,11 +184,6 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
     @Override
     public void onDismiss(final DialogInterface dialog) {
         this.dialog = null;
-        if(writtenDown.isChecked())
-            config.disarmBackupSeedReminder();
-        privateKeyPasswordView.removeTextChangedListener(privateKeyPasswordListener);
-        if(onDismissListener != null)
-            onDismissListener.onDismiss(dialog);
         super.onDismiss(dialog);
     }
 
@@ -288,9 +298,8 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
     }
 
     private void updateView(boolean isUnlocked) {
-        if(!config.remindBackupSeed() || isUpgrading)
+        if(!config.remindBackupSeed() || getArguments().getBoolean(ARGS_IS_UPGRADING, false))
             writtenDown.setVisibility(View.GONE);
         else writtenDown.setVisibility(isUnlocked ? View.VISIBLE : View.GONE);
-
     }
 }

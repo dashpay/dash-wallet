@@ -64,15 +64,7 @@ public class UpgradeWalletDisclaimerDialog extends DialogFragment {
                 new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(final DialogInterface dialog, final int which) {
-                        BackupWalletToSeedDialogFragment.show(getFragmentManager(), true, new DialogInterface.OnDismissListener() {
-                            @Override
-                            public void onDismiss(DialogInterface dialog) {
-                                Activity activity = ((AlertDialog)dialog).getOwnerActivity();
-                                if (activity instanceof OnUpgradeConfirmedListener) {
-                                    ((OnUpgradeConfirmedListener) activity).onUpgradeConfirmed();
-                                }
-                            }
-                        });
+                        BackupWalletToSeedDialogFragment.show(getFragmentManager(), true);
                     }
                 });
 
