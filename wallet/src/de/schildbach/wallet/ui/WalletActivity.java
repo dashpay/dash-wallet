@@ -105,7 +105,8 @@ import android.widget.TextView;
 public final class WalletActivity extends AbstractBindServiceActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback,
         NavigationView.OnNavigationItemSelectedListener,
-        WalletLock.OnLockChangeListener, UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener {
+        WalletLock.OnLockChangeListener, UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
+        EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
     private static final int DIALOG_RESTORE_WALLET = 2;
@@ -1089,12 +1090,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         isRestoringBackup = restoreBackup;
         if (!wallet.hasKeyChain(path)) {
             if (wallet.isEncrypted()) {
-                EncryptNewKeyChainDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
-                    @Override
-                    public void onDismiss(DialogInterface dialog) {
-                        BackupWalletToSeedDialogFragment.show(getFragmentManager(), true);
-                    }
-                }, path);
+                EncryptNewKeyChainDialogFragment.show(getFragmentManager(), path);
             } else {
                 //
                 // Upgrade the wallet now
@@ -1128,4 +1124,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }
     }
 
+    @Override
+    public void onNewKeyChainEncrypted() {
+        BackupWalletToSeedDialogFragment.show(getFragmentManager(), true);
+    }
 }
