@@ -2,7 +2,6 @@ package de.schildbach.wallet.ui;
 
 import android.app.Dialog;
 import android.app.FragmentManager;
-import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.view.LayoutInflater;
@@ -18,6 +17,7 @@ import org.spongycastle.crypto.params.KeyParameter;
 
 import de.schildbach.wallet.ui.send.DecryptSeedTask;
 import de.schildbach.wallet.ui.send.DeriveKeyTask;
+import de.schildbach.wallet.util.ParcelableChainPath;
 import de.schildbach.wallet_test.R;
 
 /**
@@ -25,18 +25,15 @@ import de.schildbach.wallet_test.R;
  */
 
 public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment {
-    private static final String FRAGMENT_TAG = EncryptNewKeyChainDialogFragment.class.getName();
 
-    private ImmutableList<ChildNumber> path;
+    private static final String FRAGMENT_TAG = EncryptNewKeyChainDialogFragment.class.getName();
+    private static final String ARGS_PATH = "chain_path";
 
     public static void show(FragmentManager fm, ImmutableList<ChildNumber> path) {
-        show(fm, null, path);
-    }
-
-    public static void show(FragmentManager fm, DialogInterface.OnDismissListener onDismissListener, ImmutableList<ChildNumber> path) {
         EncryptNewKeyChainDialogFragment dialogFragment = new EncryptNewKeyChainDialogFragment();
-        dialogFragment.path = path;
-        dialogFragment.onDismissListener = onDismissListener;
+        Bundle args = new Bundle();
+        args.putParcelable(ARGS_PATH, new ParcelableChainPath(path));
+        dialogFragment.setArguments(args);
         dialogFragment.show(fm, FRAGMENT_TAG);
     }
 
@@ -76,6 +73,9 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
                 pinRetryController.successfulAttempt();
                 handleDecryptPIN(password);
                 dismissAllowingStateLoss();
+                if (activity != null && activity instanceof OnNewKeyChainEncryptedListener) {
+                    ((OnNewKeyChainEncryptedListener) activity).onNewKeyChainEncrypted();
+                }
             }
 
             @Override
@@ -119,8 +119,8 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
                 @Override
                 protected void onSuccess(final DeterministicSeed seed) {
                     pinRetryController.successfulAttempt();
-
-                    handleAddKeyChain(seed, path, encryptionKey);
+                    ParcelableChainPath parcelableChainPath = getArguments().getParcelable(ARGS_PATH);
+                    handleAddKeyChain(seed, parcelableChainPath.getPath(), encryptionKey);
                 }
 
                 protected void onBadPassphrase() {
@@ -136,5 +136,9 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
         DeterministicKeyChain keyChain = new DeterministicKeyChain(seed, path);
         DeterministicKeyChain encryptedKeyChain = keyChain.toEncrypted(application.getWallet().getKeyCrypter(), encryptionKey);
         application.getWallet().addAndActivateHDChain(encryptedKeyChain);
+    }
+
+    public interface OnNewKeyChainEncryptedListener {
+        void onNewKeyChainEncrypted();
     }
 }
