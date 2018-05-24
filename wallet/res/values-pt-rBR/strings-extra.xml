@@ -67,6 +67,7 @@
 	<string name="encrypt_new_key_chain_dialog_message">Sua carteira será atualizada para suportar importação e exportação para mais aplicativos.</string>
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Você deve inserir seu PIN para finalizar o processo de atualização.</string>
 	<string name="pin_code_required_dialog_message">Este app agora requer um PIN para gastos e também para ver seu saldo e transações.</string>
+    <string name="backup_wallet_seed_private_key_written_down_box">Eu anotei a frase de recuperação</string>
 
 
 </resources>

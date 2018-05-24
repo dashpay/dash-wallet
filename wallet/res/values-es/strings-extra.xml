@@ -67,6 +67,7 @@
 	<string name="encrypt_new_key_chain_dialog_message">Tu billetera será actualizada para admitir la importación y exportación a otras aplicaciones.</string>
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Debes ingresar tu PIN para finalizar el proceso de actualización.</string>
 	<string name="pin_code_required_dialog_message">Esta aplicación ahora requiere un PIN para gastos y también para ver su saldo y transacciones.</string>
+    <string name="backup_wallet_seed_private_key_written_down_box">He anotado la frase de recuperación</string>
 
 
 </resources>
