@@ -19,7 +19,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="10dp"
                 android:gravity="center_horizontal"
-                android:text="@string/instructions_to_sell_pivx"
+                android:text="@string/instructions_to_sell_coin"
                 android:textColor="@color/text_color_black"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -34,14 +34,14 @@
                 android:text="@string/you_will_receive_an_sms_text_message_with_every_deposit" />
 
             <TextView
-                android:id="@+id/text_send_piv_to_label"
+                android:id="@+id/text_send_coin_to_label"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@+id/text_msg"
                 android:layout_marginBottom="10dp"
                 android:layout_marginTop="10dp"
                 android:gravity="center_horizontal"
-                android:text="@string/send_piv_to"
+                android:text="@string/send_coin_to"
                 android:textColor="@color/text_color_black"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -50,7 +50,7 @@
                 android:id="@+id/text_none_available"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/text_send_piv_to_label"
+                android:layout_below="@+id/text_send_coin_to_label"
                 android:layout_marginBottom="10dp"
                 android:gravity="center_horizontal"
                 android:text="@string/none_available"
@@ -138,20 +138,20 @@
                 android:textSize="@dimen/text_size_notice" />
 
             <TextView
-                android:id="@+id/text_piv_avail_label"
+                android:id="@+id/text_coin_avail_label"
                 style="@style/StyleTextLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@+id/text_acc_number"
                 android:layout_marginTop="20dp"
-                android:text="@string/piv_available" />
+                android:text="@string/coin_available" />
 
             <TextView
-                android:id="@+id/text_piv_avail"
+                android:id="@+id/text_coin_avail"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_alignParentStart="true"
-                android:layout_below="@+id/text_piv_avail_label"
+                android:layout_below="@+id/text_coin_avail_label"
                 android:text="2.0"
                 android:textSize="@dimen/text_size_notice" />
 
@@ -160,7 +160,7 @@
                 style="@style/StyleTextLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/text_piv_avail"
+                android:layout_below="@+id/text_coin_avail"
                 android:layout_marginTop="20dp"
                 android:text="@string/your_current_rate" />
 
@@ -196,13 +196,11 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="2dp"
-                    android:layout_marginLeft="4dp"
-                    android:layout_marginRight="2dp"
                     android:layout_marginStart="4dp"
                     android:background="@drawable/selector_edit_btn"
                     android:padding="6dp"
                     android:text="@string/action_edit"
-                    android:textColor="@color/white"
+                    android:textColor="@color/textColorWhite"
                     android:visibility="visible" />
 
                 <LinearLayout
@@ -215,12 +213,11 @@
                         android:id="@+id/text_save"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginLeft="4dp"
                         android:layout_marginStart="4dp"
                         android:background="@drawable/selector_edit_btn"
                         android:padding="6dp"
                         android:text="Save"
-                        android:textColor="@color/white"
+                        android:textColor="@color/textColorWhite"
                         android:visibility="visible" />
 
                     <TextView
@@ -228,8 +225,6 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="2dp"
-                        android:layout_marginLeft="4dp"
-                        android:layout_marginRight="2dp"
                         android:layout_marginStart="4dp"
                         android:background="@drawable/border_selling_edttxt"
                         android:padding="6dp"

@@ -18,17 +18,18 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
-import de.schildbach.wallet.wallofcoins.response.GetReceivingOptionsResp;
 import de.schildbach.wallet.wallofcoins.response.PayFieldsDeserializer;
+import de.schildbach.wallet.wallofcoins.selling_wizard.models.SellingWizardGetRecOptionsResp;
 import de.schildbach.wallet_test.BuildConfig;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
+
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 /**
- * Created by  on 04-Apr-18.
+ * Created on 04-Apr-18.
  */
 
 public class SellingAPIClient {
@@ -120,7 +121,7 @@ public class SellingAPIClient {
             httpClient.addInterceptor(interceptor);
 
         Gson gson = new GsonBuilder()
-                .registerTypeAdapter(GetReceivingOptionsResp.PayFieldsBeanX.class, new PayFieldsDeserializer())
+                .registerTypeAdapter(SellingWizardGetRecOptionsResp.PayFieldsBeanX.class, new PayFieldsDeserializer())
                 .create();
 
         return new Retrofit.Builder()

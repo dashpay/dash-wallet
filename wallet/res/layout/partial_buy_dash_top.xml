@@ -116,6 +116,7 @@
         android:layout_gravity="center"
         android:background="@drawable/selectable_item_background"
         android:indeterminate="true"
+        android:visibility="gone"
         android:indeterminateDrawable="@drawable/white_progress"
         android:padding="8dp" />
 </RelativeLayout>

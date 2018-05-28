@@ -29,9 +29,9 @@
         android:icon="@drawable/ic_menu_address_book"
         android:title="@string/preferences_report_issue_title" />
     <item
-        android:id="@+id/nav_sell_piv"
+        android:id="@+id/nav_sell_coin"
         android:icon="@drawable/ic_menu_sell_dash"
-        android:visible="false"
+        android:visible="true"
         android:title="@string/title_selling" />
 
     <!--</group>-->

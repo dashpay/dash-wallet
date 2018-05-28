@@ -133,7 +133,7 @@ public class SharedPreferenceUtil {
     /**
      * returns map of all the key value pair available in SharedPreference
      *
-     * @return Map<String, ?>
+     * @return Map<String ,   ?>
      */
     public static Map<String, ?> getAll() {
         return sharedPreferences.getAll();

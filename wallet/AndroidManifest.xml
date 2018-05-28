@@ -159,12 +159,12 @@
             android:label="@string/sell_dash_for_cash"
             android:screenOrientation="behind"
             android:theme="@style/My.Theme.ChildActivity" />
-        <activity
+     <!--   <activity
             android:name="de.schildbach.wallet.wallofcoins.buydash.BuyDashActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:label="@string/buy_dash_with_cash"
             android:screenOrientation="behind"
-            android:theme="@style/My.Theme.ChildActivity" />
+            android:theme="@style/My.Theme.ChildActivity" />-->
         <activity
             android:name="de.schildbach.wallet.ui.NetworkMonitorActivity"
             android:configChanges="keyboard|keyboardHidden"
@@ -270,10 +270,10 @@
             android:value="true" />
 
         <activity
-            android:name="de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseActivity"
+            android:name="de.schildbach.wallet.wallofcoins.buying_wizard.BuyingWizardBaseActivity"
             android:theme="@style/BuyDashBaseActivity" />
         <activity
-            android:name="de.schildbach.wallet.wallofcoins.selling_wizard.SellingBaseActivity"
+            android:name="de.schildbach.wallet.wallofcoins.selling_wizard.SellingWizardBaseActivity"
             android:theme="@style/SellingBaseTheme" />
     </application>
 

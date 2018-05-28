@@ -1,7 +1,7 @@
 package de.schildbach.wallet.wallofcoins.selling_wizard.api;
 
 /**
- * Created by  on 04-Apr-18.
+ * Created on 04-Apr-18.
  */
 
 public class SellingApiConstants {
@@ -12,7 +12,7 @@ public class SellingApiConstants {
     public final static String MARKETS = "api/v1/markets/";
     public final static String CREATE_ADDRESS = "api/adcreate/";
     public final static String SEND_VERIFICATION = "api/v1/sendVerification/";
-
+    public static final String CRYPTO = "DASH";
     public static final String WALLOFCOINS_PUBLISHER_ID = "46";
     public static final String KEY_HEADER_AUTH_TOKEN = "X-Coins-Api-Token";
     public static final String KEY_HEADER_PUBLISHER_ID = "X-Coins-Publisher";
@@ -26,7 +26,7 @@ public class SellingApiConstants {
     public static final String CODE = "code";
     public static final String KEY_DEVICECODE = "deviceCode";
     public static final String KEY_DEVICEID = "deviceId";
-    public static final String DEVICE_NAME = "PIV Wallet (Android)";
+    public static final String DEVICE_NAME = "DASH Wallet (Android)";
     public static final String KEY_DEVICE_NAME = "name";
     public static final String KEY_CODE = "code";
     public static final String KEY_USER_ENABLED = "userEnabled";
@@ -44,8 +44,4 @@ public class SellingApiConstants {
     public static final String KEY_NUMBER = "number";
     public static final String KEY_NUMBER2 = "number2";
     public static final String KEY_SELL_CRYPTO = "sellCrypto";
-
-
-
-
 }

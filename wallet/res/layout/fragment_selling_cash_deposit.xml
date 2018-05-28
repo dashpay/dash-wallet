@@ -28,7 +28,6 @@
             <TextView
                 android:id="@+id/text_label_mobile"
                 style="@style/StyleTextLabel"
-
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@+id/text_msg"
@@ -80,7 +79,6 @@
                 <TextView
                     android:id="@+id/text_acc_label"
                     style="@style/StyleTextLabel"
-
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_below="@+id/edit_holder_name"

@@ -29,7 +29,7 @@
     <string name="send_coins_options_fee_category_zero">No Fee</string>
     <string name="send_coins_fragment_hint_fee_zero">No fee of will be paid. Use \'no fee\' only if you don\'t care about confirmation time.</string>
     <string name="wallet_disclaimer_fragment_buy_wizard">Find a location nearby to &lt;u&gt;load your new Dash Wallet&lt;/u&gt;!</string>
-    <string name="buy_dash_coins_amount_lable">I\'m looking to spend</string>
+    <string name="buy_coin_amount_lable">I\'m looking to spend</string>
 
     <string name="wallet_uri_handler_public_key_request_dialog_msg">Application %s would like to receive your Master Public Key.  This can be used to keep track of your wallet, this can not be used to move your Dash.</string>
     <string name="wallet_uri_handler_address_request_dialog_msg">Application %s is requesting an address so it can pay you.  Would you like to authorize this?</string>
@@ -127,10 +127,12 @@
     <!--Buying wizard -->
     <string name="title_buy_dash">Buy Dash With Cash</string>
     <string name="wallet_is_signed">Your wallet is signed into Wall of Coins using your mobile number</string>
-    <string name="dash_wallet_name">Dash Wallet (Android)</string>
+    <string name="wallet_name">Dash Wallet (Android)</string>
     <string name="next_action">Next</string>
     <string name="action_sign_out">Sign Out</string>
     <string name="or">Or</string>
+    <string name="enter_valid_amt">Enter valid Amount</string>
+    <string name="amount_less_than_1000000">Amount should be less than $1000000.</string>
     <string name="action_buy_more_bitcoin">Buy More Bitcoin!</string>
     <string name="action_confirm_purchase_code">Confirm Purchase Code</string>
     <string name="status_waiting_deposit">Status: Waiting Deposit</string>
@@ -143,6 +145,7 @@
     <string name="status_done_pending_delivery">Status: Done - Pending Delivery</string>
     <string name="status_done_units_delivered">Status: Done - Units Delivered</string>
     <string name="call_for_help">Call (866) 841-2646 for help.   Help is also available on the website.</string>
+    <string name="to_acquire_bitcoin">to acquire Dash (Đ)\n(1,000,000 đots = 1 ĐASH)</string>
     <string name="do_not_send_me_email">[Do Not send me email]</string>
     <string name="please_enter_phone_no">Please enter phone number</string>
     <string name="please_enter_10_digits_phone_no">Please enter 10 digits phone number</string>
@@ -161,6 +164,12 @@
     <string name="do_you_already_have_an_order">Do you already have an order?</string>
     <string name="network_not_avaialable">Please check internet connection</string>
     <string name="offerid_not_available">Offerid not available</string>
+    <string name="action_order">Order</string>
+    <string name="no_order_history">You have no order history with Dash for Android. To see your full order history across all devices, visit <a href="https://wallofcoins.com">https://wallofcoins.com</a></string>
+    <string name="invalid_zip_code">Zip code shold be between 5 to 6 digits.</string>
+    <string name="deposit_due_zero">Deposit Due: 0 minutes 0 seconds</string>
+
+
 
     <!-- Selling wizard-->
     <string name="title_selling">Sell Your Dash</string>
@@ -190,7 +199,7 @@
     <string name="please_enter_conf_acc_no">Please enter confirm account number.</string>
     <string name="acc_not_matched"><![CDATA[Account & confirm account don\'t matched.]]></string>
     <string name="price_per_coin">Price Per Coin</string>
-    <string name="how_much_do_you_want_per_pivx">How much do you want per Dash?</string>
+    <string name="how_much_do_you_want_per_coin">How much do you want per Dash?</string>
     <string name="dollar_sign">$</string>
     <string name="enter_mo_no">Please enter mobile no.</string>
     <string name="enter_country_code">Please select country code</string>
@@ -225,12 +234,12 @@
     <string name="enter_new_pass">Please enter new password.</string>
     <string name="enter_confirm_pass">Please enter confirm password.</string>
     <string name="you_will_receive_an_sms_text_message_with_every_deposit">You will receive an SMS text message with every deposit.</string>
-    <string name="send_piv_to">Send Dash to</string>
+    <string name="send_coin_to">Send Dash to</string>
     <string name="none_available">(None Available)</string>
     <string name="publicly_audit_transactions">Publicly Audit Transactions</string>
     <string name="bank_name">Bank Name</string>
     <string name="account_number">Account Number</string>
-    <string name="piv_available">Dash Available</string>
+    <string name="coin_available">Dash Available</string>
     <string name="your_current_rate">Your Current Rate</string>
     <string name="edit_your_current_rate">Edit Your Current Rate</string>
     <string name="advanced_options">Advanced options</string>
@@ -238,12 +247,11 @@
     <string name="notice">The quicker you respond to our texts, the better your seller rating! Double check that you are responding with the proper status code.</string>
     <string name="transaction_notice">Transaction Notice:</string>
     <string name="notice1">Send the amount of Dash you would like to sell to the Wall of Coins peer-to-peer market.\n
-Coins are available to the public shortly after network confirmation.\n
-
-Should you need to cancel this request, Wall of Coins staff will need to do this manually on your behalf.</string>
+            Coins are available to the public shortly after network confirmation.\n
+           Should you need to cancel this request, Wall of Coins staff will need to do this manually on your behalf.</string>
     <string name="notice2">Coins are available to the public shortly after network confirmation.</string>
     <string name="notice4">Contact our support at 866-841-COIN (866-841-2646).</string>
-    <string name="instructions_to_sell_pivx">Instructions to sell Dash</string>
+    <string name="instructions_to_sell_coin">Instructions to sell Dash</string>
     <string name="action_edit">Edit</string>
     <string name="minimum_deposit_payment_amount_for_buyers">Minimum deposit payment amount for buyers.</string>
     <string name="maximum_deposit_payment_amount">Maximum deposit payment amount.</string>
@@ -254,4 +262,5 @@ Should you need to cancel this request, Wall of Coins staff will need to do this
     <string name="enter_min_payment">Please enter minimum payment</string>
     <string name="enter_max_payment">Please enter maximum payment</string>
     <string name="title_address">Address</string>
+
 </resources>

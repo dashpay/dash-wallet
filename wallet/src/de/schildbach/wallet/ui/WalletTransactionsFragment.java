@@ -91,8 +91,8 @@ import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Qr;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet.util.WalletUtils;
-import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseActivity;
-import de.schildbach.wallet.wallofcoins.selling_wizard.SellingBaseActivity;
+import de.schildbach.wallet.wallofcoins.buying_wizard.BuyingWizardBaseActivity;
+import de.schildbach.wallet.wallofcoins.selling_wizard.SellingWizardBaseActivity;
 import de.schildbach.wallet_test.R;
 
 /**
@@ -181,7 +181,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         emptyView = (TextView) view.findViewById(R.id.wallet_transactions_empty);
         btnBuyDash = (Button) view.findViewById(R.id.buy_dash_with_cash);
         sell_dash_with_cash= (Button) view.findViewById(R.id.sell_dash_with_cash);
-        sell_dash_with_cash.setVisibility(View.GONE);
+       // sell_dash_with_cash.setVisibility(View.GONE);
         recyclerView = (RecyclerView) view.findViewById(R.id.wallet_transactions_list);
         recyclerView.setHasFixedSize(true);
         recyclerView.setLayoutManager(new LinearLayoutManager(activity));
@@ -456,15 +456,14 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
                 @Override
                 public void onClick(View v) {
                     //startActivity(new Intent(activity, BuyDashActivity.class));
-                    startActivity(new Intent(activity, BuyDashBaseActivity.class));
+                    startActivity(new Intent(activity, BuyingWizardBaseActivity.class));
                 }
             });
             sell_dash_with_cash.setOnClickListener(new View.OnClickListener() {
 
                 @Override
                 public void onClick(View v) {
-                    //startActivity(new Intent(activity, BuyDashActivity.class));
-                    startActivity(new Intent(activity, SellingBaseActivity.class));
+                    startActivity(new Intent(activity, SellingWizardBaseActivity.class));
                 }
             });
         } else {

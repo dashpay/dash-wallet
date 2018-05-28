@@ -92,8 +92,8 @@ import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
-import de.schildbach.wallet.wallofcoins.buyingwizard.BuyDashBaseActivity;
-import de.schildbach.wallet.wallofcoins.selling_wizard.SellingBaseActivity;
+import de.schildbach.wallet.wallofcoins.buying_wizard.BuyingWizardBaseActivity;
+import de.schildbach.wallet.wallofcoins.selling_wizard.SellingWizardBaseActivity;
 import de.schildbach.wallet_test.R;
 
 /**
@@ -1003,7 +1003,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             startActivity(new Intent(this, NetworkMonitorActivity.class));
 
         } else if (id == R.id.nav_buy_dash_with_cash) {
-            startActivity(new Intent(this, BuyDashBaseActivity.class));
+            startActivity(new Intent(this, BuyingWizardBaseActivity.class));
         } else if (id == R.id.nav_safety) {
             openContextMenu(viewFakeForSafetySubmenu);
         } else if (id == R.id.nav_settings) {
@@ -1012,8 +1012,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
             handleDisconnect();
         } else if (id == R.id.nav_report_issue) {
             handleReportIssue();
-        } else if (id == R.id.nav_sell_piv) {
-            startActivity(new Intent(this, SellingBaseActivity.class));
+        } else if (id == R.id.nav_sell_coin) {
+            startActivity(new Intent(this, SellingWizardBaseActivity.class));
         }
         viewDrawer.closeDrawer(GravityCompat.START);
         return true;

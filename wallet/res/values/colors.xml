@@ -57,4 +57,5 @@
     <color name="colorPrimaryDarkAlpha">#cc1961a0</color>
     <color name="color_blue_light">#4590ca</color>
     <color name="bgBlackX">#DD000000</color>
+    <color name="textColorWhite">#ffffff</color>
 </resources>

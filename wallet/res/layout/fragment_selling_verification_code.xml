@@ -54,7 +54,6 @@
                 android:layout_width="0dp"
                 android:layout_height="40dp"
                 android:layout_marginEnd="4dp"
-                android:layout_marginRight="4dp"
                 android:layout_weight="1"
                 android:text="@string/text_create_ad" />
 
@@ -63,7 +62,6 @@
                 style="@style/StyleButton"
                 android:layout_width="0dp"
                 android:layout_height="40dp"
-                android:layout_marginLeft="4dp"
                 android:layout_marginStart="4dp"
                 android:layout_weight="1"
                 android:text="@string/resend_otp" />

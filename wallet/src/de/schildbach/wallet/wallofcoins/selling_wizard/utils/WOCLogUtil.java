@@ -4,9 +4,8 @@ import android.util.Log;
 
 import de.schildbach.wallet_test.BuildConfig;
 
-
 /**
- * Created by  on 05-Apr-18.
+ * Created on 05-Apr-18.
  */
 
 public class WOCLogUtil {

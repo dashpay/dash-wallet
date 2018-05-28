@@ -34,6 +34,7 @@ public final class WOCConstants {
     public static final String KEY_OFFER = "offer";
     public static final String KEY_EMAIL = "email";
     public static final String KEY_deviceName = "deviceName";
+    public static final String CRYPTO = "DASH";
 
     //BuyDash General Constants
     public static final String KEY_WEB_URL = "https://wallofcoins.com/";
@@ -45,11 +46,11 @@ public final class WOCConstants {
 
 
     //buying wizard
-    public static String LATITUDE = "latitude";
-    public static String LONGITUDE = "longitude";
-    public static String ZIP = "zip";
-    public static String BANK_ID = "bankId";
-    public static String OFFER_ID = "offerId";
-    public static String VERIFICATION_OTP = "otp";
-    public static String SCREEN_TYPE = "screenType";
+    public static String ARG_LATITUDE = "ARG_LATITUDE";
+    public static String ARG_LONGITUDE = "ARG_LONGITUDE";
+    public static String ARG_ZIP = "ARG_ZIP";
+    public static String ARG_BANK_ID = "ARG_BANK_ID";
+    public static String ARG_OFFER_ID = "ARG_OFFER_ID";
+    public static String ARG_VERIFICATION_OTP = "ARG_VERIFICATION_OTP";
+    public static String ARG_SCREEN_TYPE = "ARG_SCREEN_TYPE";
 }
