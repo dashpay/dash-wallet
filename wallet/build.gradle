@@ -60,7 +60,7 @@ dependencies {
 }
 
 ext {
-    archivesBaseName = 'dash-wallet'
+     archivesBaseName = 'dash-wallet'
 }
 
 android {
