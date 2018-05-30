@@ -104,7 +104,7 @@ public final class Constants {
     /** Base URL for browsing transactions, blocks or addresses. */
     public static final String EXPLORE_BASE_URL = NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET) ? EXPLORE_BASE_URL_PROD
             : EXPLORE_BASE_URL_TEST;
-    public static final String EXPLORE_ADDRESS_PATH = CoinDefinition.BLOCKEXPLORER_ADDRESS_PATH;
+    public static final String EXPLORE_ADDRESS_PATH= CoinDefinition.BLOCKEXPLORER_ADDRESS_PATH;
     public static final String EXPLORE_TRANSACTION_PATH = CoinDefinition.BLOCKEXPLORER_TRANSACTION_PATH;
     public static final String EXPLORE_BLOCK_PATH = CoinDefinition.BLOCKEXPLORER_BLOCK_PATH;
 
@@ -127,16 +127,16 @@ public final class Constants {
     public static final HttpUrl DYNAMIC_FEES_URL = HttpUrl.parse("https://wallet.schildbach.de/fees");
 
     /** MIME type used for transmitting single transactions. */
-    public static final String MIMETYPE_TRANSACTION = "application/x-" + CoinDefinition.coinTicker.toLowerCase() + "tx";
+    public static final String MIMETYPE_TRANSACTION = "application/x-"+CoinDefinition.coinTicker.toLowerCase()+"tx";
 
     /** MIME type used for transmitting wallet backups. */
-    public static final String MIMETYPE_WALLET_BACKUP = "application/x-" + CoinDefinition.coinName.toLowerCase() + "-wallet-backup";
+    public static final String MIMETYPE_WALLET_BACKUP = "application/x-"+CoinDefinition.coinName.toLowerCase()+"-wallet-backup";
 
     /** Number of confirmations until a transaction is fully confirmed. */
     public static final int MAX_NUM_CONFIRMATIONS = 6;
 
     /** User-agent to use for network access. */
-    public static final String USER_AGENT = CoinDefinition.coinName + " Wallet";
+    public static final String USER_AGENT = CoinDefinition.coinName +" Wallet";
 
     /** Default currency to use if all default mechanisms fail. */
     public static final String DEFAULT_EXCHANGE_CURRENCY = "USD";
