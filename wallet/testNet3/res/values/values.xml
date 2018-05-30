@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Dash Wallet [testnet]</string>
-    <string name="base_url">https://woc.reference.genitrust.com/</string>
+    <string name="base_url">https://wallofcoins.com/</string>
     <string name="PUBLISHER_ID">47</string>
     <string-array name="preferences_precision_values">
         <item>8</item>

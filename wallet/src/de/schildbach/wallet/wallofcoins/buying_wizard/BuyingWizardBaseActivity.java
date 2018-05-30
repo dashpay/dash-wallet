@@ -68,7 +68,7 @@ public class BuyingWizardBaseActivity extends AppCompatActivity implements
                 otpFragment.setArguments(bundle);
                 replaceFragment(otpFragment, true, false);
             } else {
-                replaceFragment(new BuyingWizardLocationFragment(), true, true);
+                replaceFragment(new BuyingWizardLocationFragment(), false, true);
             }
         } else
             replaceFragment(new BuyingWizardLocationFragment(), false, true);
@@ -115,7 +115,6 @@ public class BuyingWizardBaseActivity extends AppCompatActivity implements
             Fragment fragment = fragmentManager.findFragmentById(R.id.frame_container_buy_base);
             if (fragment instanceof BuyingWizardEmailPhoneFragment)
                 ((BuyingWizardEmailPhoneFragment) fragment).changeView();
-
             else if (fragment instanceof BuyingWizardOfferAmountFragment)
                 ((BuyingWizardOfferAmountFragment) fragment).changeView();
             else if (fragment instanceof BuyingWizardLocationFragment)
@@ -133,7 +132,6 @@ public class BuyingWizardBaseActivity extends AppCompatActivity implements
             fragmentManager.popBackStack();
         else
             this.finish();
-
     }
 
     @Override

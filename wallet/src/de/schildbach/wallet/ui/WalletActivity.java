@@ -93,7 +93,6 @@ import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet.wallofcoins.buying_wizard.BuyingWizardBaseActivity;
-import de.schildbach.wallet.wallofcoins.selling_wizard.SellingWizardBaseActivity;
 import de.schildbach.wallet_test.R;
 
 /**
@@ -1012,8 +1011,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             handleDisconnect();
         } else if (id == R.id.nav_report_issue) {
             handleReportIssue();
-        } else if (id == R.id.nav_sell_coin) {
-            startActivity(new Intent(this, SellingWizardBaseActivity.class));
         }
         viewDrawer.closeDrawer(GravityCompat.START);
         return true;

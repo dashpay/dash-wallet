@@ -246,7 +246,7 @@ public class BuyingWizardEmailPhoneFragment extends BuyingWizardBaseFragment imp
                                     && response.body().getAvailableAuthSources() != null
                                     && response.body().getAvailableAuthSources().size() > 0) {
 
-                                if (response.body().getAvailableAuthSources().get(0).equals("password")) {//from wesite
+                                if (response.body().getAvailableAuthSources().get(0).equals("password")) {//from website
                                     showUserPasswordAuthenticationDialog();
                                     return;
                                 } else if ((response.body().getAvailableAuthSources().size() >= 2//from mobile

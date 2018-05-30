@@ -272,9 +272,7 @@
         <activity
             android:name="de.schildbach.wallet.wallofcoins.buying_wizard.BuyingWizardBaseActivity"
             android:theme="@style/BuyDashBaseActivity" />
-        <activity
-            android:name="de.schildbach.wallet.wallofcoins.selling_wizard.SellingWizardBaseActivity"
-            android:theme="@style/SellingBaseTheme" />
+
     </application>
 
 </manifest>
