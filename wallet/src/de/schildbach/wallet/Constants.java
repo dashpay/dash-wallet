@@ -77,7 +77,7 @@ public final class Constants {
                 .getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
 
         /** Filename of the manual key backup (old format, can only be read). */
-        public static final String EXTERNAL_WALLET_KEY_BACKUP = CoinDefinition.coinName.toLowerCase() + "-wallet-keys" + FILENAME_NETWORK_SUFFIX;
+        public static final String EXTERNAL_WALLET_KEY_BACKUP = CoinDefinition.coinName.toLowerCase()+"-wallet-keys" + FILENAME_NETWORK_SUFFIX;
 
         /** Filename of the manual wallet backup. */
         public static final String EXTERNAL_WALLET_BACKUP = CoinDefinition.coinName + "-wallet-backup" + FILENAME_NETWORK_SUFFIX;
@@ -86,7 +86,7 @@ public final class Constants {
         public static final String BLOCKCHAIN_FILENAME = "blockchain" + FILENAME_NETWORK_SUFFIX;
 
         /** Filename of the block checkpoints file. */
-        public static final String CHECKPOINTS_FILENAME = "checkpoints" + FILENAME_NETWORK_SUFFIX + ".txt";
+        public static final String CHECKPOINTS_FILENAME = "checkpoints" + FILENAME_NETWORK_SUFFIX+".txt";
 
         /** Filename of the fees files. */
         public static final String FEES_FILENAME = "fees" + FILENAME_NETWORK_SUFFIX + ".txt";
@@ -104,11 +104,11 @@ public final class Constants {
     /** Base URL for browsing transactions, blocks or addresses. */
     public static final String EXPLORE_BASE_URL = NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET) ? EXPLORE_BASE_URL_PROD
             : EXPLORE_BASE_URL_TEST;
-    public static final String EXPLORE_ADDRESS_PATH= CoinDefinition.BLOCKEXPLORER_ADDRESS_PATH;
-    public static final String EXPLORE_TRANSACTION_PATH = CoinDefinition.BLOCKEXPLORER_TRANSACTION_PATH;
-    public static final String EXPLORE_BLOCK_PATH = CoinDefinition.BLOCKEXPLORER_BLOCK_PATH;
+    public static final String EXPLORE_ADDRESS_PATH  = CoinDefinition.BLOCKEXPLORER_ADDRESS_PATH;
+    public static final String EXPLORE_TRANSACTION_PATH  = CoinDefinition.BLOCKEXPLORER_TRANSACTION_PATH;
+    public static final String EXPLORE_BLOCK_PATH  = CoinDefinition.BLOCKEXPLORER_BLOCK_PATH;
 
-    public static final String MIMETYPE_BACKUP_PRIVATE_KEYS = "x-" + CoinDefinition.coinName.toLowerCase() + "/private-keys";
+    public static final String MIMETYPE_BACKUP_PRIVATE_KEYS = "x-"+CoinDefinition.coinName.toLowerCase()+"/private-keys";
 
     private static final String BITEASY_API_URL_PROD = CoinDefinition.UNSPENT_API_URL;//"https://api.biteasy.com/blockchain/v1/";
     private static final String BITEASY_API_URL_TEST = "https://api.biteasy.com/testnet/v1/";

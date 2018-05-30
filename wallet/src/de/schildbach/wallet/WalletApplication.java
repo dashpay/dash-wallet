@@ -178,11 +178,13 @@ public class WalletApplication extends Application {
         // clean up spam
         try {
             wallet.cleanup();
-        } catch (IllegalStateException x) {
+        }
+        catch (IllegalStateException x) {
             //Catch an inconsistent exception here and reset the blockchain.  This is for loading older wallets that had
             //txes with fees that were too low or dust that were stuck and could not be sent.  In a later version
             //the fees were fixed, then those stuck transactions became inconsistant and the exception is thrown.
-            if (x.getMessage().contains("Inconsistent spent tx:")) {
+            if (x.getMessage().contains("Inconsistent spent tx:"))
+            {
                 File blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
                 blockChainFile.delete();
             } else throw x;
@@ -533,5 +535,5 @@ public class WalletApplication extends Application {
 
         context.setAllowInstantXinLiteMode(config.getInstantXEnabled());
         context.setLiteMode(config.getLiteMode());
-    }
+        }
 }
