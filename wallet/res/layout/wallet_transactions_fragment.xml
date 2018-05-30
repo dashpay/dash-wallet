@@ -40,8 +40,8 @@
         android:id="@+id/wallet_transactions_list"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:animateLayoutChanges="false"
-        android:scrollbars="vertical" />
+        android:scrollbars="vertical"
+        android:animateLayoutChanges="false"/>
 
 
 </ViewAnimator>

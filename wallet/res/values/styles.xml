@@ -126,7 +126,7 @@
         <item name="android:textColor">@color/fg_significant</item>
         <item name="android:textSize">@dimen/font_size_normal</item>
     </style>
-    =======
+
     <!--style name="My.Theme" parent="@android:style/Theme.Holo.Light.DarkActionBar">
         <item name="android:actionBarStyle">@style/My.Widget.ActionBar</item>
         <item name="android:actionModeStyle">@style/My.Widget.ActionMode</item>
