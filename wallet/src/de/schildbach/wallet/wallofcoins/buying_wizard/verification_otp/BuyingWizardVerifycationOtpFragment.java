@@ -132,8 +132,6 @@ public class BuyingWizardVerifycationOtpFragment extends BuyingWizardBaseFragmen
                             linearProgress.setVisibility(View.GONE);
                             ((BuyingWizardBaseActivity) mContext).buyDashPref.setHoldId("");
                             ((BuyingWizardBaseActivity) mContext).buyDashPref.setCreateHoldResp(null);
-                            Log.e(TAG, "onResponse: " + ((BuyingWizardBaseActivity) mContext)
-                                    .buyDashPref.getHoldId() + " here");
                             if (null != response && null != response.body() && !response.body().isEmpty()) {
                                 if (response.body().get(0).account != null && !TextUtils.isEmpty(response.body().get(0).account)) {
                                     updateAddressBookValue(keyAddress, "WallofCoins.com - Order " +

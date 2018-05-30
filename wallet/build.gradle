@@ -157,6 +157,7 @@ android {
         file('src/main/jniLibs').deleteDir()
     }
 }
+
 /*task svgToPngMipmap(type: fr.avianey.androidsvgdrawable.gradle.SvgDrawableTask) {
     from = files('graphics/mipmap')
     to = file('res')
