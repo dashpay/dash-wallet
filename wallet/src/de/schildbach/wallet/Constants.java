@@ -47,10 +47,10 @@ import de.schildbach.wallet_test.BuildConfig;
 public final class Constants {
     public static final boolean TEST = BuildConfig.APPLICATION_ID.contains("_test");
 
-    /**Network this wallet is on (e.g. testnet or mainnet).*/
+    /** Network this wallet is on (e.g. testnet or mainnet). */
     public static final NetworkParameters NETWORK_PARAMETERS = TEST ? TestNet3Params.get() : MainNetParams.get();
 
-    /**Bitcoinj global context.*/
+    /** Bitcoinj global context. */
     public static final Context CONTEXT = new Context(NETWORK_PARAMETERS);
 
     public final static class Files {
@@ -60,48 +60,48 @@ public final class Constants {
         /** Filename of the wallet. */
         public static final String WALLET_FILENAME_PROTOBUF = "wallet-protobuf" + FILENAME_NETWORK_SUFFIX;
 
-        /**How often the wallet is autosaved.*/
+        /** How often the wallet is autosaved. */
         public static final long WALLET_AUTOSAVE_DELAY_MS = 5 * DateUtils.SECOND_IN_MILLIS;
 
-        /**Filename of the automatic key backup (old format, can only be read).*/
+        /** Filename of the automatic key backup (old format, can only be read). */
         public static final String WALLET_KEY_BACKUP_BASE58 = "key-backup-base58" + FILENAME_NETWORK_SUFFIX;
 
-        /**Filename of the automatic wallet backup.*/
+        /** Filename of the automatic wallet backup. */
         public static final String WALLET_KEY_BACKUP_PROTOBUF = "key-backup-protobuf" + FILENAME_NETWORK_SUFFIX;
 
-        /**Path to external storage*/
+        /** Path to external storage */
         public static final File EXTERNAL_STORAGE_DIR = Environment.getExternalStorageDirectory();
 
-        /**Manual backups go here.*/
+        /** Manual backups go here. */
         public static final File EXTERNAL_WALLET_BACKUP_DIR = Environment
                 .getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
 
-        /**Filename of the manual key backup (old format, can only be read).*/
+        /** Filename of the manual key backup (old format, can only be read). */
         public static final String EXTERNAL_WALLET_KEY_BACKUP = CoinDefinition.coinName.toLowerCase() + "-wallet-keys" + FILENAME_NETWORK_SUFFIX;
 
-        /**Filename of the manual wallet backup.*/
+        /** Filename of the manual wallet backup. */
         public static final String EXTERNAL_WALLET_BACKUP = CoinDefinition.coinName + "-wallet-backup" + FILENAME_NETWORK_SUFFIX;
 
-        /**Filename of the block store for storing the chain.*/
+        /** Filename of the block store for storing the chain. */
         public static final String BLOCKCHAIN_FILENAME = "blockchain" + FILENAME_NETWORK_SUFFIX;
 
-        /**Filename of the block checkpoints file.*/
+        /** Filename of the block checkpoints file. */
         public static final String CHECKPOINTS_FILENAME = "checkpoints" + FILENAME_NETWORK_SUFFIX + ".txt";
 
-        /**Filename of the fees files.*/
+        /** Filename of the fees files. */
         public static final String FEES_FILENAME = "fees" + FILENAME_NETWORK_SUFFIX + ".txt";
 
-        /**Filename of the file containing Electrum servers.*/
+        /** Filename of the file containing Electrum servers. */
         public static final String ELECTRUM_SERVERS_FILENAME = "electrum-servers.txt";
     }
 
-    /**Maximum size of backups. Files larger will be rejected.*/
+    /** Maximum size of backups. Files larger will be rejected. */
     public static final long BACKUP_MAX_CHARS = 10000000;
 
     private static final String EXPLORE_BASE_URL_PROD = CoinDefinition.BLOCKEXPLORER_BASE_URL_PROD;
     private static final String EXPLORE_BASE_URL_TEST = CoinDefinition.BLOCKEXPLORER_BASE_URL_TEST;
 
-    /**Base URL for browsing transactions, blocks or addresses.*/
+    /** Base URL for browsing transactions, blocks or addresses. */
     public static final String EXPLORE_BASE_URL = NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET) ? EXPLORE_BASE_URL_PROD
             : EXPLORE_BASE_URL_TEST;
     public static final String EXPLORE_ADDRESS_PATH = CoinDefinition.BLOCKEXPLORER_ADDRESS_PATH;
@@ -112,46 +112,46 @@ public final class Constants {
 
     private static final String BITEASY_API_URL_PROD = CoinDefinition.UNSPENT_API_URL;//"https://api.biteasy.com/blockchain/v1/";
     private static final String BITEASY_API_URL_TEST = "https://api.biteasy.com/testnet/v1/";
-    /**Base URL for blockchain API.*/
+    /** Base URL for blockchain API. */
     public static final String BITEASY_API_URL = NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET) ? BITEASY_API_URL_PROD
             : BITEASY_API_URL_TEST;
 
-    /**Currency code for the wallet name resolver.*/
+    /** Currency code for the wallet name resolver. */
     public static final String WALLET_NAME_CURRENCY_CODE = NETWORK_PARAMETERS.getId()
             .equals(NetworkParameters.ID_MAINNET) ? "dash" : "tdash";
 
-    /**URL to fetch version alerts from.*/
+    /** URL to fetch version alerts from. */
     public static final HttpUrl VERSION_URL = HttpUrl.parse("https://wallet.schildbach.de/version");
 
-    /**URL to fetch dynamic fees from.*/
+    /** URL to fetch dynamic fees from. */
     public static final HttpUrl DYNAMIC_FEES_URL = HttpUrl.parse("https://wallet.schildbach.de/fees");
 
-    /**MIME type used for transmitting single transactions.*/
+    /** MIME type used for transmitting single transactions. */
     public static final String MIMETYPE_TRANSACTION = "application/x-" + CoinDefinition.coinTicker.toLowerCase() + "tx";
 
-    /**MIME type used for transmitting wallet backups.*/
+    /** MIME type used for transmitting wallet backups. */
     public static final String MIMETYPE_WALLET_BACKUP = "application/x-" + CoinDefinition.coinName.toLowerCase() + "-wallet-backup";
 
-    /**Number of confirmations until a transaction is fully confirmed.*/
+    /** Number of confirmations until a transaction is fully confirmed. */
     public static final int MAX_NUM_CONFIRMATIONS = 6;
 
-    /**User-agent to use for network access.*/
+    /** User-agent to use for network access. */
     public static final String USER_AGENT = CoinDefinition.coinName + " Wallet";
 
-    /**Default currency to use if all default mechanisms fail.*/
+    /** Default currency to use if all default mechanisms fail. */
     public static final String DEFAULT_EXCHANGE_CURRENCY = "USD";
 
-    /**Donation address for tip/donate action.*/
+    /** Donation address for tip/donate action. */
     public static final String DONATION_ADDRESS = NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET)
             ? CoinDefinition.DONATION_ADDRESS : null;
 
-    /**Recipient e-mail address for reports.*/
+    /** Recipient e-mail address for reports. */
     public static final String REPORT_EMAIL = "hashengineeringsolutions@gmail.com";
 
-    /**Subject line for manually reported issues.*/
+    /** Subject line for manually reported issues. */
     public static final String REPORT_SUBJECT_ISSUE = "Dash Wallet: Reported issue";
 
-    /**Subject line for crash reports.*/
+    /** Subject line for crash reports. */
     public static final String REPORT_SUBJECT_CRASH = "Crash report";
 
     public static final char CHAR_HAIR_SPACE = '\u200a';
@@ -194,17 +194,17 @@ public final class Constants {
     public static final int NOTIFICATION_ID_COINS_RECEIVED = 1;
     public static final int NOTIFICATION_ID_INACTIVITY = 2;
 
-    /**Desired number of scrypt iterations for deriving the spending PIN*/
+    /** Desired number of scrypt iterations for deriving the spending PIN */
     public static final int SCRYPT_ITERATIONS_TARGET = 65536;
     public static final int SCRYPT_ITERATIONS_TARGET_LOWRAM = 32768;
 
-    /**Default ports for Electrum servers*/
+    /** Default ports for Electrum servers */
     public static final int ELECTRUM_SERVER_DEFAULT_PORT_TCP = NETWORK_PARAMETERS.getId()
             .equals(NetworkParameters.ID_MAINNET) ? 50001 : 51001;
     public static final int ELECTRUM_SERVER_DEFAULT_PORT_TLS = NETWORK_PARAMETERS.getId()
             .equals(NetworkParameters.ID_MAINNET) ? 50002 : 51002;
 
-    /**Shared HTTP client, can reuse connections*/
+    /** Shared HTTP client, can reuse connections */
     public static final OkHttpClient HTTP_CLIENT = new OkHttpClient();
 
     static {
