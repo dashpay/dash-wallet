@@ -17,6 +17,9 @@
 
 package de.schildbach.wallet;
 
+import java.io.File;
+import java.util.concurrent.TimeUnit;
+
 import android.os.Build;
 import android.os.Environment;
 import android.text.format.DateUtils;
@@ -35,8 +38,6 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.util.concurrent.TimeUnit;
 
 import de.schildbach.wallet_test.BuildConfig;
 
@@ -295,7 +296,6 @@ public final class Constants {
     public static String WALLET_URI_SCHEME = "dashwallet";
 
     public static boolean ENABLE_ZERO_FEES = TEST; //Enable Zero Fee's on TestNet only.
-
 
 
 }
