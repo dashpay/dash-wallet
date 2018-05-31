@@ -84,7 +84,7 @@
     <string name="send_coins_fragment_insufficient_money_title">No hay suficientes monedas disponibles</string>
     <string name="send_coins_fragment_insufficient_money_msg1">Te faltan %s.</string>
     <string name="send_coins_fragment_insufficient_money_msg2">¿Deseas pagar con todo lo que tienes?</string>
-    <string name="send_coins_fragment_empty_wallet_failed_title">El vaciado de la cartera falló.</string>
+    <string name="send_coins_fragment_empty_wallet_failed_title">Falla al vaciar billetera</string>
     <string name="send_coins_fragment_state_decrypting">Descifrando…</string>
     <string name="send_coins_preparation_msg">Firmando…</string>
     <string name="send_coins_sending_msg">Enviando…</string>
@@ -95,7 +95,7 @@
     <string name="send_coins_options_fee_category_economic">Económica</string>
     <string name="send_coins_options_fee_category_normal">Normal</string>
     <string name="send_coins_options_fee_category_priority">Prioritaria</string>
-    <string name="send_coins_options_empty">Billetera vacía</string>
+    <string name="send_coins_options_empty">Vaciar billetera</string>
     <string name="raise_fee_dialog_title">Aumento de la comisión de red</string>
     <string name="raise_fee_dialog_message">Deseas elevar la comisión de red de este pago en %s? Hará la confirmación del pago más rápida.</string>
     <string name="raise_fee_dialog_determining_fee">Determinando la comisión de red...</string>

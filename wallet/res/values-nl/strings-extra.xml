@@ -67,6 +67,7 @@
 	<string name="encrypt_new_key_chain_dialog_message">Je portemonnee krijgt een upgrade om importeren van en exporteren naar meerdere apps mogelijk te maken.</string>
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Je moet je pin invoeren om het upgradeproces te voltooien.</string>
 	<string name="pin_code_required_dialog_message">Deze app heeft nu een pin nodig om transacties te doen of je saldo of transacties te bekijken.</string>
+    <string name="backup_wallet_seed_private_key_written_down_box">Ik heb het herstelwachtwoord opgeschreven</string>
 
 
 </resources>

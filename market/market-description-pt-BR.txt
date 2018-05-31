@@ -1,11 +1,11 @@
 Use por sua conta e risco! (Requer o Android 4 ou superior)
 
-<b>Ter seu Dash sempre com você, no seu bolso!</b> Você paga rapidamente apenas verificação um QR code. Como um comerciante, você recebe pagamentos confiável e instantaneamente. Carteira do traço é o primeiro app móvel do traço e sem dúvida também o mais seguro!
+<b>Tenha seu Dash sempre com você, no seu bolso!</b> Pague rapidamente apenas escaneando um QR code. Como um comerciante, você recebe pagamentos de uma forma confiável e instantaneamente. Dash Wallet é o primeiro app móvel de Dash e sem dúvida também o mais segura!
 
 <b>CARACTERÍSTICAS</b>
 
 • Nenhum registo, serviço web ou nuvem necessários! Esta carteira é descentralizada e peer to peer.
-• Display da quantidade de Dash em mDASH e µDASH.
+• Mostra quantidade de Dash em mDASH e µDASH.
 • Conversão de e para outras moedas nacionais.
 • Envio e recebimento de Dash através de NFC, códigos QR ou URLs de Dash.
 • Livro de endereços Dash usados regularmente.

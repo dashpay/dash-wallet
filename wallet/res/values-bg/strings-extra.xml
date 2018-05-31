@@ -67,6 +67,7 @@
 	<string name="encrypt_new_key_chain_dialog_message">Вашият портфейл ще бъде надграден, за да поддържа импортирането и експортирането в още приложения.</string>
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Трябва да въведете вашият ПИН за да завършите процесът на надграждане.</string>
 	<string name="pin_code_required_dialog_message">Това приложение вече изисква ПИН за похарчване и разглеждане историята на транзакциите.</string>
+    <string name="backup_wallet_seed_private_key_written_down_box">Записах фразата за възстановяване</string>
 
 
 </resources>
