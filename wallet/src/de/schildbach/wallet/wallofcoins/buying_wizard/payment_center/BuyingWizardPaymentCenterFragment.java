@@ -92,7 +92,6 @@ public class BuyingWizardPaymentCenterFragment extends BuyingWizardBaseFragment 
                                                Response<List<GetReceivingOptionsResp>> response) {
 
                             if (response.body() != null) {
-                                Log.e(TAG, "onResponse: " + response.body().size());
                                 linear_progress.setVisibility(View.GONE);
                                 setPaymentOptNames(response.body());
                             }

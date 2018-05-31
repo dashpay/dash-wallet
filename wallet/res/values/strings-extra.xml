@@ -168,5 +168,9 @@
     <string name="no_order_history">You have no order history with Dash for Android. To see your full order history across all devices, visit <a href="https://wallofcoins.com">https://wallofcoins.com</a></string>
     <string name="invalid_zip_code">Zip code shold be between 5 to 6 digits.</string>
     <string name="deposit_due_zero">Deposit Due: 0 minutes 0 seconds</string>
-
+    <string name="total_dash">Total Dash: %1$s (%2$s dots)\nYou must deposit cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.</string>
+    <string name="total_dash2">Total Dash: %1$s (%2$s dots)</string>
+    <string name="below_are_offers_for_at_least">Below are offers for at least $%1$s . You must click the ORDER button before you receive instructions to pay at the Cash Payment center.</string>
+    <string name="below_are_offers_for">Below are offers for $$%1$s. You must click the ORDER button before you receive instructions to pay at the Cash Payment center.</string>
+    <string name="best_value_options">Best Value Options: More Dash for $%1$s Cash</string>
 </resources>

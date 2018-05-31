@@ -37,6 +37,7 @@ public class BuyingWizardOrderListAdapter extends RecyclerView.Adapter<BuyingWiz
     private final List<OrderListResp> orderList;
     private BuyingWizardOrderHistoryFragment historyFragment;
     private BuyDashPref buyDashPref;
+    private DecimalFormat formatter;
 
     public BuyingWizardOrderListAdapter(Context mContext, List<OrderListResp> orderList,
                                         BuyingWizardOrderHistoryFragment historyFragment,
@@ -45,12 +46,14 @@ public class BuyingWizardOrderListAdapter extends RecyclerView.Adapter<BuyingWiz
         this.orderList = orderList;
         this.historyFragment = historyFragment;
         this.buyDashPref = buyDashPref;
+        this.formatter = new DecimalFormat("#,###,###.##");
     }
 
     @Override
     public BuyingWizardOrderListAdapter.VHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         LayoutInflater layoutInflater = LayoutInflater.from(mContext);
-        ItemBuyingOrderListBinding itemBinding = DataBindingUtil.inflate(layoutInflater, R.layout.item_buying_order_list, parent, false);
+        ItemBuyingOrderListBinding itemBinding = DataBindingUtil.inflate(layoutInflater,
+                R.layout.item_buying_order_list, parent, false);
         return new BuyingWizardOrderListAdapter.VHolder(itemBinding);
     }
 
@@ -77,10 +80,13 @@ public class BuyingWizardOrderListAdapter extends RecyclerView.Adapter<BuyingWiz
                     for (int i = 0; i < accountList.size(); i++) {
                         TextView textView = new TextView(mContext);
                         textView.setTextSize(16);
-                        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+                        LinearLayout.LayoutParams layoutParams =
+                                new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                        ViewGroup.LayoutParams.MATCH_PARENT);
                         layoutParams.topMargin = 0;
                         textView.setLayoutParams(layoutParams);
-                        textView.setText(accountList.get(i).getLabel() + ": " + accountList.get(i).getValue());
+                        String text = accountList.get(i).getLabel() + ": " + accountList.get(i).getValue();
+                        textView.setText(text);
                         holder.itemBinding.linearAccountDetail.addView(textView);
                     }
                     holder.itemBinding.textAccountNo.setVisibility(View.GONE);
@@ -139,7 +145,6 @@ public class BuyingWizardOrderListAdapter extends RecyclerView.Adapter<BuyingWiz
 
 //              you must deposit cash
             double dots = Double.parseDouble(orderListResp.total) * 1000000;
-            DecimalFormat formatter = new DecimalFormat("#,###,###.##");
             String yourFormattedDots = formatter.format(dots);
 
             if (orderListResp.bankLogo != null
@@ -156,8 +161,7 @@ public class BuyingWizardOrderListAdapter extends RecyclerView.Adapter<BuyingWiz
 
             if (orderListResp.status.equals("WD")) {
 
-                holder.itemBinding.order.setText("Total Dash: " + orderListResp.total + " (" + yourFormattedDots + " dots)\n"
-                        + "You must deposit cash at the above Payment Center. Additional fees may apply. Paying in another method other than cash may delay your order.");
+                holder.itemBinding.order.setText(mContext.getString(R.string.total_dash, orderListResp.total, yourFormattedDots));
                 holder.itemBinding.orderInstruction.setVisibility(View.VISIBLE);
                 holder.itemBinding.btnCancelOrder.setVisibility(View.VISIBLE);
                 holder.itemBinding.btnDepositFinished.setVisibility(View.VISIBLE);
@@ -169,14 +173,12 @@ public class BuyingWizardOrderListAdapter extends RecyclerView.Adapter<BuyingWiz
                 holder.itemBinding.textContactInstruction.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        // goToUrl(WOCConstants.KEY_WEB_URL);
                         historyFragment.goToGivenUrl(WOCConstants.KEY_WEB_URL);
                     }
                 });
 
             } else {
-
-                holder.itemBinding.order.setText("Total Dash: " + orderListResp.total + " (" + yourFormattedDots + " dots)");
+                holder.itemBinding.order.setText(mContext.getString(R.string.total_dash2, orderListResp.total, yourFormattedDots));
                 holder.itemBinding.layoutDueDate.setVisibility(View.GONE);
                 holder.itemBinding.textPaymentDueDate.setVisibility(View.GONE);
                 holder.itemBinding.orderInstruction.setVisibility(View.GONE);
@@ -260,7 +262,7 @@ public class BuyingWizardOrderListAdapter extends RecyclerView.Adapter<BuyingWiz
         private ItemBuyingOrderListBinding itemBinding;
 
 
-        public VHolder(ItemBuyingOrderListBinding itemBinding) {
+        private VHolder(ItemBuyingOrderListBinding itemBinding) {
             super(itemBinding.getRoot());
             this.itemBinding = itemBinding;
         }

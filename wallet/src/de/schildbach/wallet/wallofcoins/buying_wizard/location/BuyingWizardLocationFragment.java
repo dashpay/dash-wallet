@@ -56,7 +56,7 @@ public class BuyingWizardLocationFragment extends BuyingWizardBaseFragment imple
     private View rootView;
     private Button button_get_location, button_get_location_no, btn_sign_out_woc,
             btn_order_history_woc, btn_sign_in_woc;
-    private TextView txtViewLocationMessage, text_message_sign_out, text_message_sign_in;
+    private TextView text_message_sign_out;
     private String zipCode, password;
     private double latitude, longitude;
     private final String TAG = "LocationFragment";
@@ -85,14 +85,12 @@ public class BuyingWizardLocationFragment extends BuyingWizardBaseFragment imple
 
         button_get_location_no = (Button) rootView.findViewById(R.id.button_get_location_no);
         button_get_location = (Button) rootView.findViewById(R.id.button_get_location);
-        txtViewLocationMessage = (TextView) rootView.findViewById(R.id.txtViewLocationMessage);
         btn_sign_out_woc = (Button) rootView.findViewById(R.id.btn_sign_out_woc);
         text_message_sign_out = (TextView) rootView.findViewById(R.id.text_message_sign_out);
         layout_sign_out = (LinearLayout) rootView.findViewById(R.id.layout_sign_out);
         linear_progress = (LinearLayout) rootView.findViewById(R.id.linear_progress);
         btn_order_history_woc = (Button) rootView.findViewById(R.id.btn_order_history_woc);
         layout_sign_in = (LinearLayout) rootView.findViewById(R.id.layout_sign_in);
-        text_message_sign_in = (TextView) rootView.findViewById(R.id.text_message_sign_in);
         btn_sign_in_woc = (Button) rootView.findViewById(R.id.btn_sign_in_woc);
     }
 

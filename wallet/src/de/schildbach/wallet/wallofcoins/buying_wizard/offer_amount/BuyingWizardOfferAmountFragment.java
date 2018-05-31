@@ -171,8 +171,6 @@ public class BuyingWizardOfferAmountFragment extends BuyingWizardBaseFragment im
                 if (isValidAmount())
                     callDiscoveryInputs();
                 break;
-
-
         }
     }
 

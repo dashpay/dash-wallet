@@ -114,9 +114,7 @@ public class BuyingWizardEmailPhoneFragment extends BuyingWizardBaseFragment imp
         btn_sign_in.setOnClickListener(this);
     }
 
-    /**
-     * handle the arguments according to user come from previos screen
-     */
+    //handle the arguments according to user come from previos screen
     private void readBundle(Bundle bundle) {
         if (bundle != null) {
             if (bundle.containsKey(WOCConstants.ARG_OFFER_ID)) {
@@ -128,6 +126,7 @@ public class BuyingWizardEmailPhoneFragment extends BuyingWizardBaseFragment imp
         }
     }
 
+    //Handle Back button event
     public void changeView() {
         if (linear_email.getVisibility() == View.VISIBLE)
             ((BuyingWizardBaseActivity) mContext).popBackDirect();

@@ -46,7 +46,6 @@ public class BuyingWizardPhoneListFragment extends BuyingWizardBaseFragment impl
     private BuyingWizardPhoneListFragment fragment;
     private TextView txtViewNoData;
 
-
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
@@ -130,25 +129,25 @@ public class BuyingWizardPhoneListFragment extends BuyingWizardBaseFragment impl
 
             WallofCoins.createService(interceptor, getActivity()).getAuthToken(phone, getAuthTokenReq)
                     .enqueue(new Callback<GetAuthTokenResp>() {
-                @Override
-                public void onResponse(Call<GetAuthTokenResp> call, Response<GetAuthTokenResp> response) {
-                    int code = response.code();
+                        @Override
+                        public void onResponse(Call<GetAuthTokenResp> call, Response<GetAuthTokenResp> response) {
+                            int code = response.code();
 
-                    if (code == 200) {
-                        if (!TextUtils.isEmpty(response.body().token)) {
-                            ((BuyingWizardBaseActivity) mContext).buyDashPref.setAuthToken(response.body().token);
-                            ((BuyingWizardBaseActivity) mContext).buyDashPref.setPhone(phone);
-                            ((BuyingWizardBaseActivity) mContext).buyDashPref.setDeviceId(response.body().deviceId);
-                            ((BuyingWizardBaseActivity) mContext).popBackDirect();
+                            if (code == 200) {
+                                if (!TextUtils.isEmpty(response.body().token)) {
+                                    ((BuyingWizardBaseActivity) mContext).buyDashPref.setAuthToken(response.body().token);
+                                    ((BuyingWizardBaseActivity) mContext).buyDashPref.setPhone(phone);
+                                    ((BuyingWizardBaseActivity) mContext).buyDashPref.setDeviceId(response.body().deviceId);
+                                    ((BuyingWizardBaseActivity) mContext).popBackDirect();
+                                }
+                            }
                         }
-                    }
-                }
 
-                @Override
-                public void onFailure(Call<GetAuthTokenResp> call, Throwable t) {
-                    showToast(mContext.getString(R.string.try_again));
-                }
-            });
+                        @Override
+                        public void onFailure(Call<GetAuthTokenResp> call, Throwable t) {
+                            showToast(mContext.getString(R.string.try_again));
+                        }
+                    });
 
         } else
             showToast(mContext.getString(R.string.network_not_avaialable));

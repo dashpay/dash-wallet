@@ -176,15 +176,13 @@ public class BuyingWizardOffersAdapter extends RecyclerView.Adapter<RecyclerView
             TextView more = (TextView) holder.itemView;
             if (holder.getAdapterPosition() == 0 && singleDepositBeenList.size() > 0) {
                 if (incremented) {
-                    more.setText("Below are offers for at least $" +
-                            String.format("%.2f", Double.parseDouble(offerAmount)) + ". You must click the ORDER button before you receive instructions to pay at the Cash Payment center.");
+                    more.setText(context.getString(R.string.below_are_offers_for_at_least, String.format(Locale.US, "%.2f", Double.parseDouble(offerAmount))));
                 } else {
-                    more.setText("Below are offers for $" +
-                            singleDepositBeenList.get(0).deposit.amount + ". You must click the ORDER button before you receive instructions to pay at the Cash Payment center.");
+
+                    more.setText(context.getString(R.string.below_are_offers_for, singleDepositBeenList.get(0).deposit.amount));
                 }
             } else {
-                more.setText("Best Value Options: More Dash for $" +
-                        String.format("%.2f", Double.parseDouble(offerAmount)) + " Cash");
+                more.setText(context.getString(R.string.best_value_options, String.format(Locale.US, "%.2f", Double.parseDouble(offerAmount))));
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 more.setTextColor(context.getResources().getColor(R.color.colorPrimary, context.getTheme()));

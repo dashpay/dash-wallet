@@ -24,7 +24,8 @@ public class BuyingWizardPhoneListAdapter extends RecyclerView.Adapter<BuyingWiz
     private ArrayList<BuyingWizardPhoneListVO> buyingWizardPhoneListVOS;
     private BuyingWizardPhoneListFragment fragment;
 
-    public BuyingWizardPhoneListAdapter(Context context, ArrayList<BuyingWizardPhoneListVO> buyingWizardPhoneListVOS, BuyingWizardPhoneListFragment fragment) {
+    public BuyingWizardPhoneListAdapter(Context context, ArrayList<BuyingWizardPhoneListVO> buyingWizardPhoneListVOS,
+                                        BuyingWizardPhoneListFragment fragment) {
         this.mContext = context;
         this.buyingWizardPhoneListVOS = buyingWizardPhoneListVOS;
         this.fragment = fragment;

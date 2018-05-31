@@ -294,7 +294,7 @@ public class BuyingWizardOrderHistoryFragment extends BuyingWizardBaseFragment
         String dueDateTime;
         int countdownInterval;
 
-        public MyRunnable(TextView tvText, Handler handler, String dueDateTime, int countdownInterval) {
+        private MyRunnable(TextView tvText, Handler handler, String dueDateTime, int countdownInterval) {
             this.textDepositeDue1 = new WeakReference<>(tvText);
             this.handler = handler;
             this.dueDateTime = dueDateTime;
@@ -328,7 +328,8 @@ public class BuyingWizardOrderHistoryFragment extends BuyingWizardBaseFragment
                     long seconds = diff / 1000;
 
                     if (hours > 0) {
-                        textDepositeDue.setText("Deposit Due: " + hours + " hours " + minutes + " minutes");
+                        String depositeDueTime = "Deposit Due: " + hours + " hours " + minutes + " minutes";
+                        textDepositeDue.setText(depositeDueTime);
                         countdownInterval = 60 * 1000; // call in minutes
                     } else {
                         if (minutes < 10) {
@@ -336,7 +337,8 @@ public class BuyingWizardOrderHistoryFragment extends BuyingWizardBaseFragment
                         } else {
                             textDepositeDue.setTextColor(Color.parseColor("#000000"));
                         }
-                        textDepositeDue.setText("Deposit Due: " + minutes + " minutes " + seconds + " seconds");
+                        String depositeDueTime = "Deposit Due: " + minutes + " minutes " + seconds + " seconds";
+                        textDepositeDue.setText(depositeDueTime);
                         countdownInterval = 1000; // call in seconds
                     }
                 } else {
@@ -540,34 +542,34 @@ public class BuyingWizardOrderHistoryFragment extends BuyingWizardBaseFragment
             linearProgress.setVisibility(View.VISIBLE);
             WallofCoins.createService(interceptor, getActivity()).confirmDeposit("" + response.id, "", getString(R.string.WALLOFCOINS_PUBLISHER_ID))
                     .enqueue(new Callback<ConfirmDepositResp>() {
-                @Override
-                public void onResponse(Call<ConfirmDepositResp> call, Response<ConfirmDepositResp> response) {
-                    linearProgress.setVisibility(View.GONE);
+                        @Override
+                        public void onResponse(Call<ConfirmDepositResp> call, Response<ConfirmDepositResp> response) {
+                            linearProgress.setVisibility(View.GONE);
 
-                    if (null != response && null != response.body()) {
-                        showToast(mContext.getString(R.string.alert_payment_done));
-                        getOrderList(false);
-                    } else if (null != response && null != response.errorBody()) {
-                        try {
-                            ErrorResp errorResp = new Gson().fromJson(response.errorBody().string(), ErrorResp.class);
-                            Toast.makeText(getContext(), errorResp.detail, Toast.LENGTH_LONG).show();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            showToast(mContext.getString(R.string.try_again));
+                            if (null != response && null != response.body()) {
+                                showToast(mContext.getString(R.string.alert_payment_done));
+                                getOrderList(false);
+                            } else if (null != response && null != response.errorBody()) {
+                                try {
+                                    ErrorResp errorResp = new Gson().fromJson(response.errorBody().string(), ErrorResp.class);
+                                    Toast.makeText(getContext(), errorResp.detail, Toast.LENGTH_LONG).show();
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                    showToast(mContext.getString(R.string.try_again));
+                                }
+
+                            } else {
+                                showToast(mContext.getString(R.string.try_again));
+                            }
                         }
 
-                    } else {
-                        showToast(mContext.getString(R.string.try_again));
-                    }
-                }
-
-                @Override
-                public void onFailure(Call<ConfirmDepositResp> call, Throwable t) {
-                    linearProgress.setVisibility(View.GONE);
-                    Log.e(TAG, "onFailure: ", t);
-                    showToast(mContext.getString(R.string.try_again));
-                }
-            });
+                        @Override
+                        public void onFailure(Call<ConfirmDepositResp> call, Throwable t) {
+                            linearProgress.setVisibility(View.GONE);
+                            Log.e(TAG, "onFailure: ", t);
+                            showToast(mContext.getString(R.string.try_again));
+                        }
+                    });
         } else
             showToast(mContext.getString(R.string.network_not_avaialable));
 
