@@ -1,4 +1,10 @@
 Dash Wallet
+v5.18.1
+* When Upgrading from previous versions (5.17.6 and earlier) show recovery phrase
+* Default backup scheme is now the recovery phrase
+* Fixes for crashes on Unlock Dialog, Set PIN Dialog
+* Update translations
+
 v5.18
 * Lock Feature - for security and privacy
 * BIP44 support
