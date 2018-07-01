@@ -25,7 +25,7 @@
     <string name="button_copy_address">Adresse kopieren</string>
 	<string name="request_coins_clipboard_address_msg">Dash-Adresse in die Zwischenablage kopiert</string>
 	<string name="backup_wallet_to_seed_show_recovery_phrase">Zeigen</string>
-	<string name="restore_wallet_from_invalid_seed_warning_message">Bei%s handelt es sich um ein ungültiges Wort.</string>
+	<string name="restore_wallet_from_invalid_seed_warning_message">Bei %s handelt es sich um ein ungültiges Wort.</string>
 
 	<string name="send_coins_options_fee_category_zero">Keine Netzwerk-Gebühr</string>
 	<string name="send_coins_fragment_hint_fee_zero">Keine Netzwerk-Gebühr zahlen. Verwende das nur, wenn die Bestätigungszeit für dich nicht relevant ist.</string>
@@ -67,6 +67,7 @@
 	<string name="encrypt_new_key_chain_dialog_message">Deine Wallet wird aktualisiert, damit sie den Import und Export zu mehr Apps unterstützt.</string>
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Du musst deinen PIN eingeben, um den Aktualisierungsvorgang abzuschließen.</string>
 	<string name="pin_code_required_dialog_message">Diese App verwendet nun einen PIN, um zu bezahlen und den Transaktionsverlauf und das Guthaben anzuzeigen.</string>
+    <string name="backup_wallet_seed_private_key_written_down_box">Ich habe die Wiederherstellungsphrase niedergeschrieben</string>
 
 
 </resources>
