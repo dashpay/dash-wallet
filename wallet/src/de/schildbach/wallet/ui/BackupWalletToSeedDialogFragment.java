@@ -153,7 +153,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
         builder.setTitle(R.string.export_keys_dialog_title);
         builder.setView(view);
         builder.setCancelable(false);
-        builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+        builder.setPositiveButton(R.string.button_dismiss, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 if (writtenDown.isChecked()) {
