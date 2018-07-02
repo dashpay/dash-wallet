@@ -20,8 +20,17 @@
         android:layout_alignParentBottom="true"
         android:layout_marginBottom="68dp" />
 
+    <ImageView
+        android:layout_width="96dp"
+        android:layout_height="24dp"
+        android:layout_above="@+id/subtitle"
+        android:layout_alignEnd="@+id/wallet_address_fragment"
+        android:layout_alignRight="@+id/wallet_address_fragment"
+        android:src="@drawable/dash_logo_white"
+        android:tint="#008de4" />
+
     <TextView
-        android:id="@+id/textView"
+        android:id="@+id/subtitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="right"

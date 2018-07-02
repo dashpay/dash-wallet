@@ -20,7 +20,7 @@
         android:layout_width="match_parent"
         android:layout_height="4dp"
         android:layout_marginTop="2dp"
-        android:background="@color/vivid_red"
+        android:background="@color/deep_blue"
         android:orientation="horizontal" />
 
 </android.support.design.widget.AppBarLayout>
