@@ -225,7 +225,9 @@ public final class PaymentIntent implements Parcelable {
         final String bluetoothMac = (String) bitcoinUri.getParameterByName(Bluetooth.MAC_URI_PARAM);
         final String paymentRequestHashStr = (String) bitcoinUri.getParameterByName("h");
         final byte[] paymentRequestHash = paymentRequestHashStr != null ? base64UrlDecode(paymentRequestHashStr) : null;
-        final boolean useInstantSend = bitcoinUri.getRequestInstantSend();
+        boolean useInstantSend = bitcoinUri.getRequestInstantSend();
+        if(bitcoinUri.getParameterByName("is") == null)
+            useInstantSend = true;
 
         return new PaymentIntent(PaymentIntent.Standard.BIP21, null, null, outputs, bitcoinUri.getLabel(),
                 bluetoothMac != null ? "bt:" + bluetoothMac : null, null, bitcoinUri.getPaymentRequestUrl(),
