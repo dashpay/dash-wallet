@@ -339,7 +339,7 @@ public final class SendCoinsFragment extends Fragment {
                     if (state == State.SENDING) {
                         if (confidenceType == ConfidenceType.DEAD) {
                             setState(State.FAILED);
-                        } else if (numBroadcastPeers > 1 || confidenceType == ConfidenceType.BUILDING ||
+                        } else if (numBroadcastPeers >= 1 || confidenceType == ConfidenceType.BUILDING ||
                                 ixType == TransactionConfidence.IXType.IX_LOCKED) {
                             setState(State.SENT);
 
