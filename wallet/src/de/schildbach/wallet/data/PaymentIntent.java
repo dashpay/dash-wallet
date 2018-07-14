@@ -185,6 +185,7 @@ public final class PaymentIntent implements Parcelable {
         this.payeeData = payeeData;
         this.paymentRequestUrl = paymentRequestUrl;
         this.paymentRequestHash = paymentRequestHash;
+        this.useInstantX = true;
     }
 
     public PaymentIntent(@Nullable final Standard standard, @Nullable final String payeeName, @Nullable final String payeeVerifiedBy,
