@@ -1,4 +1,12 @@
 Dash Wallet
+v5.18.2
+* Update for Dash Core 0.12.3.x network upgrade
+* Send transactions if at least 1 connected peer
+* Backup Recovery Phrase dialog, change OK to Dismiss
+* Fix file attachment issues with GMail app
+* Update translations
+* Removed checkpoints for testnet
+
 v5.18.1
 * When Upgrading from previous versions (5.17.6 and earlier) show recovery phrase
 * Default backup scheme is now the recovery phrase
