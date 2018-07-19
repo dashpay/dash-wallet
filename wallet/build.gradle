@@ -51,6 +51,10 @@ dependencies {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
         exclude group: 'com.android.support', module: 'support-annotations'
     }
+    androidTestCompile ('com.android.support.test.espresso:espresso-intents:3.0.1') {
+        exclude group: 'com.google.code.findbugs', module: 'jsr305'
+        exclude group: 'com.android.support', module: 'support-annotations'
+    }
 }
 
 ext {
