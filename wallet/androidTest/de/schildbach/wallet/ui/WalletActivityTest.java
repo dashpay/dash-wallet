@@ -24,6 +24,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet_test.R;
 
 import static android.support.test.espresso.Espresso.onView;
@@ -40,6 +41,18 @@ public class WalletActivityTest {
 
     @Test
     public void clickOnBalanceOpenExchangeRates() {
+        activityRule.getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                WalletLock.getInstance().setWalletLocked(false);
+            }
+        });
+        //Wait for wallet to sync
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         onView(withId(R.id.wallet_balance)).perform(click());
         intended(hasComponent(ExchangeRatesActivity.class.getName()));
     }
