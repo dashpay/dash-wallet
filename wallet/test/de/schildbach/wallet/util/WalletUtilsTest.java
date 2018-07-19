@@ -46,4 +46,16 @@ public class WalletUtilsTest {
         WalletUtils.restoreWalletFromProtobufOrBase58(getClass().getResourceAsStream("backup-base58-testnet"),
                 MainNetParams.get());
     }
+
+    @Test(expected = IOException.class)
+    public void restoreWalletFromProtobuf_wrongNetwork_bitcoin() throws Exception {
+        WalletUtils.restoreWalletFromProtobufOrBase58(getClass().getResourceAsStream("bitcoin-backup-protobuf-testnet"),
+                MainNetParams.get());
+    }
+
+    @Test(expected = IOException.class)
+    public void restoreWalletFromBase58_wrongNetwork_bitcoin() throws Exception {
+        WalletUtils.restoreWalletFromProtobufOrBase58(getClass().getResourceAsStream("bitcoin-backup-base58-testnet"),
+                MainNetParams.get());
+    }
 }
