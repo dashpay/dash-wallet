@@ -49,6 +49,7 @@ public class Configuration {
     public static final String PREFS_KEY_SEND_COINS_AUTOCLOSE = "send_coins_autoclose";
     public static final String PREFS_KEY_CONNECTIVITY_NOTIFICATION = "connectivity_notification";
     public static final String PREFS_KEY_EXCHANGE_CURRENCY = "exchange_currency";
+    public static final String PREFS_KEY_EXCHANGE_CURRENCY_DETECTED = "exchange_currency_detected";
     public static final String PREFS_KEY_TRUSTED_PEER = "trusted_peer";
     public static final String PREFS_KEY_TRUSTED_PEER_ONLY = "trusted_peer_only";
     public static final String PREFS_KEY_BLOCK_EXPLORER = "block_explorer";
@@ -57,6 +58,7 @@ public class Configuration {
     public static final String PREFS_KEY_DISCLAIMER = "disclaimer";
     private static final String PREFS_KEY_LABS_QR_PAYMENT_REQUEST = "labs_qr_payment_request";
     private static final String PREFS_KEY_LOOK_UP_WALLET_NAMES = "look_up_wallet_names";
+    private static final String PREFS_KEY_PREVIOUS_VERSION = "previous_version";
 
     private static final String PREFS_KEY_LAST_VERSION = "last_version";
     private static final String PREFS_KEY_LAST_USED = "last_used";
@@ -208,6 +210,22 @@ public class Configuration {
         prefs.edit().putString(PREFS_KEY_EXCHANGE_CURRENCY, exchangeCurrencyCode).apply();
     }
 
+    public boolean getExchangeCurrencyCodeDetected() {
+        return prefs.getBoolean(PREFS_KEY_EXCHANGE_CURRENCY_DETECTED, false);
+    }
+
+    public void setExchangeCurrencyCodeDetected(boolean detected) {
+        prefs.edit().putBoolean(PREFS_KEY_EXCHANGE_CURRENCY_DETECTED, detected).apply();
+    }
+
+    /**
+     * @return whether the app was ever upgraded of if it's running on the first version in which
+     * it was installed
+     */
+    public boolean wasUpgraded() {
+        return prefs.getInt(PREFS_KEY_PREVIOUS_VERSION, 0) != 0;
+    }
+
     public boolean getQrPaymentRequestEnabled() {
         return prefs.getBoolean(PREFS_KEY_LABS_QR_PAYMENT_REQUEST, false);
     }
@@ -225,7 +243,10 @@ public class Configuration {
     }
 
     public void updateLastVersionCode(final int currentVersionCode) {
-        prefs.edit().putInt(PREFS_KEY_LAST_VERSION, currentVersionCode).apply();
+        Editor editor = prefs.edit();
+        editor.putInt(PREFS_KEY_PREVIOUS_VERSION, prefs.getInt(PREFS_KEY_LAST_VERSION, 0));
+        editor.putInt(PREFS_KEY_LAST_VERSION, currentVersionCode);
+        editor.apply();
 
         if (currentVersionCode > lastVersionCode)
             log.info("detected app upgrade: " + lastVersionCode + " -> " + currentVersionCode);
