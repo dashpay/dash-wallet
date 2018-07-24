@@ -68,6 +68,9 @@
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">You must enter your PIN to finish the upgrade process.</string>
 	<string name="pin_code_required_dialog_message">This app now requires a PIN to spend and view the balance and transactions.</string>
     <string name="backup_wallet_seed_private_key_written_down_box">I have written down the recovery phrase</string>
-
+	
+	<string name="change_exchange_currency_code_message">Your local currency is %1$s, but in this app your default currency is set to %2$s. Would you like to change it to %1$s or leave it as %2$s?</string>
+	<string name="change_to">Change to %s</string>
+	<string name="leave_as">Leave as %s</string>
 
 </resources>
