@@ -45,6 +45,7 @@ import com.google.common.base.Stopwatch;
 import com.squareup.leakcanary.LeakCanary;
 import com.squareup.leakcanary.RefWatcher;
 
+import de.schildbach.wallet.data.ExchangeRate;
 import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
@@ -104,6 +105,8 @@ public class WalletApplication extends Application implements Application.Activi
     private static final Logger log = LoggerFactory.getLogger(WalletApplication.class);
 
     private RefWatcher refWatcher;
+
+    private ExchangeRate exchangeRate;
 
     public static RefWatcher getRefWatcher(Context context) {
         WalletApplication application = (WalletApplication) context.getApplicationContext();
@@ -645,6 +648,14 @@ public void updateDashMode()
         clearApplicationData();
         Process.killProcess(Process.myPid());
         System.exit(1);
+    }
+
+    public ExchangeRate getExchangeRate() {
+        return exchangeRate;
+    }
+
+    public void setExchangeRate(ExchangeRate exchangeRate) {
+        this.exchangeRate = exchangeRate;
     }
 
     public static WalletApplication getInstance() {
