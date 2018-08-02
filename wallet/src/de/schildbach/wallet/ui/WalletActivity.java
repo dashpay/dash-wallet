@@ -1136,7 +1136,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     /**
      * Get ISO 3166-1 alpha-2 country code for this device (or null if not available)
-     * If available, call {@link #showFiatCurrencyChangeDetectedDialog(String)} passing the country code.
+     * If available, call {@link #showFiatCurrencyChangeDetectedDialog(String, String)}
+     * passing the country code.
      */
     private void detectUserCountry() {
         if (config.getExchangeCurrencyCodeDetected()) {
