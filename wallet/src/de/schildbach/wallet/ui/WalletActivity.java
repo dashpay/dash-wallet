@@ -1079,6 +1079,16 @@ public final class WalletActivity extends AbstractBindServiceActivity
         viewDrawer.closeDrawer(GravityCompat.START);
         return true;
     }
+
+    @Override
+    public void onBackPressed() {
+        if (viewDrawer.isDrawerOpen(GravityCompat.START)) {
+            viewDrawer.closeDrawer(GravityCompat.START);
+        } else {
+            super.onBackPressed();
+        }
+    }
+
     //Dash Specific
     private void handleDisconnect() {
         getWalletApplication().stopBlockchainService();
