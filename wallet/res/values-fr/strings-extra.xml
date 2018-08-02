@@ -14,15 +14,15 @@
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
 	<string name="export_keys_dialog_title_to_seed">Voir la phase de récupération</string>
-	<string name="import_keys_dialog_title_from_seed">Restaurer de la phrase de récupération</string>
+	<string name="import_keys_dialog_title_from_seed">Restaurer avec la phrase de récupération</string>
 	<string name="backup_to_seed_wallet_dialog_message">Ceci est votre phrase de récupération. S\'il vous plaît écrivez-le.</string>
 	<string name="backup_wallet_to_seed_dialog_warning">Ne laissez PERSONNE voir votre phrase de récupération. Quelqu\'un qui la connaîtrait pourrait dépenser vos dashs.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Votre portefeuille est protégé par un code PIN de dépenses. Entrez votre code PIN et appuyez sur Afficher pour afficher votre phrase de récupération.</string>
-	<string name="import_keys_from_seed_dialog_message">Entrez votre phrase de récupération ici.</string>
+    <string name="import_keys_from_seed_dialog_message">Entrez votre phrase de récupération ici.</string>
 	<string name="import_export_keys_dialog_password_phrase">La phrase de récupération va ici.</string>
 	<string name="preferences_report_issue_summary">Collectez informations de votre problème et email aux développeurs.</string>
 	<string name="navigation_configuration">Configuration</string>
-	<string name="button_copy_address">Copiez addrese</string>
+    <string name="button_copy_address">Copiez addrese</string>
 	<string name="request_coins_clipboard_address_msg">Adresse Dash copiée dans le presse-papiers</string>
 	<string name="backup_wallet_to_seed_show_recovery_phrase">Afficher </string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%s est un mot invalide.</string>
@@ -67,6 +67,7 @@
 	<string name="encrypt_new_key_chain_dialog_message">Votre portefeuille sera mis à jour pour permettre l\'import et l\'export avec davantage d\'applications.</string>
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Vous devez saisir votre code PIN pour terminer la mise à jour.</string>
 	<string name="pin_code_required_dialog_message">Cette application demande un code PIN pour dépenser les fonds et pour afficher le solde et les transactions.</string>
+    <string name="backup_wallet_seed_private_key_written_down_box">J\'ai bien noté quelque part la phrase de récupération</string>
 
 
 </resources>

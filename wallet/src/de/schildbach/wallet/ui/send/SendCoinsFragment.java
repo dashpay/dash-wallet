@@ -333,12 +333,14 @@ public final class SendCoinsFragment extends Fragment {
 
                     final TransactionConfidence confidence = sentTransaction.getConfidence();
                     final ConfidenceType confidenceType = confidence.getConfidenceType();
+                    final TransactionConfidence.IXType ixType = confidence.getIXType();
                     final int numBroadcastPeers = confidence.numBroadcastPeers();
 
                     if (state == State.SENDING) {
                         if (confidenceType == ConfidenceType.DEAD) {
                             setState(State.FAILED);
-                        } else if (numBroadcastPeers > 1 || confidenceType == ConfidenceType.BUILDING) {
+                        } else if (numBroadcastPeers >= 1 || confidenceType == ConfidenceType.BUILDING ||
+                                ixType == TransactionConfidence.IXType.IX_LOCKED) {
                             setState(State.SENT);
 
                             // Auto-close the dialog after a short delay
@@ -353,7 +355,8 @@ public final class SendCoinsFragment extends Fragment {
                         }
                     }
 
-                    if (reason == ChangeReason.SEEN_PEERS && confidenceType == ConfidenceType.PENDING) {
+                    if (reason == ChangeReason.SEEN_PEERS && confidenceType == ConfidenceType.PENDING ||
+                            reason == ChangeReason.IX_TYPE && ixType == TransactionConfidence.IXType.IX_LOCKED) {
                         // play sound effect
                         final int soundResId = getResources().getIdentifier("send_coins_broadcast_" + numBroadcastPeers,
                                 "raw", activity.getPackageName());

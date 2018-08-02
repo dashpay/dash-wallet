@@ -18,11 +18,11 @@
 	<string name="backup_to_seed_wallet_dialog_message">這是你的恢復詞組。 請寫下來。</string>
 	<string name="backup_wallet_to_seed_dialog_warning">不要讓任何人看到你的恢復詞組，否則他們可以花你達世幣。</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">您的錢包受個人密碼保護。輸入您的PIN碼並按 顯示 查看您的恢復詞組。</string>
-	<string name="import_keys_from_seed_dialog_message">在這裡輸入你的恢復詞組。</string>
+    <string name="import_keys_from_seed_dialog_message">在這裡輸入你的恢復詞組。</string>
 	<string name="import_export_keys_dialog_password_phrase">恢復詞組在這裡。</string>
 	<string name="preferences_report_issue_summary">收集有關您問題的信息，並將您的報告以電子郵件發方式發送給開發人員。</string>
 	<string name="navigation_configuration">配置</string>
-	<string name="button_copy_address">複製位址</string>
+    <string name="button_copy_address">複製位址</string>
 	<string name="request_coins_clipboard_address_msg">達世幣位址複製到剪貼板</string>
 	<string name="backup_wallet_to_seed_show_recovery_phrase">顯示</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%s是一個無效的詞語。</string>
@@ -64,6 +64,7 @@
 	<string name="encrypt_new_key_chain_dialog_message">您的錢包將升級為支援從更多的應用程式導入和導出功能。</string>
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">您必須輸入PIN碼才能完成升級過程。</string>
 	<string name="pin_code_required_dialog_message">這個程序現在需要一個PIN碼來發送交易和查看餘額。</string>
+    <string name="backup_wallet_seed_private_key_written_down_box">我已經記下了恢復密語</string>
 
 
 </resources>

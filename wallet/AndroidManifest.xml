@@ -3,8 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="de.schildbach.wallet_test"
     android:installLocation="internalOnly"
-    android:versionCode="51810"
-    android:versionName="5.18.1" >
+    android:versionCode="51822"
+    android:versionName="5.18.2" >
 
     <uses-sdk
         android:minSdkVersion="16"
@@ -210,10 +210,14 @@
             android:authorities="${applicationId}.exchange_rates"
             android:exported="false" />
         <provider
-            android:name="de.schildbach.wallet.util.FileAttachmentProvider"
+            android:name="android.support.v4.content.FileProvider"
             android:authorities="${applicationId}.file_attachment"
             android:exported="false"
-            android:grantUriPermissions="true" />
+            android:grantUriPermissions="true" >
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_provider" />
+        </provider>
 
         <receiver
             android:name="de.schildbach.wallet.WalletBalanceWidgetProvider"
