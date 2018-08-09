@@ -662,6 +662,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                     peerGroup.broadcastTransaction(tx, minimum);
                 } else {
                     log.info("peergroup not available, not broadcasting transaction " + tx.getHashAsString());
+                    tx.getConfidence().setPeerInfo(0, 1);
                 }
             }
         } else {
