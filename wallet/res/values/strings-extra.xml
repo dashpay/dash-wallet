@@ -3,10 +3,10 @@
 
 	<string name="send_coins_fragment_instantx_enable">Use InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">This InstantSend payment has not been transmitted yet.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">This InstantSend payment is awaiting verification by the Dash Network.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">This InstantSend payment is awaiting verification.</string>
 	<string name="transaction_row_message_own_instantx_locked">Sent InstantSend transaction (locked)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">This InstantSend payment is awaiting verification by the Dash Network.</string>
-	<string name="transaction_row_message_received_instantx_locked">This InstantSend payment has been verified by the Dash Network.</string>
+	<string name="transaction_row_message_received_instantx_lock_request">This InstantSend payment is awaiting verification.</string>
+	<string name="transaction_row_message_received_instantx_locked">InstantSend verified</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">Unconfirmed InstantSend</string>
 	<string name="transaction_row_message_received_instantx_locked2">Locked InstantSend</string>
 	<string name="transaction_row_message_sent_to_single_peer">This payment has been sent.</string>
