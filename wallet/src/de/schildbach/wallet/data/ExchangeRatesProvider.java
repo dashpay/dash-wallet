@@ -209,10 +209,7 @@ public class ExchangeRatesProvider extends ContentProvider {
                 cursor.getLong(cursor.getColumnIndexOrThrow(ExchangeRatesProvider.KEY_RATE_FIAT)));
         final String source = cursor.getString(cursor.getColumnIndexOrThrow(ExchangeRatesProvider.KEY_SOURCE));
 
-        ExchangeRate exchangeRate = new ExchangeRate(new org.bitcoinj.utils.ExchangeRate(rateCoin,
-                rateFiat), source);
-        WalletApplication.getInstance().setExchangeRate(exchangeRate);
-        return exchangeRate;
+        return new ExchangeRate(new org.bitcoinj.utils.ExchangeRate(rateCoin, rateFiat), source);
     }
 
     @Override

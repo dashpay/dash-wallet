@@ -134,6 +134,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
     private static final int MAX_HISTORY_SIZE = Math.max(IDLE_TRANSACTION_TIMEOUT_MIN, IDLE_BLOCK_TIMEOUT_MIN);
     private static final long APPWIDGET_THROTTLE_MS = DateUtils.SECOND_IN_MILLIS;
     private static final long BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS = DateUtils.SECOND_IN_MILLIS;
+    private static final long TX_EXCHANGE_RATE_TIME_THRESHOLD_MS = TimeUnit.MINUTES.toMillis(30);
 
     private static final Logger log = LoggerFactory.getLogger(BlockchainServiceImpl.class);
 
@@ -148,16 +149,21 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         public void onCoinsReceived(final Wallet wallet, final Transaction tx, final Coin prevBalance,
                 final Coin newBalance) {
 
-            WalletApplication application = WalletApplication.getInstance();
-            final ExchangeRate exchangeRate = application.getExchangeRate().rate;
-            if (tx.getExchangeRate() == null && exchangeRate != null) {
+            final int bestChainHeight = blockChain.getBestChainHeight();
+            final boolean replaying = bestChainHeight < config.getBestChainHeightEver();
+
+            long now = new Date().getTime();
+            long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
+            boolean insideTxExchangeRateTimeThreshold = (now - blockChainHeadTime) < TX_EXCHANGE_RATE_TIME_THRESHOLD_MS;
+
+            final ExchangeRate exchangeRate = config.getCachedExchangeRate().rate;
+            if (tx.getExchangeRate() == null && exchangeRate != null && !replaying && insideTxExchangeRateTimeThreshold) {
                 tx.setExchangeRate(exchangeRate);
                 application.saveWallet();
             }
 
             transactionsReceived.incrementAndGet();
 
-            final int bestChainHeight = blockChain.getBestChainHeight();
 
             final Address address = WalletUtils.getWalletAddressOfReceived(tx, wallet);
             final Coin amount = tx.getValue(wallet);
@@ -167,7 +173,6 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                 @Override
                 public void run() {
                     final boolean isReceived = amount.signum() > 0;
-                    final boolean replaying = bestChainHeight < config.getBestChainHeightEver();
                     final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && replaying;
 
                     if (isReceived && !isReplayedTx)
