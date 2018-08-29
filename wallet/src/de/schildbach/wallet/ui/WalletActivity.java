@@ -26,8 +26,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Currency;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
@@ -43,6 +45,7 @@ import com.squareup.okhttp.HttpUrl;
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
@@ -86,6 +89,7 @@ import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.widget.Toolbar;
+import android.telephony.TelephonyManager;
 import android.text.format.DateUtils;
 import android.view.ContextMenu;
 import android.view.Menu;
@@ -234,6 +238,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }, 1000);
 
         checkLowStorageAlert();
+        detectUserCountry();
     }
 
     @Override
@@ -1079,6 +1084,16 @@ public final class WalletActivity extends AbstractBindServiceActivity
         viewDrawer.closeDrawer(GravityCompat.START);
         return true;
     }
+
+    @Override
+    public void onBackPressed() {
+        if (viewDrawer.isDrawerOpen(GravityCompat.START)) {
+            viewDrawer.closeDrawer(GravityCompat.START);
+        } else {
+            super.onBackPressed();
+        }
+    }
+
     //Dash Specific
     private void handleDisconnect() {
         getWalletApplication().stopBlockchainService();
@@ -1128,4 +1143,81 @@ public final class WalletActivity extends AbstractBindServiceActivity
     public void onNewKeyChainEncrypted() {
         BackupWalletToSeedDialogFragment.show(getFragmentManager(), true);
     }
+
+    /**
+     * Get ISO 3166-1 alpha-2 country code for this device (or null if not available)
+     * If available, call {@link #showFiatCurrencyChangeDetectedDialog(String, String)}
+     * passing the country code.
+     */
+    private void detectUserCountry() {
+        if (config.getExchangeCurrencyCodeDetected()) {
+            return;
+        }
+        try {
+            final TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+            final String simCountry = tm.getSimCountryIso();
+            if (simCountry != null && simCountry.length() == 2) { // SIM country code is available
+                updateCurrencyExchange(simCountry.toUpperCase());
+            } else if (tm.getPhoneType() != TelephonyManager.PHONE_TYPE_CDMA) { // device is not 3G (would be unreliable)
+                String networkCountry = tm.getNetworkCountryIso();
+                if (networkCountry != null && networkCountry.length() == 2) { // network country code is available
+                    updateCurrencyExchange(networkCountry.toUpperCase());
+                }
+            }
+        } catch (Exception e) {
+            //fail safe
+        }
+    }
+
+    /**
+     * Check whether app was ever updated or if it is an installation that was never updated.
+     * Show dialog to update if it's being updated or change it automatically.
+     * @param countryCode countryCode ISO 3166-1 alpha-2 country code.
+     */
+    private void updateCurrencyExchange(String countryCode) {
+        Locale l = new Locale("", countryCode);
+        Currency currency = Currency.getInstance(l);
+        String newCurrencyCode = currency.getCurrencyCode();
+        String currentCurrencyCode = config.getExchangeCurrencyCode();
+        if (currentCurrencyCode == null) {
+            currentCurrencyCode = Constants.DEFAULT_EXCHANGE_CURRENCY;
+        }
+
+        if (!currentCurrencyCode.equalsIgnoreCase(newCurrencyCode)) {
+            if (config.wasUpgraded()) {
+                showFiatCurrencyChangeDetectedDialog(currentCurrencyCode, newCurrencyCode);
+            } else {
+                config.setExchangeCurrencyCodeDetected(true);
+                config.setExchangeCurrencyCode(newCurrencyCode);
+            }
+        }
+    }
+
+    /**
+     * Show a Dialog and if user confirms it, set the default fiat currency exchange rate using
+     * the country code to generate a Locale and get the currency code from it.
+     * @param newCurrencyCode currency code.
+     */
+    private void showFiatCurrencyChangeDetectedDialog(final String currentCurrencyCode,
+                                                      final String newCurrencyCode) {
+        AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(this);
+        dialogBuilder.setMessage(getString(R.string.change_exchange_currency_code_message,
+                newCurrencyCode, currentCurrencyCode));
+        dialogBuilder.setPositiveButton(getString(R.string.change_to, newCurrencyCode), new OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                config.setExchangeCurrencyCodeDetected(true);
+                config.setExchangeCurrencyCode(newCurrencyCode);
+                WalletBalanceWidgetProvider.updateWidgets(WalletActivity.this, wallet);
+            }
+        });
+        dialogBuilder.setNegativeButton(getString(R.string.leave_as, currentCurrencyCode), new OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                config.setExchangeCurrencyCodeDetected(true);
+            }
+        });
+        dialogBuilder.show();
+    }
+
 }
