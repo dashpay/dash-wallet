@@ -6,11 +6,6 @@
     android:versionCode="51822"
     android:versionName="5.18.2" >
 
-    <uses-sdk
-        android:minSdkVersion="16"
-        android:targetSdkVersion="25"
-        tools:ignore="OldTargetApi" />
-
     <!-- normal permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -19,6 +14,7 @@
     <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <!-- dangerous permissions -->
     <uses-permission android:name="android.permission.CAMERA" /> <!-- group: CAMERA -->
