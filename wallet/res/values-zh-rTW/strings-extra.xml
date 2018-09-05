@@ -3,13 +3,13 @@
 
 	<string name="send_coins_fragment_instantx_enable">使用即時到帳功能</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">這個即時到帳交易尚未發送。</string>
-	<string name="transaction_row_message_own_instantx_lock_request">這個即時到帳交易正在等待達世幣網絡確認。</string>
+	<string name="transaction_row_message_own_instantx_lock_request">這個即時到帳交易正在等待確認。</string>
 	<string name="transaction_row_message_own_instantx_locked">發送即時到帳交易(已鎖定)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">這個即時到帳交易正在等待達世幣網絡確認。</string>
-	<string name="transaction_row_message_received_instantx_locked">這個即時到帳交易已經被達世幣網絡確認。</string>
+	<string name="transaction_row_message_received_instantx_lock_request">這個即時到帳交易正在等待確認。</string>
+	<string name="transaction_row_message_received_instantx_locked">即時到帳交易已被確認</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">未確認的即時到帳交易。</string>
 	<string name="transaction_row_message_received_instantx_locked2">被鎖定的即時到帳交易。</string>
-
+	<string name="transaction_row_message_sent_to_single_peer">此款項經已完成發送。</string>
 	<string name="wallet_options_disconnect">離線</string>
 
 	<string name="network_monitor_masternodes_title">主節點</string>
@@ -65,6 +65,9 @@
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">您必須輸入PIN碼才能完成升級過程。</string>
 	<string name="pin_code_required_dialog_message">這個程序現在需要一個PIN碼來發送交易和查看餘額。</string>
     <string name="backup_wallet_seed_private_key_written_down_box">我已經記下了恢復密語</string>
-
+	
+	<string name="change_exchange_currency_code_message">您的本地貨幣是 %1$s，但在此應用中您的貨幣設置為%2$s。您是否要將其更改為 %1$s 還是保留使用 %2$s?</string>
+	<string name="change_to">變更為 %s</string>
+	<string name="leave_as">保留使用 %s</string>
 
 </resources>

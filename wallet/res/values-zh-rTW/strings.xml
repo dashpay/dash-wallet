@@ -163,7 +163,7 @@
     <string name="transaction_row_message_own_unbroadcasted">付款尚未傳輸。</string>
     <string name="transaction_row_message_received_direct">該付款已經被直接接收，這類付款存在可能無法花費的風險。</string>
     <string name="transaction_row_message_received_unconfirmed_delayed">這筆款項的確認被延遲了，可能是由於達世幣網絡的超載所致。</string>
-    <string name="transaction_row_message_received_unconfirmed_unlocked">付款應該在幾分鐘之後才可以使用。</string>
+    <string name="transaction_row_message_received_unconfirmed_unlocked">這筆款項現在可以在未被確認的情況下使用。</string>
     <string name="transaction_row_message_received_in_conflict">這筆款項有被發送者逆轉的風險！ 如果可以，請等待確認。</string>
     <string name="transaction_row_message_received_dead">該付款已被付款人撤銷。</string>
     <string name="transaction_row_message_received_dust">極小額付款可能無法有效支付</string>

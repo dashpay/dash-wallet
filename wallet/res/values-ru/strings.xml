@@ -163,7 +163,7 @@
     <string name="transaction_row_message_own_unbroadcasted">Этот платёж ещё не был передан в сеть.</string>
     <string name="transaction_row_message_received_direct">Этот платёж был проведен напрямую. Существует риск того, что вы никогда не сможете потратить полученные средства.</string>
     <string name="transaction_row_message_received_unconfirmed_delayed">Подтверждение данного платежа задерживается, вероятнее всего, из-за высокой нагрузки сети Dash.</string>
-    <string name="transaction_row_message_received_unconfirmed_unlocked">Этот платёж должен стать доступным через несколько минут.</string>
+    <string name="transaction_row_message_received_unconfirmed_unlocked">Этот платеж можно потратить, не дожидаясь подтверждения.</string>
     <string name="transaction_row_message_received_in_conflict">Этот платёж несёт повышенный риск быть отменённым его отправителем! Рекомендуется дождаться подтверждения.</string>
     <string name="transaction_row_message_received_dead">Этот платёж был отменён отправителем.</string>
     <string name="transaction_row_message_received_dust">Возможно, вы никогда не сможете потратить столь малую сумму - она меньше размера необходимой комиссии.</string>

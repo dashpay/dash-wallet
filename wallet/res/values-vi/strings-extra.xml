@@ -3,13 +3,13 @@
 
 	<string name="send_coins_fragment_instantx_enable">Sử dụng InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Giao dịch InstantSend này chưa được bắt đầu thực hiện.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Giao dịch InstantSend này đang đợi kiểm tra bởi mạng lưới của Dash.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">Giao dịch InstantSend này đang đợi xác thực.</string>
 	<string name="transaction_row_message_own_instantx_locked">Giao dịch InstantSend đã được gửi (được khoá)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Giao dịch InstantSend này đang đợi kiểm tra bởi mạng lưới của Dash.</string>
-	<string name="transaction_row_message_received_instantx_locked">Giao dịch InstantSend này đã được kiểm tra bởi mạng lưới của Dash.</string>
+	<string name="transaction_row_message_received_instantx_lock_request">Giao dịch InstantSend này đang đợi xác thực.</string>
+	<string name="transaction_row_message_received_instantx_locked">InstantSend đã được xác thực</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">Giao dịch InstantSend chưa được xác thực</string>
 	<string name="transaction_row_message_received_instantx_locked2">InstantSend đã được khoá</string>
-
+	<string name="transaction_row_message_sent_to_single_peer">Giao dịch đã được gửi.</string>
 	<string name="wallet_options_disconnect">Cắt kết nối</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
@@ -64,6 +64,10 @@
 	<string name="encrypt_new_key_chain_dialog_message">Ví của bạn sẽ được nâng cấp để hỗ trợ việc đưa dữ liệu vào hoặc xuất dữ liệu ra cho các app khác.</string>
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Bạn phải nhập mã PIN của bạn để hoàn tất việc nâng cấp.</string>
 	<string name="pin_code_required_dialog_message">App này hiện yêu cầu một mã PIN để chi tiêu và xem số dư cũng như các giao dịch.</string>
-
+    <string name="backup_wallet_seed_private_key_written_down_box">Tôi đã viết xuống cụm từ phục hồi</string>
+	
+	<string name="change_exchange_currency_code_message">Tiền địa phương của bạn là%1$s, nhưng trong ứng dụng này thì loại tiền ngầm định của bạn được đặt là %2$s. Bạn có muốn đổi nó về %1$s hoặc để nó là %2$s?</string>
+	<string name="change_to">Đổi về %s</string>
+	<string name="leave_as">Để là %s</string>
 
 </resources>

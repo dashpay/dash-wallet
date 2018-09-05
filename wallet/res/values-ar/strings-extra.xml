@@ -3,13 +3,13 @@
 
 	<string name="send_coins_fragment_instantx_enable">إستخدم الإرسال الفوري</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">لم تتم معاملة هذا الإرسال الفوري بعد .</string>
-	<string name="transaction_row_message_own_instantx_lock_request">هذا الإرسال الفوري ينتظر التحقق من قبل شبكة داش.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">هذا الدفع الفوري هو في انتظار التحقق</string>
 	<string name="transaction_row_message_own_instantx_locked">عملية إرسال الفوري (مغلق)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">هذا الإرسال الفوري ينتظر التحقق من قبل شبكة داش.</string>
-	<string name="transaction_row_message_received_instantx_locked">تم التحقق من عملية الإرسال الفوري من قبل شبكة داش.</string>
+	<string name="transaction_row_message_received_instantx_lock_request">هذا الدفع الفوري هو في انتظار التحقق</string>
+	<string name="transaction_row_message_received_instantx_locked">التحقق من الإرسال الفوري </string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">الإرسال الفوري غير مؤكد</string>
 	<string name="transaction_row_message_received_instantx_locked2">الإرسال الفوري مغلق</string>
-
+	<string name="transaction_row_message_sent_to_single_peer">لقد تم إرسال هذه الدفعة.</string>
 	<string name="wallet_options_disconnect">إنقطع الاتصال</string>
 
 	<string name="network_monitor_masternodes_title">ماسترنود</string>
@@ -79,6 +79,10 @@
 	<string name="encrypt_new_key_chain_dialog_message">ستتم تحديث محفظتك لدعم الاستيراد والتصدير إلى المزيد من التطبيقات.</string>
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">يجب عليك إدخال الرقم السري الخاص بك لإنهاء عملية التحديث.</string>
 	<string name="pin_code_required_dialog_message">يتطلب هذا التطبيق الآن الرقم السري لإنفاق وعرض الرصيد والمعاملات.</string>
-
+    <string name="backup_wallet_seed_private_key_written_down_box">لقد كتبت عبارة الاسترداد في الأسفل </string>
+	
+	<string name="change_exchange_currency_code_message">عملتك المحلية هي %1$s ولكن في هذا التطبيق يتم تعيين العملة الافتراضية الخاصة بك%2$s . هل ترغب في تغييرها إلى %1$sأو تركها كما هي %2$s؟</string>
+	<string name="change_to">غبرها إلى %s</string>
+	<string name="leave_as">اتركها %s</string>
 
 </resources>

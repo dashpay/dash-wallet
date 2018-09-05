@@ -164,7 +164,7 @@
     <string name="transaction_row_message_own_unbroadcasted">Diese Zahlung ist noch nicht übertragen.</string>
     <string name="transaction_row_message_received_direct">Diese Zahlung wurde direkt empfangen. Es besteht das Risiko, daß sie niemals verfügbar wird.</string>
     <string name="transaction_row_message_received_unconfirmed_delayed">Die Durchführung dieser Zahlung verzögert sich wegen einer Überlastung des Dash-Netzwerks.</string>
-    <string name="transaction_row_message_received_unconfirmed_unlocked">Diese Zahlung sollte in ein paar Minuten verfügbar werden.</string>
+    <string name="transaction_row_message_received_unconfirmed_unlocked">Dieses Guthaben kann nicht ausgegeben werden, bevor es nicht bestätigt wurde.</string>
     <string name="transaction_row_message_received_in_conflict">Diese Zahlung unterliegt einem erhöhten Risiko vom Sender aufgehoben zu werden! Falls möglich warte auf eine Bestätigung.</string>
     <string name="transaction_row_message_received_dead">Diese Zahlung wurde vom Sender rückgängig gemacht.</string>
     <string name="transaction_row_message_received_dust">Dieser kleine Betrag kann vermutlich nie wirtschaftlich ausgegeben werden.</string>

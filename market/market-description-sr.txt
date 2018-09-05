@@ -1,0 +1,36 @@
+Koristite na sopstvenu odgovornost! (Zahtevana verzija Androida - 4 ili viša)
+
+<b>Da vaš Dash bude uvek uz vas, u vašem džepu!</b>Plaćanje vršite tako što na brzinu skenirate QR kod. Kao trgovac, primićete uplate pouzdano i trenutno. Dash novčanik je prva Dash mobilna aplikacija, a takodje i najsigurnija!
+
+<b>KARAKTERISTIKE</b>
+
+• Registracija, web servis ili cloud nisu potrebni! Novčanik je decentralizovan i funkcioniše po peer to peer principu.
+• Prikaz Dash iznosa u DASH, mDASH i µDASH. 
+• Razmena u i iz nacionalne valute.
+• Slanje i primanje Dash-a preko NFC, QR kodova ili Dash URL-ova.
+• Adresar često korišćenih Dash adresa.
+• Možete platiti i kada ste offline, preko Bletooth-a.
+• Sistemska obaveštenja za primljene novčiće.
+• Prebacivanje i brisanje sa papirnih novčanika (npr. novčanika korišćenih za "hladno" skladištenje).
+• Widget za aplikaciju koji pokazuje količinu Dash-a.
+
+
+<b>DOPRINESITE PROJEKTU</b>
+
+Dash novčanik je <b>open source</b> i <b>besplatan softver</b>. Licenca: GPLv3
+https://www.gnu.org/licenses/gpl-3.0.en.html
+
+Naš source code možete naći na GitHub-u:
+https://github.com/HashEngineering/dash-wallet
+
+Svi prevodi su organizovani kroz Transifex:
+https://www.transifex.com/dash/dash-wallet/
+
+Više o Dash-u možete naći na
+https://www.dash.org/
+
+<b>PREPORUKE</b>
+
+• Preporučeni mobilni novčanik od strane https://www.dash.org
+
+<i>Koristite na sopstvenu odgovornost!</i>
