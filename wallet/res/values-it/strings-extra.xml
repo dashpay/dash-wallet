@@ -1,17 +1,76 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-
-	<string name="send_coins_fragment_instantx_enable">Usi InstantSend</string>
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">Questo InstantSend pagamento non è ancora stato trasmesso.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Questo InstantSend pagamento è in attesa di verificazione dal Dash Network.</string>
-	<string name="transaction_row_message_own_instantx_locked">Invia InstantSend transazione (bloccato)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Questo InstantSend pagamento è in attesa di verificazione dal Dash Network.</string>
-	<string name="transaction_row_message_received_instantx_locked">Questo InstantSend pagamento è stato verificato dal Dash Network.</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">Non confermato InstantSend</string>
-	<string name="transaction_row_message_received_instantx_locked2">Bloccato InstantSend</string>
-
-	<string name="wallet_options_disconnect">Disconnetti</string>
+	<string name="send_coins_fragment_instantx_enable">Usa InstantSend</string>
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">Questo pagamento InstantSend non è ancora stato trasmesso.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">Il pagamento InstantSend è in attesa di verifica.</string>
+	<string name="transaction_row_message_own_instantx_locked">Transazione InstantSend inviata (bloccata)</string>
+	<string name="transaction_row_message_received_instantx_lock_request">Il pagamento InstantSend è in attesa di verifica.</string>
+	<string name="transaction_row_message_received_instantx_locked">InstantSend verificato</string>
+	<string name="transaction_row_message_received_unconfirmed_instantx">InstantSend non confermato</string>
+	<string name="transaction_row_message_received_instantx_locked2">InstantSend bloccato</string>
+	<string name="transaction_row_message_sent_to_single_peer">Pagamento inviato.</string>
+	<string name="wallet_options_disconnect">Disconnesso</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
+	<string name="export_keys_dialog_title_to_seed">Visualizza la frase di recupero</string>
+	<string name="import_keys_dialog_title_from_seed">Ripristina con la frase di recupero</string>
+	<string name="backup_to_seed_wallet_dialog_message">Questa è la tua frase di recupero. Si prega di trascriverla.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">NON lasciare che qualcuno veda la tua frase di recupero o avranno la possibilità di spendere i tuoi Dash.</string>
+	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Il tuo portafoglio è protetto da un PIN. Digita il tuo PIN e clicca \"Mostra\" per visualizzare la tua frase di recupero.</string>
+    <string name="import_keys_from_seed_dialog_message">Digita qui la tua frase di recupero.</string>
+	<string name="import_export_keys_dialog_password_phrase">La frase di recupero va qui.</string>
+	<string name="preferences_report_issue_summary">Raccogli informazioni sul tuo problema e invia tramite email la tua segnalazione agli sviluppatori.</string>
+	<string name="navigation_configuration">Configurazione</string>
+    <string name="button_copy_address">Copia indirizzo</string>
+	<string name="request_coins_clipboard_address_msg">Indirizzo Dash copiato negli appunti</string>
+	<string name="backup_wallet_to_seed_show_recovery_phrase">Mostra</string>
+	<string name="restore_wallet_from_invalid_seed_warning_message">%s parola non valida.</string>
+
+	<string name="send_coins_options_fee_category_zero">Senza Costi</string>
+	<string name="send_coins_fragment_hint_fee_zero">Nessun costo verrà addebitato. Usa \"Senza Costi\" soltanto se non hai bisogno di un tempo di conferma rapido.</string>
+
+	<string name="wallet_uri_handler_public_key_request_dialog_msg">L\'applicazione %s vorrebbe ricevere la tua Master Public Key. Questa può essere utilizzata per tenere traccia del tuo portafoglio; non può essere utilizzata per spostare i tuoi Dash.</string>
+	<string name="wallet_uri_handler_address_request_dialog_msg">L\'applicazione %s richiede un idirizzo cosi\' che tu possa ricevere pagamenti. Vuoi autorizzarla?</string>
+
+	<string name="wallet_lock_unlock">Sblocca</string>
+	<string name="wallet_lock_unlock_wallet">Sblocca portafoglio</string>
+	<string name="wallet_lock_unlock_to_see_txs_title">Portafoglio bloccato.</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">Clicca l\'icona del lucchetto sopra per sbloccare il tuo portafoglio e vedere la cronologia delle transazioni.</string>
+	<string name="wallet_lock_unlock_dialog_title">Sblocca il tuo portafoglio </string>
+	<string name="wallet_lock_unlock_dialog_message">Il tuo portafoglio è protetto da un PIN. Digita il tuo PIN e clicca \"Sblocca\" per continuare.</string>
+	<string name="wallet_lock_reset_wallet_title">Resetta portafoglio</string>
+	<string name="wallet_lock_reset_wallet_message">Ne sei sicuro? Tutti i dati immagazzinati verranno cancellati e il tuo portafoglio sarà recuperabile soltanto tramite l\'utilizzo di un file  di backup o  \"recovery seed\".</string>
+
+	<string name="wallet_lock_wallet_disabled">Portafoglio disabilitato</string>
+	<string name="wallet_lock_try_again">Riprova ancora in %1$d %2$s</string>
+	<string name="wallet_lock_reset">Reset</string>
+	<string name="wallet_lock_wrong_pin">PIN errato! %s</string>
+
+	<plurals name="wallet_lock_attempts_remaining">
+		<item quantity="one">%dtentativi rimanenti</item>
+		<item quantity="other">%d tentativi rimanenti</item>
+	</plurals>
+
+	<plurals name="minute">
+		<item quantity="one">minuti</item>
+		<item quantity="other">minuti</item>
+	</plurals>
+	
+	<plurals name="hour">
+		<item quantity="one">ore</item>
+		<item quantity="other">ore</item>
+	</plurals>
+
+	<string name="encrypt_new_key_chain_upgrade_button">Aggiorna </string>
+	<string name="encrypt_new_key_chain_dialog_title">Aggiorna il tuo portafoglio</string>
+	<string name="encrypt_new_key_chain_dialog_message">Il tuo portafoglio verrà aggiornato per supportare l\'importazione e l\'esportazione verso più app.</string>
+	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Devi immettere il tuo PIN per terminare il processo di  aggiornamento</string>
+	<string name="pin_code_required_dialog_message">Questa applicazione ora richiede un PIN per spendere o visualizzare il bilancio e transazioni.</string>
+    <string name="backup_wallet_seed_private_key_written_down_box">Ho trascritto la frase di recupero</string>
+	
+	<string name="change_exchange_currency_code_message">La tua moneta locale è%1$s,ma la moneta locale della \"app\" è %2$s.Desideri cambiarla a%1$so lasciarla a%2$s?</string>
+	<string name="change_to">cambiare a %s</string>
+	<string name="leave_as">Lasciare come %s</string>
+
 </resources>

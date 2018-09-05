@@ -3,13 +3,13 @@
 
 	<string name="send_coins_fragment_instantx_enable">Utiliser InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Ce paiement InstantSend n\'a pas encore été transmis.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Ce paiement InstantSend est en cours de vérification par le réseau Dash.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">Ce paiement InstantSend est en attente de vérification.</string>
 	<string name="transaction_row_message_own_instantx_locked">Transaction InstantSend envoyée (verrouillée)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Ce paiement InstantSend est en cours de vérification par le réseau Dash.</string>
-	<string name="transaction_row_message_received_instantx_locked">Ce paiement InstantSend a été vérifié par le réseau Dash.</string>
+	<string name="transaction_row_message_received_instantx_lock_request">Ce paiement InstantSend est en attente de vérification.</string>
+	<string name="transaction_row_message_received_instantx_locked">InstantSend vérifié</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">InstantSend non confirmé</string>
 	<string name="transaction_row_message_received_instantx_locked2">InstantSend verrouillé</string>
-
+	<string name="transaction_row_message_sent_to_single_peer">Ce paiement a été envoyé.</string>
 	<string name="wallet_options_disconnect">Déconnecter</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
@@ -68,6 +68,9 @@
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Vous devez saisir votre code PIN pour terminer la mise à jour.</string>
 	<string name="pin_code_required_dialog_message">Cette application demande un code PIN pour dépenser les fonds et pour afficher le solde et les transactions.</string>
     <string name="backup_wallet_seed_private_key_written_down_box">J\'ai bien noté quelque part la phrase de récupération</string>
-
+	
+	<string name="change_exchange_currency_code_message">Votre monnaie locale est %1$s, mais dans cette application votre monnaie par défaut est réglée sur %2$s. Voulez-vous la changer en %1$s ou la garder en %2$s?</string>
+	<string name="change_to">Changer en %s</string>
+	<string name="leave_as">Garder en %s</string>
 
 </resources>

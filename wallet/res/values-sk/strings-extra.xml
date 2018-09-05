@@ -3,13 +3,13 @@
 
 	<string name="send_coins_fragment_instantx_enable">Použiť InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Táto InstantSend platba nebola ešte odoslaná.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Táto InstantSend platba čaká na overenie sieťou Dash.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">Táto InstantSend platba čaká na overenie.</string>
 	<string name="transaction_row_message_own_instantx_locked">Odoslaná InstantSend transakcia (uzamknutá)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Táto InstantSend platba čaká na overenie sieťou Dash.</string>
-	<string name="transaction_row_message_received_instantx_locked">Táto InstantSend platba bola overená sieťou Dash.</string>
+	<string name="transaction_row_message_received_instantx_lock_request">Táto InstantSend platba čaká na overenie.</string>
+	<string name="transaction_row_message_received_instantx_locked">InstantSend overené</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">Nepotvrdená InstantSend platba</string>
 	<string name="transaction_row_message_received_instantx_locked2">Uzamknutá InstantSend platba</string>
-
+	<string name="transaction_row_message_sent_to_single_peer">Táto platba bola odoslaná.</string>
 	<string name="wallet_options_disconnect">Odpojiť</string>
 
 	<string name="network_monitor_masternodes_title">Masternódy</string>
@@ -35,7 +35,7 @@
 
 	<string name="wallet_lock_unlock">Odomknúť</string>
 	<string name="wallet_lock_unlock_wallet">Odomknúť peňaženku</string>
-	<string name="wallet_lock_unlock_to_see_txs_title">Peňaženka odomknutá.</string>
+	<string name="wallet_lock_unlock_to_see_txs_title">Peňaženka je zamknutá.</string>
 	<string name="wallet_lock_unlock_to_see_txs_txt">Ak chcete odomknúť Vašu peňaženku a zobraziť históriu transakcií, klepnite na ikonu zámku.</string>
 	<string name="wallet_lock_unlock_dialog_title">Odomknúť Vašu peňaženku</string>
 	<string name="wallet_lock_unlock_dialog_message">Vaša peňaženka je chránená PIN-om pre míňanie. Pre pokračovanie zadajte Váš PIN a stlačte Odomknúť.</string>
@@ -74,6 +74,9 @@
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Pre dokončenie aktualizácie musíte zadať Vás PIN.</string>
 	<string name="pin_code_required_dialog_message">Táto aplikácia teraz vyžaduje PIN pre míňanie a zobrazenie zostatku a transakcií.</string>
     <string name="backup_wallet_seed_private_key_written_down_box">Zapísal som si frázu pre obnovenie</string>
-
+	
+	<string name="change_exchange_currency_code_message">Vaša miestna mena je %1$s, ale v tejto aplikácii je Vaša mena nastavená na %2$s. Chcete you zmeniť na %1$s alebo ponechať ako %2$s?</string>
+	<string name="change_to">Zmeniť na %s</string>
+	<string name="leave_as">Ponechať %s</string>
 
 </resources>

@@ -3,13 +3,13 @@
 
 	<string name="send_coins_fragment_instantx_enable">Usar InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Este pagamento InstantSend ainda não foi transmitido.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Este pagamento InstantSend está aguardando por verificação da rede Dash.</string>
-	<string name="transaction_row_message_own_instantx_locked">Enviar transação instantânea (bloqueado)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Este pagamento InstantSend está aguardando por verificação da rede Dash.</string>
-	<string name="transaction_row_message_received_instantx_locked">Este pagamento InstantSend foi verificado pela rede Dash</string>
+	<string name="transaction_row_message_own_instantx_lock_request">Este pagamento InstantSend está aguardando verificação.</string>
+	<string name="transaction_row_message_own_instantx_locked">Transação InstantSend enviada (confirmada)</string>
+	<string name="transaction_row_message_received_instantx_lock_request">Este pagamento InstantSend está aguardando verificação.</string>
+	<string name="transaction_row_message_received_instantx_locked">InstantSend verificado</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">InstantSend não confirmado</string>
-	<string name="transaction_row_message_received_instantx_locked2">InstantSend bloqueado</string>
-
+	<string name="transaction_row_message_received_instantx_locked2">InstantSend confirmado</string>
+	<string name="transaction_row_message_sent_to_single_peer">Esse pagamento foi enviado</string>
 	<string name="wallet_options_disconnect">Desconectado</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>

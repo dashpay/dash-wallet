@@ -163,7 +163,7 @@
     <string name="transaction_row_message_own_unbroadcasted">此项支付尚未传输。</string>
     <string name="transaction_row_message_received_direct">此项付款已经被直接接收。这存在所获取的达世币可能永远无法使用的风险。</string>
     <string name="transaction_row_message_received_unconfirmed_delayed">本交易的网络确认延误，可能是因为达世币网络拥堵。</string>
-    <string name="transaction_row_message_received_unconfirmed_unlocked">此项付款所获得的达世币将在几分钟之后可以使用。</string>
+    <string name="transaction_row_message_received_unconfirmed_unlocked">此笔款项不需要确认即可使用。</string>
     <string name="transaction_row_message_received_in_conflict">本交易很可能被发送者撤销！如果可以，请等待网络确认。</string>
     <string name="transaction_row_message_received_dead">此项付款已被付款人撤销。</string>
     <string name="transaction_row_message_received_dust">如此小的金额，在经济意义上可能永远也无法花费。</string>

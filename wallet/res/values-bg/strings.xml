@@ -163,7 +163,7 @@
     <string name="transaction_row_message_own_unbroadcasted">Това плащане все още не е предадено.</string>
     <string name="transaction_row_message_received_direct">Това плащане беше получено директно. Има риск да не може да бъде извършено.</string>
     <string name="transaction_row_message_received_unconfirmed_delayed">Потвърждението на това плащане е забавено, вероятно се дължи на претоварване на Dash мрежата.</string>
-    <string name="transaction_row_message_received_unconfirmed_unlocked">Това плащане ще бъде извършено в следващите минути.</string>
+    <string name="transaction_row_message_received_unconfirmed_unlocked">Това плащане може да бъде похарчено сега, без да бъде потвърдено.</string>
     <string name="transaction_row_message_received_in_conflict">Това плащане има повишен риск да бъде върнато от изпращача! Ако можете, изчакайте потвърждение.</string>
     <string name="transaction_row_message_received_dead">Плащането беше отменено от подателя.</string>
     <string name="transaction_row_message_received_dust">Това малко количество никога няма да бъде извършено в икономическо отношение.</string>

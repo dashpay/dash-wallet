@@ -163,7 +163,7 @@
     <string name="transaction_row_message_own_unbroadcasted">การชำระเงินนี้ยังไม่ได้รับการส่ง</string>
     <string name="transaction_row_message_received_direct">การชำระเงินนี้ได้รับโดยตรง มีความเสี่ยงที่อาจไม่สามารถจ่ายได้</string>
     <string name="transaction_row_message_received_unconfirmed_delayed">การยืนยันของการชำระเงินนี้มีความล่าช้า  อาจเป็นเพราะการโอเวอร์โหลดของเครือข่าย Dash </string>
-    <string name="transaction_row_message_received_unconfirmed_unlocked">การชำระเงินนี้จะสามารถใช้งานได้ภายในเวลาไม่กี่นาที</string>
+    <string name="transaction_row_message_received_unconfirmed_unlocked">การชำระเงินนี้สามารถส่งได้ตอนนี้โดยไม่ได้รับการยืนยัน</string>
     <string name="transaction_row_message_received_in_conflict">การชำระเงินนี้มีความเสี่ยงที่จะถูกส่งกลับโดยผู้ส่ง! โปรดรอการยืนยัน</string>
     <string name="transaction_row_message_received_dead">การชำระเงินนี้ได้ถูกส่งกลับไปยังผู้ส่งแล้ว</string>
     <string name="transaction_row_message_received_dust">จำนวนเงินน้อยนี้อาจจะไม่เคยถูกใช้ในทางเศรษฐกิจ</string>

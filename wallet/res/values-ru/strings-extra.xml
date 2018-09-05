@@ -3,13 +3,13 @@
 
 	<string name="send_coins_fragment_instantx_enable">Использовать InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Этот платёж InstantSend пока ещё не выполнен.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Этот платёж InstantSend ожидает проверки сетью Dash.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">Этот платёж InstantSend ожидает проверки.</string>
 	<string name="transaction_row_message_own_instantx_locked">Транзакция InstantSend отправлена (подтверждена).</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Этот платёж InstantSend ожидает проверки сетью Dash.</string>
-	<string name="transaction_row_message_received_instantx_locked">Этот платёж InstantSend проверен сетью Dash.</string>
+	<string name="transaction_row_message_received_instantx_lock_request">Этот платёж InstantSend ожидает проверки.</string>
+	<string name="transaction_row_message_received_instantx_locked">Платёж InstantSend проверен</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">Неподтверждённый InstantSend</string>
 	<string name="transaction_row_message_received_instantx_locked2">Подтверждённый InstantSend</string>
-
+	<string name="transaction_row_message_sent_to_single_peer">Этот платёж был передан в сеть.</string>
 	<string name="wallet_options_disconnect">Отключить</string>
 
 	<string name="network_monitor_masternodes_title">Мастерноды</string>
@@ -74,6 +74,9 @@
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Вам необходимо ввести свой ПИН-код для завершения процедуры обновления.</string>
 	<string name="pin_code_required_dialog_message">Это приложение требует ПИН-код для проведения транзакций и просмотра истории платежей.</string>
     <string name="backup_wallet_seed_private_key_written_down_box">Я записал фразу восстановления</string>
-
+	
+	<string name="change_exchange_currency_code_message">Ваша локальная валюта %1$s, но в этом приложении в качестве Вашей валюты по умолчанию выбрана %2$s. Вы хотите поменять выбор на %1$s или оставить %2$s?</string>
+	<string name="change_to">Поменять на %s</string>
+	<string name="leave_as">Оставить %s</string>
 
 </resources>

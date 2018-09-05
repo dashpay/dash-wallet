@@ -163,7 +163,7 @@
     <string name="transaction_row_message_own_unbroadcasted">Ta płatność nie została jeszcze przesłana.</string>
     <string name="transaction_row_message_received_direct">Ta płatność została otrzymana bezpośrednio. Istnieje ryzyko, że środki nigdy nie będą możliwe do wydania.</string>
     <string name="transaction_row_message_received_unconfirmed_delayed">Potwierdzenie tej transakcji jest opóźnione, prawdopodobnie ze względu na przeładowanie sieci Dash.</string>
-    <string name="transaction_row_message_received_unconfirmed_unlocked">Ta płatność powinna stać się dostępna za kilka minut.</string>
+    <string name="transaction_row_message_received_unconfirmed_unlocked">Ta płatność może być wykonana bez potwierdzenia.</string>
     <string name="transaction_row_message_received_in_conflict">Ta płatność wyróżnia się zwiększonym ryzykiem odwołania przez nadawcę. Jeśli możesz, poczekaj na jej zatwierdzenia.</string>
     <string name="transaction_row_message_received_dead">Ta płatność została cofnięta przez nadawcę.</string>
     <string name="transaction_row_message_received_dust">Tak mała kwota prawdopodobnie nigdy nie zostanie wydana ekonomicznie.</string>

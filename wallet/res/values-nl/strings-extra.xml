@@ -2,45 +2,45 @@
 <resources>
 
 	<string name="send_coins_fragment_instantx_enable">InstantSend gebruiken</string>
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">Deze InstantSend-betaling is nog niet overgedragen.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Deze InstantSend-betaling wacht op goedkeuring door Dash Network.</string>
-	<string name="transaction_row_message_own_instantx_locked">InstantSend-transactie versturen (vergrendeld)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Deze InstantSend-betaling wacht op goedkeuring door Dash Network.</string>
-	<string name="transaction_row_message_received_instantx_locked">Deze InstantSend-betaling is goedgekeurd door Dash Network.</string>
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">Deze InstantSend betaling is nog niet verzonden.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">Deze InstantSend betaling wacht op goedkeuring.</string>
+	<string name="transaction_row_message_own_instantx_locked">Verzonden InstantSend transactie (vergrendeld)</string>
+	<string name="transaction_row_message_received_instantx_lock_request">Deze InstantSend betaling wacht op goedkeuring.</string>
+	<string name="transaction_row_message_received_instantx_locked">Geverifieerd door InstantSend</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">Niet-bevestigde InstantSend</string>
 	<string name="transaction_row_message_received_instantx_locked2">Vergrendelde InstantSend</string>
-
+	<string name="transaction_row_message_sent_to_single_peer">Deze betaling is verzonden.</string>
 	<string name="wallet_options_disconnect">Verbinding verbreken</string>
 
-	<string name="network_monitor_masternodes_title">Hoofdnodes</string>
-	<string name="export_keys_dialog_title_to_seed">Toon herstelwachtwoord</string>
-	<string name="import_keys_dialog_title_from_seed">Herstel van herstelwachtwoord</string>
-	<string name="backup_to_seed_wallet_dialog_message">Dit is je herstelwachtwoord. Schrijf het a.ub. op.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">Laat NIEMAND je herstelwachtwoord zien, anders kunnen ze je Dash uitgeven.</string>
-	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Betalingen vanuit je portemonnee zijn bescherm met een pin. Voer je pin in en kies Toon je herstelwachtwoord te bekijken.</string>
-    <string name="import_keys_from_seed_dialog_message">Voer je herstelwachtwoord hier in.</string>
-	<string name="import_export_keys_dialog_password_phrase">Voer hier je herstelwachtwoord in.</string>
-	<string name="preferences_report_issue_summary">Vergaar informatie aangaande uw probleem en verstuur via e-mail een melding aan de ontwikkelaars</string>
+	<string name="network_monitor_masternodes_title">Masternodes</string>
+	<string name="export_keys_dialog_title_to_seed">Toon herstelzin</string>
+	<string name="import_keys_dialog_title_from_seed">Herstel van herstelzin</string>
+	<string name="backup_to_seed_wallet_dialog_message">Dit is je herstelzin. Schrijf het a.u.b. op.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">Laat NIEMAND je herstelzin zien, anders kan iemand anders je Dash uitgeven.</string>
+	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Betalingen vanuit je portemonnee zijn beschermd met een pin. Voer je pin in en kies Toon om je herstelzin te bekijken.</string>
+    <string name="import_keys_from_seed_dialog_message">Voer je herstelzin hier in.</string>
+	<string name="import_export_keys_dialog_password_phrase">Voer hier je herstelzin in.</string>
+	<string name="preferences_report_issue_summary">Vergaar informatie over uw probleem en verstuur via e-mail een melding aan de ontwikkelaars.</string>
 	<string name="navigation_configuration">Configuratie</string>
     <string name="button_copy_address">Kopieer adres</string>
-	<string name="request_coins_clipboard_address_msg">Dash-adres is gekopieerd naar klembord</string>
+	<string name="request_coins_clipboard_address_msg">Dash adres is gekopieerd naar het klembord</string>
 	<string name="backup_wallet_to_seed_show_recovery_phrase">Toon</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%s is een ongeldig woord.</string>
 
-	<string name="send_coins_options_fee_category_zero">Geen marge</string>
-	<string name="send_coins_fragment_hint_fee_zero">Geen marge zal worden betaald. Gebruik \'geen marge\' alleen als niet geeft om de bevestigingstijd.</string>
+	<string name="send_coins_options_fee_category_zero">Geen transactievergoeding</string>
+	<string name="send_coins_fragment_hint_fee_zero">Geen transactievergoeding zal worden betaald. Gebruik \'geen transactievergoeding\' alleen als niet geeft om de bevestigingstijd.</string>
 
-	<string name="wallet_uri_handler_public_key_request_dialog_msg">Applicatie %s wil je Master Public Key ontvangen.  Deze kan worden gebruikt om je portemonnee te volgen, maar kan niet gebruikt worden om Dash over te maken.</string>
+	<string name="wallet_uri_handler_public_key_request_dialog_msg">Applicatie %s wil je Master Public Key verkrijgen. Deze kan worden gebruikt om je portemonnee te volgen, maar kan niet gebruikt worden om Dash over te maken.</string>
 	<string name="wallet_uri_handler_address_request_dialog_msg">Applicatie %s verzoekt een adres om je op te betalen. Wil je dit autoriseren?</string>
 
 	<string name="wallet_lock_unlock">Ontgrendel</string>
 	<string name="wallet_lock_unlock_wallet">Ontgrendel portemonnee</string>
-	<string name="wallet_lock_unlock_to_see_txs_title">Portemonnee is vergrendeld.</string>
-	<string name="wallet_lock_unlock_to_see_txs_txt">Tap het sloticoon boven om je portemonnee te ontgrendelen en de transactiegeschiedenis te bekijken.</string>
+	<string name="wallet_lock_unlock_to_see_txs_title">Portemonnee vergrendeld.</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">Druk op het slot icoon hierboven om je portemonnee te ontgrendelen en de transactiegeschiedenis te bekijken.</string>
 	<string name="wallet_lock_unlock_dialog_title">Ontgrendel je portemonnee</string>
-	<string name="wallet_lock_unlock_dialog_message">Betalingen vanuit je portemonnee zijn bescherm met een pin. Voer je pin in en kies Ontgrendel om verder te gaan.</string>
+	<string name="wallet_lock_unlock_dialog_message">Betalingen vanuit je portemonnee zijn beschermd met een pin. Voer je pin in en kies Ontgrendel om verder te gaan.</string>
 	<string name="wallet_lock_reset_wallet_title">Reset portemonnee</string>
-	<string name="wallet_lock_reset_wallet_message">Weet je het zeker? Alle opgeslagen gegevens worden verwijdern en je portemonnee zal alleen te herstellen zijn uit een backupbestand of een herstel-seed.</string>
+	<string name="wallet_lock_reset_wallet_message">Weet je het zeker? Alle opgeslagen gegevens worden verwijderd en je portemonnee zal alleen te herstellen zijn uit een back-upbestand of een herstelzin.</string>
 
 	<string name="wallet_lock_wallet_disabled">Portemonnee uitgeschakeld</string>
 	<string name="wallet_lock_try_again">Probeer nogmaals over %1$d %2$s</string>
@@ -67,7 +67,10 @@
 	<string name="encrypt_new_key_chain_dialog_message">Je portemonnee krijgt een upgrade om importeren van en exporteren naar meerdere apps mogelijk te maken.</string>
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Je moet je pin invoeren om het upgradeproces te voltooien.</string>
 	<string name="pin_code_required_dialog_message">Deze app heeft nu een pin nodig om transacties te doen of je saldo of transacties te bekijken.</string>
-    <string name="backup_wallet_seed_private_key_written_down_box">Ik heb het herstelwachtwoord opgeschreven</string>
-
+    <string name="backup_wallet_seed_private_key_written_down_box">Ik heb de herstelzin opgeschreven</string>
+	
+	<string name="change_exchange_currency_code_message">Je lokale munteenheid is %1$s, maar in deze app is de standaard munteenheid ingesteld als %2$s. Wil je dit wijzigen naar %1$s of %2$s behouden?</string>
+	<string name="change_to">Verander naar %s</string>
+	<string name="leave_as">%s behouden</string>
 
 </resources>

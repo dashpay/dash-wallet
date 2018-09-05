@@ -3,13 +3,13 @@
 
 	<string name="send_coins_fragment_instantx_enable">Използвайте InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">InstantSend плащането все още не е предадено.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">InstantSend плащането изчаква потвърждение от Dash мрежата.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">Това InstantSend плащане изчаква потвърждение.</string>
 	<string name="transaction_row_message_own_instantx_locked">Изпратена InstantSend транзакция (заключена)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">InstantSend плащането изчаква потвърждение от Dash мрежата.</string>
-	<string name="transaction_row_message_received_instantx_locked">InstantSend плащането беше потвърдено от Dash мрежата.</string>
+	<string name="transaction_row_message_received_instantx_lock_request">Това InstantSend плащане изчаква потвърждение.</string>
+	<string name="transaction_row_message_received_instantx_locked">InstantSend потвърдено</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">Непотвърден InstantSend</string>
 	<string name="transaction_row_message_received_instantx_locked2">Заключен InstantSend</string>
-
+	<string name="transaction_row_message_sent_to_single_peer">Плащането е изпратено.</string>
 	<string name="wallet_options_disconnect">Прекъсване </string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
@@ -68,6 +68,9 @@
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Трябва да въведете вашият ПИН за да завършите процесът на надграждане.</string>
 	<string name="pin_code_required_dialog_message">Това приложение вече изисква ПИН за похарчване и разглеждане историята на транзакциите.</string>
     <string name="backup_wallet_seed_private_key_written_down_box">Записах фразата за възстановяване</string>
-
+	
+	<string name="change_exchange_currency_code_message">Вашата местна валута е %1$s, но в приложението е зададено по подразбиране %2$s. Бихте ли желали да се промени в %1$s или да остане в %2$s?</string>
+	<string name="change_to">Промени в %s</string>
+	<string name="leave_as">Остави в %s</string>
 
 </resources>

@@ -163,7 +163,7 @@
 	<string name="transaction_row_message_own_unbroadcasted">لم يتم إرسال هذه الدفعة بعد.</string>
 	<string name="transaction_row_message_received_direct">تم استلام هذه الدفعة مباشرة. توجد خطورة عدم القدرة على إنفاقها.</string>
 	<string name="transaction_row_message_received_unconfirmed_delayed">تأخر تأكيد هذه الدفعة، ويرجع ذلك على الأرجح إلى زيادة حمولة شبكة داش.</string>
-	<string name="transaction_row_message_received_unconfirmed_unlocked">سيمكنك دفع هذه الدفعة في غضون دقائق.</string>
+	<string name="transaction_row_message_received_unconfirmed_unlocked">يمكن صرف هذه الدفعة الآن دون تأكيد.</string>
 	<string name="transaction_row_message_received_in_conflict">هذه الدفعة لديها خطر متزايد من عكسها من قبل المرسل! إذا كنت تستطيع، انتظر تأكيد.</string>
 	<string name="transaction_row_message_received_dead">تم إرجاع هذه الدفعة من قبل المرسل.</string>
 	<string name="transaction_row_message_received_dust">قد لايمكن  إنفاق هذا المبلغ صغير اقتصاديا.</string>

@@ -3,13 +3,13 @@
 
 	<string name="send_coins_fragment_instantx_enable">ใช้ InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">InstantSend นี้ ยังไม่ได้รับการชำระเงิน</string>
-	<string name="transaction_row_message_own_instantx_lock_request">การชำระเงินโดย InstantSend นี้  กำลังรอการยืนยันจากเครือข่าย Dash</string>
+	<string name="transaction_row_message_own_instantx_lock_request">การชำระเงิน  InstantSend นี้กำลังรอการยืนยัน</string>
 	<string name="transaction_row_message_own_instantx_locked">ธุรกรรมที่ส่งโดย InstantSend (ล็อค)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">การชำระเงินโดย InstantSend นี้  กำลังรอการยืนยันจากเครือข่าย Dash</string>
-	<string name="transaction_row_message_received_instantx_locked">การชำระเงินโดย InstantSend นี้ ได้รับการยืนยันโดยเครือข่าย Dash แล้ว</string>
+	<string name="transaction_row_message_received_instantx_lock_request">การชำระเงิน  InstantSend นี้กำลังรอการยืนยัน</string>
+	<string name="transaction_row_message_received_instantx_locked">InstantSend ยืนยันแล้ว</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">InstantSend ยังไม่มีการยืนยัน</string>
 	<string name="transaction_row_message_received_instantx_locked2">InstantSend ล็อค</string>
-
+	<string name="transaction_row_message_sent_to_single_peer">การชำระเงินนี้ถูกส่งแล้ว</string>
 	<string name="wallet_options_disconnect">ไม่เชื่อมต่อ</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
@@ -65,6 +65,9 @@
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">คุณต้องป้อนรหัส PIN เพื่อดำเนินการขั้นตอนการอัพเกรดให้สำเร็จ</string>
 	<string name="pin_code_required_dialog_message">แอพพลิเคชั่นนี้ต้องการ PIN เพื่อใช้จ่ายและดูยอดคงเหลือและธุรกรรม</string>
     <string name="backup_wallet_seed_private_key_written_down_box">ฉันได้เขียนวลีกู้คืนแล้ว</string>
-
+	
+	<string name="change_exchange_currency_code_message">สกุลเงินท้องถิ่นของคุณคือ %1$s แต่ในแอพนี้สกุลเงินเริ่มต้นของคุณถูกตั้งไว้ที่%2$s   คุณต้องการเปลี่ยนเป็น %1$s หรือปล่อยให้เป็น%2$s?</string>
+	<string name="change_to">เปลี่ยนเป็น%s</string>
+	<string name="leave_as">%sปล่อยให้เป็น </string>
 
 </resources>

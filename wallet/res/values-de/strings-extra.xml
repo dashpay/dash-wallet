@@ -3,13 +3,13 @@
 
 	<string name="send_coins_fragment_instantx_enable">InstantSend verwenden</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">InstantSend-Zahlung wurde noch nicht übermittelt.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">InstantSend-Zahlung wartet auf eine Bestätigung durch das Dash-Netzwerk.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">Diese InstantSend-Zahlung muss noch verifiziert werden.</string>
 	<string name="transaction_row_message_own_instantx_locked">InstantSend-Transaktion versenden (Bindend)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">InstantSend-Zahlung wartet auf eine Bestätigung durch das Dash-Netzwerk.</string>
-	<string name="transaction_row_message_received_instantx_locked">InstantSend-Zahlung wurde durch das Dash-Netzwerk bestätigt.</string>
+	<string name="transaction_row_message_received_instantx_lock_request">Diese InstantSend-Zahlung muss noch verifiziert werden.</string>
+	<string name="transaction_row_message_received_instantx_locked">InstantSend verifiziert</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">Unbestätigter InstantSend</string>
 	<string name="transaction_row_message_received_instantx_locked2">InstantSend verbindlich festgesetzt</string>
-
+	<string name="transaction_row_message_sent_to_single_peer">Die Zahlung wurde gesendet.</string>
 	<string name="wallet_options_disconnect">Verbindungen trennen</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
@@ -68,6 +68,9 @@
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Du musst deinen PIN eingeben, um den Aktualisierungsvorgang abzuschließen.</string>
 	<string name="pin_code_required_dialog_message">Diese App verwendet nun einen PIN, um zu bezahlen und den Transaktionsverlauf und das Guthaben anzuzeigen.</string>
     <string name="backup_wallet_seed_private_key_written_down_box">Ich habe die Wiederherstellungsphrase niedergeschrieben</string>
-
+	
+	<string name="change_exchange_currency_code_message">Ihre lokale Währung lautet %1$s, die voreingestellte Währung ist jedoch %2$s. Möchten Sie auf %1$s wechseln oder %2$s belassen? </string>
+	<string name="change_to">Wechsel zu %s</string>
+	<string name="leave_as">Belasse %s</string>
 
 </resources>
