@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
+
 	<string name="toast_wallet_reset">ウォレットはリセットされました!\n復元には多少時間がかかります。</string>
-	<string name="wallet_disclaimer_fragment_remind_safety">自己の責任においてご使用下さい。&lt;u&gt;安全の注意事項&lt;/u&gt;をお読み下さい。</string>
+	<string name="wallet_disclaimer_fragment_remind_safety">自己責任にてご使用下さい。&lt;u&gt;安全上の注意事項&lt;/u&gt;をお読み下さい。</string>
 	<string name="wallet_disclaimer_fragment_remind_backup">&lt;u&gt;ウォレットをバックアップ&lt;/u&gt;する必要があります!</string>
 	<string name="blockchain_state_progress_hours">%1$s, %2$d時間遅れ</string>
 	<string name="blockchain_state_progress_days">%1$s, %2$d日遅れ</string>
@@ -11,7 +12,7 @@
 	<string name="blockchain_state_progress_stalled">同期が停滞しています</string>
 	<string name="blockchain_state_progress_problem_storage">同期: ストレージに問題があります</string>
 	<string name="blockchain_state_progress_problem_network">同期: ネットワークに問題があります</string>
-	<string name="wallet_address_fragment_clipboard_msg">ビットコインアドレスをクリップボードにコピーしました</string>
+	<string name="wallet_address_fragment_clipboard_msg">Dashアドレスがクリップボードにコピーされました。</string>
 	<string name="wallet_address_dialog_fragment_hint">プライバシー保護のため、アドレスは支払いを受け取るごとに変化します。</string>
 	<string name="wallet_balance_fragment_too_much">この額はポケットに入れて運ぶには多すぎます。一部をもっと安全な場所に移してください。</string>
 	<string name="wallet_balance_fragment_replaying">再生中は残高情報は利用できません。</string>
@@ -23,50 +24,49 @@
 	<string name="exchange_rates_fragment_balance">残高</string>
 	<string name="exchange_rates_fragment_source">%s による価格</string>
 	<string name="exchange_rates_options_search">為替レートの検索</string>
-	<string name="exchange_rates_context_set_as_default_title">既定の外貨に設定する</string>
-	<string name="wallet_transactions_fragment_empty_text_received">まだビットコインを受け取っていません。</string>
-	<string name="wallet_transactions_fragment_empty_text_sent">まだビットコインを送っていません。</string>
-	<string name="wallet_transactions_fragment_empty_text_howto">ビットコインを入手するには?\n\n通常通貨と交換するか、\nグッズやサービスを販売するか\nまたは働いて稼ぎましょう</string>
+	<string name="exchange_rates_context_set_as_default_title">デフォルトとして設定する</string>
+	<string name="wallet_transactions_fragment_empty_text_received">まだDashを受け取っていません。</string>
+	<string name="wallet_transactions_fragment_empty_text_sent">まだDashを送っていません。</string>
+	<string name="wallet_transactions_fragment_empty_text_howto">ダッシュを入手するには?\n\n通常通貨と交換するか、\nグッズやサービスを販売するか\nまたは働いて稼ぎましょう</string>
 	<string name="wallet_transactions_row_warning_backup">おめでとうございます、初めて支払いを受け取りました。遺失を防ぐために&lt;u&gt;ウォレットをバックアップ&lt;/u&gt;していますか?</string>
-	<string name="wallet_transactions_fragment_coinbase">採掘</string>
+	<string name="wallet_transactions_row_warning_storage_encryption">ヒント：ウォレットの安全性を高めるために、&lt;u&gt;デバイスのロック&lt;/u&gt;を推奨します。それにより他のアプリのデータも保護されます。</string>
+	<string name="wallet_transactions_fragment_coinbase">採掘されました</string>
 	<string name="wallet_transactions_fragment_internal">内部</string>
 	<string name="wallet_transactions_options_filter">絞り込み</string>
 	<string name="wallet_transactions_options_filter_all">全ての支払い</string>
 	<string name="wallet_transactions_options_filter_received">受け取った支払い</string>
 	<string name="wallet_transactions_options_filter_sent">送った支払い</string>
 	<string name="wallet_options_safety_menu">安全対策</string>
-	<string name="wallet_options_encrypt_keys_set">送金用PINを設定</string>
-	<string name="wallet_options_encrypt_keys_change">送金用PINを変更</string>
-	<string name="wallet_options_safety">安全の注意事項</string>
+	<string name="wallet_options_encrypt_keys_set">送金用PINコードを設定</string>
+	<string name="wallet_options_encrypt_keys_change">送金用PINコードを変更</string>
+	<string name="wallet_options_safety">安全上の注意事項</string>
 	<string name="wallet_options_donate">チップ/寄付</string>
-	<string name="wallet_donate_address_label">Dash Walletへ寄付する</string>
+	<string name="wallet_donate_address_label">Dashウォレットのために寄付をする</string>
 	<string name="wallet_low_storage_dialog_title">内部デバイスのストレージ容量が残りわずかです!</string>
-	<string name="wallet_low_storage_dialog_msg">Dash Walletはトランザクションやブロックを記憶するのに内部ストレージを使用します。もし容量が不足した場合、動作しなくなりあなたのビットコインが危機にさらされるでしょう!\n\n不要なアプリを削除するためにアプリケーションマネージャを開きますか?</string>
+	<string name="wallet_low_storage_dialog_msg">Dash Walletはトランザクションやブロックを記憶するのに内部ストレージを使用します。もし容量が不足した場合、動作しなくなりあなたのDashが危機にさらされるでしょう!\n\n不要なアプリを削除するためにアプリケーションマネージャを開きますか?</string>
 	<string name="wallet_low_storage_dialog_button_apps">アプリの管理</string>
+	<string name="wallet_timeskew_dialog_title">時刻の設定を確認してください！</string>
+	<string name="wallet_timeskew_dialog_msg">デバイスの時間が%d分ずれてます。 この問題の為、Dashのやり取りが出来なくなる可能性があります。\n\n正確な時間とタイムゾーンを設定してください。</string>
 	<string name="wallet_version_dialog_title">新バージョンが利用可能です!</string>
-	<string name="wallet_version_dialog_msg">このバージョンには重要なバグフィックスがあります。詳細を見るには、Google Playの最新情報を見てください。</string>
-	<string name="wallet_version_dialog_msg_deprecated">アップデートが表示されない場合、それはおそらくあなたのバージョンのAndroidはもうサポートされないということです。</string>
+	<string name="wallet_version_dialog_msg">このバージョンでは重要なバグが修正されます。詳細を見るには、Google Playの詳細情報を見てください。</string>
+	<string name="wallet_version_dialog_msg_deprecated">アップデートが表示されない場合、それはおそらくあなたのバージョンのAndroidはもうサポートされていないということです。</string>
 	<string name="wallet_version_dialog_button_market">Google Play</string>
 	<string name="wallet_version_dialog_button_binary">ダウンロード</string>
-
 	<string name="wallet_old_sdk_dialog_title">Androidのバージョンが古すぎます</string>
 	<string name="wallet_old_sdk_dialog_message">次のDash Walletのリリースの際、このデバイスはもうサポートされないかもしれません。場合によっては、このデバイスでのコインの利用が困難になるかもしれません。\n\n意図的にしているのでない限り、あなたのコインをすぐにでも移動させることをおすすめします。</string>
 	<string name="send_coins_activity_title">ビットコインの送金</string>
 	<string name="send_coins_fragment_request_payment_request_progress">%s から署名の取得中……</string>
 	<string name="send_coins_fragment_request_payment_request_failed_title">署名の取得に失敗しました</string>
 	<string name="send_coins_fragment_request_payment_request_wrong_signature">不正な署名です!</string>
-
 	<string name="send_coins_fragment_payee_verified_by">認証者: %s</string>
 	<string name="send_coins_fragment_payee_verified_by_unknown">不明</string>
-
 	<string name="send_coins_fragment_receiving_address_label">支払先</string>
 	<string name="send_coins_fragment_receiving_address_hint">アドレスもしくは名前を入力</string>
-	<string name="send_coins_fragment_receiving_address_error">無効なビットコインアドレスです!</string>
+	<string name="send_coins_fragment_receiving_address_error">無効なDashアドレスです！</string>
 	<string name="send_coins_fragment_receiving_address_own">自分自身に送金しようとしています!</string>
 	<string name="send_coins_fragment_receiving_address_complex">複雑な\nアドレス</string>
 	<string name="send_coins_fragment_pending">(%sが確認待ちです)</string>
 	<string name="send_coins_fragment_amount_label">合計支払</string>
-	<string name="send_coins_fragment_hint_fee">%sの少額のネットワーク手数料が課金されます。</string>
 	<string name="send_coins_fragment_hint_dusty_send">送金額小さすぎます</string>
 	<string name="send_coins_fragment_hint_insufficient_money">ご利用できるコインが足りません。%sが不足です。</string>
 	<string name="send_coins_fragment_hint_empty_wallet_failed">ウォレット中の少額の支払いを合計しても送信可能な額には足りませんでした。</string>
@@ -91,9 +91,11 @@
 	<string name="send_coins_options_fee_category_economic">節約</string>
 	<string name="send_coins_options_fee_category_normal">通常</string>
 	<string name="send_coins_options_fee_category_priority">優先</string>
-	<string name="send_coins_options_empty">ウォレットが空です</string>
+	<string name="send_coins_options_empty">ウォレットを空にする</string>
 	<string name="raise_fee_dialog_title">ネットワーク手数料の増額</string>
-	<string name="raise_fee_dialog_message">この支払いの手数料を%sだけ増やしますか? これにより支払いの承認が早くなります。</string>
+	<string name="raise_fee_dialog_message">ネットワーク手数料を %s増額しますか? 支払いの承認が早くなります。</string>
+	<string name="raise_fee_dialog_determining_fee">ネットワーク手数料を決定中…</string>
+	<string name="raise_fee_dialog_cant_raise">この支払のネットワーク手数料は増額できません。</string>
 	<string name="raise_fee_dialog_state_decrypting">復号中……</string>
 	<string name="raise_fee_dialog_state_done">完了。</string>
 	<string name="raise_fee_dialog_button_raise">増額</string>
@@ -156,21 +158,27 @@
 	<string name="transaction_row_message_purpose_raise_fee">このトランザクションは前の支払いのネットワーク手数料を増額します。</string>
 	<string name="transaction_row_message_own_unbroadcasted">この支払はまだ送信されていません。</string>
 	<string name="transaction_row_message_received_direct">この支払は直接届きました。利用可能とならないリスクがあります。</string>
-	<string name="transaction_row_message_received_unconfirmed_unlocked">この支払は数分程度で利用可能となります。</string>
-	<string name="transaction_row_message_received_dead">この支払は送金者により、引き戻されました。</string>
+	<string name="transaction_row_message_received_unconfirmed_delayed">Dashネットワークが過負荷の可能性があるので、この支払の承認が遅れています。</string>
+	<string name="transaction_row_message_received_unconfirmed_unlocked">この支払は現在承認なしで送信できます。</string>
+	<string name="transaction_row_message_received_in_conflict">この支払は送信者によって無効にされる可能性が高まっています。できれば、承認されるまでお待ちください。</string>
+	<string name="transaction_row_message_received_dead">この支払は送金者によって無効とされました。</string>
 	<string name="transaction_row_message_received_dust">少額すぎて、通常の支払等には使用できないでしょう。</string>
 	<string name="transaction_row_message_received_pay_to_many">この支払いはあなた以外にも多くのウォレットに支払っており、徐々にアプリを遅くする可能性があります。可能であればあなただけに支払う支払いを受けてください。</string>
+	<string name="transaction_row_message_received_rbf">この支払いが遅延したのは、送信者が不安定な取引方法を利用したことが原因です。</string>
 	<string name="network_monitor_activity_title">ネットワークモニタ</string>
 	<string name="network_monitor_peer_list_title">ピア</string>
 	<string name="network_monitor_block_list_title">ブロック</string>
+	<string name="block_row_mining_difficulty_adjustment">採掘難易度の調整</string>
+	<string name="block_row_mining_reward_adjustment">採掘報酬の半減</string>
 	<string name="block_row_now">たった今</string>
 	<string name="peer_list_fragment_empty">接続済みのピアはありません</string>
 	<string name="peer_list_row_ping_time">⇆ %d&#x2009;ms</string>
-
-	<string name="import_keys_dialog_title">ウォレットのリストア</string>
+	<string name="restore_wallet_permission_dialog_title">読み取り権限がありません</string>
+	<string name="restore_wallet_permission_dialog_message">外部ストレージ上でウォレットのバックアップを検索するためには、読み取り権限を許可する必要があります。</string>
+	<string name="import_keys_dialog_title">ウォレットの回復</string>
 	<string name="import_keys_dialog_message">外部ストレージからウォレットのバックアップファイルを選択してください (%s):</string>
 	<string name="restore_wallet_dialog_replace_warning">現在のウォレットを置き換えようとしています。現在ウォレットにあるコインは別途バックアップが無いかぎり全て失われます。</string>
-	<string name="import_keys_dialog_warning">重要: 不審な出所からのプライベートキーを読込まないでください! 読み込んだ場合、他人があなたの資産を操作できてしまいます。</string>
+	<string name="import_keys_dialog_warning">重要: 不審な出所からのプライベートキーを読込まないでください! 読み込んだ場合、他人があなたの資産を操作できるようになってしまいます。</string>
 	<string name="import_keys_dialog_file_security_encrypted">パスワード暗号化済</string>
 	<string name="import_keys_dialog_file_security_unencrypted">パスワード未暗号化</string>
 	<string name="import_keys_dialog_file_security_external">外部ストレージ</string>
@@ -181,7 +189,8 @@
 	<string name="restore_wallet_dialog_success">ウォレットは復元されました。</string>
 	<string name="restore_wallet_dialog_success_replay">あなたのウォレットは正常に復元されました。続いて残高を計算します。これには多少時間がかかる場合があります。</string>
 	<string name="import_keys_dialog_failure">ウォレットが復元できませんでした:\n\n%s\n\nパスワード間違い?</string>
-
+	<string name="backup_wallet_permission_dialog_title">書き込み権限がありません</string>
+	<string name="backup_wallet_permission_dialog_message">あなたのウォレットを外部ストレージにバックアップするには、書き込み権限を許可する必要があります。</string>
 	<string name="export_keys_dialog_title">ウォレットのバックアップ</string>
 	<string name="backup_wallet_dialog_message">バックアップはあなたが決めたパスワードで暗号化され、外部ストレージに書き込まれます。</string>
 	<string name="backup_wallet_dialog_warning_encrypted">あなたのウォレットは送金用PINで保護されています。バックアップ用パスワードに加えてPINも忘れないようにしてください。</string>
@@ -212,15 +221,15 @@
 	<string name="encrypt_keys_dialog_state_decrypting">復号中……</string>
 	<string name="encrypt_keys_dialog_state_done">完了</string>
 	<string name="scan_camera_problem_dialog_title">申し訳ありません</string>
-	<string name="scan_camera_problem_dialog_message">カメラに問題があります。デバイスを再起動する必要があるかもしれません。</string>
+	<string name="scan_camera_problem_dialog_message">カメラに問題があります。デバイスを再起動する必要がある可能性があります。</string>
+	<string name="scan_camera_permission_dialog_title">カメラの利用権限</string>
+	<string name="scan_camera_permission_dialog_message">QRコードをスキャンするには、カメラを利用する権限を許可する必要があります。</string>
 	<string name="input_parser_io_error">データを読込めませんでした:\n%s</string>
 	<string name="input_parser_cannot_classify">入力を認識できません:\n%s</string>
 	<string name="input_parser_invalid_bitcoin_uri">無効なビットコインURI:\n%s</string>
 	<string name="input_parser_invalid_address">無効なビットコインアドレスを入手しました!\n(メインネット/テストネットの混同?)</string>
 	<string name="input_parser_unverifyable_paymentrequest">支払いリクエストの検証が出来ません:\n%s</string>
-
 	<string name="input_parser_invalid_paymentrequest">無効な支払のリクエスト:\n%s</string>
-
 	<string name="input_parser_invalid_transaction">無効なトランザクション:\n%s</string>
 	<string name="preferences_activity_title">設定</string>
 	<string name="preferences_category_diagnostics">診断</string>
@@ -234,19 +243,26 @@
 	<string name="preferences_precision_labels_0_6">µDASH、小数点無し</string>
 	<string name="preferences_own_name_title">自身の名前</string>
 	<string name="preferences_own_name_summary">支払いリクエストに含める、あなた自身の名前。短いものにしてください。</string>
+	<string name="preferences_send_coins_autoclose_title">送金ダイアローグを自動的に閉じる</string>
+	<string name="preferences_send_coins_autoclose_summary">支払いが行われた時、送金ダイアローグは自動的に閉じます。</string>
 	<string name="preferences_connectivity_notification_title">接続インジゲーター</string>
 	<string name="preferences_connectivity_notification_summary">通知エリア内に現在の接続ピア数を表示する。</string>
 	<string name="preferences_trusted_peer_title">信頼されたピア</string>
 	<string name="preferences_trusted_peer_summary">接続する単一ピアのIPアドレスかホスト名。</string>
+	<string name="preferences_trusted_peer_resolve_progress">解決中です...</string>
+	<string name="preferences_trusted_peer_resolve_unknown_host">未知のホスト名です！</string>
 	<string name="preferences_trusted_peer_only_title">通常のピア探索をスキップ</string>
 	<string name="preferences_trusted_peer_only_summary">信頼されたピア以外に接続しない。</string>
+	<string name="preferences_block_explorer_title">ブロックエクスプローラー</string>
+	<string name="preferences_block_explorer_summary">取引やアドレスやブロックの閲覧に利用する外部のブロックエクスプローラー</string>
 	<string name="preferences_data_usage_title">データの使用方法</string>
 	<string name="preferences_data_usage_summary">モバイルネットワークにおけるデータ使用制限のオプションを表示する。</string>
+	<string name="preferences_remind_balance_title">残高の通知</string>
+	<string name="preferences_remind_balance_summary">数週間未使用が続くと、ウォレット内にまだコインが残っているかどうかアプリから通知します。</string>
 	<string name="preferences_report_issue_title">問題を報告</string>
-	<string name="preferences_report_issue_summary">問題に関する情報を収集し、開発者へメールで報告する。</string>
 	<string name="preferences_initiate_reset_title">ブロックチェーンのリセット</string>
-	<string name="preferences_initiate_reset_summary">ブロックチェーン・トランザクション・ウォレットの残高をリセットします。再生にしばらくかかります。</string>
-	<string name="preferences_initiate_reset_dialog_message">ブロックチェーンのリセットと再生を実行しますか?\n\n一時的にウォレットの残高が見られなくなり、トランザクションも削除されます。両方ともブロックチェーンの同期後は復元されます。</string>
+	<string name="preferences_initiate_reset_summary">ブロックチェーンと取引とウォレットの残高をリセットします。リプレイには時間がかかりますので、理由が分かっている場合のみ実施して下さい。</string>
+	<string name="preferences_initiate_reset_dialog_message">ブロックチェーンをリセットしてリプレーしますか？?\n\n一時的にウォレットの残高が見られなくなり、取引も削除されます。両方ともブロックチェーンの同期後は復元されます。必ず信頼できるインターネット接続をお使いください。</string>
 	<string name="preferences_initiate_reset_dialog_positive">リセット</string>
 	<string name="preferences_extended_public_key_title">xpubを表示</string>
 	<string name="preferences_extended_public_key_summary">他のアプリやサービスにインポートできるように、ウォレットの拡張公開鍵を表示します。注意: その場合そのアプリに金銭的なプライバシー情報を公開することになります。</string>
@@ -255,7 +271,8 @@
 	<string name="extended_public_key_fragment_share">xpubを共有……</string>
 	<string name="report_issue_dialog_title_issue">問題を報告</string>
 	<string name="report_issue_dialog_title_crash">直前のクラッシュを検知しました</string>
-	<string name="report_issue_dialog_message_issue">発生した問題について、再現するのに十分なぐらい性格に記述してください。</string>
+	<string name="report_issue_dialog_title_transaction">問題及び選択した支払いを報告</string>
+	<string name="report_issue_dialog_message_issue">発生した問題を再現できるように正確に記述して下さい。できれば英語をお使い下さい。</string>
 	<string name="report_issue_dialog_message_crash">今後、この問題を修正する手助けとして、クラッシュレポートを送信しますか?</string>
 	<string name="report_issue_dialog_description">説明</string>
 	<string name="report_issue_dialog_report">報告</string>
@@ -269,16 +286,27 @@
 	<string name="about_version_title">バージョン</string>
 	<string name="about_copyright_title">コピーライト</string>
 	<string name="about_license_title">ライセンス</string>
-    <string name="about_source_title">ソースコード</string>
-	<string name="about_credits_zxing_title">このアプリは\'zxing\'を使用しています。</string>
+	<string name="about_source_title">ソースコード</string>
+	<string name="about_category_credits">このアプリは...を使用中です。</string>
+	<string name="about_credits_bitcoinj_title">dashj %s, Dashプロトコル実装</string>
+	<string name="about_credits_zxing_title">ZXing, QRコード処理ライブラリー</string>
 	<string name="about_credits_icon_title">このアプリは\'bitboy\'によるアイコンを使用しています。</string>
-	<string name="about_community_googleplus_title">Google+ コミュニティ</string>
-	<string name="about_community_googleplus_summary">アプリについてのディスカッション</string>
+	<string name="about_credits_scrypt_title">Scrypt, Will Glozer と Colin Percivalによって実装されました</string>
 	<string name="about_market_app_title">Google Playのページ</string>
 	<string name="about_market_app_summary">アプリのレビューや評価をしてください</string>
+	<string name="about_faq_title">よくある質問</string>
+	<string name="about_faq_summary">アプリについてよくある質問</string>
+	<string name="about_community_googleplus_title">Google+ コミュニティ</string>
+	<string name="about_community_googleplus_summary">このアプリについて議論する</string>
 	<string name="notification_coins_received_msg">%sを受け取りました</string>
-
 	<string name="notification_peers_connected_msg">%dピアが接続済</string>
+	<string name="notification_inactivity_title">あなたはまだこのデバイスにDashを保有しています！</string>
+	<string name="notification_inactivity_message">保有残高を出金せずにDashウォレットアプリをアインインストールした場合、あなたは %s を失います。</string>
+	<string name="notification_inactivity_message_donate">あなたがコインを必要としない場合は、Dash Walletプロジェクトに寄付することもできます。</string>
+	<string name="notification_inactivity_action_dismiss">後で通知する</string>
+	<string name="notification_inactivity_action_dismiss_forever">今後通知しない</string>
+	<string name="appwidget_wallet_balance_title">Dash残高</string>
+
 	<!-- generic buttons -->
 	<string name="button_ok">OK</string>
 	<string name="button_dismiss">閉じる</string>
@@ -313,4 +341,12 @@
 	<string name="error_http">HTTPエラー %1$s:\n%2$s</string>
 	<string name="error_bluetooth">Bluetoothエラー: %1$s</string>
 
-	</resources>
+	<string name="transaction_fragment_confirmations_label">認証</string>
+
+	<string name="navigation_drawer_open">ナビゲーションのアプリ一覧画面を開く</string>
+	<string name="navigation_drawer_close">ナビゲーションのアプリ一覧画面を閉じる</string>
+
+	<string name="dash_slogan">Instant - Private - Secure</string>
+	<string name="dash_wallet">ウォレット</string>
+
+</resources>

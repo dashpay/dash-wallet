@@ -1,5 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
+
 	<string name="toast_wallet_reset">Din plånbok är nollställd!\nDet tar en stund för att återställa.</string>
 	<string name="wallet_disclaimer_fragment_remind_safety">Använd på egen risk. Läs &lt;u&gt;säkerhetsråden&lt;/u&gt;.</string>
 	<string name="wallet_disclaimer_fragment_remind_backup">Du behöver &lt;u&gt;säkerhetskopiera din plånbok&lt;/u&gt;!</string>
@@ -11,7 +12,7 @@
 	<string name="blockchain_state_progress_stalled">Synkroniseringen har avstannat</string>
 	<string name="blockchain_state_progress_problem_storage">Synkronisering: Lagringsproblem</string>
 	<string name="blockchain_state_progress_problem_network">Synkronisering: Nätverksproblem</string>
-	<string name="wallet_address_fragment_clipboard_msg">Dashadressen kopierades</string>
+	<string name="wallet_address_fragment_clipboard_msg">Dash adressen kopierades till urklipp</string>
 	<string name="wallet_address_dialog_fragment_hint">För att skydda din integritet ändras din adress varje gång du mottager en betalning.</string>
 	<string name="wallet_balance_fragment_too_much">Det här är ett stort belopp att bära omkring på i fickan. Flytta gärna över en del till en säkrare plats.</string>
 	<string name="wallet_balance_fragment_replaying">Saldot är inte tillgängligt under reprisen.</string>
@@ -23,11 +24,12 @@
 	<string name="exchange_rates_fragment_balance">saldo</string>
 	<string name="exchange_rates_fragment_source">Pris från %s</string>
 	<string name="exchange_rates_options_search">Sök växlingskurs</string>
-	<string name="exchange_rates_context_set_as_default_title">Ange som utländsk standardvaluta</string>
+	<string name="exchange_rates_context_set_as_default_title">Ange som standard</string>
 	<string name="wallet_transactions_fragment_empty_text_received">Inga Dash har hittills mottagits</string>
 	<string name="wallet_transactions_fragment_empty_text_sent">Inga Dash har hittills skickats</string>
 	<string name="wallet_transactions_fragment_empty_text_howto">Hur får man tag i Dash?\n\nKöp för svenska kronor,\nsälj varor eller tjänster eller\ntjäna genom att arbeta.</string>
 	<string name="wallet_transactions_row_warning_backup">Grattis, fick du din första betalning! Har du redan &lt;u&gt;säkerhetskopierat din plånbok&lt;/u&gt;, för att skydda mot förlust?</string>
+	<string name="wallet_transactions_row_warning_storage_encryption">Tips: för att öka säkerheten till din plånbok, du kan &lt;u&gt;kryptera din maskin&lt;/u&gt;. Detta skulle också skydda din data i andra appar.</string>
 	<string name="wallet_transactions_fragment_coinbase">genererade</string>
 	<string name="wallet_transactions_fragment_internal">intern</string>
 	<string name="wallet_transactions_options_filter">Filter</string>
@@ -39,7 +41,7 @@
 	<string name="wallet_options_encrypt_keys_change">Ändra PIN-kod</string>
 	<string name="wallet_options_safety">Säkerhetsinfo</string>
 	<string name="wallet_options_donate">Dricksa / Donera</string>
-	<string name="wallet_donate_address_label">Donation till Dash Wallet</string>
+	<string name="wallet_donate_address_label">Donation för Dash Wallet</string>
 	<string name="wallet_low_storage_dialog_title">Lagringsutrymme snart slut</string>
 	<string name="wallet_low_storage_dialog_msg">Dash Wallet använder intern lagring för att komma ihåg transaktioner och block. Om lagringsutrymmet tar slut kommer den att sluta fungera och dina Dash hamnar i riskzonen!\n\nVill du öppna Application Manager för att avinstallera onödiga appar?</string>
 	<string name="wallet_low_storage_dialog_button_apps">Hantera appar</string>
@@ -48,17 +50,14 @@
 	<string name="wallet_version_dialog_msg_deprecated">Om du inte ser en uppdatering så beror det förmodligen på att din version av Android inte stöds längre.</string>
 	<string name="wallet_version_dialog_button_market">Google Play</string>
 	<string name="wallet_version_dialog_button_binary">Ladda ner</string>
-
 	<string name="wallet_old_sdk_dialog_title">Android-versionen är inaktuell</string>
 	<string name="wallet_old_sdk_dialog_message">Chansen är stor att någon av de kommande releaserna av Dash Wallet inte kommer att fungera på din enhet längre. I vissa fall kan det bli svårt att spendera dina tillgångar med den här enheten.\n\nSåvida du inte vet vad du gör, rekommenderas att du flyttar dina Dash snart.</string>
 	<string name="send_coins_activity_title">Skicka Dash</string>
 	<string name="send_coins_fragment_request_payment_request_progress">Hämtar signatur från %s</string>
 	<string name="send_coins_fragment_request_payment_request_failed_title">Hämtning av signatur misslyckades</string>
 	<string name="send_coins_fragment_request_payment_request_wrong_signature">Felaktig signatur!</string>
-
 	<string name="send_coins_fragment_payee_verified_by">Verifierad av: %s</string>
 	<string name="send_coins_fragment_payee_verified_by_unknown">okänd</string>
-
 	<string name="send_coins_fragment_receiving_address_label">Skicka till</string>
 	<string name="send_coins_fragment_receiving_address_hint">skriv adress eller namn</string>
 	<string name="send_coins_fragment_receiving_address_error">Ogiltig Dashadress!</string>
@@ -66,7 +65,6 @@
 	<string name="send_coins_fragment_receiving_address_complex">Komplex\nadress</string>
 	<string name="send_coins_fragment_pending">(%s väntar på bekräftelse)</string>
 	<string name="send_coins_fragment_amount_label">Belopp att skicka</string>
-	<string name="send_coins_fragment_hint_fee">En nätverksavgift på %s tas ut.</string>
 	<string name="send_coins_fragment_hint_dusty_send">Summan är för låg för att kunna skickas.</string>
 	<string name="send_coins_fragment_hint_insufficient_money">Du saknar tillräckliga medel. Det fattas %s</string>
 	<string name="send_coins_fragment_hint_empty_wallet_failed">Det sammanlagda värdet av betalningarna i din wallet räcker inte för att kunna skickas.</string>
@@ -93,7 +91,6 @@
 	<string name="send_coins_options_fee_category_priority">Prioritet</string>
 	<string name="send_coins_options_empty">Tom wallet</string>
 	<string name="raise_fee_dialog_title">Höj nätverksavgift</string>
-	<string name="raise_fee_dialog_message">Vill du höja avgiften på den här betalningen med %s? Det kommer göra att betalningen bekräftas snabbare.</string>
 	<string name="raise_fee_dialog_state_decrypting">Dekrypterar…</string>
 	<string name="raise_fee_dialog_state_done">Klar.</string>
 	<string name="raise_fee_dialog_button_raise">Höj</string>
@@ -156,7 +153,6 @@
 	<string name="transaction_row_message_purpose_raise_fee">Den här transaktionen höjer nätverksavgiften för en tidigare betalning.</string>
 	<string name="transaction_row_message_own_unbroadcasted">Denna betalning har inte skickats ännu.</string>
 	<string name="transaction_row_message_received_direct">Denna betalning har mottagits direkt. Det finns en risk att den aldrig kommer att kunna användas.</string>
-	<string name="transaction_row_message_received_unconfirmed_unlocked">Den här betalningen borde bli spenderbar inom några minuter.</string>
 	<string name="transaction_row_message_received_dead">Denna betalning har återförts av avsändaren.</string>
 	<string name="transaction_row_message_received_dust">En så låg summa kan förmodligen aldrig användas ekonomiskt.</string>
 	<string name="transaction_row_message_received_pay_to_many">Denna betalning skickas till många olika användare samtidigt, vilket kan göra appen långsam över tid. Om du kan, försök att bara ta emot betalningar som är riktade till dig enbart.</string>
@@ -166,7 +162,6 @@
 	<string name="block_row_now">just nu</string>
 	<string name="peer_list_fragment_empty">Inga peers anslutna</string>
 	<string name="peer_list_row_ping_time">⇆ %d&#x2009;ms</string>
-
 	<string name="import_keys_dialog_title">Återställ plånbok</string>
 	<string name="import_keys_dialog_message">Välj en plånboksbackup från extern källa (%s):</string>
 	<string name="restore_wallet_dialog_replace_warning">Du är på väg att byta ut din nuvarande wallet. Eventuella tillgångar i din nuvarande wallet kommer att förloras för alltid om du inte har gjort en separat säkerhetskopia.</string>
@@ -181,7 +176,6 @@
 	<string name="restore_wallet_dialog_success">Din wallet återskapades.</string>
 	<string name="restore_wallet_dialog_success_replay">Din wallet har återskapats. Beloppet kommer att beräknas snart. Detta kommer att ta en stund.</string>
 	<string name="import_keys_dialog_failure">Walleten kunde inte återskapas:\n\n%s\n\nFelaktigt lösenord?</string>
-
 	<string name="export_keys_dialog_title">Säkerhetskopiera wallet</string>
 	<string name="backup_wallet_dialog_message">Din säkerhetskopia kommer att krypteras med ett valt lösenord och lagras på extern plats.</string>
 	<string name="backup_wallet_dialog_warning_encrypted">Din wallet är skyddad av en betalnings-PIN. Se till att du kommer ihåg din PIN-kod tillsammans med lösenordet för säkerhetskopian.</string>
@@ -218,9 +212,7 @@
 	<string name="input_parser_invalid_bitcoin_uri">Ogiltig Dash URI:\n%s</string>
 	<string name="input_parser_invalid_address">Fick en ogiltig bitcoinadress!\n(Blandar du ihop Mainnet/Testnet?)</string>
 	<string name="input_parser_unverifyable_paymentrequest">Kan inte verifiera betalningsförfrågant:\n%s</string>
-
 	<string name="input_parser_invalid_paymentrequest">Ogiltig betalningsförffrågan:\n%s</string>
-
 	<string name="input_parser_invalid_transaction">Ogiltig transaktion:\n%s</string>
 	<string name="preferences_activity_title">Inställningar</string>
 	<string name="preferences_category_diagnostics">Diagnostik</string>
@@ -243,10 +235,7 @@
 	<string name="preferences_data_usage_title">Dataanvändning</string>
 	<string name="preferences_data_usage_summary">Visa alternativ för att begränsa dataanvändning över mobila nätverk.</string>
 	<string name="preferences_report_issue_title">Rapportera problem</string>
-	<string name="preferences_report_issue_summary">Samla information om ditt problem och maila rapporten till utvecklarna.</string>
 	<string name="preferences_initiate_reset_title">Återställ blockkedjan</string>
-	<string name="preferences_initiate_reset_summary">Återställer blockkedjan, transaktioner och plånboksbalansen, det tar en stund.</string>
-	<string name="preferences_initiate_reset_dialog_message">Vill du återställa och återsynkronisera blockkedjan? Detta kommer att tillfälligt dölja plånbokens saldo och radera genomförda transaktioner. Båda dessa kommer att återställas när blockkedjans synkronisering fortsätter.</string>
 	<string name="preferences_initiate_reset_dialog_positive">Återställ</string>
 	<string name="preferences_extended_public_key_title">Visa xpub</string>
 	<string name="preferences_extended_public_key_summary">Visa din plånboks publika huvudnyckel så den kan importeras till andra program och tjänster. Men var försiktig: Detta kommer att avslöja dina kontouppgifter för det program som importerar nyckeln.</string>
@@ -255,7 +244,6 @@
 	<string name="extended_public_key_fragment_share">Dela xpub…</string>
 	<string name="report_issue_dialog_title_issue">Rapportera problem</string>
 	<string name="report_issue_dialog_title_crash">Tidigare krasch upptäckt</string>
-	<string name="report_issue_dialog_message_issue">Beskriv felet så utförligt som möjligt så att det går att återskapa händelsen.</string>
 	<string name="report_issue_dialog_message_crash">Vill du skicka en krasch rapport och hjälpa att fixa det här problemet i framtiden?</string>
 	<string name="report_issue_dialog_description">problembeskrivning</string>
 	<string name="report_issue_dialog_report">Rapportera</string>
@@ -269,15 +257,12 @@
 	<string name="about_version_title">Version</string>
 	<string name="about_copyright_title">Copyright</string>
 	<string name="about_license_title">Licens</string>
-    <string name="about_source_title">Källkod</string>
-	<string name="about_credits_zxing_title">Denna app använder \'zxing\'</string>
+	<string name="about_source_title">Källkod</string>
 	<string name="about_credits_icon_title">Appen använder en ikon av \'bitboy\'</string>
-	<string name="about_community_googleplus_title">Google+-community</string>
-	<string name="about_community_googleplus_summary">Diskussioner om appen</string>
 	<string name="about_market_app_title">Google Play-sida</string>
 	<string name="about_market_app_summary">Recensera eller betygsätt appen</string>
+	<string name="about_community_googleplus_title">Google+-community</string>
 	<string name="notification_coins_received_msg">Mottagit %s</string>
-
 	<string name="notification_peers_connected_msg">Ansluten till %d noder</string>
 	<!-- generic buttons -->
 	<string name="button_ok">OK</string>
