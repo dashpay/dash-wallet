@@ -73,6 +73,7 @@ import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.service.BlockchainState.Impediment;
 import de.schildbach.wallet.ui.WalletActivity;
+import de.schildbach.wallet.util.BlockchainStateUtils;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet.util.WalletUtils;
@@ -93,10 +94,13 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Binder;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.format.DateUtils;
 
@@ -137,6 +141,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
     private static final long TX_EXCHANGE_RATE_TIME_THRESHOLD_MS = TimeUnit.MINUTES.toMillis(30);
 
     private static final Logger log = LoggerFactory.getLogger(BlockchainServiceImpl.class);
+
+    private static final String START_AS_FOREGROUND_EXTRA = "start_as_foreground";
 
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
@@ -225,7 +231,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
             text.append(label != null ? label : addressStr);
         }
 
-        final Notification.Builder notification = new Notification.Builder(this);
+        final NotificationCompat.Builder notification = new NotificationCompat.Builder(this,
+                Constants.TRANSACTIONS_NOTIFICATION_CHANNEL_ID);
         notification.setSmallIcon(R.drawable.stat_notify_received_24dp);
         notification.setTicker(tickerMsg);
         notification.setContentTitle(msg);
@@ -646,6 +653,24 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
     @Override
     public int onStartCommand(final Intent intent, final int flags, final int startId) {
         if (intent != null) {
+            Bundle extras = intent.getExtras();
+            if (getBlockchainState().replaying) {
+                //Restart service as a Foreground Service if it's synchronizing the blockchain
+                if (extras == null || !extras.containsKey(START_AS_FOREGROUND_EXTRA)) {
+                    Intent serviceIntent = new Intent(this, BlockchainServiceImpl.class);
+                    serviceIntent.putExtra(START_AS_FOREGROUND_EXTRA, true);
+                    ContextCompat.startForegroundService(this, serviceIntent);
+                    return START_NOT_STICKY;
+                } else {
+                    //Shows ongoing notification promoting service to foreground service and
+                    //preventing it from being killed in Android 26 or later
+                    Notification notification = createNetworkSyncNotification(getBlockchainState());
+                    if (notification != null) {
+                        startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+                    }
+                }
+            }
+
             log.info("service start command: " + intent + (intent.hasExtra(Intent.EXTRA_ALARM_COUNT)
                     ? " (alarm count: " + intent.getIntExtra(Intent.EXTRA_ALARM_COUNT, 0) + ")" : ""));
 
@@ -755,6 +780,24 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         }
     }
 
+    private Notification createNetworkSyncNotification(BlockchainState blockchainState) {
+        Intent notificationIntent = new Intent(this, WalletActivity.class);
+        PendingIntent pendingIntent=PendingIntent.getActivity(this, 0,
+                notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        String message = BlockchainStateUtils.getSyncStateString(blockchainState, this);
+        if (message == null) {
+            return null;
+        }
+
+        return new NotificationCompat.Builder(this,
+                Constants.SYNCHRONIZATION_NOTIFICATION_CHANNEL_ID)
+                .setSmallIcon(R.drawable.stat_notify_received_24dp)
+                .setContentTitle(getString(R.string.app_name))
+                .setContentText(message)
+                .setContentIntent(pendingIntent).build();
+    }
+
     @Override
     public BlockchainState getBlockchainState() {
         final StoredBlock chainHead = blockChain.getChainHead();
@@ -806,7 +849,20 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
     private void broadcastBlockchainState() {
         final Intent broadcast = new Intent(ACTION_BLOCKCHAIN_STATE);
         broadcast.setPackage(getPackageName());
-        getBlockchainState().putExtras(broadcast);
+        BlockchainState blockchainState = getBlockchainState();
+        blockchainState.putExtras(broadcast);
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
+
+        if (blockchainState.bestChainHeight == config.getBestChainHeightEver()) {
+            //Remove ongoing notification if blockchain sync finished
+            stopForeground(true);
+            nm.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC);
+        } else if (blockchainState.replaying) {
+            //Shows ongoing notification when synchronizing the blockchain
+            Notification notification = createNetworkSyncNotification(blockchainState);
+            if (notification != null) {
+                nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+            }
+        }
     }
 }

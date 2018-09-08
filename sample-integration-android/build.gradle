@@ -5,15 +5,15 @@ repositories {
 }
 
 dependencies {
-    compile(project(':integration-android')) {
+    implementation(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
     }
-    compile 'org.dashj:dashj-core:0.14.4.5'
+    implementation 'org.dashj:dashj-core:0.14.4.5'
 }
 
 android {
     compileSdkVersion 'android-15'
-    buildToolsVersion '25.0.2'
+    buildToolsVersion '28.0.2'
 
     lintOptions { abortOnError false }
 
