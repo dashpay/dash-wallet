@@ -54,6 +54,7 @@ import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
 import org.bitcoinj.net.discovery.MultiplexingDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscoveryException;
+import org.bitcoinj.net.discovery.SeedPeers;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
@@ -422,7 +423,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                 peerGroup.addPeerDiscovery(new PeerDiscovery() {
                     private final PeerDiscovery normalPeerDiscovery = MultiplexingDiscovery
                             .forServices(Constants.NETWORK_PARAMETERS, 0);
-
+                    private final SeedPeers seedPeerDiscovery = new SeedPeers(Constants.NETWORK_PARAMETERS);
                     @Override
                     public InetSocketAddress[] getPeers(final long services, final long timeoutValue,
                             final TimeUnit timeoutUnit) throws PeerDiscoveryException {
@@ -442,9 +443,14 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                             }
                         }
 
-                        if (!connectTrustedPeerOnly)
-                            peers.addAll(
-                                    Arrays.asList(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                        if (!connectTrustedPeerOnly) {
+                            try {
+                                peers.addAll(
+                                        Arrays.asList(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                            } catch (PeerDiscoveryException x) {
+                                peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                            }
+                        }
 
                         // workaround because PeerGroup will shuffle peers
                         if (needsTrimPeersWorkaround)
