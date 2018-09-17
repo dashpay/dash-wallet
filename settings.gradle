@@ -1,3 +1,5 @@
 include 'wallet'
 include 'integration-android'
 include 'sample-integration-android'
+include 'native-scrypt'
+include 'native-x11'

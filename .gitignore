@@ -16,4 +16,3 @@ out/
 *.iml
 *.so
 .DS_Store
-.externalNativeBuild/
