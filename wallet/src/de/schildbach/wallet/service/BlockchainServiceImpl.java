@@ -51,6 +51,7 @@ import org.bitcoinj.core.listeners.AbstractPeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
+import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.net.discovery.MultiplexingDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscoveryException;
@@ -128,6 +129,13 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
     private AtomicInteger transactionsReceived = new AtomicInteger();
     private long serviceCreatedAt;
     private boolean resetBlockchainOnShutdown = false;
+
+    //Settings to bypass dashj default dns seeds
+    private final SeedPeers seedPeerDiscovery = new SeedPeers(Constants.NETWORK_PARAMETERS);
+    private final String dnsSeeds[] = { "dnsseed.dash.org" };
+    private final DnsDiscovery dnsDiscovery = new DnsDiscovery(dnsSeeds, Constants.NETWORK_PARAMETERS);
+    ArrayList<PeerDiscovery> peerDiscoveryList = new ArrayList<>(2);
+
 
     private static final int MIN_COLLECT_HISTORY = 2;
     private static final int IDLE_BLOCK_TIMEOUT_MIN = 2;
@@ -414,9 +422,12 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                 peerGroup.setPeerDiscoveryTimeoutMillis(Constants.PEER_DISCOVERY_TIMEOUT_MS);
 
                 peerGroup.addPeerDiscovery(new PeerDiscovery() {
-                    private final PeerDiscovery normalPeerDiscovery = MultiplexingDiscovery
-                            .forServices(Constants.NETWORK_PARAMETERS, 0);
-                    private final SeedPeers seedPeerDiscovery = new SeedPeers(Constants.NETWORK_PARAMETERS);
+                    //Keep Original code here for now
+                    //private final PeerDiscovery normalPeerDiscovery = MultiplexingDiscovery
+                    //        .forServices(Constants.NETWORK_PARAMETERS, 0);
+                    private final PeerDiscovery normalPeerDiscovery = new MultiplexingDiscovery(Constants.NETWORK_PARAMETERS, peerDiscoveryList);
+
+
                     @Override
                     public InetSocketAddress[] getPeers(final long services, final long timeoutValue,
                             final TimeUnit timeoutUnit) throws PeerDiscoveryException {
@@ -440,7 +451,12 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                             try {
                                 peers.addAll(
                                         Arrays.asList(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                                if(peers.size() < 10) {
+                                    log.info("DNS peer discovery returned less than 10 nodes.  Adding seed peers to the list to increase connections");
+                                    peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                                }
                             } catch (PeerDiscoveryException x) {
+                                log.info("DNS peers returned no nodes.  Adding seed peers to the list to ensure connections");
                                 peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
                             }
                         }
@@ -647,6 +663,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         registerReceiver(tickReceiver, new IntentFilter(Intent.ACTION_TIME_TICK));
 
         wallet.getContext().initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
+
+        peerDiscoveryList.add(dnsDiscovery);
     }
 
     @Override
