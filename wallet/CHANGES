@@ -1,4 +1,9 @@
 Dash Wallet
+v5.18.4
+* Optimize node connectivity for more reliable connections
+* Get VES from localbitcoins.com
+* Remove remaining status message for RBF transactions
+
 v5.18.3
 * Add Travis CI
 * Detect Local currency (upgrade from previous version)
