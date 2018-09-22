@@ -148,7 +148,8 @@ preBuild.dependsOn 'buildNativeScrypt'
 preBuild.dependsOn 'buildNativeX11'
 
 clean {
-    file('src/main/jniLibs').deleteDir()
+    //This is commented out to so apks will include the scrypt libraries with gradle 4.10
+    //file('src/main/jniLibs').deleteDir()
 }
 
 /*task svgToPngMipmap(type: fr.avianey.androidsvgdrawable.gradle.SvgDrawableTask) {
