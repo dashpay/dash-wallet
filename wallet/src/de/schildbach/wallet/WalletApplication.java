@@ -51,13 +51,10 @@ import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet_test.R;
 
-import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlarmManager;
 import android.app.Application;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -68,7 +65,6 @@ import android.os.Bundle;
 import android.os.Process;
 import android.os.StrictMode;
 import android.preference.PreferenceManager;
-import android.support.annotation.StringRes;
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.format.DateUtils;
 import android.widget.Toast;
@@ -185,40 +181,6 @@ public class WalletApplication extends Application implements Application.Activi
         afterLoadWallet();
 
         cleanupFiles();
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            createNotificationChannels();
-        }
-    }
-
-    @TargetApi(Build.VERSION_CODES.O)
-    private void createNotificationChannels() {
-        //Transactions
-        createNotificationChannel(Constants.TRANSACTIONS_NOTIFICATION_CHANNEL_ID,
-                R.string.notification_transactions_channel_name,
-                R.string.notification_transactions_channel_description,
-                NotificationManager.IMPORTANCE_HIGH);
-        //Synchronization
-        createNotificationChannel(Constants.SYNCHRONIZATION_NOTIFICATION_CHANNEL_ID,
-                R.string.notification_synchronization_channel_name,
-                R.string.notification_synchronization_channel_description,
-                NotificationManager.IMPORTANCE_LOW);
-    }
-
-    @TargetApi(Build.VERSION_CODES.O)
-    private void createNotificationChannel(String channelId, @StringRes int channelName,
-                                           @StringRes int channelDescription, int importance) {
-        CharSequence name = getString(channelName);
-        String description = getString(channelDescription);
-
-        NotificationChannel channel = new NotificationChannel(channelId, name, importance);
-        channel.setDescription(description);
-        // Register the channel with the system; you can't change the importance
-        // or other notification behaviors after this
-        NotificationManager notificationManager = getSystemService(NotificationManager.class);
-        if (notificationManager != null) {
-            notificationManager.createNotificationChannel(channel);
-        }
     }
 
     private void afterLoadWallet() {

@@ -1,4 +1,20 @@
 Dash Wallet
+v5.18.4
+* Optimize node connectivity for more reliable connections
+* Get VES from localbitcoins.com
+* Remove remaining status message for RBF transactions
+
+v5.18.3
+* Add Travis CI
+* Detect Local currency (upgrade from previous version)
+* Back on navigation menu closes the menu
+* Use dashj 0.14.4.7 (Seed List, changes for sending transactions)
+* Changes to Transaction State messages
+* Add VES currency
+* Updated Translations
+* Target API 28 (reverted)
+* If DNS seeders fail, use seed list
+
 v5.18.2
 * Update for Dash Core 0.12.3.x network upgrade
 * Send transactions if at least 1 connected peer

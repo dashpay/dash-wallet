@@ -88,9 +88,10 @@ public class ExchangeRatesProvider extends ContentProvider {
     private static final HttpUrl POLONIEX_URL = HttpUrl.parse("https://poloniex.com/public?command=returnTradeHistory&currencyPair="+CoinDefinition.cryptsyMarketCurrency +"_" + CoinDefinition.coinTicker);
     private static final String POLONIEX_SOURCE = "Poloniex";
 
-    private static final HttpUrl COINHILLS_BTCVEF_URL = HttpUrl
-            .parse("https://api.coinhills.com/v1/cspa/btc/vef/");
-    private static final String COINHILLS_SOURCE = "Coinhills";
+    private static final HttpUrl LOCALBITCOINS_URL = HttpUrl
+            .parse("https://localbitcoins.com/bitcoinaverage/ticker-all-currencies/");
+    private static final String LOCALBITCOINS_SOURCE = "LocalBitcoins.com";
+
 
     private static final long UPDATE_FREQ_MS = TimeUnit.SECONDS.toMillis(30);
 
@@ -398,7 +399,7 @@ public class ExchangeRatesProvider extends ContentProvider {
         final Stopwatch watch = Stopwatch.createStarted();
 
         final Request.Builder request = new Request.Builder();
-        request.url(COINHILLS_BTCVEF_URL);
+        request.url(LOCALBITCOINS_URL);
         request.header("User-Agent", userAgent);
 
         final Call call = Constants.HTTP_CLIENT.newCall(request.build());
@@ -408,23 +409,30 @@ public class ExchangeRatesProvider extends ContentProvider {
                 pinRetryController.storeSecureTime(response.headers().getDate("date"));
                 final String content = response.body().string();
                 final JSONObject head = new JSONObject(content);
+                final JSONObject vesData = head.getJSONObject("VES");
 
-                if(head.getBoolean("success")) {
-                    JSONObject data = head.getJSONObject("data");
-                    JSONObject cspa_BTC_VEF = data.getJSONObject("CSPA:BTC/VEF");
-                    String rateString =  cspa_BTC_VEF.getString("cspa");
-                    watch.stop();
-                    log.info("fetched exchange rates from {}, {} chars, took {}", BITCOINAVERAGE_DASHBTC_URL, content.length(),
-                            watch);
-                    return rateString;
+                String rateString = null;
+                if(vesData.has("avg_1h")) {
+                    rateString = vesData.getString("avg_1h");
+                } else if(vesData.has("avg_6h")) {
+                    rateString = vesData.getString("avg_6h");
+                } else if(vesData.has("avg_12h")) {
+                    rateString = vesData.getString("avg_12h");
+                } else if(vesData.has("avg_24h")) {
+                    rateString = vesData.getString("avg_24h");
                 }
-                log.warn("success == false when fetching exchange rates from {}", BITCOINAVERAGE_DASHBTC_URL);
+
+                watch.stop();
+                log.info("fetched exchange rates from {}, {} chars, took {}", BITCOINAVERAGE_DASHBTC_URL, content.length(),
+                            watch);
+                if(rateString != null)
+                    return rateString;
 
             } else {
                 log.warn("http status {} when fetching exchange rates from {}", response.code(), BITCOINAVERAGE_DASHBTC_URL);
             }
         } catch (final Exception x) {
-            log.warn("problem fetching exchange rates from " + COINHILLS_BTCVEF_URL, x);
+            log.warn("problem fetching exchange rates from " + LOCALBITCOINS_URL, x);
         }
 
         return null;
@@ -446,12 +454,12 @@ public class ExchangeRatesProvider extends ContentProvider {
             final Fiat rate = parseFiatInexact("VES", _rate.toString());
             if (rate.signum() > 0) {
                 rates.put("VES", new ExchangeRate(
-                        new org.bitcoinj.utils.ExchangeRate(rate), COINHILLS_SOURCE));
+                        new org.bitcoinj.utils.ExchangeRate(rate), LOCALBITCOINS_SOURCE));
                 rates.remove("VEF");
             }
         } catch (final IllegalArgumentException x) {
             log.warn("problem fetching {} exchange rate from {}: {}", "BTC",
-                    COINHILLS_BTCVEF_URL, x.getMessage());
+                    LOCALBITCOINS_URL, x.getMessage());
         }
     }
 }
