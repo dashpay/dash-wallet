@@ -139,11 +139,11 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
 
         final String currencyCode = btcFormat.code();
         if (MonetaryFormat.CODE_BTC.equals(currencyCode))
-            views.setImageViewResource(R.id.widget_wallet_prefix, R.drawable.currency_symbol_btc);
+            views.setImageViewResource(R.id.widget_wallet_prefix, R.drawable.currency_symbol_dash);
         else if (MonetaryFormat.CODE_MBTC.equals(currencyCode))
-            views.setImageViewResource(R.id.widget_wallet_prefix, R.drawable.currency_symbol_mbtc);
+            views.setImageViewResource(R.id.widget_wallet_prefix, R.drawable.currency_symbol_mdash);
         else if (MonetaryFormat.CODE_UBTC.equals(currencyCode))
-            views.setImageViewResource(R.id.widget_wallet_prefix, R.drawable.currency_symbol_ubtc);
+            views.setImageViewResource(R.id.widget_wallet_prefix, R.drawable.currency_symbol_udash);
 
         views.setTextViewText(R.id.widget_wallet_balance_btc, balanceStr);
         views.setViewVisibility(R.id.widget_wallet_balance_local, localBalanceStr != null ? View.VISIBLE : View.GONE);

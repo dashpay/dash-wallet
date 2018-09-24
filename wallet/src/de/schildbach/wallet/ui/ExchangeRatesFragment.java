@@ -39,6 +39,7 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.app.LoaderManager;
 import android.app.LoaderManager.LoaderCallbacks;
+import android.content.Context;
 import android.content.CursorLoader;
 import android.content.Loader;
 import android.content.SharedPreferences;
@@ -50,6 +51,7 @@ import android.os.Bundle;
 import android.provider.BaseColumns;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -359,7 +361,12 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
 
             holder.itemView.setBackgroundResource(isDefaultCurrency ? R.color.bg_list_selected : R.color.bg_list);
 
-            holder.defaultView.setVisibility(isDefaultCurrency ? View.VISIBLE : View.INVISIBLE);
+            int colorPrimary = getActivity().getResources().getColor(R.color.colorPrimary);
+            int colorDarkestBlue = getActivity().getResources().getColor(R.color.darkest_blue);
+
+            holder.currencyCodeView.setTextColor(isDefaultCurrency ? colorPrimary : colorDarkestBlue);
+            holder.rateLabel.setTextColor(isDefaultCurrency ? colorPrimary : colorDarkestBlue);
+            holder.rateView.setTextColor(isDefaultCurrency ? colorPrimary : colorDarkestBlue);
 
             holder.currencyCodeView.setText(exchangeRate.getCurrencyCode());
 
@@ -379,7 +386,8 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
             holder.menuView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(final View v) {
-                    final PopupMenu popupMenu = new PopupMenu(activity, v);
+                    Context wrapper = new ContextThemeWrapper(activity, R.style.My_PopupOverlay);
+                    final PopupMenu popupMenu = new PopupMenu(wrapper, v);
                     popupMenu.inflate(R.menu.exchange_rates_context);
                     popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
                         @Override
@@ -401,16 +409,16 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
     }
 
     private final class ExchangeRateViewHolder extends RecyclerView.ViewHolder {
-        private final View defaultView;
         private final TextView currencyCodeView;
+        private final TextView rateLabel;
         private final CurrencyTextView rateView;
         private final CurrencyTextView walletView;
         private final ImageButton menuView;
 
         public ExchangeRateViewHolder(final View itemView) {
             super(itemView);
-            defaultView = itemView.findViewById(R.id.exchange_rate_row_default);
             currencyCodeView = (TextView) itemView.findViewById(R.id.exchange_rate_row_currency_code);
+            rateLabel = (TextView) itemView.findViewById(R.id.exchange_rate_label);
             rateView = (CurrencyTextView) itemView.findViewById(R.id.exchange_rate_row_rate);
             walletView = (CurrencyTextView) itemView.findViewById(R.id.exchange_rate_row_balance);
             menuView = (ImageButton) itemView.findViewById(R.id.exchange_rate_row_menu);

@@ -25,6 +25,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
@@ -79,9 +81,14 @@ import android.provider.Settings;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.Spannable;
 import android.text.SpannableStringBuilder;
+import android.text.Spanned;
 import android.text.format.DateUtils;
+import android.text.style.AbsoluteSizeSpan;
+import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
+import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -158,7 +165,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         setRetainInstance(true);
         setHasOptionsMenu(true);
 
-        adapter = new TransactionsAdapter(activity, wallet, true, application.maxConnectedPeers(), this);
+        adapter = new TransactionsAdapter(activity, wallet, application.maxConnectedPeers(), this);
 
         this.direction = null;
     }
@@ -307,7 +314,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         final byte[] txSerialized = tx.unsafeBitcoinSerialize();
         final boolean txRotation = tx.getPurpose() == Purpose.KEY_ROTATION;
 
-        final PopupMenu popupMenu = new PopupMenu(activity, view);
+        Context wrapper = new ContextThemeWrapper(activity, R.style.My_PopupOverlay);
+        final PopupMenu popupMenu = new PopupMenu(wrapper, view);
         popupMenu.inflate(R.menu.wallet_transactions_context);
         final MenuItem editAddressMenuItem = popupMenu.getMenu()
                 .findItem(R.id.wallet_transactions_context_edit_address);
@@ -461,9 +469,22 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
         final SpannableStringBuilder lockedWalletText = new SpannableStringBuilder(
                 getString(R.string.wallet_lock_unlock_to_see_txs_title));
-        lockedWalletText.setSpan(new StyleSpan(Typeface.BOLD), 0, lockedWalletText.length(),
+        int titleLength = lockedWalletText.length();
+
+        lockedWalletText.setSpan(new StyleSpan(Typeface.BOLD), 0, titleLength,
                 SpannableStringBuilder.SPAN_POINT_MARK);
-        lockedWalletText.append("\n\n").append(getString(R.string.wallet_lock_unlock_to_see_txs_txt));
+        lockedWalletText.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.darkest_blue)),
+                0, titleLength, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        String unlockToSeeTxt = getString(R.string.wallet_lock_unlock_to_see_txs_txt);
+        lockedWalletText.append("\n\n").append(unlockToSeeTxt);
+        lockedWalletText.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.medium_gray)),
+                titleLength, lockedWalletText.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+        Matcher matcher = Pattern.compile("\n\n").matcher(lockedWalletText);
+        while (matcher.find()) {
+            lockedWalletText.setSpan(new AbsoluteSizeSpan(10, true),
+                    matcher.start() + 1, matcher.end(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
 
         emptyView.setText(lockedWalletText);
     }
@@ -474,10 +495,24 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         final SpannableStringBuilder emptyText = new SpannableStringBuilder(
                 getString(direction == Direction.SENT ? R.string.wallet_transactions_fragment_empty_text_sent
                         : R.string.wallet_transactions_fragment_empty_text_received));
-        emptyText.setSpan(new StyleSpan(Typeface.BOLD), 0, emptyText.length(),
+        int titleLength = emptyText.length();
+        emptyText.setSpan(new StyleSpan(Typeface.BOLD), 0, titleLength,
                 SpannableStringBuilder.SPAN_POINT_MARK);
-        if (direction != Direction.SENT)
+        emptyText.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.darkest_blue)),
+                0, titleLength, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+        if (direction != Direction.SENT) {
             emptyText.append("\n\n").append(getString(R.string.wallet_transactions_fragment_empty_text_howto));
+            emptyText.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.medium_gray)),
+                    titleLength, emptyText.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+
+        Matcher matcher = Pattern.compile("\n\n").matcher(emptyText);
+        while (matcher.find()) {
+            emptyText.setSpan(new AbsoluteSizeSpan(10, true),
+                    matcher.start() + 1, matcher.end(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+
         emptyView.setText(emptyText);
     }
 

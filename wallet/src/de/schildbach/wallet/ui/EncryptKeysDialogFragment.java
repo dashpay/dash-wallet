@@ -28,26 +28,24 @@ import org.spongycastle.crypto.params.KeyParameter;
 
 import com.google.common.base.Strings;
 
-import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.preference.PinRetryController;
+import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.app.FragmentManager;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnShowListener;
-import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
+import android.support.v7.app.AlertDialog;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
@@ -215,6 +213,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
 
     @Override
     public void onDismiss(final DialogInterface dialog) {
+        KeyboardUtil.hideKeyboard(getActivity(), oldPasswordView);
         this.dialog = null;
 
         oldPasswordView.removeTextChangedListener(textWatcher);

@@ -16,8 +16,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
-            android:layout_marginLeft="@dimen/list_entry_padding_horizontal_lax"
-            android:layout_marginRight="@dimen/list_entry_padding_horizontal_lax"
+            android:layout_marginLeft="@dimen/space_medium"
+            android:layout_marginRight="@dimen/space_medium"
             android:layout_marginTop="8dp"
             android:text="@string/sweep_wallet_fragment_intro" />
 
@@ -26,8 +26,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
-            android:layout_marginLeft="@dimen/list_entry_padding_horizontal_lax"
-            android:layout_marginRight="@dimen/list_entry_padding_horizontal_lax"
+            android:layout_marginLeft="@dimen/space_medium"
+            android:layout_marginRight="@dimen/space_medium"
             android:layout_marginTop="0dp"
             android:textStyle="bold" />
 
@@ -67,8 +67,8 @@
             android:id="@+id/sweep_wallet_fragment_balance"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="@dimen/list_entry_padding_horizontal_lax"
-            android:layout_marginRight="@dimen/list_entry_padding_horizontal_lax"
+            android:layout_marginLeft="@dimen/space_medium"
+            android:layout_marginRight="@dimen/space_medium"
             android:layout_marginTop="8dp" />
 
         <Space
@@ -81,8 +81,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
-            android:layout_marginLeft="@dimen/list_entry_padding_horizontal_lax"
-            android:layout_marginRight="@dimen/list_entry_padding_horizontal_lax"
+            android:layout_marginLeft="@dimen/space_medium"
+            android:layout_marginRight="@dimen/space_medium"
             android:layout_marginTop="8dp"
             android:text="@string/sweep_wallet_fragment_hint"
             android:textColor="@color/fg_less_significant"

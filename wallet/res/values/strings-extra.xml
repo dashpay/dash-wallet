@@ -78,4 +78,6 @@
 	<string name="notification_synchronization_channel_name">Synchronization</string>
 	<string name="notification_synchronization_channel_description">Shows ongoing notification while synchronizing the network.</string>
 
+	<string name="protocol_version" translatable="false">%1$s\nprotocol: %2$d</string>
+
 </resources>

@@ -103,8 +103,6 @@ public class WalletUtils {
             final String part = address.substring(i, end < len ? end : len);
 
             builder.append(part);
-            builder.setSpan(new TypefaceSpan("monospace"), builder.length() - part.length(), builder.length(),
-                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             if (end < len) {
                 final boolean endOfLine = lineSize > 0 && end % lineSize == 0;
                 builder.append(endOfLine ? '\n' : groupSeparator);

@@ -1,41 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
+<TextView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
-    android:orientation="vertical">
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/strong_blue_bis"
-        android:orientation="horizontal">
-
-        <ImageView
-            android:id="@android:id/icon"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:layout_gravity="center_vertical"
-            android:layout_marginLeft="6dp"
-            android:src="@drawable/ic_warning"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@android:id/title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:padding="12dp"
-            android:text="Title"
-            android:textColor="@color/white"
-            android:textStyle="bold" />
-
-    </LinearLayout>
-
-    <ImageView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:paddingBottom="8dp"
-        android:src="@drawable/dialog_header" />
-
-</LinearLayout>
+    android:textColor="@color/darkest_blue"
+    android:textSize="14sp"
+    android:paddingLeft="?dialogPreferredPadding"
+    android:paddingRight="?dialogPreferredPadding"
+    android:paddingTop="?dialogPreferredPadding"
+    style="@style/MontserratSemiBold"/>

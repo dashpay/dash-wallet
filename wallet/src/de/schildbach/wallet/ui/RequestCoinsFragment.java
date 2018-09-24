@@ -59,7 +59,6 @@ import android.content.Intent;
 import android.content.Loader;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.nfc.NdefMessage;
@@ -67,8 +66,6 @@ import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
 import android.nfc.NfcEvent;
 import android.os.Bundle;
-import android.support.v4.app.ShareCompat;
-import android.support.v7.widget.CardView;
 import android.text.SpannableStringBuilder;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -177,18 +174,14 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
         final View view = inflater.inflate(R.layout.request_coins_fragment, container, false);
 
         qrView = (ImageView) view.findViewById(R.id.request_coins_qr);
-
-        final CardView qrCardView = (CardView) view.findViewById(R.id.request_coins_qr_card);
-        qrCardView.setCardBackgroundColor(Color.WHITE);
-        qrCardView.setPreventCornerOverlap(false);
-        qrCardView.setOnClickListener(new OnClickListener() {
+        qrView.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(final View v) {
                 BitmapFragment.show(getFragmentManager(), qrCodeBitmap.getBitmap());
             }
         });
 
-        final CurrencyAmountView btcAmountView = (CurrencyAmountView) view.findViewById(R.id.request_coins_amount_btc);
+        final CurrencyAmountView btcAmountView = (CurrencyAmountView) view.findViewById(R.id.request_coins_amount_dash);
         btcAmountView.setCurrencySymbol(config.getFormat().code());
         btcAmountView.setInputFormat(config.getMaxPrecisionFormat());
         btcAmountView.setHintFormat(config.getFormat());

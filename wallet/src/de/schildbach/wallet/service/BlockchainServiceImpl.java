@@ -233,7 +233,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
         final NotificationCompat.Builder notification = new NotificationCompat.Builder(this,
                 Constants.TRANSACTIONS_NOTIFICATION_CHANNEL_ID);
-        notification.setSmallIcon(R.drawable.stat_notify_received_24dp);
+        notification.setSmallIcon(R.drawable.ic_dash_d_white_bottom);
         notification.setTicker(tickerMsg);
         notification.setContentTitle(msg);
         if (text.length() > 0)
@@ -792,7 +792,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
         return new NotificationCompat.Builder(this,
                 Constants.SYNCHRONIZATION_NOTIFICATION_CHANNEL_ID)
-                .setSmallIcon(R.drawable.stat_notify_received_24dp)
+                .setSmallIcon(R.drawable.ic_dash_d_white_bottom)
                 .setContentTitle(getString(R.string.app_name))
                 .setContentText(message)
                 .setContentIntent(pendingIntent).build();
