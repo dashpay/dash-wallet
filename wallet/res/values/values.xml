@@ -22,22 +22,13 @@
 		<item>@string/preferences_precision_labels_0_6</item>
 	</string-array>
 	<string-array name="preferences_block_explorer_values">
+		<item>http://insight.dash.org/insight/</item>
 		<item>http://explorer.dash.org/chain/Dash/</item>
-		<item>http://explorer.darkcoin.qa/</item>
-		<item>https://bitinfocharts.com/darkcoin/</item>
+		<item>https://bitinfocharts.com/dash/</item>
 	</string-array>
 	<string-array name="preferences_block_explorer_labels">
+		<item>Dash Insight Block Explorer</item>
 		<item>Dash Block Explorer (Official)</item>
-		<item>Dash Block Explorer (Mirror)</item>
 		<item>BitinfoCharts</item>
 	</string-array>
-	<string-array name="preferences_block_explorer_values_testnet">
-		<item>http://test.explorer.dash.org/</item>
-		<item>http://test.explorer.dashninja.pl/</item>
-	</string-array>
-	<string-array name="preferences_block_explorer_labels_testnet">
-		<item>Dash Block Explorer (Official Testnet)</item>
-		<item>Dash Ninja</item>
-	</string-array>
-
 </resources>
