@@ -11,7 +11,7 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-		android:layout_marginBottom="@dimen/request_coins_qr_margin_top">
+		android:layout_marginBottom="@dimen/space_medium">
 
 		<include
 			android:layout_width="match_parent"
