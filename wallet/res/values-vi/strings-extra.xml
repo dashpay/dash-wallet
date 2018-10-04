@@ -1,17 +1,73 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-
 	<string name="send_coins_fragment_instantx_enable">Sử dụng InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Giao dịch InstantSend này chưa được bắt đầu thực hiện.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Giao dịch InstantSend này đang đợi kiểm tra bởi mạng lưới của Dash.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">Giao dịch InstantSend này đang đợi xác thực.</string>
 	<string name="transaction_row_message_own_instantx_locked">Giao dịch InstantSend đã được gửi (được khoá)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Giao dịch InstantSend này đang đợi kiểm tra bởi mạng lưới của Dash.</string>
-	<string name="transaction_row_message_received_instantx_locked">Giao dịch InstantSend này đã được kiểm tra bởi mạng lưới của Dash.</string>
+	<string name="transaction_row_message_received_instantx_lock_request">Giao dịch InstantSend này đang đợi xác thực.</string>
+	<string name="transaction_row_message_received_instantx_locked">InstantSend đã được xác thực</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">Giao dịch InstantSend chưa được xác thực</string>
 	<string name="transaction_row_message_received_instantx_locked2">InstantSend đã được khoá</string>
-
+	<string name="transaction_row_message_sent_to_single_peer">Giao dịch đã được gửi.</string>
 	<string name="wallet_options_disconnect">Cắt kết nối</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
+	<string name="export_keys_dialog_title_to_seed">Hiển thị câu phục hồi</string>
+	<string name="import_keys_dialog_title_from_seed">Khôi phục với câu phục hồi</string>
+	<string name="backup_to_seed_wallet_dialog_message">Đây là câu phục hồi của bạn. Hãy ghi nó xuống.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">ĐỪNG ĐỂ bất kỳ ai nhìn thấy câu phục hồi của bạn nếu không họ sẽ tiêu sạch số Dash của bạn đấy.</string>
+	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Ví của bạn được bảo vệ bởi mã PIN chi tiêu. Hãy nhập mã PIN của bạn và bấm Hiển thị để xem câu phục hồi của bạn.</string>
+    <string name="import_keys_from_seed_dialog_message">Hãy nhập câu phục hồi của bạn ở đây.</string>
+	<string name="import_export_keys_dialog_password_phrase">Câu phục hồi ở đây.</string>
+	<string name="preferences_report_issue_summary">Thu thập các thông tin về lỗi bạn gặp phải và gửi email về báo cáo lỗi này đến các nhà phát triển phần mềm.</string>
+	<string name="navigation_configuration">Cấu hình</string>
+    <string name="button_copy_address">Chép địa chỉ</string>
+	<string name="request_coins_clipboard_address_msg">Địa chỉ Dash đã được copy vào bộ đệm</string>
+	<string name="backup_wallet_to_seed_show_recovery_phrase">Hiển thị</string>
+	<string name="restore_wallet_from_invalid_seed_warning_message">%s là từ không hợp lệ.</string>
+
+	<string name="send_coins_options_fee_category_zero">Không phí</string>
+	<string name="send_coins_fragment_hint_fee_zero">Không phải trả phí. Sử dụng \"không phí\" chỉ khi bạn không quan tâm đến thời gian chờ xác thực.</string>
+
+	<string name="wallet_uri_handler_public_key_request_dialog_msg">Ứng dụng %s muốn nhận khoá công khai tổng thể của bạn. Nó có thể được sử dụng để theo dõi ví của bạn, nhưng nó không thể được dùng để tiêu Dash của bạn.</string>
+	<string name="wallet_uri_handler_address_request_dialog_msg">Ứng dụng %s đang yêu cầu một địa chỉ để nó có thể thanh toán cho bạn. Bạn có muốn cho phép điều này?</string>
+
+	<string name="wallet_lock_unlock">Mở khoá</string>
+	<string name="wallet_lock_unlock_wallet">Mở khoá ví</string>
+	<string name="wallet_lock_unlock_to_see_txs_title">Ví đã được khoá</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">Bấm vào biểu tượng khoá ở trên để mở khoá ví của bạn và xem lịch sử giao dịch.</string>
+	<string name="wallet_lock_unlock_dialog_title">Mở khoá ví</string>
+	<string name="wallet_lock_unlock_dialog_message">Ví của bạn được bảo vệ bởi mã PIN chi tiêu. Hãy nhập mã PIN và bấm Mở Khoá để tiếp tục</string>
+	<string name="wallet_lock_reset_wallet_title">Thiết lập lại ví</string>
+	<string name="wallet_lock_reset_wallet_message">Bạn chắc chứ? Tất cả dữ liệu sẽ bị xoá sạch và ví của bạn chỉ có thể khôi phục được bằng file sao lưu dự phòng hoặc các hạt giống khôi phục.</string>
+
+	<string name="wallet_lock_wallet_disabled">Ví bị mất tác dụng</string>
+	<string name="wallet_lock_try_again">Thử lại trong %1$d%2$s</string>
+	<string name="wallet_lock_reset">Thiết đặt lại</string>
+	<string name="wallet_lock_wrong_pin">Sai mã PIN! %s</string>
+
+	<plurals name="wallet_lock_attempts_remaining">
+		<item quantity="other">%dlần còn có thể thử lại</item>
+	</plurals>
+
+	<plurals name="minute">
+		<item quantity="other">phút</item>
+	</plurals>
+	
+	<plurals name="hour">
+		<item quantity="other">giờ</item>
+	</plurals>
+
+	<string name="encrypt_new_key_chain_upgrade_button">Nâng cấp</string>
+	<string name="encrypt_new_key_chain_dialog_title">Nâng cấp ví</string>
+	<string name="encrypt_new_key_chain_dialog_message">Ví của bạn sẽ được nâng cấp để hỗ trợ việc đưa dữ liệu vào hoặc xuất dữ liệu ra cho các app khác.</string>
+	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Bạn phải nhập mã PIN của bạn để hoàn tất việc nâng cấp.</string>
+	<string name="pin_code_required_dialog_message">App này hiện yêu cầu một mã PIN để chi tiêu và xem số dư cũng như các giao dịch.</string>
+    <string name="backup_wallet_seed_private_key_written_down_box">Tôi đã viết xuống cụm từ phục hồi</string>
+	
+	<string name="change_exchange_currency_code_message">Tiền địa phương của bạn là%1$s, nhưng trong ứng dụng này thì loại tiền ngầm định của bạn được đặt là %2$s. Bạn có muốn đổi nó về %1$s hoặc để nó là %2$s?</string>
+	<string name="change_to">Đổi về %s</string>
+	<string name="leave_as">Để là %s</string>
+
 </resources>

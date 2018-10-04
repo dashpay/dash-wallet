@@ -3,13 +3,13 @@
 
 	<string name="send_coins_fragment_instantx_enable">Usar InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Este pagamento InstantSend ainda não foi transmitido.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Este pagamento InstantSend está aguardando por verificação da rede Dash.</string>
-	<string name="transaction_row_message_own_instantx_locked">Enviar transação instantânea (bloqueado)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Este pagamento InstantSend está aguardando por verificação da rede Dash.</string>
-	<string name="transaction_row_message_received_instantx_locked">Este pagamento InstantSend foi verificado pela rede Dash</string>
+	<string name="transaction_row_message_own_instantx_lock_request">Este pagamento InstantSend está aguardando verificação.</string>
+	<string name="transaction_row_message_own_instantx_locked">Transação InstantSend enviada (confirmada)</string>
+	<string name="transaction_row_message_received_instantx_lock_request">Este pagamento InstantSend está aguardando verificação.</string>
+	<string name="transaction_row_message_received_instantx_locked">InstantSend verificado</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">InstantSend não confirmado</string>
-	<string name="transaction_row_message_received_instantx_locked2">InstantSend bloqueado</string>
-
+	<string name="transaction_row_message_received_instantx_locked2">InstantSend confirmado</string>
+	<string name="transaction_row_message_sent_to_single_peer">Esse pagamento foi enviado</string>
 	<string name="wallet_options_disconnect">Desconectado</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
@@ -18,11 +18,11 @@
 	<string name="backup_to_seed_wallet_dialog_message">Esta é a sua frase de recuperação. Por favor, anote isso.</string>
 	<string name="backup_wallet_to_seed_dialog_warning">NÃO deixe ninguém ver sua frase de recuperação ou poderão gastar seu Dash.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Sua carteira é protegida por um PIN. Digite seu PIN e pressione Mostrar para ver sua frase de recuperação.</string>
-    <string name="import_keys_from_seed_dialog_message">Digite sua frase de recuperação aqui.</string>
+	<string name="import_keys_from_seed_dialog_message">Digite sua frase de recuperação aqui.</string>
 	<string name="import_export_keys_dialog_password_phrase">A frase de recuperação vai aqui.</string>
 	<string name="preferences_report_issue_summary">Coletar informações sobre seu problema e enviar seu relatório por e-mail para os desenvolvedores.</string>
 	<string name="navigation_configuration">Configuração</string>
-    <string name="button_copy_address">Copiar endereço</string>
+	<string name="button_copy_address">Copiar endereço</string>
 	<string name="request_coins_clipboard_address_msg">Endereço Dash copiado para a área de transferência</string>
 	<string name="backup_wallet_to_seed_show_recovery_phrase">Mostrar</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%sé uma palavra inválida.</string>
@@ -56,7 +56,7 @@
 		<item quantity="one">minuto</item>
 		<item quantity="other">minutos</item>
 	</plurals>
-	
+
 	<plurals name="hour">
 		<item quantity="one">hora</item>
 		<item quantity="other">horas</item>
@@ -67,5 +67,10 @@
 	<string name="encrypt_new_key_chain_dialog_message">Sua carteira será atualizada para suportar importação e exportação para mais aplicativos.</string>
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Você deve inserir seu PIN para finalizar o processo de atualização.</string>
 	<string name="pin_code_required_dialog_message">Este app agora requer um PIN para gastos e também para ver seu saldo e transações.</string>
+	<string name="backup_wallet_seed_private_key_written_down_box">Eu anotei a frase de recuperação</string>
+
+	<string name="change_exchange_currency_code_message">Sua moeda local é %1$s, porém, nessa aplicação sua moeda padrão está definida como %2$s. Deseja mudar para %1$s ou deixar como %2$s?</string>
+	<string name="change_to">Mudar para %s</string>
+	<string name="leave_as">Deixar como %s</string>
 
 </resources>

@@ -87,6 +87,11 @@ public class ExchangeRatesProvider extends ContentProvider {
     private static final HttpUrl POLONIEX_URL = HttpUrl.parse("https://poloniex.com/public?command=returnTradeHistory&currencyPair="+CoinDefinition.cryptsyMarketCurrency +"_" + CoinDefinition.coinTicker);
     private static final String POLONIEX_SOURCE = "Poloniex";
 
+    private static final HttpUrl LOCALBITCOINS_URL = HttpUrl
+            .parse("https://localbitcoins.com/bitcoinaverage/ticker-all-currencies/");
+    private static final String LOCALBITCOINS_SOURCE = "LocalBitcoins.com";
+
+
     private static final long UPDATE_FREQ_MS = TimeUnit.SECONDS.toMillis(30);
 
     private static final Logger log = LoggerFactory.getLogger(ExchangeRatesProvider.class);
@@ -284,6 +289,7 @@ public class ExchangeRatesProvider extends ContentProvider {
                         }
                     }
                 }
+                assignAlternateVEFRate(dashPerBTC, rates);
 
                 watch.stop();
                 log.info("fetched exchange rates from {}, {} chars, took {}", BITCOINAVERAGE_URL, content.length(),
@@ -388,9 +394,71 @@ public class ExchangeRatesProvider extends ContentProvider {
         return null;
     }
 
+    private String requestExchangeRatesForBTCInVEF() {
+        final Stopwatch watch = Stopwatch.createStarted();
+
+        final Request.Builder request = new Request.Builder();
+        request.url(LOCALBITCOINS_URL);
+        request.header("User-Agent", userAgent);
+
+        final Call call = Constants.HTTP_CLIENT.newCall(request.build());
+        try {
+            final Response response = call.execute();
+            if (response.isSuccessful()) {
+                pinRetryController.storeSecureTime(response.headers().getDate("date"));
+                final String content = response.body().string();
+                final JSONObject head = new JSONObject(content);
+                final JSONObject vesData = head.getJSONObject("VES");
+
+                String rateString = null;
+                if(vesData.has("avg_1h")) {
+                    rateString = vesData.getString("avg_1h");
+                } else if(vesData.has("avg_6h")) {
+                    rateString = vesData.getString("avg_6h");
+                } else if(vesData.has("avg_12h")) {
+                    rateString = vesData.getString("avg_12h");
+                } else if(vesData.has("avg_24h")) {
+                    rateString = vesData.getString("avg_24h");
+                }
+
+                watch.stop();
+                log.info("fetched exchange rates from {}, {} chars, took {}", BITCOINAVERAGE_DASHBTC_URL, content.length(),
+                            watch);
+                if(rateString != null)
+                    return rateString;
+
+            } else {
+                log.warn("http status {} when fetching exchange rates from {}", response.code(), BITCOINAVERAGE_DASHBTC_URL);
+            }
+        } catch (final Exception x) {
+            log.warn("problem fetching exchange rates from " + LOCALBITCOINS_URL, x);
+        }
+
+        return null;
+    }
+
     // backport from bitcoinj 0.15
     private static Fiat parseFiatInexact(final String currencyCode, final String str) {
         final long val = new BigDecimal(str).movePointRight(Fiat.SMALLEST_UNIT_EXPONENT).longValue();
         return Fiat.valueOf(currencyCode, val);
+    }
+
+    private void assignAlternateVEFRate(Double dashPerBTC, Map<String, ExchangeRate> rates) {
+        String vefRate = requestExchangeRatesForBTCInVEF();
+        if(vefRate == null)
+            return;
+
+        try {
+            Double _rate = dashPerBTC * Double.parseDouble(vefRate);
+            final Fiat rate = parseFiatInexact("VES", _rate.toString());
+            if (rate.signum() > 0) {
+                rates.put("VES", new ExchangeRate(
+                        new org.bitcoinj.utils.ExchangeRate(rate), LOCALBITCOINS_SOURCE));
+                rates.remove("VEF");
+            }
+        } catch (final IllegalArgumentException x) {
+            log.warn("problem fetching {} exchange rate from {}: {}", "BTC",
+                    LOCALBITCOINS_URL, x.getMessage());
+        }
     }
 }

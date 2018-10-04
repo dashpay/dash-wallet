@@ -1,4 +1,34 @@
 Dash Wallet
+v5.18.4
+* Optimize node connectivity for more reliable connections
+* Get VES from localbitcoins.com
+* Remove remaining status message for RBF transactions
+
+v5.18.3
+* Add Travis CI
+* Detect Local currency (upgrade from previous version)
+* Back on navigation menu closes the menu
+* Use dashj 0.14.4.7 (Seed List, changes for sending transactions)
+* Changes to Transaction State messages
+* Add VES currency
+* Updated Translations
+* Target API 28 (reverted)
+* If DNS seeders fail, use seed list
+
+v5.18.2
+* Update for Dash Core 0.12.3.x network upgrade
+* Send transactions if at least 1 connected peer
+* Backup Recovery Phrase dialog, change OK to Dismiss
+* Fix file attachment issues with GMail app
+* Update translations
+* Removed checkpoints for testnet
+
+v5.18.1
+* When Upgrading from previous versions (5.17.6 and earlier) show recovery phrase
+* Default backup scheme is now the recovery phrase
+* Fixes for crashes on Unlock Dialog, Set PIN Dialog
+* Update translations
+
 v5.18
 * Lock Feature - for security and privacy
 * BIP44 support

@@ -3,13 +3,13 @@
 
 	<string name="send_coins_fragment_instantx_enable">Use InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">This InstantSend payment has not been transmitted yet.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">This InstantSend payment is awaiting verification by the Dash Network.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">This InstantSend payment is awaiting verification.</string>
 	<string name="transaction_row_message_own_instantx_locked">Sent InstantSend transaction (locked)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">This InstantSend payment is awaiting verification by the Dash Network.</string>
-	<string name="transaction_row_message_received_instantx_locked">This InstantSend payment has been verified by the Dash Network.</string>
+	<string name="transaction_row_message_received_instantx_lock_request">This InstantSend payment is awaiting verification.</string>
+	<string name="transaction_row_message_received_instantx_locked">InstantSend verified</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">Unconfirmed InstantSend</string>
 	<string name="transaction_row_message_received_instantx_locked2">Locked InstantSend</string>
-
+	<string name="transaction_row_message_sent_to_single_peer">This payment has been sent.</string>
 	<string name="wallet_options_disconnect">Disconnect</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
@@ -67,6 +67,10 @@
 	<string name="encrypt_new_key_chain_dialog_message">Your wallet will be upgraded to support importing from and exporting to more apps.</string>
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">You must enter your PIN to finish the upgrade process.</string>
 	<string name="pin_code_required_dialog_message">This app now requires a PIN to spend and view the balance and transactions.</string>
-
+    <string name="backup_wallet_seed_private_key_written_down_box">I have written down the recovery phrase</string>
+	
+	<string name="change_exchange_currency_code_message">Your local currency is %1$s, but in this app your default currency is set to %2$s. Would you like to change it to %1$s or leave it as %2$s?</string>
+	<string name="change_to">Change to %s</string>
+	<string name="leave_as">Leave as %s</string>
 
 </resources>

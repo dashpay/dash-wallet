@@ -73,6 +73,7 @@
     <string name="send_coins_fragment_hint_dusty_send">该金额太小了，无法支付。</string>
     <string name="send_coins_fragment_hint_insufficient_money">达世币余额不足。您还缺少 %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">您钱包中的微小付款金额无法达到可支付的金额。</string>
+    <string name="send_coins_fragment_hint_replaying">因正在进行重播, 当前交易不可用.</string>
     <string name="send_coins_fragment_direct_payment_enable">直接向收款人付款。</string>
     <string name="send_coins_fragment_direct_payment_ack">您的直接付款已经成功发送。</string>
     <string name="send_coins_fragment_direct_payment_nack">您的直接付款已被拒绝。</string>
@@ -162,7 +163,7 @@
     <string name="transaction_row_message_own_unbroadcasted">此项支付尚未传输。</string>
     <string name="transaction_row_message_received_direct">此项付款已经被直接接收。这存在所获取的达世币可能永远无法使用的风险。</string>
     <string name="transaction_row_message_received_unconfirmed_delayed">本交易的网络确认延误，可能是因为达世币网络拥堵。</string>
-    <string name="transaction_row_message_received_unconfirmed_unlocked">此项付款所获得的达世币将在几分钟之后可以使用。</string>
+    <string name="transaction_row_message_received_unconfirmed_unlocked">此笔款项不需要确认即可使用。</string>
     <string name="transaction_row_message_received_in_conflict">本交易很可能被发送者撤销！如果可以，请等待网络确认。</string>
     <string name="transaction_row_message_received_dead">此项付款已被付款人撤销。</string>
     <string name="transaction_row_message_received_dust">如此小的金额，在经济意义上可能永远也无法花费。</string>
@@ -239,11 +240,11 @@
     <string name="preferences_category_labs">实验</string>
     <string name="preferences_precision_title">面值和精度</string>
     <string name="preferences_precision_summary">金额的显示单位，不会影响计算。</string>
-    <string name="preferences_precision_labels_8">DASH, 8位小数</string>
-    <string name="preferences_precision_labels_6">DASH, 6位小数</string>
-    <string name="preferences_precision_labels_4">DASH, 4位小数</string>
-    <string name="preferences_precision_labels_2_3">mDASH, 2位小数</string>
-    <string name="preferences_precision_labels_0_6">µDASH, 无小数位</string>
+    <string name="preferences_precision_labels_8">达世币小数点后8位</string>
+    <string name="preferences_precision_labels_6">达世币小数点后6位</string>
+    <string name="preferences_precision_labels_4">达世币小数点后4位</string>
+    <string name="preferences_precision_labels_2_3">m达世币小数点后2位</string>
+    <string name="preferences_precision_labels_0_6">µ达世币</string>
     <string name="preferences_own_name_title">自己的名字</string>
     <string name="preferences_own_name_summary">为自己起名，可在支付请求中显示。尽量简短。</string>
     <string name="preferences_send_coins_autoclose_title">自动关闭发送币窗口</string>

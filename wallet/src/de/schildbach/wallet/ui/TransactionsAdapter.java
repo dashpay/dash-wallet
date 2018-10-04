@@ -70,7 +70,7 @@ import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     public enum Warning {
-        BACKUP, STORAGE_ENCRYPTION
+        BACKUP, BACKUP_SEED, STORAGE_ENCRYPTION
     }
 
     private final Context context;
@@ -309,7 +309,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         } else if (holder instanceof WarningViewHolder) {
             final WarningViewHolder warningHolder = (WarningViewHolder) holder;
 
-            if (warning == Warning.BACKUP) {
+            if (warning == Warning.BACKUP || warning == Warning.BACKUP_SEED) {
                 if (transactions.size() == 1) {
                     warningHolder.messageView.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0);
                     warningHolder.messageView
@@ -416,6 +416,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
             final boolean isIX = confidence.isIX();
             final boolean isLocked = confidence.isTransactionLocked();
+            final boolean sentToSinglePeer = confidence.getPeerCount() == 1;
+            final boolean sentToSinglePeerSuccessful = sentToSinglePeer ? confidence.isSent() : false;
 
             TransactionCacheEntry txCache = transactionCache.get(tx.getHash());
             if (txCache == null) {
@@ -616,6 +618,12 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 extendMessageView.setVisibility(View.VISIBLE);
                 messageView.setText(R.string.transaction_row_message_purpose_raise_fee);
                 messageView.setTextColor(colorInsignificant);
+            }  else if (isOwn && confidenceType == ConfidenceType.PENDING && sentToSinglePeer && txCache.isLocked == false && confidence.numBroadcastPeers() == 0) {
+                extendMessageView.setVisibility(View.VISIBLE);
+                if(sentToSinglePeerSuccessful)
+                    messageView.setText(R.string.transaction_row_message_sent_to_single_peer);
+                else messageView.setText(R.string.transaction_row_message_own_unbroadcasted);
+                messageView.setTextColor(colorInsignificant);
             } else if (isOwn && confidenceType == ConfidenceType.PENDING && confidence.numBroadcastPeers() == 0) {
                 extendMessageView.setVisibility(View.VISIBLE);
                 messageView.setText(R.string.transaction_row_message_own_unbroadcasted);
@@ -665,10 +673,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             } else if (!txCache.sent && WalletUtils.isPayToManyTransaction(tx)) {
                 extendMessageView.setVisibility(View.VISIBLE);
                 messageView.setText(R.string.transaction_row_message_received_pay_to_many);
-                messageView.setTextColor(colorInsignificant);
-            } else if (!txCache.sent && tx.isOptInFullRBF()) {
-                extendMessageView.setVisibility(View.VISIBLE);
-                messageView.setText(R.string.transaction_row_message_received_rbf);
                 messageView.setTextColor(colorInsignificant);
             } else if (memo != null) {
                 extendMessageView.setVisibility(View.VISIBLE);

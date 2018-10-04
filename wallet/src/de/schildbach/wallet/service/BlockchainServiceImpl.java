@@ -51,12 +51,15 @@ import org.bitcoinj.core.listeners.AbstractPeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
+import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.net.discovery.MultiplexingDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscoveryException;
+import org.bitcoinj.net.discovery.SeedPeers;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
+import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
@@ -99,6 +102,8 @@ import android.os.PowerManager.WakeLock;
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.format.DateUtils;
 
+import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
+
 /**
  * @author Andreas Schildbach
  */
@@ -127,12 +132,20 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
     private long serviceCreatedAt;
     private boolean resetBlockchainOnShutdown = false;
 
+    //Settings to bypass dashj default dns seeds
+    private final SeedPeers seedPeerDiscovery = new SeedPeers(Constants.NETWORK_PARAMETERS);
+    private final String dnsSeeds[] = { "dnsseed.dash.org" };
+    private final DnsDiscovery dnsDiscovery = new DnsDiscovery(dnsSeeds, Constants.NETWORK_PARAMETERS);
+    ArrayList<PeerDiscovery> peerDiscoveryList = new ArrayList<>(2);
+
+
     private static final int MIN_COLLECT_HISTORY = 2;
     private static final int IDLE_BLOCK_TIMEOUT_MIN = 2;
     private static final int IDLE_TRANSACTION_TIMEOUT_MIN = 9;
     private static final int MAX_HISTORY_SIZE = Math.max(IDLE_TRANSACTION_TIMEOUT_MIN, IDLE_BLOCK_TIMEOUT_MIN);
     private static final long APPWIDGET_THROTTLE_MS = DateUtils.SECOND_IN_MILLIS;
     private static final long BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS = DateUtils.SECOND_IN_MILLIS;
+    private static final long TX_EXCHANGE_RATE_TIME_THRESHOLD_MS = TimeUnit.MINUTES.toMillis(30);
 
     private static final Logger log = LoggerFactory.getLogger(BlockchainServiceImpl.class);
 
@@ -146,9 +159,22 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         @Override
         public void onCoinsReceived(final Wallet wallet, final Transaction tx, final Coin prevBalance,
                 final Coin newBalance) {
-            transactionsReceived.incrementAndGet();
 
             final int bestChainHeight = blockChain.getBestChainHeight();
+            final boolean replaying = bestChainHeight < config.getBestChainHeightEver();
+
+            long now = new Date().getTime();
+            long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
+            boolean insideTxExchangeRateTimeThreshold = (now - blockChainHeadTime) < TX_EXCHANGE_RATE_TIME_THRESHOLD_MS;
+
+            final ExchangeRate exchangeRate = config.getCachedExchangeRate().rate;
+            if (tx.getExchangeRate() == null && exchangeRate != null && !replaying && insideTxExchangeRateTimeThreshold) {
+                tx.setExchangeRate(exchangeRate);
+                application.saveWallet();
+            }
+
+            transactionsReceived.incrementAndGet();
+
 
             final Address address = WalletUtils.getWalletAddressOfReceived(tx, wallet);
             final Coin amount = tx.getValue(wallet);
@@ -158,11 +184,10 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                 @Override
                 public void run() {
                     final boolean isReceived = amount.signum() > 0;
-                    final boolean replaying = bestChainHeight < config.getBestChainHeightEver();
                     final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && replaying;
 
                     if (isReceived && !isReplayedTx)
-                        notifyCoinsReceived(address, amount);
+                        notifyCoinsReceived(address, amount, exchangeRate);
                 }
             });
         }
@@ -174,7 +199,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         }
     };
 
-    private void notifyCoinsReceived(@Nullable final Address address, final Coin amount) {
+    private void notifyCoinsReceived(@Nullable final Address address, final Coin amount,
+                                     @Nullable ExchangeRate exchangeRate) {
         if (notificationCount == 1)
             nm.cancel(Constants.NOTIFICATION_ID_COINS_RECEIVED);
 
@@ -186,7 +212,14 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         final MonetaryFormat btcFormat = config.getFormat();
 
         final String packageFlavor = application.applicationPackageFlavor();
-        final String msgSuffix = packageFlavor != null ? " [" + packageFlavor + "]" : "";
+        String msgSuffix = packageFlavor != null ? " [" + packageFlavor + "]" : "";
+
+        if (exchangeRate != null) {
+            exchangeRate.coinToFiat(amount);
+            MonetaryFormat format = Constants.LOCAL_FORMAT.code(0,
+                    PREFIX_ALMOST_EQUAL_TO + exchangeRate.fiat.getCurrencyCode());
+            msgSuffix += " " + format.format(exchangeRate.coinToFiat(amount));
+        }
 
         final String tickerMsg = getString(R.string.notification_coins_received_msg, btcFormat.format(amount))
                 + msgSuffix;
@@ -391,8 +424,11 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                 peerGroup.setPeerDiscoveryTimeoutMillis(Constants.PEER_DISCOVERY_TIMEOUT_MS);
 
                 peerGroup.addPeerDiscovery(new PeerDiscovery() {
-                    private final PeerDiscovery normalPeerDiscovery = MultiplexingDiscovery
-                            .forServices(Constants.NETWORK_PARAMETERS, 0);
+                    //Keep Original code here for now
+                    //private final PeerDiscovery normalPeerDiscovery = MultiplexingDiscovery
+                    //        .forServices(Constants.NETWORK_PARAMETERS, 0);
+                    private final PeerDiscovery normalPeerDiscovery = new MultiplexingDiscovery(Constants.NETWORK_PARAMETERS, peerDiscoveryList);
+
 
                     @Override
                     public InetSocketAddress[] getPeers(final long services, final long timeoutValue,
@@ -413,9 +449,19 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                             }
                         }
 
-                        if (!connectTrustedPeerOnly)
-                            peers.addAll(
-                                    Arrays.asList(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                        if (!connectTrustedPeerOnly) {
+                            try {
+                                peers.addAll(
+                                        Arrays.asList(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                                if(peers.size() < 10) {
+                                    log.info("DNS peer discovery returned less than 10 nodes.  Adding seed peers to the list to increase connections");
+                                    peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                                }
+                            } catch (PeerDiscoveryException x) {
+                                log.info("DNS peers returned no nodes.  Adding seed peers to the list to ensure connections");
+                                peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                            }
+                        }
 
                         // workaround because PeerGroup will shuffle peers
                         if (needsTrimPeersWorkaround)
@@ -619,6 +665,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         registerReceiver(tickReceiver, new IntentFilter(Intent.ACTION_TIME_TICK));
 
         wallet.getContext().initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
+
+        peerDiscoveryList.add(dnsDiscovery);
     }
 
     @Override
@@ -647,9 +695,16 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
                 if (peerGroup != null) {
                     log.info("broadcasting transaction " + tx.getHashAsString());
-                    peerGroup.broadcastTransaction(tx);
+                    int count = peerGroup.numConnectedPeers();
+                    int minimum = peerGroup.getMinBroadcastConnections();
+                    //if the number of peers is <= 3, then only require that number of peers to send
+                    if(count <= 3)
+                        minimum = count;
+
+                    peerGroup.broadcastTransaction(tx, minimum);
                 } else {
                     log.info("peergroup not available, not broadcasting transaction " + tx.getHashAsString());
+                    tx.getConfidence().setPeerInfo(0, 1);
                 }
             }
         } else {

@@ -163,7 +163,7 @@
     <string name="transaction_row_message_own_unbroadcasted">Este pagamento ainda não foi transmitido.</string>
     <string name="transaction_row_message_received_direct">Esse pagamento foi recebido diretamente. Existe um certo risco dessa quantia nunca poder ser gasta no futuro.</string>
     <string name="transaction_row_message_received_unconfirmed_delayed">A confirmação deste pagamento está atrasada, provavelmente devido a uma sobrecarga da rede Dash.</string>
-    <string name="transaction_row_message_received_unconfirmed_unlocked">Este pagamento estará disponível em alguns minutos.</string>
+    <string name="transaction_row_message_received_unconfirmed_unlocked">Esse pagamento pode ser gasto agora sem ser confirmado.</string>
     <string name="transaction_row_message_received_in_conflict">Este pagamento tem um alto risco de ser anulado pelo emissor! Se você puder, espere pela confirmação.</string>
     <string name="transaction_row_message_received_dead">Este pagamento foi anulado pelo emissor.</string>
     <string name="transaction_row_message_received_dust">Esta pequena quantidade pode provavelmente nunca ser gasta economicamente.</string>

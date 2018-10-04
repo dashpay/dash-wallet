@@ -216,6 +216,11 @@ public class CrashReporter {
         report.append("Time of backup: "
                 + (lastBackupTime > 0 ? String.format(Locale.US, "%tF %tT %tZ", calendar, calendar, calendar) : "none")
                 + "\n");
+        final long lastBackupSeedTime = configuration.getLastBackupSeedTime();
+        calendar.setTimeInMillis(lastBackupSeedTime);
+        report.append("Time of seed backup: "
+                + (lastBackupSeedTime > 0 ? String.format(Locale.US, "%tF %tT %tZ", calendar, calendar, calendar) : "none")
+                + "\n");
         report.append("Network: " + Constants.NETWORK_PARAMETERS.getId() + "\n");
         final Wallet wallet = application.getWallet();
         report.append("Encrypted: " + wallet.isEncrypted() + "\n");
@@ -248,9 +253,6 @@ public class CrashReporter {
         final File filesDir = application.getFilesDir();
         report.append("\nContents of FilesDir " + filesDir + ":\n");
         appendDir(report, filesDir, 0);
-        final File logDir = application.getDir("log", Context.MODE_PRIVATE);
-        report.append("\nContents of LogDir " + logDir + ":\n");
-        appendDir(report, logDir, 0);
     }
 
     private static void appendDir(final Appendable report, final File file, final int indent) throws IOException {

@@ -49,6 +49,7 @@ public class Configuration {
     public static final String PREFS_KEY_SEND_COINS_AUTOCLOSE = "send_coins_autoclose";
     public static final String PREFS_KEY_CONNECTIVITY_NOTIFICATION = "connectivity_notification";
     public static final String PREFS_KEY_EXCHANGE_CURRENCY = "exchange_currency";
+    public static final String PREFS_KEY_EXCHANGE_CURRENCY_DETECTED = "exchange_currency_detected";
     public static final String PREFS_KEY_TRUSTED_PEER = "trusted_peer";
     public static final String PREFS_KEY_TRUSTED_PEER_ONLY = "trusted_peer_only";
     public static final String PREFS_KEY_BLOCK_EXPLORER = "block_explorer";
@@ -57,6 +58,7 @@ public class Configuration {
     public static final String PREFS_KEY_DISCLAIMER = "disclaimer";
     private static final String PREFS_KEY_LABS_QR_PAYMENT_REQUEST = "labs_qr_payment_request";
     private static final String PREFS_KEY_LOOK_UP_WALLET_NAMES = "look_up_wallet_names";
+    private static final String PREFS_KEY_PREVIOUS_VERSION = "previous_version";
 
     private static final String PREFS_KEY_LAST_VERSION = "last_version";
     private static final String PREFS_KEY_LAST_USED = "last_used";
@@ -68,6 +70,8 @@ public class Configuration {
     private static final String PREFS_KEY_CHANGE_LOG_VERSION = "change_log_version";
     public static final String PREFS_KEY_REMIND_BACKUP = "remind_backup";
     private static final String PREFS_KEY_LAST_BACKUP = "last_backup";
+    public static final String PREFS_KEY_REMIND_BACKUP_SEED = "remind_backup_seed";
+    private static final String PREFS_KEY_LAST_BACKUP_SEED = "last_backup_seed";
     public static final String PREFS_KEY_INSTANTX_ENABLED = "labs_instantx_enabled";
     public static final String PREFS_KEY_LITE_MODE = "labs_lite_mode";
 
@@ -165,7 +169,9 @@ public class Configuration {
     public boolean remindBackup() {
         return prefs.getBoolean(PREFS_KEY_REMIND_BACKUP, true);
     }
-
+    public boolean remindBackupSeed() {
+        return prefs.getBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true);
+    }
     public long getLastBackupTime() {
         return prefs.getLong(PREFS_KEY_LAST_BACKUP, 0);
     }
@@ -179,6 +185,19 @@ public class Configuration {
                 .putLong(PREFS_KEY_LAST_BACKUP, System.currentTimeMillis()).apply();
     }
 
+    public long getLastBackupSeedTime() {
+        return prefs.getLong(PREFS_KEY_LAST_BACKUP_SEED, 0);
+    }
+
+    public void armBackupSeedReminder() {
+        prefs.edit().putBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true).apply();
+    }
+
+    public void disarmBackupSeedReminder() {
+        prefs.edit().putBoolean(PREFS_KEY_REMIND_BACKUP_SEED, false)
+                .putLong(PREFS_KEY_LAST_BACKUP_SEED, System.currentTimeMillis()).apply();
+    }
+
     public boolean getDisclaimerEnabled() {
         return prefs.getBoolean(PREFS_KEY_DISCLAIMER, true);
     }
@@ -189,6 +208,22 @@ public class Configuration {
 
     public void setExchangeCurrencyCode(final String exchangeCurrencyCode) {
         prefs.edit().putString(PREFS_KEY_EXCHANGE_CURRENCY, exchangeCurrencyCode).apply();
+    }
+
+    public boolean getExchangeCurrencyCodeDetected() {
+        return prefs.getBoolean(PREFS_KEY_EXCHANGE_CURRENCY_DETECTED, false);
+    }
+
+    public void setExchangeCurrencyCodeDetected(boolean detected) {
+        prefs.edit().putBoolean(PREFS_KEY_EXCHANGE_CURRENCY_DETECTED, detected).apply();
+    }
+
+    /**
+     * @return whether the app was ever upgraded of if it's running on the first version in which
+     * it was installed
+     */
+    public boolean wasUpgraded() {
+        return prefs.getInt(PREFS_KEY_PREVIOUS_VERSION, 0) != 0;
     }
 
     public boolean getQrPaymentRequestEnabled() {
@@ -208,7 +243,10 @@ public class Configuration {
     }
 
     public void updateLastVersionCode(final int currentVersionCode) {
-        prefs.edit().putInt(PREFS_KEY_LAST_VERSION, currentVersionCode).apply();
+        Editor editor = prefs.edit();
+        editor.putInt(PREFS_KEY_PREVIOUS_VERSION, prefs.getInt(PREFS_KEY_LAST_VERSION, 0));
+        editor.putInt(PREFS_KEY_LAST_VERSION, currentVersionCode);
+        editor.apply();
 
         if (currentVersionCode > lastVersionCode)
             log.info("detected app upgrade: " + lastVersionCode + " -> " + currentVersionCode);

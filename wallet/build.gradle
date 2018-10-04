@@ -24,7 +24,7 @@ dependencies {
     compile 'com.android.support:support-core-utils:25.1.1'
     compile 'com.android.support:recyclerview-v7:25.1.1'
     compile 'com.android.support:cardview-v7:25.1.1'
-    compile 'org.dashj:dashj-core:0.14.4.4'
+    compile 'org.dashj:dashj-core:0.14.4.7'
     compile 'com.google.protobuf:protobuf-java:2.6.1'
     compile 'com.google.guava:guava:20.0'
     compile 'com.google.zxing:core:3.3.0'
@@ -42,6 +42,13 @@ dependencies {
     debugCompile 'com.squareup.leakcanary:leakcanary-android:1.5.1'
     releaseCompile 'com.squareup.leakcanary:leakcanary-android-no-op:1.5.1'
     testCompile 'com.squareup.leakcanary:leakcanary-android-no-op:1.5.1'
+
+    //Uphold Integration
+    debugCompile project(path: ':common', configuration: 'debug')
+    releaseCompile project(path: ':common', configuration: 'release')
+    debugCompile project(path: ':uphold-integration', configuration: 'debug')
+    releaseCompile project(path: ':uphold-integration', configuration: 'release')
+
     //Espresso
     androidTestCompile ('com.android.support.test:runner:1.0.1') {
         exclude group: 'com.android.support', module: 'support-annotations'
@@ -54,11 +61,6 @@ dependencies {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
         exclude group: 'com.android.support', module: 'support-annotations'
     }
-
-    debugCompile project(path: ':common', configuration: 'debug')
-    releaseCompile project(path: ':common', configuration: 'release')
-    debugCompile project(path: ':uphold-integration', configuration: 'debug')
-    releaseCompile project(path: ':uphold-integration', configuration: 'release')
 }
 
 
@@ -157,7 +159,8 @@ preBuild.dependsOn 'buildNativeScrypt'
 preBuild.dependsOn 'buildNativeX11'
 
 clean {
-    file('src/main/jniLibs').deleteDir()
+    //This is commented out to so apks will include the scrypt libraries with gradle 4.10
+    //file('src/main/jniLibs').deleteDir()
 }
 
 /*task svgToPngMipmap(type: fr.avianey.androidsvgdrawable.gradle.SvgDrawableTask) {

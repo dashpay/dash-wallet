@@ -3,101 +3,107 @@
   <string name="help_wallet">
 <![CDATA[
 		<p>
-			La parte in alto a sinistra dello schermo mostra il tuo saldo in Dash e nella valuta nazionale selezionata.
-			Toccare per visualizzare la lista delle valute nazionali, e toccare una valuta per sceglierla come predefinita.
+			Nella parte in alto a destra dello schermo viene visualizzato il saldo in Dash e una valuta nazionale selezionata
+			Toccare per andare all\'elenco delle valute nazionali e toccare una delle valute per selezionarlo come predefinito.
 		</p>
 		<p>
-			Il codice QR sulla destra contiene il vostro indirizzo Dash e può essere utilizzato per la scansione da parte di un altro soggetto.
+			Il codice QR che contiene il tuo indirizzo Dash è accessibile dal menu di navigazione (in alto a sinistra) e può essere utilizzato per la scansione da una controparte.
 			Toccare il codice QR per ingrandirlo.
 		</p>
 		<p>
-			La parte inferiore dello schermo è occupata dalla lista delle transazioni, inizialmente è vuota.
-			Le operazioni in sospeso sono visualizzate in grigio finché non vengono confermate.
-			Toccare un elemento della lista per aggiungere l\'indirizzo del mittente o del destinatario nella rubrica degli indirizzi.
+			La parte inferiore dello schermo è coperta dall\'elenco delle transazioni, che è vuoto all\'inizio.
+			Le transazioni in sospeso sono disattivate fino a quando non vengono confermate.
+			Toccare una voce per visualizzare i dettagli o aggiungere l\'indirizzo di mittenti o destinatari alla rubrica.
+			La rubrica è accessibile dal menu di navigazione (in alto a sinistra).
 		</p>
 		<p>
-			È possibile inviare o ricevere Dash toccando i pulsanti nella barra delle azioni.
-			Ulteriori opzioni sono disponibili nel menu delle opzioni.
+			Puoi inviare o richiedere monete toccando i pulsanti nella barra delle azioni.
+			Altre opzioni sono disponibili nel menu di navigazione (in alto a sinistra) e nelle opzioni.
 		</p>
 	]]>
 	</string>
   <string name="help_request_coins">
 <![CDATA[
 		<p>
-			Utilizzando questa finestra puoi richiedere dei Dash ad un\'altra persona
-			(che dovrebbe aver già installato Dash Wallet).
+			Usando questa finestra di dialogo, puoi richiedere monete da un\'altra persona (che dovrebbe aver già installato Dash Wallet).
 		</p>
 		<p>
-			Come prima cosa puoi inserire il numero di Dash da richiedere.
+			Innanzitutto, puoi inserire una quantità di Dash da richiedere.
 		</p>
 		<p>
-			Poi puoi generare dei codici QR da far acquisire all\'altra persona.
-			Oppure puoi inviare la richiesta con il tasto \"condividi\" nella barra azioni.
-			La persona che riceve la richiesta dovrà cliccare l\'URL Dash.
+			Quindi, il codice QR generato viene scansionato dal pagatore.
+			Oppure, puoi inviare la tua richiesta a una persona remota con il pulsante Condividi nella barra delle azioni.
+			Se entrambi i telefoni hanno abilitato NFC, puoi anche farli toccare.
 		</p>
 		<p>
-			In ogni modo alla persona ricevente verrà presentata un modulo precompilato per inviare i Dash.
-			Per confermare l\'invio dovrà solo accettare la transazione.
+			In entrambi i casi, al pagatore verrà presentata una finestra di dialogo per l\'invio di monete con tutti i campi precompilati.
+			Se il pagatore (lui/lei) è d\'accordo,  il pagamento avverrà facilmente.
 		</p>
 	]]>
 	</string>
   <string name="help_send_coins">
 <![CDATA[
 		<p>
-			Hai iniziato il processo per inviare Dash.
-			Sei giunto qui a partire dalla schermata principale o cliccando su di un URL Dash dal tuo browser.
+			Hai inizializzato la procedura di invio monete.
+			Sei arrivato qui attraverso la schermata principale o facendo clic su un URL di Dash o nel tuo  \"mobile browser\".
 		</p>
 		<p>
-			Come prima cosa è necessario inserire l\'indirizzo Dash a cui inviare.
-			L\'indirizzo si autocompleterà in base al contenuto della tua rubrica.
-			Puoi anche acquisire un codice QR che contiene indirizzi Dash o richieste Dash premendo il tasto QR sulla barra azioni.
+			Innanzitutto, inserisci l\'indirizzo di Dash per pagare.
+			L\'indirizzo verrà completato automaticamente dalle voci conosciute nella tua rubrica.
+			Puoi anche scansionare i codici QR con gli indirizzi di Dash o le richieste di Dash premendo il pulsante QR.
 		</p>
 		<p>
-			Ti è poi possibile visualizzare quanti Dash puoi spendere.
-			Eventuali differenze con il saldo visualizzato sulla schermata principale fanno parte di transazioni
-			non ancora confermate il cui importo non può quindi essere ancora utilizzato.
+			Successivamente, puoi vedere quanti Dash puoi spendere al momento.
+			Nessuna differenza rispetto al saldo dalla schermata principale è ancora non confermata e quindi non può essere ancora spesa.
 		</p>
 		<p>
-			Puoi infine inserire il numero di Dash da inviare.
+			Tocca Invio immediato se si intende effettuare un pagamento immediato. La tariffa è più alta (> 0,001 DASH).
+			Infine, inserisci l\'importo da pagare e il PIN di spesa deve essere inserito se ne è stato preventivamente impostato uno.
 		</p>
 		<p>
-			Puoi inserire una transazione anche senza collegamento ad Internet, verrà inviata alla prossima esecuzione di Dash Wallet.
-			Se vuoi che la transazione venga processata il prima possibile assicurati di avere un buon collegamento ad Internet.
+			Puoi inserire un pagamento mentre sei offline.
+			Verrà inviato al prossimo riavvio di \"Dash Wallet\".
+			Se vuoi che un pagamento venga elaborato il più velocemente possibile, assicurati di essere ben collegato (ad esempio su una WLAN).
 		</p>
 		<p>
-			Nota:
-			I pagamenti non possono essere annullate!
-			Controlla sempre la correttezza degli indirizzi di destinazione.
+			ATTENZIONE:
+			I Pagamenti sono inreversibili!
+			Controlla sempre l\'indirizzo di ricezione.
 		</p>
 	]]>
 	</string>
   <string name="help_safety">
 <![CDATA[
 		<p>
-			<b>Alcune informazioni riguardo la sicurezza relativa ai vostri Dash:</b>
+			<b>Note importanti:</b>
 		</p>
 		<p>
-			I Dash di Dash Wallet vengono memorizzati sul dispositivo.
+			I Dash sono custoditi nel dispositivo
 			<b>Se perdi il dispositivo, perdi i tuoi Dash.</b>
-			Esattamente come denaro nel tuo vero portafoglio.
 		</p>
 		<p>
-			<b>Prima di disinstallare Dash Wallet</b> (o cancellare i dati dell\'applicazione o del dispositivo), <b>trasferisci i tuoi Dash ad un altro portafoglio</b>.
-			Eventuali Dash non trasferiti saranno persi per sempre.
+			Ciò significa che è necessario che <b>crei un backup del tuo portafoglio</b>!
+			Utilizzare la funzione di backup in-app disponibile, piuttosto che un\'app di backup di terze parti.
+			Custodisci il tuo backup e non dimenticare la password.
+			Questo è un portafoglio HD. È richiesto un solo backup.
 		</p>
 		<p>
-			<b>I pagamenti non possono essere annullate</b>.
-			Se invi i tuoi Dash ad indirizzi errati non c\'è modo di riaverli indietro
-			a meno che tu non conosca il ricevente e che sia disponibile a restituirli.
+			<b>Prima di disinstallare</b>(o eliminare i dati delle applicazioni dal dispositivo) ,<b>Trasferisci i Dash in un altro tuo portafoglio</b>.
+			I Dash rimanenti andranno persi.
 		</p>
 		<p>
-			<b>Proteggi il tuo dispositivo Android!</b>
-			Installa solo applicazioni di cui ti fidi completamente.
-			Applicazioni malevole potrebbero provare a rubare il tuo portafoglio.
+			I pagamenti sono inreversibili<b>.
+			Se mandi i tuoi Dash nel vuoto, non c\'è modo di riaverli indietro.
 		</p>
 		<p>
-			Tieni basso il rischio!
-			<b>Usa Dash Wallet solo con piccoli importi</b> sufficienti per l\'uso quotidiano.
+			<b>Tieni il tuo dispositivo al sicuro!</b>
+			Non eseguire il \"ROOT\" del tuo dispositivo.
+			Installa solo app di cui ti fidi completamente.
+			Le app \"malevoli\" potrebbero tentare di rubare il tuo portafoglio.
+		</p>
+		<p>
+			Mantieni il rischio basso!
+			<b>Mantieni solo quantità raggionevoli</b> per uso quotidiano.
 		</p>
 	]]>
 	</string>

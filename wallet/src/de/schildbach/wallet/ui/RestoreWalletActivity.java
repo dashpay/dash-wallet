@@ -57,7 +57,8 @@ import android.widget.EditText;
  * @author Andreas Schildbach
  */
 public final class RestoreWalletActivity extends AbstractWalletActivity
-        implements UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener {
+        implements UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
+        EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
     private static final int DIALOG_RESTORE_WALLET = 0;
 
     private WalletApplication application;
@@ -69,9 +70,9 @@ public final class RestoreWalletActivity extends AbstractWalletActivity
 
     enum State {
         INPUT, UPGRADE, PINSET, DONE;
+
     }
     State state = State.INPUT;
-
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -204,17 +205,17 @@ public final class RestoreWalletActivity extends AbstractWalletActivity
     }
 
     private class FinishListener implements DialogInterface.OnClickListener, DialogInterface.OnCancelListener {
+
         @Override
         public void onClick(final DialogInterface dialog, final int which) {
             finish();
         }
-
         @Override
         public void onCancel(final DialogInterface dialog) {
             finish();
         }
-    }
 
+    }
     private final FinishListener finishListener = new FinishListener();
 
     private void upgradeWalletKeyChains(final ImmutableList<ChildNumber> path) {
@@ -223,12 +224,7 @@ public final class RestoreWalletActivity extends AbstractWalletActivity
         if (!wallet.hasKeyChain(path)) {
             if (wallet.isEncrypted()) {
                 state = State.PINSET;
-                EncryptNewKeyChainDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
-                    @Override
-                    public void onDismiss(DialogInterface dialog) {
-                        onUpgradeConfirmed();
-                    }
-                }, path);
+                EncryptNewKeyChainDialogFragment.show(getFragmentManager(), path);
             } else {
                 //
                 // Upgrade the wallet now
@@ -292,5 +288,10 @@ public final class RestoreWalletActivity extends AbstractWalletActivity
                 onUpgradeConfirmed();
             }
         });
+    }
+
+    @Override
+    public void onNewKeyChainEncrypted() {
+        BackupWalletToSeedDialogFragment.show(getFragmentManager(), true);
     }
 }

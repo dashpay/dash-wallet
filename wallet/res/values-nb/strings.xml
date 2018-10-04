@@ -1,5 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
+
 	<string name="toast_wallet_reset">Lommeboken ble nullstilt!\nDet vil ta litt tid å gjenopprette.</string>
 	<string name="wallet_disclaimer_fragment_remind_safety">Bruk på egen risiko. Les &lt;u&gt;sikkerhetsnotatene&lt;/u&gt;.</string>
 	<string name="wallet_disclaimer_fragment_remind_backup">Du bør &lt;u&gt;ta sikkerhetskopi av din lommebok&lt;/u&gt;!</string>
@@ -23,7 +24,7 @@
 	<string name="exchange_rates_fragment_balance">saldo</string>
 	<string name="exchange_rates_fragment_source">Pris fra %s</string>
 	<string name="exchange_rates_options_search">Søk i valutakurser</string>
-	<string name="exchange_rates_context_set_as_default_title">Sett som standard for fremmed valuta</string>
+	<string name="exchange_rates_context_set_as_default_title">Sett som standard</string>
 	<string name="wallet_transactions_fragment_empty_text_received">Ingen Dash mottatt ennå.</string>
 	<string name="wallet_transactions_fragment_empty_text_sent">Ingen Dash sendt ennå.</string>
 	<string name="wallet_transactions_fragment_empty_text_howto">Hvordan får man Dash?\n\nKjøp for tradisjonelle penger,\nselg varer eller tjenester eller\ntjen dem ved å arbeide.</string>
@@ -48,17 +49,14 @@
 	<string name="wallet_version_dialog_msg_deprecated">Hvis du ikke ser en oppdatering, betyr dette sannsynligvis at din versjon av Android ikke støttes lenger.</string>
 	<string name="wallet_version_dialog_button_market">Google Play</string>
 	<string name="wallet_version_dialog_button_binary">Last ned</string>
-
 	<string name="wallet_old_sdk_dialog_title">Android-versjon er utdatert</string>
 	<string name="wallet_old_sdk_dialog_message">Der er risiko for at en av de neste utgivelsene av Dash Wallet ikke vil støtte din enhet lenger. I noen tilfeller kan det være vanskelig å bruke mynter på denne enheten.\n\nMed mindre du vet hva du gjør, anbefales det å straks flytte dine mynter vekk.</string>
 	<string name="send_coins_activity_title">Send Dash</string>
 	<string name="send_coins_fragment_request_payment_request_progress">Henter signatur fra %s…</string>
 	<string name="send_coins_fragment_request_payment_request_failed_title">Henting av signatur mislyktes</string>
 	<string name="send_coins_fragment_request_payment_request_wrong_signature">Feil signatur!</string>
-
 	<string name="send_coins_fragment_payee_verified_by">verifisert av: %s</string>
 	<string name="send_coins_fragment_payee_verified_by_unknown">ukjent</string>
-
 	<string name="send_coins_fragment_receiving_address_label">Betal til</string>
 	<string name="send_coins_fragment_receiving_address_hint">skriv adresse eller navn</string>
 	<string name="send_coins_fragment_receiving_address_error">Ugyldig Dash-adresse!</string>
@@ -66,7 +64,6 @@
 	<string name="send_coins_fragment_receiving_address_complex">kompleks\nadresse</string>
 	<string name="send_coins_fragment_pending">(%s venter på bekreftelse)</string>
 	<string name="send_coins_fragment_amount_label">Beløp å betale</string>
-	<string name="send_coins_fragment_hint_fee">Et lite gebyr til nettverket på %s vil bli betalt.</string>
 	<string name="send_coins_fragment_hint_dusty_send">Beløpet er for lite til å sende.</string>
 	<string name="send_coins_fragment_hint_insufficient_money">Ikke nok tilgjengelige mynter. Du mangler %s.</string>
 	<string name="send_coins_fragment_hint_empty_wallet_failed">Summen av små betalinger i lommeboken er ikke en verdi stor nok til å sendes.</string>
@@ -93,7 +90,6 @@
 	<string name="send_coins_options_fee_category_priority">Prioritert</string>
 	<string name="send_coins_options_empty">Tøm lommebok</string>
 	<string name="raise_fee_dialog_title">Øk nettverksgebyret</string>
-	<string name="raise_fee_dialog_message">Ønsker du å øke gebyret for denne betalingen med %s? Det vil gjøre at betalingen godkjennes raskere.</string>
 	<string name="raise_fee_dialog_state_decrypting">Dekrypterer…</string>
 	<string name="raise_fee_dialog_state_done">Ferdig.</string>
 	<string name="raise_fee_dialog_button_raise">Øk</string>
@@ -156,7 +152,6 @@
 	<string name="transaction_row_message_purpose_raise_fee">Denne transaksjonen øker nettverksgebyret for en tidligere betaling.</string>
 	<string name="transaction_row_message_own_unbroadcasted">Denne betalingen er ikke sendt ennå.</string>
 	<string name="transaction_row_message_received_direct">Denne betalingen er mottatt direkte. Det er en risiko for at den aldri blir brukbar.</string>
-	<string name="transaction_row_message_received_unconfirmed_unlocked">Denne betalingen bør bli brukbar om få minutter.</string>
 	<string name="transaction_row_message_received_dead">Denne betalingen er blitt reversert av avsenderen.</string>
 	<string name="transaction_row_message_received_dust">Dette lille beløpet kan økonomisk sett sannsynligvis aldri brukes.</string>
 	<string name="transaction_row_message_received_pay_to_many">Denne betalingen går til mange flere enn deg, og dette gjør at appen går tregere over tid. Hvis du kan, prøv å motta betalinger som kun går til deg.</string>
@@ -166,7 +161,6 @@
 	<string name="block_row_now">akkurat nå</string>
 	<string name="peer_list_fragment_empty">Ingen peers tilkoblet</string>
 	<string name="peer_list_row_ping_time">⇆ %d&#x2009;ms</string>
-
 	<string name="import_keys_dialog_title">Gjenopprett lommebok</string>
 	<string name="import_keys_dialog_message">Velg en fil med sikkerhetskopi av lommeboken fra et eksternt lager (%s):</string>
 	<string name="restore_wallet_dialog_replace_warning">Du er i gang med å erstatte din nåværende lommebok. Hvis den inneholder mynter, vil disse mistes, med mindre du har en separat sikkerhetskopi av lommeboken.</string>
@@ -181,7 +175,6 @@
 	<string name="restore_wallet_dialog_success">Lommeboken ble gjenopprettet.</string>
 	<string name="restore_wallet_dialog_success_replay">Din lommebok ble gjenopprettet. Saldoen vil nå bli bestemt. Dette vil ta litt tid.</string>
 	<string name="import_keys_dialog_failure">Lommeboken kunne ikke gjenopprettes:\n\n%s\n\nFeil passord?</string>
-
 	<string name="export_keys_dialog_title">Ta sikkerhetskopi av lommeboken</string>
 	<string name="backup_wallet_dialog_message">Din sikkerhetskopi blir kryptert med det valgte passordet og skrevet til eksternt lager.</string>
 	<string name="backup_wallet_dialog_warning_encrypted">Lommeboken din er beskyttet av en PIN for betaling. Sørg for at du husker PIN-koden i tillegg til passordet for sikkerhetskopien!</string>
@@ -218,9 +211,7 @@
 	<string name="input_parser_invalid_bitcoin_uri">Ugyldig Dash-URI:\n%s</string>
 	<string name="input_parser_invalid_address">Fikk ugyldig Dash-adresse!\n(Blanding av Mainnet/Testnet?)</string>
 	<string name="input_parser_unverifyable_paymentrequest">Kan ikke verifisere betalingsforespørsel:\n%s</string>
-
 	<string name="input_parser_invalid_paymentrequest">Ugyldig betalingsforespørsel:\n%s</string>
-
 	<string name="input_parser_invalid_transaction">Ugyldig transaksjon:\n%s</string>
 	<string name="preferences_activity_title">Innstillinger</string>
 	<string name="preferences_category_diagnostics">Diagnostikk</string>
@@ -243,10 +234,7 @@
 	<string name="preferences_data_usage_title">Dataforbruk</string>
 	<string name="preferences_data_usage_summary">Vis innstillinger for restriksjon for dataforbruk på mobile nettverk.</string>
 	<string name="preferences_report_issue_title">Rapporter problem</string>
-	<string name="preferences_report_issue_summary">Samle inn informasjon om problemet ditt og send rapporten din på e-post til utviklerne.</string>
 	<string name="preferences_initiate_reset_title">Tilbakestill blokkjeden</string>
-	<string name="preferences_initiate_reset_summary">Tilbakestill blokkjeden, transaksjoner og lommeboken sin balanse. Gjennomgangen vil ta litt tid.</string>
-	<string name="preferences_initiate_reset_dialog_message">Ønsker du å tilbakestille og gjennomgå blokkjeden?\n\nDette vil midlertidig skjule din lommebok sin balanse og fjerne transaksjoner. Begge vil gjenopprettes under gjennomgangen av blokkjeden.</string>
 	<string name="preferences_initiate_reset_dialog_positive">Nullstill</string>
 	<string name="preferences_extended_public_key_title">Vis xpub</string>
 	<string name="preferences_extended_public_key_summary">Vis den utvidede offentlige nøkkelen til lommeboken din, slik at den kan importeres i andre programmer og tjenester. Vær forsiktig: dette vil utlevere dine transaksjoner og privatliv til det programmet.</string>
@@ -255,7 +243,6 @@
 	<string name="extended_public_key_fragment_share">Del xpub…</string>
 	<string name="report_issue_dialog_title_issue">Rapporter problem</string>
 	<string name="report_issue_dialog_title_crash">Tidligere krasj oppdaget</string>
-	<string name="report_issue_dialog_message_issue">Beskriv problemet presist nok, slik at det kan gjenskapes.</string>
 	<string name="report_issue_dialog_message_crash">Har du lyst til å sende en krasjrapport som vil bidra til å løse dette problemet i fremtiden?</string>
 	<string name="report_issue_dialog_description">problembeskrivelse</string>
 	<string name="report_issue_dialog_report">Rapport</string>
@@ -269,15 +256,12 @@
 	<string name="about_version_title">Versjon</string>
 	<string name="about_copyright_title">Opphavsrett</string>
 	<string name="about_license_title">Lisens</string>
-    <string name="about_source_title">Kildekode</string>
-	<string name="about_credits_zxing_title">Denne appen bruker \'zxing\'</string>
+	<string name="about_source_title">Kildekode</string>
 	<string name="about_credits_icon_title">Denne appen bruker ett ikon av \'bitboy\'</string>
-	<string name="about_community_googleplus_title">Google+ samfunnet</string>
-	<string name="about_community_googleplus_summary">Diskusjon om appen</string>
 	<string name="about_market_app_title">Google Play-siden</string>
 	<string name="about_market_app_summary">Anmeld eller bedøm appen</string>
+	<string name="about_community_googleplus_title">Google+ samfunnet</string>
 	<string name="notification_coins_received_msg">Mottok %s</string>
-
 	<string name="notification_peers_connected_msg">%d peers tilkoblet</string>
 	<!-- generic buttons -->
 	<string name="button_ok">OK</string>

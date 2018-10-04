@@ -1,33 +1,36 @@
-<b>Porta i tuoi Dash sempre con te, in tasca!</b>  Paghi velocemente scansionando un QR-code. Come un commerciante, riceverai i pagamenti sicuri e istantanei. Dash Wallet è la prima Dash app mobile, e probabilmente anche la più sicura!
+Usare a proprio rischio! (Richiede Android 4 o successive versioni )
+
+<b>Porta i tuoi Dash sempre con te nella tua tasca </b> Paga semplicemente scansionando un codice QR. In qualità di commerciante, ricevi pagamenti in modo affidabile e istantaneo. Dash Wallet è la prima app mobile di Dash, e probabilmente anche la più sicura!
 
 <b>CARATTERISTICHE</b>
 
-• Non è necessaria alcuna registrazione, servizio web o cloud! Questo portafoglio è de-centralizzato e peer to peer.
-• Mostra l'ammontare di Dash in DASH, mDASH e µDASH.
-• Conversione verso e dalle monete nazionali.
-• Invio e ricevimento di Dash tramite NFC, codici QR o URL Dash.
-• Rubrica degli indirizzi per usare indirizzi Dash regolarmente.
-• Quando sei offline, puoi comunque ancora pagare via Bluetooth.
-• Sistema di notifica per le monete ricevute.
-• Svuotamento di portafogli cartacei (es: quelli utilizzati come depositi offline)
-• App Widget per il saldo Dash
+• Nessuna registrazione , a servizio cloud Web  necessario! Questo portafoglio è decentralizzato  e da persona a persona "p2p".
+• Visualizza l'ammontare di Dash in DASH, mDASH e µDASH.
+• Conversione in e da valute nazionali.
+• Manda e ricevi DASH via NFC, codici QR o collegamenti URLs DASH.
+• Rubrica indirizzi per indirizzi DASH di uso corrente o abituale.
+Quando sei offline, puoi comunque pagare via Bluetooth.
+• Sistema di notifiche di ricezione monete
+• Importazione di wallet cartacei (e.g. quelli usati per il congelamento dei fondi "cold storage")
+• App widget per bilancio Dash.
 
 
-<b>CONTRIBUISCI</b>
+<b>CONTRIBUIRE</b>
 
-Dash Wallet è <b>open source</b> e <b>software libero</b>. Licenza: GPLv3
+Il portafoglio Dash è<b>open source</b>e<b>free software</b>. Licenza: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
-Il nostro codice sorgente è disponibile su GitHub
-https://github.com/HashEngineering/darkcoin-wallet
+Il nostro codice sorgente è disponibile su GitHub:
+https://github.com/HashEngineering/dash-wallet
 
-Tutte le traduzioni sono gestite attraverso Transifex:
+Tutte le traduzioni sono gestite via Transifex:
 https://www.transifex.com/dash/dash-wallet/
 
+Per ulteriori informazioni su Dash visita:
+https://www.dash.org/
 
-<b>TESTIMONIANZE</b>
+<b>TESTIMONIAL</b>
 
-• Portafoglio mobile raccomandato da https://dash.org
+Un portafoglio per dispositivi mobili raccomandato da https://www.dash.org
 
-
-<i>Usala a tuo rischio!</i>
+<i>Usare a proprio rischio!</i>

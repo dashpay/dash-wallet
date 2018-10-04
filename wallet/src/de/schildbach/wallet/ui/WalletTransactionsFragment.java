@@ -41,6 +41,8 @@ import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.bitcoinj.wallet.Wallet;
+
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
@@ -431,6 +433,10 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
             ((WalletActivity) activity).handleBackupWallet();
             break;
 
+        case BACKUP_SEED:
+            ((WalletActivity) activity).handleBackupWalletToSeed();
+            break;
+
         case STORAGE_ENCRYPTION:
             startActivity(new Intent(Settings.ACTION_SECURITY_SETTINGS));
             break;
@@ -624,7 +630,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
     }
     @Override
     public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences, final String key) {
-        if (Configuration.PREFS_KEY_BTC_PRECISION.equals(key) || Configuration.PREFS_KEY_REMIND_BACKUP.equals(key))
+        if (Configuration.PREFS_KEY_BTC_PRECISION.equals(key) || Configuration.PREFS_KEY_REMIND_BACKUP.equals(key) ||
+                Configuration.PREFS_KEY_REMIND_BACKUP_SEED.equals(key))
             updateView();
     }
 
@@ -635,7 +642,9 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
     private Warning warning() {
         final int storageEncryptionStatus = devicePolicyManager.getStorageEncryptionStatus();
-        if (config.remindBackup())
+        if (config.remindBackupSeed())
+            return Warning.BACKUP_SEED;
+        if (Constants.SUPPORT_BOTH_BACKUP_WARNINGS && config.remindBackup())
             return Warning.BACKUP;
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
                 && (storageEncryptionStatus == DevicePolicyManager.ENCRYPTION_STATUS_INACTIVE

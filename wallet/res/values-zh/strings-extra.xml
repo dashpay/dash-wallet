@@ -1,23 +1,22 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-
 	<string name="send_coins_fragment_instantx_enable">使用即时支付</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">此项即时支付交易尚未传输。</string>
-	<string name="transaction_row_message_own_instantx_lock_request">此项即时支付交易正在等待达世币网络的确认。</string>
+	<string name="transaction_row_message_own_instantx_lock_request">此项即时支付交易正在等待确认。</string>
 	<string name="transaction_row_message_own_instantx_locked">发送即时支付交易(锁定)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">此项即时支付交易正在等待达世币网络的确认。</string>
-	<string name="transaction_row_message_received_instantx_locked">此项即时支付交易已经被达世币网络确认。</string>
+	<string name="transaction_row_message_received_instantx_lock_request">此项即时支付交易正在等待确认。</string>
+	<string name="transaction_row_message_received_instantx_locked">即时支付已确认</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">未确认的即时支付</string>
 	<string name="transaction_row_message_received_instantx_locked2">被锁定的即时支付</string>
-
+	<string name="transaction_row_message_sent_to_single_peer">此款项已发送。</string>
 	<string name="wallet_options_disconnect">未连接</string>
 
 	<string name="network_monitor_masternodes_title">主节点</string>
 	<string name="export_keys_dialog_title_to_seed">查看恢复密语</string>
 	<string name="import_keys_dialog_title_from_seed">使用恢复密语复原</string>
 	<string name="backup_to_seed_wallet_dialog_message">这是你的恢复密语. 请记录下来.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">请不要让任何人得知你的恢复密语, 不然他们将能够使用你的达世币. 此密语不与其他达世币软件相兼容.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">请不要让任何人看到您的恢复密语, 否则他们将可以使用您的达世币.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">资金密码可以保护你的钱包. 输入密码并点击显示, 浏览你的恢复密语.</string>
     <string name="import_keys_from_seed_dialog_message">在这里输入你的恢复密语.</string>
 	<string name="import_export_keys_dialog_password_phrase">这里是你的恢复密语.</string>
@@ -28,8 +27,47 @@
 	<string name="backup_wallet_to_seed_show_recovery_phrase">显示</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%s 是无效字.</string>
 
+	<string name="send_coins_options_fee_category_zero">不支付手续费</string>
+	<string name="send_coins_fragment_hint_fee_zero">不支付任何交易手续费. 仅在您不在意确认时间长短的情况下使用此选项.</string>
 
+	<string name="wallet_uri_handler_public_key_request_dialog_msg">应用程序 %s 想要获取您的主公钥. 这可以被用来追踪您的钱包, 但无法支配您的达世币.</string>
+	<string name="wallet_uri_handler_address_request_dialog_msg">应用程序 %s 正在请求一个地址以用来向您发送交易.  您是否同意?</string>
 
+	<string name="wallet_lock_unlock">解锁</string>
+	<string name="wallet_lock_unlock_wallet">解锁钱包</string>
+	<string name="wallet_lock_unlock_to_see_txs_title">钱包已锁.</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">点击上方的锁定图标解锁您的钱包并查看交易记录.</string>
+	<string name="wallet_lock_unlock_dialog_title">解锁您的钱包</string>
+	<string name="wallet_lock_unlock_dialog_message">您的钱包受到密码保护. 输入您的PIN码并按解锁以继续.</string>
+	<string name="wallet_lock_reset_wallet_title">重置钱包</string>
+	<string name="wallet_lock_reset_wallet_message">您确定吗? 所有的存储数据将被删除, 只能通过备份文件或恢复种子来恢复您的钱包.</string>
 
+	<string name="wallet_lock_wallet_disabled">钱包被禁用</string>
+	<string name="wallet_lock_try_again">请在 %1$d %2$s 后再试</string>
+	<string name="wallet_lock_reset">重置</string>
+	<string name="wallet_lock_wrong_pin">PIN码错误! %s</string>
+
+	<plurals name="wallet_lock_attempts_remaining">
+		<item quantity="other">剩余尝试次数 %d </item>
+	</plurals>
+
+	<plurals name="minute">
+		<item quantity="other">分钟</item>
+	</plurals>
+	
+	<plurals name="hour">
+		<item quantity="other">小时</item>
+	</plurals>
+
+	<string name="encrypt_new_key_chain_upgrade_button">升级</string>
+	<string name="encrypt_new_key_chain_dialog_title">升级您的钱包</string>
+	<string name="encrypt_new_key_chain_dialog_message">您的钱包将被升级, 以支持更多APP的导入导出功能.</string>
+	<string name="encrypt_new_key_chain_enter_pin_dialog_message">您必须输入PIN码才能完成升级过程.</string>
+	<string name="pin_code_required_dialog_message">这个应用程序需要PIN码来发送交易和查看交易余额.</string>
+    <string name="backup_wallet_seed_private_key_written_down_box">我已经记下了恢复密语</string>
+	
+	<string name="change_exchange_currency_code_message">你的本地货币是%1$s，但是在这个应用程序中默认货币设置为%2$s。请问您想要改为%1$s 或保持%2$s?</string>
+	<string name="change_to">改为%s</string>
+	<string name="leave_as">保持%s</string>
 
 </resources>

@@ -3,20 +3,20 @@
 
 	<string name="send_coins_fragment_instantx_enable">Използвайте InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">InstantSend плащането все още не е предадено.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">InstantSend плащането изчаква потвърждение от Dash мрежата.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">Това InstantSend плащане изчаква потвърждение.</string>
 	<string name="transaction_row_message_own_instantx_locked">Изпратена InstantSend транзакция (заключена)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">InstantSend плащането изчаква потвърждение от Dash мрежата.</string>
-	<string name="transaction_row_message_received_instantx_locked">InstantSend плащането беше потвърдено от Dash мрежата.</string>
+	<string name="transaction_row_message_received_instantx_lock_request">Това InstantSend плащане изчаква потвърждение.</string>
+	<string name="transaction_row_message_received_instantx_locked">InstantSend потвърдено</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">Непотвърден InstantSend</string>
 	<string name="transaction_row_message_received_instantx_locked2">Заключен InstantSend</string>
-
+	<string name="transaction_row_message_sent_to_single_peer">Плащането е изпратено.</string>
 	<string name="wallet_options_disconnect">Прекъсване </string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
 	<string name="export_keys_dialog_title_to_seed">Преглед на фраза за възстановяване</string>
 	<string name="import_keys_dialog_title_from_seed">Възстановяване от фразата за възстановяване</string>
 	<string name="backup_to_seed_wallet_dialog_message">Това е вашата фраза за възстановяване. Моля, напишете я.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">НЕ позволявайте на никого да види фразата ви за възстановяване или могат да похарчат вашите Dash. Тази фраза не е съвместима с друг Dash софтуер .</string>
+	<string name="backup_wallet_to_seed_dialog_warning">НЕ позволявайте на никого да види фразата Ви за възстановяване тъй като в възможно да похарчи вашите Dash.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Портфейлът Ви е защитен от ПИН . Въведете своя ПИН и натиснете Покажи, за да видите фразата си за възстановяване.</string>
 	<string name="import_keys_from_seed_dialog_message">Въведете фразата си за възстановяване тук.</string>
 	<string name="import_export_keys_dialog_password_phrase">Фразата за възстановяване отива тук.</string>
@@ -27,8 +27,50 @@
 	<string name="backup_wallet_to_seed_show_recovery_phrase">Покажи</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%sе невалидна дума.</string>
 
-
 	<string name="send_coins_options_fee_category_zero">Без такса</string>
 	<string name="send_coins_fragment_hint_fee_zero">Няма да бъде платена такса. Използвайте \"без такса\" само ако не ви е грижа за времето за потвърждение.</string>
+
+	<string name="wallet_uri_handler_public_key_request_dialog_msg">Приложението %s би желало да получи вашият Главен публичен ключ.  Той може да бъде използвано за да проследи вашият портфейл, но не може да бъде използван за преместването на вашите  Dash.</string>
+	<string name="wallet_uri_handler_address_request_dialog_msg">Приложението %s изисква адрес за да Ви бъде платено.  Бихте ли желали да позволите това?</string>
+
+	<string name="wallet_lock_unlock">Отключи</string>
+	<string name="wallet_lock_unlock_wallet">Отключи портфейла</string>
+	<string name="wallet_lock_unlock_to_see_txs_title">Портфейлът е заключен.</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">Докоснете иконата за заключване по-горе, за да отключите портфейла си и да видите историята на транзакциите.</string>
+	<string name="wallet_lock_unlock_dialog_title">Отключете портфейла си</string>
+	<string name="wallet_lock_unlock_dialog_message">Портфейлът Ви е защитен от ПИН за  похарчване. Въведете своя ПИН и натиснете Отключи за да продължите.</string>
+	<string name="wallet_lock_reset_wallet_title">Нулиране на портфейла</string>
+	<string name="wallet_lock_reset_wallet_message">Сигурен ли си? Всички съхранени данни ще бъдат изтрити и портфейлът ви ще бъде възстановим само чрез резервен файл или възстановяващата фраза.</string>
+
+	<string name="wallet_lock_wallet_disabled">Портфейлът е изключен</string>
+	<string name="wallet_lock_try_again">Опитай отново след %1$d %2$s</string>
+	<string name="wallet_lock_reset">Нулиране</string>
+	<string name="wallet_lock_wrong_pin">Грешен ПИН! %s</string>
+
+	<plurals name="wallet_lock_attempts_remaining">
+		<item quantity="one">%d оставащи опита</item>
+		<item quantity="other">%d оставащи опита</item>
+	</plurals>
+
+	<plurals name="minute">
+		<item quantity="one">минута</item>
+		<item quantity="other">минути</item>
+	</plurals>
+	
+	<plurals name="hour">
+		<item quantity="one">час</item>
+		<item quantity="other">часа</item>
+	</plurals>
+
+	<string name="encrypt_new_key_chain_upgrade_button">Надграждане</string>
+	<string name="encrypt_new_key_chain_dialog_title">Надгради своят портфейл</string>
+	<string name="encrypt_new_key_chain_dialog_message">Вашият портфейл ще бъде надграден, за да поддържа импортирането и експортирането в още приложения.</string>
+	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Трябва да въведете вашият ПИН за да завършите процесът на надграждане.</string>
+	<string name="pin_code_required_dialog_message">Това приложение вече изисква ПИН за похарчване и разглеждане историята на транзакциите.</string>
+    <string name="backup_wallet_seed_private_key_written_down_box">Записах фразата за възстановяване</string>
+	
+	<string name="change_exchange_currency_code_message">Вашата местна валута е %1$s, но в приложението е зададено по подразбиране %2$s. Бихте ли желали да се промени в %1$s или да остане в %2$s?</string>
+	<string name="change_to">Промени в %s</string>
+	<string name="leave_as">Остави в %s</string>
 
 </resources>

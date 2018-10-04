@@ -1,4 +1,4 @@
-﻿Use at your own risk! (Requires Android 4 or higher)
+Gebruik op eigen risico! (Vereist Android 4 of hoger)
 
 <b>Heb uw Dash altijd in uw zakt!</b> U kunt betalen door simpelweg een QR code te scannen. En als verkoper kunt u betalingen betrouwbaar en razendsnel ontvangen. Dash portemonnee is de eerste mobiele Dash app, en misschien wel de meest veilige!
 
@@ -8,7 +8,7 @@
 • Toon de hoeveelheid Dash in DASH, mDASH of µDASH.
 • Conversie van en naar nationale munteenheden.
 • Verzenden en ontvangen van Dash via NFC, QR codes of Dash URL's.
-• Adresboek voor vaak gebruike Dash adressen.
+• Adresboek voor vaak gebruikte Dash adressen.
 • Als je offline bent, kan je via Bluetooth nog steeds betalen.
 • Notificaties bij het ontvangen van coins.
 • Importeren van papieren portemonnees (die gebruikt worden voor koude opslag).
@@ -26,11 +26,11 @@ https://github.com/HashEngineering/dash-wallet
 Alle vertalingen worden gemanaged via Transifex:
 https://www.transifex.com/dash/dash-wallet/
 
-You can find more about Dash at
+Meer informatie over Dash op
 https://www.dash.org/
 
 <b>TESTIMONIALS</b>
 
-• A recommended mobile wallet by https://www.dash.org
+• Een aanbevolen mobile portemonnee van https://www.dash.org
 
 <i>Gebruik op eigen risico!</i>

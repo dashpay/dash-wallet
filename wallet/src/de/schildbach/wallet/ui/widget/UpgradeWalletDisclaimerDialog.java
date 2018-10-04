@@ -29,6 +29,7 @@ import android.view.ViewGroup;
 
 import org.dash.wallet.common.ui.DialogBuilder;
 
+import de.schildbach.wallet.ui.BackupWalletToSeedDialogFragment;
 import de.schildbach.wallet_test.R;
 
 public class UpgradeWalletDisclaimerDialog extends DialogFragment {
@@ -56,13 +57,13 @@ public class UpgradeWalletDisclaimerDialog extends DialogFragment {
         dialogBuilder.setMessage(message);
         dialogBuilder.setCancelable(false);
         dialogBuilder.setPositiveButton(android.R.string.ok, null);
-        dialogBuilder.setPositiveButton(R.string.wallet_options_encrypt_keys_set,
+
+        String buttonText = getString(R.string.export_keys_dialog_title_to_seed) + " / " + getString(R.string.wallet_options_encrypt_keys_set);
+        dialogBuilder.setPositiveButton(buttonText,
                 new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(final DialogInterface dialog, final int which) {
-                        if (getActivity() instanceof OnUpgradeConfirmedListener) {
-                            ((OnUpgradeConfirmedListener) getActivity()).onUpgradeConfirmed();
-                        }
+                        BackupWalletToSeedDialogFragment.show(getFragmentManager(), true);
                     }
                 });
 
