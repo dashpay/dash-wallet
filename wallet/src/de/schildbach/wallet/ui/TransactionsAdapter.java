@@ -49,6 +49,7 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.text.Html;
@@ -65,7 +66,7 @@ import android.widget.TextView;
  */
 public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     public enum Warning {
-        BACKUP, BACKUP_SEED, STORAGE_ENCRYPTION
+        STORAGE_ENCRYPTION
     }
 
     private final Context context;
@@ -204,6 +205,10 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         return count;
     }
 
+    public int getTransactionsCount() {
+        return transactions.size();
+    }
+
     @Override
     public long getItemId(int position) {
         if (position == RecyclerView.NO_POSITION)
@@ -271,18 +276,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         } else if (holder instanceof WarningViewHolder) {
             final WarningViewHolder warningHolder = (WarningViewHolder) holder;
 
-            if (warning == Warning.BACKUP || warning == Warning.BACKUP_SEED) {
-                if (transactions.size() == 1) {
-                    warningHolder.messageView.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0);
-                    warningHolder.messageView
-                            .setText(Html.fromHtml(context.getString(R.string.wallet_transactions_row_warning_backup)));
-                } else {
-                    warningHolder.messageView
-                            .setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_warning_grey600_24dp, 0, 0, 0);
-                    warningHolder.messageView.setText(
-                            Html.fromHtml(context.getString(R.string.wallet_disclaimer_fragment_remind_backup)));
-                }
-            } else if (warning == Warning.STORAGE_ENCRYPTION) {
+            if (warning == Warning.STORAGE_ENCRYPTION) {
                 warningHolder.messageView.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0);
                 warningHolder.messageView.setText(
                         Html.fromHtml(context.getString(R.string.wallet_transactions_row_warning_storage_encryption)));
@@ -441,34 +435,37 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                         DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_SHOW_TIME));
             }
 
+            Typeface defaultTypeface = ResourcesCompat.getFont(context, R.font.montserrat_medium);
+            Typeface boldTypeface = ResourcesCompat.getFont(context, R.font.montserrat_semibold);
+
             // address
             if (isCoinBase) {
-                addressView.setTextColor(textColor);
-                addressView.setTypeface(Typeface.DEFAULT_BOLD);
+                addressView.setTypeface(boldTypeface);
                 addressView.setText(textCoinBase);
             } else if (purpose == Purpose.KEY_ROTATION || txCache.self) {
-                addressView.setTextColor(lessSignificantColor);
-                addressView.setTypeface(Typeface.DEFAULT_BOLD);
+                addressView.setTypeface(boldTypeface);
                 addressView.setText(textInternal);
             } else if (purpose == Purpose.RAISE_FEE) {
                 addressView.setText(null);
             } else if (txCache.addressLabel != null) {
-                addressView.setTextColor(textColor);
-                addressView.setTypeface(Typeface.DEFAULT_BOLD);
+                addressView.setTypeface(boldTypeface);
                 addressView.setText(txCache.addressLabel);
             } else if (memo != null && memo.length >= 2) {
-                addressView.setTextColor(textColor);
-                addressView.setTypeface(Typeface.DEFAULT_BOLD);
+                addressView.setTypeface(boldTypeface);
                 addressView.setText(memo[1]);
             } else if (txCache.address != null) {
-                addressView.setTextColor(lessSignificantColor);
-                addressView.setTypeface(Typeface.DEFAULT);
-                String address = txCache.address.toBase58();
+                addressView.setTypeface(defaultTypeface);
                 if (!itemView.isActivated()) {
-                    addressView.setText(address);
+                    String address = txCache.address.toBase58();
+                    StringBuilder addressBuilder = new StringBuilder(address.substring(0,
+                            Constants.ADDRESS_FORMAT_FIRST_SECTION_SIZE));
+                    addressBuilder.append(Constants.ADDRESS_FORMAT_SECTION_SEPARATOR);
+                    int lastSectionStart = address.length() - Constants.ADDRESS_FORMAT_LAST_SECTION_SIZE;
+                    addressBuilder.append(address.substring(lastSectionStart, address.length()));
+                    addressView.setText(addressBuilder.toString());
                 } else {
                     addressView.setText(WalletUtils.formatAddress(txCache.address, Constants.ADDRESS_FORMAT_GROUP_SIZE,
-                            Constants.ADDRESS_FORMAT_LINE_SIZE));
+                            Constants.ADDRESS_ROW_FORMAT_LINE_SIZE));
                 }
             } else {
                 addressView.setTextColor(lessSignificantColor);

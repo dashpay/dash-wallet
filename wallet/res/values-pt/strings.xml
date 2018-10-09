@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Sua carteira foi reiniciada!\nA recuperação levará um tempo.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Use por sua conta e risco. Leia as &lt;u&gt;indicações de segurança&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Você precisa fazer um &lt;u&gt;back up de sua carteira&lt;/u&gt;!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Você precisa fazer um back up de sua carteira!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d horas atrás</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d dias atrás</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d semanas atrás</string>
@@ -28,7 +28,7 @@
     <string name="wallet_transactions_fragment_empty_text_received">Nenhum Dash recebido até o momento.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Nenhum Dash enviado até o momento.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Como conseguir Dash?\n\nTroque por dinheiro tradicional,\nvenda bens ou serviços ou\nganhe trabalhando.</string>
-    <string name="wallet_transactions_row_warning_backup">Parabéns, você recebeu o seu primeiro pagamento! Deseja efetuar o &lt;u&gt;backup de sua carteira&lt;/u&gt;, para proteger seus Dash?</string>
+    <string name="wallet_transactions_row_warning_backup">Parabéns, você recebeu o seu primeiro pagamento! Deseja efetuar o backup de sua carteira, para proteger seus Dash?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Dica: para aumentar a segurança da sua carteira, você pode &lt;u&gt;encriptar o seu dispositivo&lt;/u&gt;. Isto também protege os dados de outros aplicativos.</string>
     <string name="wallet_transactions_fragment_coinbase">minerados</string>
     <string name="wallet_transactions_fragment_internal">interno</string>

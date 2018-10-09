@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">钱包已重置，\n需要一些时间才能恢复</string>
     <string name="wallet_disclaimer_fragment_remind_safety">使用时请您自担风险。请务必阅读 &lt;u&gt;安全提示&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">您需要 &lt;u&gt;备份你的钱包&lt;/u&gt;!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">您需要 备份你的钱包!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d 小时延迟</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d 天延迟</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d 星期延迟</string>
@@ -28,7 +28,7 @@
     <string name="wallet_transactions_fragment_empty_text_received">尚未收到达世币。</string>
     <string name="wallet_transactions_fragment_empty_text_sent">尚未发送达世币。</string>
     <string name="wallet_transactions_fragment_empty_text_howto">如何获得达世币？\\n\\n用传统货币进行交易，\\n出售商品或服务，或者\\n通过劳动赚取。</string>
-    <string name="wallet_transactions_row_warning_backup">恭喜，您收到了第一笔付款！您是否已经 &lt;u&gt;备份了您的钱包&lt;/u&gt;，以避免损失？</string>
+    <string name="wallet_transactions_row_warning_backup">恭喜，您收到了第一笔付款！您是否已经 备份了您的钱包，以避免损失？</string>
     <string name="wallet_transactions_row_warning_storage_encryption">提示：为了增加钱包的安全度，您可以 &lt;u&gt;加密您的设备&lt;/u&gt;. 这样也可以同样其他app的数据。</string>
     <string name="wallet_transactions_fragment_coinbase">挖矿所的</string>
     <string name="wallet_transactions_fragment_internal">内部</string>

@@ -3,7 +3,7 @@
 
 	<string name="toast_wallet_reset">Monujo restartiĝis,\nprenos iom da tempo por reakiri</string>
 	<string name="wallet_disclaimer_fragment_remind_safety">Uzu je via propra risko. Legu la &lt;u&gt;sekurecaj notoj&lt;/u&gt;.</string>
-	<string name="wallet_disclaimer_fragment_remind_backup">Vi bezonas &lt;u&gt;savkopii vian monujon&lt;/u&gt;!</string>
+	<string name="wallet_disclaimer_fragment_remind_backup">Vi bezonas savkopii vian monujon!</string>
 	<string name="blockchain_state_progress_hours">%1$s, %2$d horoj malantaŭ</string>
 	<string name="blockchain_state_progress_days">%1$s, %2$d tagoj malantaŭ</string>
 	<string name="blockchain_state_progress_weeks">%1$s, %2$d semajnoj malantaŭ</string>
@@ -26,7 +26,7 @@
 	<string name="wallet_transactions_fragment_empty_text_received">Neniom da Bitmonoj tamen ricevitaj.</string>
 	<string name="wallet_transactions_fragment_empty_text_sent">Neniom da Bitmonoj tamen senditaj.</string>
 	<string name="wallet_transactions_fragment_empty_text_howto">Kiel obteni Bitmonojn?\n\nNegocu por tradicia mono,\nvendu varojn aŭ servojn aŭ\ngajnu per laborado.</string>
-	<string name="wallet_transactions_row_warning_backup">Gratulon, vi ricevis vian unuan pagon! Ĉu vi jam &lt;u&gt;savkopiis vian monujon&lt;/u&gt;, por protekti kontraŭ perdo?</string>
+	<string name="wallet_transactions_row_warning_backup">Gratulon, vi ricevis vian unuan pagon! Ĉu vi jam savkopiis vian monujon, por protekti kontraŭ perdo?</string>
 	<string name="wallet_transactions_fragment_coinbase">minita</string>
 	<string name="wallet_transactions_fragment_internal">interna</string>
 	<string name="wallet_options_safety">Sekurecaj notoj</string>

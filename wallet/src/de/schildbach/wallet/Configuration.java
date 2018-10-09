@@ -202,6 +202,10 @@ public class Configuration {
         return prefs.getBoolean(PREFS_KEY_DISCLAIMER, true);
     }
 
+    public void setDisclaimerEnabled(boolean enabled) {
+        prefs.edit().putBoolean(PREFS_KEY_DISCLAIMER, enabled).apply();
+    }
+
     public String getExchangeCurrencyCode() {
         return prefs.getString(PREFS_KEY_EXCHANGE_CURRENCY, null);
     }

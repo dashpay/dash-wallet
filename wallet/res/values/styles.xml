@@ -172,6 +172,11 @@
 		<item name="android:textAllCaps">false</item>
 	</style>
 
+	<style name="MontserratButton.Inverted">
+		<item name="android:textColor">@color/inverted_button</item>
+		<item name="android:background">@drawable/inverted_button</item>
+	</style>
+
 	<style name="MontserratMedium.DB">
 		<item name="android:textColor">@color/darkest_blue</item>
 	</style>

@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Din tegnebog blev nulstillet!\nDet tager nogen tid at genoprette.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Brug for egen risiko. Læs &lt;u&gt;sikkerhedsnoterne&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Du bør &lt;u&gt;tage sikkerhedskopi af din tegnebog&lt;/u&gt;!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Du bør tage sikkerhedskopi af din tegnebog!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d timer bagefter</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d dage bagefter</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d uger bagefter</string>
@@ -28,7 +28,7 @@
     <string name="wallet_transactions_fragment_empty_text_received">Ingen Dash modtaget endnu.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Ingen Dash sendt endnu.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Hvordan får man Dash?\n\nKøb for traditionelle penge,\nsælg varer eller ydelser eller\ntjen dem ved at arbejde.</string>
-    <string name="wallet_transactions_row_warning_backup">Tillykke, du har modtaget din første betaling! Har du &lt;u&gt;taget en sikkerhedskopi af din tegnebog&lt;/u&gt;, for at beskytte dig mod tab?</string>
+    <string name="wallet_transactions_row_warning_backup">Tillykke, du har modtaget din første betaling! Har du taget en sikkerhedskopi af din tegnebog, for at beskytte dig mod tab?</string>
     <string name="wallet_transactions_fragment_coinbase">mined</string>
     <string name="wallet_transactions_fragment_internal">intern</string>
     <string name="wallet_transactions_options_filter">Filter</string>

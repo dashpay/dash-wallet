@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">¡Tu billetera se ha reiniciado!\nTardará un tiempo en recuperarse.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Utilízalo bajo tu propio riesgo. Lee las &lt;u&gt;notas de seguridad&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">¡Necesitas hacer &lt;u&gt;una copia de seguridad de tu billetera&lt;/u&gt;!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">¡Necesitas hacer una copia de seguridad de tu billetera!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d horas atrás</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d días atrás</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d semanas atrás</string>
@@ -28,7 +28,7 @@
     <string name="wallet_transactions_fragment_empty_text_received">Aún no se han recibido Dash.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Aún no se han enviado Dash.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">¿Cómo obtener Dash?\n\nCámbialos por dinero tradicional,\nvende bienes o servicios o\ngánalos trabajando</string>
-    <string name="wallet_transactions_row_warning_backup">Felicitaciones. ¡Has recibido tu primer pago! ¿Has hecho ya una &lt;u&gt;copia de seguridad de tu billetera&lt;/u&gt; como protección frente a pérdidas?</string>
+    <string name="wallet_transactions_row_warning_backup">Felicitaciones. ¡Has recibido tu primer pago! ¿Has hecho ya una copia de seguridad de tu billetera como protección frente a pérdidas?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Tip: para incrementar la seguridad de tu billetera, puedes &lt;u&gt;encriptar tu dispositivo&lt;/u&gt;. Esto tambien protege los datos de otras apps.</string>
     <string name="wallet_transactions_fragment_coinbase">extraído</string>
     <string name="wallet_transactions_fragment_internal">interno</string>

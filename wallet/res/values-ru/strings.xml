@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Ваш кошелёк был сброшен!\nВосстановление займёт некоторое время.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Используйте на свой страх и риск. Прочитайте &lt;u&gt;заметки по безопасности&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Вам необходимо &lt;u&gt;сделать резервную копию вашего кошелька&lt;/u&gt;!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Вам необходимо сделать резервную копию вашего кошелька!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d часов отставания</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d дней отставания</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d недель отставания</string>
@@ -28,7 +28,7 @@
     <string name="wallet_transactions_fragment_empty_text_received">Ещё не получено Dash.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Ещё не отправлено Dash.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Как получить Dash?\n\nОбменяйте обычные деньги,\nпродайте товары, окажите услуги или\nзаработайте.</string>
-    <string name="wallet_transactions_row_warning_backup">Поздравляем, вы получили первый платёж! Вы уже &lt;u&gt;сделали резервную копию кошелька&lt;/u&gt;, чтобы обезопаситься от потерь?</string>
+    <string name="wallet_transactions_row_warning_backup">Поздравляем, вы получили первый платёж! Вы уже сделали резервную копию кошелька, чтобы обезопаситься от потерь?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Подсказка: чтобы усилить безопасность Вашего кошелька, вы можете &lt;u&gt;зашифровать ваше устройство&lt;/u&gt;. Это поможет защитить данные и других приложений.</string>
     <string name="wallet_transactions_fragment_coinbase">добыто</string>
     <string name="wallet_transactions_fragment_internal">внутренний</string>

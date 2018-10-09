@@ -76,16 +76,7 @@
             android:layout_below="@id/transaction_row_time">
 
             <TextView
-                android:id="@+id/transaction_row_address"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:singleLine="true"
-                style="@style/MontserratMedium.MG.12"
-                tools:text="XcJcu9C2y1MMuNjgjnyqfYCnPoK94D18oL"/>
-
-            <TextView
                 android:id="@+id/transaction_row_ix_extended"
-                android:layout_marginTop="5dp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:maxLines="1"
@@ -93,6 +84,15 @@
                 tools:text="InstantSend Verified"
                 style="@style/MontserratMedium.B.12" />
 
+            <TextView
+                android:id="@+id/transaction_row_address"
+                android:layout_marginTop="5dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:singleLine="true"
+                style="@style/MontserratMedium.MG.12"
+                tools:text="XcJcu9C2y1MMuNjgjnyqfYCnPoK94D18oL"/>
+            
         </LinearLayout>
 
         <de.schildbach.wallet.ui.CurrencyTextView

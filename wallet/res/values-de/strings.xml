@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Deine Wallet wurde zurückgesetzt,\ndies wird einige Zeit in Anspruch nehmen.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Nutzung auf eigene Gefahr. Lies bitte die &lt;u&gt;Sicherheitshinweise&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Bitte &lt;u&gt;sichere deine Wallet&lt;/u&gt;!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Bitte sichere deine Wallet!</string>
     <string name="blockchain_state_progress_hours">%1$s, hinkt %2$d Stunden hinterher</string>
     <string name="blockchain_state_progress_days">%1$s, hinkt %2$d Tage hinterher</string>
     <string name="blockchain_state_progress_weeks">%1$s, hinkt %2$d Wochen hinterher</string>
@@ -28,7 +28,7 @@
     <string name="wallet_transactions_fragment_empty_text_received">Noch keine Dash empfangen.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Noch keine Dash gesendet.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Wie komme ich an Dash?\n\nHandle gegen traditionelles Geld,\nverkaufe Güter oder Dienstleistungen oder\nverdiene durch Arbeit.</string>
-    <string name="wallet_transactions_row_warning_backup">Gratulation, du hast deine erste Zahlung erhalten! Hast du deine Wallet bereits &lt;u&gt;gesichert&lt;/u&gt;, um dich gegen einen möglichen Verlust zu schützen?</string>
+    <string name="wallet_transactions_row_warning_backup">Gratulation, du hast deine erste Zahlung erhalten! Hast du deine Wallet bereits gesichert, um dich gegen einen möglichen Verlust zu schützen?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Hinweis: Um die Sicherheit der Wallet zu erhöhen kann man &lt;u&gt;sein Gerät verschlüsseln&lt;/u&gt;. Dies schützt auch die Daten anderer Apps. </string>
     <string name="wallet_transactions_fragment_coinbase">geschürft</string>
     <string name="wallet_transactions_fragment_internal">intern</string>

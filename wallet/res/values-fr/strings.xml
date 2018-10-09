@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Votre portefeuille a été réinitialisé !\nSa récupération va prendre un certain temps.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">L\'utilisation est à vos risques et périls. Veuillez lire les &lt;u&gt;notes de sécurité&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Vous devez &lt;u&gt;sauvegarder votre portefeuille&lt;/u&gt; !</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Vous devez sauvegarder votre portefeuille!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d heures en retard</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d jours en retard</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d semaines en retard</string>
@@ -28,7 +28,7 @@
     <string name="wallet_transactions_fragment_empty_text_received">Aucun dash reçu à ce jour</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Aucun dash envoyé à ce jour</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Comment obtenir des dashs ?\n\nÉchangez-en contre de l\'argent traditionnel,\nvendez des biens ou des services ou\ngagnez-en en travaillant.</string>
-    <string name="wallet_transactions_row_warning_backup">Félicitations, vous avez reçu votre premier paiement ! Avez-vous déjà &lt;u&gt;sauvegardé votre portefeuille&lt;/u&gt; afin de le protéger de toute perte ?</string>
+    <string name="wallet_transactions_row_warning_backup">Félicitations, vous avez reçu votre premier paiement ! Avez-vous déjà sauvegardé votre portefeuille afin de le protéger de toute perte ?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Astuce : pour augmenter la sécurité de votre portefeuille, vous pouvez &lt;u&gt;chiffrer votre appareil&lt;/u&gt;. Cela protégera également les données des autres applications.</string>
     <string name="wallet_transactions_fragment_coinbase">miné</string>
     <string name="wallet_transactions_fragment_internal">interne</string>

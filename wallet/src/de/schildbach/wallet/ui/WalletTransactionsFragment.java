@@ -122,6 +122,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
     private TextView emptyView;
     private RecyclerView recyclerView;
+    private View backupDisclaimerView;
+    private TextView backupDisclaimerTitle;
     private TransactionsAdapter adapter;
     private MenuItem filterMenuItem;
     @Nullable
@@ -184,6 +186,23 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         viewGroup = (ViewAnimator) view.findViewById(R.id.wallet_transactions_group);
 
         emptyView = (TextView) view.findViewById(R.id.wallet_transactions_empty);
+
+        backupDisclaimerView = view.findViewById(R.id.backup_wallet_disclaimer);
+        backupDisclaimerTitle = (TextView) view.findViewById(R.id.backup_warning_title);
+
+        view.findViewById(R.id.backup_now).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                onBackupNowClicked();
+            }
+        });
+        view.findViewById(R.id.remind_later).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                WalletApplication.getInstance().setBackupDisclaimerDismissed(true);
+                backupDisclaimerView.setVisibility(View.GONE);
+            }
+        });
 
         recyclerView = (RecyclerView) view.findViewById(R.id.wallet_transactions_list);
         recyclerView.setHasFixedSize(true);
@@ -427,17 +446,17 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         popupMenu.show();
     }
 
+    private void onBackupNowClicked() {
+        if (config.remindBackupSeed()) {
+            ((WalletActivity) activity).handleBackupWalletToSeed();
+        } else if (Constants.SUPPORT_BOTH_BACKUP_WARNINGS && config.remindBackup()) {
+            ((WalletActivity) activity).handleBackupWallet();
+        }
+    }
+
     @Override
     public void onWarningClick() {
         switch (warning()) {
-        case BACKUP:
-            ((WalletActivity) activity).handleBackupWallet();
-            break;
-
-        case BACKUP_SEED:
-            ((WalletActivity) activity).handleBackupWalletToSeed();
-            break;
-
         case STORAGE_ENCRYPTION:
             startActivity(new Intent(Settings.ACTION_SECURITY_SETTINGS));
             break;
@@ -454,6 +473,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         final Direction direction = ((TransactionsLoader) loader).getDirection();
 
         adapter.replace(transactions);
+        updateView();
 
         if (WalletLock.getInstance().isWalletLocked(wallet)) {
             hideTransactions();
@@ -659,15 +679,26 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
     private void updateView() {
         adapter.setFormat(config.getFormat());
         adapter.setWarning(warning());
+
+        boolean showBackupDisclaimer = (config.remindBackupSeed()
+                || (Constants.SUPPORT_BOTH_BACKUP_WARNINGS && config.remindBackup()))
+                && !WalletApplication.getInstance().isBackupDisclaimerDismissed();
+
+        if (showBackupDisclaimer) {
+            backupDisclaimerView.setVisibility(View.VISIBLE);
+            if (adapter.getTransactionsCount() == 1) {
+                backupDisclaimerTitle.setText(R.string.wallet_transactions_row_warning_backup);
+            } else {
+                backupDisclaimerTitle.setText(R.string.wallet_disclaimer_fragment_remind_backup);
+            }
+        } else {
+            backupDisclaimerView.setVisibility(View.GONE);
+        }
     }
 
     private Warning warning() {
         final int storageEncryptionStatus = devicePolicyManager.getStorageEncryptionStatus();
-        if (config.remindBackupSeed())
-            return Warning.BACKUP_SEED;
-        if (Constants.SUPPORT_BOTH_BACKUP_WARNINGS && config.remindBackup())
-            return Warning.BACKUP;
-        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
                 && (storageEncryptionStatus == DevicePolicyManager.ENCRYPTION_STATUS_INACTIVE
                         || storageEncryptionStatus == DevicePolicyManager.ENCRYPTION_STATUS_ACTIVE_DEFAULT_KEY))
             return Warning.STORAGE_ENCRYPTION;

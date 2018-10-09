@@ -2,7 +2,7 @@
 <resources>
   <string name="toast_wallet_reset">Гаманець був скинутий,\nвідновлення займе трохи часу</string>
   <string name="wallet_disclaimer_fragment_remind_safety">Використовуйте на власний страх та ризик. Прочитайте &lt;u&gt;примітки по безпеці&lt;/u&gt;.</string>
-  <string name="wallet_disclaimer_fragment_remind_backup">Вам необхідно &lt;u&gt;зробити резервну копію вашого гаманця&lt;/u&gt;!</string>
+  <string name="wallet_disclaimer_fragment_remind_backup">Вам необхідно зробити резервну копію вашого гаманця!</string>
   <string name="blockchain_state_progress_hours">%1$s, %2$d годин відставання</string>
   <string name="blockchain_state_progress_days">%1$s, %2$d днів відставання</string>
   <string name="blockchain_state_progress_weeks">%1$s, %2$d тиждень відставання</string>
@@ -27,7 +27,7 @@
   <string name="wallet_transactions_fragment_empty_text_received">Ще не отримано Dash-монет</string>
   <string name="wallet_transactions_fragment_empty_text_sent">Ще не відправлено Dash-монет</string>
   <string name="wallet_transactions_fragment_empty_text_howto">Як отримати Dash?\n\nКупуйте за звичайні гроші,\nпродавайте товари і послуги\nабо заробляйте.</string>
-  <string name="wallet_transactions_row_warning_backup">Вітаємо, ви отримали перший платіж! Ви вже &lt;u&gt;зробили резервну копію гаманця&lt;/u&gt;, щоб убезпечитись від втрат?</string>
+  <string name="wallet_transactions_row_warning_backup">Вітаємо, ви отримали перший платіж! Ви вже зробили резервну копію гаманця, щоб убезпечитись від втрат?</string>
   <string name="wallet_transactions_fragment_coinbase">добуто</string>
   <string name="wallet_transactions_fragment_internal">внутрішній</string>
   <string name="wallet_options_safety_menu">Безпека</string>

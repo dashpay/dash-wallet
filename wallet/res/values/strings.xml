@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Your wallet was reset!\nIt will take some time to recover.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Use at your own risk. Read the &lt;u&gt;safety notes&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">You need to &lt;u&gt;back up your wallet&lt;/u&gt;!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">You need to back up your wallet!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d hours behind</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d days behind</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d weeks behind</string>
@@ -28,7 +28,7 @@
     <string name="wallet_transactions_fragment_empty_text_received">No Dash received so far.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">No Dash sent so far.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">How to get Dash?\n\nTrade for traditional money,\nsell goods or services or\nearn by working.</string>
-    <string name="wallet_transactions_row_warning_backup">Congratulations, you received your first payment! Have you already &lt;u&gt;backed up your wallet&lt;/u&gt;, to protect against loss?</string>
+    <string name="wallet_transactions_row_warning_backup">Congratulations, you received your first payment! Have you already backed up your wallet, to protect against loss?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Hint: to increase the safety of your wallet, you can &lt;u&gt;encrypt your device&lt;/u&gt;. This also protects data of other apps.</string>
     <string name="wallet_transactions_fragment_coinbase">mined</string>
     <string name="wallet_transactions_fragment_internal">internal</string>

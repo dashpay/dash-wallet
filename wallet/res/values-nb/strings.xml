@@ -3,7 +3,7 @@
 
 	<string name="toast_wallet_reset">Lommeboken ble nullstilt!\nDet vil ta litt tid å gjenopprette.</string>
 	<string name="wallet_disclaimer_fragment_remind_safety">Bruk på egen risiko. Les &lt;u&gt;sikkerhetsnotatene&lt;/u&gt;.</string>
-	<string name="wallet_disclaimer_fragment_remind_backup">Du bør &lt;u&gt;ta sikkerhetskopi av din lommebok&lt;/u&gt;!</string>
+	<string name="wallet_disclaimer_fragment_remind_backup">Du bør ta sikkerhetskopi av din lommebok!</string>
 	<string name="blockchain_state_progress_hours">%1$s, %2$d timer bak</string>
 	<string name="blockchain_state_progress_days">%1$s, %2$d dager bak</string>
 	<string name="blockchain_state_progress_weeks">%1$s, %2$d uker bak</string>
@@ -28,7 +28,7 @@
 	<string name="wallet_transactions_fragment_empty_text_received">Ingen Dash mottatt ennå.</string>
 	<string name="wallet_transactions_fragment_empty_text_sent">Ingen Dash sendt ennå.</string>
 	<string name="wallet_transactions_fragment_empty_text_howto">Hvordan får man Dash?\n\nKjøp for tradisjonelle penger,\nselg varer eller tjenester eller\ntjen dem ved å arbeide.</string>
-	<string name="wallet_transactions_row_warning_backup">Gratulerer, du har mottatt din første betaling! Har du &lt;u&gt;tatt en sikkerhetskopi av din lommebok&lt;/u&gt;, for å beskytte deg mot tap?</string>
+	<string name="wallet_transactions_row_warning_backup">Gratulerer, du har mottatt din første betaling! Har du tatt en sikkerhetskopi av din lommebok, for å beskytte deg mot tap?</string>
 	<string name="wallet_transactions_fragment_coinbase">utgravd</string>
 	<string name="wallet_transactions_fragment_internal">intern</string>
 	<string name="wallet_transactions_options_filter">Filter</string>

@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Lompakkosi nollattiin!\nPalautuminen kestää hetken.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Käytä omalla vastuullasi. Lue &lt;u&gt;turvallisuusohjeet&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Sinun on &lt;u&gt;varmuuskopioitava lompakkosi&lt;/u&gt;!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Sinun on varmuuskopioitava lompakkosi!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d tuntia takana</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d päivää takana</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d viikkoa takana</string>
@@ -28,7 +28,7 @@
     <string name="wallet_transactions_fragment_empty_text_received">Dasheja ei ole vielä vastaanotettu.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Dasheja ei ole vielä lähetetty.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Kuinka saada Dasheja?\nVaihda perinteiseen rahaan,\nmyy tuotteita tai palveluita\ntai tienaa työskentelemällä.</string>
-    <string name="wallet_transactions_row_warning_backup">Onnittelut, olet vastaanottanut ensimmäisen rahansiirtosi! Onko sinulla jo &lt;u&gt;varmuuskopio lompakostasi&lt;/u&gt; suojataksesi sitä katoamiselta?</string>
+    <string name="wallet_transactions_row_warning_backup">Onnittelut, olet vastaanottanut ensimmäisen rahansiirtosi! Onko sinulla jo varmuuskopio lompakostasi suojataksesi sitä katoamiselta?</string>
     <string name="wallet_transactions_fragment_coinbase">louhittu</string>
     <string name="wallet_transactions_fragment_internal">sisäinen</string>
     <string name="wallet_transactions_options_filter">Suodata</string>

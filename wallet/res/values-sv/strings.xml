@@ -3,7 +3,7 @@
 
 	<string name="toast_wallet_reset">Din plånbok är nollställd!\nDet tar en stund för att återställa.</string>
 	<string name="wallet_disclaimer_fragment_remind_safety">Använd på egen risk. Läs &lt;u&gt;säkerhetsråden&lt;/u&gt;.</string>
-	<string name="wallet_disclaimer_fragment_remind_backup">Du behöver &lt;u&gt;säkerhetskopiera din plånbok&lt;/u&gt;!</string>
+	<string name="wallet_disclaimer_fragment_remind_backup">Du behöver säkerhetskopiera din plånbok!</string>
 	<string name="blockchain_state_progress_hours">%1$s, %2$d timmar efter</string>
 	<string name="blockchain_state_progress_days">%1$s, %2$d dagar efter</string>
 	<string name="blockchain_state_progress_weeks">%1$s, %2$d veckor efter</string>
@@ -28,7 +28,7 @@
 	<string name="wallet_transactions_fragment_empty_text_received">Inga Dash har hittills mottagits</string>
 	<string name="wallet_transactions_fragment_empty_text_sent">Inga Dash har hittills skickats</string>
 	<string name="wallet_transactions_fragment_empty_text_howto">Hur får man tag i Dash?\n\nKöp för svenska kronor,\nsälj varor eller tjänster eller\ntjäna genom att arbeta.</string>
-	<string name="wallet_transactions_row_warning_backup">Grattis, fick du din första betalning! Har du redan &lt;u&gt;säkerhetskopierat din plånbok&lt;/u&gt;, för att skydda mot förlust?</string>
+	<string name="wallet_transactions_row_warning_backup">Grattis, fick du din första betalning! Har du redan säkerhetskopierat din plånbok, för att skydda mot förlust?</string>
 	<string name="wallet_transactions_row_warning_storage_encryption">Tips: för att öka säkerheten till din plånbok, du kan &lt;u&gt;kryptera din maskin&lt;/u&gt;. Detta skulle också skydda din data i andra appar.</string>
 	<string name="wallet_transactions_fragment_coinbase">genererade</string>
 	<string name="wallet_transactions_fragment_internal">intern</string>

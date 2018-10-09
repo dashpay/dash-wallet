@@ -2,7 +2,7 @@
 <resources>
   <string name="toast_wallet_reset">Denarnica je bila ponastavljena,\nto bo trajalo nekaj časa.</string>
   <string name="wallet_disclaimer_fragment_remind_safety">Uporaba na lastno odgovornost. Preberite &lt;u&gt;navodila za varnost&lt;/u&gt;.</string>
-  <string name="wallet_disclaimer_fragment_remind_backup">Napraviti morate &lt;u&gt;rezervno kopijo denarnice&lt;/u&gt;!</string>
+  <string name="wallet_disclaimer_fragment_remind_backup">Napraviti morate rezervno kopijo denarnice!</string>
   <string name="blockchain_state_progress_hours">%1$s, %2$d ur zadaj</string>
   <string name="blockchain_state_progress_days">%1$s, %2$d dni zadaj</string>
   <string name="blockchain_state_progress_weeks">%1$s, %2$d tednov zadaj</string>
@@ -24,7 +24,7 @@
   <string name="wallet_transactions_fragment_empty_text_received">Prejeli niste še nobenih novcev.</string>
   <string name="wallet_transactions_fragment_empty_text_sent">Poslali niste še nobenih novcev.</string>
   <string name="wallet_transactions_fragment_empty_text_howto">Kako dobim Dashe?\n\nLahko jih kupite,\nprodate kaj za Dash\nali pa zaslužite z delom.</string>
-  <string name="wallet_transactions_row_warning_backup">Čestitke, prejeli ste prvo plačilo! Ste že napravili &lt;u&gt;rezervno kopijo ključev&lt;/u&gt; za zaščito pred izgubo novcev?</string>
+  <string name="wallet_transactions_row_warning_backup">Čestitke, prejeli ste prvo plačilo! Ste že napravili rezervno kopijo ključev za zaščito pred izgubo novcev?</string>
   <string name="wallet_transactions_fragment_coinbase">narudarjeno</string>
   <string name="wallet_transactions_fragment_internal">notranji</string>
   <string name="wallet_transactions_options_filter_received">Prejeto</string>
