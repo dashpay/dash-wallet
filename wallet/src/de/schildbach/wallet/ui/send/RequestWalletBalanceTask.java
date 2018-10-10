@@ -45,6 +45,9 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.UTXO;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,10 +56,11 @@ import com.google.common.base.Splitter;
 import com.squareup.moshi.JsonAdapter;
 import com.squareup.moshi.JsonDataException;
 import com.squareup.moshi.Moshi;
+import com.squareup.okhttp.Call;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.Response;
 
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.util.Io;
-import org.bitcoinj.core.CoinDefinition;
 import static de.schildbach.wallet.Constants.HEX;
 import de.schildbach.wallet_test.R;
 import android.content.res.AssetManager;
@@ -172,14 +176,17 @@ public final class RequestWalletBalanceTask {
 						onResult(utxos);
 					} else {
 						log.info("id mismatch response:{} vs request:{}", response.id, request.id);
-						onFail(R.string.error_parse, socketAddress.toString());
+						if(!requestWalletBalanceFromBlockExplorers(address))
+							onFail(R.string.error_parse, socketAddress.toString());
 					}
 				} catch (final JsonDataException x) {
 					log.info("problem parsing json", x);
-					onFail(R.string.error_parse, x.getMessage());
+					if(!requestWalletBalanceFromBlockExplorers(address))
+						onFail(R.string.error_parse, x.getMessage());
 				} catch (final IOException x) {
 					log.info("problem querying unspent outputs", x);
-					onFail(R.string.error_io, x.getMessage());
+					if(!requestWalletBalanceFromBlockExplorers(address))
+						onFail(R.string.error_io, x.getMessage());
 				}
 			}
 		});
@@ -240,5 +247,135 @@ public final class RequestWalletBalanceTask {
 			is.close();
 		}
 		return addresses;
+	}
+
+	enum UnspentAPI {
+		CryptoId,
+		ABE,
+		Insight
+	}
+
+	boolean requestWalletBalanceFromBlockExplorers(Address address) {
+		Set<UTXO> utxos = requestWalletBalanceFromBlockExplorer("http://insight.dash.org/api/addr/", UnspentAPI.Insight, address);
+
+		if(utxos != null) {
+			onResult(utxos);
+			return true;
+		} else {
+			utxos = requestWalletBalanceFromBlockExplorer("https://explorer.dash.org/chain/Dash/unspent/", UnspentAPI.ABE, address);
+			if(utxos != null) {
+				onResult(utxos);
+				return true;
+			} else {
+				utxos = requestWalletBalanceFromBlockExplorer("https://chainz.cryptoid.info/dash/api.dws?q=unspent", UnspentAPI.CryptoId, address);
+				if(utxos != null) {
+					onResult(utxos);
+					return true;
+				}
+			}
+		}
+		onFail(R.string.error_io, "cannot connect to any block explorer for unspent outputs");
+		return false;
+	}
+
+
+	Set<UTXO> requestWalletBalanceFromBlockExplorer(String blockExplorerUrl, UnspentAPI unspentAPI, Address address) {
+
+		final StringBuilder url = new StringBuilder(blockExplorerUrl);
+		if(unspentAPI == UnspentAPI.CryptoId)
+		{
+			url.append("&key=d47da926b82e");    //Cryptoid API key
+			url.append("&active=").append(address.toString());
+		} else if(unspentAPI == UnspentAPI.ABE) {
+			url.append(address.toString());
+		} else if(unspentAPI == UnspentAPI.Insight) {
+			url.append(address.toString());
+			url.append("/utxo");
+		}
+		log.debug("trying to request wallet balance from {}", url);
+
+		final Request.Builder request = new Request.Builder();
+		request.url(url.toString());
+		request.header("User-Agent", Constants.USER_AGENT);
+
+		final Call call = Constants.HTTP_CLIENT.newCall(request.build());
+
+		try
+		{
+			final Response response = call.execute();
+
+			if(response.isSuccessful())
+			{
+				final String content = response.body().string();
+				JSONArray outputs = null;
+
+				if(unspentAPI == UnspentAPI.CryptoId)
+				{
+					JSONObject head = new JSONObject(content);
+					outputs = head.getJSONArray("unspent_outputs");
+				} else if(unspentAPI == UnspentAPI.ABE) {
+					if(content.startsWith("No free outputs to spend"))
+						return null;
+					JSONObject head = new JSONObject(content);
+					outputs = head.getJSONArray("unspent_outputs");
+				} else if(unspentAPI == UnspentAPI.Insight) {
+					outputs = new JSONArray(content);
+				}
+
+				final Set<UTXO> utxos = new HashSet<>();
+
+				for (int i = 0; i < outputs.length(); i++)
+				{
+					final JSONObject jsonOutput = outputs.getJSONObject(i);
+
+					Sha256Hash hash = null;
+					int index = 0;
+					byte[] scryptBytes = null;
+					Coin value = null;
+					int blockNumber = 0;
+
+
+					if(unspentAPI == UnspentAPI.ABE) {
+						hash = Sha256Hash.wrap(jsonOutput.getString("tx_hash"));
+						index = jsonOutput.getInt("tx_output_n");
+						scryptBytes = HEX.decode(jsonOutput.getString("script"));
+						value = Coin.valueOf(jsonOutput.getLong("value"));
+						blockNumber = jsonOutput.getInt("block_number");
+					}
+					else if(unspentAPI == UnspentAPI.CryptoId) {
+						hash = Sha256Hash.wrap(jsonOutput.getString("tx_hash"));
+						index = jsonOutput.getInt("tx_ouput_n"); //yes, output is spelled as "ouput"
+						scryptBytes = ScriptBuilder.createOutputScript(address).getProgram();
+						value = Coin.valueOf(jsonOutput.getLong("value"));
+					} else if(unspentAPI == UnspentAPI.Insight) {
+						if(jsonOutput.has("height")) //unconfirmed
+							blockNumber = jsonOutput.getInt("height");
+						hash = Sha256Hash.wrap(jsonOutput.getString("txid"));
+						index = jsonOutput.getInt("vout");
+						scryptBytes = HEX.decode(jsonOutput.getString("scriptPubKey"));
+						value = Coin.valueOf(jsonOutput.getLong("satoshis"));
+					}
+					utxos.add(new UTXO(hash, index, value, blockNumber, false, new Script(scryptBytes), address.toString()));
+				}
+
+				log.info("fetched unspent outputs from {}", url);
+				return utxos;
+			}
+			else
+			{
+				log.info("got http error '{}: {}' from {}", response.code(), response.message(), url);
+				return null;
+			}
+		}
+		catch (final JSONException x)
+		{
+			log.info("problem parsing json from " + url, x);
+			return null;
+		}
+		catch (final IOException x)
+		{
+			log.info("problem querying unspent outputs from " + url, x);
+			return null;
+		}
 	}
 }
