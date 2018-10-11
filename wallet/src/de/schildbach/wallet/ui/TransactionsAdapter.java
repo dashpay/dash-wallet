@@ -90,6 +90,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private final String textCoinBase;
     private final String textInternal;
     private final float textSizeNormal;
+    private boolean showTransactionRowMenu;
 
     private static final String CONFIDENCE_SYMBOL_IN_CONFLICT = "\u26A0"; // warning sign
     private static final String CONFIDENCE_SYMBOL_DEAD = "\u271D"; // latin cross
@@ -273,6 +274,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                     }
                 });
             }
+
+            transactionHolder.menuView.setVisibility(showTransactionRowMenu ? View.VISIBLE : View.INVISIBLE);
         } else if (holder instanceof WarningViewHolder) {
             final WarningViewHolder warningHolder = (WarningViewHolder) holder;
 
@@ -282,6 +285,10 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                         Html.fromHtml(context.getString(R.string.wallet_transactions_row_warning_storage_encryption)));
             }
         }
+    }
+
+    public void setShowTransactionRowMenu(boolean showTransactionRowMenu) {
+        this.showTransactionRowMenu = showTransactionRowMenu;
     }
 
     public interface OnClickListener {

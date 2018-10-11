@@ -168,6 +168,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         setHasOptionsMenu(true);
 
         adapter = new TransactionsAdapter(activity, wallet, application.maxConnectedPeers(), this);
+        adapter.setShowTransactionRowMenu(true);
 
         this.direction = null;
     }
