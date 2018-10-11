@@ -1,101 +1,125 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_height="match_parent"
+    android:layout_width="match_parent"
     xmlns:tools="http://schemas.android.com/tools"
-    android:divider="?android:attr/dividerHorizontal"
-    android:dividerPadding="0dp"
-    android:orientation="vertical"
-    android:showDividers="middle" >
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <LinearLayout
+        android:id="@+id/sweep_wallet_introduction_group"
         android:layout_width="match_parent"
-        android:layout_height="0px"
-        android:layout_weight="1"
-        android:orientation="vertical" >
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:layout_marginLeft="@dimen/space_medium"
-            android:layout_marginRight="@dimen/space_medium"
-            android:layout_marginTop="8dp"
-            android:text="@string/sweep_wallet_fragment_intro" />
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="22dp">
 
         <TextView
             android:id="@+id/sweep_wallet_fragment_message"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:layout_marginLeft="@dimen/space_medium"
-            android:layout_marginRight="@dimen/space_medium"
-            android:layout_marginTop="0dp"
-            android:textStyle="bold" />
-
-        <LinearLayout
-            android:id="@+id/sweep_wallet_fragment_password_group"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:layout_marginLeft="@dimen/list_entry_padding_horizontal"
-            android:layout_marginRight="@dimen/list_entry_padding_horizontal"
-            android:layout_marginTop="0dp"
-            android:divider="@drawable/divider_field"
-            android:orientation="horizontal"
-            android:showDividers="middle" >
-
-            <EditText
-                android:id="@+id/sweep_wallet_fragment_password"
-                android:layout_width="0px"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="@string/sweep_wallet_fragment_password"
-                android:inputType="textPassword"
-                android:singleLine="true" />
-
-            <TextView
-                android:id="@+id/sweep_wallet_fragment_bad_password"
-                android:layout_width="0px"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/sweep_wallet_fragment_bad_password"
-                android:textColor="@color/fg_error"
-                android:textStyle="bold"
-                android:visibility="invisible" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/sweep_wallet_fragment_balance"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="@dimen/space_medium"
-            android:layout_marginRight="@dimen/space_medium"
-            android:layout_marginTop="8dp" />
-
-        <Space
-            android:layout_width="0px"
-            android:layout_height="0px"
-            android:layout_weight="1" />
-
-        <TextView
-            android:id="@+id/sweep_wallet_fragment_hint"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:gravity="center"
             android:layout_marginBottom="16dp"
-            android:layout_marginLeft="@dimen/space_medium"
-            android:layout_marginRight="@dimen/space_medium"
-            android:layout_marginTop="8dp"
-            android:text="@string/sweep_wallet_fragment_hint"
-            android:textColor="@color/fg_less_significant"
-            android:textSize="@dimen/font_size_small" />
+            android:text="@string/sweep_wallet_fragment_wallet_unknown"
+            style="@style/MontserratSemiBold.DB.14"/>
 
-        <FrameLayout
-            android:id="@+id/sweep_wallet_fragment_sent_transaction"
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layoutAnimation="@anim/transaction_layout_anim"
-            android:visibility="gone" />
+            android:gravity="center"
+            android:text="@string/sweep_wallet_fragment_intro"
+            style="@style/MontserratMedium.MG.14"/>
+
     </LinearLayout>
 
-    <include layout="@layout/send_coins_buttons_include" />
+    <RelativeLayout
+        android:id="@+id/sweep_wallet_balance_group"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
-</LinearLayout>
+        <LinearLayout
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_centerInParent="true"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/MontserratMedium.MG"
+                android:textSize="16sp"
+                android:layout_marginBottom="8dp"
+                android:text="@string/sweep_wallet_fragment_balance"/>
+
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="32dp">
+
+                <ImageView
+                    android:src="@drawable/ic_dash_d_white_bottom"
+                    android:tint="@color/darkest_blue"
+                    android:layout_marginTop="4dp"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp" />
+
+                <de.schildbach.wallet.ui.CurrencyTextView
+                    android:id="@+id/sweep_wallet_fragment_balance"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="8dp"
+                    android:layout_marginStart="8dp"
+                    android:textSize="26sp"
+                    tools:text="0.00"
+                    android:includeFontPadding="false"
+                    style="@style/MontserratRegular.DB" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/sweep_wallet_fragment_sent_transaction_group"
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone">
+
+                <View style="@style/ListSeparator"/>
+
+                <FrameLayout
+                    android:id="@+id/sweep_wallet_fragment_sent_transaction"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layoutAnimation="@anim/transaction_layout_anim" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </RelativeLayout>
+
+    <Button
+        android:id="@+id/send_coins_go"
+        style="@style/MontserratButton"
+        android:layout_alignParentBottom="true"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        tools:text="@string/sweep_wallet_fragment_button_sweep"
+        android:maxLines="2"
+        android:layout_margin="16dp"
+        android:visibility="gone"/>
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/fab_scan_qr"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="16dp"
+        android:layout_marginRight="16dp"
+        android:src="@drawable/ic_qrcode"
+        app:backgroundTint="@color/colorPrimary" />
+
+</RelativeLayout>

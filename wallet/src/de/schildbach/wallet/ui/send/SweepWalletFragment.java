@@ -60,6 +60,7 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.DynamicFeeLoader;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
+import de.schildbach.wallet.ui.CurrencyTextView;
 import de.schildbach.wallet.ui.DialogBuilder;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
@@ -70,6 +71,7 @@ import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
+import android.app.Dialog;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.LoaderManager;
@@ -86,7 +88,6 @@ import android.os.HandlerThread;
 import android.os.Process;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.widget.RecyclerView;
-import android.text.SpannableStringBuilder;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -94,7 +95,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
@@ -119,21 +119,21 @@ public class SweepWalletFragment extends Fragment {
 	private Wallet walletToSweep = null;
 	private Transaction sentTransaction = null;
 
-	private TextView messageView;
-	private View passwordViewGroup;
-	private EditText passwordView;
-	private View badPasswordView;
-	private TextView balanceView;
-	private View hintView;
+	private View introductionGroup;
+	private View balanceGroup;
+	private CurrencyTextView balanceView;
+	private Dialog decryptDialog;
 	private FrameLayout sweepTransactionView;
+	private View sweepTransactionViewGroup;
 	private TransactionsAdapter sweepTransactionAdapter;
 	private RecyclerView.ViewHolder sweepTransactionViewHolder;
 	private Button viewGo;
-	private Button viewCancel;
 	private FloatingActionButton viewFabScanQr;
 
 	private MenuItem reloadAction;
 	private MenuItem scanAction;
+
+	private String password = "";
 
 	private static final int ID_DYNAMIC_FEES_LOADER = 0;
 
@@ -227,17 +227,13 @@ public class SweepWalletFragment extends Fragment {
 							 final Bundle savedInstanceState) {
 		final View view = inflater.inflate(R.layout.sweep_wallet_fragment, container);
 
-		messageView = (TextView) view.findViewById(R.id.sweep_wallet_fragment_message);
+		introductionGroup = view.findViewById(R.id.sweep_wallet_introduction_group);
+        balanceGroup = view.findViewById(R.id.sweep_wallet_balance_group);
 
-		passwordViewGroup = view.findViewById(R.id.sweep_wallet_fragment_password_group);
-		passwordView = (EditText) view.findViewById(R.id.sweep_wallet_fragment_password);
-		badPasswordView = view.findViewById(R.id.sweep_wallet_fragment_bad_password);
-
-		balanceView = (TextView) view.findViewById(R.id.sweep_wallet_fragment_balance);
-
-		hintView = view.findViewById(R.id.sweep_wallet_fragment_hint);
+		balanceView = (CurrencyTextView) view.findViewById(R.id.sweep_wallet_fragment_balance);
 
 		sweepTransactionView = (FrameLayout) view.findViewById(R.id.sweep_wallet_fragment_sent_transaction);
+		sweepTransactionViewGroup = view.findViewById(R.id.sweep_wallet_fragment_sent_transaction_group);
 		sweepTransactionAdapter = new TransactionsAdapter(activity, application.getWallet(),
 				application.maxConnectedPeers(), null);
 		sweepTransactionViewHolder = sweepTransactionAdapter.createTransactionViewHolder(sweepTransactionView);
@@ -252,14 +248,6 @@ public class SweepWalletFragment extends Fragment {
 					handleDecrypt();
 				if (state == State.CONFIRM_SWEEP)
 					handleSweep();
-			}
-		});
-
-		viewCancel = (Button) view.findViewById(R.id.send_coins_cancel);
-		viewCancel.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(final View v) {
-				activity.finish();
 			}
 		});
 
@@ -437,11 +425,6 @@ public class SweepWalletFragment extends Fragment {
 			final ECKey key = ((DumpedPrivateKey) privateKeyToSweep).getKey();
 			askConfirmSweep(key);
 		} else if (privateKeyToSweep instanceof BIP38PrivateKey) {
-			badPasswordView.setVisibility(View.INVISIBLE);
-
-			final String password = passwordView.getText().toString().trim();
-			passwordView.setText(null); // get rid of it asap
-
 			if (!password.isEmpty()) {
 				ProgressDialogFragment.showProgress(fragmentManager,
 						getString(R.string.sweep_wallet_fragment_decrypt_progress));
@@ -461,9 +444,7 @@ public class SweepWalletFragment extends Fragment {
 						log.info("failed decoding BIP38 private key (bad password)");
 
 						ProgressDialogFragment.dismissProgress(fragmentManager);
-
-						badPasswordView.setVisibility(View.VISIBLE);
-						passwordView.requestFocus();
+						showDecryptDialog(true);
 					}
 				}.decodePrivateKey((BIP38PrivateKey) privateKeyToSweep, password);
 			}
@@ -586,48 +567,39 @@ public class SweepWalletFragment extends Fragment {
 		final MonetaryFormat btcFormat = config.getFormat();
 
 		if (walletToSweep != null) {
-			balanceView.setVisibility(View.VISIBLE);
-			final MonetarySpannable balanceSpannable = new MonetarySpannable(btcFormat,
-					walletToSweep.getBalance(BalanceType.ESTIMATED));
-			balanceSpannable.applyMarkup(null, null);
-			final SpannableStringBuilder balance = new SpannableStringBuilder(balanceSpannable);
-			balance.insert(0, ": ");
-			balance.insert(0, getString(R.string.sweep_wallet_fragment_balance));
-			balanceView.setText(balance);
+		    introductionGroup.setVisibility(View.GONE);
+		    viewFabScanQr.setVisibility(View.GONE);
+		    viewGo.setVisibility(View.VISIBLE);
+			balanceGroup.setVisibility(View.VISIBLE);
+			balanceView.setFormat(btcFormat.noCode());
+			balanceView.setAmount(walletToSweep.getBalance(BalanceType.ESTIMATED));
 		} else {
-			balanceView.setVisibility(View.GONE);
+		    introductionGroup.setVisibility(View.VISIBLE);
+		    viewFabScanQr.setVisibility(View.VISIBLE);
+			viewGo.setVisibility(View.GONE);
+			balanceGroup.setVisibility(View.GONE);
 		}
 
-		if (state == State.DECODE_KEY && privateKeyToSweep == null) {
-			messageView.setVisibility(View.VISIBLE);
-			messageView.setText(R.string.sweep_wallet_fragment_wallet_unknown);
-		} else if (state == State.DECODE_KEY && privateKeyToSweep != null) {
-			messageView.setVisibility(View.VISIBLE);
-			messageView.setText(R.string.sweep_wallet_fragment_encrypted);
-		} else if (privateKeyToSweep != null) {
-			messageView.setVisibility(View.GONE);
+		if (state == State.DECODE_KEY && privateKeyToSweep != null) {
+			showDecryptDialog();
+		} else if (decryptDialog != null && decryptDialog.isShowing()) {
+			decryptDialog.cancel();
+			decryptDialog = null;
 		}
-
-		passwordViewGroup
-				.setVisibility(state == State.DECODE_KEY && privateKeyToSweep != null ? View.VISIBLE : View.GONE);
-
-		hintView.setVisibility(state == State.DECODE_KEY && privateKeyToSweep == null ? View.VISIBLE : View.GONE);
 
 		if (sentTransaction != null) {
-			sweepTransactionView.setVisibility(View.VISIBLE);
+			sweepTransactionViewGroup.setVisibility(View.VISIBLE);
 			sweepTransactionAdapter.setFormat(btcFormat);
 			sweepTransactionAdapter.replace(sentTransaction);
 			sweepTransactionAdapter.bindViewHolder(sweepTransactionViewHolder, 0);
 		} else {
-			sweepTransactionView.setVisibility(View.GONE);
+			sweepTransactionViewGroup.setVisibility(View.GONE);
 		}
 
 		if (state == State.DECODE_KEY) {
-			viewCancel.setText(R.string.button_cancel);
 			viewGo.setText(R.string.sweep_wallet_fragment_button_decrypt);
 			viewGo.setEnabled(privateKeyToSweep != null);
 		} else if (state == State.CONFIRM_SWEEP) {
-			viewCancel.setText(R.string.button_cancel);
 			viewGo.setText(R.string.sweep_wallet_fragment_button_sweep);
 			viewGo.setEnabled(walletToSweep != null && walletToSweep.getBalance(BalanceType.ESTIMATED).signum() > 0
 					&& fees != null);
@@ -635,30 +607,61 @@ public class SweepWalletFragment extends Fragment {
 					"wallet balance > 0: " + (walletToSweep.getBalance(BalanceType.ESTIMATED).signum() > 0 ? "true" : "false") +
 					"fees: " + (fees == null ? "null" : fees.toString()));
 		} else if (state == State.PREPARATION) {
-			viewCancel.setText(R.string.button_cancel);
 			viewGo.setText(R.string.send_coins_preparation_msg);
 			viewGo.setEnabled(false);
 		} else if (state == State.SENDING) {
-			viewCancel.setText(R.string.send_coins_fragment_button_back);
 			viewGo.setText(R.string.send_coins_sending_msg);
 			viewGo.setEnabled(false);
 		} else if (state == State.SENT) {
-			viewCancel.setText(R.string.send_coins_fragment_button_back);
 			viewGo.setText(R.string.send_coins_sent_msg);
 			viewGo.setEnabled(false);
 		} else if (state == State.FAILED) {
-			viewCancel.setText(R.string.send_coins_fragment_button_back);
 			viewGo.setText(R.string.send_coins_failed_msg);
 			viewGo.setEnabled(false);
 		}
-
-		viewCancel.setEnabled(state != State.PREPARATION);
 
 		// enable actions
 		if (reloadAction != null)
 			reloadAction.setEnabled(state == State.CONFIRM_SWEEP && walletToSweep != null);
 		if (scanAction != null)
 			scanAction.setEnabled(state == State.DECODE_KEY || state == State.CONFIRM_SWEEP);
+	}
+
+	private void showDecryptDialog() {
+		showDecryptDialog(false);
+	}
+
+	private void showDecryptDialog(boolean badPassword) {
+		if (!isAdded()) {
+			return;
+		}
+
+		DialogBuilder dialogBuilder = new DialogBuilder(getActivity());
+		dialogBuilder.setTitle(R.string.sweep_wallet_fragment_encrypted);
+
+		View contentView = LayoutInflater.from(getActivity())
+				.inflate(R.layout.sweep_wallet_decrypt_dialog, null);
+		final TextView passwordText = contentView.findViewById(R.id.sweep_wallet_fragment_password);
+		View badPasswordView = contentView.findViewById(R.id.sweep_wallet_fragment_bad_password);
+
+		badPasswordView.setVisibility(badPassword ? View.VISIBLE : View.GONE);
+
+		dialogBuilder.setView(contentView);
+		dialogBuilder.setPositiveButton(R.string.sweep_wallet_fragment_button_decrypt, new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				password = passwordText.getText().toString();
+				handleDecrypt();
+			}
+		});
+		dialogBuilder.setCancelable(false);
+
+		if (decryptDialog != null) {
+			decryptDialog.cancel();
+			decryptDialog = null;
+		}
+
+		decryptDialog = dialogBuilder.show();
 	}
 
 	private void handleDecrypt() {
