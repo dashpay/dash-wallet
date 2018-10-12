@@ -50,8 +50,6 @@ public class UpholdClient {
     private UpholdCard dashCard;
 
     public static final String UPHOLD_AUTH_REDIRECT_URL = "www.dash.org";
-    private static final String UPHOLD_CLIENT_ID = "dfb85d44118d6ca2b3e070d434da6e9102a3c7d9";
-    private static final String UPHOLD_CLIENT_SECRET = "fdb513ff0dd2672a23875816d31354076fc5372e";
     private static final String UPHOLD_PREFS = "uphold_prefs";
     private static final String UPHOLD_ACCESS_TOKEN = "access_token";
 
@@ -79,7 +77,7 @@ public class UpholdClient {
         this.prefs = context.getSharedPreferences(UPHOLD_PREFS, Context.MODE_PRIVATE);
         this.accessToken = getStoredAccessToken();
 
-        String baseUrl = BuildConfig.DEBUG ? "https://api-sandbox.uphold.com/" : "https://api.uphold.com/";
+        String baseUrl = UpholdConstants.CLIENT_BASE_URL;
         OkHttpClient okClient = new OkHttpClient.Builder().addInterceptor(headerInterceptor).build();
 
         Moshi moshi = new Moshi.Builder().add(new UpholdCardAddressAdapter()).build();
@@ -101,7 +99,7 @@ public class UpholdClient {
     }
 
     public void getAccessToken(String code, final Callback<String> callback) {
-        service.getAccessToken(UPHOLD_CLIENT_ID, UPHOLD_CLIENT_SECRET, code,
+        service.getAccessToken(UpholdConstants.CLIENT_ID, UpholdConstants.CLIENT_SECRET, code,
                 "authorization_code").enqueue(new retrofit2.Callback<UpholdAccessToken>() {
             @Override
             public void onResponse(Call<UpholdAccessToken> call, Response<UpholdAccessToken> response) {

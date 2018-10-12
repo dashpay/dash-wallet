@@ -36,10 +36,9 @@ import android.webkit.WebViewClient;
 
 import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
+import org.dash.wallet.integration.uphold.data.UpholdConstants;
 
 public class UpholdActivity extends AppCompatActivity {
-
-    private static final String INITIAL_URL = "https://sandbox.uphold.com/authorize/dfb85d44118d6ca2b3e070d434da6e9102a3c7d9?scope=accounts:read%20cards:read%20cards:write%20transactions:deposit%20transactions:read%20transactions:transfer:application%20transactions:transfer:others%20transactions:transfer:self%20transactions:withdraw%20transactions:commit:otp%20user:read&state=somehash";
 
     private WebView webView;
     private ProgressDialog loadingDialog;
@@ -111,7 +110,7 @@ public class UpholdActivity extends AppCompatActivity {
             //Confirmation URL
             webView.loadUrl(intent.getDataString());
         } else {
-            webView.loadUrl(INITIAL_URL);
+            webView.loadUrl(UpholdConstants.INITIAL_URL);
         }
 
         if (actionBar != null) {
@@ -183,8 +182,7 @@ public class UpholdActivity extends AppCompatActivity {
                 UpholdClient.getInstance(this).getAccessToken(code, new UpholdClient.Callback<String>() {
                     @Override
                     public void onSuccess(String dashCardId) {
-                        String url = "https://sandbox.uphold.com/dashboard/cards/" + dashCardId + "/add";
-                        webView.loadUrl(url);
+                        webView.loadUrl(String.format(UpholdConstants.CARD_URL_BASE, dashCardId));
                     }
 
                     @Override
