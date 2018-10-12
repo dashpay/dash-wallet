@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Vaš novčanik je resetovan!\nTrebaću mu neko vreme da se oporavi.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Koristite na sopstvenu odgovornost. Pročitajte &lt;u&gt;sigurnosne preporuke&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Potrebno je da odradite back up vašeg novčanika!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Potrebno je da odradite &lt;u&gt;back up vašeg novčanika&lt;/u&gt;!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d sati kasni</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d dana kasni</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d nedelja kasni</string>
@@ -28,7 +28,7 @@
     <string name="wallet_transactions_fragment_empty_text_received">Dash još uvek nije primljen.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Dash još uvek nije poslat.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Kako doći do Dash-a?\n\nKupite redovnim novcem,\nprodajte robu ili usluge\nzaradite radom.</string>
-    <string name="wallet_transactions_row_warning_backup">Čestitamo, dobili ste vašu prvu uplatu! Da li ste već odradili backed up vašeg novčanika, da biste se zaštitili od gubitka?</string>
+    <string name="wallet_transactions_row_warning_backup">Čestitamo, dobili ste vašu prvu uplatu! Da li ste već odradili &lt;u&gt;backed up vašeg novčanika&lt;/u&gt;, da biste se zaštitili od gubitka?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Preporuka: kako biste unapredili sigurnost vašeg novčanika možete odraditi &lt;u&gt;enkripciju vašeg uredjaja&lt;/u&gt;. Ovim ćete takođe zaštititi podatke drugih aplikacija.</string>
     <string name="wallet_transactions_fragment_coinbase">iskopano</string>
     <string name="wallet_transactions_fragment_internal">unutrašnje</string>

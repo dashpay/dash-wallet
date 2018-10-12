@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Il portafoglio è stato resettato!\nlt Occorrerà del tempo per ripristinarlo.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Usalo a tuo rischio. Leggi le &lt;u&gt;avvertenze per la sicurezza&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Hai bisogno di eseguire un backup del tuo portafoglio!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Hai bisogno di &lt;u&gt;eseguire un backup del tuo portafoglio&lt;/u&gt;!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d ore indietro</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d giorni indietro</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d settimane indietro</string>
@@ -28,7 +28,7 @@
     <string name="wallet_transactions_fragment_empty_text_received">Nessun Dash ancora ricevuto</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Nessun Dash ancora inviato</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Come ottenere Dash?\n\nBarattali per soldi reali,\nvendi beni o servizi oppure\nricavali lavorando.</string>
-    <string name="wallet_transactions_row_warning_backup">Congratulazioni, hai ricevuto i tuoi primi pagamenti! Hai già eseguito un backup del tuo portafoglio, per proteggerlo dai danni?</string>
+    <string name="wallet_transactions_row_warning_backup">Congratulazioni, hai ricevuto i tuoi primi pagamenti! Hai già &lt;u&gt;eseguito un backup del tuo portafoglio &lt;/u&gt;, per proteggerlo dai danni?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Suggerimenti: per aumentare la sicurezza del tuo portafoglio, tu puoi criptare i dati del tuo dispositivo. Questa misura proteggei  anche i dati di altre applicazioni da te installate.</string>
     <string name="wallet_transactions_fragment_coinbase">minato</string>
     <string name="wallet_transactions_fragment_internal">Interno</string>

@@ -3,7 +3,7 @@
 
 	<string name="toast_wallet_reset">Паричникот е ресетиран,\nпотребно е време да се обнови</string>
 	<string name="wallet_disclaimer_fragment_remind_safety">Користи на сопствен ризик. Прочитај &lt;u&gt;safety notes&lt;/u&gt;.</string>
-	<string name="wallet_disclaimer_fragment_remind_backup">Треба да направиш резервна копија на твојот паричник!</string>
+	<string name="wallet_disclaimer_fragment_remind_backup">Треба да направиш &lt;u&gt;резервна копија на твојот паричник&lt;/u&gt;!</string>
 	<string name="blockchain_state_progress_hours">%1$s, %2$d часови заостанува</string>
 	<string name="blockchain_state_progress_days">%1$s, %2$d денови заостанува</string>
 	<string name="blockchain_state_progress_weeks">%1$s, %2$d недели заостанува</string>
@@ -26,7 +26,7 @@
 	<string name="wallet_transactions_fragment_empty_text_received">Нема примени Биткоини досега.</string>
 	<string name="wallet_transactions_fragment_empty_text_sent">Нема испратени Биткоини досега.</string>
 	<string name="wallet_transactions_fragment_empty_text_howto">Како да дојдеш до Биткоини?\n\nРазмени за традиционални пари,\nпродавај продукти или сервиси, или \nзаработи со работење.</string>
-	<string name="wallet_transactions_row_warning_backup">Честитки, ја доби твојата прва исплата! Дали веќе направи резервна копија од паричникот, во случај да го загубиш?</string>
+	<string name="wallet_transactions_row_warning_backup">Честитки, ја доби твојата прва исплата! Дали веќе направи &lt;u&gt;резервна копија од паричникот&lt;/u&gt;, во случај да го загубиш?</string>
 	<string name="wallet_transactions_fragment_coinbase">ископани</string>
 	<string name="wallet_transactions_fragment_internal">внатрешен</string>
 	<string name="wallet_options_safety">Безбедносни белешки</string>

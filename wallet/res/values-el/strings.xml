@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Έγινε επανεκίννηση στο πορτοφόλι σας!\nΘα πάρει λίγο χρόνο μέχρι την ανάκτηση του,</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Χρησιμοποιήστε με δική σας ευθύνη. Διαβάστε τις &lt;u&gt;επισημάνσεις ασφάλειας&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Είναι ανάγκη να πάρετε αντίγραφο ασφάλειας του πορτοφολιού σας!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Είναι ανάγκη να &lt;u&gt;πάρετε αντίγραφο ασφάλειας του πορτοφολιού σας&lt;/u&gt;!</string>
     <string name="blockchain_state_progress_hours">Απομένουν %1$s, %2$d ώρες</string>
     <string name="blockchain_state_progress_days">Απομένουν %1$s, %2$d μέρες</string>
     <string name="blockchain_state_progress_weeks">Απομένουν %1$s, %2$d εβδομάδες</string>
@@ -28,7 +28,7 @@
     <string name="wallet_transactions_fragment_empty_text_received">Δεν έχουν ληφθεί Dash μέχρι στιγμής.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Δεν έχουν σταλεί Dash μέχρι στιγμής.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Πως να λάβετε Dash;\n\nΑνταλλάξτε με πραγματικά χρήματα,\nπουλήστε αγαθά ή υπηρεσίες, ή\nκερδίστε τα με την εργασία σας.</string>
-    <string name="wallet_transactions_row_warning_backup">Συγχαρητήρια, έλαβες την πρώτη σου πληρωμή! Έχεις ήδη κρατήσει αντίγραφο ασφαλείας, για να το προστατέψεις από απώλεια;</string>
+    <string name="wallet_transactions_row_warning_backup">Συγχαρητήρια, έλαβες την πρώτη σου πληρωμή! Έχεις ήδη &lt;u&gt;κρατήσει αντίγραφο ασφαλείας&lt;/u&gt;, για να το προστατέψεις από απώλεια;</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Βοήθεια: Για να αυξήσεις την ασφάλεια του πορτοφολιού σου μπορείς να &lt;u&gt;κρυπτογραφήσεις την συσκευή σου&lt;/u&gt;. Αυτό επίσης προστατεύει τα δεδομένα και από άλλες επικίνδυνες εφαρμογές.</string>
     <string name="wallet_transactions_fragment_coinbase">εξορυχθέντα</string>
     <string name="wallet_transactions_fragment_internal">εσωτερικός</string>

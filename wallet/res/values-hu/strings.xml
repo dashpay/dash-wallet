@@ -3,7 +3,7 @@
 
 	<string name="toast_wallet_reset">A tárcád alapállapotba került!\nA visszaállítás némi időt vesz igénybe.</string>
 	<string name="wallet_disclaimer_fragment_remind_safety">Csak saját felelősségre használd. Olvasd el a &lt;u&gt;biztonsági megjegyzéseket&lt;/u&gt;.</string>
-	<string name="wallet_disclaimer_fragment_remind_backup">Szükséges biztonsági mentést készítened a tárcádról!</string>
+	<string name="wallet_disclaimer_fragment_remind_backup">Szükséges &lt;u&gt;biztonsági mentést készítened a tárcádról&lt;/u&gt;!</string>
 	<string name="blockchain_state_progress_hours">%1$s, %2$d óra van még hátra</string>
 	<string name="blockchain_state_progress_days">%1$s, %2$d nap van még hátra</string>
 	<string name="blockchain_state_progress_weeks">%1$s, %2$d hét van még hátra</string>
@@ -28,7 +28,7 @@
 	<string name="wallet_transactions_fragment_empty_text_received">Eddig nem érkezett Dash.</string>
 	<string name="wallet_transactions_fragment_empty_text_sent">Eddig nem lett küldve Dash.</string>
 	<string name="wallet_transactions_fragment_empty_text_howto">Hogyan szerezz Dash-t?\n\nVásárolj hagyományos pénzért,\nadj el termékeket vagy szolgáltatásokat, vagy\nkeress munkával.</string>
-	<string name="wallet_transactions_row_warning_backup">Gratulálunk, megérkezett az első kifizetésed! Már készítettél biztonsági mentést a tárcádról, hogy megóvd a veszteségtől?</string>
+	<string name="wallet_transactions_row_warning_backup">Gratulálunk, megérkezett az első kifizetésed! Már készítettél &lt;u&gt;biztonsági mentést a tárcádról&lt;/u&gt;, hogy megóvd a veszteségtől?</string>
 	<string name="wallet_transactions_fragment_coinbase">bányászott</string>
 	<string name="wallet_transactions_fragment_internal">belső</string>
 	<string name="wallet_transactions_options_filter">Szűrő</string>

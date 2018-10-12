@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">¡Tu billetera se ha reiniciado!\nTardará un tiempo en recuperarse.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Utilízalo bajo tu propio riesgo. Lee las &lt;u&gt;notas de seguridad&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">¡Necesitas hacer una copia de seguridad de tu billetera!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Necesitas hacer backup de tu billetera!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d horas atrás</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d días atrás</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d semanas atrás</string>
@@ -20,15 +20,15 @@
     <string name="exchange_rates_fragment_empty_text">No se pueden cargar las tasas de cambio.</string>
     <string name="exchange_rates_fragment_empty_search">No se encuentra la tasa de cambio.</string>
     <string name="exchange_rates_fragment_default">(predeterminado)</string>
-    <string name="exchange_rates_fragment_rate">tipo</string>
-    <string name="exchange_rates_fragment_balance">saldo</string>
+    <string name="exchange_rates_fragment_rate">Tasa</string>
+    <string name="exchange_rates_fragment_balance">Saldo</string>
     <string name="exchange_rates_fragment_source">Precio extraído de %s</string>
     <string name="exchange_rates_options_search">Buscar tasa de cambio</string>
     <string name="exchange_rates_context_set_as_default_title">Establecer por defecto</string>
     <string name="wallet_transactions_fragment_empty_text_received">Aún no se han recibido Dash.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Aún no se han enviado Dash.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">¿Cómo obtener Dash?\n\nCámbialos por dinero tradicional,\nvende bienes o servicios o\ngánalos trabajando</string>
-    <string name="wallet_transactions_row_warning_backup">Felicitaciones. ¡Has recibido tu primer pago! ¿Has hecho ya una copia de seguridad de tu billetera como protección frente a pérdidas?</string>
+    <string name="wallet_transactions_row_warning_backup">Felicitaciones, recibiste tu primer pago! ¿Ya hiciste backup de tu billetera para protegerse contra pérdidas?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Tip: para incrementar la seguridad de tu billetera, puedes &lt;u&gt;encriptar tu dispositivo&lt;/u&gt;. Esto tambien protege los datos de otras apps.</string>
     <string name="wallet_transactions_fragment_coinbase">extraído</string>
     <string name="wallet_transactions_fragment_internal">interno</string>
@@ -67,6 +67,7 @@
     <string name="send_coins_fragment_receiving_address_complex">dirección\ncompleja</string>
     <string name="send_coins_fragment_pending">(%s esperando confirmación)</string>
     <string name="send_coins_fragment_amount_label">Cantidad a pagar</string>
+    <string name="send_coins_fragment_pin_label">Inserir PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Una comisión económica de %s será pagada. Usa \"Económica\" solo si no te importa el tiempo de confirmación.</string>
     <string name="send_coins_fragment_hint_fee">Una comisión de red de %s será pagada.</string>
     <string name="send_coins_fragment_hint_fee_priority">Una comisión prioritaria de %s será pagada. Si te importan las comisiones bajas, usa \"Prioritaria\" solo si necesitas confirmación lo más pronto posible.</string>
@@ -124,7 +125,7 @@
     <string name="maintenance_dialog_state_decrypting">Desencriptando…</string>
     <string name="maintenance_dialog_state_done">Hecho.</string>
     <string name="maintenance_dialog_button_move">Mover</string>
-    <string name="request_coins_activity_title">Solicitar Dash</string>
+    <string name="request_coins_activity_title">Recibir Dash</string>
     <string name="request_coins_fragment_amount_label">Cantidad solicitada (opcional)</string>
     <string name="request_coins_fragment_accept_bluetooth_payment">Acepte pagos vía Bluetooth para un proceso más seguro.</string>
     <string name="request_coins_fragment_initiate_request_qr">Pide al pagador que escanee este código.</string>
@@ -326,8 +327,8 @@
     <string name="button_paste">Pegar</string>
     <string name="button_share">Compartir</string>
     <string name="button_set_as_default">Establecer como predeterminado</string>
-    <string name="button_request_coins">Pedir Dash</string>
-    <string name="button_send_coins">Enviar</string>
+    <string name="button_request_coins">Recibir Dash</string>
+    <string name="button_send_coins">Enviar Dash</string>
     <string name="button_scan">Explorar</string>
     <string name="button_settings">Ajustes</string>
     <string name="action_show_qr">Mostrar código QR</string>
@@ -337,7 +338,7 @@
     <string name="time_today">hoy</string>
     <string name="address_unlabeled">(sin nombre)</string>
     <string name="private_key_password">PIN</string>
-    <string name="private_key_bad_password">¡PIN incorrecto!</string>
+    <string name="private_key_bad_password">PIN incorrecto!</string>
 
     <!-- generic error messages -->
     <string name="error_io">Error de entrada/salida: %s</string>

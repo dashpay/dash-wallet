@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">wallet ของคุณถูกรีเซ็ตแล้ว ใช้เวลาสักพักในการกู้คืน</string>
     <string name="wallet_disclaimer_fragment_remind_safety">ใช้ความเสี่ยงด้วยตัวคุณเอง!  อ่าน Read the &lt;u&gt;safety notes&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">คุณจำเป็นต้อง สำรองข้อมูล wallet ของคุณ!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">คุณจำเป็นต้อง &lt;u&gt; สำรองข้อมูล wallet ของคุณ &lt;/u&gt;!</string>
     <string name="blockchain_state_progress_hours">%1$s,%2$d ชั่วโมงที่ผ่านมา</string>
     <string name="blockchain_state_progress_days">%1$s,%2$d วันที่ผ่านมา</string>
     <string name="blockchain_state_progress_weeks">%1$s,%2$d สัปดาห์ที่ผ่านมา</string>

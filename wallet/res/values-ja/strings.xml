@@ -3,7 +3,7 @@
 
 	<string name="toast_wallet_reset">ウォレットはリセットされました!\n復元には多少時間がかかります。</string>
 	<string name="wallet_disclaimer_fragment_remind_safety">自己責任にてご使用下さい。&lt;u&gt;安全上の注意事項&lt;/u&gt;をお読み下さい。</string>
-	<string name="wallet_disclaimer_fragment_remind_backup">ウォレットをバックアップする必要があります!</string>
+	<string name="wallet_disclaimer_fragment_remind_backup">&lt;u&gt;ウォレットをバックアップ&lt;/u&gt;する必要があります!</string>
 	<string name="blockchain_state_progress_hours">%1$s, %2$d時間遅れ</string>
 	<string name="blockchain_state_progress_days">%1$s, %2$d日遅れ</string>
 	<string name="blockchain_state_progress_weeks">%1$s, %2$d週遅れ</string>
@@ -28,7 +28,7 @@
 	<string name="wallet_transactions_fragment_empty_text_received">まだDashを受け取っていません。</string>
 	<string name="wallet_transactions_fragment_empty_text_sent">まだDashを送っていません。</string>
 	<string name="wallet_transactions_fragment_empty_text_howto">ダッシュを入手するには?\n\n通常通貨と交換するか、\nグッズやサービスを販売するか\nまたは働いて稼ぎましょう</string>
-	<string name="wallet_transactions_row_warning_backup">おめでとうございます、初めて支払いを受け取りました。遺失を防ぐためにウォレットをバックアップしていますか?</string>
+	<string name="wallet_transactions_row_warning_backup">おめでとうございます、初めて支払いを受け取りました。遺失を防ぐために&lt;u&gt;ウォレットをバックアップ&lt;/u&gt;していますか?</string>
 	<string name="wallet_transactions_row_warning_storage_encryption">ヒント：ウォレットの安全性を高めるために、&lt;u&gt;デバイスのロック&lt;/u&gt;を推奨します。それにより他のアプリのデータも保護されます。</string>
 	<string name="wallet_transactions_fragment_coinbase">採掘されました</string>
 	<string name="wallet_transactions_fragment_internal">内部</string>

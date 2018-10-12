@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Uw portemonnee is gereset!\\nHerstel zal enige tijd duren.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Gebruik op eigen risico. Lees de &lt;u&gt;veiligheidsvoorschriften&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">U moet uw portomonnee back-uppen!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">U moet uw &lt;u&gt;portomonnee back-uppen&lt;/u&gt;!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d uur achter</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d dagen achter</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d weken achter</string>
@@ -28,7 +28,7 @@
     <string name="wallet_transactions_fragment_empty_text_received">Nog geen Dash ontvangen.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Nog geen Dash verzonden.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Hoe komt u aan Dash?\\n\\nWissel traditionele munteenheden om voor Dash,\\nverkoop goederen of diensten of\\nverdien ze door te werken.</string>
-    <string name="wallet_transactions_row_warning_backup">Gefeliciteerd! U heeft uw eerste betaling ontvangen. Heeft u al een back-up gemaakt van uw portemonnee, om verlies tegen te gaan?</string>
+    <string name="wallet_transactions_row_warning_backup">Gefeliciteerd! U heeft uw eerste betaling ontvangen. Heeft u al &lt;u&gt; een back-up gemaakt van uw portemonnee&lt;/u&gt;, om verlies tegen te gaan?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Tip: om uw portemonnee veiliger te maken, kunt u uw  &lt;u&gt;apparaat versleutelen&lt;/u&gt;. Hierdoor worden ook de gegevens van andere apps beschermd.</string>
     <string name="wallet_transactions_fragment_coinbase">gegenereerd</string>
     <string name="wallet_transactions_fragment_internal">intern</string>

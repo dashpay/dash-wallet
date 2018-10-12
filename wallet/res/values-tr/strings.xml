@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Cüzdanınız sıfırlandı reset!\nIt normale dönmesi biraz vakit alacaktır.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Riskin size ait olduğunu bilerek kullanın. &lt;u&gt;Güvenlik notlarını&lt;/u&gt; okuyunuz.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Cüzdanınızı yedeklemeniz gerekmektedir!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">&lt;u&gt;Cüzdanınızı yedeklemeniz&lt;/u&gt; gerekmektedir!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d saat geride</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d gün geride</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d hafta geride</string>
@@ -28,7 +28,7 @@
     <string name="wallet_transactions_fragment_empty_text_received">Şu ana kadar hiçbir Dash alınmadı.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Şu ana kadar hiçbir Dash gönderilmedi.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Dash nasıl elde edilir?\n Geleneksel para ile \ntakas ederek, mal ve hizmetler \nsatarak ya da \nçalışarak kazanabilirsiniz.</string>
-    <string name="wallet_transactions_row_warning_backup">Tebrikler, ilk ödemenizi almış bulunuyorsunuz! Kayba karşı korunmak için cüzdanınızı yedeklediniz mi?</string>
+    <string name="wallet_transactions_row_warning_backup">Tebrikler, ilk ödemenizi almış bulunuyorsunuz! Kayba karşı korunmak için &lt;u&gt;cüzdanınızı yedeklediniz mi&lt;/u&gt;?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">İpucu: Cüzdanınızın güvenliğini arttırmak için, &lt;u&gt;cihazınızı şifreleyebilirsiniz&lt;/u&gt;. Bu aynı zamanda diğer uygulamaların verilerini de korur.</string>
     <string name="wallet_transactions_fragment_coinbase">Üretilen</string>
     <string name="wallet_transactions_fragment_internal">Dahili</string>

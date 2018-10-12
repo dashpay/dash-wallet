@@ -3,7 +3,7 @@
 
 	<string name="toast_wallet_reset">La teva cartera s\'ha reiniciat, traigarà uns instants a tornar a recuperar-se</string>
 	<string name="wallet_disclaimer_fragment_remind_safety">Utilitzar sota la teva responsabilitat. Llegeix les &lt;u&gt;advertències de seguretat&lt;/u&gt;.</string>
-	<string name="wallet_disclaimer_fragment_remind_backup">Necessites fer una còpia de seguretat de la cartera!</string>
+	<string name="wallet_disclaimer_fragment_remind_backup">Necessites &lt;u&gt;fer una còpia de seguretat de la cartera&lt;/u&gt;!</string>
 	<string name="blockchain_state_progress_hours">%1$s, %2$d hores restants</string>
 	<string name="blockchain_state_progress_days">%1$s, %2$d dies restants</string>
 	<string name="blockchain_state_progress_weeks">%1$s, %2$d setmanes restants</string>
@@ -28,7 +28,7 @@
 	<string name="wallet_transactions_fragment_empty_text_received">Cap Dash rebut fins ara.</string>
 	<string name="wallet_transactions_fragment_empty_text_sent">Cap Dash enviat fins ara.</string>
 	<string name="wallet_transactions_fragment_empty_text_howto">Com aconseguir Dash?\n\nCanvia\'ls per diner tradicional,\nven bens o serveis o bé\nguanyen treballant.</string>
-	<string name="wallet_transactions_row_warning_backup">Enhorabona, has rebut el teu primer pagament! Tens a punt una còpia de seguretat de la teva cartera, per protegir-te contra la pèrdua?</string>
+	<string name="wallet_transactions_row_warning_backup">Enhorabona, has rebut el teu primer pagament! Tens a punt &lt;u&gt;una còpia de seguretat de la teva cartera&lt;/u&gt;, per protegir-te contra la pèrdua?</string>
 	<string name="wallet_transactions_fragment_coinbase">minat</string>
 	<string name="wallet_transactions_fragment_internal">intern</string>
 	<string name="wallet_transactions_options_filter_all">Ambdós</string>

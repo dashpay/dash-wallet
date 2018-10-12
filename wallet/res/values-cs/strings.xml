@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Vaše peněženka byla zresetována!\nObnova chvíli potrvá.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Použití na vlastní riziko. Čtěte &lt;u&gt;bezpečnostní instrukce&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Musíte si zazálohovat vaši peněženku!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Musíte si &lt;u&gt;zazálohovat vaši peněženku&lt;/u&gt;!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d hodin pozadu</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d dnů pozadu</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d týdnů pozadu</string>
@@ -28,7 +28,7 @@
     <string name="wallet_transactions_fragment_empty_text_received">Zatím žádné Dashy neobdrženy</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Zatím žádné Dashy neodeslány</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Jak získat Dashy?\n\nSměnou za klasické peníze,\nprodejem zboží nebo služeb\nnebo vyděláním prací.</string>
-    <string name="wallet_transactions_row_warning_backup">Gratulujeme, přijal jste vaši první platbu! Už jste si zazálohoval vaši peněženku, aby jste se ochránil proti ztrátě?</string>
+    <string name="wallet_transactions_row_warning_backup">Gratulujeme, přijal jste vaši první platbu! Už jste si &lt;u&gt;zazálohoval vaši peněženku&lt;/u&gt;, aby jste se ochránil proti ztrátě?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Tip: pro zvýšení zabezpečení vaší peněženky můžete &lt;u&gt;zašifrovat vaše zařízenílt;/u&gt;. Zabezpečíte tím i data ostatních aplikací.</string>
     <string name="wallet_transactions_fragment_coinbase">vytěženo</string>
     <string name="wallet_transactions_fragment_internal">interní</string>

@@ -3,7 +3,7 @@
 
 	<string name="toast_wallet_reset">Kuleta juaj është resetuar!\nDo të duhet pak kohë derisa të rikthehet.</string>
 	<string name="wallet_disclaimer_fragment_remind_safety">Përdoreni me përgjegjësinë tuaj, Lexoni &lt;u&gt;safety notes&lt;/u&gt;.</string>
-	<string name="wallet_disclaimer_fragment_remind_backup">Ju duhet të back kuletën tuaj!</string>
+	<string name="wallet_disclaimer_fragment_remind_backup">Ju duhet të &lt;u&gt;back kuletën tuaj&lt;/u&gt;!</string>
 	<string name="blockchain_state_progress_hours">%1$s, %2$d orë mbrapa</string>
 	<string name="blockchain_state_progress_days">%1$s, %2$d ditë mbrapa</string>
 	<string name="blockchain_state_progress_weeks">%1$s, %2$d javë mbrapa</string>
@@ -28,7 +28,7 @@
 	<string name="wallet_transactions_fragment_empty_text_received">Nuk keni pranuar asnjë Dash deri më tani</string>
 	<string name="wallet_transactions_fragment_empty_text_sent">Nuk keni dërguar asnjë Dash deri me tani</string>
 	<string name="wallet_transactions_fragment_empty_text_howto">Si të merrni Dash?\n\nKëmbeni me para tradicionale,\shitni gjëra apo shërbime ose\nfito duke punuar.</string>
-	<string name="wallet_transactions_row_warning_backup">Urime, ju sapo keni pranuar pagesën e parë! E keni ruajtur një kopje rezervë të kuletës suaj tashmë, për ta mbrojutur ne rast humbjeje? </string>
+	<string name="wallet_transactions_row_warning_backup">Urime, ju sapo keni pranuar pagesën e parë! E keni &lt;u&gt;ruajtur një kopje rezervë të kuletës suaj tashmë, për ta mbrojutur ne rast humbjeje? </string>
 	<string name="wallet_transactions_fragment_coinbase">të minuara</string>
 	<string name="wallet_transactions_fragment_internal">interne</string>
 	<string name="wallet_transactions_options_filter">Filtro</string>

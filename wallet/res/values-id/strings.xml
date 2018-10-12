@@ -3,7 +3,7 @@
 
 	<string name="toast_wallet_reset">Dompet diatur-ulang,\nakan memakan waktu utk dipulihkan</string>
 	<string name="wallet_disclaimer_fragment_remind_safety">Gunakan dlm resiko Anda. Baca &lt;u&gt;nota keamanan&lt;/u&gt;.</string>
-	<string name="wallet_disclaimer_fragment_remind_backup">Anda seharusnya mencadangkan dompet Anda!</string>
+	<string name="wallet_disclaimer_fragment_remind_backup">Anda seharusnya &lt;u&gt;mencadangkan dompet Anda&lt;/u&gt;!</string>
 	<string name="blockchain_state_progress_hours">%1$s, %2$d jam terlambat</string>
 	<string name="blockchain_state_progress_days">%1$s, %2$d hari terlambat</string>
 	<string name="blockchain_state_progress_weeks">%1$s, %2$d minggu terlambat</string>
@@ -26,7 +26,7 @@
 	<string name="wallet_transactions_fragment_empty_text_received">Tidak ada Dash yg diterima.</string>
 	<string name="wallet_transactions_fragment_empty_text_sent">Tidak ada Dash yg dikirim.</string>
 	<string name="wallet_transactions_fragment_empty_text_howto">Bagaimana mendapatkan Dash?\n\nTukar dgn uang tradisional,\njual barang atau jasa atau\ndengan bekerja.</string>
-	<string name="wallet_transactions_row_warning_backup">Selamat, Anda menerima pembayaran pertama Anda! Sudahkah Anda mencadangkan dompet Anda, utk hindari kehilangan?</string>
+	<string name="wallet_transactions_row_warning_backup">Selamat, Anda menerima pembayaran pertama Anda! Sudahkah Anda &lt;u&gt;mencadangkan dompet Anda&lt;/u&gt;, utk hindari kehilangan?</string>
 	<string name="wallet_transactions_fragment_coinbase">ditambang</string>
 	<string name="wallet_transactions_fragment_internal">Internal</string>
 	<string name="wallet_options_safety">Nota keamanan</string>

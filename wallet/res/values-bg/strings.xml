@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Вашият портфейл беше занулен!\\nIt ще отнеме известно време да се възстанови.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Използвайте на свой риск. Прочетете &lt;u&gt;бележките за безопастност&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Нужно е да направиш резервно копие на портфейла си!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Нужно е да направиш &lt;u&gt;резервно копие на портфейла си&lt;/u&gt;!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d часа назад</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d дена назад</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d седмици назад</string>
@@ -28,7 +28,7 @@
     <string name="wallet_transactions_fragment_empty_text_received">Не са получавани Dash скоро.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Не са изпращани Dash скоро.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Как да получите Dash?\\n\\nОбменете за конвенционална валута,\\nпродайте стоки или услуги или\\nспечелете с работа.</string>
-    <string name="wallet_transactions_row_warning_backup">Поздравления, Вие получихте първото си плащане! Направихте ли вече архивно копие на вашия портфейл, за да го защитите срещу кражба?</string>
+    <string name="wallet_transactions_row_warning_backup">Поздравления, Вие получихте първото си плащане! Направихте ли вече &lt;u&gt;архивно копие на вашия портфейл&lt;/u&gt;, за да го защитите срещу кражба?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Съвет: за да повишите сигурноста за вашият портфейл, може  &lt;u&gt;да криптирате вашето устройство&lt;/u&gt;. Това ще предпази също данните и на други приложения.</string>
     <string name="wallet_transactions_fragment_coinbase">изкопани</string>
     <string name="wallet_transactions_fragment_internal">вътрешен</string>
