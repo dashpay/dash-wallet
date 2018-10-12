@@ -79,4 +79,7 @@
 	<string name="change_to">Поменять на %s</string>
 	<string name="leave_as">Оставить %s</string>
 
+	<string name="remind_later">Напомнить позже</string>
+	<string name="backup_now">Создать резервную копию сейчас</string>
+
 </resources>
