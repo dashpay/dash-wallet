@@ -1,4 +1,7 @@
 Dash Wallet
+v5.18.5
+* Paper Wallet Sweep:  Use block explorers as a backup for electrum servers
+
 v5.18.4
 * Optimize node connectivity for more reliable connections
 * Get VES from localbitcoins.com
