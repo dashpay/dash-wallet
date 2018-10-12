@@ -34,22 +34,24 @@ import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
-import android.app.Fragment;
-import android.app.LoaderManager;
-import android.app.LoaderManager.LoaderCallbacks;
-import android.content.AsyncTaskLoader;
+
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.Loader;
 import android.content.ServiceConnection;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.support.annotation.NonNull;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.AsyncTaskLoader;
+import android.support.v4.content.Loader;
 import android.support.v4.content.LocalBroadcastManager;
+import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.format.DateUtils;
@@ -190,6 +192,9 @@ public final class PeerListFragment extends Fragment {
         private final LayoutInflater inflater = LayoutInflater.from(activity);
         private final List<Peer> peers = new LinkedList<Peer>();
 
+        private Typeface defaultTypeFace;
+        private Typeface boldTypeFace;
+
         public PeerViewAdapter() {
             setHasStableIds(true);
         }
@@ -221,8 +226,11 @@ public final class PeerListFragment extends Fragment {
             return peers.get(position).getAddress().hashCode();
         }
 
+        @NonNull
         @Override
-        public PeerViewHolder onCreateViewHolder(final ViewGroup parent, final int viewType) {
+        public PeerViewHolder onCreateViewHolder(@NonNull final ViewGroup parent, final int viewType) {
+            defaultTypeFace = ResourcesCompat.getFont(parent.getContext(), R.font.montserrat_medium);
+            boldTypeFace = ResourcesCompat.getFont(parent.getContext(), R.font.montserrat_semibold);
             return new PeerViewHolder(inflater.inflate(R.layout.peer_list_row, parent, false));
         }
 
@@ -238,18 +246,17 @@ public final class PeerListFragment extends Fragment {
 
             final long bestHeight = peer.getBestHeight();
             holder.heightView.setText(bestHeight > 0 ? bestHeight + " blocks" : null);
-            holder.heightView.setTypeface(isDownloading ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+            holder.heightView.setTypeface(isDownloading ? boldTypeFace : defaultTypeFace);
 
-            holder.versionView.setText(versionMessage.subVer);
-            holder.versionView.setTypeface(isDownloading ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
-
-            holder.protocolView.setText("protocol: " + versionMessage.clientVersion);
-            holder.protocolView.setTypeface(isDownloading ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+            String version = getView().getResources().getString(R.string.protocol_version,
+                    versionMessage.subVer, versionMessage.clientVersion);
+            holder.versionView.setText(version);
+            holder.versionView.setTypeface(isDownloading ? boldTypeFace : defaultTypeFace);
 
             final long pingTime = peer.getPingTime();
             holder.pingView
                     .setText(pingTime < Long.MAX_VALUE ? getString(R.string.peer_list_row_ping_time, pingTime) : null);
-            holder.pingView.setTypeface(isDownloading ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+            holder.pingView.setTypeface(isDownloading ? boldTypeFace : defaultTypeFace);
         }
     }
 
@@ -257,7 +264,6 @@ public final class PeerListFragment extends Fragment {
         private final TextView ipView;
         private final TextView heightView;
         private final TextView versionView;
-        private final TextView protocolView;
         private final TextView pingView;
 
         private PeerViewHolder(final View itemView) {
@@ -266,7 +272,6 @@ public final class PeerListFragment extends Fragment {
             ipView = (TextView) itemView.findViewById(R.id.peer_list_row_ip);
             heightView = (TextView) itemView.findViewById(R.id.peer_list_row_height);
             versionView = (TextView) itemView.findViewById(R.id.peer_list_row_version);
-            protocolView = (TextView) itemView.findViewById(R.id.peer_list_row_protocol);
             pingView = (TextView) itemView.findViewById(R.id.peer_list_row_ping);
         }
     }
@@ -315,7 +320,7 @@ public final class PeerListFragment extends Fragment {
         };
     }
 
-    private final LoaderCallbacks<List<Peer>> peerLoaderCallbacks = new LoaderCallbacks<List<Peer>>() {
+    private final LoaderManager.LoaderCallbacks<List<Peer>> peerLoaderCallbacks = new LoaderManager.LoaderCallbacks<List<Peer>>() {
         @Override
         public Loader<List<Peer>> onCreateLoader(final int id, final Bundle args) {
             return new PeerLoader(activity, service);
@@ -353,7 +358,7 @@ public final class PeerListFragment extends Fragment {
         }
     }
 
-    private final LoaderCallbacks<String> reverseDnsLoaderCallbacks = new LoaderCallbacks<String>() {
+    private final LoaderManager.LoaderCallbacks<String> reverseDnsLoaderCallbacks = new LoaderManager.LoaderCallbacks<String>() {
         @Override
         public Loader<String> onCreateLoader(final int id, final Bundle args) {
             final InetAddress address = (InetAddress) args.getSerializable("address");

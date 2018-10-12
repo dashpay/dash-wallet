@@ -3,21 +3,17 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:scrollbars="none" >
+    android:scrollbars="none">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="@dimen/list_entry_padding_horizontal_lax"
-        android:layout_marginRight="@dimen/list_entry_padding_horizontal_lax"
-        android:orientation="vertical" >
+    <LinearLayout style="@style/DialogContainer">
 
         <TextView
             android:id="@+id/report_issue_dialog_message"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/list_entry_padding_vertical"
-            android:layout_marginTop="@dimen/list_entry_padding_vertical" />
+            android:layout_marginBottom="@dimen/space_medium"
+            android:layout_marginTop="6dp"
+            style="@style/MontserratRegular.DB.12"/>
 
         <EditText
             android:id="@+id/report_issue_dialog_description"
@@ -26,43 +22,51 @@
             android:layout_marginBottom="@dimen/list_entry_padding_vertical"
             android:layout_marginTop="@dimen/list_entry_padding_vertical"
             android:hint="@string/report_issue_dialog_description"
-            android:inputType="text|textCapSentences|textMultiLine" />
+            android:inputType="text|textCapSentences|textMultiLine"
+            android:textSize="12sp"
+            android:textColor="@color/darkest_blue"
+            style="@style/MontserratRegular"/>
 
-        <CheckBox
+        <de.schildbach.wallet.ui.widget.MontserratCheckBox
             android:id="@+id/report_issue_dialog_collect_device_info"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/list_entry_padding_vertical"
             android:layout_marginTop="@dimen/list_entry_padding_vertical"
             android:checked="true"
-            android:text="@string/report_issue_dialog_collect_device_info" />
+            android:text="@string/report_issue_dialog_collect_device_info"
+            style="@style/CheckBox"/>
 
-        <CheckBox
+        <de.schildbach.wallet.ui.widget.MontserratCheckBox
             android:id="@+id/report_issue_dialog_collect_application_log"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/list_entry_padding_vertical"
             android:layout_marginTop="@dimen/list_entry_padding_vertical"
             android:checked="true"
-            android:text="@string/report_issue_dialog_collect_application_log" />
+            android:text="@string/report_issue_dialog_collect_application_log"
+            style="@style/CheckBox"/>
 
-        <CheckBox
+        <de.schildbach.wallet.ui.widget.MontserratCheckBox
             android:id="@+id/report_issue_dialog_collect_wallet_dump"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/list_entry_padding_vertical"
             android:layout_marginTop="@dimen/list_entry_padding_vertical"
             android:checked="true"
-            android:text="@string/report_issue_dialog_collect_wallet_dump" />
+            android:text="@string/report_issue_dialog_collect_wallet_dump"
+            style="@style/CheckBox"/>
 
-        <CheckBox
+        <de.schildbach.wallet.ui.widget.MontserratCheckBox
             android:id="@+id/report_issue_dialog_collect_installed_packages"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/list_entry_padding_vertical"
             android:layout_marginTop="@dimen/list_entry_padding_vertical"
             android:checked="false"
-            android:text="@string/report_issue_dialog_collect_installed_packages" />
+            android:text="@string/report_issue_dialog_collect_installed_packages"
+            style="@style/CheckBox"/>
+
     </LinearLayout>
 
 </ScrollView>

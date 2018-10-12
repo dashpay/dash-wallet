@@ -26,13 +26,11 @@ import de.schildbach.wallet_test.R;
 
 import android.content.Context;
 import android.graphics.Paint;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.AppCompatTextView;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.ScaleXSpan;
 import android.util.AttributeSet;
-import android.widget.TextView;
 
 /**
  * @author Andreas Schildbach
@@ -45,6 +43,7 @@ public class CurrencyTextView extends AppCompatTextView {
     private ScaleXSpan prefixScaleXSpan = null;
     private ForegroundColorSpan prefixColorSpan = null;
     private RelativeSizeSpan insignificantRelativeSizeSpan = null;
+    private boolean applyMarkup = true;
 
     public CurrencyTextView(final Context context) {
         super(context);
@@ -74,6 +73,10 @@ public class CurrencyTextView extends AppCompatTextView {
             setPaintFlags(getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
         else
             setPaintFlags(getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
+    }
+
+    public void setApplyMarkup(boolean applyMarkup) {
+        this.applyMarkup = applyMarkup;
     }
 
     public void setInsignificantRelativeSize(final float insignificantRelativeSize) {
@@ -107,14 +110,18 @@ public class CurrencyTextView extends AppCompatTextView {
     }
 
     private void updateView() {
-        final MonetarySpannable text;
+        MonetarySpannable text;
 
-        if (amount != null)
-            text = new MonetarySpannable(format, alwaysSigned, amount).applyMarkup(
-                    new Object[] { prefixRelativeSizeSpan, prefixScaleXSpan, prefixColorSpan },
-                    new Object[] { insignificantRelativeSizeSpan });
-        else
+        if (amount != null) {
+            text = new MonetarySpannable(format, alwaysSigned, amount);
+            if (applyMarkup) {
+                text = text.applyMarkup(
+                        new Object[] { prefixRelativeSizeSpan, prefixScaleXSpan, prefixColorSpan },
+                        new Object[] { insignificantRelativeSizeSpan });
+            }
+        } else {
             text = null;
+        }
 
         setText(text);
     }

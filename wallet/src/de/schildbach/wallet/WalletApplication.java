@@ -93,6 +93,7 @@ public class WalletApplication extends Application implements Application.Activi
     private PackageInfo packageInfo;
 
     private int numStarted;
+    private boolean backupDisclaimerDismissed = false;
 
     public static final String ACTION_WALLET_REFERENCE_CHANGED = WalletApplication.class.getPackage().getName()
             + ".wallet_reference_changed";
@@ -643,6 +644,14 @@ public void updateDashMode()
         clearApplicationData();
         Process.killProcess(Process.myPid());
         System.exit(1);
+    }
+
+    public boolean isBackupDisclaimerDismissed() {
+        return backupDisclaimerDismissed;
+    }
+
+    public void setBackupDisclaimerDismissed(boolean backupDisclaimerDismissed) {
+        this.backupDisclaimerDismissed = backupDisclaimerDismissed;
     }
 
     public static WalletApplication getInstance() {

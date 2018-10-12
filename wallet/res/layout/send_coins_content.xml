@@ -9,7 +9,7 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:orientation="vertical">
 
         <include
@@ -40,9 +40,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="80dp"
         android:layout_marginRight="16dp"
         android:src="@drawable/ic_qrcode"
-        app:backgroundTint="@color/strong_blue_new" />
+        app:backgroundTint="@color/colorPrimary" />
 
 </de.schildbach.wallet.ui.widget.KeyboardResponsiveCoordinatorLayout>

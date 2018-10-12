@@ -73,4 +73,9 @@
 	<string name="change_to">Change to %s</string>
 	<string name="leave_as">Leave as %s</string>
 
+	<string name="protocol_version" translatable="false">%1$s\nprotocol: %2$d</string>
+
+	<string name="remind_later">Remind later</string>
+	<string name="backup_now">Backup now</string>
+
 </resources>

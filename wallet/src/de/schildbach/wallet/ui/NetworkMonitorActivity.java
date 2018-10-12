@@ -17,15 +17,19 @@
 
 package de.schildbach.wallet.ui;
 
-import de.schildbach.wallet.util.ViewPagerTabs;
 import de.schildbach.wallet_test.R;
 
-import android.app.Fragment;
-import android.app.FragmentManager;
 import android.os.Bundle;
-import android.support.v13.app.FragmentStatePagerAdapter;
+import android.support.annotation.Nullable;
+import android.support.design.widget.TabLayout;
+
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.view.ViewPager;
+import android.view.LayoutInflater;
 import android.view.MenuItem;
+import android.widget.TextView;
 
 /**
  * @author Andreas Schildbach
@@ -42,18 +46,24 @@ public final class NetworkMonitorActivity extends AbstractBindServiceActivity {
 
         final ViewPager pager = (ViewPager) findViewById(R.id.network_monitor_pager);
 
-        final FragmentManager fm = getFragmentManager();
+        final FragmentManager fm = getSupportFragmentManager();
 
         if (pager != null) {
-            final ViewPagerTabs pagerTabs = (ViewPagerTabs) findViewById(R.id.network_monitor_pager_tabs);
-            pagerTabs.addTabLabels(R.string.network_monitor_peer_list_title, R.string.network_monitor_block_list_title);
+            TabLayout tabs = findViewById(R.id.network_monitor_pager_tabs);
 
-            final PagerAdapter pagerAdapter = new PagerAdapter(fm);
+            String peersTitle = getString(R.string.network_monitor_peer_list_title);
+            String blocksTitle = getString(R.string.network_monitor_block_list_title);
+            final PagerAdapter pagerAdapter = new PagerAdapter(fm, peersTitle, blocksTitle);
 
             pager.setAdapter(pagerAdapter);
-            pager.setOnPageChangeListener(pagerTabs);
             pager.setPageMargin(2);
             pager.setPageMarginDrawable(R.color.bg_less_bright);
+
+            tabs.setupWithViewPager(pager);
+            for (int i = 0; i < tabs.getTabCount(); i++) {
+                TextView tv = (TextView) LayoutInflater.from(this).inflate(R.layout.tab_title, null);
+                tabs.getTabAt(i).setCustomView(tv);
+            }
 
             peerListFragment = new PeerListFragment();
             blockListFragment = new BlockListFragment();
@@ -75,8 +85,14 @@ public final class NetworkMonitorActivity extends AbstractBindServiceActivity {
     }
 
     private class PagerAdapter extends FragmentStatePagerAdapter {
-        public PagerAdapter(final FragmentManager fm) {
+
+        private final String peersTitle;
+        private final String blocksTitle;
+
+        public PagerAdapter(final FragmentManager fm, String peersTitle, String blocksTitle) {
             super(fm);
+            this.peersTitle = peersTitle;
+            this.blocksTitle = blocksTitle;
         }
 
         @Override
@@ -90,6 +106,16 @@ public final class NetworkMonitorActivity extends AbstractBindServiceActivity {
                 return peerListFragment;
             else
                 return blockListFragment;
+        }
+
+        @Nullable
+        @Override
+        public CharSequence getPageTitle(int position) {
+            switch (position) {
+                case 0: return peersTitle;
+                case 1: return blocksTitle;
+            }
+            return super.getPageTitle(position);
         }
     }
 }

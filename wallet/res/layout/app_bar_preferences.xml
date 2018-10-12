@@ -12,15 +12,8 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@drawable/toolbar_background"
+        android:background="@color/colorPrimary"
         app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
         app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
-
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="4dp"
-        android:layout_marginTop="2dp"
-        android:background="@color/vivid_red"
-        android:orientation="horizontal" />
 
 </android.support.design.widget.AppBarLayout>

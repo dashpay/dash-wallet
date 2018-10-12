@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    style="@style/DialogContainer">
+
+    <EditText
+        android:id="@+id/sweep_wallet_fragment_password"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/sweep_wallet_fragment_password"
+        android:inputType="textPassword"
+        android:singleLine="true"
+        style="@style/MontserratMedium.DB.14"/>
+
+    <TextView
+        android:id="@+id/sweep_wallet_fragment_bad_password"
+        android:text="@string/sweep_wallet_fragment_bad_password"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="@color/fg_error"
+        android:visibility="gone"
+        android:textSize="12sp"
+        style="@style/MontserratSemiBold"/>
+
+</LinearLayout>

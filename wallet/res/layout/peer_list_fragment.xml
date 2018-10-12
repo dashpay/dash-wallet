@@ -14,7 +14,7 @@
         android:background="@color/bg_bright"
         android:gravity="center"
         android:text="@string/peer_list_fragment_empty"
-        android:textSize="@dimen/font_size_small" />
+        style="@style/MontserratSemiBold.DB.14"/>
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/peer_list"

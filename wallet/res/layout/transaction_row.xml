@@ -1,198 +1,182 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-	android:layout_width="match_parent"
-	android:layout_height="wrap_content" >
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:animateLayoutChanges="true">
 
-	<LinearLayout
-		android:layout_width="match_parent"
-		android:layout_height="wrap_content"
-		android:orientation="vertical"
-		android:paddingBottom="8dp"
-		android:paddingLeft="@dimen/list_entry_padding_horizontal"
-		android:paddingRight="@dimen/list_entry_padding_horizontal"
-		android:paddingTop="8dp" >
+    <RelativeLayout
+        android:id="@+id/transaction_row_extend_address"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="19dp"
+        android:paddingLeft="19dp"
+        android:paddingBottom="10dp"
+        android:paddingTop="15dp"
+        android:baselineAligned="true"
+        android:orientation="horizontal" >
 
-		<LinearLayout
-			android:id="@+id/transaction_row_extend_time"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:baselineAligned="true"
-			android:orientation="horizontal"
-			android:paddingBottom="2dp"
-			android:visibility="gone" >
+        <ImageButton
+            android:id="@+id/transaction_row_menu"
+            android:layout_width="28dp"
+            android:paddingRight="14dp"
+            android:layout_marginLeft="7dp"
+            android:tint="@color/menu_gray"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentTop="true"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_more_vert_24dp" />
 
-			<de.schildbach.wallet.util.CircularProgressView
-				android:id="@+id/transaction_row_confidence_circular_selected"
-				android:layout_width="@dimen/symbol_size_normal"
-				android:layout_height="@dimen/symbol_size_normal"
-				android:layout_marginRight="8dp" />
+        <de.schildbach.wallet.util.CircularProgressView
+            android:id="@+id/transaction_row_confidence_circular"
+            android:layout_marginTop="4dp"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentLeft="true"
+            android:layout_marginEnd="16dp"
+            android:layout_marginRight="16dp"
+            android:layout_width="@dimen/symbol_size_normal"
+            android:layout_height="@dimen/symbol_size_normal" />
 
-			<TextView
-				android:id="@+id/transaction_row_confidence_textual_selected"
-				android:layout_width="@dimen/symbol_size_normal"
-				android:layout_height="wrap_content"
-				android:layout_marginRight="8dp"
-				android:ellipsize="none"
-				android:gravity="center_horizontal|top"
-				android:singleLine="true"
-				android:textStyle="bold" />
+        <TextView
+            android:id="@+id/transaction_row_time"
+            android:layout_toRightOf="@id/transaction_row_confidence_circular"
+            android:layout_toEndOf="@id/transaction_row_confidence_circular"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="5dp"
+            style="@style/MontserratMedium.DB.12"
+            tools:text="August 30, 11:28 AM" />
 
-			<TextView
-				android:id="@+id/transaction_row_full_time"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content" />
-		</LinearLayout>
+        <TextView
+            android:id="@+id/transaction_row_confidence_textual"
+            android:layout_width="@dimen/symbol_size_normal"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="8dp"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="none"
+            android:gravity="center_horizontal|top"
+            android:singleLine="true"
+            android:textStyle="bold" />
 
-		<LinearLayout
-			android:id="@+id/transaction_row_extend_address"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:baselineAligned="true"
-			android:orientation="horizontal" >
+        <LinearLayout
+            android:id="@+id/transaction_row_address_container"
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignLeft="@id/transaction_row_time"
+            android:layout_alignStart="@id/transaction_row_time"
+            android:layout_toLeftOf="@+id/transaction_row_fiat"
+            android:layout_toStartOf="@id/transaction_row_fiat"
+            android:layout_marginEnd="10dp"
+            android:layout_marginRight="10dp"
+            android:layout_below="@id/transaction_row_time">
 
-			<de.schildbach.wallet.util.CircularProgressView
-				android:id="@+id/transaction_row_confidence_circular"
-				android:layout_width="@dimen/symbol_size_normal"
-				android:layout_height="@dimen/symbol_size_normal"
-				android:layout_marginRight="8dp" />
+            <TextView
+                android:id="@+id/transaction_row_ix_extended"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
+                tools:text="InstantSend Verified"
+                style="@style/MontserratMedium.B.12" />
 
-			<TextView
-				android:id="@+id/transaction_row_confidence_textual"
-				android:layout_width="@dimen/symbol_size_normal"
-				android:layout_height="wrap_content"
-				android:layout_marginRight="8dp"
-				android:ellipsize="none"
-				android:gravity="center_horizontal|top"
-				android:singleLine="true"
-				android:textStyle="bold" />
+            <TextView
+                android:id="@+id/transaction_row_address"
+                android:layout_marginTop="5dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:singleLine="true"
+                style="@style/MontserratMedium.MG.12"
+                tools:text="XcJcu9C2y1MMuNjgjnyqfYCnPoK94D18oL"/>
+            
+        </LinearLayout>
 
-			<TextView
-				android:id="@+id/transaction_row_time"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:layout_marginRight="10dp" />
+        <de.schildbach.wallet.ui.CurrencyTextView
+            android:id="@+id/transaction_row_value"
+            style="@style/MontserratSemiBold.B.14"
+            android:layout_toLeftOf="@id/transaction_row_menu"
+            android:layout_toStartOf="@id/transaction_row_menu"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
 
-			<TextView
-				android:id="@+id/transaction_row_address"
-				android:layout_width="0px"
-				android:layout_height="wrap_content"
-				android:layout_gravity="left|top"
-				android:layout_weight="1"
-				android:singleLine="true"
-				android:textStyle="bold" />
+        <de.schildbach.wallet.ui.CurrencyTextView
+            android:id="@id/transaction_row_fiat"
+            android:layout_alignTop="@id/transaction_row_address_container"
+            android:layout_toLeftOf="@id/transaction_row_menu"
+            android:layout_toStartOf="@id/transaction_row_menu"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/MontserratMedium.MG.12" />
 
-			<de.schildbach.wallet.ui.CurrencyTextView
-				android:id="@+id/transaction_row_value"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:layout_gravity="right|top"
-				android:layout_marginLeft="8dp" />
-		</LinearLayout>
+        <TextView
+            android:id="@+id/transaction_row_ix"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@id/transaction_row_time"
+            android:layout_toEndOf="@id/transaction_row_time"
+            android:layout_toLeftOf="@id/transaction_row_value"
+            android:layout_toStartOf="@id/transaction_row_value"
+            android:layout_marginRight="5dp"
+            android:layout_marginLeft="5dp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            tools:text="InstantSend Verified"
+            style="@style/MontserratMedium.B.12" />
 
-		<LinearLayout
-			android:id="@+id/transaction_row_ix"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:orientation="horizontal"
-			android:paddingTop="2dp" >
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            style="@style/ExtendedTransactions">
 
-			<Space
-				android:layout_width="@dimen/symbol_size_normal"
-				android:layout_height="@dimen/symbol_size_normal"
-				android:layout_marginRight="8dp" />
+            <RelativeLayout
+                android:id="@+id/transaction_row_extend_fee"
+                tools:visibility="visible"
+                style="@style/ExtendedTransactionItem">
 
-			<TextView
-				android:id="@+id/transaction_row_ix_status"
-				android:layout_width="0px"
-				android:layout_height="wrap_content"
-				android:layout_weight="1"
-				android:textColor="@color/fg_insignificant" />
-
-		</LinearLayout>
-
-
-		<LinearLayout
-			android:id="@+id/transaction_row_extend_fee"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:orientation="horizontal"
-			android:paddingTop="2dp" >
-
-			<Space
-				android:layout_width="@dimen/symbol_size_normal"
-				android:layout_height="@dimen/symbol_size_normal"
-				android:layout_marginRight="8dp" />
-
-			<TextView
-				android:layout_width="0px"
-				android:layout_height="wrap_content"
-				android:layout_weight="1"
-				android:text="@string/transaction_row_fee"
-				android:textColor="@color/fg_insignificant" />
-
-			<de.schildbach.wallet.ui.CurrencyTextView
-				android:id="@+id/transaction_row_fee"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:layout_gravity="right|top"
-				android:layout_marginLeft="8dp"
-				android:textColor="@color/fg_insignificant" />
-		</LinearLayout>
-
-		<LinearLayout
-			android:id="@+id/transaction_row_extend_fiat"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:orientation="horizontal"
-			android:paddingTop="2dp"
-			android:visibility="gone" >
-
-			<Space
-				android:layout_width="0px"
-				android:layout_height="@dimen/symbol_size_normal"
-				android:layout_marginRight="8dp"
-				android:layout_weight="1" />
-
-			<de.schildbach.wallet.ui.CurrencyTextView
-				android:id="@+id/transaction_row_fiat"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:layout_gravity="right|top"
-				android:layout_marginLeft="8dp"
-				android:textColor="@color/fg_insignificant" />
-		</LinearLayout>
-
-		<LinearLayout
-			android:id="@+id/transaction_row_extend_message"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:orientation="horizontal"
-			android:paddingTop="2dp" >
-
-			<Space
-				android:layout_width="@dimen/symbol_size_normal"
-				android:layout_height="@dimen/symbol_size_normal"
-				android:layout_marginRight="8dp" />
-
-			<TextView
-				android:id="@+id/transaction_row_message"
-				android:layout_width="0px"
-				android:layout_height="wrap_content"
-				android:layout_gravity="left|top"
-				android:layout_weight="1"
-				android:singleLine="true"
-				android:textColor="@color/fg_error"
-				android:textSize="@dimen/font_size_small" />
-		</LinearLayout>
-	</LinearLayout>
-
-	<ImageButton
-		android:id="@+id/transaction_row_menu"
-		style="@style/My.Widget.Button.Borderless.Small"
-		android:layout_width="wrap_content"
-		android:layout_height="wrap_content"
-		android:layout_gravity="top|right"
-		android:src="@drawable/ic_more_vert_grey600_18dp" />
+                <TextView
+                    android:layout_alignParentLeft="true"
+                    android:layout_alignParentStart="true"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/transaction_row_fee"
+                    style="@style/MontserratMedium.MG.12"/>
 
 
-</FrameLayout>
+                <de.schildbach.wallet.ui.CurrencyTextView
+                    android:id="@+id/transaction_row_fee"
+                    android:layout_alignParentEnd="true"
+                    android:layout_alignParentRight="true"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    style="@style/MontserratMedium.MG.12" />
+
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:id="@+id/transaction_row_extend_message"
+                tools:visibility="visible"
+                style="@style/ExtendedTransactionItem">
+
+                <TextView
+                    android:id="@+id/transaction_row_message"
+                    android:layout_alignParentLeft="true"
+                    android:layout_alignParentStart="true"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/transaction_row_message_sent_to_single_peer"
+                    style="@style/MontserratMedium.MG.12"/>
+
+            </RelativeLayout>
+
+        </LinearLayout>
+
+    </RelativeLayout>
+
+    <View style="@style/ListSeparator" />
+
+</LinearLayout>

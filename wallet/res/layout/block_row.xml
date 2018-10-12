@@ -2,87 +2,95 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    xmlns:tools="http://schemas.android.com/tools"
     android:background="@color/bg_list"
-    android:orientation="vertical" >
+    android:orientation="vertical"
+    android:paddingBottom="18dp"
+    android:paddingTop="14dp">
 
     <TextView
         android:id="@+id/block_list_row_mining_reward_adjustment"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/bg_less_bright"
+        android:paddingLeft="@dimen/space_medium"
+        android:paddingRight="@dimen/space_medium"
         android:paddingBottom="@dimen/list_entry_padding_vertical_cram"
-        android:paddingLeft="@dimen/list_entry_padding_horizontal"
-        android:paddingRight="@dimen/list_entry_padding_horizontal"
         android:paddingTop="@dimen/list_entry_padding_vertical_cram"
+        android:layout_marginBottom="4dp"
         android:text="@string/block_row_mining_reward_adjustment"
         android:textColor="@color/fg_less_significant"
-        android:textSize="@dimen/font_size_small" />
+        android:textSize="@dimen/font_size_small"
+        style="@style/MontserratMedium"/>
 
     <TextView
         android:id="@+id/block_list_row_mining_difficulty_adjustment"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/bg_less_bright"
+        android:paddingLeft="@dimen/space_medium"
+        android:paddingRight="@dimen/space_medium"
         android:paddingBottom="@dimen/list_entry_padding_vertical_cram"
-        android:paddingLeft="@dimen/list_entry_padding_horizontal"
-        android:paddingRight="@dimen/list_entry_padding_horizontal"
         android:paddingTop="@dimen/list_entry_padding_vertical_cram"
+        android:layout_marginBottom="4dp"
         android:text="@string/block_row_mining_difficulty_adjustment"
         android:textColor="@color/fg_less_significant"
-        android:textSize="@dimen/font_size_small" />
+        android:textSize="@dimen/font_size_small"
+        style="@style/MontserratMedium"/>
 
-    <FrameLayout
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" >
-
-        <LinearLayout
-            android:id="@+id/block_list_row_transactions_group"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingBottom="@dimen/list_entry_padding_vertical"
-            android:paddingLeft="@dimen/list_entry_padding_horizontal"
-            android:paddingRight="@dimen/list_entry_padding_horizontal"
-            android:paddingTop="@dimen/list_entry_padding_vertical" >
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:baselineAligned="true"
-                android:orientation="horizontal"
-                android:paddingBottom="2dp" >
-
-                <TextView
-                    android:id="@+id/block_list_row_height"
-                    android:layout_width="0px"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/block_list_row_time"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-
-                <Space
-                    android:layout_width="24dp"
-                    android:layout_height="0px" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/block_list_row_hash"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingTop="2dp" />
-        </LinearLayout>
+        android:layout_height="wrap_content"
+        android:paddingLeft="@dimen/space_medium"
+        android:paddingRight="@dimen/space_medium">
 
         <ImageButton
             android:id="@+id/block_list_row_menu"
-            style="@style/My.Widget.Button.Borderless.Small"
+            android:layout_width="14dp"
+            android:layout_marginLeft="10dp"
+            android:layout_marginStart="10dp"
+            android:tint="@color/menu_gray"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentTop="true"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_more_vert_24dp"
+            tools:ignore="RtlSymmetry" />
+
+        <TextView
+            android:id="@+id/block_list_row_height"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="top|right"
-            android:src="@drawable/ic_more_vert_grey600_18dp" />
-    </FrameLayout>
+            style="@style/MontserratSemiBold.DB.14"
+            android:layout_marginBottom="14dp"
+            tools:text="935940"/>
+
+        <TextView
+            android:id="@+id/block_list_row_time"
+            android:layout_toStartOf="@id/block_list_row_menu"
+            android:layout_toLeftOf="@id/block_list_row_menu"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/MontserratMedium.MG.14"
+            tools:text="just now"/>
+
+        <TextView
+            android:id="@+id/block_list_row_hash"
+            android:layout_below="@id/block_list_row_height"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            tools:text="000000000000002c07adc34df3becd45bdb4417a52485f9e2920ae192ea8a6f7"
+            style="@style/MontserratMedium.MG.14"/>
+
+        <LinearLayout
+            android:layout_below="@id/block_list_row_hash"
+            android:paddingTop="4dp"
+            android:id="@+id/block_list_row_transactions_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"/>
+
+    </RelativeLayout>
 
 </LinearLayout>

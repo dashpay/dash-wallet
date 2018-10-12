@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Your wallet was reset!\nIt will take some time to recover.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Use at your own risk. Read the &lt;u&gt;safety notes&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">You need to &lt;u&gt;back up your wallet&lt;/u&gt;!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">You need to back up your wallet!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d hours behind</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d days behind</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d weeks behind</string>
@@ -20,15 +20,15 @@
     <string name="exchange_rates_fragment_empty_text">Could not load exchange rates.</string>
     <string name="exchange_rates_fragment_empty_search">Could not find exchange rate.</string>
     <string name="exchange_rates_fragment_default">(default)</string>
-    <string name="exchange_rates_fragment_rate">rate</string>
-    <string name="exchange_rates_fragment_balance">balance</string>
+    <string name="exchange_rates_fragment_rate">Rate</string>
+    <string name="exchange_rates_fragment_balance">Balance</string>
     <string name="exchange_rates_fragment_source">Price from %s</string>
     <string name="exchange_rates_options_search">Search exchange rate</string>
     <string name="exchange_rates_context_set_as_default_title">Set as default</string>
     <string name="wallet_transactions_fragment_empty_text_received">No Dash received so far.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">No Dash sent so far.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">How to get Dash?\n\nTrade for traditional money,\nsell goods or services or\nearn by working.</string>
-    <string name="wallet_transactions_row_warning_backup">Congratulations, you received your first payment! Have you already &lt;u&gt;backed up your wallet&lt;/u&gt;, to protect against loss?</string>
+    <string name="wallet_transactions_row_warning_backup">Congratulations, you received your first payment! Have you already backed up your wallet, to protect against loss?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Hint: to increase the safety of your wallet, you can &lt;u&gt;encrypt your device&lt;/u&gt;. This also protects data of other apps.</string>
     <string name="wallet_transactions_fragment_coinbase">mined</string>
     <string name="wallet_transactions_fragment_internal">internal</string>
@@ -67,6 +67,7 @@
     <string name="send_coins_fragment_receiving_address_complex">complex\naddress</string>
     <string name="send_coins_fragment_pending">(%s waiting for confirmation)</string>
     <string name="send_coins_fragment_amount_label">Amount to pay</string>
+    <string name="send_coins_fragment_pin_label">Enter PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">An economic fee of %s will be paid. Use \'economic\' only if you don\'t care about confirmation time.</string>
     <string name="send_coins_fragment_hint_fee">A network fee of %s will be paid.</string>
     <string name="send_coins_fragment_hint_fee_priority">A priority fee of %s will be paid. If you care about low fees, use \'priority\' only if you need confirmation as soon as possible.</string>
@@ -326,8 +327,8 @@
     <string name="button_paste">Paste</string>
     <string name="button_share">Share</string>
     <string name="button_set_as_default">Set as default</string>
-    <string name="button_request_coins">Request coins</string>
-    <string name="button_send_coins">Send coins</string>
+    <string name="button_request_coins">Request Dash</string>
+    <string name="button_send_coins">Send Dash</string>
     <string name="button_scan">Scan</string>
     <string name="button_settings">Settings</string>
     <string name="action_show_qr">Show QR code</string>
@@ -337,7 +338,7 @@
     <string name="time_today">today</string>
     <string name="address_unlabeled">(unlabeled)</string>
     <string name="private_key_password">PIN</string>
-    <string name="private_key_bad_password">bad PIN!</string>
+    <string name="private_key_bad_password">Bad PIN!</string>
 
     <!-- generic error messages -->
     <string name="error_io">I/O error: %s</string>

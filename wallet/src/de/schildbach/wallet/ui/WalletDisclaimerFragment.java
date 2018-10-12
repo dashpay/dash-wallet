@@ -58,6 +58,7 @@ public final class WalletDisclaimerFragment extends Fragment implements OnShared
     private BlockchainState blockchainState = null;
 
     private TextView messageView;
+    private View closeSafetyDisclaimerView;
 
     private static final int ID_BLOCKCHAIN_STATE_LOADER = 0;
 
@@ -74,7 +75,8 @@ public final class WalletDisclaimerFragment extends Fragment implements OnShared
     @Override
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
             final Bundle savedInstanceState) {
-        messageView = (TextView) inflater.inflate(R.layout.wallet_disclaimer_fragment, container);
+        final View view = inflater.inflate(R.layout.wallet_disclaimer_fragment, container);
+        messageView = view.findViewById(R.id.wallet_disclaimer_text);
 
         messageView.setOnClickListener(new OnClickListener() {
             @Override
@@ -83,7 +85,14 @@ public final class WalletDisclaimerFragment extends Fragment implements OnShared
             }
         });
 
-        return messageView;
+        closeSafetyDisclaimerView = view.findViewById(R.id.wallet_disclaimer_close);
+        closeSafetyDisclaimerView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                config.setDisclaimerEnabled(false);
+            }
+        });
+        return view;
     }
 
     @Override
@@ -117,6 +126,7 @@ public final class WalletDisclaimerFragment extends Fragment implements OnShared
             return;
 
         final boolean showDisclaimer = config.getDisclaimerEnabled();
+        closeSafetyDisclaimerView.setVisibility(showDisclaimer ? View.VISIBLE : View.GONE);
 
         int progressResId = 0;
         if (blockchainState != null) {

@@ -1,23 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
     android:fillViewport="true"
-    android:scrollbars="none" >
+    android:scrollbars="none"
+    style="@style/DialogContainer">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="@dimen/list_entry_padding_horizontal_lax"
-        android:layout_marginRight="@dimen/list_entry_padding_horizontal_lax"
         android:orientation="vertical" >
 
         <LinearLayout
             android:id="@+id/backup_wallet_seed_private_key_password_group"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/list_entry_padding_vertical"
-            android:divider="@drawable/divider_field"
             android:orientation="vertical"
             android:showDividers="middle"
             android:visibility="invisible">
@@ -25,8 +20,6 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/list_entry_padding_vertical"
-                android:divider="@drawable/divider_field"
                 android:orientation="horizontal"
                 android:showDividers="middle">
 
@@ -36,7 +29,9 @@
                     android:layout_marginBottom="@dimen/list_entry_padding_vertical"
                     android:layout_marginTop="@dimen/list_entry_padding_vertical"
                     android:layout_weight="2"
-                    android:text="@string/backup_to_seed_wallet_dialog_enter_pin_message" />
+                    android:text="@string/backup_to_seed_wallet_dialog_enter_pin_message"
+                    style="@style/MontserratRegular.DB.12"/>
+
             </LinearLayout>
 
             <LinearLayout
@@ -55,14 +50,18 @@
                     android:hint="@string/private_key_password"
                     android:imeOptions="flagNoExtractUi"
                     android:inputType="numberPassword"
-                    android:singleLine="true" />
+                    android:singleLine="true"
+                    android:textSize="@dimen/dialog_input_text_size"
+                    style="@style/MontserratMedium"/>
 
                 <Button
                     android:id="@+id/backup_wallet_seed_private_key_enter"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="@string/backup_wallet_to_seed_show_recovery_phrase" />
+                    android:text="@string/backup_wallet_to_seed_show_recovery_phrase"
+                    style="@style/MontserratButton"/>
+
             </LinearLayout>
 
             <TextView
@@ -71,9 +70,9 @@
                 android:layout_height="wrap_content"
                 android:text="@string/private_key_bad_password"
                 android:textColor="@color/fg_error"
-                android:textStyle="bold"
-                android:visibility="invisible" />
-
+                android:textSize="12sp"
+                style="@style/MontserratSemiBold"
+                android:visibility="gone" />
 
         </LinearLayout>
 
@@ -81,7 +80,6 @@
             android:id="@+id/backup_wallet_seed_group"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/list_entry_padding_vertical"
             android:divider="@drawable/divider_field"
             android:orientation="vertical"
             android:showDividers="middle">
@@ -91,7 +89,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="@dimen/list_entry_padding_vertical"
                 android:layout_marginTop="@dimen/list_entry_padding_vertical"
-                android:text="@string/backup_to_seed_wallet_dialog_message" />
+                android:text="@string/backup_to_seed_wallet_dialog_message"
+                style="@style/MontserratMedium.DB.12"/>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -106,15 +105,15 @@
                     android:layout_width="0px"
                     android:layout_height="wrap_content"
                     android:layout_weight="3"
-                    android:textColor="@color/strong_blue_bis"
-                    android:textStyle="bold" />
+                    android:textColor="@color/colorPrimaryDark"
+                    android:textSize="14sp"
+                    style="@style/MontserratSemiBold"/>
 
             </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:divider="@drawable/divider_field"
                 android:orientation="horizontal"
                 android:showDividers="middle" >
 
@@ -126,23 +125,23 @@
                     android:text="@string/backup_wallet_dialog_password_mismatch"
                     android:textColor="@color/fg_error"
                     android:textStyle="bold"
-                    android:visibility="invisible" />
+                    android:visibility="invisible"
+                    style="@style/MontserratSemiBold"/>
+
             </LinearLayout>
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="@dimen/list_entry_padding_vertical_lax"
-                android:layout_marginTop="@dimen/list_entry_padding_vertical_lax"
                 android:text="@string/backup_wallet_to_seed_dialog_warning"
-                android:textColor="@color/fg_less_significant"
-                android:textSize="@dimen/font_size_small" />
+                style="@style/MontserratRegular.MG.12" />
 
-            <CheckBox
+            <de.schildbach.wallet.ui.widget.MontserratCheckBox
                 android:id="@+id/backup_wallet_seed_private_key_written_down"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/backup_wallet_seed_private_key_written_down_box" />
+                android:text="@string/backup_wallet_seed_private_key_written_down_box"
+                style="@style/CheckBox"/>
 
             <!--TextView
                 android:id="@+id/backup_wallet_dialog_warning_encrypted"
@@ -154,7 +153,7 @@
                 android:textColor="@color/fg_less_significant"
                 android:textSize="@dimen/font_size_small" /-->
         </LinearLayout>
-    </LinearLayout>
 
+    </LinearLayout>
 
 </ScrollView>

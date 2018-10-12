@@ -21,24 +21,17 @@ import javax.annotation.Nullable;
 
 import de.schildbach.wallet_test.R;
 
-import android.app.AlertDialog;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.DialogInterface.OnClickListener;
-import android.graphics.drawable.Drawable;
-import android.os.Build;
-import android.view.ContextThemeWrapper;
+import android.support.v7.app.AlertDialog;
 import android.view.LayoutInflater;
-import android.view.View;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 /**
  * @author Andreas Schildbach
  */
 public class DialogBuilder extends AlertDialog.Builder {
-    private final View customTitle;
-    private final ImageView iconView;
-    private final TextView titleView;
 
     public static DialogBuilder warn(final Context context, final int titleResId) {
         final DialogBuilder builder = new DialogBuilder(context);
@@ -48,66 +41,34 @@ public class DialogBuilder extends AlertDialog.Builder {
     }
 
     public DialogBuilder(final Context context) {
-        super(new ContextThemeWrapper(context, R.style.NewDialogTheme));
+        super(context);
+    }
 
-        this.customTitle = LayoutInflater.from(context).inflate(R.layout.dialog_title, null);
-        this.iconView = (ImageView) customTitle.findViewById(android.R.id.icon);
-        this.titleView = (TextView) customTitle.findViewById(android.R.id.title);
+    @SuppressLint("InflateParams")
+    @Override
+    public AlertDialog.Builder setTitle(int titleId) {
+        return this.setTitle(getContext().getString(titleId));
     }
 
     @Override
-    public DialogBuilder setIcon(final Drawable icon) {
-        if (icon != null) {
-            setCustomTitle(customTitle);
-            iconView.setImageDrawable(icon);
-            iconView.setVisibility(View.VISIBLE);
-        }
-
-        return this;
-    }
-
-    @Override
-    public DialogBuilder setIcon(final int iconResId) {
-        if (iconResId != 0) {
-            setCustomTitle(customTitle);
-            iconView.setImageResource(iconResId);
-            iconView.setVisibility(View.VISIBLE);
-        }
-
-        return this;
-    }
-
-    @Override
-    public DialogBuilder setTitle(final CharSequence title) {
-        if (title != null) {
-            setCustomTitle(customTitle);
-            titleView.setText(title);
-        }
-
-        return this;
-    }
-
-    @Override
-    public DialogBuilder setTitle(final int titleResId) {
-        if (titleResId != 0) {
-            setCustomTitle(customTitle);
-            titleView.setText(titleResId);
-        }
-
-        return this;
-    }
-
-    @Override
-    public DialogBuilder setMessage(final CharSequence message) {
-        super.setMessage(message);
-
-        return this;
+    public AlertDialog.Builder setTitle(@android.support.annotation.Nullable CharSequence title) {
+        TextView titleTextView = (TextView) LayoutInflater.from(getContext())
+                .inflate(R.layout.dialog_title, null);
+        titleTextView.setText(title);
+        return this.setCustomTitle(titleTextView);
     }
 
     @Override
     public DialogBuilder setMessage(final int messageResId) {
-        super.setMessage(messageResId);
+        return this.setMessage(this.getContext().getString(messageResId));
+    }
 
+    @Override
+    public DialogBuilder setMessage(final CharSequence message) {
+        TextView messageTextView = (TextView) LayoutInflater.from(getContext())
+                .inflate(R.layout.dialog_message, null);
+        messageTextView.setText(message);
+        this.setView(messageTextView);
         return this;
     }
 

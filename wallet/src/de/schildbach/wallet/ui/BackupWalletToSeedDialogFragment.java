@@ -190,7 +190,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
     private final TextWatcher privateKeyPasswordListener = new TextWatcher() {
         @Override
         public void onTextChanged(final CharSequence s, final int start, final int before, final int count) {
-            privateKeyBadPasswordView.setVisibility(View.INVISIBLE);
+            privateKeyBadPasswordView.setVisibility(View.GONE);
             showMnemonicSeedButton.setEnabled(true);
         }
 
@@ -231,7 +231,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
             new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
                 @Override
                 protected void onSuccess(final KeyParameter encryptionKey, final boolean wasChanged) {
-                    privateKeyBadPasswordView.setVisibility(View.INVISIBLE);
+                    privateKeyBadPasswordView.setVisibility(View.GONE);
                     handleDecryptSeed(encryptionKey, pin);
                 }
             }.deriveKey(wallet, pin);

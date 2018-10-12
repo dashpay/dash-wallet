@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Sua carteira foi reiniciada!\nA recuperação levará um tempo.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Use por sua conta e risco. Leia as &lt;u&gt;indicações de segurança&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Você precisa fazer um &lt;u&gt;back up de sua carteira&lt;/u&gt;!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Você precisa fazer backup da sua carteira!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d horas atrás</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d dias atrás</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d semanas atrás</string>
@@ -20,15 +20,15 @@
     <string name="exchange_rates_fragment_empty_text">Não foi possível carregar as cotações.</string>
     <string name="exchange_rates_fragment_empty_search">Não foi possível encontrar a taxa de câmbio.</string>
     <string name="exchange_rates_fragment_default">(padrão)</string>
-    <string name="exchange_rates_fragment_rate">cotação</string>
-    <string name="exchange_rates_fragment_balance">saldo</string>
+    <string name="exchange_rates_fragment_rate">Taxa</string>
+    <string name="exchange_rates_fragment_balance">Saldo</string>
     <string name="exchange_rates_fragment_source">Preço de %s</string>
     <string name="exchange_rates_options_search">Pesquisar taxa de câmbio</string>
     <string name="exchange_rates_context_set_as_default_title">Definir como padrão</string>
     <string name="wallet_transactions_fragment_empty_text_received">Nenhum Dash recebido até o momento.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Nenhum Dash enviado até o momento.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Como conseguir Dash?\n\nTroque por dinheiro tradicional,\nvenda bens ou serviços ou\nganhe trabalhando.</string>
-    <string name="wallet_transactions_row_warning_backup">Parabéns, você recebeu o seu primeiro pagamento! Deseja efetuar o &lt;u&gt;backup de sua carteira&lt;/u&gt;, para proteger seus Dash?</string>
+    <string name="wallet_transactions_row_warning_backup">Parabéns, você recebeu o seu primeiro pagamento! Você já fez backup da sua carteira para se proteger contra perdas?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Dica: para aumentar a segurança da sua carteira, você pode &lt;u&gt;encriptar o seu dispositivo&lt;/u&gt;. Isto também protege os dados de outros aplicativos.</string>
     <string name="wallet_transactions_fragment_coinbase">minerados</string>
     <string name="wallet_transactions_fragment_internal">interno</string>
@@ -67,6 +67,7 @@
     <string name="send_coins_fragment_receiving_address_complex">complexo\nendereço</string>
     <string name="send_coins_fragment_pending">(%s esperando confirmação)</string>
     <string name="send_coins_fragment_amount_label">Quantidade a pagar</string>
+    <string name="send_coins_fragment_pin_label">Inserir PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Uma taxa econômica de%s será paga. Use \"econômico\" somente se você não se importa com o tempo de confirmação.</string>
     <string name="send_coins_fragment_hint_fee">Uma taxa de rede de %s será paga.</string>
     <string name="send_coins_fragment_hint_fee_priority">Uma taxa para a prioridade de%s será paga. Se você se preocupa com baixas taxas, use \"prioridade\" apenas se você precisar de confirmação mais rapido possível.</string>
@@ -337,7 +338,7 @@
     <string name="time_today">hoje</string>
     <string name="address_unlabeled">(sem nome)</string>
     <string name="private_key_password">PIN</string>
-    <string name="private_key_bad_password">PIN inválido!</string>
+    <string name="private_key_bad_password">PIN incorreto!</string>
 
     <!-- generic error messages -->
     <string name="error_io">Erro de I/O, leitura ou escrita: %s</string>
