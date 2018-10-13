@@ -6,20 +6,32 @@ public class UpholdTransaction {
     private Origin origin;
 
     public static class Origin {
-        private String base;
-        private String amount;
-        private String fee;
+        private Float base;
+        private Float amount;
+        private Float fee;
 
-        public String getBase() {
+        public Float getBase() {
             return base;
         }
 
-        public String getAmount() {
+        public void setBase(Float base) {
+            this.base = base;
+        }
+
+        public Float getAmount() {
             return amount;
         }
 
-        public String getFee() {
+        public void setAmount(Float amount) {
+            this.amount = amount;
+        }
+
+        public Float getFee() {
             return fee;
+        }
+
+        public void setFee(Float fee) {
+            this.fee = fee;
         }
     }
 

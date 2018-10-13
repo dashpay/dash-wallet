@@ -41,8 +41,6 @@ import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.bitcoinj.wallet.Wallet;
-
 import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
@@ -98,7 +96,7 @@ import android.widget.TextView;
 import android.widget.ViewAnimator;
 
 import org.dash.wallet.integration.uphold.data.UpholdClient;
-import org.dash.wallet.integration.uphold.ui.UpholdTransferToWalletDialog;
+import org.dash.wallet.integration.uphold.ui.UpholdWithdrawalDialog;
 
 /**
  * @author Andreas Schildbach
@@ -682,9 +680,9 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         MonetaryFormat hintFormat = config.getFormat();
 
         BigDecimal balance = info.getData();
-        UpholdTransferToWalletDialog.show(getFragmentManager(), balance,
+        UpholdWithdrawalDialog.show(getFragmentManager(), balance,
                 wallet.currentReceiveAddress().toString(), currencyCode, inputFormat, hintFormat,
-                new UpholdTransferToWalletDialog.OnTransferListener() {
+                new UpholdWithdrawalDialog.OnTransferListener() {
                     @Override
                     public void onTransfer() {
                         adapter.removeInfo(info);

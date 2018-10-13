@@ -44,9 +44,9 @@ import org.dash.wallet.common.ui.DialogBuilder;
 import java.math.BigDecimal;
 
 
-public class UpholdTransferToWalletDialog extends DialogFragment {
+public class UpholdWithdrawalDialog extends DialogFragment {
 
-    private static final String FRAGMENT_TAG = UpholdTransferToWalletDialog.class.getName();
+    private static final String FRAGMENT_TAG = UpholdWithdrawalDialog.class.getName();
 
     private BigDecimal balance;
     private String receivingAddress;
@@ -65,7 +65,7 @@ public class UpholdTransferToWalletDialog extends DialogFragment {
                             MonetaryFormat hintFormat,
                             OnTransferListener onTransferListener) {
 
-        final UpholdTransferToWalletDialog dialog = new UpholdTransferToWalletDialog();
+        final UpholdWithdrawalDialog dialog = new UpholdWithdrawalDialog();
 
         dialog.balance = balance;
         dialog.receivingAddress = receivingAddress;
@@ -115,11 +115,8 @@ public class UpholdTransferToWalletDialog extends DialogFragment {
                 transferButton.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        if (transaction == null) {
-                            transfer(new BigDecimal(dashAmountView.getTextView().getText().toString()));
-                        } else {
-                            showCommitTransactionConfirmationDialog();
-                        }
+                        transfer(Float.parseFloat(dashAmountView.getTextView().getText().toString()),
+                                false);
                     }
                 });
             }
@@ -150,15 +147,15 @@ public class UpholdTransferToWalletDialog extends DialogFragment {
         }
     };
 
-    private void transfer(BigDecimal value) {
+    private void transfer(float value, final boolean deductFeeFromAmount) {
         final ProgressDialog progressDialog = showLoading();
-        UpholdClient.getInstance(getActivity()).createDashWithdrawalTransaction(value.toString(),
+        UpholdClient.getInstance(getActivity()).createDashWithdrawalTransaction(value + "",
                 receivingAddress, new UpholdClient.Callback<UpholdTransaction>() {
                     @Override
                     public void onSuccess(UpholdTransaction tx) {
                         transaction = tx;
                         progressDialog.dismiss();
-                        showCommitTransactionConfirmationDialog();
+                        showCommitTransactionConfirmationDialog(deductFeeFromAmount);
                     }
 
                     @Override
@@ -173,24 +170,45 @@ public class UpholdTransferToWalletDialog extends DialogFragment {
                 });
     }
 
-    private void showCommitTransactionConfirmationDialog() {
+    private void showCommitTransactionConfirmationDialog(boolean deductFeeFromAmount) {
         AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(getActivity());
         dialogBuilder.setTitle(R.string.uphold_transfer_from_external_account_confirm_title);
-        dialogBuilder.setMessage(getString(R.string.uphold_transfer_from_external_account_confirm_message,
-                transaction.getOrigin().getAmount(), transaction.getOrigin().getBase(),
-                transaction.getOrigin().getFee(), "Uphold"));
+
+        float fee = transaction.getOrigin().getFee();
+        final float baseAmount = transaction.getOrigin().getBase();
+        final float total = transaction.getOrigin().getAmount();
+
+        //TODO: Use BigDecimal Everywhere?
+        if (total > balance.floatValue()) {
+            transfer(balance.floatValue() - fee, true);
+            return;
+        }
+
+        String message = getString(R.string.uphold_transfer_from_external_account_confirm_message,
+                baseAmount, fee, total);
+
+        if (deductFeeFromAmount) {
+            message += "\n\n" + getString(R.string.uphold_transfer_from_external_account_deduct_fee_disclaimer);
+        }
+
+        dialogBuilder.setMessage(message);
         dialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                commitUpholdTransaction();
+                commitTransaction();
             }
         });
 
         dialogBuilder.setNegativeButton(android.R.string.no, null);
-        dialogBuilder.show();
+        dialogBuilder.show().setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                transaction = null;
+            }
+        });
     }
 
-    private void commitUpholdTransaction() {
+    private void commitTransaction() {
         final ProgressDialog progressDialog = showLoading();
         UpholdClient.getInstance(getActivity()).commitTransaction(transaction.getId(), new UpholdClient.Callback<Object>() {
             @Override
@@ -219,7 +237,7 @@ public class UpholdTransferToWalletDialog extends DialogFragment {
             @Override
             public void onOtpSet() {
                 if (transaction != null) {
-                    commitUpholdTransaction();
+                    commitTransaction();
                 }
             }
         });
