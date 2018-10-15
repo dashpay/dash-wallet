@@ -17,7 +17,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/list_entry_padding_vertical"
-            android:text="@string/uphold_transfer_from_external_account_instructions" />
+            android:text="@string/uphold_withdrawal_instructions" />
 
         <org.dash.wallet.common.ui.CurrencyAmountView
             android:id="@+id/send_coins_amount_dash"

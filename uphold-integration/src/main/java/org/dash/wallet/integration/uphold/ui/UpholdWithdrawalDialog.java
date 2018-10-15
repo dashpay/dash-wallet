@@ -23,6 +23,8 @@ import android.app.DialogFragment;
 import android.app.FragmentManager;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.text.Editable;
@@ -35,6 +37,7 @@ import android.widget.TextView;
 
 import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
+import org.dash.wallet.integration.uphold.data.UpholdConstants;
 import org.dash.wallet.integration.uphold.data.UpholdTransaction;
 
 import org.bitcoinj.utils.MonetaryFormat;
@@ -100,7 +103,7 @@ public class UpholdWithdrawalDialog extends DialogFragment {
         });
 
         DialogBuilder builder = new DialogBuilder(activity);
-        builder.setTitle(R.string.uphold_transfer_from_external_account_title);
+        builder.setTitle(R.string.uphold_withdrawal_title);
         builder.setView(view);
         //click listener is set directly below to prevent dialog from being dismissed
         builder.setPositiveButton(R.string.uphold_transfer, null);
@@ -172,7 +175,7 @@ public class UpholdWithdrawalDialog extends DialogFragment {
 
     private void showCommitTransactionConfirmationDialog(boolean deductFeeFromAmount) {
         AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(getActivity());
-        dialogBuilder.setTitle(R.string.uphold_transfer_from_external_account_confirm_title);
+        dialogBuilder.setTitle(R.string.uphold_withdrawal_confirm_title);
 
         float fee = transaction.getOrigin().getFee();
         final float baseAmount = transaction.getOrigin().getBase();
@@ -184,11 +187,11 @@ public class UpholdWithdrawalDialog extends DialogFragment {
             return;
         }
 
-        String message = getString(R.string.uphold_transfer_from_external_account_confirm_message,
+        String message = getString(R.string.uphold_withdrawal_confirm_message,
                 baseAmount, fee, total);
 
         if (deductFeeFromAmount) {
-            message += "\n\n" + getString(R.string.uphold_transfer_from_external_account_deduct_fee_disclaimer);
+            message += "\n\n" + getString(R.string.uphold_withdrawal_deduct_fee_disclaimer);
         }
 
         dialogBuilder.setMessage(message);
@@ -210,14 +213,15 @@ public class UpholdWithdrawalDialog extends DialogFragment {
 
     private void commitTransaction() {
         final ProgressDialog progressDialog = showLoading();
-        UpholdClient.getInstance(getActivity()).commitTransaction(transaction.getId(), new UpholdClient.Callback<Object>() {
+        final String txId = transaction.getId();
+        UpholdClient.getInstance(getActivity()).commitTransaction(txId, new UpholdClient.Callback<Object>() {
             @Override
             public void onSuccess(Object data) {
                 if (onTransferListener != null) {
                     onTransferListener.onTransfer();
                 }
                 progressDialog.dismiss();
-                dismiss();
+                showSuccessDialog(txId);
             }
 
             @Override
@@ -228,6 +232,26 @@ public class UpholdWithdrawalDialog extends DialogFragment {
                 } else {
                     showLoadingError();
                 }
+            }
+        });
+    }
+
+    private void showSuccessDialog(final String txId) {
+        DialogBuilder dialogBuilder = new DialogBuilder(getActivity());
+        dialogBuilder.setTitle(R.string.uphold_withdrawal_success_title);
+        dialogBuilder.setMessage(getString(R.string.uphold_withdrawal_success_message, txId));
+        dialogBuilder.setPositiveButton(android.R.string.ok, null);
+        dialogBuilder.setNeutralButton(R.string.uphold_see_on_uphold, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                String txUrl = String.format(UpholdConstants.TRANSACTION_URL, txId);
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(txUrl)));
+            }
+        });
+        dialogBuilder.show().setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                dismiss();
             }
         });
     }

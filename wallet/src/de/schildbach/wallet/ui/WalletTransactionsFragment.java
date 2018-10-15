@@ -724,7 +724,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
             @Override
             public void onSuccess(final BigDecimal balance) {
                 if (balance.compareTo(BigDecimal.ZERO) > 0) {
-                    final String infoText = getString(R.string.uphold_transfer_from_external_account_message, balance);
+                    final String infoText = getString(R.string.uphold_withdrawal_message, balance);
                     adapter.addInfo(new TransactionsAdapter.Info<>(infoText, balance));
                     //Check if is displaying empty screen and show list instead
                     if (viewGroup.getDisplayedChild() == 1 && !WalletLock.getInstance().isWalletLocked(wallet)) {
