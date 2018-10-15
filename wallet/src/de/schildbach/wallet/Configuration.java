@@ -74,7 +74,6 @@ public class Configuration {
     private static final String PREFS_KEY_LAST_BACKUP_SEED = "last_backup_seed";
     public static final String PREFS_KEY_INSTANTX_ENABLED = "labs_instantx_enabled";
     public static final String PREFS_KEY_LITE_MODE = "labs_lite_mode";
-    public final static String PREFS_LAST_UNLOCK_TIME = "last_unlock_time";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 4;
@@ -342,13 +341,5 @@ public class Configuration {
 
     public boolean getLiteMode() {
         return prefs.getBoolean(PREFS_KEY_LITE_MODE, true);
-    }
-
-    public long getLastUnlockTime() {
-        return prefs.getLong(PREFS_LAST_UNLOCK_TIME, 0);
-    }
-
-    public void setLastUnlockTime(long unlockTime) {
-        prefs.edit().putLong(PREFS_LAST_UNLOCK_TIME, unlockTime).apply();
     }
 }

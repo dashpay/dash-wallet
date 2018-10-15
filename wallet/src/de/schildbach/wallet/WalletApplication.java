@@ -567,7 +567,7 @@ public void updateDashMode()
 
     private void lockWalletIfNeeded() {
         WalletLock walletLock = WalletLock.getInstance();
-        if (walletLock.isWalletLocked(wallet)) {
+        if (wallet.isEncrypted() && !walletLock.isWalletLocked(wallet)) {
             walletLock.setWalletLocked(true);
         }
     }
@@ -579,7 +579,9 @@ public void updateDashMode()
 
     @Override
     public void onActivityStarted(Activity activity) {
-        lockWalletIfNeeded();
+        if (numStarted == 0) {
+            lockWalletIfNeeded();
+        }
         numStarted++;
     }
 
