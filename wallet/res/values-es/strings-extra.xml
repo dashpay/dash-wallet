@@ -18,11 +18,11 @@
 	<string name="backup_to_seed_wallet_dialog_message">Esta es tu frase de recuperación. Por favor anótala.</string>
 	<string name="backup_wallet_to_seed_dialog_warning">NO DEJES a nadie ver tu frase de recuperación o podrán gastar tus Dash.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Tu billetera está protegida por un PIN. Introduce tu PIN y presiona Mostrar para ver tu frase de recuperación.</string>
-	<string name="import_keys_from_seed_dialog_message">Introduce tu frase de recuperación aqui.</string>
+    <string name="import_keys_from_seed_dialog_message">Introduce tu frase de recuperación aqui.</string>
 	<string name="import_export_keys_dialog_password_phrase">La frase de recuperación va aquí.</string>
 	<string name="preferences_report_issue_summary">Reúne información sobre tu problema y envía un email a los desarrolladores con tu reporte.</string>
 	<string name="navigation_configuration">Configuración</string>
-	<string name="button_copy_address">Copiar dirección</string>
+    <string name="button_copy_address">Copiar dirección</string>
 	<string name="request_coins_clipboard_address_msg">Dirección Dash copiada en el portapapeles</string>
 	<string name="backup_wallet_to_seed_show_recovery_phrase">Mostrar</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%s es una palabra inválida.</string>
@@ -33,12 +33,12 @@
 	<string name="wallet_uri_handler_public_key_request_dialog_msg">La aplicación %s le gustaría recibir tu Llave Pública Maestra. Esto puede ser usado para realizar un seguimiento de tu billetera, esto no puede ser usado para mover tus Dash.</string>
 	<string name="wallet_uri_handler_address_request_dialog_msg">La aplicación %s está solicitando una dirección para que pueda pagarte. ¿Te gustaría autorizar esto?</string>
 
-	<string name="wallet_lock_unlock">Desbloquear</string>
-	<string name="wallet_lock_unlock_wallet">Desbloquear billetera</string>
-	<string name="wallet_lock_unlock_to_see_txs_title">Billetera bloqueada.</string>
-	<string name="wallet_lock_unlock_to_see_txs_txt">Toque el ícono de candado de arriba para desbloquear tu billetera y ver el historial de transacciones.</string>
-	<string name="wallet_lock_unlock_dialog_title">Desbloquea tu billetera</string>
-	<string name="wallet_lock_unlock_dialog_message">Tu billetera está protegida por un PIN. Ingresa tu PIN y presiona Desbloquear para continuar.</string>
+	<string name="wallet_lock_unlock">Abrir</string>
+	<string name="wallet_lock_unlock_wallet">Abrir billetera</string>
+	<string name="wallet_lock_unlock_to_see_txs_title">Billetera protegida.</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">Toque el ícono de candado de arriba para abrir tu billetera y ver el historial de transacciones.</string>
+	<string name="wallet_lock_unlock_dialog_title">Abra tu billetera</string>
+	<string name="wallet_lock_unlock_dialog_message">Tu billetera está protegida por un PIN. Ingresa tu PIN y presiona Abrir para continuar.</string>
 	<string name="wallet_lock_reset_wallet_title">Reiniciar billetera</string>
 	<string name="wallet_lock_reset_wallet_message">¿Estás seguro? Toda los datos almacenados serán borrados y tu billetera solo será recuperable por un archivo de respaldo o frase de recuperación.</string>
 
@@ -56,7 +56,7 @@
 		<item quantity="one">minuto</item>
 		<item quantity="other">minutos</item>
 	</plurals>
-
+	
 	<plurals name="hour">
 		<item quantity="one">hora</item>
 		<item quantity="other">horas</item>
@@ -67,12 +67,13 @@
 	<string name="encrypt_new_key_chain_dialog_message">Tu billetera será actualizada para admitir la importación y exportación a otras aplicaciones.</string>
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Debes ingresar tu PIN para finalizar el proceso de actualización.</string>
 	<string name="pin_code_required_dialog_message">Esta aplicación ahora requiere un PIN para gastos y también para ver su saldo y transacciones.</string>
-	<string name="backup_wallet_seed_private_key_written_down_box">He anotado la frase de recuperación</string>
-
+    <string name="backup_wallet_seed_private_key_written_down_box">He anotado la frase de recuperación</string>
+	
 	<string name="change_exchange_currency_code_message">Su moneda local es %1$s, pero en esta aplicación su moneda predeterminada está configurada como %2$s. Quieres cambiar para %1$s o dejar como %2$s?</string>
 	<string name="change_to">Cambiar para %s</string>
 	<string name="leave_as">Dejar como %s</string>
 
-	<string name="uphold_buy_dash_activity_title">Comprar Dash</string>
+	<string name="remind_later">Recordar más tarde</string>
+	<string name="backup_now">Hacer backup</string>
 
 </resources>

@@ -29,7 +29,6 @@ import org.bitcoinj.wallet.Wallet;
 import com.google.common.collect.Iterables;
 
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.util.ViewPagerTabs;
 import de.schildbach.wallet_test.R;
 
 import android.app.Fragment;
@@ -38,11 +37,15 @@ import android.app.FragmentTransaction;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
+import android.support.design.widget.TabLayout;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
+import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 /**
  * @author Andreas Schildbach
@@ -88,21 +91,23 @@ public final class AddressBookActivity extends AbstractBindServiceActivity {
 
 		final ViewPager pager = (ViewPager) findViewById(R.id.address_book_pager);
         if (pager != null) {
-            pager.setAdapter(
-                    new TwoFragmentAdapter(fragmentManager, walletAddressesFragment, sendingAddressesFragment));
+			String leftTitle = getString(R.string.address_book_list_receiving_title);
+			String rightTitle = getString(R.string.address_book_list_sending_title);
+			PagerAdapter adapter = new TwoFragmentAdapter(fragmentManager, walletAddressesFragment,
+					sendingAddressesFragment, leftTitle, rightTitle);
+			pager.setAdapter(adapter);
 
-			final ViewPagerTabs pagerTabs = (ViewPagerTabs) findViewById(R.id.address_book_pager_tabs);
-            pagerTabs.addTabLabels(R.string.address_book_list_receiving_title,
-                    R.string.address_book_list_sending_title);
-
-			pager.setOnPageChangeListener(pagerTabs);
+			TabLayout tabs = findViewById(R.id.address_book_pager_tabs);
 			final int position = 1;
 			pager.setCurrentItem(position);
 			pager.setPageMargin(2);
 			pager.setPageMarginDrawable(R.color.bg_less_bright);
 
-			pagerTabs.onPageSelected(position);
-			pagerTabs.onPageScrolled(position, 0, 0);
+			tabs.setupWithViewPager(pager);
+			for (int i = 0; i < tabs.getTabCount(); i++) {
+				TextView tv = (TextView) LayoutInflater.from(this).inflate(R.layout.tab_title, null);
+				tabs.getTabAt(i).setCustomView(tv);
+			}
         } else {
 			fragmentManager.beginTransaction().add(R.id.wallet_addresses_fragment, walletAddressesFragment, TAG_LEFT)
 					.add(R.id.sending_addresses_fragment, sendingAddressesFragment, TAG_RIGHT).commit();
@@ -141,14 +146,19 @@ public final class AddressBookActivity extends AbstractBindServiceActivity {
 		private final FragmentManager fragmentManager;
 		private final Fragment left;
 		private final Fragment right;
+		private final String leftTitle;
+		private final String rightTitle;
 
 		private FragmentTransaction currentTransaction = null;
 		private Fragment currentPrimaryItem = null;
 
-        public TwoFragmentAdapter(final FragmentManager fragmentManager, final Fragment left, final Fragment right) {
+        public TwoFragmentAdapter(final FragmentManager fragmentManager, final Fragment left,
+								  final Fragment right, String leftTitle, String rightTitle) {
 			this.fragmentManager = fragmentManager;
 			this.left = left;
 			this.right = right;
+			this.leftTitle = leftTitle;
+			this.rightTitle = rightTitle;
 		}
 
 		@Override
@@ -206,6 +216,17 @@ public final class AddressBookActivity extends AbstractBindServiceActivity {
 		@Override
         public boolean isViewFromObject(final View view, final Object object) {
 			return ((Fragment) object).getView() == view;
+		}
+
+
+		@Nullable
+		@Override
+		public CharSequence getPageTitle(int position) {
+			switch (position) {
+				case 0: return leftTitle;
+				case 1: return rightTitle;
+			}
+			return super.getPageTitle(position);
 		}
 	}
 }

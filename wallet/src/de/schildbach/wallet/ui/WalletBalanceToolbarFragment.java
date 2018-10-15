@@ -66,6 +66,7 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 	private CurrencyTextView viewBalanceBtc;
 	private View viewBalanceTooMuch;
 	private CurrencyTextView viewBalanceLocal;
+	private View appBarBottom;
 	private TextView appBarMessageView;
 
 	private boolean showLocalBalance;
@@ -116,7 +117,8 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 	public void onActivityCreated(@android.support.annotation.Nullable Bundle savedInstanceState)
 	{
 		super.onActivityCreated(savedInstanceState);
-		this.appBarMessageView = (TextView) activity.findViewById(R.id.toolbar_message);
+		appBarMessageView = activity.findViewById(R.id.toolbar_message);
+		appBarBottom = activity.findViewById(R.id.toolbar_bottom);
 	}
 
 	@Override
@@ -308,10 +310,10 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 
 	private void showAppBarMessage(CharSequence message) {
 		if (message != null) {
-			appBarMessageView.setVisibility(View.VISIBLE);
+			appBarBottom.setVisibility(View.VISIBLE);
 			appBarMessageView.setText(message);
 		} else {
-			appBarMessageView.setVisibility(View.GONE);
+			appBarBottom.setVisibility(View.GONE);
 		}
 	}
 

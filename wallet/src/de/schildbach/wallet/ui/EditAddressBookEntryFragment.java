@@ -38,8 +38,10 @@ import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.v7.app.AlertDialog;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 
 /**
@@ -107,16 +109,15 @@ public final class EditAddressBookEntryFragment extends DialogFragment {
         final boolean isAdd = label == null;
         final boolean isOwn = wallet.isPubKeyHashMine(address.getHash160());
 
-        final DialogBuilder dialog = new DialogBuilder(activity);
+        final DialogBuilder dialogBuilder = new DialogBuilder(activity);
+        final View view = inflater.inflate(R.layout.edit_address_book_entry_dialog, null);
 
         if (isOwn)
-            dialog.setTitle(isAdd ? R.string.edit_address_book_entry_dialog_title_add_receive
-                    : R.string.edit_address_book_entry_dialog_title_edit_receive);
+            dialogBuilder.setTitle((isAdd ? R.string.edit_address_book_entry_dialog_title_add_receive
+                    : R.string.edit_address_book_entry_dialog_title_edit_receive));
         else
-            dialog.setTitle(isAdd ? R.string.edit_address_book_entry_dialog_title_add
-                    : R.string.edit_address_book_entry_dialog_title_edit);
-
-        final View view = inflater.inflate(R.layout.edit_address_book_entry_dialog, null);
+            dialogBuilder.setTitle((isAdd ? R.string.edit_address_book_entry_dialog_title_add
+                    : R.string.edit_address_book_entry_dialog_title_edit));
 
         final TextView viewAddress = (TextView) view.findViewById(R.id.edit_address_book_entry_address);
         viewAddress.setText(WalletUtils.formatAddress(address, Constants.ADDRESS_FORMAT_GROUP_SIZE,
@@ -125,7 +126,7 @@ public final class EditAddressBookEntryFragment extends DialogFragment {
         final TextView viewLabel = (TextView) view.findViewById(R.id.edit_address_book_entry_label);
         viewLabel.setText(label != null ? label : suggestedAddressLabel);
 
-        dialog.setView(view);
+        dialogBuilder.setView(view);
 
         final DialogInterface.OnClickListener onClickListener = new DialogInterface.OnClickListener() {
             @Override
@@ -152,12 +153,30 @@ public final class EditAddressBookEntryFragment extends DialogFragment {
             }
         };
 
-        dialog.setPositiveButton(isAdd ? R.string.button_add : R.string.edit_address_book_entry_dialog_button_edit,
+        dialogBuilder.setPositiveButton(isAdd ? R.string.button_add : R.string.edit_address_book_entry_dialog_button_edit,
                 onClickListener);
         if (!isAdd)
-            dialog.setNeutralButton(R.string.button_delete, onClickListener);
-        dialog.setNegativeButton(R.string.button_cancel, onClickListener);
+            dialogBuilder.setNeutralButton(R.string.button_delete, onClickListener);
+        dialogBuilder.setNegativeButton(R.string.button_cancel, onClickListener);
 
-        return dialog.create();
+        final AlertDialog dialog = dialogBuilder.create();
+
+        dialog.setOnShowListener(new DialogInterface.OnShowListener() {
+            @Override
+            public void onShow(DialogInterface d) {
+                Button negativeButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+                Button neutralButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
+
+                int colorMediumGray = getActivity().getResources().getColor(R.color.medium_gray);
+                if (negativeButton != null) {
+                    negativeButton.setTextColor(colorMediumGray);
+                }
+                if (neutralButton != null) {
+                    neutralButton.setTextColor(colorMediumGray);
+                }
+            }
+        });
+
+        return dialog;
     }
 }

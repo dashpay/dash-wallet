@@ -157,6 +157,10 @@ public final class Constants {
 
     public static final int ADDRESS_FORMAT_GROUP_SIZE = 4;
     public static final int ADDRESS_FORMAT_LINE_SIZE = 12;
+    public static final int ADDRESS_ROW_FORMAT_LINE_SIZE = 20;
+    public static final int ADDRESS_FORMAT_FIRST_SECTION_SIZE = 12;
+    public static final int ADDRESS_FORMAT_LAST_SECTION_SIZE = 3;
+    public static final String ADDRESS_FORMAT_SECTION_SEPARATOR = "…";
 
     public static final MonetaryFormat LOCAL_FORMAT = new MonetaryFormat().noCode().minDecimals(2).optionalDecimals();
 

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="backup_buttons_margin">42dp</dimen>
+</resources>

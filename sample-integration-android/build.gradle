@@ -1,19 +1,19 @@
 apply plugin: 'com.android.application'
 
 repositories {
-    mavenLocal();
+    mavenLocal()
 }
 
 dependencies {
-    compile(project(':integration-android')) {
+    implementation(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
     }
-    compile 'org.dashj:dashj-core:0.14.4.7'
+    implementation 'org.dashj:dashj-core:0.14.4.7'
 }
 
 android {
     compileSdkVersion 'android-15'
-    buildToolsVersion '25.0.2'
+    buildToolsVersion '28.0.3'
 
     lintOptions { abortOnError false }
 
@@ -34,5 +34,8 @@ android {
         exclude 'com/google/thirdparty/publicsuffix/PublicSuffixType.gwt.xml'
         exclude 'org/bitcoinj/crypto/mnemonic/wordlist/english.txt'
         exclude 'org/bitcoinj/crypto/cacerts'
+    }
+    defaultConfig {
+        minSdkVersion = 15
     }
 }

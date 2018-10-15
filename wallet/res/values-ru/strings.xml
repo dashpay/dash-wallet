@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Ваш кошелёк был сброшен!\nВосстановление займёт некоторое время.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Используйте на свой страх и риск. Прочитайте &lt;u&gt;заметки по безопасности&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Вам необходимо &lt;u&gt;сделать резервную копию вашего кошелька&lt;/u&gt;!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Вам необходимо создать резервную копию кошелька!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d часов отставания</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d дней отставания</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d недель отставания</string>
@@ -20,15 +20,15 @@
     <string name="exchange_rates_fragment_empty_text">Не удалось загрузить курсы валют.</string>
     <string name="exchange_rates_fragment_empty_search">Не удалось найти обменный курс.</string>
     <string name="exchange_rates_fragment_default">(по умолчанию)</string>
-    <string name="exchange_rates_fragment_rate">курс</string>
-    <string name="exchange_rates_fragment_balance">баланс</string>
+    <string name="exchange_rates_fragment_rate">Курс</string>
+    <string name="exchange_rates_fragment_balance">Баланс</string>
     <string name="exchange_rates_fragment_source">Цена получена с %s</string>
     <string name="exchange_rates_options_search">Поиск обменного курса</string>
     <string name="exchange_rates_context_set_as_default_title">Включено по умолчанию</string>
     <string name="wallet_transactions_fragment_empty_text_received">Ещё не получено Dash.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Ещё не отправлено Dash.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Как получить Dash?\n\nОбменяйте обычные деньги,\nпродайте товары, окажите услуги или\nзаработайте.</string>
-    <string name="wallet_transactions_row_warning_backup">Поздравляем, вы получили первый платёж! Вы уже &lt;u&gt;сделали резервную копию кошелька&lt;/u&gt;, чтобы обезопаситься от потерь?</string>
+    <string name="wallet_transactions_row_warning_backup">Поздравляем, вы получили первый платёж! Вы уже сделали резервную копию кошелька, чтобы обезопасить себя от потерь?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Подсказка: чтобы усилить безопасность Вашего кошелька, вы можете &lt;u&gt;зашифровать ваше устройство&lt;/u&gt;. Это поможет защитить данные и других приложений.</string>
     <string name="wallet_transactions_fragment_coinbase">добыто</string>
     <string name="wallet_transactions_fragment_internal">внутренний</string>
@@ -67,6 +67,7 @@
     <string name="send_coins_fragment_receiving_address_complex">сложный\nадрес</string>
     <string name="send_coins_fragment_pending">(%s ожидание подтверждения)</string>
     <string name="send_coins_fragment_amount_label">Величина оплаты</string>
+    <string name="send_coins_fragment_pin_label">Введите PIN-код</string>
     <string name="send_coins_fragment_hint_fee_economic">Экономный размер платы составит %s. Используйте эту опцию только в том случае, если вам не важно время подтверждения транзакции.</string>
     <string name="send_coins_fragment_hint_fee">Будет заплачена комиссия %s.</string>
     <string name="send_coins_fragment_hint_fee_priority">Приоритетный размер платы составит %s. Если размер комиссии имеет для вас значение, используйте опцию приоритета только когда вам необходимо срочное подтверждение транзакции.</string>
@@ -326,8 +327,8 @@
     <string name="button_paste">Вставить</string>
     <string name="button_share">Поделиться</string>
     <string name="button_set_as_default">Установить по умолчанию</string>
-    <string name="button_request_coins">Запросить</string>
-    <string name="button_send_coins">Отправить</string>
+    <string name="button_request_coins">Запросить средства</string>
+    <string name="button_send_coins">Отправить средства</string>
     <string name="button_scan">Сканировать</string>
     <string name="button_settings">Настройки</string>
     <string name="action_show_qr">Показать QR код</string>

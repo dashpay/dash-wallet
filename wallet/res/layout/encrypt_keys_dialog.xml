@@ -1,112 +1,108 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:fillViewport="true"
-    android:scrollbars="none">
+    android:orientation="vertical"
+    style="@style/DialogContainer">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/list_entry_padding_vertical"
+        android:text="@string/encrypt_keys_dialog_message"
+        android:layout_marginBottom="@dimen/space_medium"
+        style="@style/MontserratRegular.DB.12"/>
+
+    <LinearLayout
+        android:id="@+id/encrypt_keys_dialog_password_old_group"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/list_entry_padding_vertical"
+        android:orientation="horizontal"
+        android:showDividers="middle" >
+
+        <EditText
+            android:id="@+id/encrypt_keys_dialog_password_old"
+            android:layout_width="0px"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="@string/encrypt_keys_dialog_password_old"
+            android:imeOptions="flagNoExtractUi"
+            android:inputType="numberPassword"
+            android:singleLine="true"
+            style="@style/MontserratMedium.DB.14"/>
+
+        <TextView
+            tools:visibility="visible"
+            android:id="@+id/encrypt_keys_dialog_bad_password"
+            android:layout_width="0px"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/private_key_bad_password"
+            android:textColor="@color/fg_error"
+            android:visibility="invisible"
+            android:textSize="@dimen/dialog_label_text_size"
+            style="@style/MontserratSemiBold"/>
+
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="@dimen/list_entry_padding_horizontal_lax"
-        android:layout_marginRight="@dimen/list_entry_padding_horizontal_lax"
-        android:orientation="vertical" >
+        android:layout_marginTop="@dimen/list_entry_padding_vertical"
+        android:divider="@drawable/divider_field"
+        android:orientation="horizontal"
+        android:showDividers="middle" >
 
-        <TextView
-            android:layout_width="match_parent"
+        <EditText
+            android:id="@+id/encrypt_keys_dialog_password_new"
+            android:layout_width="0px"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/list_entry_padding_vertical"
-            android:text="@string/encrypt_keys_dialog_message" />
-
-        <LinearLayout
-            android:id="@+id/encrypt_keys_dialog_password_old_group"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/list_entry_padding_vertical"
-            android:divider="@drawable/divider_field"
-            android:orientation="horizontal"
-            android:showDividers="middle" >
-
-            <EditText
-                android:id="@+id/encrypt_keys_dialog_password_old"
-                android:layout_width="0px"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="@string/encrypt_keys_dialog_password_old"
-                android:imeOptions="flagNoExtractUi"
-                android:inputType="numberPassword"
-                android:singleLine="true" />
-
-            <TextView
-                tools:visibility="visible"
-                android:id="@+id/encrypt_keys_dialog_bad_password"
-                android:layout_width="0px"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/private_key_bad_password"
-                android:textColor="@color/fg_error"
-                android:textStyle="bold"
-                android:visibility="invisible" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/list_entry_padding_vertical"
-            android:divider="@drawable/divider_field"
-            android:orientation="horizontal"
-            android:showDividers="middle" >
-
-            <EditText
-                android:id="@+id/encrypt_keys_dialog_password_new"
-                android:layout_width="0px"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="@string/private_key_password"
-                android:imeOptions="flagNoExtractUi"
-                android:inputType="numberPassword"
-                android:singleLine="true" />
-
-            <TextView
-                tools:visibility="visible"
-                tools:text="weak"
-                android:id="@+id/encrypt_keys_dialog_password_strength"
-                android:layout_width="0px"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:textStyle="bold" />
-
-        </LinearLayout>
-
-        <CheckBox
-            android:id="@+id/encrypt_keys_dialog_show"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/list_entry_padding_vertical"
-            android:layout_marginTop="@dimen/list_entry_padding_vertical"
-            android:text="@string/encrypt_keys_dialog_show" />
+            android:layout_weight="1"
+            android:hint="@string/private_key_password"
+            android:imeOptions="flagNoExtractUi"
+            android:inputType="numberPassword"
+            android:singleLine="true"
+            style="@style/MontserratMedium.DB.14"/>
 
         <TextView
             tools:visibility="visible"
-            tools:text="6 attempts remaining"
-            android:id="@+id/pin_attempts"
-            android:layout_width="wrap_content"
+            tools:text="weak"
+            android:id="@+id/encrypt_keys_dialog_password_strength"
+            android:layout_width="0px"
             android:layout_height="wrap_content"
-            android:textColor="@color/fg_error"
-            android:textStyle="bold"
-            android:visibility="gone" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/list_entry_padding_vertical_lax"
-            android:layout_marginTop="@dimen/list_entry_padding_vertical_lax"
-            android:text="@string/encrypt_keys_dialog_warning"
-            android:textColor="@color/fg_less_significant"
-            android:textSize="@dimen/font_size_small" />
+            android:layout_weight="1"
+            android:textSize="@dimen/dialog_label_text_size"
+            style="@style/MontserratSemiBold"/>
 
     </LinearLayout>
 
-</ScrollView>
+    <de.schildbach.wallet.ui.widget.MontserratCheckBox
+        android:id="@+id/encrypt_keys_dialog_show"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="@dimen/list_entry_padding_vertical"
+        android:layout_marginTop="@dimen/list_entry_padding_vertical"
+        android:text="@string/encrypt_keys_dialog_show"
+        style="@style/CheckBox"/>
+
+    <TextView
+        android:id="@+id/pin_attempts"
+        tools:visibility="visible"
+        tools:text="6 attempts remaining"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/fg_error"
+        android:visibility="gone"
+        android:textSize="@dimen/dialog_label_text_size"
+        style="@style/MontserratSemiBold"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="@dimen/list_entry_padding_vertical_lax"
+        android:layout_marginTop="@dimen/list_entry_padding_vertical_lax"
+        android:text="@string/encrypt_keys_dialog_warning"
+        style="@style/MontserratMedium.MG.12"/>
+
+</LinearLayout>

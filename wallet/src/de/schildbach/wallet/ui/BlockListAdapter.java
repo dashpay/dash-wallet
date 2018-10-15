@@ -53,8 +53,6 @@ import android.widget.TextView;
  * @author Andreas Schildbach
  */
 public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.BlockViewHolder> {
-    private static final int ROW_BASE_CHILD_COUNT = 2;
-    private static final int ROW_INSERT_INDEX = 1;
 
     private final Context context;
     private final Wallet wallet;
@@ -155,7 +153,7 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
 
         holder.hashView.setText(WalletUtils.formatHash(null, header.getHashAsString(), 8, 0, ' '));
 
-        final int transactionChildCount = holder.transactionsViewGroup.getChildCount() - ROW_BASE_CHILD_COUNT;
+        final int transactionChildCount = holder.transactionsViewGroup.getChildCount();
         int iTransactionView = 0;
 
         if (transactions != null) {
@@ -163,10 +161,10 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
                 if (tx.getAppearsInHashes().containsKey(header.getHash())) {
                     final View view;
                     if (iTransactionView < transactionChildCount) {
-                        view = holder.transactionsViewGroup.getChildAt(ROW_INSERT_INDEX + iTransactionView);
+                        view = holder.transactionsViewGroup.getChildAt(iTransactionView);
                     } else {
                         view = inflater.inflate(R.layout.block_row_transaction, null);
-                        holder.transactionsViewGroup.addView(view, ROW_INSERT_INDEX + iTransactionView);
+                        holder.transactionsViewGroup.addView(view, iTransactionView);
                     }
 
                     bindView(view, tx);
@@ -178,7 +176,7 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
 
         final int leftoverTransactionViews = transactionChildCount - iTransactionView;
         if (leftoverTransactionViews > 0)
-            holder.transactionsViewGroup.removeViews(ROW_INSERT_INDEX + iTransactionView, leftoverTransactionViews);
+            holder.transactionsViewGroup.removeViews(iTransactionView, leftoverTransactionViews);
 
         if (onClickListener != null) {
             holder.menuView.setOnClickListener(new View.OnClickListener() {

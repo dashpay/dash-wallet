@@ -61,7 +61,7 @@
                 android:layout_marginBottom="16dp"
                 android:layout_marginRight="16dp"
                 android:src="@drawable/ic_qrcode"
-                app:backgroundTint="@color/strong_blue_new" />
+                app:backgroundTint="@color/colorPrimary" />
 
         </android.support.design.widget.CoordinatorLayout>
 
@@ -69,11 +69,12 @@
 
     <android.support.design.widget.NavigationView
         android:id="@+id/nav_view"
-        android:layout_width="wrap_content"
+        android:layout_width="240dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:fitsSystemWindows="true"
         app:headerLayout="@layout/nav_header_main"
+        android:theme="@style/NavigationTheme"
         app:menu="@menu/main_drawer" />
 
 </android.support.v4.widget.DrawerLayout>

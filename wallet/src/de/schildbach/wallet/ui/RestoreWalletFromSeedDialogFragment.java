@@ -18,12 +18,12 @@
 package de.schildbach.wallet.ui;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.app.FragmentManager;
 import android.content.DialogInterface;
 import android.os.Bundle;
+import android.support.v7.app.AlertDialog;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.Spanned;
@@ -265,7 +265,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
                 invalidWordView.setText(getString(R.string.restore_wallet_from_invalid_seed_warning_message, firstBadWord));
                 invalidWordView.setVisibility(View.VISIBLE);
             }
-            else invalidWordView.setVisibility(View.INVISIBLE);
+            else invalidWordView.setVisibility(View.GONE);
             final Button button = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
             button.setEnabled(restoreButtonEnabled);
             String restoreButtonTitle = getString(R.string.import_keys_dialog_button_import);

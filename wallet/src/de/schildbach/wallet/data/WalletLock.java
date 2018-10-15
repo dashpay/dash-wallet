@@ -18,15 +18,24 @@
 package de.schildbach.wallet.data;
 
 import org.bitcoinj.wallet.Wallet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import de.schildbach.wallet.Configuration;
+
 public class WalletLock {
+
+    protected static final Logger log = LoggerFactory.getLogger(WalletLock.class);
+
 
     private List<OnLockChangeListener> listeners = new ArrayList<>();
 
-    private boolean walletLocked = true;
+    private static int DEFAULT_LOCK_TIMER_MILLIS = 1000 * 60 * 3; // 3 Minutes
+
+    private Configuration config;
 
     private static WalletLock instance;
 
@@ -40,11 +49,14 @@ public class WalletLock {
     }
 
     public boolean isWalletLocked(Wallet wallet) {
-        return walletLocked && wallet.isEncrypted();
+        boolean isTimerExpired = config.getLastUnlockTime() + DEFAULT_LOCK_TIMER_MILLIS < System.currentTimeMillis();
+        return isTimerExpired && wallet.isEncrypted();
     }
 
     public void setWalletLocked(boolean walletLocked) {
-        this.walletLocked = walletLocked;
+        log.info(walletLocked ? "Locking" : "Unlocking" + "wallet");
+        if(walletLocked)
+            config.setLastUnlockTime(0);
         for (OnLockChangeListener listener : listeners) {
             listener.onLockChanged(walletLocked);
         }
@@ -60,6 +72,10 @@ public class WalletLock {
 
     public interface OnLockChangeListener {
         void onLockChanged(boolean locked);
+    }
+
+    public void setConfiguration(Configuration config) {
+        this.config = config;
     }
 
 }

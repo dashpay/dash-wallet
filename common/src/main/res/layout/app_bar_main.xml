@@ -13,9 +13,9 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@drawable/toolbar_background"
-        app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
-        app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
+        android:background="@color/colorPrimary"
+        app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+        app:popupTheme="@style/My.PopupOverlay">
 
         <fragment
             android:id="@+id/wallet_balance_fragment_toolbar"
@@ -28,28 +28,22 @@
     </android.support.v7.widget.Toolbar>
 
     <RelativeLayout
+        android:background="@color/medium_gray"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:id="@+id/toolbar_bottom"
+        android:layout_height="50dp">
 
         <TextView
             android:id="@+id/toolbar_message"
+            android:gravity="center"
+            android:layout_centerInParent="true"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/dark_blue"
-            android:paddingBottom="8dp"
-            android:paddingLeft="16dp"
-            android:paddingRight="16dp"
-            android:paddingTop="10dp"
-            android:text="toolbar message..."
+            tools:text="Synchronizing with network. 3 months behind."
             android:textColor="@color/white"
-            android:textSize="14sp" />
+            app:fontFamily="@font/montserrat_regular"
+            android:textSize="12sp" />
 
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="4dp"
-            android:layout_marginTop="2dp"
-            android:background="@color/vivid_red"
-            android:orientation="horizontal" />
     </RelativeLayout>
 
 </android.support.design.widget.AppBarLayout>

@@ -1,4 +1,10 @@
 Dash Wallet
+v6.0.0
+* Rebranded
+* Updated block explorer list
+* Wallet stays unlocked for 3 minutes
+* Fix backup archival on Android 8 and above
+
 v5.18.5
 * Paper Wallet Sweep:  Use block explorers as a backup for electrum servers
 

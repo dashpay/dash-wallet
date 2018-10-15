@@ -37,7 +37,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
-import de.schildbach.wallet_test.R;
 
 /**
  * @author Andreas Schildbach
@@ -142,7 +141,7 @@ public class WalletAddressesAdapter extends BaseAdapter {
 
         final TextView addressView = (TextView) row.findViewById(R.id.address_book_row_address);
         addressView.setText(WalletUtils.formatAddress(address, Constants.ADDRESS_FORMAT_GROUP_SIZE,
-                Constants.ADDRESS_FORMAT_LINE_SIZE));
+                address.toBase58().length()));
         addressView.setTextColor(isRotateKey ? colorInsignificant : colorSignificant);
 
         final TextView labelView = (TextView) row.findViewById(R.id.address_book_row_label);

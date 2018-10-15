@@ -30,9 +30,11 @@ import org.dash.wallet.common.util.MonetarySpannable;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.support.v4.content.res.ResourcesCompat;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.Spannable;
@@ -55,7 +57,7 @@ public final class CurrencyAmountView extends FrameLayout {
         void focusChanged(final boolean hasFocus);
     }
 
-    private int significantColor, lessSignificantColor, errorColor;
+    private int significantColor, lessSignificantColor, errorColor, colorPrimary;
     private Drawable deleteButtonDrawable, contextButtonDrawable;
     private Drawable currencySymbolDrawable;
     private String localCurrencyCode = null;
@@ -85,6 +87,7 @@ public final class CurrencyAmountView extends FrameLayout {
         significantColor = resources.getColor(R.color.fg_significant);
         lessSignificantColor = resources.getColor(R.color.fg_less_significant);
         errorColor = resources.getColor(R.color.fg_error);
+        colorPrimary = resources.getColor(R.color.colorPrimary);
         deleteButtonDrawable = resources.getDrawable(R.drawable.ic_clear_grey600_24dp);
     }
 
@@ -103,6 +106,11 @@ public final class CurrencyAmountView extends FrameLayout {
         textView.addTextChangedListener(textViewListener);
         textView.setOnFocusChangeListener(textViewListener);
 
+        //For layout preview only.
+        if (isInEditMode()) {
+            textView.setText("0.1");
+        }
+
         contextButton = new View(context) {
             @Override
             protected void onMeasure(final int wMeasureSpec, final int hMeasureSpec) {
@@ -120,21 +128,22 @@ public final class CurrencyAmountView extends FrameLayout {
 
     public void setCurrencySymbol(@Nullable final String currencyCode) {
         if (MonetaryFormat.CODE_BTC.equals(currencyCode)) {
-            currencySymbolDrawable = getResources().getDrawable(R.drawable.currency_symbol_btc);
+            currencySymbolDrawable = getResources().getDrawable(R.drawable.currency_symbol_dash);
             localCurrencyCode = null;
         } else if (MonetaryFormat.CODE_MBTC.equals(currencyCode)) {
-            currencySymbolDrawable = getResources().getDrawable(R.drawable.currency_symbol_mbtc);
+            currencySymbolDrawable = getResources().getDrawable(R.drawable.currency_symbol_mdash);
             localCurrencyCode = null;
         } else if (MonetaryFormat.CODE_UBTC.equals(currencyCode)) {
-            currencySymbolDrawable = getResources().getDrawable(R.drawable.currency_symbol_ubtc);
+            currencySymbolDrawable = getResources().getDrawable(R.drawable.currency_symbol_udash);
             localCurrencyCode = null;
         } else if (currencyCode != null) // fiat
         {
             final String currencySymbol = GenericUtils.currencySymbol(currencyCode);
             final float textSize = textView.getTextSize();
-            final float smallerTextSize = textSize * (20f / 24f);
-            currencySymbolDrawable = new CurrencySymbolDrawable(currencySymbol, smallerTextSize, lessSignificantColor,
-                    textSize * 0.37f);
+            final float smallerTextSize = textSize * 0.85f;
+            Typeface typeface = ResourcesCompat.getFont(getContext(), R.font.montserrat_semibold);
+            currencySymbolDrawable = new CurrencySymbolDrawable(currencySymbol,
+                    typeface, smallerTextSize, colorPrimary, smallerTextSize * 0.41f);
             localCurrencyCode = currencyCode;
         } else {
             currencySymbolDrawable = null;
@@ -265,6 +274,9 @@ public final class CurrencyAmountView extends FrameLayout {
     };
 
     private void updateAppearance() {
+        if (isInEditMode()) {
+            return;
+        }
         final boolean enabled = textView.isEnabled();
 
         contextButton.setEnabled(enabled);

@@ -114,9 +114,9 @@ public final class SendingAddressesFragment extends FancyListFragment
             public boolean setViewValue(final View view, final Cursor cursor, final int columnIndex) {
                 if (!AddressBookProvider.KEY_ADDRESS.equals(cursor.getColumnName(columnIndex)))
                     return false;
-
-                ((TextView) view).setText(WalletUtils.formatHash(cursor.getString(columnIndex),
-                        Constants.ADDRESS_FORMAT_GROUP_SIZE, Constants.ADDRESS_FORMAT_LINE_SIZE));
+                String address = cursor.getString(columnIndex);
+                ((TextView) view).setText(WalletUtils.formatHash(address,
+                        Constants.ADDRESS_FORMAT_GROUP_SIZE, address.length()));
 
                 return true;
             }

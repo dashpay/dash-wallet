@@ -20,6 +20,7 @@ package org.dash.wallet.common.ui;
 import android.graphics.Canvas;
 import android.graphics.ColorFilter;
 import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 
 import org.dash.wallet.common.Constants;
@@ -32,7 +33,8 @@ public final class CurrencySymbolDrawable extends Drawable {
     private final String symbol;
     private final float y;
 
-    public CurrencySymbolDrawable(final String symbol, final float textSize, final int color, final float y) {
+    public CurrencySymbolDrawable(final String symbol, Typeface typeface, final float textSize, final int color, final float y) {
+        paint.setTypeface(typeface);
         paint.setColor(color);
         paint.setAntiAlias(true);
         paint.setTextSize(textSize);

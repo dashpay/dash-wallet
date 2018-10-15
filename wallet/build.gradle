@@ -1,5 +1,9 @@
 apply plugin: 'com.android.application'
 
+ext {
+    archivesBaseName = 'dash-wallet'
+    androidSupportVersion = '27.1.1'
+}
 repositories {
     mavenLocal()
     maven {
@@ -9,55 +13,57 @@ repositories {
 }
 
 dependencies {
-    compile 'com.android.support:design:25.1.1'
-    compile 'com.android.support:appcompat-v7:25.1.1'
-    compile 'com.android.support:support-v4:25.1.1'
-    compile(project(':integration-android')) {
+    implementation "com.android.support:design:$androidSupportVersion"
+    implementation "com.android.support:appcompat-v7:$androidSupportVersion"
+    implementation "com.android.support:support-v4:$androidSupportVersion"
+    implementation(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
     }
-    compile 'com.android.support:support-annotations:25.1.1'
-    compile 'com.android.support:support-compat:25.1.1'
-    compile('com.android.support:support-v13:25.1.1') {
+    implementation "com.android.support:support-annotations:$androidSupportVersion"
+    implementation "com.android.support:support-compat:$androidSupportVersion"
+    implementation("com.android.support:support-v13:$androidSupportVersion") {
         exclude(group: 'com.android.support', module: 'support-fragment')
         exclude(group: 'com.android.support', module: 'support-media-compat')
     }
-    compile 'com.android.support:support-core-utils:25.1.1'
-    compile 'com.android.support:recyclerview-v7:25.1.1'
-    compile 'com.android.support:cardview-v7:25.1.1'
-    compile 'org.dashj:dashj-core:0.14.4.7'
-    compile 'com.google.protobuf:protobuf-java:2.6.1'
-    compile 'com.google.guava:guava:20.0'
-    compile 'com.google.zxing:core:3.3.0'
-
-    //compile 'com.netki:wallet-name-resolver:0.1.3'
-    compile 'com.hashengineering:dash-wallet-name-resolver:0.1.4-12.1'
-    compile 'org.slf4j:slf4j-api:1.7.22'
-    compile('com.github.tony19:logback-android-classic:1.1.1-6') {
+    implementation "com.android.support:support-core-utils:$androidSupportVersion"
+    implementation "com.android.support:recyclerview-v7:$androidSupportVersion"
+    implementation "com.android.support:cardview-v7:$androidSupportVersion"
+    implementation 'org.dashj:dashj-core:0.14.4.7'
+    implementation 'com.google.protobuf:protobuf-java:2.6.1'
+    implementation 'com.google.guava:guava:20.0'
+    implementation 'com.google.zxing:core:3.3.0'
+    implementation 'com.squareup.okhttp:okhttp:2.7.5'
+    implementation 'com.squareup.okhttp:logging-interceptor:2.7.5'
+    implementation 'com.squareup.moshi:moshi:1.3.1'
+    //implementation 'com.netki:wallet-name-resolver:0.1.3'
+    implementation 'com.hashengineering:dash-wallet-name-resolver:0.1.4-12.1'
+    implementation 'org.slf4j:slf4j-api:1.7.22'
+    implementation('com.github.tony19:logback-android-classic:1.1.1-6') {
         exclude(group: 'com.google.android', module: 'android')
     }
-    compile 'com.github.tony19:logback-android-core:1.1.1-6'
-    compile 'com.google.code.findbugs:jsr305:2.0.3'
-    testCompile 'junit:junit:4.12'
-    //Memory Leak Detection
-    debugCompile 'com.squareup.leakcanary:leakcanary-android:1.5.1'
-    releaseCompile 'com.squareup.leakcanary:leakcanary-android-no-op:1.5.1'
-    testCompile 'com.squareup.leakcanary:leakcanary-android-no-op:1.5.1'
+    implementation 'com.github.tony19:logback-android-core:1.1.1-6'
+    implementation 'com.google.code.findbugs:jsr305:2.0.3'
 
+    implementation project(path: ':common')
+    //releaseImplementation project(path: ':common', configuration: 'release')
     //Uphold Integration
-    debugCompile project(path: ':common', configuration: 'debug')
-    releaseCompile project(path: ':common', configuration: 'release')
-    debugCompile project(path: ':uphold-integration', configuration: 'debug')
-    releaseCompile project(path: ':uphold-integration', configuration: 'release')
-
+    implementation project(path: ':uphold-integration')
+    //releaseImplementation project(path: ':uphold-integration', configuration: 'release')
+    //Memory Leak Detection
+    debugImplementation 'com.squareup.leakcanary:leakcanary-android:1.6.1'
+    debugImplementation 'com.squareup.leakcanary:leakcanary-support-fragment:1.6.1'
+    releaseImplementation 'com.squareup.leakcanary:leakcanary-android-no-op:1.6.1'
+    testImplementation 'com.squareup.leakcanary:leakcanary-android-no-op:1.6.1'
+    testImplementation 'junit:junit:4.12'
     //Espresso
-    androidTestCompile ('com.android.support.test:runner:1.0.1') {
+    androidTestImplementation ('com.android.support.test:runner:1.0.1') {
         exclude group: 'com.android.support', module: 'support-annotations'
     }
-    androidTestCompile ('com.android.support.test.espresso:espresso-core:3.0.1') {
+    androidTestImplementation ('com.android.support.test.espresso:espresso-core:3.0.1') {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
         exclude group: 'com.android.support', module: 'support-annotations'
     }
-    androidTestCompile ('com.android.support.test.espresso:espresso-intents:3.0.1') {
+    androidTestImplementation ('com.android.support.test.espresso:espresso-intents:3.0.1') {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
         exclude group: 'com.android.support', module: 'support-annotations'
     }
@@ -69,25 +75,38 @@ ext {
 }
 
 android {
-    compileSdkVersion 'android-25'
-    buildToolsVersion '25.0.2'
+    compileSdkVersion 28
+    buildToolsVersion '28.0.3'
 
     lintOptions {
         abortOnError false
         disable 'MissingTranslation'
     }
     defaultConfig {
+        minSdkVersion 16
+        targetSdkVersion 25
         generatedDensities = ['hdpi', 'xhdpi']
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        ndk {
+            abiFilters 'armeabi', 'armeabi-v7a', 'x86'
+        }
+        externalNativeBuild {
+            cmake {
+                cFlags '-DHAVE_CONFIG_H'
+                cppFlags ""
+                arguments "-DANDROID_STL=c++_shared"
+            }
+        }
     }
 
     buildTypes {
-        all {
+        release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg'
             testProguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg', 'proguardTest-rules.txt'
         }
         debug {
+            multiDexEnabled true
             debuggable true
         }
     }
@@ -114,6 +133,7 @@ android {
             res.srcDirs = ["beta/res"]
         }
     }
+    flavorDimensions "default"
     productFlavors {
         beta {
             applicationId = "hashengineering.dash.wallet.beta"
@@ -123,6 +143,11 @@ android {
         }
         _testNet3 {
             applicationId = "hashengineering.darkcoin.wallet_test"
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path 'cpp/CMakeLists.txt'
         }
     }
     packagingOptions {
@@ -140,27 +165,12 @@ android {
         exclude 'META-INF/services/org.xmlpull.v1.XmlPullParserFactory'
     }
     dexOptions {
-        incremental true
         preDexLibraries true
     }
 }
 
-task buildNativeScrypt(type: GradleBuild) {
-    buildFile = '../native-scrypt/build.gradle'
-    tasks = ['copy']
-}
-
-task buildNativeX11(type: GradleBuild) {
-    buildFile = '../native-x11/build.gradle'
-    tasks = ['copy']
-}
-
-preBuild.dependsOn 'buildNativeScrypt'
-preBuild.dependsOn 'buildNativeX11'
-
 clean {
-    //This is commented out to so apks will include the scrypt libraries with gradle 4.10
-    //file('src/main/jniLibs').deleteDir()
+    file('src/main/jniLibs').deleteDir()
 }
 
 /*task svgToPngMipmap(type: fr.avianey.androidsvgdrawable.gradle.SvgDrawableTask) {

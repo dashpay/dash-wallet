@@ -26,7 +26,8 @@
             android:text="@string/wallet_balance_fragment_too_much"
             android:textColor="@color/white"
             android:textSize="@dimen/font_size_tiny"
-            android:visibility="gone" />
+            android:visibility="gone"
+            style="@style/MontserratMedium"/>
 
         <org.dash.wallet.common.ui.CurrencyTextView
             android:id="@+id/wallet_balance_local"
@@ -42,8 +43,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:layout_marginLeft="@dimen/list_entry_padding_horizontal_lax"
-        android:layout_marginRight="@dimen/list_entry_padding_horizontal_lax"
+        android:layout_marginLeft="@dimen/space_medium"
+        android:layout_marginRight="@dimen/space_medium"
         android:textColor="@color/white"
         android:textSize="@dimen/font_size_small"
         android:visibility="gone" />

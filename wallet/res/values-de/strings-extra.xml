@@ -73,4 +73,7 @@
 	<string name="change_to">Wechsel zu %s</string>
 	<string name="leave_as">Belasse %s</string>
 
+	<string name="remind_later">Später erinnern</string>
+	<string name="backup_now">Backup erstellen</string>
+
 </resources>

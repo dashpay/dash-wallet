@@ -38,23 +38,25 @@ import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
-import android.app.Fragment;
-import android.app.LoaderManager;
-import android.app.LoaderManager.LoaderCallbacks;
-import android.content.AsyncTaskLoader;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.Loader;
 import android.content.ServiceConnection;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.AsyncTaskLoader;
+import android.support.v4.content.Loader;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -167,7 +169,8 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 
 	@Override
     public void onBlockMenuClick(final View view, final StoredBlock block) {
-		final PopupMenu popupMenu = new PopupMenu(activity, view);
+		Context wrapper = new ContextThemeWrapper(activity, R.style.My_PopupOverlay);
+		final PopupMenu popupMenu = new PopupMenu(wrapper, view);
 		popupMenu.inflate(R.menu.blocks_context);
 
         popupMenu.setOnMenuItemClickListener(new OnMenuItemClickListener() {
@@ -253,14 +256,14 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 		};
 	}
 
-    private final LoaderCallbacks<List<StoredBlock>> blockLoaderCallbacks = new LoaderCallbacks<List<StoredBlock>>() {
+	private final LoaderManager.LoaderCallbacks<List<StoredBlock>> blockLoaderCallbacks = new LoaderManager.LoaderCallbacks<List<StoredBlock>>() {
 		@Override
         public Loader<List<StoredBlock>> onCreateLoader(final int id, final Bundle args) {
 			return new BlockLoader(activity, service);
 		}
 
 		@Override
-        public void onLoadFinished(final Loader<List<StoredBlock>> loader, final List<StoredBlock> blocks) {
+		public void onLoadFinished(@NonNull android.support.v4.content.Loader<List<StoredBlock>> loader, List<StoredBlock> blocks) {
 			adapter.replace(blocks);
 			viewGroup.setDisplayedChild(1);
 
@@ -270,7 +273,7 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 		}
 
 		@Override
-        public void onLoaderReset(final Loader<List<StoredBlock>> loader) {
+		public void onLoaderReset(@NonNull android.support.v4.content.Loader<List<StoredBlock>> loader) {
 			adapter.clear();
 		}
 	};
@@ -301,19 +304,21 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 		}
 	}
 
-    private final LoaderCallbacks<Set<Transaction>> transactionLoaderCallbacks = new LoaderCallbacks<Set<Transaction>>() {
+    private final LoaderManager.LoaderCallbacks<Set<Transaction>> transactionLoaderCallbacks = new LoaderManager.LoaderCallbacks<Set<Transaction>>() {
+
+		@NonNull
 		@Override
-        public Loader<Set<Transaction>> onCreateLoader(final int id, final Bundle args) {
+		public android.support.v4.content.Loader<Set<Transaction>> onCreateLoader(int id, @Nullable Bundle args) {
 			return new TransactionsLoader(activity, wallet);
 		}
 
 		@Override
-        public void onLoadFinished(final Loader<Set<Transaction>> loader, final Set<Transaction> transactions) {
+		public void onLoadFinished(@NonNull android.support.v4.content.Loader<Set<Transaction>> loader, Set<Transaction> transactions) {
 			adapter.replaceTransactions(transactions);
 		}
 
 		@Override
-        public void onLoaderReset(final Loader<Set<Transaction>> loader) {
+		public void onLoaderReset(@NonNull android.support.v4.content.Loader<Set<Transaction>> loader) {
 			adapter.clearTransactions();
 		}
 	};

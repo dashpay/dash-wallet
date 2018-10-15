@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/backup_wallet_disclaimer"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingTop="26dp"
+    android:gravity="center">
+
+    <TextView
+        android:id="@+id/backup_warning_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="36dp"
+        android:layout_marginRight="36dp"
+        android:layout_marginBottom="18dp"
+        android:gravity="center"
+        android:text="@string/wallet_disclaimer_fragment_remind_backup"
+        style="@style/MontserratMedium.MG.12"/>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingLeft="@dimen/backup_buttons_margin"
+        android:paddingRight="@dimen/backup_buttons_margin"
+        android:weightSum="2">
+
+        <Button
+            android:id="@+id/backup_now"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@string/backup_now"
+            android:layout_marginRight="2dp"
+            android:layout_marginEnd="2dp"
+            style="@style/MontserratButton"/>
+
+        <Button
+            android:id="@+id/remind_later"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@string/remind_later"
+            android:layout_marginLeft="2dp"
+            android:layout_marginStart="2dp"
+            style="@style/MontserratButton.Inverted"/>
+
+    </LinearLayout>
+
+    <View android:layout_marginTop="20dp" style="@style/ListSeparator"/>
+
+</LinearLayout>

@@ -1,14 +1,16 @@
 package de.schildbach.wallet.ui;
 
 import android.app.Activity;
-import android.app.AlertDialog;
+
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.content.DialogInterface;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
+import android.support.v7.app.AlertDialog;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
@@ -19,6 +21,8 @@ import android.widget.TextView;
 
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.DialogBuilder;
+
+import java.util.concurrent.TimeUnit;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.preference.PinRetryController;
@@ -89,7 +93,16 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
         alertDialog.setOnShowListener(new DialogInterface.OnShowListener() {
             @Override
             public void onShow(DialogInterface dialog) {
-                KeyboardUtil.showSoftKeyboard(getActivity(), pinView);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    pinView.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            KeyboardUtil.showSoftKeyboard(getActivity(), pinView);
+                        }
+                    }, 100);
+                } else {
+                    KeyboardUtil.showSoftKeyboard(getActivity(), pinView);
+                }
             }
         });
 
