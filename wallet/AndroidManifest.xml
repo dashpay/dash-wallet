@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="de.schildbach.wallet_test"
     android:installLocation="internalOnly"
-    android:versionCode="60000"
+    android:versionCode="60001"
     android:versionName="6.0.0" >
 
     <!-- normal permissions -->
