@@ -144,7 +144,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         application = getWalletApplication();
         config = application.getConfiguration();
         wallet = application.getWallet();
-        WalletLock.getInstance().setConfiguration(config);
 
         setContentView(R.layout.wallet_activity_onepane_vertical);
 

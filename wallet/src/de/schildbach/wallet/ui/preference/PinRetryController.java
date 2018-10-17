@@ -6,15 +6,11 @@ import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.widget.Toast;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet_test.R;
 
@@ -31,8 +27,6 @@ public class PinRetryController {
     private final static int POW_LOCK_TIME_BASE = 6;
     private final static int FAIL_LIMIT = 8;
     private final static long ONE_MINUTE_MILLIS = TimeUnit.MINUTES.toMillis(1);
-
-    private static final Logger log = LoggerFactory.getLogger(PinRetryController.class);
 
     public PinRetryController(Context context) {
         this.context = context;
@@ -64,18 +58,6 @@ public class PinRetryController {
         prefsEditor.remove(PREFS_FAIL_HEIGHT);
         prefsEditor.remove(PREFS_FAILED_PINS);
         prefsEditor.apply();
-        log.info("PIN entered successfully");
-    }
-
-    /**
-     * When the PIN is entered successfully, save the time it was entered.
-     * @param config
-     */
-    public void successfulAttempt(Configuration config) {
-        long secureTime = prefs.getLong(PREFS_SECURE_TIME, System.currentTimeMillis());
-        config.setLastUnlockTime(secureTime);
-        successfulAttempt();
-        log.info("PIN entered successfully at " + secureTime/1000);
     }
 
     public void failedAttempt(String pin) {
@@ -88,7 +70,6 @@ public class PinRetryController {
             int failCount = failedPins.size();
             SharedPreferences.Editor prefsEditor = prefs.edit();
             prefsEditor.putStringSet(PREFS_FAILED_PINS, failedPins);
-            log.info("PIN entered incorrectly " + failCount + "times");
 
             if (failCount >= FAIL_LIMIT) {
                 wipeWallet();
@@ -139,7 +120,6 @@ public class PinRetryController {
         dialogBuilder.setNegativeButton(android.R.string.yes, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                log.info("Clearing all app data and exiting.");
                 WalletApplication.getInstance().clearDataAndExit();
             }
         });
@@ -157,7 +137,6 @@ public class PinRetryController {
     private void wipeWallet() {
         Toast.makeText(context, "Locked 4ever. Wiping wallet... ", Toast.LENGTH_SHORT).show();
         //TODO: WIPE WALLET AND CLOSE THE APP
-        log.info("Locked 4ever. Wiping wallet... (function not implimented)");
     }
 
     public void storeSecureTime(Date date) {

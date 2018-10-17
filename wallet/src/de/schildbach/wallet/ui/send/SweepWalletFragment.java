@@ -229,7 +229,7 @@ public class SweepWalletFragment extends Fragment {
 		introductionGroup = view.findViewById(R.id.sweep_wallet_introduction_group);
         balanceGroup = view.findViewById(R.id.sweep_wallet_balance_group);
 
-		balanceView = (CurrencyTextView) view.findViewById(R.id.uphold_account_balance);
+		balanceView = (CurrencyTextView) view.findViewById(R.id.sweep_wallet_fragment_balance);
 
 		sweepTransactionView = (FrameLayout) view.findViewById(R.id.sweep_wallet_fragment_sent_transaction);
 		sweepTransactionViewGroup = view.findViewById(R.id.sweep_wallet_fragment_sent_transaction_group);
