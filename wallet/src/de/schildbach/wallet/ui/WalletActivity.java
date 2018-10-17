@@ -39,12 +39,14 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.dash.wallet.common.ui.DialogBuilder;
 
-import org.dash.wallet.integration.uphold.ui.UpholdActivity;
+import org.dash.wallet.integration.uphold.data.UpholdClient;
+import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
+import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.squareup.okhttp.HttpUrl;
 
-import de.schildbach.wallet.Configuration;
+import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
@@ -183,6 +185,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
         Toolbar toolbarView = initToolbar();
         initNavigationDrawer(toolbarView);
         initFloatingButton();
+        findViewById(R.id.uphold_account_section).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startUpholdActivity();
+                viewDrawer.closeDrawer(GravityCompat.START);
+            }
+        });
     }
 
     private Toolbar initToolbar() {
@@ -1082,8 +1091,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             handleDisconnect();
         } else if (id == R.id.nav_report_issue) {
             handleReportIssue();
-        } else if (id == R.id.nav_buy_dash) {
-            startUpholdActivity();
         }
 
         viewDrawer.closeDrawer(GravityCompat.START);
@@ -1100,7 +1107,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void startUpholdActivity() {
-        Intent intent = new Intent(this, UpholdActivity.class);
+        Intent intent;
+        if (UpholdClient.getInstance(this).isAuthenticated()) {
+            intent = new Intent(this, UpholdAccountActivity.class);
+        } else {
+            intent = new Intent(this, UpholdSplashActivity.class);
+        }
+        intent.putExtra(UpholdAccountActivity.WALLET_RECEIVING_ADDRESS_EXTRA, wallet.currentReceiveAddress().toString());
         startActivity(intent);
     }
 

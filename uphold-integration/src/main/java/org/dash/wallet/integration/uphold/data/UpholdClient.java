@@ -293,6 +293,10 @@ public class UpholdClient {
         this.otpToken = otpToken;
     }
 
+    public boolean isAuthenticated() {
+        return getStoredAccessToken() != null;
+    }
+
     public interface Callback<T> {
         void onSuccess(T data);
         void onError(Exception e, boolean otpRequired);

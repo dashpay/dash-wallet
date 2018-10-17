@@ -124,7 +124,7 @@
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content">
 
-				<de.schildbach.wallet.ui.CurrencyAmountView
+				<org.dash.wallet.common.ui.CurrencyAmountView
 					android:id="@+id/send_coins_amount_dash"
 					android:layout_width="0px"
 					android:layout_height="wrap_content"
@@ -140,9 +140,9 @@
 						style="@style/MontserratRegular"
 						tools:ignore="TextFields" />
 
-				</de.schildbach.wallet.ui.CurrencyAmountView>
+				</org.dash.wallet.common.ui.CurrencyAmountView>
 
-				<de.schildbach.wallet.ui.CurrencyAmountView
+				<org.dash.wallet.common.ui.CurrencyAmountView
 					android:id="@+id/send_coins_amount_local"
 					android:layout_width="0px"
 					android:layout_height="wrap_content"
@@ -158,7 +158,7 @@
 						style="@style/MontserratRegular"
 						tools:ignore="TextFields" />
 
-				</de.schildbach.wallet.ui.CurrencyAmountView>
+				</org.dash.wallet.common.ui.CurrencyAmountView>
 
 			</LinearLayout>
 
@@ -227,7 +227,7 @@
 					android:id="@+id/send_coins_direct_payment_enable"
 					android:layout_width="match_parent"
 					android:layout_height="wrap_content"
-					android:layout_marginBottom="10dp"
+					android:layout_marginBottom="@dimen/list_entry_padding"
 					android:text="@string/send_coins_fragment_direct_payment_enable"
 					style="@style/CheckBox" />
 

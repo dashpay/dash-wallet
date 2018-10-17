@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.schildbach.wallet.Configuration;
+import org.dash.wallet.common.Configuration;
 
 public class WalletLock {
 

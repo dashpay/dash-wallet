@@ -40,10 +40,10 @@ import org.dash.wallet.common.ui.CurrencyTextView;
 
 import javax.annotation.Nullable;
 
-import de.schildbach.wallet.Configuration;
+import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.ExchangeRatesProvider;
-import de.schildbach.wallet.data.ExchangeRate;
+import org.dash.wallet.common.data.ExchangeRate;
 import de.schildbach.wallet.data.ExchangeRatesLoader;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.WalletLock;

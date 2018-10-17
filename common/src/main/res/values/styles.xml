@@ -160,6 +160,10 @@
         <item name="android:textSize">12sp</item>
     </style>
 
+    <style name="MontserratRegular.MG.14">
+        <item name="android:textSize">14sp</item>
+    </style>
+
     <style name="MontserratMedium">
         <item name="fontFamily">@font/montserrat_medium</item>
     </style>

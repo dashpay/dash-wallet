@@ -1,4 +1,6 @@
 .gradle/
+gradlew
+gradlew.bat
 build/
 local.properties
 .classpath
@@ -17,3 +19,5 @@ out/
 *.so
 .DS_Store
 .externalNativeBuild/
+gradle-wrapper.jar
+wallet/prod

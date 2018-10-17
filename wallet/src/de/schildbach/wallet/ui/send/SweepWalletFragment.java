@@ -56,7 +56,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ComparisonChain;
 
-import de.schildbach.wallet.Configuration;
+import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.DynamicFeeLoader;
@@ -229,7 +229,7 @@ public class SweepWalletFragment extends Fragment {
 		introductionGroup = view.findViewById(R.id.sweep_wallet_introduction_group);
         balanceGroup = view.findViewById(R.id.sweep_wallet_balance_group);
 
-		balanceView = (CurrencyTextView) view.findViewById(R.id.sweep_wallet_fragment_balance);
+		balanceView = (CurrencyTextView) view.findViewById(R.id.uphold_account_balance);
 
 		sweepTransactionView = (FrameLayout) view.findViewById(R.id.sweep_wallet_fragment_sent_transaction);
 		sweepTransactionViewGroup = view.findViewById(R.id.sweep_wallet_fragment_sent_transaction_group);

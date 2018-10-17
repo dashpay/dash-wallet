@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:paddingStart="19dp"
         android:paddingLeft="19dp"
-        android:paddingBottom="10dp"
+        android:paddingBottom="@dimen/list_entry_padding"
         android:paddingTop="15dp"
         android:baselineAligned="true"
         android:orientation="horizontal" >
@@ -71,8 +71,8 @@
             android:layout_alignStart="@id/transaction_row_time"
             android:layout_toLeftOf="@+id/transaction_row_fiat"
             android:layout_toStartOf="@id/transaction_row_fiat"
-            android:layout_marginEnd="10dp"
-            android:layout_marginRight="10dp"
+            android:layout_marginEnd="@dimen/list_entry_padding"
+            android:layout_marginRight="@dimen/list_entry_padding"
             android:layout_below="@id/transaction_row_time">
 
             <TextView

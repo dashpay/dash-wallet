@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet;
+package org.dash.wallet.common;
 
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
@@ -29,11 +29,11 @@ import com.google.common.base.Strings;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
+import org.dash.wallet.common.data.ExchangeRate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.schildbach.wallet.data.ExchangeRate;
-import de.schildbach.wallet_test.R;
+import org.dash.wallet.common.R;
 
 /**
  * @author Andreas Schildbach

@@ -37,13 +37,12 @@ import org.bitcoinj.core.ScriptException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Transaction.Purpose;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
-import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.schildbach.wallet.Configuration;
+import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
@@ -103,7 +102,6 @@ import android.widget.TextView;
 import android.widget.ViewAnimator;
 
 import org.dash.wallet.integration.uphold.data.UpholdClient;
-import org.dash.wallet.integration.uphold.ui.UpholdWithdrawalDialog;
 
 /**
  * @author Andreas Schildbach
@@ -253,7 +251,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         wallet.addTransactionConfidenceEventListener(Threading.SAME_THREAD, transactionChangeListener);
 
         updateView();
-        checkUpholdBalance();
         WalletLock.getInstance().addListener(this);
     }
 
@@ -472,7 +469,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
     @Override
     public void onInfoClicked(TransactionsAdapter.Info info) {
         if (info.getData() instanceof BigDecimal) {
-            showTransferFromUpholdAccountDialog(info);
+            //showTransferFromUpholdAccountDialog(info);
         }
     }
 
@@ -717,45 +714,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
             return Warning.STORAGE_ENCRYPTION;
         else
             return null;
-    }
-
-    private void checkUpholdBalance() {
-        UpholdClient.getInstance(getActivity()).getDashBalance(new UpholdClient.Callback<BigDecimal>() {
-            @Override
-            public void onSuccess(final BigDecimal balance) {
-                if (balance.compareTo(BigDecimal.ZERO) > 0) {
-                    final String infoText = getString(R.string.uphold_withdrawal_message, balance);
-                    adapter.addInfo(new TransactionsAdapter.Info<>(infoText, balance));
-                    //Check if is displaying empty screen and show list instead
-                    if (viewGroup.getDisplayedChild() == 1 && !WalletLock.getInstance().isWalletLocked(wallet)) {
-                        viewGroup.setDisplayedChild(2);
-                    }
-                }
-            }
-
-            @Override
-            public void onError(Exception e, boolean otpRequired) {
-
-            }
-        });
-    }
-
-    private void showTransferFromUpholdAccountDialog(final TransactionsAdapter.Info<BigDecimal> info) {
-        Configuration config = ((WalletApplication) (getActivity().getApplication())).getConfiguration();
-        String currencyCode = config.getFormat().code();
-        MonetaryFormat inputFormat = config.getMaxPrecisionFormat();
-        MonetaryFormat hintFormat = config.getFormat();
-
-        BigDecimal balance = info.getData();
-        UpholdWithdrawalDialog.show(getFragmentManager(), balance,
-                wallet.currentReceiveAddress().toString(), currencyCode, inputFormat, hintFormat,
-                new UpholdWithdrawalDialog.OnTransferListener() {
-                    @Override
-                    public void onTransfer() {
-                        adapter.removeInfo(info);
-                        checkUpholdBalance();
-                    }
-                });
     }
 
     @Override

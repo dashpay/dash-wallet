@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.data;
+package org.dash.wallet.common.data;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 

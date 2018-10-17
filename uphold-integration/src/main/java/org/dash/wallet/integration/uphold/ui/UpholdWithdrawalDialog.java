@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integration.uphold.ui;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.DialogFragment;
@@ -84,16 +85,16 @@ public class UpholdWithdrawalDialog extends DialogFragment {
     public Dialog onCreateDialog(final Bundle savedInstanceState) {
         setRetainInstance(true);
         Activity activity = getActivity();
-        View view = LayoutInflater.from(activity).inflate(R.layout.transfer_from_external_account_dialog, null);
+        View view = LayoutInflater.from(activity).inflate(R.layout.uphold_withdrawal_dialog, null);
 
-        final CurrencyAmountView dashAmountView = (CurrencyAmountView) view.findViewById(R.id.send_coins_amount_dash);
+        final CurrencyAmountView dashAmountView = view.findViewById(R.id.send_coins_amount_dash);
         dashAmountView.setCurrencySymbol(currencyCode);
         dashAmountView.setInputFormat(inputFormat);
         dashAmountView.setHintFormat(hintFormat);
         dashAmountView.getTextView().setText(balance.toString());
         dashAmountView.getTextView().addTextChangedListener(dashAmountTextWatcher);
 
-        TextView hintView = (TextView) view.findViewById(R.id.hint);
+        TextView hintView = view.findViewById(R.id.hint);
         hintView.setText(Html.fromHtml(getString(R.string.dash_available, balance)));
         hintView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -103,7 +104,7 @@ public class UpholdWithdrawalDialog extends DialogFragment {
         });
 
         DialogBuilder builder = new DialogBuilder(activity);
-        builder.setTitle(R.string.uphold_withdrawal_title);
+        builder.setTitle(R.string.uphold_withdrawal_instructions);
         builder.setView(view);
         //click listener is set directly below to prevent dialog from being dismissed
         builder.setPositiveButton(R.string.uphold_transfer, null);
@@ -139,7 +140,13 @@ public class UpholdWithdrawalDialog extends DialogFragment {
                 transferButton.setEnabled(false);
                 return;
             }
-            BigDecimal value = new BigDecimal(s.toString());
+
+            String textValue = s.toString();
+            if (textValue.substring(0, 1).equals(".")) {
+                textValue = "0" + textValue;
+            }
+
+            BigDecimal value = new BigDecimal(textValue);
             boolean valid = value.compareTo(BigDecimal.ZERO) == 1 && value.compareTo(balance) <= 0;
             transferButton.setEnabled(valid);
         }
@@ -173,9 +180,17 @@ public class UpholdWithdrawalDialog extends DialogFragment {
                 });
     }
 
+    @SuppressLint("SetTextI18n")
     private void showCommitTransactionConfirmationDialog(boolean deductFeeFromAmount) {
         AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(getActivity());
         dialogBuilder.setTitle(R.string.uphold_withdrawal_confirm_title);
+
+        View contentView = LayoutInflater.from(getActivity())
+                .inflate(R.layout.uphold_confirm_transaction_dialog, null);
+        TextView amountTxt = contentView.findViewById(R.id.uphold_withdrawal_amount);
+        TextView feeTxt = contentView.findViewById(R.id.uphold_withdrawal_fee);
+        TextView totalTxt = contentView.findViewById(R.id.uphold_withdrawal_total);
+        View deductFeeDisclaimer = contentView.findViewById(R.id.uphold_withdrawal_confirmation_fee_deduction_disclaimer);
 
         float fee = transaction.getOrigin().getFee();
         final float baseAmount = transaction.getOrigin().getBase();
@@ -187,14 +202,15 @@ public class UpholdWithdrawalDialog extends DialogFragment {
             return;
         }
 
-        String message = getString(R.string.uphold_withdrawal_confirm_message,
-                baseAmount, fee, total);
+        amountTxt.setText(Float.toString(baseAmount));
+        feeTxt.setText(Float.toString(fee));
+        totalTxt.setText(Float.toString(total));
 
         if (deductFeeFromAmount) {
-            message += "\n\n" + getString(R.string.uphold_withdrawal_deduct_fee_disclaimer);
+            deductFeeDisclaimer.setVisibility(View.VISIBLE);
         }
 
-        dialogBuilder.setMessage(message);
+        dialogBuilder.setView(contentView);
         dialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
@@ -202,13 +218,14 @@ public class UpholdWithdrawalDialog extends DialogFragment {
             }
         });
 
-        dialogBuilder.setNegativeButton(android.R.string.no, null);
-        dialogBuilder.show().setOnDismissListener(new DialogInterface.OnDismissListener() {
+        dialogBuilder.setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
             @Override
-            public void onDismiss(DialogInterface dialog) {
+            public void onClick(DialogInterface dialog, int which) {
                 transaction = null;
             }
         });
+        dialogBuilder.setCancelable(false);
+        dialogBuilder.show();
     }
 
     private void commitTransaction() {

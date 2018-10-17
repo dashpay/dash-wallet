@@ -6,7 +6,7 @@
     android:background="@color/bg_list"
     android:minHeight="?android:attr/listPreferredItemHeight"
     android:orientation="vertical"
-    android:paddingBottom="10dp"
+    android:paddingBottom="@dimen/list_entry_padding"
     android:paddingLeft="@dimen/space_medium"
     android:paddingRight="@dimen/space_medium"
     android:paddingTop="16dp">

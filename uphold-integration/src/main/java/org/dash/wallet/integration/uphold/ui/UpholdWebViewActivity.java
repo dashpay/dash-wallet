@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 
 package org.dash.wallet.integration.uphold.ui;
 
@@ -38,12 +39,13 @@ import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
 
-public class UpholdActivity extends AppCompatActivity {
+public class UpholdWebViewActivity extends AppCompatActivity {
 
     private WebView webView;
     private ProgressDialog loadingDialog;
     private int retryCount = 0;
     private static final int MAX_RETRY = 3;
+    public static final String BUYING_EXTRA = "buying";
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -64,7 +66,7 @@ public class UpholdActivity extends AppCompatActivity {
         loadingDialog.setCancelable(false);
         loadingDialog.setMessage(getString(R.string.loading));
 
-        webView = (WebView) findViewById(R.id.webview);
+        webView = findViewById(R.id.webview);
         webView.getSettings().setJavaScriptEnabled(true);
 
         webView.setWebViewClient(new WebViewClient() {
@@ -182,7 +184,12 @@ public class UpholdActivity extends AppCompatActivity {
                 UpholdClient.getInstance(this).getAccessToken(code, new UpholdClient.Callback<String>() {
                     @Override
                     public void onSuccess(String dashCardId) {
-                        webView.loadUrl(String.format(UpholdConstants.CARD_URL_BASE, dashCardId));
+                        if (getIntent().getBooleanExtra(BUYING_EXTRA, false)) {
+                            webView.loadUrl(String.format(UpholdConstants.CARD_URL_BASE, dashCardId));
+                        } else {
+                            startUpholdAccountActivity();
+                        }
+
                     }
 
                     @Override
@@ -196,6 +203,16 @@ public class UpholdActivity extends AppCompatActivity {
             }
         }
         return false;
+    }
+
+    private void startUpholdAccountActivity() {
+        Intent intent = new Intent(this, UpholdAccountActivity.class);
+        Bundle extras = getIntent().getExtras();
+        if (extras != null) {
+            intent.putExtras(extras);
+        }
+        startActivity(intent);
+        finish();
     }
 
     @Override

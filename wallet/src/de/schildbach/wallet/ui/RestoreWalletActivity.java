@@ -32,7 +32,7 @@ import org.dash.wallet.common.ui.DialogBuilder;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 
-import de.schildbach.wallet.Configuration;
+import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;

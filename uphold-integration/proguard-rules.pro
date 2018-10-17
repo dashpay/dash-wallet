@@ -21,3 +21,5 @@
     @com.squareup.moshi.* <methods>;
 }
 -keep @com.squareup.moshi.JsonQualifier interface *
+-dontnote com.squareup.moshi.**
+-dontwarn com.squareup.moshi.**
