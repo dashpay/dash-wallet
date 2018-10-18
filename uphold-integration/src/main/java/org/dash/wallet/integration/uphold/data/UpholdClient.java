@@ -221,8 +221,8 @@ public class UpholdClient {
             }
         }, new Callback<UpholdCard>() {
             @Override
-            public void onSuccess(UpholdCard data) {
-                callback.onSuccess(new BigDecimal(data.getBalance()));
+            public void onSuccess(UpholdCard card) {
+                callback.onSuccess(new BigDecimal(card.getAvailable()));
             }
 
             @Override
