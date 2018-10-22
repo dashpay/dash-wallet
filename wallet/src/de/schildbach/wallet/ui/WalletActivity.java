@@ -31,6 +31,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
@@ -171,6 +172,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         MaybeMaintenanceFragment.add(getFragmentManager());
 
+        initUphold();
         initView();
 
         //Prevent showing dialog twice or more when activity is recreated (e.g: rotating device, etc)
@@ -178,6 +180,15 @@ public final class WalletActivity extends AbstractBindServiceActivity
             //Add BIP44 support and PIN if missing
             upgradeWalletKeyChains(Constants.BIP44_PATH, false);
         }
+    }
+
+    private void initUphold() {
+        //Uses Sha256 hash of excerpt of xpub as Uphold authentication salt
+        String xpub = wallet.getWatchingKey().serializePubB58(Constants.NETWORK_PARAMETERS);
+        byte[] xpubExcerptHash = Sha256Hash.hash(xpub.substring(4, 15).getBytes());
+        String authenticationHash = Sha256Hash.wrap(xpubExcerptHash).toString();
+
+        UpholdClient.init(getApplicationContext(), authenticationHash);
     }
 
     private void initView() {
@@ -1107,7 +1118,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void startUpholdActivity() {
         Intent intent;
-        if (UpholdClient.getInstance(this).isAuthenticated()) {
+        if (UpholdClient.getInstance().isAuthenticated()) {
             intent = new Intent(this, UpholdAccountActivity.class);
         } else {
             intent = new Intent(this, UpholdSplashActivity.class);

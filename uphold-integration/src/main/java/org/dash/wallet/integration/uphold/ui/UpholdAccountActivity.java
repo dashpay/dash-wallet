@@ -40,7 +40,7 @@ import java.math.BigDecimal;
 
 public class UpholdAccountActivity extends AppCompatActivity {
 
-    public static final String WALLET_RECEIVING_ADDRESS_EXTRA = "receiving_address";
+    public static final String WALLET_RECEIVING_ADDRESS_EXTRA = "uphold_receiving_address_extra";
 
     CurrencyTextView balanceView;
     BigDecimal balance;
@@ -117,7 +117,7 @@ public class UpholdAccountActivity extends AppCompatActivity {
         loadingDialog.setMessage(getString(R.string.loading));
         loadingDialog.show();
 
-        UpholdClient.getInstance(this).getDashBalance(new UpholdClient.Callback<BigDecimal>() {
+        UpholdClient.getInstance().getDashBalance(new UpholdClient.Callback<BigDecimal>() {
             @Override
             public void onSuccess(BigDecimal data) {
                 balance = data;

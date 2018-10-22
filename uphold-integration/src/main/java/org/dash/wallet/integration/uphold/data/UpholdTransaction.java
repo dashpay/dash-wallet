@@ -1,36 +1,38 @@
 package org.dash.wallet.integration.uphold.data;
 
+import java.math.BigDecimal;
+
 public class UpholdTransaction {
 
     private String id;
     private Origin origin;
 
     public static class Origin {
-        private Float base;
-        private Float amount;
-        private Float fee;
+        private BigDecimal base;
+        private BigDecimal amount;
+        private BigDecimal fee;
 
-        public Float getBase() {
+        public BigDecimal getBase() {
             return base;
         }
 
-        public void setBase(Float base) {
+        public void setBase(BigDecimal base) {
             this.base = base;
         }
 
-        public Float getAmount() {
+        public BigDecimal getAmount() {
             return amount;
         }
 
-        public void setAmount(Float amount) {
+        public void setAmount(BigDecimal amount) {
             this.amount = amount;
         }
 
-        public Float getFee() {
+        public BigDecimal getFee() {
             return fee;
         }
 
-        public void setFee(Float fee) {
+        public void setFee(BigDecimal fee) {
             this.fee = fee;
         }
     }

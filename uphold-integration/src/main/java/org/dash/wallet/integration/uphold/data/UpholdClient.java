@@ -21,9 +21,9 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
+import com.securepreferences.SecurePreferences;
 import com.squareup.moshi.Moshi;
 
-import org.dash.wallet.integration.uphold.BuildConfig;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -45,12 +45,13 @@ public class UpholdClient {
     private static UpholdClient instance;
     private final UpholdService service;
     private final SharedPreferences prefs;
+    private final String encryptionKey;
     private String accessToken;
     private String otpToken;
     private UpholdCard dashCard;
 
     public static final String UPHOLD_AUTH_REDIRECT_URL = "www.dash.org";
-    private static final String UPHOLD_PREFS = "uphold_prefs";
+    private static final String UPHOLD_PREFS = "uphold_prefs.xml";
     private static final String UPHOLD_ACCESS_TOKEN = "access_token";
 
     private static final String OTP_REQUIRED_KEY = "OTP-Token";
@@ -73,14 +74,17 @@ public class UpholdClient {
 
     };
 
-    private UpholdClient(Context context) {
-        this.prefs = context.getSharedPreferences(UPHOLD_PREFS, Context.MODE_PRIVATE);
+    private UpholdClient(Context context, String prefsEncryptionKey) {
+        this.encryptionKey = prefsEncryptionKey;
+        this.prefs = new SecurePreferences(context, prefsEncryptionKey, UPHOLD_PREFS);
         this.accessToken = getStoredAccessToken();
 
         String baseUrl = UpholdConstants.CLIENT_BASE_URL;
         OkHttpClient okClient = new OkHttpClient.Builder().addInterceptor(headerInterceptor).build();
 
-        Moshi moshi = new Moshi.Builder().add(new UpholdCardAddressAdapter()).build();
+        Moshi moshi = new Moshi.Builder()
+                .add(new BigDecimalAdapter())
+                .add(new UpholdCardAddressAdapter()).build();
 
         Retrofit retrofit = new Retrofit.Builder()
                 .client(okClient)
@@ -91,9 +95,14 @@ public class UpholdClient {
         this.service = retrofit.create(UpholdService.class);
     }
 
-    public static UpholdClient getInstance(Context context) {
+    public static UpholdClient init(Context context, String prefsEncryptionKey) {
+        instance = new UpholdClient(context, prefsEncryptionKey);
+        return instance;
+    }
+
+    public static UpholdClient getInstance() {
         if (instance == null) {
-            instance = new UpholdClient(context);
+            throw new IllegalStateException("You must call UpholdClient#init() first");
         }
         return instance;
     }
@@ -295,6 +304,10 @@ public class UpholdClient {
 
     public boolean isAuthenticated() {
         return getStoredAccessToken() != null;
+    }
+
+    public String getEncryptionKey() {
+        return encryptionKey;
     }
 
     public interface Callback<T> {

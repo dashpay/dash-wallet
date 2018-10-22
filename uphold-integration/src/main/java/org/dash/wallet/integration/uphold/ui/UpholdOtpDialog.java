@@ -71,7 +71,7 @@ public class UpholdOtpDialog extends DialogFragment {
                     @Override
                     public void onClick(View v) {
                         //Set Otp Code and make request
-                        UpholdClient.getInstance(getActivity()).setOtpToken(otpCodeView.getText().toString());
+                        UpholdClient.getInstance().setOtpToken(otpCodeView.getText().toString());
                         dismiss();
                         if (onOtpSetListener != null) {
                             onOtpSetListener.onOtpSet();

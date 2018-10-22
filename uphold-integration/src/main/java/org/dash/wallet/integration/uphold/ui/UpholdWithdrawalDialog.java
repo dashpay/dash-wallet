@@ -119,7 +119,7 @@ public class UpholdWithdrawalDialog extends DialogFragment {
                 transferButton.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        transfer(Float.parseFloat(dashAmountView.getTextView().getText().toString()),
+                        transfer(new BigDecimal(dashAmountView.getTextView().getText().toString()),
                                 false);
                     }
                 });
@@ -157,9 +157,9 @@ public class UpholdWithdrawalDialog extends DialogFragment {
         }
     };
 
-    private void transfer(float value, final boolean deductFeeFromAmount) {
+    private void transfer(BigDecimal value, final boolean deductFeeFromAmount) {
         final ProgressDialog progressDialog = showLoading();
-        UpholdClient.getInstance(getActivity()).createDashWithdrawalTransaction(value + "",
+        UpholdClient.getInstance().createDashWithdrawalTransaction(value.toPlainString(),
                 receivingAddress, new UpholdClient.Callback<UpholdTransaction>() {
                     @Override
                     public void onSuccess(UpholdTransaction tx) {
@@ -192,19 +192,18 @@ public class UpholdWithdrawalDialog extends DialogFragment {
         TextView totalTxt = contentView.findViewById(R.id.uphold_withdrawal_total);
         View deductFeeDisclaimer = contentView.findViewById(R.id.uphold_withdrawal_confirmation_fee_deduction_disclaimer);
 
-        float fee = transaction.getOrigin().getFee();
-        final float baseAmount = transaction.getOrigin().getBase();
-        final float total = transaction.getOrigin().getAmount();
+        BigDecimal fee = transaction.getOrigin().getFee();
+        final BigDecimal baseAmount = transaction.getOrigin().getBase();
+        final BigDecimal total = transaction.getOrigin().getAmount();
 
-        //TODO: Use BigDecimal Everywhere?
-        if (total > balance.floatValue()) {
-            transfer(balance.floatValue() - fee, true);
+        if (total.compareTo(balance) > 0) {
+            transfer(balance.subtract(fee), true);
             return;
         }
 
-        amountTxt.setText(Float.toString(baseAmount));
-        feeTxt.setText(Float.toString(fee));
-        totalTxt.setText(Float.toString(total));
+        amountTxt.setText(baseAmount.toPlainString());
+        feeTxt.setText(fee.toPlainString());
+        totalTxt.setText(total.toPlainString());
 
         if (deductFeeFromAmount) {
             deductFeeDisclaimer.setVisibility(View.VISIBLE);
@@ -231,7 +230,7 @@ public class UpholdWithdrawalDialog extends DialogFragment {
     private void commitTransaction() {
         final ProgressDialog progressDialog = showLoading();
         final String txId = transaction.getId();
-        UpholdClient.getInstance(getActivity()).commitTransaction(txId, new UpholdClient.Callback<Object>() {
+        UpholdClient.getInstance().commitTransaction(txId, new UpholdClient.Callback<Object>() {
             @Override
             public void onSuccess(Object data) {
                 if (onTransferListener != null) {

@@ -15,7 +15,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.dash.wallet.integration.uphold.ui;
 
 import android.annotation.SuppressLint;
@@ -45,7 +44,7 @@ public class UpholdWebViewActivity extends AppCompatActivity {
     private ProgressDialog loadingDialog;
     private int retryCount = 0;
     private static final int MAX_RETRY = 3;
-    public static final String BUYING_EXTRA = "buying";
+    public static final String BUYING_EXTRA = "uphold_buying_extra";
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -112,7 +111,8 @@ public class UpholdWebViewActivity extends AppCompatActivity {
             //Confirmation URL
             webView.loadUrl(intent.getDataString());
         } else {
-            webView.loadUrl(UpholdConstants.INITIAL_URL);
+            webView.loadUrl(String.format(UpholdConstants.INITIAL_URL,
+                    UpholdClient.getInstance().getEncryptionKey()));
         }
 
         if (actionBar != null) {
@@ -179,9 +179,12 @@ public class UpholdWebViewActivity extends AppCompatActivity {
 
         if (url.contains(UpholdClient.UPHOLD_AUTH_REDIRECT_URL)) {
             Uri uri = Uri.parse(url);
+
             String code = uri.getQueryParameter("code");
-            if (code != null) {
-                UpholdClient.getInstance(this).getAccessToken(code, new UpholdClient.Callback<String>() {
+            String state = uri.getQueryParameter("state");
+
+            if (code != null && UpholdClient.getInstance().getEncryptionKey().equals(state)) {
+                UpholdClient.getInstance().getAccessToken(code, new UpholdClient.Callback<String>() {
                     @Override
                     public void onSuccess(String dashCardId) {
                         if (getIntent().getBooleanExtra(BUYING_EXTRA, false)) {
@@ -189,7 +192,6 @@ public class UpholdWebViewActivity extends AppCompatActivity {
                         } else {
                             startUpholdAccountActivity();
                         }
-
                     }
 
                     @Override
