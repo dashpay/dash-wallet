@@ -16,13 +16,13 @@ android {
     publishNonDefault true
 
     buildTypes {
-        release {
+        all {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             consumerProguardFiles 'proguard-rules.pro'
         }
         debug {
-            multiDexEnabled true
+            debuggable true
         }
     }
 }
