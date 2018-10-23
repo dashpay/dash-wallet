@@ -698,7 +698,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                     int count = peerGroup.numConnectedPeers();
                     int minimum = peerGroup.getMinBroadcastConnections();
                     //if the number of peers is <= 3, then only require that number of peers to send
-                    if(count <= 3)
+                    //if the number of peers is 0, then require 3 peers (default min connections)
+                    if(count > 0 && count <= 3)
                         minimum = count;
 
                     peerGroup.broadcastTransaction(tx, minimum);
