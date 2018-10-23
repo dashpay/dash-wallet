@@ -43,5 +43,4 @@ dependencies {
     implementation 'com.scottyab:secure-preferences-lib:0.1.4'
 
     implementation project(path: ':common')
-    //releaseImplementation project(path: ':common', configuration: 'release')
 }

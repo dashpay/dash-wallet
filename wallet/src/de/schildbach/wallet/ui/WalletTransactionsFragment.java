@@ -18,7 +18,6 @@
 package de.schildbach.wallet.ui;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -39,10 +38,10 @@ import org.bitcoinj.core.Transaction.Purpose;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
@@ -100,8 +99,6 @@ import android.widget.PopupMenu;
 import android.widget.PopupMenu.OnMenuItemClickListener;
 import android.widget.TextView;
 import android.widget.ViewAnimator;
-
-import org.dash.wallet.integration.uphold.data.UpholdClient;
 
 /**
  * @author Andreas Schildbach
@@ -251,6 +248,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         wallet.addTransactionConfidenceEventListener(Threading.SAME_THREAD, transactionChangeListener);
 
         updateView();
+
         WalletLock.getInstance().addListener(this);
     }
 
@@ -467,13 +465,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
     }
 
     @Override
-    public void onInfoClicked(TransactionsAdapter.Info info) {
-        if (info.getData() instanceof BigDecimal) {
-            //showTransferFromUpholdAccountDialog(info);
-        }
-    }
-
-    @Override
     public Loader<List<Transaction>> onCreateLoader(final int id, final Bundle args) {
         return new TransactionsLoader(activity, wallet, (Direction) args.getSerializable(ARG_DIRECTION));
     }
@@ -487,7 +478,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
 
         if (WalletLock.getInstance().isWalletLocked(wallet)) {
             hideTransactions();
-        } else if (adapter.isEmpty()) {
+        } else if (transactions.isEmpty()) {
             showEmptyTransactions(direction);
         } else {
             viewGroup.setDisplayedChild(2);

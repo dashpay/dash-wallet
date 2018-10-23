@@ -42,9 +42,9 @@ public class UpholdAccountActivity extends AppCompatActivity {
 
     public static final String WALLET_RECEIVING_ADDRESS_EXTRA = "uphold_receiving_address_extra";
 
-    CurrencyTextView balanceView;
-    BigDecimal balance;
-    String receivingAddress;
+    private CurrencyTextView balanceView;
+    private BigDecimal balance;
+    private String receivingAddress;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {

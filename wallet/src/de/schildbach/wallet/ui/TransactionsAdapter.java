@@ -37,13 +37,13 @@ import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.DefaultCoinSelector;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.ui.CurrencyTextView;
+import org.dash.wallet.common.ui.Formats;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.util.CircularProgressView;
 
-import org.dash.wallet.common.ui.CurrencyTextView;
-import org.dash.wallet.common.ui.Formats;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
@@ -69,7 +69,6 @@ import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
  * @author Andreas Schildbach
  */
 public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
-
     public enum Warning {
         STORAGE_ENCRYPTION
     }
@@ -83,9 +82,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private final OnClickListener onClickListener;
 
     private final List<Transaction> transactions = new ArrayList<Transaction>();
-    private final List<Info> infoList = new ArrayList<>();
     private MonetaryFormat format;
-    private Warning warning;
+    private Warning warning = null;
 
     private long selectedItemId = RecyclerView.NO_ID;
 
@@ -104,7 +102,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     private static final int VIEW_TYPE_TRANSACTION = 0;
     private static final int VIEW_TYPE_WARNING = 1;
-    private static final int VIEW_TYPE_INFO = 2;
 
     private Map<Sha256Hash, TransactionCacheEntry> transactionCache = new HashMap<Sha256Hash, TransactionCacheEntry>();
 
@@ -207,13 +204,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     public int getItemCount() {
         int count = transactions.size();
 
-        if (warning != null) {
+        if (warning != null)
             count++;
-        }
-
-        if (!infoList.isEmpty()) {
-            count += infoList.size();
-        }
 
         return count;
     }
@@ -224,25 +216,14 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     @Override
     public long getItemId(int position) {
-        if (position == RecyclerView.NO_POSITION) {
+        if (position == RecyclerView.NO_POSITION)
             return RecyclerView.NO_ID;
-        }
 
         if (warning != null) {
-            if (position == 0) {
+            if (position == 0)
                 return 0;
-            } else {
+            else
                 position--;
-            }
-        }
-
-        if (!infoList.isEmpty()) {
-            if (position == 0) {
-                return 0;
-            }
-            if (position >= infoList.size()) {
-                position -= infoList.size();
-            }
         }
 
         return WalletUtils.longHash(transactions.get(position).getHash());
@@ -250,14 +231,10 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     @Override
     public int getItemViewType(final int position) {
-        int index = (warning != null) ? position - 1 : position;
-        if (position == 0 && warning != null) {
+        if (position == 0 && warning != null)
             return VIEW_TYPE_WARNING;
-        } else if (!infoList.isEmpty() && index < infoList.size()) {
-            return VIEW_TYPE_INFO;
-        } else {
+        else
             return VIEW_TYPE_TRANSACTION;
-        }
     }
 
     public RecyclerView.ViewHolder createTransactionViewHolder(final ViewGroup parent) {
@@ -270,8 +247,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             return new TransactionViewHolder(inflater.inflate(R.layout.transaction_row, parent, false));
         } else if (viewType == VIEW_TYPE_WARNING) {
             return new WarningViewHolder(inflater.inflate(R.layout.transaction_row_warning, parent, false));
-        } else if (viewType == VIEW_TYPE_INFO) {
-            return new InfoViewHolder(inflater.inflate(R.layout.transaction_row_info, parent, false));
         } else {
             throw new IllegalStateException("unknown type: " + viewType);
         }
@@ -285,7 +260,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             final long itemId = getItemId(position);
             transactionHolder.itemView.setActivated(itemId == selectedItemId);
 
-            final Transaction tx = transactions.get(position - (warning != null ? 1 : 0) - infoList.size());
+            final Transaction tx = transactions.get(position - (warning != null ? 1 : 0));
             transactionHolder.bind(tx);
 
             transactionHolder.itemView.setOnClickListener(new View.OnClickListener() {
@@ -313,25 +288,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 warningHolder.messageView.setText(
                         Html.fromHtml(context.getString(R.string.wallet_transactions_row_warning_storage_encryption)));
             }
-        } else if (holder instanceof InfoViewHolder) {
-            final InfoViewHolder infoViewHolder = (InfoViewHolder) holder;
-
-            int index = (warning != null) ? position - 1 : position;
-            final Info info = infoList.get(index);
-            infoViewHolder.bind(info);
-            if (onClickListener != null) {
-                infoViewHolder.messageView.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        onClickListener.onInfoClicked(info);
-                    }
-                });
-            }
         }
-    }
-
-    public boolean isEmpty() {
-        return transactions.isEmpty() && infoList.isEmpty();
     }
 
     public void setShowTransactionRowMenu(boolean showTransactionRowMenu) {
@@ -342,8 +299,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         void onTransactionMenuClick(View view, Transaction tx);
 
         void onWarningClick();
-
-        void onInfoClicked(Info info);
     }
 
     private class TransactionViewHolder extends RecyclerView.ViewHolder {
@@ -672,69 +627,4 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             }
         }
     }
-
-    private class InfoViewHolder extends RecyclerView.ViewHolder {
-
-        private final TextView messageView;
-
-        InfoViewHolder(View itemView) {
-            super(itemView);
-
-            messageView = (TextView) itemView.findViewById(R.id.transaction_row_info_message);
-        }
-
-        void bind(Info info) {
-            messageView.setText(Html.fromHtml(info.getHtmlText()));
-        }
-    }
-
-    public void addInfo(Info info) {
-        if (!infoList.contains(info)) {
-            infoList.add(info);
-        }
-        notifyDataSetChanged();
-    }
-
-    public void removeInfo(Info info) {
-        infoList.remove(info);
-    }
-
-    public static class Info<T> {
-
-        private final String htmlText;
-        private final T data;
-
-        public Info(String htmlText, T data) {
-            this.htmlText = htmlText;
-            this.data = data;
-        }
-
-        public String getHtmlText() {
-            return htmlText;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            Info info = (Info) o;
-
-            return htmlText.equals(info.htmlText);
-        }
-
-        public T getData() {
-            return data;
-        }
-
-        @Override
-        public int hashCode() {
-            return htmlText.hashCode();
-        }
-    }
-
-    public interface OnInfoClickedListener {
-        void onInfoClicked(Info info);
-    }
-
 }
