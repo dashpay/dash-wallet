@@ -51,6 +51,8 @@ public abstract class AbstractWalletActivity extends AppCompatActivity implement
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
             setTaskDescription(new TaskDescription(null, null, getResources().getColor(R.color.bg_action_bar)));
 
+        PinRetryController.handleLockedForever(this);
+
         WalletLock.getInstance().addListener(this);
         super.onCreate(savedInstanceState);
     }
@@ -101,8 +103,7 @@ public abstract class AbstractWalletActivity extends AppCompatActivity implement
     }
 
     private void unlockWallet() {
-        PinRetryController pinRetryController = new PinRetryController(this);
-        if(!pinRetryController.handleLockedForever())
+        if(!PinRetryController.handleLockedForever(this))
             UnlockWalletDialogFragment.show(getFragmentManager());
     }
 

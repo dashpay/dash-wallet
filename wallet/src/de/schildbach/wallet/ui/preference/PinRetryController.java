@@ -1,10 +1,12 @@
 package de.schildbach.wallet.ui.preference;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.os.Process;
 
 import java.util.Date;
 import java.util.HashSet;
@@ -20,6 +22,7 @@ public class PinRetryController {
 
     private final SharedPreferences prefs;
     private final Context context;
+    private final Activity activity;
     private final static String PREFS_SECURE_TIME = "secure_time";
     private final static String PREFS_FAIL_HEIGHT = "fail_height";
     private final static String PREFS_FAILED_PINS = "failed_pins";
@@ -28,9 +31,16 @@ public class PinRetryController {
     private final static int FAIL_LIMIT = 8;
     private final static long ONE_MINUTE_MILLIS = TimeUnit.MINUTES.toMillis(1);
 
+    public PinRetryController(Activity activity) {
+        this.context = activity;
+        this.prefs = context.getSharedPreferences("pin_retry_controller_prefs", Context.MODE_PRIVATE);
+        this.activity = activity;
+    }
+
     public PinRetryController(Context context) {
         this.context = context;
         this.prefs = context.getSharedPreferences("pin_retry_controller_prefs", Context.MODE_PRIVATE);
+        this.activity = null;
     }
 
     public boolean isLocked() {
@@ -122,7 +132,7 @@ public class PinRetryController {
 
     }
 
-    private void showResetWalletDialog(boolean forceWipe) {
+    private void showResetWalletDialog(boolean forceClose) {
         AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(context);
         dialogBuilder.setTitle(R.string.wallet_lock_reset_wallet_title);
         dialogBuilder.setMessage(R.string.wallet_lock_reset_wallet_message);
@@ -130,12 +140,18 @@ public class PinRetryController {
         dialogBuilder.setNegativeButton(R.string.wallet_lock_reset_wallet_title, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                WalletApplication.getInstance().clearDataAndExit();
                 clearPreferences();
+                WalletApplication.getInstance().clearDataAndExit();
             }
         });
-        if(!forceWipe)
-            dialogBuilder.setPositiveButton(android.R.string.no, null);
+        dialogBuilder.setPositiveButton(android.R.string.no, forceClose ? new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                if(activity != null)
+                    activity.finish();
+                else Process.killProcess(Process.myPid());
+            }
+        } : null);
         dialogBuilder.setCancelable(false);
         Dialog dialog = dialogBuilder.create();
         dialog.setCanceledOnTouchOutside(false);
@@ -154,9 +170,10 @@ public class PinRetryController {
     }
 
     // returns true if the wallet is wiped
-    public boolean handleLockedForever() {
-        if(isLockedForever()) {
-            wipeWallet();
+    public static boolean handleLockedForever(Context context) {
+        PinRetryController pinRetryController = new PinRetryController(context);
+        if(pinRetryController.isLockedForever()) {
+            pinRetryController.wipeWallet();
             return true;
         }
         return false;
