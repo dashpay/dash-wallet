@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.WalletLock;
+import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet_test.R;
 
 import android.support.v7.app.AppCompatActivity;
@@ -100,7 +101,9 @@ public abstract class AbstractWalletActivity extends AppCompatActivity implement
     }
 
     private void unlockWallet() {
-        UnlockWalletDialogFragment.show(getFragmentManager());
+        PinRetryController pinRetryController = new PinRetryController(this);
+        if(!pinRetryController.handleLockedForever())
+            UnlockWalletDialogFragment.show(getFragmentManager());
     }
 
     @Override

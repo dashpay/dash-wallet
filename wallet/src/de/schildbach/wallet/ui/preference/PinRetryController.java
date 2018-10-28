@@ -53,6 +53,12 @@ public class PinRetryController {
         return locked;
     }
 
+
+    public boolean isLockedForever() {
+        int failCount = prefs.getStringSet(PREFS_FAILED_PINS, new HashSet<String>()).size();
+        return failCount >= FAIL_LIMIT;
+    }
+
     public void clearPreferences() {
         SharedPreferences.Editor prefsEditor = prefs.edit();
         prefsEditor.remove(PREFS_FAIL_HEIGHT);
@@ -145,6 +151,15 @@ public class PinRetryController {
 
     private void wipeWallet() {
         showResetWalletDialog(true);
+    }
+
+    // returns true if the wallet is wiped
+    public boolean handleLockedForever() {
+        if(isLockedForever()) {
+            wipeWallet();
+            return true;
+        }
+        return false;
     }
 
     public void storeSecureTime(Date date) {
