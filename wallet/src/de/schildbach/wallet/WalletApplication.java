@@ -83,6 +83,7 @@ public class WalletApplication extends Application implements Application.Activi
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
+    private Activity currentActivity;
 
     private Intent blockchainServiceIntent;
     private Intent blockchainServiceCancelCoinsReceivedIntent;
@@ -112,6 +113,12 @@ public class WalletApplication extends Application implements Application.Activi
     }
 
     @Override
+    protected void attachBaseContext(Context base) {
+        super.attachBaseContext(base);
+        instance = this;
+    }
+
+    @Override
     public void onCreate() {
         //Memory Leak Detection
         if (LeakCanary.isInAnalyzerProcess(this)) {
@@ -119,7 +126,6 @@ public class WalletApplication extends Application implements Application.Activi
             // You should not init your app in this process.
             return;
         }
-        instance = this;
         refWatcher = LeakCanary.install(this);
 
         registerActivityLifecycleCallbacks(this);
@@ -583,6 +589,7 @@ public void updateDashMode()
             lockWalletIfNeeded();
         }
         numStarted++;
+        currentActivity = activity;
     }
 
     @Override
@@ -633,12 +640,7 @@ public void updateDashMode()
         log.info("New wallet created to replace the wiped locked wallet");
     }
 
-    public void resetWalletAndExit() {
-        eraseAndCreateNewWallet();
-        log.info("closing app after wallet wipe");
-        Process.killProcess(Process.myPid());
-        System.exit(1);
-    }
+
 
     public boolean isBackupDisclaimerDismissed() {
         return backupDisclaimerDismissed;
@@ -650,6 +652,14 @@ public void updateDashMode()
 
     public static WalletApplication getInstance() {
         return instance;
+    }
+
+    public void killAllActivities() {
+        if (currentActivity != null) {
+            currentActivity.finishAffinity();
+        } else {
+            System.exit(0);
+        }
     }
 
 }
