@@ -1,12 +1,10 @@
 package de.schildbach.wallet.ui.preference;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
-import android.os.Process;
 
 import java.util.Date;
 import java.util.HashSet;
@@ -22,7 +20,6 @@ public class PinRetryController {
 
     private final SharedPreferences prefs;
     private final Context context;
-    private final Activity activity;
     private final static String PREFS_SECURE_TIME = "secure_time";
     private final static String PREFS_FAIL_HEIGHT = "fail_height";
     private final static String PREFS_FAILED_PINS = "failed_pins";
@@ -31,16 +28,9 @@ public class PinRetryController {
     private final static int FAIL_LIMIT = 8;
     private final static long ONE_MINUTE_MILLIS = TimeUnit.MINUTES.toMillis(1);
 
-    public PinRetryController(Activity activity) {
-        this.context = activity;
-        this.prefs = context.getSharedPreferences("pin_retry_controller_prefs", Context.MODE_PRIVATE);
-        this.activity = activity;
-    }
-
     public PinRetryController(Context context) {
         this.context = context;
-        this.prefs = context.getSharedPreferences("pin_retry_controller_prefs", Context.MODE_PRIVATE);
-        this.activity = null;
+        this.prefs = WalletApplication.getInstance().getSharedPreferences("pin_retry_controller_prefs", Context.MODE_PRIVATE);
     }
 
     public boolean isLocked() {
@@ -73,7 +63,7 @@ public class PinRetryController {
         SharedPreferences.Editor prefsEditor = prefs.edit();
         prefsEditor.remove(PREFS_FAIL_HEIGHT);
         prefsEditor.remove(PREFS_FAILED_PINS);
-        prefsEditor.apply();
+        prefsEditor.commit();
     }
 
     public void successfulAttempt() {
@@ -82,7 +72,8 @@ public class PinRetryController {
 
     public void failedAttempt(String pin) {
         long secureTime = prefs.getLong(PREFS_SECURE_TIME, 0);
-        Set<String> failedPins = prefs.getStringSet(PREFS_FAILED_PINS, new HashSet<String>());
+        Set<String> storedFailedPins = prefs.getStringSet(PREFS_FAILED_PINS, new HashSet<String>());
+        Set<String> failedPins = new HashSet<>(storedFailedPins);
 
         if (!failedPins.contains(pin)) {
             failedPins.add(pin);
@@ -97,7 +88,7 @@ public class PinRetryController {
                 prefsEditor.putLong(PREFS_FAIL_HEIGHT, secureTime + System.currentTimeMillis());
             }
 
-            prefsEditor.apply();
+            prefsEditor.commit();
         }
     }
 
@@ -142,17 +133,13 @@ public class PinRetryController {
             public void onClick(DialogInterface dialog, int which) {
                 clearPreferences();
                 WalletApplication.getInstance().eraseAndCreateNewWallet();
-                if(activity != null)
-                    activity.finish();
-                else Process.killProcess(Process.myPid());
+                WalletApplication.getInstance().killAllActivities();
             }
         });
         dialogBuilder.setPositiveButton(android.R.string.no, forceClose ? new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                if(activity != null)
-                    activity.finish();
-                else Process.killProcess(Process.myPid());
+                WalletApplication.getInstance().killAllActivities();
             }
         } : null);
         dialogBuilder.setCancelable(false);
@@ -183,7 +170,7 @@ public class PinRetryController {
     }
 
     public void storeSecureTime(Date date) {
-        prefs.edit().putLong(PREFS_SECURE_TIME, date.getTime()).apply();
+        prefs.edit().putLong(PREFS_SECURE_TIME, date.getTime()).commit();
     }
 
 }
