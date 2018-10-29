@@ -141,7 +141,10 @@ public class PinRetryController {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 clearPreferences();
-                WalletApplication.getInstance().clearDataAndExit();
+                WalletApplication.getInstance().eraseAndCreateNewWallet();
+                if(activity != null)
+                    activity.finish();
+                else Process.killProcess(Process.myPid());
             }
         });
         dialogBuilder.setPositiveButton(android.R.string.no, forceClose ? new DialogInterface.OnClickListener() {

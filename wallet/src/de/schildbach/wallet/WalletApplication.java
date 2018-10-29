@@ -616,7 +616,7 @@ public void updateDashMode()
     /**
       Replace the wallet with an new wallet as part of a wallet wipe
      */
-    private void clearApplicationData() {
+    public void eraseAndCreateNewWallet() {
         Wallet newWallet = new Wallet(Constants.NETWORK_PARAMETERS);
         newWallet.addKeyChain(Constants.BIP44_PATH);
 
@@ -633,8 +633,8 @@ public void updateDashMode()
         log.info("New wallet created to replace the wiped locked wallet");
     }
 
-    public void clearDataAndExit() {
-        clearApplicationData();
+    public void resetWalletAndExit() {
+        eraseAndCreateNewWallet();
         log.info("closing app after wallet wipe");
         Process.killProcess(Process.myPid());
         System.exit(1);
