@@ -1,4 +1,11 @@
 Dash Wallet
+
+v6.1.1 (Hotfix)
+* Resolve Delayed Sending (from sending quickly)
+
+v6.1.0
+* Uphold Integration
+
 v6.0.0
 * Rebranded
 * Updated block explorer list
