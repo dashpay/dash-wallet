@@ -17,7 +17,7 @@
 
 package de.schildbach.wallet.data;
 
-import de.schildbach.wallet.Configuration;
+import org.dash.wallet.common.Configuration;
 
 import android.content.Context;
 import android.content.CursorLoader;

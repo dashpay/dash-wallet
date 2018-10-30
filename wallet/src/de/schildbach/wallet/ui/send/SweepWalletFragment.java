@@ -49,19 +49,19 @@ import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.WalletTransaction;
+import org.dash.wallet.common.ui.CurrencyTextView;
+import org.dash.wallet.common.ui.DialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ComparisonChain;
 
-import de.schildbach.wallet.Configuration;
+import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.DynamicFeeLoader;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
-import de.schildbach.wallet.ui.CurrencyTextView;
-import de.schildbach.wallet.ui.DialogBuilder;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
 import de.schildbach.wallet.ui.ScanActivity;

@@ -24,17 +24,18 @@ import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
+import org.dash.wallet.common.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.schildbach.wallet.data.ExchangeRate;
+import org.dash.wallet.common.data.ExchangeRate;
 import de.schildbach.wallet.data.ExchangeRatesProvider;
 import de.schildbach.wallet.ui.RequestCoinsActivity;
 import de.schildbach.wallet.ui.SendCoinsQrActivity;
 import de.schildbach.wallet.ui.WalletActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
-import de.schildbach.wallet.util.GenericUtils;
-import de.schildbach.wallet.util.MonetarySpannable;
+import org.dash.wallet.common.util.GenericUtils;
+import org.dash.wallet.common.util.MonetarySpannable;
 import de.schildbach.wallet_test.R;
 
 import android.app.PendingIntent;
@@ -50,6 +51,8 @@ import android.text.Spannable;
 import android.text.style.ForegroundColorSpan;
 import android.view.View;
 import android.widget.RemoteViews;
+
+import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 
 /**
  * @author Andreas Schildbach
@@ -121,7 +124,7 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
                 final ExchangeRate exchangeRate = ExchangeRatesProvider.getExchangeRate(data);
                 final Fiat localBalance = exchangeRate.rate.coinToFiat(balance);
                 final MonetaryFormat localFormat = Constants.LOCAL_FORMAT.code(0,
-                        Constants.PREFIX_ALMOST_EQUAL_TO + GenericUtils.currencySymbol(exchangeRate.getCurrencyCode()));
+                        PREFIX_ALMOST_EQUAL_TO + GenericUtils.currencySymbol(exchangeRate.getCurrencyCode()));
                 final Object[] prefixSpans = new Object[] { MonetarySpannable.SMALLER_SPAN,
                         new ForegroundColorSpan(context.getResources().getColor(R.color.fg_less_significant)) };
                 localBalanceStr = new MonetarySpannable(localFormat, localBalance).applyMarkup(prefixSpans,

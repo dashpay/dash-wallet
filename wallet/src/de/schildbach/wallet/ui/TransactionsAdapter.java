@@ -37,11 +37,13 @@ import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.DefaultCoinSelector;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.ui.CurrencyTextView;
+import org.dash.wallet.common.ui.Formats;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.util.CircularProgressView;
-import de.schildbach.wallet.util.Formats;
+
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
@@ -60,6 +62,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.TextView;
+
+import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 
 /**
  * @author Andreas Schildbach
@@ -511,7 +515,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             final ExchangeRate exchangeRate = tx.getExchangeRate();
             if (exchangeRate != null) {
                 fiatView.setFormat(Constants.LOCAL_FORMAT.code(0,
-                        Constants.PREFIX_ALMOST_EQUAL_TO + exchangeRate.fiat.getCurrencyCode() + " "));
+                        PREFIX_ALMOST_EQUAL_TO + exchangeRate.fiat.getCurrencyCode() + " "));
                 Coin absCoin = Coin.valueOf(Math.abs(txCache.value.value));
                 fiatView.setAmount(exchangeRate.coinToFiat(absCoin));
             }

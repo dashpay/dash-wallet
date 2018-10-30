@@ -21,6 +21,7 @@ import javax.annotation.Nullable;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.ui.DialogBuilder;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;

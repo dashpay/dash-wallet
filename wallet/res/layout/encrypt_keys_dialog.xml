@@ -100,8 +100,8 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="@dimen/list_entry_padding_vertical_lax"
-        android:layout_marginTop="@dimen/list_entry_padding_vertical_lax"
+        android:layout_marginBottom="@dimen/list_entry_padding"
+        android:layout_marginTop="@dimen/list_entry_padding"
         android:text="@string/encrypt_keys_dialog_warning"
         style="@style/MontserratMedium.MG.12"/>
 

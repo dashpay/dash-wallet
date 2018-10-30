@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">Uphold account</string>
+    <string name="uphold_buy_dash_activity_title">Buy/Sell Dash with Uphold</string>
+    <string name="uphold_buy_dash_with_uphold">Buy Dash with Uphold account</string>
+    <string name="uphold_buy_dash_button">Buy Dash</string>
+    <string name="uphold_transfer_to_this_wallet_button">Transfer from Uphold</string>
+    <string name="uphold_link_account">Link Uphold account</string>
+    <string name="uphold_account_dash_balance">Your Uphold account Dash balance is</string>
+    <string name="uphold_transfer_to_this_wallet">Transfer Dash from your Uphold account to this wallet</string>
+    <string name="uphold_withdrawal_amount">Amount</string>
+    <string name="uphold_withdrawal_fee">Fee</string>
+    <string name="uphold_withdrawal_total">Total</string>
+    <string name="uphold_withdrawal_title">Transfer Dash to this wallet</string>
+    <string name="uphold_withdrawal_message">You have &lt;b>%1$s Dash&lt;/b> in your Uphold account. Do you want to &lt;u>transfer this value to this wallet&lt;/u>?</string>
+    <string name="uphold_withdrawal_confirm_title">Confirm transaction</string>
+    <string name="uphold_withdrawal_confirm_message">Base amount: %1$f\nFee: %2$f\nTotal: %3$f\n\nDo you want to confirm this transaction?</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">Fee will be deducted from requested amount.</string>
+    <string name="uphold_withdrawal_instructions">Enter the amount to transfer below</string>
+    <string name="uphold_withdrawal_success_title">Success</string>
+    <string name="uphold_withdrawal_success_message">Your transaction was sent and the amount should appear in your wallet in a few minutes.\n\nTransaction id: %s</string>
+    <string name="uphold_otp_dialog_title">Enter your 2FA code below:</string>
+    <string name="uphold_transfer">Transfer</string>
+    <string name="uphold_see_on_uphold">See on Uphold</string>
+
+</resources>

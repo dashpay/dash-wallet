@@ -19,7 +19,7 @@ public class KeyboardUtil {
     }
 
     public static void hideKeyboard(Context context, View view) {
-        if (view != null) {
+        if (view != null && context != null) {
             InputMethodManager keyboard = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
             keyboard.hideSoftInputFromWindow(view.getWindowToken(), 0);
         }

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <include
+        layout="@layout/app_bar_general"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <RelativeLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:ignore="MissingDefaultResource">
+
+        <ImageView
+            android:id="@+id/uphold_logo"
+            android:layout_centerHorizontal="true"
+            android:layout_width="wrap_content"
+            android:layout_height="141dp"
+            android:layout_marginTop="60dp"
+            android:layout_marginBottom="36dp"
+            android:src="@drawable/uphold_logo"/>
+
+        <LinearLayout
+            android:id="@+id/uphold_account_title"
+            android:gravity="bottom"
+            android:layout_below="@id/uphold_logo"
+            android:orientation="horizontal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/uphold_account_dash_balance"
+                style="@style/MontserratMedium.DB.14"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_below="@id/uphold_account_title"
+            android:orientation="horizontal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="32dp">
+
+            <ImageView
+                android:src="@drawable/ic_dash_d_white_bottom"
+                android:tint="@color/colorPrimary"
+                android:layout_marginTop="4dp"
+                android:layout_width="24dp"
+                android:layout_height="24dp" />
+
+            <org.dash.wallet.common.ui.CurrencyTextView
+                android:id="@+id/uphold_account_balance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="8dp"
+                android:layout_marginStart="8dp"
+                android:textSize="26sp"
+                tools:text="0.00"
+                android:includeFontPadding="false"
+                android:textColor="@color/colorPrimary"
+                style="@style/MontserratRegular" />
+
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/uphold_buy_dash_btn"
+            style="@style/MontserratButton.Inverted"
+            android:layout_alignParentBottom="true"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/uphold_buy_dash_button"
+            android:maxLines="2"
+            android:layout_margin="16dp" />
+
+        <Button
+            android:id="@+id/uphold_transfer_to_this_wallet_button"
+            style="@style/MontserratButton"
+            android:layout_above="@id/uphold_buy_dash_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/uphold_transfer_to_this_wallet_button"
+            android:maxLines="2"
+            android:layout_marginLeft="16dp"
+            android:layout_marginRight="16dp"/>
+
+    </RelativeLayout>
+
+</LinearLayout>

@@ -30,11 +30,9 @@ import android.os.HandlerThread;
 import android.os.Process;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -42,6 +40,7 @@ import android.widget.TextView;
 
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.ui.DialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.params.KeyParameter;
@@ -50,7 +49,7 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
-import de.schildbach.wallet.Configuration;
+import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.send.DecryptSeedTask;

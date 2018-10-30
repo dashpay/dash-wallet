@@ -32,6 +32,7 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Transaction.Purpose;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.ui.CurrencyTextView;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.AddressBookProvider;

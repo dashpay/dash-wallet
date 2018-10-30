@@ -27,7 +27,7 @@
         android:singleLine="true"
         style="@style/MontserratMedium.MG.14"/>
 
-    <de.schildbach.wallet.ui.CurrencyTextView
+    <org.dash.wallet.common.ui.CurrencyTextView
         android:id="@+id/block_row_transaction_value"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

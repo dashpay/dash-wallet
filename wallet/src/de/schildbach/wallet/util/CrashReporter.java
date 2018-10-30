@@ -45,7 +45,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 
-import de.schildbach.wallet.Configuration;
+import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 

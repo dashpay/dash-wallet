@@ -20,6 +20,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.ui.DialogBuilder;
 
 import java.util.concurrent.TimeUnit;
 

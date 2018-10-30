@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.regex.Matcher;
 
+import org.dash.wallet.common.ui.Formats;
 import org.junit.Test;
 
 /**

@@ -35,12 +35,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.params.KeyParameter;
 
-import de.schildbach.wallet.Configuration;
+import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.DynamicFeeLoader;
 import de.schildbach.wallet.ui.AbstractWalletActivity;
-import de.schildbach.wallet.ui.DialogBuilder;
+import org.dash.wallet.common.ui.DialogBuilder;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 

@@ -35,4 +35,7 @@ android {
         exclude 'org/bitcoinj/crypto/mnemonic/wordlist/english.txt'
         exclude 'org/bitcoinj/crypto/cacerts'
     }
+    defaultConfig {
+        minSdkVersion = 15
+    }
 }

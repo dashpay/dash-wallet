@@ -27,13 +27,14 @@ import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.ui.CurrencyAmountView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.schildbach.wallet.Configuration;
+import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.ExchangeRate;
+import org.dash.wallet.common.data.ExchangeRate;
 import de.schildbach.wallet.data.ExchangeRatesLoader;
 import de.schildbach.wallet.data.ExchangeRatesProvider;
 import de.schildbach.wallet.offline.AcceptBluetoothService;

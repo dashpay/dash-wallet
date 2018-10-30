@@ -37,7 +37,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.AbstractWalletActivity;
-import de.schildbach.wallet.ui.DialogBuilder;
+import org.dash.wallet.common.ui.DialogBuilder;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;

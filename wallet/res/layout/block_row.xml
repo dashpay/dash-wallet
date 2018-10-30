@@ -47,8 +47,8 @@
         <ImageButton
             android:id="@+id/block_list_row_menu"
             android:layout_width="14dp"
-            android:layout_marginLeft="10dp"
-            android:layout_marginStart="10dp"
+            android:layout_marginLeft="@dimen/list_entry_padding"
+            android:layout_marginStart="@dimen/list_entry_padding"
             android:tint="@color/menu_gray"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"

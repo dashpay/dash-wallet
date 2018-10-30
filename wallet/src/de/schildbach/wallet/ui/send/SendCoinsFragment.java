@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui.send;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.dash.wallet.common.Constants.CHAR_CHECKMARK;
 
 import java.io.FileNotFoundException;
 import java.io.InputStream;
@@ -64,12 +65,12 @@ import com.netki.tlsa.CACertService;
 import com.netki.tlsa.CertChainValidator;
 import com.netki.tlsa.TLSAValidator;
 
-import de.schildbach.wallet.Configuration;
+import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.DynamicFeeLoader;
-import de.schildbach.wallet.data.ExchangeRate;
+import org.dash.wallet.common.data.ExchangeRate;
 import de.schildbach.wallet.data.ExchangeRatesLoader;
 import de.schildbach.wallet.data.ExchangeRatesProvider;
 import de.schildbach.wallet.data.PaymentIntent;
@@ -81,9 +82,9 @@ import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.AddressAndLabel;
-import de.schildbach.wallet.ui.CurrencyAmountView;
+import org.dash.wallet.common.ui.CurrencyAmountView;
 import de.schildbach.wallet.ui.CurrencyCalculatorLink;
-import de.schildbach.wallet.ui.DialogBuilder;
+import org.dash.wallet.common.ui.DialogBuilder;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StreamInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
@@ -93,7 +94,7 @@ import de.schildbach.wallet.ui.TransactionsAdapter;
 import de.schildbach.wallet.ui.UnlockWalletDialogFragment;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.util.Bluetooth;
-import de.schildbach.wallet.util.MonetarySpannable;
+import org.dash.wallet.common.util.MonetarySpannable;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -1314,8 +1315,7 @@ public final class SendCoinsFragment extends Fragment {
                 payeeVerifiedByView.setVisibility(View.VISIBLE);
                 final String verifiedBy = paymentIntent.payeeVerifiedBy != null ? paymentIntent.payeeVerifiedBy
                         : getString(R.string.send_coins_fragment_payee_verified_by_unknown);
-                payeeVerifiedByView.setText(Constants.CHAR_CHECKMARK
-                        + String.format(getString(R.string.send_coins_fragment_payee_verified_by), verifiedBy));
+                payeeVerifiedByView.setText(CHAR_CHECKMARK + String.format(getString(R.string.send_coins_fragment_payee_verified_by), verifiedBy));
             } else {
                 payeeNameView.setVisibility(View.GONE);
                 payeeVerifiedByView.setVisibility(View.GONE);

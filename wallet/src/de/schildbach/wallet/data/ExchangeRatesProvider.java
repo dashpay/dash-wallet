@@ -31,6 +31,7 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
+import org.dash.wallet.common.data.ExchangeRate;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -42,11 +43,11 @@ import com.squareup.okhttp.HttpUrl;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
 
-import de.schildbach.wallet.Configuration;
+import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.preference.PinRetryController;
-import de.schildbach.wallet.util.GenericUtils;
+import org.dash.wallet.common.util.GenericUtils;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;
@@ -56,7 +57,6 @@ import android.database.MatrixCursor;
 import android.net.Uri;
 import android.preference.PreferenceManager;
 import android.provider.BaseColumns;
-import android.text.format.DateUtils;
 
 /**
  * @author Andreas Schildbach

@@ -7,7 +7,7 @@
     android:paddingTop="18dp"
     android:paddingLeft="@dimen/space_medium"
     android:paddingRight="@dimen/space_medium"
-    android:paddingBottom="10dp"
+    android:paddingBottom="@dimen/list_entry_padding"
     android:focusable="true"
     android:foreground="?android:attr/selectableItemBackground"
     tools:ignore="RtlHardcoded" >
@@ -61,7 +61,7 @@
         android:textColor="@color/fg_less_significant"
         style="@style/MontserratMedium.MG.12"/>
 
-    <de.schildbach.wallet.ui.CurrencyTextView
+    <org.dash.wallet.common.ui.CurrencyTextView
         android:id="@+id/exchange_rate_row_rate"
         android:layout_toLeftOf="@id/exchange_rate_row_menu"
         android:layout_toStartOf="@id/exchange_rate_row_menu"
@@ -71,7 +71,7 @@
         android:layout_gravity="right|end"
         style="@style/MontserratSemiBold.DB.12"/>
 
-    <de.schildbach.wallet.ui.CurrencyTextView
+    <org.dash.wallet.common.ui.CurrencyTextView
         android:id="@+id/exchange_rate_row_balance"
         android:layout_below="@id/exchange_rate_row_rate"
         android:layout_alignEnd="@id/exchange_rate_row_rate"

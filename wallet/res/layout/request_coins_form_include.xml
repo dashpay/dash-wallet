@@ -20,7 +20,7 @@
 		android:layout_height="wrap_content"
 		android:layout_marginBottom="18dp">
 
-		<de.schildbach.wallet.ui.CurrencyAmountView
+		<org.dash.wallet.common.ui.CurrencyAmountView
 			android:id="@+id/request_coins_amount_dash"
 			android:layout_width="0px"
 			android:layout_height="wrap_content"
@@ -36,9 +36,9 @@
 				style="@style/MontserratRegular"
 				tools:ignore="TextFields" />
 
-		</de.schildbach.wallet.ui.CurrencyAmountView>
+		</org.dash.wallet.common.ui.CurrencyAmountView>
 
-		<de.schildbach.wallet.ui.CurrencyAmountView
+		<org.dash.wallet.common.ui.CurrencyAmountView
 			android:id="@+id/request_coins_amount_local"
 			android:layout_width="0px"
 			android:layout_height="wrap_content"
@@ -54,7 +54,7 @@
 				style="@style/MontserratRegular"
 				tools:ignore="TextFields" />
 
-		</de.schildbach.wallet.ui.CurrencyAmountView>
+		</org.dash.wallet.common.ui.CurrencyAmountView>
 
 	</LinearLayout>
 

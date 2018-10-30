@@ -68,7 +68,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
 
-import de.schildbach.wallet.Configuration;
+import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
@@ -101,6 +101,8 @@ import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.format.DateUtils;
+
+import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 
 /**
  * @author Andreas Schildbach
@@ -215,7 +217,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         if (exchangeRate != null) {
             exchangeRate.coinToFiat(amount);
             MonetaryFormat format = Constants.LOCAL_FORMAT.code(0,
-                    Constants.PREFIX_ALMOST_EQUAL_TO + exchangeRate.fiat.getCurrencyCode());
+                    PREFIX_ALMOST_EQUAL_TO + exchangeRate.fiat.getCurrencyCode());
             msgSuffix += " " + format.format(exchangeRate.coinToFiat(amount));
         }
 

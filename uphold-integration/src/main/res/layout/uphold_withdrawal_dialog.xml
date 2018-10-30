@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:scrollbars="none"
+    style="@style/DialogContainer">
+
+    <LinearLayout
+        android:paddingTop="@dimen/list_entry_padding"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" >
+
+        <LinearLayout
+            android:gravity="top"
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <ImageView
+                android:id="@+id/uphold_withdrawal_amount_icon"
+                android:src="@drawable/ic_dash_d_white_bottom"
+                android:tint="@color/medium_gray"
+                android:layout_marginTop="1dp"
+                android:layout_height="14dp"
+                android:layout_width="14dp"
+                android:layout_marginRight="8dp"
+                android:layout_marginEnd="8dp"/>
+
+            <TextView
+                android:id="@+id/hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="26dp"
+                android:includeFontPadding="false"
+                tools:text="1000 available"
+                style="@style/MontserratRegular.MG.14"/>
+
+        </LinearLayout>
+
+        <org.dash.wallet.common.ui.CurrencyAmountView
+            android:id="@+id/send_coins_amount_dash"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <EditText
+                android:id="@+id/dash_amount"
+                android:drawablePadding="8dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:imeOptions="flagNoExtractUi"
+                android:textSize="16sp"
+                style="@style/MontserratRegular"
+                tools:ignore="TextFields" />
+
+        </org.dash.wallet.common.ui.CurrencyAmountView>
+
+    </LinearLayout>
+
+</ScrollView>

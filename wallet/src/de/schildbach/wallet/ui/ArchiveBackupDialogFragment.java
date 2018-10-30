@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui;
 
 import java.io.File;
 
+import org.dash.wallet.common.ui.DialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

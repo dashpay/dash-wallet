@@ -18,7 +18,6 @@
 package de.schildbach.wallet.ui;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
@@ -37,13 +36,14 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.utils.Fiat;
+import org.dash.wallet.common.ui.CurrencyTextView;
 
 import javax.annotation.Nullable;
 
-import de.schildbach.wallet.Configuration;
+import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.ExchangeRatesProvider;
-import de.schildbach.wallet.data.ExchangeRate;
+import org.dash.wallet.common.data.ExchangeRate;
 import de.schildbach.wallet.data.ExchangeRatesLoader;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.WalletLock;
@@ -249,7 +249,8 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 					{
 						final Fiat localValue = exchangeRate.rate.coinToFiat(balance);
 						viewBalanceLocal.setVisibility(View.VISIBLE);
-						viewBalanceLocal.setFormat(Constants.LOCAL_FORMAT.code(0, Constants.PREFIX_ALMOST_EQUAL_TO + exchangeRate.getCurrencyCode()));
+						viewBalanceLocal.setFormat(Constants.LOCAL_FORMAT.code(0,
+								org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO + exchangeRate.getCurrencyCode()));
 						viewBalanceLocal.setAmount(localValue);
 					}
 					else

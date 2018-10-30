@@ -28,8 +28,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:layout_marginBottom="@dimen/list_entry_padding_vertical_lax"
-            android:layout_marginTop="@dimen/list_entry_padding_vertical_lax"
+            android:layout_marginBottom="@dimen/list_entry_padding"
+            android:layout_marginTop="@dimen/list_entry_padding"
             android:gravity="left"
             style="@style/MontserratMedium.DB"
             android:textSize="@dimen/font_size_normal" />

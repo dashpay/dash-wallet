@@ -31,18 +31,23 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
+import org.dash.wallet.common.ui.DialogBuilder;
 
+import org.dash.wallet.integration.uphold.data.UpholdClient;
+import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
+import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.squareup.okhttp.HttpUrl;
 
-import de.schildbach.wallet.Configuration;
+import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
@@ -167,6 +172,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         MaybeMaintenanceFragment.add(getFragmentManager());
 
+        initUphold();
         initView();
 
         //Prevent showing dialog twice or more when activity is recreated (e.g: rotating device, etc)
@@ -176,10 +182,26 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }
     }
 
+    private void initUphold() {
+        //Uses Sha256 hash of excerpt of xpub as Uphold authentication salt
+        String xpub = wallet.getWatchingKey().serializePubB58(Constants.NETWORK_PARAMETERS);
+        byte[] xpubExcerptHash = Sha256Hash.hash(xpub.substring(4, 15).getBytes());
+        String authenticationHash = Sha256Hash.wrap(xpubExcerptHash).toString();
+
+        UpholdClient.init(getApplicationContext(), authenticationHash);
+    }
+
     private void initView() {
         Toolbar toolbarView = initToolbar();
         initNavigationDrawer(toolbarView);
         initFloatingButton();
+        findViewById(R.id.uphold_account_section).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startUpholdActivity();
+                viewDrawer.closeDrawer(GravityCompat.START);
+            }
+        });
     }
 
     private Toolbar initToolbar() {
@@ -1092,6 +1114,17 @@ public final class WalletActivity extends AbstractBindServiceActivity
         } else {
             super.onBackPressed();
         }
+    }
+
+    private void startUpholdActivity() {
+        Intent intent;
+        if (UpholdClient.getInstance().isAuthenticated()) {
+            intent = new Intent(this, UpholdAccountActivity.class);
+        } else {
+            intent = new Intent(this, UpholdSplashActivity.class);
+        }
+        intent.putExtra(UpholdAccountActivity.WALLET_RECEIVING_ADDRESS_EXTRA, wallet.currentReceiveAddress().toString());
+        startActivity(intent);
     }
 
     //Dash Specific
