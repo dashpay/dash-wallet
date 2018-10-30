@@ -82,6 +82,7 @@ public class WalletApplication extends Application implements Application.Activi
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
+    private Activity currentActivity;
 
     private Intent blockchainServiceIntent;
     private Intent blockchainServiceCancelCoinsReceivedIntent;
@@ -111,6 +112,12 @@ public class WalletApplication extends Application implements Application.Activi
     }
 
     @Override
+    protected void attachBaseContext(Context base) {
+        super.attachBaseContext(base);
+        instance = this;
+    }
+
+    @Override
     public void onCreate() {
         //Memory Leak Detection
         if (LeakCanary.isInAnalyzerProcess(this)) {
@@ -118,7 +125,6 @@ public class WalletApplication extends Application implements Application.Activi
             // You should not init your app in this process.
             return;
         }
-        instance = this;
         refWatcher = LeakCanary.install(this);
 
         registerActivityLifecycleCallbacks(this);
@@ -582,6 +588,7 @@ public void updateDashMode()
             lockWalletIfNeeded();
         }
         numStarted++;
+        currentActivity = activity;
     }
 
     @Override
@@ -612,40 +619,27 @@ public void updateDashMode()
 
     }
 
-    private void clearApplicationData() {
-        File cacheDirectory = getCacheDir();
-        File applicationDirectory = new File(cacheDirectory.getParent());
-        if (applicationDirectory.exists()) {
-            String[] fileNames = applicationDirectory.list();
-            for (String fileName : fileNames) {
-                if (!fileName.equals("lib")) {
-                    deleteFile(new File(applicationDirectory, fileName));
-                }
-            }
-        }
+    /**
+      Replace the wallet with an new wallet as part of a wallet wipe
+     */
+    public void eraseAndCreateNewWallet() {
+        Wallet newWallet = new Wallet(Constants.NETWORK_PARAMETERS);
+        newWallet.addKeyChain(Constants.BIP44_PATH);
+
+        log.info("creating new wallet after wallet wipe");
+
+        File walletBackupFile = getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
+        if(walletBackupFile.exists())
+            walletBackupFile.delete();
+
+        replaceWallet(newWallet);
+        saveWallet();
+        config.armBackupReminder();
+        config.armBackupSeedReminder();
+        log.info("New wallet created to replace the wiped locked wallet");
     }
 
-    private static boolean deleteFile(File file) {
-        boolean deletedAll = true;
-        if (file != null) {
-            if (file.isDirectory()) {
-                String[] children = file.list();
-                for (int i = 0; i < children.length; i++) {
-                    deletedAll = deleteFile(new File(file, children[i])) && deletedAll;
-                }
-            } else {
-                deletedAll = file.delete();
-            }
-        }
 
-        return deletedAll;
-    }
-
-    public void clearDataAndExit() {
-        clearApplicationData();
-        Process.killProcess(Process.myPid());
-        System.exit(1);
-    }
 
     public boolean isBackupDisclaimerDismissed() {
         return backupDisclaimerDismissed;
@@ -657,6 +651,14 @@ public void updateDashMode()
 
     public static WalletApplication getInstance() {
         return instance;
+    }
+
+    public void killAllActivities() {
+        if (currentActivity != null) {
+            currentActivity.finishAffinity();
+        } else {
+            System.exit(0);
+        }
     }
 
 }
