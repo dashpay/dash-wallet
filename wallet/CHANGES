@@ -1,4 +1,7 @@
 Dash Wallet
+v6.1.2 (Hotfix)
+* Wipe Wallet after 8 incorrect PIN entries.
+* Prevent Brute Forcing PIN
 
 v6.1.1 (Hotfix)
 * Resolve Delayed Sending (from sending quickly)
