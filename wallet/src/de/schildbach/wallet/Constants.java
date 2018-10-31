@@ -190,6 +190,10 @@ public final class Constants {
     public static final int NOTIFICATION_ID_CONNECTED = 0;
     public static final int NOTIFICATION_ID_COINS_RECEIVED = 1;
     public static final int NOTIFICATION_ID_INACTIVITY = 2;
+    public static final int NOTIFICATION_ID_BLOCKCHAIN_SYNC = 3;
+
+    public static String TRANSACTIONS_NOTIFICATION_CHANNEL_ID = "dash.notifications.transactions";
+    public static String SYNCHRONIZATION_NOTIFICATION_CHANNEL_ID = "dash.notifications.synchronization";
 
     /** Desired number of scrypt iterations for deriving the spending PIN */
     public static final int SCRYPT_ITERATIONS_TARGET = 65536;

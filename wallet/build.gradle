@@ -84,7 +84,7 @@ android {
     }
     defaultConfig {
         minSdkVersion 16
-        targetSdkVersion 25
+        targetSdkVersion 28
         generatedDensities = ['hdpi', 'xhdpi']
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         ndk {
