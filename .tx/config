@@ -37,3 +37,16 @@ source_file = market/market-description.txt
 source_lang = en
 type = TXT
 
+[dash-wallet.strings-common]
+file_filter = common/src/main/res/values-<lang>/strings.xml
+lang_map = sl_SI:sl, zh_TW:zh-rTW
+source_file = common/src/main/res/values/strings.xml
+source_lang = en
+type = ANDROID
+
+[dash-wallet.strings-uphold]
+file_filter = uphold-integration/src/main/res/values-<lang>/strings-uphold.xml
+lang_map = sl_SI:sl, zh_TW:zh-rTW
+source_file = uphold-integration/src/main/res/values/strings-uphold.xml
+source_lang = en
+type = ANDROID
