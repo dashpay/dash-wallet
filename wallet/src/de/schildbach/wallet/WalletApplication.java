@@ -62,9 +62,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.media.AudioAttributes;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Process;
 import android.os.StrictMode;
 import android.preference.PreferenceManager;
 import android.support.annotation.StringRes;
@@ -219,6 +220,15 @@ public class WalletApplication extends Application implements Application.Activi
 
         NotificationChannel channel = new NotificationChannel(channelId, name, importance);
         channel.setDescription(description);
+
+        if (Constants.TRANSACTIONS_NOTIFICATION_CHANNEL_ID.equals(channelId)) {
+            AudioAttributes attributes = new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .build();
+            Uri soundUri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.coins_received);
+            channel.setSound(soundUri, attributes);
+        }
+
         // Register the channel with the system; you can't change the importance
         // or other notification behaviors after this
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
@@ -590,12 +600,15 @@ public class WalletApplication extends Application implements Application.Activi
 
         final AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         PendingIntent alarmIntent;
+
+        Intent serviceIntent = new Intent(context, BlockchainServiceImpl.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            alarmIntent = PendingIntent.getForegroundService(context, 0,
-                    new Intent(context, BlockchainServiceImpl.class), 0);
+            serviceIntent.putExtra(BlockchainServiceImpl.START_AS_FOREGROUND_EXTRA, true);
+            alarmIntent = PendingIntent.getForegroundService(context, 0, serviceIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT);
         } else {
-            alarmIntent = PendingIntent.getService(context, 0,
-                    new Intent(context, BlockchainServiceImpl.class), 0);
+            alarmIntent = PendingIntent.getService(context, 0, serviceIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT);
         }
         alarmManager.cancel(alarmIntent);
 

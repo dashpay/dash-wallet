@@ -153,7 +153,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
     private static final Logger log = LoggerFactory.getLogger(BlockchainServiceImpl.class);
 
-    private static final String START_AS_FOREGROUND_EXTRA = "start_as_foreground";
+    public static final String START_AS_FOREGROUND_EXTRA = "start_as_foreground";
 
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
@@ -242,7 +242,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
             text.append(label != null ? label : addressStr);
         }
 
-        final Notification.Builder notification = new Notification.Builder(this);
+        final NotificationCompat.Builder notification = new NotificationCompat.Builder(this,
+                Constants.TRANSACTIONS_NOTIFICATION_CHANNEL_ID);
         notification.setSmallIcon(R.drawable.ic_dash_d_white_bottom);
         notification.setTicker(tickerMsg);
         notification.setContentTitle(msg);
@@ -678,23 +679,10 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
     @Override
     public int onStartCommand(final Intent intent, final int flags, final int startId) {
         if (intent != null) {
-
             //Restart service as a Foreground Service if it's synchronizing the blockchain
             Bundle extras = intent.getExtras();
-            if (getBlockchainState().replaying) {
-                if (extras == null || !extras.containsKey(START_AS_FOREGROUND_EXTRA)) {
-                    Intent serviceIntent = new Intent(this, BlockchainServiceImpl.class);
-                    serviceIntent.putExtra(START_AS_FOREGROUND_EXTRA, true);
-                    ContextCompat.startForegroundService(this, serviceIntent);
-                    return START_NOT_STICKY;
-                } else {
-                    //Shows ongoing notification promoting service to foreground service and
-                    //preventing it from being killed in Android 26 or later
-                    Notification notification = createNetworkSyncNotification(getBlockchainState());
-                    if (notification != null) {
-                        startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
-                    }
-                }
+            if (extras != null && extras.containsKey(START_AS_FOREGROUND_EXTRA)) {
+                startForeground();
             }
 
             log.info("service start command: " + intent + (intent.hasExtra(Intent.EXTRA_ALARM_COUNT)
@@ -738,6 +726,15 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         }
 
         return START_NOT_STICKY;
+    }
+
+    private void startForeground() {
+        //Shows ongoing notification promoting service to foreground service and
+        //preventing it from being killed in Android 26 or later
+        Notification notification = createNetworkSyncNotification(getBlockchainState());
+        if (notification != null) {
+            startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+        }
     }
 
     @Override
