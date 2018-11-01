@@ -201,12 +201,12 @@ public class WalletApplication extends Application implements Application.Activi
     @TargetApi(Build.VERSION_CODES.O)
     private void createNotificationChannels() {
         //Transactions
-        createNotificationChannel(Constants.TRANSACTIONS_NOTIFICATION_CHANNEL_ID,
+        createNotificationChannel(Constants.NOTIFICATION_CHANNEL_ID_TRANSACTIONS,
                 R.string.notification_transactions_channel_name,
                 R.string.notification_transactions_channel_description,
                 NotificationManager.IMPORTANCE_HIGH);
         //Synchronization
-        createNotificationChannel(Constants.SYNCHRONIZATION_NOTIFICATION_CHANNEL_ID,
+        createNotificationChannel(Constants.NOTIFICATION_CHANNEL_ID_ONGOING,
                 R.string.notification_synchronization_channel_name,
                 R.string.notification_synchronization_channel_description,
                 NotificationManager.IMPORTANCE_LOW);
@@ -221,7 +221,7 @@ public class WalletApplication extends Application implements Application.Activi
         NotificationChannel channel = new NotificationChannel(channelId, name, importance);
         channel.setDescription(description);
 
-        if (Constants.TRANSACTIONS_NOTIFICATION_CHANNEL_ID.equals(channelId)) {
+        if (Constants.NOTIFICATION_CHANNEL_ID_TRANSACTIONS.equals(channelId)) {
             AudioAttributes attributes = new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                     .build();

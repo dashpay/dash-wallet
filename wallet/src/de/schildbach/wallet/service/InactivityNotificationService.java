@@ -120,7 +120,7 @@ public final class InactivityNotificationService extends Service {
             donateIntent.setAction(ACTION_DONATE);
 
             final NotificationCompat.Builder notification = new NotificationCompat.Builder(this,
-                    Constants.TRANSACTIONS_NOTIFICATION_CHANNEL_ID);
+                    Constants.NOTIFICATION_CHANNEL_ID_TRANSACTIONS);
             notification.setStyle(new NotificationCompat.BigTextStyle().bigText(text));
             notification.setSmallIcon(R.drawable.ic_dash_d_white_bottom);
             notification.setContentTitle(title);
@@ -145,7 +145,7 @@ public final class InactivityNotificationService extends Service {
             //startForeground is called here to prevent a crash that would happen by not calling
             //startForeground after calling a service with startForegroundService.
             final NotificationCompat.Builder invisibleNotification = new NotificationCompat.Builder(this,
-                    Constants.SYNCHRONIZATION_NOTIFICATION_CHANNEL_ID);
+                    Constants.NOTIFICATION_CHANNEL_ID_ONGOING);
             invisibleNotification.setPriority(Notification.PRIORITY_MIN);
             startForeground(Constants.NOTIFICATION_ID_INACTIVITY, invisibleNotification.build());
 

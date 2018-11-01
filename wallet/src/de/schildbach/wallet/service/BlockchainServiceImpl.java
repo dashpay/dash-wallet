@@ -102,7 +102,6 @@ import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.support.v4.app.NotificationCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.format.DateUtils;
 
@@ -243,7 +242,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         }
 
         final NotificationCompat.Builder notification = new NotificationCompat.Builder(this,
-                Constants.TRANSACTIONS_NOTIFICATION_CHANNEL_ID);
+                Constants.NOTIFICATION_CHANNEL_ID_TRANSACTIONS);
         notification.setSmallIcon(R.drawable.ic_dash_d_white_bottom);
         notification.setTicker(tickerMsg);
         notification.setContentTitle(msg);
@@ -815,7 +814,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         }
 
         return new NotificationCompat.Builder(this,
-                Constants.SYNCHRONIZATION_NOTIFICATION_CHANNEL_ID)
+                Constants.NOTIFICATION_CHANNEL_ID_ONGOING)
                 .setSmallIcon(R.drawable.ic_dash_d_white_bottom)
                 .setContentTitle(getString(R.string.app_name))
                 .setContentText(message)
