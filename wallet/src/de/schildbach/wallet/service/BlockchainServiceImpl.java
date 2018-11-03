@@ -96,6 +96,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -810,7 +811,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
         String message = BlockchainStateUtils.getSyncStateString(blockchainState, this);
         if (message == null) {
-            return null;
+            message = getString(R.string.blockchain_state_progress_downloading);
         }
 
         return new NotificationCompat.Builder(this,
@@ -876,16 +877,18 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         blockchainState.putExtras(broadcast);
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
 
-        //Handle Ongoing notification state
-        if (blockchainState.bestChainHeight == config.getBestChainHeightEver()) {
-            //Remove ongoing notification if blockchain sync finished
-            stopForeground(true);
-            nm.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC);
-        } else if (blockchainState.replaying) {
-            //Shows ongoing notification when synchronizing the blockchain
-            Notification notification = createNetworkSyncNotification(blockchainState);
-            if (notification != null) {
-                nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            //Handle Ongoing notification state
+            if (blockchainState.bestChainHeight == config.getBestChainHeightEver()) {
+                //Remove ongoing notification if blockchain sync finished
+                stopForeground(true);
+                nm.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC);
+            } else if (blockchainState.replaying) {
+                //Shows ongoing notification when synchronizing the blockchain
+                Notification notification = createNetworkSyncNotification(blockchainState);
+                if (notification != null) {
+                    nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+                }
             }
         }
     }
