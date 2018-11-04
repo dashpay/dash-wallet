@@ -40,7 +40,7 @@
 	<string name="wallet_lock_unlock_dialog_title">Mở khoá ví</string>
 	<string name="wallet_lock_unlock_dialog_message">Ví của bạn được bảo vệ bởi mã PIN chi tiêu. Hãy nhập mã PIN và bấm Mở Khoá để tiếp tục</string>
 	<string name="wallet_lock_reset_wallet_title">Thiết lập lại ví</string>
-	<string name="wallet_lock_reset_wallet_message">Bạn chắc chứ? Tất cả dữ liệu sẽ bị xoá sạch và ví của bạn chỉ có thể khôi phục được bằng file sao lưu dự phòng hoặc các hạt giống khôi phục.</string>
+	<string name="wallet_lock_reset_wallet_message">Bạn chắc chứ? Ví của bạn sẽ bị xoá và tất cả số Dash trong đó sẽ bị mất.\n\nCách duy nhất để khôi phục số Dash đó là với một file backup hoặc có dòng chữ phục hồi.</string>
 
 	<string name="wallet_lock_wallet_disabled">Ví bị mất tác dụng</string>
 	<string name="wallet_lock_try_again">Thử lại trong %1$d%2$s</string>
@@ -69,5 +69,8 @@
 	<string name="change_exchange_currency_code_message">Tiền địa phương của bạn là%1$s, nhưng trong ứng dụng này thì loại tiền ngầm định của bạn được đặt là %2$s. Bạn có muốn đổi nó về %1$s hoặc để nó là %2$s?</string>
 	<string name="change_to">Đổi về %s</string>
 	<string name="leave_as">Để là %s</string>
+
+	<string name="remind_later">Hãy nhắc tôi sau</string>
+	<string name="backup_now">Sao lưu dự phòng</string>
 
 </resources>

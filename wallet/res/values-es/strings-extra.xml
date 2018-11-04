@@ -40,7 +40,7 @@
 	<string name="wallet_lock_unlock_dialog_title">Abra tu billetera</string>
 	<string name="wallet_lock_unlock_dialog_message">Tu billetera está protegida por un PIN. Ingresa tu PIN y presiona Abrir para continuar.</string>
 	<string name="wallet_lock_reset_wallet_title">Reiniciar billetera</string>
-	<string name="wallet_lock_reset_wallet_message">¿Estás seguro? Toda los datos almacenados serán borrados y tu billetera solo será recuperable por un archivo de respaldo o frase de recuperación.</string>
+	<string name="wallet_lock_reset_wallet_message">¿Estás seguro? Tu billetera se borrará y todos sus Dash se perderán.\n\nLa única forma de recuperar sus Dash es con un archivo de backup o frase de recuperación.</string>
 
 	<string name="wallet_lock_wallet_disabled">Billetera deshabilitada</string>
 	<string name="wallet_lock_try_again">Intente nuevamente en %1$d %2$s</string>

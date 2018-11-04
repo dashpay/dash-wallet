@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">Uphold Account</string>
+    <string name="uphold_buy_dash_activity_title">Dash mit Uphold kaufen/verkaufen</string>
+    <string name="uphold_buy_dash_with_uphold">Dash über den Uphold Account kaufen</string>
+    <string name="uphold_buy_dash_button">Dash kaufen</string>
+    <string name="uphold_transfer_to_this_wallet_button">Von Uphold transferieren</string>
+    <string name="uphold_link_account">Uphold Account verknüpfen</string>
+    <string name="uphold_account_dash_balance">Das Dash-Guthaben des Uphold Accounts beträgt</string>
+    <string name="uphold_transfer_to_this_wallet">Dash vom Uphold Account an diese Wallet transferieren</string>
+    <string name="uphold_withdrawal_amount">Betrag</string>
+    <string name="uphold_withdrawal_fee">Netzwerk-Gebühr</string>
+    <string name="uphold_withdrawal_total">Gesamtbetrag</string>
+    <string name="uphold_withdrawal_title">Dash an diese Wallet transferieren</string>
+    <string name="uphold_withdrawal_message">Du hast &lt;b>%1$s Dash&lt;/b> in deinem Uphold Account. Möchtest du &lt;u>diesen Wert an diese Wallet transferieren&lt;/u>?</string>
+    <string name="uphold_withdrawal_confirm_title">Transaktion bestätigen</string>
+    <string name="uphold_withdrawal_confirm_message">Grundbetrag: %1$f\nGebühr: %2$f\nGesamtbetrag: %3$f\n\nMöchtest du diese Transaktion bestätigen?</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">Die Gebühr wird vom angeforderten Betrag abgezogen.</string>
+    <string name="uphold_withdrawal_instructions">Gib bitte den Transaktionsbetrag an</string>
+    <string name="uphold_withdrawal_success_title">Erfolg</string>
+    <string name="uphold_withdrawal_success_message">Deine Transaktion wurde abgeschickt und der Betrag sollte in ein paar Minuten auf deine Wallet gutgeschrieben werden.\n\nTransaktions-ID: %s</string>
+    <string name="uphold_otp_dialog_title">Gib bitte deinen 2FA-Code an:</string>
+    <string name="uphold_transfer">Transferieren</string>
+    <string name="uphold_see_on_uphold">Auf Uphold ansehen</string>
+
+</resources>

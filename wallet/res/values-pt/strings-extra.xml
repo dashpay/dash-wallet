@@ -40,7 +40,7 @@
 	<string name="wallet_lock_unlock_dialog_title">Desbloqueie sua carteira</string>
 	<string name="wallet_lock_unlock_dialog_message">Sua carteira é protegida por um PIN. Insira o seu PIN e pressione Desbloquear para continuar.</string>
 	<string name="wallet_lock_reset_wallet_title">Resetar carteira</string>
-	<string name="wallet_lock_reset_wallet_message">Tem certeza? Todo os dados serão apagados e sua carteira somente será recuperável por um arquivo de backup ou frase de recuperação.</string>
+	<string name="wallet_lock_reset_wallet_message">Tem certeza? Sua carteira será deletada e todo seu Dash será perdido.\n\nA única maneira de recuperar seu Dash é com um arquivo de backup ou frase de recuperação.</string>
 
 	<string name="wallet_lock_wallet_disabled">Carteira desabilitada</string>
 	<string name="wallet_lock_try_again">Tente novamente em %1$d %2$s</string>

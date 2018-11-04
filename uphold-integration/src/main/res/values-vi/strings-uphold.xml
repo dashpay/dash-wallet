@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">Tài khoản Uphold</string>
+    <string name="uphold_buy_dash_activity_title">Mua/Bán Dash với Uphold</string>
+    <string name="uphold_buy_dash_with_uphold">Mua Dash với tài khoản Uphold</string>
+    <string name="uphold_buy_dash_button">Mua Dash</string>
+    <string name="uphold_transfer_to_this_wallet_button">Chuyển từ Uphold</string>
+    <string name="uphold_link_account">Liên kết tài khoản Uphold</string>
+    <string name="uphold_account_dash_balance">Số dư Dash trên tài khoản Uphold của bạn là</string>
+    <string name="uphold_transfer_to_this_wallet">Chuyển Dash từ tài khoản Uphold của bạn đến ví này</string>
+    <string name="uphold_withdrawal_amount">Số lượng</string>
+    <string name="uphold_withdrawal_fee">Phí</string>
+    <string name="uphold_withdrawal_total">Tổng số</string>
+    <string name="uphold_withdrawal_title">Chuyển Dash sang ví này</string>
+    <string name="uphold_withdrawal_message">Bạn có &lt;b> %1$s Dash&lt;/b> trong tài khoản Uphold. Bạn có muốn &lt;u>chuyển số lượng đó vào ví này không&lt;u>?</string>
+    <string name="uphold_withdrawal_confirm_title">Xác nhận giao dịch</string>
+    <string name="uphold_withdrawal_confirm_message">Số lượng cơ bản: %1$f \nPhí: %2$f \nTông số: %3$f \n\nBạn có muốn xác nhận giao dịch này không?</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">Phí chuyển sẽ được trừ từ số lượng yêu cầu.</string>
+    <string name="uphold_withdrawal_instructions">Nhập số lượng muốn chuyển vào dưới đây</string>
+    <string name="uphold_withdrawal_success_title">Thành công</string>
+    <string name="uphold_withdrawal_success_message">Giao dịch của bạn đã được gửi và số lượng đó sẽ xuất hiện trong ví của bạn trong vòng vài phút.\n\n lMã giao dịch: %s</string>
+    <string name="uphold_otp_dialog_title">Nhập mã bảo mật 2 lớp</string>
+    <string name="uphold_transfer">Chuyển</string>
+    <string name="uphold_see_on_uphold">Xem trên Uphold</string>
+
+</resources>

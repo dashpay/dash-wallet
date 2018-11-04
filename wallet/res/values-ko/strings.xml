@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">지갑이 재설치되었습니다. \n완전한 복구를 위해 잠시만 기다려 주세요.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">&lt;u&gt;안전 이슈 참조&lt;/u&gt;를 먼저 읽어보신 후 위험성을 충분히 숙지하고 사용하시기 바랍니다.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">&lt;u&gt;전자 지갑 백업&lt;/u&gt;이 필요합니다.!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">지갑을 백업해야 합니다!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d시간 이전으로부터 동기화 중</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d일 이전으로부터 동기화 중</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d주 이전으로부터 동기화 중</string>
@@ -13,22 +13,22 @@
     <string name="blockchain_state_progress_problem_storage">동기화 중 : 저장 공간 문제 발생</string>
     <string name="blockchain_state_progress_problem_network">동기화 중 : 네트워크에 문제 발생</string>
     <string name="wallet_address_fragment_clipboard_msg">대쉬 주소가 클립보드에 복사되었습니다</string>
-    <string name="wallet_address_dialog_fragment_hint">프라이버시를 보호하기 위해 송금을 한 번 받으면, 새로운 주소가 생성됩니다.(송금자가 당신의 예전 주소로 보내도, 자동으로 받음)</string>
+    <string name="wallet_address_dialog_fragment_hint">프라이버시를 보호하기 위해 송금을 한 번 받으면 새로운 주소가 생성됩니다.</string>
     <string name="wallet_balance_fragment_too_much">이 금액은 전자지갑에 보관하기에 너무 큰 금액입니다. 데스크탑 지갑으로 옮기거나 비밀키를 별도로 보관하세요.</string>
-    <string name="wallet_balance_fragment_replaying">블럭체인 초기화 중, 잔액을 사용할 수 없습니다.</string>
+    <string name="wallet_balance_fragment_replaying">블록체인 초기화 중, 잔액을 사용할 수 없습니다.</string>
     <string name="exchange_rates_activity_title">환율 목록</string>
     <string name="exchange_rates_fragment_empty_text">환율 정보를 불러오지 못했습니다.</string>
     <string name="exchange_rates_fragment_empty_search">환율 정보를 찾지 못했습니다.</string>
     <string name="exchange_rates_fragment_default">(기본값)</string>
-    <string name="exchange_rates_fragment_rate">평가 환율</string>
-    <string name="exchange_rates_fragment_balance">평가 잔액</string>
+    <string name="exchange_rates_fragment_rate">요금</string>
+    <string name="exchange_rates_fragment_balance">잔액</string>
     <string name="exchange_rates_fragment_source">가격 출처  %s</string>
     <string name="exchange_rates_options_search">환율 검색</string>
     <string name="exchange_rates_context_set_as_default_title">기본값으로 설정</string>
     <string name="wallet_transactions_fragment_empty_text_received">아직 대쉬를 받은 내역이 없습니다.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">아직 대쉬를 보낸 내역이 없습니다.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">대쉬 획득 방법\n\n1. 로컬 통화로 대쉬 구매\n2. 상품이나 서비스 판매\n3. 용역 대가로 획득</string>
-    <string name="wallet_transactions_row_warning_backup">축하드립니다. 첫번째 결제를 받았습니다. 분실에 대비하기 위해 &lt;u&gt;전자 지갑 백업&lt;/u&gt;을 수행하신 적이 있나요? </string>
+    <string name="wallet_transactions_row_warning_backup">축하합니다, 첫번째 지불금을 받으셨습니다! 분실 방지를 위한 지갑 백업하기를 진행하셨습니까?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">힌트: 지갑의 안전을 위해 &lt;u&gt;기기 암호화&lt;u&gt;를 사용해 보세요. 이것은 다른 앱의 자료도 보호해 줍니다.</string>
     <string name="wallet_transactions_fragment_coinbase">신규 채굴 코인</string>
     <string name="wallet_transactions_fragment_internal">내부 처리 금액</string>
@@ -41,7 +41,7 @@
     <string name="wallet_options_encrypt_keys_change">송금 PIN 변경</string>
     <string name="wallet_options_safety">안전 이슈 참조</string>
     <string name="wallet_options_donate">팁 / 기부</string>
-    <string name="wallet_donate_address_label">대시 앱의 기부 주소</string>
+    <string name="wallet_donate_address_label">대쉬 앱의 기부 주소</string>
     <string name="wallet_low_storage_dialog_title">저장장치 용량 부족</string>
     <string name="wallet_low_storage_dialog_msg">대쉬 지갑은 거래 기록과 블록을 기억하기 위해 저장 장치의 공간을 사용합니다. 저장 공간이 부족할 경우 앱 작동이 중단될 수 있으며, 대쉬 보관과 거래에 문제가 있을 수 있습니다.\n\n불필요한 앱 정리를 위해 어플리케이션 매니저를 여시겠습니까?</string>
     <string name="wallet_low_storage_dialog_button_apps">앱 정리하기</string>
@@ -67,12 +67,14 @@
     <string name="send_coins_fragment_receiving_address_complex">이해할 수 없는\n주소</string>
     <string name="send_coins_fragment_pending">(승인을 위해 기다는 중 : %s)</string>
     <string name="send_coins_fragment_amount_label">송금액</string>
+    <string name="send_coins_fragment_pin_label">PIN 입력하기</string>
     <string name="send_coins_fragment_hint_fee_economic">경제적 수수료 설정으로 %s가 수수료로 지불됩니다. 위험: 대쉬 거래 시 네트워크를 통해 승인이 되어야 거래가 완료됩니다. 낮은 수수료 설정 시 승인에 오랜 시간이 걸릴 수 있습니다.</string>
     <string name="send_coins_fragment_hint_fee">네트워크 승인을 위해 %s가 지불됩니다.</string>
     <string name="send_coins_fragment_hint_fee_priority">급행 수수료 설정으로 %s가 수수료로 지불됩니다. 네트워크 상에서 빠른 승인을 원한다면, 급행 수수료로 설정하시기 바랍니다.</string>
-    <string name="send_coins_fragment_hint_dusty_send">송금액이 너무 적어 전송 할 수 없습니다.</string>
+    <string name="send_coins_fragment_hint_dusty_send">송금액이 너무 적어 전송할 수 없습니다.</string>
     <string name="send_coins_fragment_hint_insufficient_money">보유하고 있는 금액이 %s 부족합니다.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">극소량의 금액은 송금 가능액에 포함되지 않습니다.</string>
+    <string name="send_coins_fragment_hint_replaying">재생이 진행 중이므로 현재 지불 할 수 없습니다.</string>
     <string name="send_coins_fragment_direct_payment_enable">대쉬가 수신인에게 바로 송금됩니다.</string>
     <string name="send_coins_fragment_direct_payment_ack">송금이 완료되었습니다.</string>
     <string name="send_coins_fragment_direct_payment_nack">송금 시도가 직접 연결된 곳으로부터 거부되었습니다.</string>
@@ -162,9 +164,9 @@
     <string name="transaction_row_message_own_unbroadcasted">이 결제는 아직 전송되지 않았습니다.</string>
     <string name="transaction_row_message_received_direct">해당 결제는 직접 연결로부터 수령했습니다. 이 내역은 사용이 영구적으로 불가능한 승인되지 않은 금액일 수도 있습니다.</string>
     <string name="transaction_row_message_received_unconfirmed_delayed">대쉬 네트워크 트래픽 부하 등의 이유로 거래의 승인이 늦어지고 있습니다. </string>
-    <string name="transaction_row_message_received_unconfirmed_unlocked">이 결제 내역은 승인 과정을 통해 몇 분 후에 사용할 수 있습니다.</string>
+    <string name="transaction_row_message_received_unconfirmed_unlocked">이 결제는 승인없이 바로 송금 가능합니다.</string>
     <string name="transaction_row_message_received_in_conflict">이 결제는 승인이 완료되지 않아 송금자가 거래를 되돌릴 수 있습니다. 네트워크 승인을 기다려 주십시오. </string>
-    <string name="transaction_row_message_received_dead">이 결제는 송금자에 의해 취소되었습니다</string>
+    <string name="transaction_row_message_received_dead">이 결제는 송금자에 의해 취소되었습니다.</string>
     <string name="transaction_row_message_received_dust">현재 입력한 극소량의 금액은 송금되지 않을 수 있습니다.</string>
     <string name="transaction_row_message_received_pay_to_many">현재 송금 거래는 당신의 주소 외에 다른 여러 지갑으로의 송금을 포함하고 있어, 결제 처리 도중 앱이 느려질 수 있습니다. 가능하다면 송금자에게 당신의 주소만 포함해서 송금하도록 요청하십시오.</string>
     <string name="transaction_row_message_received_rbf">송금자가 안전하지 않은 거래 유형을 사용함으로써, 결제 완료가 지연되어 지금 도착했습니다.</string>
@@ -213,7 +215,7 @@
     <string name="import_keys_intent_filter_action">전자 지갑 복구</string>
     <string name="encrypt_keys_dialog_title">송금 PIN</string>
     <string name="encrypt_keys_dialog_message">이 앱을 사용해 송금 시 설정된 PIN 번호를 입력해야 합니다.</string>
-    <string name="encrypt_keys_dialog_warning">중요: PIN 번호를 기억해야 합니다! 생일과 같은 노출되기 쉬운 숫자를 사용하지 마세요.</string>
+    <string name="encrypt_keys_dialog_warning">중요: PIN 번호를 기억해야 합니다! (생일과 같은) 노출되기 쉬운 숫자를 사용하지 마세요.</string>
     <string name="encrypt_keys_dialog_password_old">이전 PIN</string>
     <string name="encrypt_keys_dialog_password_strength_weak">약함</string>
     <string name="encrypt_keys_dialog_password_strength_fair">괜찮음</string>
@@ -243,7 +245,7 @@
     <string name="preferences_precision_labels_6">DASH, 소수 6자리</string>
     <string name="preferences_precision_labels_4">DASH, 소수 4자리</string>
     <string name="preferences_precision_labels_2_3">mDASH, 소수 2자리</string>
-    <string name="preferences_precision_labels_0_6">µDASH, 소수 표시 안함</string>
+    <string name="preferences_precision_labels_0_6">µDASH, 소수 표시안함</string>
     <string name="preferences_own_name_title">소유자명</string>
     <string name="preferences_own_name_summary">결제요청에 추가될 당신의 이름입니다. 짧게 입력해주세요.</string>
     <string name="preferences_send_coins_autoclose_title">송금 대화창을 자동으로 닫기</string>
@@ -263,19 +265,19 @@
     <string name="preferences_remind_balance_title">잔액 알림</string>
     <string name="preferences_remind_balance_summary">앱에 잔액이 남아 있는 상태에서 몇 주간 사용을 하지 않으면 앱이 알람을 보냅니다.</string>
     <string name="preferences_report_issue_title">오류 보고</string>
-    <string name="preferences_initiate_reset_title">블럭체인 재설정</string>
-    <string name="preferences_initiate_reset_summary">블럭 체인과 거래 내역, 대쉬 잔액을 다시 읽어들입니다. 이 리셋 과정에 상당히 많은 시간이 소요되므로 이 기능이 무엇인지 정확히 이해하고 있는 경우에만 적용하십시오.</string>
-    <string name="preferences_initiate_reset_dialog_message">블럭체인을 초기화한 후 다시 불러오겠습니까?\n\n이 작업을 진행하면 지갑의 잔액과 거래 내역이 일시적으로 표시되지 않습니다. 블럭체인 동기화 완료 시, 다시 정상적으로 표시됩니다.</string>
+    <string name="preferences_initiate_reset_title">블록체인 재설정</string>
+    <string name="preferences_initiate_reset_summary">블록 체인과 거래 내역, 대쉬 잔액을 다시 읽어들입니다. 이 리셋 과정에 상당히 많은 시간이 소요되므로 이 기능이 무엇인지 정확히 이해하고 있는 경우에만 적용하십시오.</string>
+    <string name="preferences_initiate_reset_dialog_message">블록체인을 초기화한 후 다시 불러오겠습니까?\n\n이 작업을 진행하면 지갑의 잔액과 거래 내역이 일시적으로 표시되지 않습니다. 블록체인 동기화 완료 시, 다시 정상적으로 표시됩니다.</string>
     <string name="preferences_initiate_reset_dialog_positive">재동기화</string>
     <string name="preferences_extended_public_key_title">xpub 보이기</string>
     <string name="preferences_extended_public_key_summary">전자지갑의 확장 공개키를 표시해서 다른 앱과 서비스로 내보낼 수 있습니다. 지갑의 잔액과 거래 내역이 다른 사람에게 공개될 수 있으므로 주의해야 합니다.</string>
-    <string name="bitmap_fragment_share">공유</string>
+    <string name="bitmap_fragment_share">공유...</string>
     <string name="extended_public_key_fragment_title">확장 개인키</string>
     <string name="extended_public_key_fragment_share">xpub 공유</string>
     <string name="report_issue_dialog_title_issue">오류 보고</string>
     <string name="report_issue_dialog_title_crash">로드 중 에러 발생</string>
     <string name="report_issue_dialog_title_transaction">선택된 거래에 대한 이슈 사항 보고</string>
-    <string name="report_issue_dialog_message_issue">재현 가능하도록 이슈 사항을 구체적으로 설명해 주십시오.(이슈 내용은 영어로 작성하는 것을 권장)</string>
+    <string name="report_issue_dialog_message_issue">재현 가능하도록 이슈 사항을 구체적으로 설명해 주십시오. 이슈 내용은 영어로 작성하는 것을 권장합니다.</string>
     <string name="report_issue_dialog_message_crash">이 문제점을 고치기 위해 추후 비정상 종료에 대한 보고서를 보내겠습니까?</string>
     <string name="report_issue_dialog_description">오류 내용 입력</string>
     <string name="report_issue_dialog_report">전송</string>
@@ -291,7 +293,7 @@
     <string name="about_license_title">라이센스</string>
     <string name="about_source_title">소스 코드</string>
     <string name="about_category_credits">이 앱이 사용 중인 프로토콜</string>
-    <string name="about_credits_bitcoinj_title">dashj %s 버전</string>
+    <string name="about_credits_bitcoinj_title">dashj %s , 대쉬 프로토콜 구현</string>
     <string name="about_credits_zxing_title">ZXing의 QR코드 처리 라이브러리</string>
     <string name="about_credits_icon_title">이 앱은 \'bitboy\'의 아이콘을 사용합니다.</string>
     <string name="about_credits_scrypt_title">Scrypt : Will Glozer와 Colin Percival 구현</string>
@@ -304,7 +306,7 @@
     <string name="notification_coins_received_msg">대쉬 받음 : %s</string>
     <string name="notification_peers_connected_msg">피어 연결 개수 알림 : %d</string>
     <string name="notification_inactivity_title">아직 이 장치 기기에 대쉬가 남아 있습니다.</string>
-    <string name="notification_inactivity_message">이 대쉬 앱을 삭제하기 전에, 잔액을 다른 곳으로 송금하지 않으면 모든 대쉬 금액(%s)이 사라집니다.</string>
+    <string name="notification_inactivity_message">이 대쉬 지갑 앱을 삭제하기 전에, 잔액을 다른 곳으로 송금하지 않으면 모든 대쉬 금액%s이 사라집니다.</string>
     <string name="notification_inactivity_message_donate">만약 남은 잔액에 관심이 없다면 대쉬 지갑 프로젝트에 기부할 수 있습니다.</string>
     <string name="notification_inactivity_action_dismiss">이후 다시 알림</string>
     <string name="notification_inactivity_action_dismiss_forever">알림 필요없음</string>
@@ -325,18 +327,18 @@
     <string name="button_paste">붙여넣기</string>
     <string name="button_share">공유</string>
     <string name="button_set_as_default">기본값으로 설정</string>
-    <string name="button_request_coins">대쉬 송금 요청</string>
-    <string name="button_send_coins">송금하기</string>
-    <string name="button_scan">QR 읽기</string>
+    <string name="button_request_coins">대쉬 송금요청</string>
+    <string name="button_send_coins">대쉬 송금</string>
+    <string name="button_scan">스캔</string>
     <string name="button_settings">설정</string>
     <string name="action_show_qr">QR코드 보기</string>
-    <string name="action_browse">블럭체인 탐색</string>
+    <string name="action_browse">보기</string>
 
     <!-- generic strings -->
     <string name="time_today">오늘</string>
     <string name="address_unlabeled">(이름 없음)</string>
     <string name="private_key_password">PIN</string>
-    <string name="private_key_bad_password">잘못된 PIN 번호입니다!</string>
+    <string name="private_key_bad_password">잘못된 PIN입니다!</string>
 
     <!-- generic error messages -->
     <string name="error_io">I/O 오류: %s</string>

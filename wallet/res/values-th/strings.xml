@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">wallet ของคุณถูกรีเซ็ตแล้ว ใช้เวลาสักพักในการกู้คืน</string>
     <string name="wallet_disclaimer_fragment_remind_safety">ใช้ความเสี่ยงด้วยตัวคุณเอง!  อ่าน Read the &lt;u&gt;safety notes&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">คุณจำเป็นต้อง &lt;u&gt; สำรองข้อมูล wallet ของคุณ &lt;/u&gt;!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">คุณจำเป็นต้อง สำรองข้อมูล wallet ของคุณ!</string>
     <string name="blockchain_state_progress_hours">%1$s,%2$d ชั่วโมงที่ผ่านมา</string>
     <string name="blockchain_state_progress_days">%1$s,%2$d วันที่ผ่านมา</string>
     <string name="blockchain_state_progress_weeks">%1$s,%2$d สัปดาห์ที่ผ่านมา</string>
@@ -67,6 +67,7 @@
     <string name="send_coins_fragment_receiving_address_complex">ที่อยู่ \n ซับซ้อน</string>
     <string name="send_coins_fragment_pending">(%sกำลังรอการยืนยัน​)</string>
     <string name="send_coins_fragment_amount_label">จำนวนเงินที่ต้องจ่าย</string>
+    <string name="send_coins_fragment_pin_label">ใส่รหัส PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">ค่าธรรมเนียมทางเศรษฐกิจของ %s จะถูกจ่าย ,  ใช้  \'economic\'  เฉพาะในกรณีที่คุณไม่สนใจเกี่ยวกับเวลาในการยืนยัน </string>
     <string name="send_coins_fragment_hint_fee">ค่าธรรมเนียมระบบเครือข่ายของ %s จะถูกจ่าย</string>
     <string name="send_coins_fragment_hint_fee_priority">ค่าธรรมเนียมพิเศษของ %s จะถูกจ่าย หากคุณสนใจค่าธรรมเนียมพิเศษนี้ โปรดใช้ \'priority\' เมื่อต้องการการยืนยันอย่างรวดเร็ว</string>
@@ -326,8 +327,8 @@
     <string name="button_paste">วาง</string>
     <string name="button_share">แบ่งปัน</string>
     <string name="button_set_as_default">ตั้งเป็นค่าเริ่มต้น</string>
-    <string name="button_request_coins">เรียกขอเหรียญ</string>
-    <string name="button_send_coins">ส่งเหรียญ</string>
+    <string name="button_request_coins">Dash ที่ต้องการ</string>
+    <string name="button_send_coins">ส่ง Dash </string>
     <string name="button_scan">สแกน</string>
     <string name="button_settings">ตั้งค่า</string>
     <string name="action_show_qr">แสดงโค้ด QR</string>
@@ -337,7 +338,7 @@
     <string name="time_today">วันนี้</string>
     <string name="address_unlabeled">(ไม่มีป้ายกำกับ)</string>
     <string name="private_key_password">PIN</string>
-    <string name="private_key_bad_password">PIN! ไม่ถูกต้อง</string>
+    <string name="private_key_bad_password">PIN ไม่ถูกต้อง!</string>
 
     <!-- generic error messages -->
     <string name="error_io">ข้อผิดพลาด I/O : %s</string>

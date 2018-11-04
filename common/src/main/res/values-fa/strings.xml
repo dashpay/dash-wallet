@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="loading">در حال بارگذاری...</string>
+    <string name="loading_error">خطایی روی داده است. لطفا دوباره تلاش کنید.</string>
+    <string name="dash_available">%1$sموجود است</string>
+
+</resources>

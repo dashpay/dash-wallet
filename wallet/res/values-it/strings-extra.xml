@@ -40,7 +40,7 @@
 	<string name="wallet_lock_unlock_dialog_title">Sblocca il tuo portafoglio </string>
 	<string name="wallet_lock_unlock_dialog_message">Il tuo portafoglio è protetto da un PIN. Digita il tuo PIN e clicca \"Sblocca\" per continuare.</string>
 	<string name="wallet_lock_reset_wallet_title">Resetta portafoglio</string>
-	<string name="wallet_lock_reset_wallet_message">Ne sei sicuro? Tutti i dati immagazzinati verranno cancellati e il tuo portafoglio sarà recuperabile soltanto tramite l\'utilizzo di un file  di backup o  \"recovery seed\".</string>
+	<string name="wallet_lock_reset_wallet_message">Sei sicuro? Il tuo portafoglio verrà eliminato e tutti i tuoi Dash andranno persi.\n\nL\'unico modo per recuperare i tuoi Dash è con un file di backup o una frase di recupero.</string>
 
 	<string name="wallet_lock_wallet_disabled">Portafoglio disabilitato</string>
 	<string name="wallet_lock_try_again">Riprova ancora in %1$d %2$s</string>
@@ -72,5 +72,8 @@
 	<string name="change_exchange_currency_code_message">La tua moneta locale è%1$s,ma la moneta locale della \"app\" è %2$s.Desideri cambiarla a%1$so lasciarla a%2$s?</string>
 	<string name="change_to">cambiare a %s</string>
 	<string name="leave_as">Lasciare come %s</string>
+
+	<string name="remind_later">Ricordamelo più tardi</string>
+	<string name="backup_now">Effettua il backup ora</string>
 
 </resources>

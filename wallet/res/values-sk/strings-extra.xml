@@ -6,7 +6,7 @@
 	<string name="transaction_row_message_own_instantx_lock_request">Táto InstantSend platba čaká na overenie.</string>
 	<string name="transaction_row_message_own_instantx_locked">Odoslaná InstantSend transakcia (uzamknutá)</string>
 	<string name="transaction_row_message_received_instantx_lock_request">Táto InstantSend platba čaká na overenie.</string>
-	<string name="transaction_row_message_received_instantx_locked">InstantSend overené</string>
+	<string name="transaction_row_message_received_instantx_locked">Overené InstantSend</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">Nepotvrdená InstantSend platba</string>
 	<string name="transaction_row_message_received_instantx_locked2">Uzamknutá InstantSend platba</string>
 	<string name="transaction_row_message_sent_to_single_peer">Táto platba bola odoslaná.</string>
@@ -40,7 +40,7 @@
 	<string name="wallet_lock_unlock_dialog_title">Odomknúť Vašu peňaženku</string>
 	<string name="wallet_lock_unlock_dialog_message">Vaša peňaženka je chránená PIN-om pre míňanie. Pre pokračovanie zadajte Váš PIN a stlačte Odomknúť.</string>
 	<string name="wallet_lock_reset_wallet_title">Resetovať peňaženku</string>
-	<string name="wallet_lock_reset_wallet_message">Ste si istý? Všetky uložené údaje budú vymazané a Vaša peňaženka bude obnoviteľná iba pomocou záložného súboru, alebo frázou pre obnovenie.</string>
+	<string name="wallet_lock_reset_wallet_message">Ste si istý? Vaša peňaženka bude zmazaná a všetky Vaše Dashe budú stratené.\n\nJediná možnosť ako obnoviť Vaše Dashe je pomocou záložného súboru, alebo frázou pre obnovenie.</string>
 
 	<string name="wallet_lock_wallet_disabled">Peňaženka neaktívna</string>
 	<string name="wallet_lock_try_again">Skúste znova za %1$d %2$s</string>
@@ -78,5 +78,8 @@
 	<string name="change_exchange_currency_code_message">Vaša miestna mena je %1$s, ale v tejto aplikácii je Vaša mena nastavená na %2$s. Chcete you zmeniť na %1$s alebo ponechať ako %2$s?</string>
 	<string name="change_to">Zmeniť na %s</string>
 	<string name="leave_as">Ponechať %s</string>
+
+	<string name="remind_later">Pripomenúť neskôr </string>
+	<string name="backup_now">Teraz zálohovať</string>
 
 </resources>

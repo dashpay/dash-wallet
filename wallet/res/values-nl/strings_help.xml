@@ -9,8 +9,8 @@
 			Druk hier op om naar de lijst van nationale valuta\'s te gaan en kies er een om als standaard in te stellen.
 		</p>
 		<p>
-			De QR code die uw Dash bevat kan worden gevonden in het navigatiemenu (linksboven), en kan worden gebruikt door anderen om in te scannen.
-			Druk op de QR code voor een grotere versie.
+			De QR-code die uw Dash bevat kan worden gevonden in het navigatiemenu (linksboven), en kan worden gebruikt door anderen om in te scannen.
+			Druk op de QR-code voor een grotere versie.
 		</p>
 		<p>
 			Het onderste deel van het scherm bevat je transactieoverzicht. Deze is in het begin nog leeg.
@@ -33,7 +33,7 @@
 			Als eerste geef je een Dash bedrag aan wat u wilt verzoeken.
 		</p>
 		<p>
-			Daarna kan je of de gegenereerde QR code laten scannen door de betalende partij.
+			Daarna kan je of de gegenereerde QR-code laten scannen door de betalende partij.
 			Of je kan het verzoek versturen met de \'delen\' knop in de actiebalk.
 			Als beide telefoons NFC hebben geactiveerd kunnen deze ook tegen elkaar aan worden gehouden.
 		</p>
@@ -52,7 +52,7 @@
 		<p>
 			Als eerste vul je het Dash adres in waar naar je wilt betalen.
 			Het adres zal automatisch worden aangevuld als deze herkend is in het adresbook.
-			Je kan ook QR-codes scannen met een Dash adres of een verzoek door op de QR knop in de actiebalk te klikken.
+			Je kan ook QR-codes scannen met een Dash adres of een verzoek door op de QR-knop in de actiebalk te klikken.
 		</p>
 		<p>
 			Vervolgens kun je zien hoe veel Dash op dit moment beschikbaar is voor besteding.
@@ -60,7 +60,7 @@
 		</p>
 		<p>
 			Druk op InstantSend als je de transactie onmiddellijk wil laten uitvoeren. De transctievergoeding is hoger (> 0.001 DASH).
-			Als laatste moet het bedrag nog worden ingevuld, alsmede de PIN als deze is ingesteld.
+			Als laatste moet het bedrag nog worden ingevuld, alsmede de pin als deze is ingesteld.
 		</p>
 		<p>
 			Je kunt ook transacties ingeven terwijl u offline bent.
@@ -85,9 +85,9 @@
 		</p>
 		<p>
 			Dit betekent dat u een <b>back-up</b> van de portemonnee moet maken!
-			Gebruik hier voor bij voorkeur de in-app back-up mogelijkheid, in plaats van een andere back-up app.
+			Gebruik hier voor bij voorkeur de in-app back-up mogelijkheid, in plaats van een andere back-upapp.
 			Sla de back-up op een veilige plek op en onthoud het wachtwoord.
-			Dit is een HD portemonnee. Slechts een enkele back-up volstaat.
+			Dit is een HD-portemonnee. Slechts een enkele back-up volstaat.
 		</p>
 		<p>
 			<b>Alvorens te de-installeren</b> (of app data/cache te verwijderen/Apparaat herinstalleren), <b>verplaats dan eerste de Dash naar een andere portemonnee</b>.

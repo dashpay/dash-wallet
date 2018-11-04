@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="loading">加载中...</string>
+    <string name="loading_error">发生错误，请稍后再试。</string>
+    <string name="dash_available">%1$s 可用</string>
+
+</resources>

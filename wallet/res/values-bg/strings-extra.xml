@@ -40,7 +40,7 @@
 	<string name="wallet_lock_unlock_dialog_title">Отключете портфейла си</string>
 	<string name="wallet_lock_unlock_dialog_message">Портфейлът Ви е защитен от ПИН за  похарчване. Въведете своя ПИН и натиснете Отключи за да продължите.</string>
 	<string name="wallet_lock_reset_wallet_title">Нулиране на портфейла</string>
-	<string name="wallet_lock_reset_wallet_message">Сигурен ли си? Всички съхранени данни ще бъдат изтрити и портфейлът ви ще бъде възстановим само чрез резервен файл или възстановяващата фраза.</string>
+	<string name="wallet_lock_reset_wallet_message">Сигурен ли си? Твоят портфейл ще бъде изтрит и всичкият Dash ще бъдат изгубен.\n\nЕдинственият начин да възстановиш твоят Dash е, чрез резервен архив или възстановяваща фраза.</string>
 
 	<string name="wallet_lock_wallet_disabled">Портфейлът е изключен</string>
 	<string name="wallet_lock_try_again">Опитай отново след %1$d %2$s</string>
@@ -72,5 +72,8 @@
 	<string name="change_exchange_currency_code_message">Вашата местна валута е %1$s, но в приложението е зададено по подразбиране %2$s. Бихте ли желали да се промени в %1$s или да остане в %2$s?</string>
 	<string name="change_to">Промени в %s</string>
 	<string name="leave_as">Остави в %s</string>
+
+	<string name="remind_later">Напомни по-късно</string>
+	<string name="backup_now">Архивирай сега</string>
 
 </resources>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">Conta Uphold</string>
+    <string name="uphold_buy_dash_activity_title">Comprar/Vender Dash com Uphold</string>
+    <string name="uphold_buy_dash_with_uphold">Comprar Dash com conta Uphold</string>
+    <string name="uphold_buy_dash_button">Comprar Dash</string>
+    <string name="uphold_transfer_to_this_wallet_button">Transferir de Uphold</string>
+    <string name="uphold_link_account">Enlaçar conta Uphold</string>
+    <string name="uphold_account_dash_balance">O saldo da sua conta Uphold é de</string>
+    <string name="uphold_transfer_to_this_wallet">Transferir Dash de sua conta Uphold para essa carteira</string>
+    <string name="uphold_withdrawal_amount">Quantia</string>
+    <string name="uphold_withdrawal_fee">Taxa</string>
+    <string name="uphold_withdrawal_total">Total</string>
+    <string name="uphold_withdrawal_title">Transferir Dash para essa carteira</string>
+    <string name="uphold_withdrawal_message">Você tem &lt;b>%1$s Dash&lt;/b> na sua conta Uphold. Você deseja &lt;u>transferir esse valor para esta carteira&lt;/u>?</string>
+    <string name="uphold_withdrawal_confirm_title">Confirmar transação</string>
+    <string name="uphold_withdrawal_confirm_message">Quantia base: %1$f\nTaxa: %2$f\nTotal: %3$f\n\nDeseja confirmar essa transação?</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">A taxa será deduzida do valor solicitado.</string>
+    <string name="uphold_withdrawal_instructions">Insira abaixo o valor a ser transferido</string>
+    <string name="uphold_withdrawal_success_title">Sucesso</string>
+    <string name="uphold_withdrawal_success_message">Sua transação foi enviada e a quantia deverá aparecer na sua carteira em alguns minutos.\n\nId da transação: %s</string>
+    <string name="uphold_otp_dialog_title">Insira o seu código de 2FA abaixo:</string>
+    <string name="uphold_transfer">Transferir</string>
+    <string name="uphold_see_on_uphold">Ver na Uphold</string>
+
+</resources>

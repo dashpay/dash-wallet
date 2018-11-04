@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">บัญชี  Uphold</string>
+    <string name="uphold_buy_dash_activity_title">ซื้อ / ขาย Dash กับ Uphold</string>
+    <string name="uphold_buy_dash_with_uphold">ซื้อ Dash ด้วยบัญชี  Uphold</string>
+    <string name="uphold_buy_dash_button">ซื้อ Dash </string>
+    <string name="uphold_transfer_to_this_wallet_button">โอนจาก Uphold</string>
+    <string name="uphold_link_account">เชื่อมต่อกับบัญชี Uphold</string>
+    <string name="uphold_account_dash_balance">จำนวน Dash ในบัญชี Uphold ของคุณคือ </string>
+    <string name="uphold_transfer_to_this_wallet">โอน Dash จากบัญชี Uphold ของคุณไปยัง wallet นี้</string>
+    <string name="uphold_withdrawal_amount">จำนวน</string>
+    <string name="uphold_withdrawal_fee">ค่าธรรมเนียม</string>
+    <string name="uphold_withdrawal_total">ทั้งหมด</string>
+    <string name="uphold_withdrawal_title">โอน Dash ไปยัง wallet นี้</string>
+    <string name="uphold_withdrawal_message">คุณมี &lt;b>%1$s Dash&lt;/b> ในบัญชี Uphold  ของคุณ  คุณต้องการโอนจำนวน  &lt;u> ไปยัง wallet นี้ใช่หรือไม่?</string>
+    <string name="uphold_withdrawal_confirm_title">ยืนยันการทำรายการ</string>
+    <string name="uphold_withdrawal_confirm_message">จำนวนเงิน: %1$f\n  ค่าธรรมเนียม: %2$f \n ทั้งหมด: %3$f \n\n  คุณต้องการยืนยันรายการนี้หรือไม่?</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">ค่าธรรมเนียมจะถูกหักออกจากจำนวนที่ต้องการ</string>
+    <string name="uphold_withdrawal_instructions">ป้อนจำนวนเงินที่ต้องการโอนด้านล่าง</string>
+    <string name="uphold_withdrawal_success_title">สำเร็จแล้ว</string>
+    <string name="uphold_withdrawal_success_message">ธุรกรรมของคุณถูกส่งไปแล้วและจำนวนเงินจะปรากฎใน wallet อีกไม่กี่นาที \n\n  รหัสธุรกรรม: %s</string>
+    <string name="uphold_otp_dialog_title">ใส่รหัส 2FA ด้านล่าง:</string>
+    <string name="uphold_transfer">โอน</string>
+    <string name="uphold_see_on_uphold">ดูที่ Uphold</string>
+
+</resources>

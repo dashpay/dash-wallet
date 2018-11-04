@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">Uphold аккаунт</string>
+    <string name="uphold_buy_dash_activity_title">Купить/продать Dash с помощью Uphold</string>
+    <string name="uphold_buy_dash_with_uphold">Купить Dash с помощью аккаунта Uphold</string>
+    <string name="uphold_buy_dash_button">Купить Dash</string>
+    <string name="uphold_transfer_to_this_wallet_button">Осуществить перевод из Uphold</string>
+    <string name="uphold_link_account">Привязать Uphold аккаунт </string>
+    <string name="uphold_account_dash_balance">Ваш баланс Dash на Uphold составляет</string>
+    <string name="uphold_transfer_to_this_wallet">Перевести Dash из Uphold аккаунта на этот кошелёк</string>
+    <string name="uphold_withdrawal_amount">Сумма</string>
+    <string name="uphold_withdrawal_fee">Комиссия</string>
+    <string name="uphold_withdrawal_total">Итого</string>
+    <string name="uphold_withdrawal_title">Перевести Dash на этот кошелёк</string>
+    <string name="uphold_withdrawal_message">У вас есть &lt;b>%1$s Dash&lt;/b> на Uphold аккаунте. Вы хотите &lt;u>перевести эту сумму на кошелёк&lt;/u>?</string>
+    <string name="uphold_withdrawal_confirm_title">Подтвердите транзакцию</string>
+    <string name="uphold_withdrawal_confirm_message">Сумма: %1$f\nКомиссия: %2$f\nИтого: %3$f\n\nВы хотите подтвердить эту транзакцию?</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">Комиссия будет списана из запрашиваемой суммы.</string>
+    <string name="uphold_withdrawal_instructions">Ниже укажите сумму перевода</string>
+    <string name="uphold_withdrawal_success_title">Успешно</string>
+    <string name="uphold_withdrawal_success_message">Ваша транзакция была отправлена и соотвествующая сумма должна появиться в Вашем кошелька через несколько минут.\n\nId транзакции: %s</string>
+    <string name="uphold_otp_dialog_title">Введите ваш 2FA код ниже:</string>
+    <string name="uphold_transfer">Перевести</string>
+    <string name="uphold_see_on_uphold">Посмотреть на Uphold</string>
+
+</resources>

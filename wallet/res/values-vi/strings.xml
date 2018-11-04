@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Ví tiền đã được thiết lập lại,\nsẽ tốn chút ít thời gian để hồi phục lại</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Sử dụng với sự cẩn trọng. Đọc &lt;u&gt;ghi chú an toàn&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Bạn cần &lt;u&gt;sao lưu dự phòng ví của bạn&lt;/u&gt;!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Bạn cần sao lưu dự phòng ví của bạn!</string>
     <string name="blockchain_state_progress_hours">Còn lại %1$s, %2$d giờ</string>
     <string name="blockchain_state_progress_days">Còn lại %1$s, %2$d ngày</string>
     <string name="blockchain_state_progress_weeks">Còn lại %1$s, %2$d tuần</string>
@@ -20,15 +20,15 @@
     <string name="exchange_rates_fragment_empty_text">Không thể tải tỉ lệ hoán đổi</string>
     <string name="exchange_rates_fragment_empty_search">Không thể tìm thấy tỷ giáo giao dịch.</string>
     <string name="exchange_rates_fragment_default">(mặc định)</string>
-    <string name="exchange_rates_fragment_rate">tỉ lệ</string>
-    <string name="exchange_rates_fragment_balance">cân bằng</string>
+    <string name="exchange_rates_fragment_rate">Tỷ giá</string>
+    <string name="exchange_rates_fragment_balance">Số dư</string>
     <string name="exchange_rates_fragment_source">Giá được tải về từ %s</string>
     <string name="exchange_rates_options_search">Tìm tỷ giá giao dịch</string>
     <string name="exchange_rates_context_set_as_default_title">Đặt làm ngầm định</string>
     <string name="wallet_transactions_fragment_empty_text_received">Hiện vẫn chưa nhận được Dash nào.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Hiện vẫn chưa gửi Dash nào.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Làm cách nào để nhận được Dash?\n\nSử dụng cho các giao dịch bằng tiền như truyền thống,\nbán các sản phẩm hoặc dịch vụ hoặc\ndùng cho việc nhận thanh toán.</string>
-    <string name="wallet_transactions_row_warning_backup">Chúc mừng, bạn đã nhận được phần thanh toán đầu tiên của mình! Bạn đã &lt;u&gt;sao lưu ví tiền của mình&lt;/u&gt;, để tránh việc thất thoát hay chưa?</string>
+    <string name="wallet_transactions_row_warning_backup">Chúc mừng, bạn đã nhận được phần thanh toán đầu tiên của mình! Bạn đã sao lưu ví tiền của mình, để tránh việc thất thoát hay chưa?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Gợi ý: để tăng tính an toàn cho ví của bạn, bạn có thể &lt;u&gt;mã hoá thiết bị của bạn&lt;/u&gt;. Điều này cũng giúp bảo vệ những dữ liệu của các ứng dụng khác nữa.</string>
     <string name="wallet_transactions_fragment_coinbase">đã khai thác</string>
     <string name="wallet_transactions_fragment_internal">nội bộ</string>
@@ -67,6 +67,7 @@
     <string name="send_coins_fragment_receiving_address_complex">phức tạp\\nđịa chỉ</string>
     <string name="send_coins_fragment_pending">(%s đợi xác nhận)</string>
     <string name="send_coins_fragment_amount_label">Số lượng chi trả</string>
+    <string name="send_coins_fragment_pin_label">Nhập mã PIN!</string>
     <string name="send_coins_fragment_hint_fee_economic">Mức phí tiết kiệm %s sẽ được trả. Sử dụng mức phí \'tiết kiệm\' chỉ khi bạn không quan tâm đến thời gian xác thực lâu hay chóng.</string>
     <string name="send_coins_fragment_hint_fee">Một phần phí giao dịch của %s sẽ được trả.</string>
     <string name="send_coins_fragment_hint_fee_priority">Một mức phí ưu tiên %s sẽ được trả. Nếu bạn quan tâm đến mức phí thấp, hãy sử dụng \'ưu tiên\' chỉ khi bạn cần xác thực càng nhanh càng tốt.</string>
@@ -326,8 +327,8 @@
     <string name="button_paste">Dán</string>
     <string name="button_share">Chia sẻ</string>
     <string name="button_set_as_default">Đặt làm mặc định</string>
-    <string name="button_request_coins">Yêu cầu coin</string>
-    <string name="button_send_coins">Gửi coin</string>
+    <string name="button_request_coins">Yêu cầu Dash</string>
+    <string name="button_send_coins">Gửi Dash</string>
     <string name="button_scan">Quét</string>
     <string name="button_settings">Thiết lập</string>
     <string name="action_show_qr">Hiển thị mã QR</string>
@@ -337,7 +338,7 @@
     <string name="time_today">hôm nay</string>
     <string name="address_unlabeled">(chưa có nhãn)</string>
     <string name="private_key_password">PIN</string>
-    <string name="private_key_bad_password">PIN sai</string>
+    <string name="private_key_bad_password">Sai mã PIN!</string>
 
     <!-- generic error messages -->
     <string name="error_io">Lỗi vào ra: %s</string>

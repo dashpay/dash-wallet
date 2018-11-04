@@ -40,7 +40,7 @@
 	<string name="wallet_lock_unlock_dialog_title">Открыть ваш кошелёк</string>
 	<string name="wallet_lock_unlock_dialog_message">Ваш кошелёк защищён ПИН-кодом. Введите свой ПИН-код и нажмите \"Открыть\".</string>
 	<string name="wallet_lock_reset_wallet_title">Сброс кошелька</string>
-	<string name="wallet_lock_reset_wallet_message">Вы уверены? Вся сохранённая информация будет удалена и восстановить ваш кошелёк можно будет только с помощью файла восстановления или фразы восстановления.</string>
+	<string name="wallet_lock_reset_wallet_message">Вы уверены? Ваш кошелёк будет удалён, а доступ к средствам утерян.\n\nВаш кошелёк Dash можно будет восстановить только с помощью файла восстановления или фразы восстановления.</string>
 
 	<string name="wallet_lock_wallet_disabled">Кошелёк отключён</string>
 	<string name="wallet_lock_try_again">Попробуйте снова через %1$d%2$s</string>

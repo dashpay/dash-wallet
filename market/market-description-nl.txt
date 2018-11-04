@@ -1,29 +1,29 @@
 Gebruik op eigen risico! (Vereist Android 4 of hoger)
 
-<b>Heb uw Dash altijd in uw zakt!</b> U kunt betalen door simpelweg een QR code te scannen. En als verkoper kunt u betalingen betrouwbaar en razendsnel ontvangen. Dash portemonnee is de eerste mobiele Dash app, en misschien wel de meest veilige!
+<b>Heb uw Dash altijd in uw zak!</b> U kunt betalen door simpelweg een QR-code te scannen. En als verkoper kunt u betalingen betrouwbaar en razendsnel ontvangen. Dash portemonnee is de eerste mobiele Dash app, en misschien wel de meest veilige!
 
 <b>KENMERKEN</b>
 
 • Er is geen registratie, webservice of clouddienst benodigd. Deze portemonnee werkt decentraal en peer to peer. 
 • Toon de hoeveelheid Dash in DASH, mDASH of µDASH.
 • Conversie van en naar nationale munteenheden.
-• Verzenden en ontvangen van Dash via NFC, QR codes of Dash URL's.
-• Adresboek voor vaak gebruikte Dash adressen.
-• Als je offline bent, kan je via Bluetooth nog steeds betalen.
+• Verzenden en ontvangen van Dash via NFC, QR-codes of Dash URL's.
+• Adresboek voor vaak gebruikte Dash-adressen.
+• Als je offline bent, kan je via bluetooth nog steeds betalen.
 • Notificaties bij het ontvangen van coins.
 • Importeren van papieren portemonnees (die gebruikt worden voor koude opslag).
-• Widget met uw Dash saldo.
+• Widget met uw Dash-saldo.
 
 
 <b>DRAAG BIJ</b>
 
-Dash portemonnee is <b>open source</b> en <b>gratis software</b>. GPLv3 licentie
+Dash-portemonnee is <b>open source</b> en <b>gratis software</b>. GPLv3-licentie
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 De broncode is beschikbaar op GitHub:
 https://github.com/HashEngineering/dash-wallet
 
-Alle vertalingen worden gemanaged via Transifex:
+Alle vertalingen worden beheerd via Transifex:
 https://www.transifex.com/dash/dash-wallet/
 
 Meer informatie over Dash op

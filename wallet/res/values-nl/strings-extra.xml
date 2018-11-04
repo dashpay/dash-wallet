@@ -40,7 +40,7 @@
 	<string name="wallet_lock_unlock_dialog_title">Ontgrendel je portemonnee</string>
 	<string name="wallet_lock_unlock_dialog_message">Betalingen vanuit je portemonnee zijn beschermd met een pin. Voer je pin in en kies Ontgrendel om verder te gaan.</string>
 	<string name="wallet_lock_reset_wallet_title">Reset portemonnee</string>
-	<string name="wallet_lock_reset_wallet_message">Weet je het zeker? Alle opgeslagen gegevens worden verwijderd en je portemonnee zal alleen te herstellen zijn uit een back-upbestand of een herstelzin.</string>
+	<string name="wallet_lock_reset_wallet_message">Weet je het zeker? Je portemonnee wordt verwijderd en al je Dash gaat verloren.\n\nDe enige manier om je Dash te herstellen is met een backup bestand of herstelzin.</string>
 
 	<string name="wallet_lock_wallet_disabled">Portemonnee uitgeschakeld</string>
 	<string name="wallet_lock_try_again">Probeer nogmaals over %1$d %2$s</string>
@@ -72,5 +72,8 @@
 	<string name="change_exchange_currency_code_message">Je lokale munteenheid is %1$s, maar in deze app is de standaard munteenheid ingesteld als %2$s. Wil je dit wijzigen naar %1$s of %2$s behouden?</string>
 	<string name="change_to">Verander naar %s</string>
 	<string name="leave_as">%s behouden</string>
+
+	<string name="remind_later">Herinner mij later</string>
+	<string name="backup_now">Nu backup maken</string>
 
 </resources>

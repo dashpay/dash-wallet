@@ -1,0 +1,76 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources>
+
+	<string name="send_coins_fragment_instantx_enable">Gunakan InstantSend</string>
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">Pembayaran InstantSend ini belum terkirim.</string>
+	<string name="transaction_row_message_own_instantx_lock_request">Pembayaran InstantSend ini sedang menunggu verifikasi.</string>
+	<string name="transaction_row_message_own_instantx_locked">Mengirim transaksi InstantSend (dikunci)</string>
+	<string name="transaction_row_message_received_instantx_lock_request">Pembayaran InstantSend ini sedang menunggu verifikasi.</string>
+	<string name="transaction_row_message_received_instantx_locked">InstantSend diverifikasi</string>
+	<string name="transaction_row_message_received_unconfirmed_instantx">InstantSend Belum dikonfirmasi</string>
+	<string name="transaction_row_message_received_instantx_locked2">InstantSend Terkunci</string>
+	<string name="transaction_row_message_sent_to_single_peer">Pembayaran ini telah dikirim.</string>
+	<string name="wallet_options_disconnect">Terputus</string>
+
+	<string name="network_monitor_masternodes_title">Masternode</string>
+	<string name="export_keys_dialog_title_to_seed">Lihat frasa pemulihan</string>
+	<string name="import_keys_dialog_title_from_seed">Pulihkan dari frasa pemulihan</string>
+	<string name="backup_to_seed_wallet_dialog_message">Ini adalah frasa pemulihan anda. Tolong Catat.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">JANGAN biarkan siapa pun melihat frasa pemulihan Anda atau mereka dapat menghabiskan Dash Anda.</string>
+	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Dompet Anda dilindungi oleh PIN. Masukkan PIN Anda dan tekan Tampil untuk melihat frasa pemulihan Anda.</string>
+    <string name="import_keys_from_seed_dialog_message">Masukkan frasa pemulihan anda disini.</string>
+	<string name="import_export_keys_dialog_password_phrase">Frasa pemulihan ada di sini.</string>
+	<string name="preferences_report_issue_summary">Kumpulkan informasi masalah Anda dan kirimkan laporan Anda ke pengembang.</string>
+	<string name="navigation_configuration">Konfigurasi</string>
+    <string name="button_copy_address">Salin alamat</string>
+	<string name="request_coins_clipboard_address_msg">Alamat Dash disalin</string>
+	<string name="backup_wallet_to_seed_show_recovery_phrase">Tunjukkan</string>
+	<string name="restore_wallet_from_invalid_seed_warning_message">%s adalah kata yang tidak valid. </string>
+
+	<string name="send_coins_options_fee_category_zero">Tanpa Biaya</string>
+	<string name="send_coins_fragment_hint_fee_zero">Tidak ada biaya yang akan dibayarkan. Gunakan \'tanpa biaya\' hanya jika Anda tidak peduli tentang waktu konfirmasi.</string>
+
+	<string name="wallet_uri_handler_public_key_request_dialog_msg">Aplikasi %s  ingin menerima Master Public Key Anda. Ini dapat digunakan untuk melacak dompet Anda, ini tidak dapat digunakan untuk memindahkan Dash Anda.</string>
+	<string name="wallet_uri_handler_address_request_dialog_msg">Aplikasi %s  meminta alamat agar dapat membayar Anda. Apakah Anda ingin mengesahkan ini?</string>
+
+	<string name="wallet_lock_unlock">Terbuka</string>
+	<string name="wallet_lock_unlock_wallet">Buka kunci dompet</string>
+	<string name="wallet_lock_unlock_to_see_txs_title">Dompet terkunci.</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">Ketuk ikon kunci di atas untuk membuka kunci dompet Anda dan lihat riwayat transaksi.</string>
+	<string name="wallet_lock_unlock_dialog_title">Buka kunci dompet Anda</string>
+	<string name="wallet_lock_unlock_dialog_message">Dompet Anda dilindungi oleh PIN. Masukkan PIN Anda dan tekan Buka Kunci untuk melanjutkan.</string>
+	<string name="wallet_lock_reset_wallet_title">Atur ulang dompet</string>
+	<string name="wallet_lock_reset_wallet_message">Apakah kamu yakin? Dompet Anda akan dihapus dan semua Dash Anda akan hilang.\n\n Satu-satunya cara untuk memulihkan Dash Anda adalah dengan file cadangan atau frasa pemulihan.</string>
+
+	<string name="wallet_lock_wallet_disabled">Dompet dinonaktifkan</string>
+	<string name="wallet_lock_try_again">Coba lagi dalam %1$d %2$s</string>
+	<string name="wallet_lock_reset">Atur-ulang</string>
+	<string name="wallet_lock_wrong_pin">PIN salah! %s</string>
+
+	<plurals name="wallet_lock_attempts_remaining">
+		<item quantity="other">%d upaya tersisa </item>
+	</plurals>
+
+	<plurals name="minute">
+		<item quantity="other">menit</item>
+	</plurals>
+	
+	<plurals name="hour">
+		<item quantity="other">jam</item>
+	</plurals>
+
+	<string name="encrypt_new_key_chain_upgrade_button">Tingkatkan</string>
+	<string name="encrypt_new_key_chain_dialog_title">Tingkatkan dompet anda</string>
+	<string name="encrypt_new_key_chain_dialog_message">Dompet Anda akan ditingkatkan untuk mendukung pengimporan dan mengekspor ke lebih banyak aplikasi.</string>
+	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Anda harus memasukkan PIN Anda untuk menyelesaikan proses peningkatan.</string>
+	<string name="pin_code_required_dialog_message">Aplikasi ini sekarang membutuhkan PIN untuk menggunakan dan melihat saldo dan transaksi.</string>
+    <string name="backup_wallet_seed_private_key_written_down_box">Saya telah menuliskan frasa pemulihan</string>
+	
+	<string name="change_exchange_currency_code_message">Mata uang lokal Anda adalah %1$s, tetapi dalam aplikasi ini mata uang default Anda disetel ke%2$s. Apakah Anda ingin mengubahnya menjadi%1$s atau membiarkannya sebagai%2$s?</string>
+	<string name="change_to">Ubah ke %s</string>
+	<string name="leave_as">tinggalkan sebagai %s</string>
+
+	<string name="remind_later">Ingatkan nanti</string>
+	<string name="backup_now">Cadangkan sekarang</string>
+
+</resources>

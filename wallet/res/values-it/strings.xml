@@ -3,13 +3,13 @@
 
     <string name="toast_wallet_reset">Il portafoglio è stato resettato!\nlt Occorrerà del tempo per ripristinarlo.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Usalo a tuo rischio. Leggi le &lt;u&gt;avvertenze per la sicurezza&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Hai bisogno di &lt;u&gt;eseguire un backup del tuo portafoglio&lt;/u&gt;!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Hai bisogno di eseguire un backup del tuo portafoglio!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d ore indietro</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d giorni indietro</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d settimane indietro</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d mesi indietro</string>
     <string name="blockchain_state_progress_downloading">Sincronizzazione con la rete</string>
-    <string name="blockchain_state_progress_stalled">Sincronizzazione bloccata</string>
+    <string name="blockchain_state_progress_stalled">La sincronizzazione è in fase di stallo</string>
     <string name="blockchain_state_progress_problem_storage">Sincronizzazione: problema di Memorizzazione</string>
     <string name="blockchain_state_progress_problem_network">Sincronizzazione: problema di Rete</string>
     <string name="wallet_address_fragment_clipboard_msg">Indirizzo Dash copiato negli appunti</string>
@@ -20,15 +20,15 @@
     <string name="exchange_rates_fragment_empty_text">Impossibile caricare tassi di cambio.</string>
     <string name="exchange_rates_fragment_empty_search">Impossibile trovare il tasso di cambio.</string>
     <string name="exchange_rates_fragment_default">(predefinito)</string>
-    <string name="exchange_rates_fragment_rate">tasso</string>
-    <string name="exchange_rates_fragment_balance">saldo</string>
+    <string name="exchange_rates_fragment_rate">Tasso</string>
+    <string name="exchange_rates_fragment_balance">Saldo</string>
     <string name="exchange_rates_fragment_source">Prezzo da %s</string>
     <string name="exchange_rates_options_search">Ricerca tasso di cambio</string>
     <string name="exchange_rates_context_set_as_default_title">Imposta come valuta straniera predefinita</string>
     <string name="wallet_transactions_fragment_empty_text_received">Nessun Dash ancora ricevuto</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Nessun Dash ancora inviato</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Come ottenere Dash?\n\nBarattali per soldi reali,\nvendi beni o servizi oppure\nricavali lavorando.</string>
-    <string name="wallet_transactions_row_warning_backup">Congratulazioni, hai ricevuto i tuoi primi pagamenti! Hai già &lt;u&gt;eseguito un backup del tuo portafoglio &lt;/u&gt;, per proteggerlo dai danni?</string>
+    <string name="wallet_transactions_row_warning_backup">Congratulazioni, hai ricevuto i tuoi primi pagamenti! Hai già eseguito un backup del tuo portafoglio, per proteggerlo dai danni?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Suggerimenti: per aumentare la sicurezza del tuo portafoglio, tu puoi criptare i dati del tuo dispositivo. Questa misura proteggei  anche i dati di altre applicazioni da te installate.</string>
     <string name="wallet_transactions_fragment_coinbase">minato</string>
     <string name="wallet_transactions_fragment_internal">Interno</string>
@@ -67,6 +67,7 @@
     <string name="send_coins_fragment_receiving_address_complex">completo\nindirizzo</string>
     <string name="send_coins_fragment_pending">(%s in attesa di conferma)</string>
     <string name="send_coins_fragment_amount_label">Importo da pagare</string>
+    <string name="send_coins_fragment_pin_label">Immetti il PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Una tassa economica  %ssara pagata. Usa \'economico\' solo se non ti interessa il tempo di conferma.</string>
     <string name="send_coins_fragment_hint_fee">Sarà pagata una piccola commissione di rete di %s.</string>
     <string name="send_coins_fragment_hint_fee_priority">Una tassa di priorità %s sara pagata. Usa \'priorità\' solo se hai bisogno di una conferma il prima possibile.</string>

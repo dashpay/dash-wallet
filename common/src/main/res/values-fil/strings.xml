@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="loading">Nagkakarga...</string>
+    <string name="loading_error">May kamaliang naganap. Pakiusap ulitin ito mamaya.</string>
+    <string name="dash_available">%1$s magagamit</string>
+
+</resources>
