@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-	<string name="toast_wallet_reset">تم إعادة تعيين المحفظة،\nسوف يستغرق بعض الوقت لاستعادة الوضع</string>
+	<string name="toast_wallet_reset">تم إعادة تعيين المحفظة!\nسوف يستغرق بعض الوقت لاستعادة الوضع.</string>
 	<string name="wallet_disclaimer_fragment_remind_safety">استخدم على مسؤوليتك الخاصة. يرجى قراءة ملاحظات السلامة.</string>
 	<string name="wallet_disclaimer_fragment_remind_backup">يجب عليك القيام بإجراء حفظ احتياطي لمحفظتك!</string>
 	<string name="blockchain_state_progress_hours">متأخر %1$s, %2$d ساعات</string>
@@ -37,8 +37,8 @@
 	<string name="wallet_transactions_options_filter_received">تم الاستلام</string>
 	<string name="wallet_transactions_options_filter_sent">تم الارسال</string>
 	<string name="wallet_options_safety_menu">السلامة</string>
-	<string name="wallet_options_encrypt_keys_set">تعيين رقم التعريف الشخصي للإنفاق</string>
-	<string name="wallet_options_encrypt_keys_change">تغيير رقم التعريف الشخصي للإنفاق</string>
+	<string name="wallet_options_encrypt_keys_set">تعيين الرقم السري الشخصي للإنفاق</string>
+	<string name="wallet_options_encrypt_keys_change">تغيير الرقم السري الشخصي للإنفاق</string>
 	<string name="wallet_options_safety">ملاحظات السلامة</string>
 	<string name="wallet_options_donate">التبرعات</string>
 	<string name="wallet_donate_address_label">التبرع لمحفظة داش</string>
@@ -67,6 +67,7 @@
 	<string name="send_coins_fragment_receiving_address_complex">مركب\nعنوان</string>
 	<string name="send_coins_fragment_pending">(جاري تأكيد مبلغ %s)</string>
 	<string name="send_coins_fragment_amount_label">المبلغ المطلوب دفعه</string>
+	<string name="send_coins_fragment_pin_label">أدخل الرقم السري</string>
 	<string name="send_coins_fragment_hint_fee_economic">سيتم دفع رسوم اقتصادية قدرها%s استخدام \"الاقتصادية\" إلا إذا كنت لا تهتم وقت التأكيد.</string>
 	<string name="send_coins_fragment_hint_fee">سيتم دفع رسم شبكة%s.</string>
 	<string name="send_coins_fragment_hint_fee_priority">سيتم دفع رسم أولوية بنسبة%s إذا كنت تهتم بالرسوم المنخفضة، استخدم \"الأولوية\" فقط إذا كنت بحاجة إلى تأكيد في أقرب وقت ممكن.</string>
@@ -197,7 +198,7 @@
 	<string name="backup_wallet_permission_dialog_message">من أجل النسخ الاحتياطي محفظتك لتخزين خارجي، تحتاج إلى منح إذن الكتابة.</string>
 	<string name="export_keys_dialog_title">حفظ احتياطي للمفاتيح الخاصة</string>
 	<string name="backup_wallet_dialog_message">سيتم تشفير مفاتيحك الخاصة مع كلمة المرور الخاصة  بك  وتسجيلها في وحدة تخزين خارجية.</string>
-	<string name="backup_wallet_dialog_warning_encrypted">محفظتك محمي من قبل بين الإنفاق. تأكد من تذكر رقم التعريف الشخصي بالإضافة إلى كلمة السر الاحتياطية!</string>
+	<string name="backup_wallet_dialog_warning_encrypted">محفظتك محمي من قبل بين الإنفاق. تأكد من تذكر الرقم السري الشخصي بالإضافة إلى كلمة السر الاحتياطية!</string>
 	<string name="export_keys_dialog_button_export">حفظ احتياطي</string>
 	<string name="export_keys_dialog_success">تم الحفظ الاحتياطي للمفاتيح الخاصة بك إلى\n\n%s\n \nيرجى الاحتفاظ بها بشكل آمن، والحفاظ على كلمة المرور الخاصة بك بشكل آمن!\n \nهل تريد أرشفة المفاتيح الخاصة بك باستخدام تطبيق؟</string>
 	<string name="export_keys_dialog_failure">تعذر الحفظ الاحتياطي للمفاتيح الخاصة بك:\n%s</string>
@@ -212,15 +213,15 @@
 	<string name="import_export_keys_dialog_show">إظهار كلمة المرور</string>
 	<string name="import_export_keys_dialog_failure_title">خطأ</string>
 	<string name="import_keys_intent_filter_action">استعادة مفتاح الداش</string>
-	<string name="encrypt_keys_dialog_title">إنفاق رقم التعريف الشخصي</string>
-	<string name="encrypt_keys_dialog_message">سيتم حماية الإنفاق من محفظتك مع رقم التعريف الشخصي المختار.</string>
-	<string name="encrypt_keys_dialog_warning">هام: تحتاج إلى تذكر رقم التعريف الشخصي الخاص بك! لا تستخدم الأرقام الشائعة (مثل تاريخ الميلاد).</string>
-	<string name="encrypt_keys_dialog_password_old">رقم التعريف الشخصي القديم</string>
+	<string name="encrypt_keys_dialog_title">إنفاق الرقم السري الشخصي</string>
+	<string name="encrypt_keys_dialog_message">سيتم حماية الإنفاق من محفظتك مع الرقم السري الشخصي المختار.</string>
+	<string name="encrypt_keys_dialog_warning">هام: تحتاج إلى تذكر الرقم السري الشخصي الخاص بك! لا تستخدم الأرقام الشائعة (مثل تاريخ الميلاد).</string>
+	<string name="encrypt_keys_dialog_password_old">الرقم السري الشخصي القديم</string>
 	<string name="encrypt_keys_dialog_password_strength_weak">ضعيف</string>
 	<string name="encrypt_keys_dialog_password_strength_fair">معرض</string>
 	<string name="encrypt_keys_dialog_password_strength_good">جيد</string>
 	<string name="encrypt_keys_dialog_password_strength_strong">قوي</string>
-	<string name="encrypt_keys_dialog_show">إظهار رقم التعريف الشخصي</string>
+	<string name="encrypt_keys_dialog_show">إظهار الرقم السري الشخصي</string>
 	<string name="encrypt_keys_dialog_state_encrypting">تشفير ...</string>
 	<string name="encrypt_keys_dialog_state_decrypting">فك تشفير ...</string>
 	<string name="encrypt_keys_dialog_state_done">فعل.</string>
@@ -326,8 +327,8 @@
 	<string name="button_paste">لصق</string>
 	<string name="button_share">نشر</string>
 	<string name="button_set_as_default">تعيين كافتراضي</string>
-	<string name="button_request_coins">طلب داش</string>
-	<string name="button_send_coins">إرسال داش</string>
+	<string name="button_request_coins">طلب مبلغ داش</string>
+	<string name="button_send_coins">أرسل داش</string>
 	<string name="button_scan">مسح بصري</string>
 	<string name="button_settings">الإعدادات</string>
 	<string name="action_show_qr">عرض رمز الاستجابة السريعة QR-code</string>
@@ -336,8 +337,8 @@
 	<!-- generic strings -->
 	<string name="time_today">اليوم</string>
 	<string name="address_unlabeled">(غير مسمى)</string>
-	<string name="private_key_password">رقم التعريف</string>
-	<string name="private_key_bad_password">رقم التعريف سيئة!</string>
+	<string name="private_key_password">الرقم السري</string>
+	<string name="private_key_bad_password">الرقم السري سيئة!</string>
 
 	<!-- generic error messages -->
 	<string name="error_io">خطأ مدخلات/مخرجات: %s</string>

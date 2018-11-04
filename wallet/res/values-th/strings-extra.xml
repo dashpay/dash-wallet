@@ -40,7 +40,7 @@
 	<string name="wallet_lock_unlock_dialog_title">ปลดล็อค  wallet  ของคุณ </string>
 	<string name="wallet_lock_unlock_dialog_message">wallet ของคุณถูกป้องกันโดยการใช้รหัส PIN  ป้อนรหัส PIN และกดปุ่มปลดล็อคเพื่อทำต่อ</string>
 	<string name="wallet_lock_reset_wallet_title">ตั้งค่า wallet</string>
-	<string name="wallet_lock_reset_wallet_message">คุณแน่ใจหรือไม่? ข้อมูลที่เก็บไว้ทั้งหมดจะถูกลบออก และ wallet ของคุณจะสามารถกู้คืนได้จากไฟล์สำรองหรือวลีกู้คืนเท่านั้น</string>
+	<string name="wallet_lock_reset_wallet_message">คุณแน่ใจหรือไม่?  Wallet ของคุณจะถูกลบและ Dash ทั้งหมดจะหายไป \n\n วิธีเดียวที่จะกู้คืน Dash ของคุณได้คือไฟล์สำรองหรือวลีกู้คืน</string>
 
 	<string name="wallet_lock_wallet_disabled">wallet ถูกปิดการใช้งาน</string>
 	<string name="wallet_lock_try_again">ลองอีกครั้ง ใน %1$d%2$s</string>
@@ -69,5 +69,8 @@
 	<string name="change_exchange_currency_code_message">สกุลเงินท้องถิ่นของคุณคือ %1$s แต่ในแอพนี้สกุลเงินเริ่มต้นของคุณถูกตั้งไว้ที่%2$s   คุณต้องการเปลี่ยนเป็น %1$s หรือปล่อยให้เป็น%2$s?</string>
 	<string name="change_to">เปลี่ยนเป็น%s</string>
 	<string name="leave_as">%sปล่อยให้เป็น </string>
+
+	<string name="remind_later">เตือนภายหลัง</string>
+	<string name="backup_now">สำรองข้อมูลตอนนี้</string>
 
 </resources>

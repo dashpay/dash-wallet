@@ -1,0 +1,36 @@
+Unawain ang posibleng panganib! (Nangangailangan ng Android 4 o higit pa)
+
+<b>Palaging dalhin ang iyong Dash, sa iyong bulsa!</b>Magbayad sa pamamagitan ng mabilisang pag-scan ng QR code. Bilang isang negosyante, makakatanggap ka ng mga bayad ng tapat at agad-agad. Ang Dash Wallet ang unang mobile Dash app, at walang dudang pinakaligtas!
+
+<b>KATANGIAN</b>
+
+• Hindi kailangan magrehistro, web service o cloud! Itong pitakang ito ay decentralisado at peer to peer.
+• Ipakita ang halaga ng Dash sa DASH, mDASH at µDASH.
+• Pagsasalin patungo at mula sa mga pambansang pananalapi.
+• Pagpadala at pagtanggap ng Dash sa pamamagitan ng NFC, QR codes o Dash URLs.
+• Adresbuk para sa palagiang paggamit ng mga Dash address.
+• Kahit ikaw ay offline, maaari ka parin magbayad sa pamamagitan ng Bluetooth.
+• Pagbibigay abiso sa taong nakatanggap ng mga barya.
+• Pinagpalisan ng papel na pitaka (Mga ginagamit para sa cold storage).
+• App widget para sa balanse ng Dash.
+
+
+<b>TUMULONG</b>
+
+Ang Dash Wallet ay <b>open source</b> at <b>free software</b>. Lisensya: GPLv3
+https://www.gnu.org/licenses/gpl-3.0.en.html
+
+Ang aming source code ay makukuha sa Github:
+https://github.com/HashEngineering/dash-wallet
+
+Ang lahat ng pagsasalin ay pinangangasiwaan sa pamamagitaan ng Transifex:
+https://www.transifex.com/dash/dash-wallet/
+
+Makikita ang ibang pang impormasyon tungkol sa Dash sa
+https://www.dash.org/
+
+<b>MGA KATIBAYAN</b>
+
+• Inirekomendang mobile wallet ng https://www.dash.org
+
+<i>Unawain ang posibleng panganib!</i>

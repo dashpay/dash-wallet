@@ -40,7 +40,7 @@
 	<string name="wallet_lock_unlock_dialog_title">Entsperre deine Wallet</string>
 	<string name="wallet_lock_unlock_dialog_message">Deine Wallet wird durch einen Zahlungs-PIN geschützt. Gebe den PIN ein und tippe auf Entsperren, um fortzufahren.</string>
 	<string name="wallet_lock_reset_wallet_title">Wallet zurücksetzen</string>
-	<string name="wallet_lock_reset_wallet_message">Bist du sicher? Alle gespeicherten Daten werden gelöscht und die Wallet kann nur durch eine Backup-Datei oder die Wiederherstellungsphrase wiederhergestellt werden.</string>
+	<string name="wallet_lock_reset_wallet_message">Bist du sicher? Die Wallet wird gelöscht und der Inhalt wird verloren gehen.\n\nDie Dash können danach nur noch über eine Backup-Datei oder eine Wiederherstellungsphrase wiederhergestellt werden.</string>
 
 	<string name="wallet_lock_wallet_disabled">Wallet deaktiviert</string>
 	<string name="wallet_lock_try_again">Versuches es wieder in %1$d %2$s</string>

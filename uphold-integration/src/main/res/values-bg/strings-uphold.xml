@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">Uphold акаунт</string>
+    <string name="uphold_buy_dash_activity_title">Купи/Продай Dash с Uphold</string>
+    <string name="uphold_buy_dash_with_uphold">Купи Dash с Uphold акаунт</string>
+    <string name="uphold_buy_dash_button">Купи Dash</string>
+    <string name="uphold_transfer_to_this_wallet_button">Прехвърляне от Uphold</string>
+    <string name="uphold_link_account">Свързване с Uphold акаунт</string>
+    <string name="uphold_account_dash_balance">Вашият Dash баланс в Uphold акаунта е</string>
+    <string name="uphold_transfer_to_this_wallet">Прехвърляне на Dash от Вашият Uphold акаунт към този портфейл</string>
+    <string name="uphold_withdrawal_amount">Количество</string>
+    <string name="uphold_withdrawal_fee">Такса</string>
+    <string name="uphold_withdrawal_total">Обща сума</string>
+    <string name="uphold_withdrawal_title">Прехвърли Dash към този портфейл</string>
+    <string name="uphold_withdrawal_message">Имате &lt;b>%1$s Dash&lt;/b> във вашият Uphold акаунт. Желаете ли да прехвърлите тази стойност&lt;u>към този портфейл&lt;/u>?</string>
+    <string name="uphold_withdrawal_confirm_title">Потвърди транзакцията</string>
+    <string name="uphold_withdrawal_confirm_message">Основно количество: %1$f\nТакса: %2$f\nОбща сума: %3$f\n\nЖелаете ли да потвърдите тази транзакция?</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">Таксата ще бъде приспадната от поисканата сума.</string>
+    <string name="uphold_withdrawal_instructions">Въведете сумата за прехвърляне по-долу</string>
+    <string name="uphold_withdrawal_success_title">Успешно</string>
+    <string name="uphold_withdrawal_success_message">Вашата транзакция беше изпратена и сумата трябва да се появи в портфейла Ви след няколко минути.\n\nТранзакция номер: %s</string>
+    <string name="uphold_otp_dialog_title">Въведете вашият 2FA код по-долу:</string>
+    <string name="uphold_transfer">Прехвърляне</string>
+    <string name="uphold_see_on_uphold">Вижте в Uphold</string>
+
+</resources>

@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Вашият портфейл беше занулен!\\nIt ще отнеме известно време да се възстанови.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Използвайте на свой риск. Прочетете &lt;u&gt;бележките за безопастност&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Нужно е да направиш &lt;u&gt;резервно копие на портфейла си&lt;/u&gt;!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Нужно е да направиш резервно копие на портфейла си!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d часа назад</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d дена назад</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d седмици назад</string>
@@ -20,15 +20,15 @@
     <string name="exchange_rates_fragment_empty_text">Не може да зареди обеменните курсове.</string>
     <string name="exchange_rates_fragment_empty_search">Не може да намери обменните курсове.</string>
     <string name="exchange_rates_fragment_default">(по подразбиране)</string>
-    <string name="exchange_rates_fragment_rate">курс</string>
-    <string name="exchange_rates_fragment_balance">баланс</string>
+    <string name="exchange_rates_fragment_rate">Курс</string>
+    <string name="exchange_rates_fragment_balance">Баланс</string>
     <string name="exchange_rates_fragment_source">Цена от %s</string>
     <string name="exchange_rates_options_search">Търсене на обменен курс</string>
     <string name="exchange_rates_context_set_as_default_title">Задай по подразбиране</string>
     <string name="wallet_transactions_fragment_empty_text_received">Не са получавани Dash скоро.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Не са изпращани Dash скоро.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Как да получите Dash?\\n\\nОбменете за конвенционална валута,\\nпродайте стоки или услуги или\\nспечелете с работа.</string>
-    <string name="wallet_transactions_row_warning_backup">Поздравления, Вие получихте първото си плащане! Направихте ли вече &lt;u&gt;архивно копие на вашия портфейл&lt;/u&gt;, за да го защитите срещу кражба?</string>
+    <string name="wallet_transactions_row_warning_backup">Поздравления, Вие получихте първото си плащане! Направихте ли вече архивно копие на вашия портфейл, за да го защитите срещу кражба?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Съвет: за да повишите сигурноста за вашият портфейл, може  &lt;u&gt;да криптирате вашето устройство&lt;/u&gt;. Това ще предпази също данните и на други приложения.</string>
     <string name="wallet_transactions_fragment_coinbase">изкопани</string>
     <string name="wallet_transactions_fragment_internal">вътрешен</string>
@@ -67,6 +67,7 @@
     <string name="send_coins_fragment_receiving_address_complex">комплексен\\nадрес</string>
     <string name="send_coins_fragment_pending">(%s чака за потвърждение)</string>
     <string name="send_coins_fragment_amount_label">Сума за плащане</string>
+    <string name="send_coins_fragment_pin_label">Въведи PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Икономична такса от %s ще бъде платена. Използвайте \'икономична\' само ако не ви интересува времето за потвърждение.</string>
     <string name="send_coins_fragment_hint_fee">Мрежова такса от %s ще бъде платена.</string>
     <string name="send_coins_fragment_hint_fee_priority">Приоритетна такса от %s ще бъде платена. Ако се интересувате от ниски такси, използвайте \'приоритетна\' само ако се нуждаете от бързо потвърждение.</string>
@@ -326,8 +327,8 @@
     <string name="button_paste">Постави</string>
     <string name="button_share">Сподели</string>
     <string name="button_set_as_default">Задай по подразбиране</string>
-    <string name="button_request_coins">Заяви монети</string>
-    <string name="button_send_coins">Изпрати монети</string>
+    <string name="button_request_coins">Заяви Dash</string>
+    <string name="button_send_coins">Изпрати Dash</string>
     <string name="button_scan">Сканирай</string>
     <string name="button_settings">Настройки </string>
     <string name="action_show_qr">Покажи QR код</string>
@@ -337,7 +338,7 @@
     <string name="time_today">днес</string>
     <string name="address_unlabeled">(необозначен)</string>
     <string name="private_key_password">ПИН</string>
-    <string name="private_key_bad_password">грешен ПИН!</string>
+    <string name="private_key_bad_password">Грешен ПИН!</string>
 
     <!-- generic error messages -->
     <string name="error_io">I/O грешка: %s</string>

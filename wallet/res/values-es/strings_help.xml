@@ -23,7 +23,7 @@
 		</p>
 	]]>
 </string>
-	<string name="help_request_coins">
+    <string name="help_request_coins">
 <![CDATA[
 		<p>
 			Al usar éste diálogo, puedes solicitar monedas de otras personas (que ya tengan instalado su Monedero Dash).
@@ -42,7 +42,7 @@
 		</p>
 	]]>
 </string>
-	<string name="help_send_coins">
+    <string name="help_send_coins">
 <![CDATA[
 		<p>
 			Has iniciado el proceso de enviar monedas.
@@ -73,7 +73,7 @@
 		</p>
 		]]>
 </string>
-	<string name="help_safety">
+    <string name="help_safety">
 <![CDATA[
 		<p>
 			<b>Notas de seguridad importantes:</b>

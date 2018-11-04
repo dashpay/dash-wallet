@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">Uphold 계정</string>
+    <string name="uphold_buy_dash_activity_title">Uphold 로 대쉬 구입</string>
+    <string name="uphold_buy_dash_with_uphold">Uphold 계정으로 대쉬 구입</string>
+    <string name="uphold_buy_dash_button">대쉬 구입</string>
+    <string name="uphold_transfer_to_this_wallet_button">Uphold에서 송금</string>
+    <string name="uphold_link_account">Upload 계정 연결</string>
+    <string name="uphold_account_dash_balance">귀하의 Upload 계정의 대쉬 잔액은 </string>
+    <string name="uphold_transfer_to_this_wallet">Uphold 계정에서이 지갑으로 대쉬를 송금하십시오</string>
+    <string name="uphold_withdrawal_amount">총액</string>
+    <string name="uphold_withdrawal_fee">수수료</string>
+    <string name="uphold_withdrawal_total">총계</string>
+    <string name="uphold_withdrawal_title">이 지갑으로 대쉬 송금하기</string>
+    <string name="uphold_withdrawal_message">Uphold계정에 &lt;b>%1$s Dash&lt;/b> 의 대쉬가 있습니다. 이 금액을 &lt;u>이 지갑으로 전송하시겠습니까&lt;/u>?</string>
+    <string name="uphold_withdrawal_confirm_title">거래 승인</string>
+    <string name="uphold_withdrawal_confirm_message">기본 금액: %1$f\n수수료: %2$f\n총액: %3$f\n\n이 거래를 승인하시겠습니까?</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">요청한 금액에서 수수료가 공제됩니다.</string>
+    <string name="uphold_withdrawal_instructions">송금할 금액을 입력하십시오</string>
+    <string name="uphold_withdrawal_success_title">성공</string>
+    <string name="uphold_withdrawal_success_message">귀하의 거래가 전송되었고 금액은 몇 분 안에 지갑에 표시됩니다.\n\n거래 id: %s</string>
+    <string name="uphold_otp_dialog_title">아래에 2FA 코드를 입력하십시오:</string>
+    <string name="uphold_transfer">송금하기</string>
+    <string name="uphold_see_on_uphold">Uphold에서 보기</string>
+
+</resources>

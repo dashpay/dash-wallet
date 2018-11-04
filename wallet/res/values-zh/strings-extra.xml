@@ -9,7 +9,7 @@
 	<string name="transaction_row_message_received_instantx_locked">即时支付已确认</string>
 	<string name="transaction_row_message_received_unconfirmed_instantx">未确认的即时支付</string>
 	<string name="transaction_row_message_received_instantx_locked2">被锁定的即时支付</string>
-	<string name="transaction_row_message_sent_to_single_peer">此款项已发送。</string>
+	<string name="transaction_row_message_sent_to_single_peer">此交易已被发送。</string>
 	<string name="wallet_options_disconnect">未连接</string>
 
 	<string name="network_monitor_masternodes_title">主节点</string>
@@ -40,7 +40,7 @@
 	<string name="wallet_lock_unlock_dialog_title">解锁您的钱包</string>
 	<string name="wallet_lock_unlock_dialog_message">您的钱包受到密码保护. 输入您的PIN码并按解锁以继续.</string>
 	<string name="wallet_lock_reset_wallet_title">重置钱包</string>
-	<string name="wallet_lock_reset_wallet_message">您确定吗? 所有的存储数据将被删除, 只能通过备份文件或恢复种子来恢复您的钱包.</string>
+	<string name="wallet_lock_reset_wallet_message">您确定吗？您的钱包将会被删除，您所有的达世币将会丢失.\n\n找回您达世币的唯一途径是通过备份文件或恢复短语。</string>
 
 	<string name="wallet_lock_wallet_disabled">钱包被禁用</string>
 	<string name="wallet_lock_try_again">请在 %1$d %2$s 后再试</string>
@@ -69,5 +69,8 @@
 	<string name="change_exchange_currency_code_message">你的本地货币是%1$s，但是在这个应用程序中默认货币设置为%2$s。请问您想要改为%1$s 或保持%2$s?</string>
 	<string name="change_to">改为%s</string>
 	<string name="leave_as">保持%s</string>
+
+	<string name="remind_later">稍后提醒</string>
+	<string name="backup_now">立刻备份</string>
 
 </resources>

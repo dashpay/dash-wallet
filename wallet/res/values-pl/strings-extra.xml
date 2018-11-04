@@ -40,7 +40,7 @@
 	<string name="wallet_lock_unlock_dialog_title">Odblokuj swój portfel</string>
 	<string name="wallet_lock_unlock_dialog_message">Twój portfel jest chroniony za pomocą PIN. Wpisz swój PIN i wciśnij Odblokuj aby kontynuować. </string>
 	<string name="wallet_lock_reset_wallet_title">Resetuj portfel</string>
-	<string name="wallet_lock_reset_wallet_message">Czy jesteś pewien? Wszystkie dane zostaną usunięte i będziesz mógł odzyskać swój portfel tylko z kopii zapasowej lub z frazy odzyskiwania portfela.</string>
+	<string name="wallet_lock_reset_wallet_message">Jesteś pewien? Twój portfel zostanie usunięty wszystkie twoje Dashe przepadną. \n\nJedynym sposobem na odzyskanie twoich Dashy będzie kopia zapasowa portfelu lub fraza odzysku.</string>
 
 	<string name="wallet_lock_wallet_disabled">Portfel zdezaktywowany</string>
 	<string name="wallet_lock_try_again">Spróbuj raz jeszcze w %1$d%2$s</string>
@@ -75,8 +75,11 @@
 	<string name="pin_code_required_dialog_message">Ta aplikacja obecnie wymaga PIN aby móc wydawać oraz wyświetlić saldo konta i transakcji.</string>
     <string name="backup_wallet_seed_private_key_written_down_box">Zanotowałem frazę odzyskiwania portfela</string>
 	
-	<string name="change_exchange_currency_code_message">Twoja lokalna waluta to %1$s, lecz w tej aplikacji domyślna waluta ustawiona jest jako %2$s. Czy chcesz zmienić domyślną walutę na %1$sczy pozostawić %2$s?</string>
+	<string name="change_exchange_currency_code_message">Twoja lokalna waluta to %1$s, lecz w tej aplikacji domyślna waluta ustawiona jest jako %2$s. Czy chcesz zmienić domyślną walutę na %1$s czy pozostawić %2$s?</string>
 	<string name="change_to">Zmień na %s</string>
 	<string name="leave_as">Pozostaw %s</string>
+
+	<string name="remind_later">Przypomnij później</string>
+	<string name="backup_now">Wykonaj kopie zapasową</string>
 
 </resources>

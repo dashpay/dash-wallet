@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="loading">로딩중...</string>
+    <string name="loading_error">오류가 발생했습니다. 나중에 다시 시도하십시오.</string>
+    <string name="dash_available">%1$s 이용 가능</string>
+
+</resources>

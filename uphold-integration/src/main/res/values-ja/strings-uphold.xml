@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">Upholdアカウント</string>
+    <string name="uphold_buy_dash_activity_title">UpholdでDashを売買する</string>
+    <string name="uphold_buy_dash_with_uphold">UpholdアカウントでDashを購入する</string>
+    <string name="uphold_buy_dash_button">Dashを購入する</string>
+    <string name="uphold_transfer_to_this_wallet_button">UpholdからDashを移す</string>
+    <string name="uphold_link_account">Upholdアカウントへのリンク</string>
+    <string name="uphold_account_dash_balance">あなたのUpholdアカウント内のDash残高</string>
+    <string name="uphold_transfer_to_this_wallet">UpholdアカウントからこのウォレットにDashを移す</string>
+    <string name="uphold_withdrawal_amount">送金額</string>
+    <string name="uphold_withdrawal_fee">手数料</string>
+    <string name="uphold_withdrawal_total">総計</string>
+    <string name="uphold_withdrawal_title">このウォレットにDashを移す</string>
+    <string name="uphold_withdrawal_message">あなたはUpholdアカウントに &lt;b>%1$s Dash&lt;/b> を保有しています。あなたは&lt;u>このウォレットにこの金額を送金&lt;/u>しますか？</string>
+    <string name="uphold_withdrawal_confirm_title">トランザクションを承認</string>
+    <string name="uphold_withdrawal_confirm_message">送金額：%1$f\n手数料：%2$f\n総計：%3$f\n\nこのトランザクションを承認しますか？</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">請求額から手数料が差し引かれます。</string>
+    <string name="uphold_withdrawal_instructions">下に送金額を入力して下さい</string>
+    <string name="uphold_withdrawal_success_title">成功</string>
+    <string name="uphold_withdrawal_success_message">あなたのトランザクションは送信され、数分で送金額がウォレットに表示されます。\n\nトランザクションID： %s</string>
+    <string name="uphold_otp_dialog_title">下に2段階認証コードを入力：</string>
+    <string name="uphold_transfer">移す</string>
+    <string name="uphold_see_on_uphold">Upholdで見る</string>
+
+</resources>

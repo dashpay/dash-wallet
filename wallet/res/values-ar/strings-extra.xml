@@ -17,7 +17,7 @@
 	<string name="import_keys_dialog_title_from_seed">إسترجاع من جملة الإسرجاع الخاصة بك </string>
 	<string name="backup_to_seed_wallet_dialog_message">هذه هي جملة الإسترجاع الخاصة بك . يرجى الكتابة عليه.</string>
 	<string name="backup_wallet_to_seed_dialog_warning">لا تترك أي أحد ان يرى جملة الإسترجاع الخاصة بك أو سوف يتمكنون من إستعمال داش الذي تملك.</string>
-	<string name="backup_to_seed_wallet_dialog_enter_pin_message">محفظتك محمي من قبل بين الإنفاق. أدخل رقم التعريف الشخصي واضغط على عرض لعرض عبارة الاسترداد.</string>
+	<string name="backup_to_seed_wallet_dialog_enter_pin_message">محفظتك محمي من قبل بين الإنفاق. أدخل الرقم السري الشخصي واضغط على عرض لعرض عبارة الاسترداد.</string>
     <string name="import_keys_from_seed_dialog_message">أدخل جملة الإسترجاع الخاصة بك هنا.</string>
 	<string name="import_export_keys_dialog_password_phrase">جملة الإسترجاع تذهب هنا.</string>
 	<string name="preferences_report_issue_summary">جمع معلومات حول مشكلتك وإرسالها إلى البريد الإلكتروني للمطورين.</string>
@@ -38,9 +38,9 @@
 	<string name="wallet_lock_unlock_to_see_txs_title">قفل المحفظة</string>
 	<string name="wallet_lock_unlock_to_see_txs_txt">انقر على رمز القفل أعلاه لإلغاء قفل محفظتك والاطلاع على سجل المعاملات.</string>
 	<string name="wallet_lock_unlock_dialog_title">إفتح محفظتك</string>
-	<string name="wallet_lock_unlock_dialog_message">محفظتك محمية برقم سري . إدخل رقمك السري و إضغط على فتح للمتابعة.</string>
+	<string name="wallet_lock_unlock_dialog_message">محفظتك محمي من قبل بين الإنفاق. إدخل الرقم السري و إضغط على فتح للمتابعة.</string>
 	<string name="wallet_lock_reset_wallet_title">إعادة ظبط المحفظة</string>
-	<string name="wallet_lock_reset_wallet_message">هل أنت واثق؟ سيتم حذف جميع البيانات المخزنة وستكون محفظتك قابلة للاسترداد فقط من خلال ملف النسخ الاحتياطي أو بجملة الإسترجاع الخلصة بك.</string>
+	<string name="wallet_lock_reset_wallet_message">هل أنت واثق؟ سيتم حذف جميع البيانات المخزنة وستكون محفظتك قابلة للاسترداد فقط من خلال ملف النسخ الاحتياطي أو بجملة الإسترجاع الخاصة بك.</string>
 
 	<string name="wallet_lock_wallet_disabled">المحفظة معطلة</string>
 	<string name="wallet_lock_try_again">أعد المحاولة %1$d%2$s</string>
@@ -84,5 +84,8 @@
 	<string name="change_exchange_currency_code_message">عملتك المحلية هي %1$s ولكن في هذا التطبيق يتم تعيين العملة الافتراضية الخاصة بك%2$s . هل ترغب في تغييرها إلى %1$sأو تركها كما هي %2$s؟</string>
 	<string name="change_to">غبرها إلى %s</string>
 	<string name="leave_as">اتركها %s</string>
+
+	<string name="remind_later">تذكر لاحقا</string>
+	<string name="backup_now">اعمل نسخة احتياطية الان</string>
 
 </resources>

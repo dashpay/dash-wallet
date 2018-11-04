@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">Konto Uphold</string>
+    <string name="uphold_buy_dash_activity_title">Kup/Sprzedaj Dash z Uphold</string>
+    <string name="uphold_buy_dash_with_uphold">Kup Dash na Uphold</string>
+    <string name="uphold_buy_dash_button">Kup Dash</string>
+    <string name="uphold_transfer_to_this_wallet_button">Przelej z Uphold</string>
+    <string name="uphold_link_account">Połącz z kontem Uphold</string>
+    <string name="uphold_account_dash_balance">Saldo twojego konta na Uphold wynosi</string>
+    <string name="uphold_transfer_to_this_wallet">Przelej Dash z twojego konta na Uphold do tego portfela</string>
+    <string name="uphold_withdrawal_amount">Kwota</string>
+    <string name="uphold_withdrawal_fee">Opłata</string>
+    <string name="uphold_withdrawal_total">Razem</string>
+    <string name="uphold_withdrawal_title">Przelej Dash do tego portfela</string>
+    <string name="uphold_withdrawal_message">Posiadasz&lt;b>%1$s&lt;/b> na twoim koncie Uphold. Chciałbyś &lt;u>tprzelać tę kwotę do tego portfela&lt;u>t? </string>
+    <string name="uphold_withdrawal_confirm_title">Potwierdź przelew</string>
+    <string name="uphold_withdrawal_confirm_message">Kwota podstawowa%1$f\nFee: %2$f: %3$f\n\nChciałbyś potwierdzić tę transakcję?</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">Opłata będzie odciągnięta od zarządanej kwoty.</string>
+    <string name="uphold_withdrawal_instructions">Poniżej wpisz kwotę jaką chcesz przelać.</string>
+    <string name="uphold_withdrawal_success_title">Wszystko odbyło się pomyślnie.</string>
+    <string name="uphold_withdrawal_success_message">Twoja transakcja została wysłana i kwota powinna się pojawić w twoim portfelu w ciągu kilku minut. \n\nTransaction id: %s</string>
+    <string name="uphold_otp_dialog_title">Wprowadź twój kod 2FA poniżej:</string>
+    <string name="uphold_transfer">Przelej</string>
+    <string name="uphold_see_on_uphold">Zobacz na Uphold</string>
+
+</resources>

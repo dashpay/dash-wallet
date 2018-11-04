@@ -1,37 +1,36 @@
-<b>ビットコインを持ち歩こう、いつでもあなたのポケットに!</b> QRコードスキャンで素早く支払。バイヤーとしても、即座にかつ確実に支払を受取り。 ビットコインウォレットは初めてのモバイルビットコインアプリ、そして間違いなく最も安全なアプリでもあります!
+ユーザ自身の責任でご使用ください！（Android 4.0以上の端末が必要）
+
+いつもポケットにあなたのDashを！QRコードを読み取ってすぐに支払いができます。事業者の方は確実かつ瞬時に支払いを受け取ることができます。Dashウォレットは間違いなく最も安全なモバイル用アプリです。
+
+特長
+
+・ウェブサービスやクラウドは不要で登録なしでご利用いただけます！このウォレットは分散型でP2Pです。
+・Dashの額はDASH、mDASH、μDASHの各単位で表示できます。
+・各国通貨とDash間で価格の変換ができます。
+・NFC、QRコード、またはDashアドレス経由でDashの送金と受取ができます。
+・定期的に使用するDashアドレスはアドレス帳に登録できます。
+・オフラインでもBluetooth経由で支払いができます。
+・コインの受取時は通知があります。
+・ペーパーウォレット（コールドストレージとして使われるもの）からの取り出しができます。
+・Dash残高が表示されるウィジェット機能があります。
 
 
+<b>CONTRIBUTE</b>
 
-<b>特徴</b>
-
-• 登録必要なし、ウェブサービスもクラウドもいりません! このウォレットは分散型P2Pです。
-• DASH、mDASH、μDASHでのビットコインの表示。
-• 自国通貨へ/自国通貨からの変換表示。
-• NFC、QRコード、ビットコインURLでの送金や受取。
-• 良く使うビットコインアドレス用のアドレスブック。
-• オフラインの時でもBluetoothで支払い可能。
-• コイン受取の通知。
-• ペーパーウォレットをスィープ(例. コールドストレージ用)
-• ビットコイン残高のためのウィジェット。
-
-
-<b>開発に協力ください</b>
-
-Dash Walletは<b>オープンソース</b>であり、<b>自由ソフトウェア</b>です。ライセンス: GPLv3
+Dash Wallet is <b>open source</b> and <b>free software</b>. License: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.ja.html
 
-ソースコードはGithubにあります。
-https://github.com/HashEngineering/darkcoin-wallet
+Our source code is available at GitHub:
+https://github.com/HashEngineering/dash-wallet
 
-全ての翻訳はTransifexで管理されています:
+すべての翻訳はTransifexで管理されています。
 https://www.transifex.com/dash/dash-wallet/
 
+Dashについて詳しくはこちら
+https://www.dash.org/
 
-<b>推薦文</b>
+<b>TESTIMONIALS</b>
 
-• 多くのモバイルウォレットのコードはBitcoin Walletをベースにしています。例: blockchain.info, BTCX.
-• https://dash.org の推奨モバイルウォレットです。
-• BitPayによって推奨されています。
+• https://www.dash.org で推奨されているモバイルウォレットです
 
-
-<i>自己責任でお使いください!</i>
+<i>ユーザ自身の責任でご使用ください！</i>

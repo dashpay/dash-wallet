@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">حساب آپهلد</string>
+    <string name="uphold_buy_dash_activity_title">خرید/فروش دش با آپهلد</string>
+    <string name="uphold_buy_dash_with_uphold">خرید دش با حساب آپهلد</string>
+    <string name="uphold_buy_dash_button">خرید دش</string>
+    <string name="uphold_transfer_to_this_wallet_button">انتقال از آپهلد</string>
+    <string name="uphold_link_account">متصل کردن حساب آپهلد</string>
+    <string name="uphold_account_dash_balance">موجودی حساب آپهلد شما برابر است با</string>
+    <string name="uphold_transfer_to_this_wallet">انتقال دش از حساب آپهلد به این کیف پول</string>
+    <string name="uphold_withdrawal_amount">مبلغ</string>
+    <string name="uphold_withdrawal_fee">کارمزد</string>
+    <string name="uphold_withdrawal_total">مجموع</string>
+    <string name="uphold_withdrawal_title">انتقال دش به این کیف پول</string>
+    <string name="uphold_withdrawal_message">شما &lt;b> %1$s دش &lt;/b> در حساب آپهلدتان دارید. آیا می‌خواهید &lt;u> این میزان را به این کیف پول منتقل کنید &lt;/u> ؟</string>
+    <string name="uphold_withdrawal_confirm_title">تایید تراکنش</string>
+    <string name="uphold_withdrawal_confirm_message">میزان پایه%1$f \n کارمزد:%2$f \n  مجموع:%3$f \n\n آیا می‌خواهید این تراکنش را تایید کنید؟</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">کارمزد از میزان درخواستی شما کم می‌شود.</string>
+    <string name="uphold_withdrawal_instructions">میزان مورد نظر برای انتقال را در زیر وارد کنید</string>
+    <string name="uphold_withdrawal_success_title">با موفقیت انجام شد</string>
+    <string name="uphold_withdrawal_success_message">تراکنش‌تان ارسال شد و مبلغ مورد نظر طی چند دقیقه آینده در کیف پول‌تان ظاهر می‌شود. \n\n شناسه تراکنش: %s</string>
+    <string name="uphold_otp_dialog_title">کد 2FA خود را در زیر وارد کنید:</string>
+    <string name="uphold_transfer">انتقال</string>
+    <string name="uphold_see_on_uphold">مشاهده در آپهلد</string>
+
+</resources>

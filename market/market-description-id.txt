@@ -1,21 +1,36 @@
-Dengan aplikasi ini Anda selalu mempunyai Dash dengan Anda, dalam saku Anda! Anda dapat mengirim pembayaran hanya dengan memindai kode-QR atau mendekatkan dua ponsel bersama (NFC). Dash Wallet dirancang untuk mudah digunakan dan diandalkan, sementara juga menjadi lebih aman dan cepat.
+Gunakan dengan resiko Anda sendiri! (Membutuhkan Android 4 atau lebih tinggi)
 
-FITUR:
+<b>Miliki Dash Anda selalu bersama Anda, di saku Anda! </b>Anda membayar dengan cepat memindai kode QR. Sebagai pedagang, Anda menerima pembayaran dengan andal dan instan. Dash Wallet adalah aplikasi Dash ponsel pertama, dan bisa dibilang juga yang paling aman!  
 
-• Tidak diperlukan server awan atau layanan web! Dompet ini benar-benar peer ke peer.
-• Tampilkan saldo dompet dalam Dash dan mata uang lainnya.
-• Mengirim dan menerima Dash via NFC, kode-QR atau Tautan Dash.
-• Buku alamat untuk alamat penggunaan Dash secara reguler.
-• Masukkan transaksi saat offline, akan dilaksanakan ketika online.
-• Notifikasi sistem untuk konektivitas Dash dan menerima koin.
-• Widget Apl untuk saldo Dash.
+<b>FITUR</b> 
 
-Anda dapat mengetahui lebih mengenai Dash di
-http://darkcoin.io
+• Tidak perlu registrasi, layanan web atau cloud! Dompet ini tidak terpusat dan peer to peer.
+• Tampilan jumlah Dash dalam DASH, mDASH, dan µDASH.
+• Konversi ke dan dari mata uang nasional.
+• Mengirim dan menerima Dash melalui NFC, kode QR atau Dash URL.
+• Buku alamat untuk alamat-alamat Dash yang sering digunakan.
+• Saat Anda offline, Anda tetap dapat membayar melalui Bluetooth.
+• Pemberitahuan sistem untuk koin yang diterima.
+• Menyapu dompet kertas (misalnya yang digunakan untuk cold storage).
+• Widget aplikasi untuk saldo Dash.
 
-Jika Anda ingin berkontribusi kepada Dash Wallet, proyeknya berada di
-https://github.com/HashEngineering/darkcoin-wallet
 
-Lisensi: GPLv3
-Gunakan dengan resiko Anda!
-http://www.gnu.org/licenses/gpl-3.0.en.html
+<b>BERKONTRIBUSI</b>
+
+Dash Wallet adalah <b>sumber terbuka</b> dan <b>perangkat lunak bebas</b>. Lisensi: GPLv3
+https://www.gnu.org/licenses/gpl-3.0.en.html
+
+Kode sumber kami tersedia di GitHub:
+https://github.com/HashEngineering/dash-wallet
+
+Semua terjemahan dikelola melalui Transifex:
+https://www.transifex.com/dash/dash-wallet/
+
+Anda dapat menemukan lebih banyak tentang Dash di
+https://www.dash.org/
+
+<b>TANDA PENGHARGAAN</b>
+
+• Dompet ponsel yang direkomendasikan oleh https://www.dash.org
+
+<i>Gunakan dengan resiko Anda sendiri!</i>
