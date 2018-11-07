@@ -1,4 +1,9 @@
 Dash Wallet
+v6.2.0
+* Target API 28
+* Add Adaptive Icons
+* Use DashJ 0.14.7
+
 v6.1.2 (Hotfix)
 * Wipe Wallet after 8 incorrect PIN entries.
 * Prevent Brute Forcing PIN
