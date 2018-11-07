@@ -77,5 +77,10 @@
 
 	<string name="remind_later">Remind later</string>
 	<string name="backup_now">Backup now</string>
+	
+	<string name="notification_transactions_channel_name">Transactions</string>
+	<string name="notification_transactions_channel_description">Receive alerts about incoming transactions.</string>
+	<string name="notification_synchronization_channel_name">Synchronization</string>
+	<string name="notification_synchronization_channel_description">Shows a notification when the app is synchronizing with the network.</string>
 
 </resources>

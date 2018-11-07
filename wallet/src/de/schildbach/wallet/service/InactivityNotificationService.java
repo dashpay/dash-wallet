@@ -32,21 +32,25 @@ import de.schildbach.wallet.ui.send.FeeCategory;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet_test.R;
 
-import android.app.IntentService;
+import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.os.IBinder;
+import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.content.ContextCompat;
 
 /**
  * This service is responsible for showing a notification if the user hasn't used the app for a longer time.
  *
  * @author Andreas Schildbach
  */
-public final class InactivityNotificationService extends IntentService {
+public final class InactivityNotificationService extends Service {
     public static void startMaybeShowNotification(final Context context) {
-        context.startService(new Intent(context, InactivityNotificationService.class));
+        ContextCompat.startForegroundService(context, new Intent(context, InactivityNotificationService.class));
     }
 
     private NotificationManager nm;
@@ -62,12 +66,6 @@ public final class InactivityNotificationService extends IntentService {
 
     private static final Logger log = LoggerFactory.getLogger(InactivityNotificationService.class);
 
-    public InactivityNotificationService() {
-        super(InactivityNotificationService.class.getName());
-
-        setIntentRedelivery(true);
-    }
-
     @Override
     public void onCreate() {
         super.onCreate();
@@ -78,10 +76,14 @@ public final class InactivityNotificationService extends IntentService {
         wallet = application.getWallet();
     }
 
+    @Nullable
     @Override
-    protected void onHandleIntent(final Intent intent) {
-        org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
 
+    @Override
+    public int onStartCommand(final Intent intent, final int flags, final int startId) {
         if (ACTION_DISMISS.equals(intent.getAction()))
             handleDismiss();
         else if (ACTION_DISMISS_FOREVER.equals(intent.getAction()))
@@ -90,6 +92,8 @@ public final class InactivityNotificationService extends IntentService {
             handleDonate();
         else
             handleMaybeShowNotification();
+
+        return START_REDELIVER_INTENT;
     }
 
     private void handleMaybeShowNotification() {
@@ -115,7 +119,8 @@ public final class InactivityNotificationService extends IntentService {
             final Intent donateIntent = new Intent(this, InactivityNotificationService.class);
             donateIntent.setAction(ACTION_DONATE);
 
-            final NotificationCompat.Builder notification = new NotificationCompat.Builder(this);
+            final NotificationCompat.Builder notification = new NotificationCompat.Builder(this,
+                    Constants.NOTIFICATION_CHANNEL_ID_TRANSACTIONS);
             notification.setStyle(new NotificationCompat.BigTextStyle().bigText(text));
             notification.setSmallIcon(R.drawable.ic_dash_d_white_bottom);
             notification.setContentTitle(title);
@@ -134,26 +139,36 @@ public final class InactivityNotificationService extends IntentService {
                 notification
                         .addAction(new NotificationCompat.Action.Builder(0, getString(R.string.wallet_options_donate),
                                 PendingIntent.getService(this, 0, donateIntent, 0)).build());
-            nm.notify(Constants.NOTIFICATION_ID_INACTIVITY, notification.build());
+            Notification inactivityNotification = notification.build();
+            startForeground(Constants.NOTIFICATION_ID_INACTIVITY, inactivityNotification);
+        } else {
+            //startForeground is called here to prevent a crash that would happen by not calling
+            //startForeground after calling a service with startForegroundService.
+            final NotificationCompat.Builder invisibleNotification = new NotificationCompat.Builder(this,
+                    Constants.NOTIFICATION_CHANNEL_ID_ONGOING);
+            invisibleNotification.setPriority(Notification.PRIORITY_MIN);
+            startForeground(Constants.NOTIFICATION_ID_INACTIVITY, invisibleNotification.build());
+
+            stopForeground(true);
         }
     }
 
     private void handleDismiss() {
         log.info("dismissing inactivity notification");
-        nm.cancel(Constants.NOTIFICATION_ID_INACTIVITY);
+        stopForeground(true);
     }
 
     private void handleDismissForever() {
         log.info("dismissing inactivity notification forever");
         config.setRemindBalance(false);
-        nm.cancel(Constants.NOTIFICATION_ID_INACTIVITY);
+        stopForeground(true);
     }
 
     private void handleDonate() {
         final Coin balance = wallet.getBalance(BalanceType.AVAILABLE_SPENDABLE);
         SendCoinsActivity.startDonate(this, balance, FeeCategory.ECONOMIC,
                 Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        nm.cancel(Constants.NOTIFICATION_ID_INACTIVITY);
+        stopForeground(true);
         sendBroadcast(new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
     }
 }
