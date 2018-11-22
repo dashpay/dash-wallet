@@ -17,8 +17,8 @@
 
 package de.schildbach.wallet.ui;
 
-import android.app.FragmentManager;
 import android.content.DialogInterface;
+import android.support.v4.app.FragmentManager;
 import android.view.View;
 import de.schildbach.wallet.data.WalletLock;
 

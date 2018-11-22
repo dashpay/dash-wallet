@@ -71,13 +71,8 @@ import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
 import android.app.Dialog;
-import android.app.Fragment;
-import android.app.FragmentManager;
-import android.app.LoaderManager;
-import android.app.LoaderManager.LoaderCallbacks;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.Loader;
 import android.content.pm.PackageManager;
 import android.media.RingtoneManager;
 import android.net.Uri;
@@ -86,6 +81,10 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -146,7 +145,7 @@ public class SweepWalletFragment extends Fragment {
 
 	private static final Logger log = LoggerFactory.getLogger(SweepWalletFragment.class);
 
-	private final LoaderCallbacks<Map<FeeCategory, Coin>> dynamicFeesLoaderCallbacks = new LoaderManager.LoaderCallbacks<Map<FeeCategory, Coin>>() {
+	private final LoaderManager.LoaderCallbacks<Map<FeeCategory, Coin>> dynamicFeesLoaderCallbacks = new LoaderManager.LoaderCallbacks<Map<FeeCategory, Coin>>() {
 		@Override
 		public Loader<Map<FeeCategory, Coin>> onCreateLoader(final int id, final Bundle args) {
 			return new DynamicFeeLoader(activity);
