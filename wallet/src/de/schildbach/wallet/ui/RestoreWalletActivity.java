@@ -224,7 +224,7 @@ public final class RestoreWalletActivity extends AbstractWalletActivity
         if (!wallet.hasKeyChain(path)) {
             if (wallet.isEncrypted()) {
                 state = State.PINSET;
-                EncryptNewKeyChainDialogFragment.show(getFragmentManager(), path);
+                EncryptNewKeyChainDialogFragment.show(getSupportFragmentManager(), path);
             } else {
                 //
                 // Upgrade the wallet now
@@ -282,7 +282,7 @@ public final class RestoreWalletActivity extends AbstractWalletActivity
     }
 
     public void handleEncryptKeys() {
-        EncryptKeysDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
+        EncryptKeysDialogFragment.show(getSupportFragmentManager(), new DialogInterface.OnDismissListener() {
             @Override
             public void onDismiss(DialogInterface dialog) {
                 onUpgradeConfirmed();

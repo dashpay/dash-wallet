@@ -104,7 +104,7 @@ public abstract class AbstractWalletActivity extends AppCompatActivity implement
 
     private void unlockWallet() {
         if(!PinRetryController.handleLockedForever(this))
-            UnlockWalletDialogFragment.show(getFragmentManager());
+            UnlockWalletDialogFragment.show(getSupportFragmentManager());
     }
 
     @Override
