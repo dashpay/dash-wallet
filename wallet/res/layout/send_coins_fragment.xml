@@ -57,6 +57,15 @@
 				tools:text="@string/send_coins_fragment_payee_verified_by"
 				android:textSize="@dimen/font_size_small" />
 
+			<TextView
+				android:id="@+id/send_coins_auto_lock_possible"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:singleLine="true"
+				android:textColor="#00cc00"
+				android:text="@string/send_coins_auto_lock_possible"
+				android:textSize="@dimen/font_size_small" />
+
 			<LinearLayout
 				android:id="@+id/send_coins_payee_group"
 				android:layout_width="match_parent"

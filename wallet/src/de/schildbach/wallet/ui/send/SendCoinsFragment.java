@@ -173,6 +173,7 @@ public final class SendCoinsFragment extends Fragment {
     private View payeeGroup;
     private TextView payeeNameView;
     private TextView payeeVerifiedByView;
+    private TextView autoLockPossibleView;
     private AutoCompleteTextView receivingAddressView;
     private ReceivingAddressViewAdapter receivingAddressViewAdapter;
     private ReceivingAddressLoaderCallbacks receivingAddressLoaderCallbacks;
@@ -209,6 +210,7 @@ public final class SendCoinsFragment extends Fragment {
 
     private Transaction dryrunTransaction;
     private Exception dryrunException;
+    private boolean dryrunAutoLockPossible;
     private PinRetryController pinRetryController;
 
     private boolean forceInstantSend = false;
@@ -675,6 +677,7 @@ public final class SendCoinsFragment extends Fragment {
 
         payeeNameView = (TextView) view.findViewById(R.id.send_coins_payee_name);
         payeeVerifiedByView = (TextView) view.findViewById(R.id.send_coins_payee_verified_by);
+        autoLockPossibleView = view.findViewById(R.id.send_coins_auto_lock_possible);
 
         receivingAddressView = (AutoCompleteTextView) view.findViewById(R.id.send_coins_receiving_address);
         receivingAddressViewAdapter = new ReceivingAddressViewAdapter(activity);
@@ -1261,13 +1264,13 @@ public final class SendCoinsFragment extends Fragment {
         private void executeDryrun() {
             dryrunTransaction = null;
             dryrunException = null;
+            dryrunAutoLockPossible = false;
 
             final Coin amount = amountCalculatorLink.getAmount();
             if (amount != null && fees != null) {
+                final Address dummy = wallet.currentReceiveAddress(); // won't be used, tx is never committed
+                final SendRequest sendRequest = paymentIntent.mergeWithEditedValues(amount, dummy).toSendRequest();
                 try {
-                    final Address dummy = wallet.currentReceiveAddress(); // won't be used, tx is never
-                    // committed
-                    final SendRequest sendRequest = paymentIntent.mergeWithEditedValues(amount, dummy).toSendRequest();
                     sendRequest.useInstantSend = (instantXenable.isChecked());
                     ixCoinSelector.setUsingInstantX(sendRequest.useInstantSend);
                     sendRequest.coinSelector = ixCoinSelector;
@@ -1287,6 +1290,8 @@ public final class SendCoinsFragment extends Fragment {
                     dryrunTransaction = sendRequest.tx;
                 } catch (final Exception x) {
                     dryrunException = x;
+                } finally {
+                    dryrunAutoLockPossible = sendRequest.instantSendAutoLockPossible;
                 }
             }
         }
@@ -1362,6 +1367,8 @@ public final class SendCoinsFragment extends Fragment {
             } else {
                 payeeGroup.setVisibility(View.GONE);
             }
+
+            autoLockPossibleView.setVisibility(dryrunAutoLockPossible ? View.VISIBLE : View.GONE);
 
             receivingAddressView.setEnabled(state == State.INPUT);
             amountCalculatorLink.setEnabled(state == State.INPUT && paymentIntent.mayEditAmount());
