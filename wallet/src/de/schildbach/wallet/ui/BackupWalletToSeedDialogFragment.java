@@ -24,10 +24,13 @@ import android.app.DialogFragment;
 import android.app.FragmentManager;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
+import android.support.annotation.RequiresApi;
+import android.support.v4.os.CancellationSignal;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
@@ -54,7 +57,9 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.send.DecryptSeedTask;
 import de.schildbach.wallet.ui.send.DeriveKeyTask;
+import de.schildbach.wallet.ui.widget.FingerprintView;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
+import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet_test.R;
 
@@ -66,6 +71,10 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
 
     private static final String FRAGMENT_TAG = BackupWalletToSeedDialogFragment.class.getName();
     private static final String ARGS_IS_UPGRADING = "is_upgrading";
+
+    private FingerprintView fingerprintView;
+
+    private CancellationSignal fingerprintCancellationSignal;
 
     public static void show(final FragmentManager fm) {
         final BackupWalletToSeedDialogFragment newFragment = new BackupWalletToSeedDialogFragment();
@@ -128,6 +137,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
         seedViewGroup = view.findViewById(R.id.backup_wallet_seed_group);
         writtenDown = (CheckBox)view.findViewById(R.id.backup_wallet_seed_private_key_written_down);
 
+        fingerprintView = view.findViewById(R.id.fingerprint_view);
         privateKeyPasswordViewGroup.setVisibility(wallet.isEncrypted() ? View.VISIBLE : View.GONE);
 
         privateKeyPasswordView.addTextChangedListener(privateKeyPasswordListener);
@@ -165,6 +175,11 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
                 }
             }
         });
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            initFingerprintHelper();
+        }
+
         return builder.create();
     }
 
@@ -183,6 +198,9 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
     @Override
     public void onDismiss(final DialogInterface dialog) {
         this.dialog = null;
+        if (fingerprintCancellationSignal != null) {
+            fingerprintCancellationSignal.cancel();
+        }
         super.onDismiss(dialog);
     }
 
@@ -201,6 +219,34 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
         public void afterTextChanged(final Editable s) {
         }
     };
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private void initFingerprintHelper() {
+        FingerprintHelper fingerprintHelper = new FingerprintHelper(getActivity());
+        if (fingerprintHelper.init() && fingerprintHelper.isFingerprintEnabled()) {
+            fingerprintView.setVisibility(View.VISIBLE);
+            fingerprintCancellationSignal = new CancellationSignal();
+            fingerprintHelper.getPassword(fingerprintCancellationSignal, new FingerprintHelper.Callback() {
+                @Override
+                public void onSuccess(String savedPass) {
+                    privateKeyPasswordView.setText(savedPass);
+                    handleDecryptPIN();
+                }
+
+                @Override
+                public void onFailure(String message, boolean canceled) {
+                    if (!canceled) {
+                        fingerprintView.showError();
+                    }
+                }
+
+                @Override
+                public void onHelp(int helpCode, String helpString) {
+                    fingerprintView.showError();
+                }
+            });
+        }
+    }
 
     private void showMnemonicSeed(final DeterministicSeed seed) {
         StringBuilder wordlist = new StringBuilder(255);

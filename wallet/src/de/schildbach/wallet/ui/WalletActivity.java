@@ -61,6 +61,7 @@ import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Crypto;
+import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
@@ -126,6 +127,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private WalletApplication application;
     private Configuration config;
     private Wallet wallet;
+    private FingerprintHelper fingerprintHelper;
 
     private DrawerLayout viewDrawer;
     private View viewFakeForSafetySubmenu;
@@ -179,6 +181,14 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (savedInstanceState == null) {
             //Add BIP44 support and PIN if missing
             upgradeWalletKeyChains(Constants.BIP44_PATH, false);
+        }
+
+        //Init fingerprint helper
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            fingerprintHelper = new FingerprintHelper(this);
+            if (!fingerprintHelper.init()) {
+                fingerprintHelper = null;
+            }
         }
     }
 
@@ -515,6 +525,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
         };
         dialog.show();
+    }
+
+    private void enableFingerprint() {
+        config.setRemindEnableFingerprint(true);
+        UnlockWalletDialogFragment.show(getSupportFragmentManager());
     }
 
     @Override
@@ -1045,6 +1060,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
             menu.findItem(R.id.wallet_options_backup_wallet).setEnabled(Environment.MEDIA_MOUNTED.equals(externalStorageState));
             menu.findItem(R.id.wallet_options_encrypt_keys).setTitle(
                     wallet.isEncrypted() ? R.string.wallet_options_encrypt_keys_change : R.string.wallet_options_encrypt_keys_set);
+
+            boolean showFingerprintOption = fingerprintHelper != null && !fingerprintHelper.isFingerprintEnabled();
+            menu.findItem(R.id.wallet_options_enable_fingerprint).setVisible(showFingerprintOption);
         }
     }
 
@@ -1072,6 +1090,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
             case R.id.wallet_options_restore_wallet_from_seed:
                 handleRestoreWalletFromSeed();
+                return true;
+
+            case R.id.wallet_options_enable_fingerprint:
+                enableFingerprint();
                 return true;
         }
 

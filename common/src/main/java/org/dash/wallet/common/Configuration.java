@@ -74,6 +74,7 @@ public class Configuration {
     private static final String PREFS_KEY_LAST_BACKUP_SEED = "last_backup_seed";
     public static final String PREFS_KEY_INSTANTX_ENABLED = "labs_instantx_enabled";
     public static final String PREFS_KEY_LITE_MODE = "labs_lite_mode";
+    private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 4;
@@ -341,5 +342,13 @@ public class Configuration {
 
     public boolean getLiteMode() {
         return prefs.getBoolean(PREFS_KEY_LITE_MODE, true);
+    }
+
+    public boolean getRemindEnableFingerprint() {
+        return prefs.getBoolean(PREFS_REMIND_ENABLE_FINGERPRINT, true);
+    }
+
+    public void setRemindEnableFingerprint(boolean remind) {
+        prefs.edit().putBoolean(PREFS_REMIND_ENABLE_FINGERPRINT, remind).apply();
     }
 }

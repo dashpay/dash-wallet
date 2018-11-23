@@ -83,4 +83,11 @@
 	<string name="notification_synchronization_channel_name">Synchronization</string>
 	<string name="notification_synchronization_channel_description">Shows a notification when the app is synchronizing with the network.</string>
 
+	<string name="unlock_with_fingerprint">Use your fingerprint to unlock.</string>
+	<string name="unlock_with_fingerprint_error">Failed to recognize fingerprint, please try again.</string>
+	<string name="or_unlock_with_fingerprint">Or use your fingerprint to unlock.</string>
+	<string name="enable_fingerprint">Enable fingerprint</string>
+	<string name="touch_fingerprint_sensor">Touch the fingerprint sensor.</string>
+	<string name="touch_fingerprint_to_enable">Touch the fingerprint sensor to enable unlocking with fingerprint.</string>
+
 </resources>
