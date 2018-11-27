@@ -47,11 +47,11 @@ import com.squareup.leakcanary.RefWatcher;
 import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
+import de.schildbach.wallet.ui.AbstractWalletActivity;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet_test.R;
 
 import android.annotation.TargetApi;
-import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlarmManager;
 import android.app.Application;
@@ -65,7 +65,6 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.StrictMode;
 import android.preference.PreferenceManager;
 import android.support.annotation.StringRes;
@@ -83,11 +82,10 @@ import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 /**
  * @author Andreas Schildbach
  */
-public class WalletApplication extends Application implements Application.ActivityLifecycleCallbacks {
+public class WalletApplication extends Application {
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
-    private Activity currentActivity;
 
     private Intent blockchainServiceIntent;
     private Intent blockchainServiceCancelCoinsReceivedIntent;
@@ -97,7 +95,6 @@ public class WalletApplication extends Application implements Application.Activi
     private Wallet wallet;
     private PackageInfo packageInfo;
 
-    private int numStarted;
     private boolean backupDisclaimerDismissed = false;
 
     public static final String ACTION_WALLET_REFERENCE_CHANGED = WalletApplication.class.getPackage().getName()
@@ -131,8 +128,6 @@ public class WalletApplication extends Application implements Application.Activi
             return;
         }
         refWatcher = LeakCanary.install(this);
-
-        registerActivityLifecycleCallbacks(this);
 
         new LinuxSecureRandom(); // init proper random number generator
 
@@ -177,9 +172,9 @@ public class WalletApplication extends Application implements Application.Activi
 
         loadWalletFromProtobuf();
 
-		org.bitcoinj.core.Context context = wallet.getContext();
+        org.bitcoinj.core.Context context = wallet.getContext();
 
-		wallet.getContext().initDash(config.getLiteMode(), config.getInstantXEnabled());
+        wallet.getContext().initDash(config.getLiteMode(), config.getInstantXEnabled());
 
         if (config.versionCodeCrossed(packageInfo.versionCode, VERSION_CODE_SHOW_BACKUP_REMINDER)
                 && !wallet.getImportedKeys().isEmpty()) {
@@ -244,17 +239,14 @@ public class WalletApplication extends Application implements Application.Activi
         // clean up spam
         try {
             wallet.cleanup();
-        }
-        catch(IllegalStateException x) {
+        } catch (IllegalStateException x) {
             //Catch an inconsistent exception here and reset the blockchain.  This is for loading older wallets that had
             //txes with fees that were too low or dust that were stuck and could not be sent.  In a later version
             //the fees were fixed, then those stuck transactions became inconsistant and the exception is thrown.
-        	if(x.getMessage().contains("Inconsistent spent tx:"))
-            {
-             	File blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
-            	blockChainFile.delete();
-            }
-            else throw x;
+            if (x.getMessage().contains("Inconsistent spent tx:")) {
+                File blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
+                blockChainFile.delete();
+            } else throw x;
         }
 
         // make sure there is at least one recent backup
@@ -297,7 +289,7 @@ public class WalletApplication extends Application implements Application.Activi
         rollingPolicy.start();
 
 
-		PreferenceManager.setDefaultValues(this, R.xml.preference_settings, false);
+        PreferenceManager.setDefaultValues(this, R.xml.preference_settings, false);
         fileAppender.setEncoder(filePattern);
         fileAppender.setRollingPolicy(rollingPolicy);
         fileAppender.start();
@@ -619,14 +611,13 @@ public class WalletApplication extends Application implements Application.Activi
     }
 
 
-//dash Specific
-public void updateDashMode()
-		{
-		org.bitcoinj.core.Context context = wallet.getContext();
+    //dash Specific
+    public void updateDashMode() {
+        org.bitcoinj.core.Context context = wallet.getContext();
 
-		context.setAllowInstantXinLiteMode(config.getInstantXEnabled());
-		context.setLiteMode(config.getLiteMode());
-		}
+        context.setAllowInstantXinLiteMode(config.getInstantXEnabled());
+        context.setLiteMode(config.getLiteMode());
+    }
 
     private void lockWalletIfNeeded() {
         WalletLock walletLock = WalletLock.getInstance();
@@ -635,50 +626,8 @@ public void updateDashMode()
         }
     }
 
-    @Override
-    public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
-
-    }
-
-    @Override
-    public void onActivityStarted(Activity activity) {
-        if (numStarted == 0) {
-            lockWalletIfNeeded();
-        }
-        numStarted++;
-        currentActivity = activity;
-    }
-
-    @Override
-    public void onActivityResumed(Activity activity) {
-
-    }
-
-    @Override
-    public void onActivityPaused(Activity activity) {
-
-    }
-
-    @Override
-    public void onActivityStopped(Activity activity) {
-        numStarted--;
-        if (numStarted == 0) {
-            // app went to background
-        }
-    }
-
-    @Override
-    public void onActivitySaveInstanceState(Activity activity, Bundle outState) {
-
-    }
-
-    @Override
-    public void onActivityDestroyed(Activity activity) {
-
-    }
-
     /**
-      Replace the wallet with an new wallet as part of a wallet wipe
+     * Replace the wallet with an new wallet as part of a wallet wipe
      */
     public void eraseAndCreateNewWallet() {
         Wallet newWallet = new Wallet(Constants.NETWORK_PARAMETERS);
@@ -687,7 +636,7 @@ public void updateDashMode()
         log.info("creating new wallet after wallet wipe");
 
         File walletBackupFile = getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
-        if(walletBackupFile.exists())
+        if (walletBackupFile.exists())
             walletBackupFile.delete();
 
         replaceWallet(newWallet);
@@ -696,8 +645,6 @@ public void updateDashMode()
         config.armBackupSeedReminder();
         log.info("New wallet created to replace the wiped locked wallet");
     }
-
-
 
     public boolean isBackupDisclaimerDismissed() {
         return backupDisclaimerDismissed;
@@ -712,11 +659,7 @@ public void updateDashMode()
     }
 
     public void killAllActivities() {
-        if (currentActivity != null) {
-            currentActivity.finishAffinity();
-        } else {
-            System.exit(0);
-        }
+        AbstractWalletActivity.finishAll(this);
     }
 
 }
