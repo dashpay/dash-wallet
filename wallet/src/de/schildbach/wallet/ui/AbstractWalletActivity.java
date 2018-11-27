@@ -61,14 +61,14 @@ public abstract class AbstractWalletActivity extends AppCompatActivity implement
         PinRetryController.handleLockedForever(this);
 
         WalletLock.getInstance().addListener(this);
-        registerFinishAllListener();
+        registerFinishAllReceiver();
         super.onCreate(savedInstanceState);
     }
 
     @Override
     protected void onDestroy() {
         WalletLock.getInstance().removeListener(this);
-        unregisterFinishAllListener();
+        unregisterFinishAllReceiver();
         super.onDestroy();
     }
 
@@ -125,7 +125,7 @@ public abstract class AbstractWalletActivity extends AppCompatActivity implement
         return application;
     }
 
-    private BroadcastReceiver finishAllListener = new BroadcastReceiver() {
+    private BroadcastReceiver finishAllReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             LocalBroadcastManager.getInstance(application).unregisterReceiver(this);
@@ -133,13 +133,13 @@ public abstract class AbstractWalletActivity extends AppCompatActivity implement
         }
     };
 
-    private void registerFinishAllListener() {
+    private void registerFinishAllReceiver() {
         IntentFilter finishAllFilter = new IntentFilter(FINISH_ALL_ACTIVITIES_ACTION);
-        LocalBroadcastManager.getInstance(application).registerReceiver(finishAllListener, finishAllFilter);
+        LocalBroadcastManager.getInstance(application).registerReceiver(finishAllReceiver, finishAllFilter);
     }
 
-    private void unregisterFinishAllListener() {
-        LocalBroadcastManager.getInstance(application).unregisterReceiver(finishAllListener);
+    private void unregisterFinishAllReceiver() {
+        LocalBroadcastManager.getInstance(application).unregisterReceiver(finishAllReceiver);
     }
 
     public static void finishAll(Context context) {
