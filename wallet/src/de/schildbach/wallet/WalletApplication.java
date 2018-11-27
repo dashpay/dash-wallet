@@ -172,9 +172,9 @@ public class WalletApplication extends Application {
 
         loadWalletFromProtobuf();
 
-        org.bitcoinj.core.Context context = wallet.getContext();
+		org.bitcoinj.core.Context context = wallet.getContext();
 
-        wallet.getContext().initDash(config.getLiteMode(), config.getInstantXEnabled());
+		wallet.getContext().initDash(config.getLiteMode(), config.getInstantXEnabled());
 
         if (config.versionCodeCrossed(packageInfo.versionCode, VERSION_CODE_SHOW_BACKUP_REMINDER)
                 && !wallet.getImportedKeys().isEmpty()) {
@@ -239,14 +239,17 @@ public class WalletApplication extends Application {
         // clean up spam
         try {
             wallet.cleanup();
-        } catch (IllegalStateException x) {
+        }
+        catch(IllegalStateException x) {
             //Catch an inconsistent exception here and reset the blockchain.  This is for loading older wallets that had
             //txes with fees that were too low or dust that were stuck and could not be sent.  In a later version
             //the fees were fixed, then those stuck transactions became inconsistant and the exception is thrown.
-            if (x.getMessage().contains("Inconsistent spent tx:")) {
-                File blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
-                blockChainFile.delete();
-            } else throw x;
+        	if(x.getMessage().contains("Inconsistent spent tx:"))
+            {
+             	File blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
+            	blockChainFile.delete();
+            }
+            else throw x;
         }
 
         // make sure there is at least one recent backup
@@ -289,7 +292,7 @@ public class WalletApplication extends Application {
         rollingPolicy.start();
 
 
-        PreferenceManager.setDefaultValues(this, R.xml.preference_settings, false);
+		PreferenceManager.setDefaultValues(this, R.xml.preference_settings, false);
         fileAppender.setEncoder(filePattern);
         fileAppender.setRollingPolicy(rollingPolicy);
         fileAppender.start();
@@ -611,13 +614,14 @@ public class WalletApplication extends Application {
     }
 
 
-    //dash Specific
-    public void updateDashMode() {
-        org.bitcoinj.core.Context context = wallet.getContext();
+//dash Specific
+public void updateDashMode()
+		{
+		org.bitcoinj.core.Context context = wallet.getContext();
 
-        context.setAllowInstantXinLiteMode(config.getInstantXEnabled());
-        context.setLiteMode(config.getLiteMode());
-    }
+		context.setAllowInstantXinLiteMode(config.getInstantXEnabled());
+		context.setLiteMode(config.getLiteMode());
+		}
 
     private void lockWalletIfNeeded() {
         WalletLock walletLock = WalletLock.getInstance();
@@ -627,7 +631,7 @@ public class WalletApplication extends Application {
     }
 
     /**
-     * Replace the wallet with an new wallet as part of a wallet wipe
+      Replace the wallet with an new wallet as part of a wallet wipe
      */
     public void eraseAndCreateNewWallet() {
         Wallet newWallet = new Wallet(Constants.NETWORK_PARAMETERS);
@@ -636,7 +640,7 @@ public class WalletApplication extends Application {
         log.info("creating new wallet after wallet wipe");
 
         File walletBackupFile = getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
-        if (walletBackupFile.exists())
+        if(walletBackupFile.exists())
             walletBackupFile.delete();
 
         replaceWallet(newWallet);
@@ -645,6 +649,8 @@ public class WalletApplication extends Application {
         config.armBackupSeedReminder();
         log.info("New wallet created to replace the wiped locked wallet");
     }
+
+
 
     public boolean isBackupDisclaimerDismissed() {
         return backupDisclaimerDismissed;
