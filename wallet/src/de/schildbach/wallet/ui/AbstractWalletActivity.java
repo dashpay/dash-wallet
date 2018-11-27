@@ -143,8 +143,7 @@ public abstract class AbstractWalletActivity extends AppCompatActivity implement
     }
 
     public static void finishAll(Context context) {
-        LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(context);
         Intent localIntent = new Intent(FINISH_ALL_ACTIVITIES_ACTION);
-        localBroadcastManager.sendBroadcast(localIntent);
+        LocalBroadcastManager.getInstance(context).sendBroadcast(localIntent);
     }
 }
