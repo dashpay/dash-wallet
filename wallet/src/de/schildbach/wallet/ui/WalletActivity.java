@@ -86,6 +86,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.support.annotation.RequiresApi;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.v4.app.ActivityCompat;
@@ -116,7 +117,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback,
         NavigationView.OnNavigationItemSelectedListener,
         WalletLock.OnLockChangeListener, UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
-        EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
+        EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
+        EnableFingerprintDialog.OnFingerprintEnabledListener {
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
     private static final int DIALOG_RESTORE_WALLET = 2;
@@ -1273,6 +1275,17 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
         });
         dialogBuilder.show();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    @Override
+    public void onFingerprintEnabled() {
+        WalletTransactionsFragment walletTransactionsFragment = (WalletTransactionsFragment)
+                getSupportFragmentManager().findFragmentById(R.id.wallet_transactions_fragment);
+        if (walletTransactionsFragment != null) {
+            walletTransactionsFragment.initFingerprintHelper();
+            walletTransactionsFragment.onLockChanged(WalletLock.getInstance().isWalletLocked(wallet));
+        }
     }
 
 }

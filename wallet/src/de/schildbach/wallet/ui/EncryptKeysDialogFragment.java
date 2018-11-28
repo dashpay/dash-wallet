@@ -333,6 +333,11 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                                         new FingerprintHelper.Callback() {
                                     @Override
                                     public void onSuccess(String result) {
+                                        if (activity != null && activity
+                                                instanceof EnableFingerprintDialog.OnFingerprintEnabledListener) {
+                                            ((EnableFingerprintDialog.OnFingerprintEnabledListener) activity)
+                                                    .onFingerprintEnabled();
+                                        }
                                         delayedDismiss();
                                     }
 

@@ -41,7 +41,7 @@ public class EnableFingerprintDialog extends DialogFragment {
 
     @Override
     public Dialog onCreateDialog(final Bundle savedInstanceState) {
-        Activity activity = getActivity();
+        final Activity activity = getActivity();
         final View view = LayoutInflater.from(activity)
                 .inflate(R.layout.fingerprint_dialog, null);
 
@@ -65,6 +65,11 @@ public class EnableFingerprintDialog extends DialogFragment {
                         @Override
                         public void onSuccess(String savedPass) {
                             fingerprintCancellationSignal = null;
+
+                            if (activity != null && activity instanceof OnFingerprintEnabledListener) {
+                                ((OnFingerprintEnabledListener) activity).onFingerprintEnabled();
+                            }
+
                             dismiss();
                         }
 
@@ -98,6 +103,10 @@ public class EnableFingerprintDialog extends DialogFragment {
             fingerprintCancellationSignal.cancel();
         }
         super.onDismiss(dialog);
+    }
+
+    public interface OnFingerprintEnabledListener {
+        void onFingerprintEnabled();
     }
 
 }

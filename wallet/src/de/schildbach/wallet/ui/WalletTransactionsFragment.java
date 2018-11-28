@@ -745,7 +745,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
-    private void initFingerprintHelper() {
+    public void initFingerprintHelper() {
         if (fingerprintHelper == null) {
             fingerprintHelper = new FingerprintHelper(getActivity());
         }
