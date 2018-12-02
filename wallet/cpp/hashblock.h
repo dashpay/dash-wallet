@@ -1,7 +1,6 @@
 #ifndef HASHBLOCK_H
 #define HASHBLOCK_H
 
-#include "uint256.h"
 #include "sph_blake.h"
 #include "sph_bmw.h"
 #include "sph_groestl.h"
@@ -14,53 +13,17 @@
 #include "sph_simd.h"
 #include "sph_echo.h"
 
-#ifndef QT_NO_DEBUG
-#include <string>
-#endif
+#define HASH512_SIZE 64
+#define HASH256_SIZE 32
 
-#ifdef GLOBALDEFINED
-#define GLOBAL
-#else
-#define GLOBAL extern
-#endif
+void trim256(const unsigned char * pn, unsigned char * ret)
+{
+    for (unsigned int i = 0; i < HASH256_SIZE; i++){
+        ret[i] = pn[i];
+    }
+}
 
-GLOBAL sph_blake512_context     z_blake;
-GLOBAL sph_bmw512_context       z_bmw;
-GLOBAL sph_groestl512_context   z_groestl;
-GLOBAL sph_jh512_context        z_jh;
-GLOBAL sph_keccak512_context    z_keccak;
-GLOBAL sph_skein512_context     z_skein;
-GLOBAL sph_luffa512_context     z_luffa;
-GLOBAL sph_cubehash512_context  z_cubehash;
-GLOBAL sph_shavite512_context   z_shavite;
-GLOBAL sph_simd512_context      z_simd;
-GLOBAL sph_echo512_context      z_echo;
-
-#define fillz() do { \
-    sph_blake512_init(&z_blake); \
-    sph_bmw512_init(&z_bmw); \
-    sph_groestl512_init(&z_groestl); \
-    sph_jh512_init(&z_jh); \
-    sph_keccak512_init(&z_keccak); \
-    sph_skein512_init(&z_skein); \
-    sph_luffa512_init(&z_luffa); \
-    sph_cubehash512_init(&z_cubehash); \
-    sph_shavite512_init(&z_shavite); \
-    sph_simd512_init(&z_simd); \
-    sph_echo512_init(&z_echo); \
-} while (0) 
-
-
-#define ZBLAKE (memcpy(&ctx_blake, &z_blake, sizeof(z_blake)))
-#define ZBMW (memcpy(&ctx_bmw, &z_bmw, sizeof(z_bmw)))
-#define ZGROESTL (memcpy(&ctx_groestl, &z_groestl, sizeof(z_groestl)))
-#define ZJH (memcpy(&ctx_jh, &z_jh, sizeof(z_jh)))
-#define ZKECCAK (memcpy(&ctx_keccak, &z_keccak, sizeof(z_keccak)))
-#define ZSKEIN (memcpy(&ctx_skein, &z_skein, sizeof(z_skein)))
-
-template<typename T1>
-inline uint256 Hash9(const T1 pbegin, const T1 pend)
-
+inline bool HashX11(const unsigned char * pbegin, const unsigned char * pend, unsigned char * pResult)
 {
     sph_blake512_context     ctx_blake;
     sph_bmw512_context       ctx_bmw;
@@ -75,12 +38,7 @@ inline uint256 Hash9(const T1 pbegin, const T1 pend)
     sph_echo512_context      ctx_echo;
     static unsigned char pblank[1];
 
-#ifndef QT_NO_DEBUG
-    //std::string strhash;
-    //strhash = "";
-#endif
-    
-    uint512 hash[17];
+    unsigned char hash[11][HASH512_SIZE];
 
     sph_blake512_init(&ctx_blake);
     sph_blake512 (&ctx_blake, (pbegin == pend ? pblank : static_cast<const void*>(&pbegin[0])), (pend - pbegin) * sizeof(pbegin[0]));
@@ -126,11 +84,9 @@ inline uint256 Hash9(const T1 pbegin, const T1 pend)
     sph_echo512 (&ctx_echo, static_cast<const void*>(&hash[9]), 64);
     sph_echo512_close(&ctx_echo, static_cast<void*>(&hash[10]));
 
-    return hash[10].trim256();
+    trim256(hash[10], pResult);
+    return true;
 }
-
-
-
 
 
 
