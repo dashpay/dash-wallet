@@ -6,53 +6,33 @@
 
 #include <jni.h>
 
-
-
-jbyteArray JNICALL hash11_native(JNIEnv *env, jclass cls, jbyteArray header)
+jbyteArray JNICALL x11_native(JNIEnv *env, jclass cls, jbyteArray input)
 {
-    jint Plen = (env)->GetArrayLength(header);
-    jbyte *P = (env)->GetByteArrayElements(header, NULL);
-    //uint8_t *buf = malloc(sizeof(uint8_t) * dkLen);
-    jbyteArray DK = NULL;
+    jint Plen = (env)->GetArrayLength(input);
+    jbyte *pInput = (env)->GetByteArrayElements(input, NULL);
+    jbyteArray byteArray = NULL;
 
-    if (P)
+    if (pInput)
 	{
-	
-	uint256 result = Hash9(P, P+Plen);
+	    jbyte result[HASH256_SIZE];
+	    HashX11((uint8_t *)pInput, (uint8_t *)pInput+Plen, (uint8_t *)result);
 
-    /*if (crypto_scrypt((uint8_t *) P, Plen, (uint8_t *) S, Slen, N, r, p, buf, dkLen)) {
-        jclass e = (*env)->FindClass(env, "java/lang/IllegalArgumentException");
-        char *msg;
-        switch (errno) {
-            case EINVAL:
-                msg = "N must be a power of 2 greater than 1";
-                break;
-            case EFBIG:
-            case ENOMEM:
-                msg = "Insufficient memory available";
-                break;
-            default:
-                msg = "Memory allocation failed";
+        byteArray = (env)->NewByteArray(32);
+        if (byteArray)
+        {
+            (env)->SetByteArrayRegion(byteArray, 0, 32, (jbyte *) result);
         }
-        (*env)->ThrowNew(env, e, msg);
-        goto cleanup;
-    }*/
 
-    DK = (env)->NewByteArray(32);
-    if (DK)
-	{
-		(env)->SetByteArrayRegion(DK, 0, 32, (jbyte *) result.begin());
-	}
-	
-
-    if (P) (env)->ReleaseByteArrayElements(header, P, JNI_ABORT);
-    //if (buf) free(buf);
-	}
-    return DK;
+        (env)->ReleaseByteArrayElements(input, pInput, JNI_ABORT);
+	} else {
+        jclass e = env->FindClass("java/lang/NullPointerException");
+        env->ThrowNew(e, "input is null");
+    }
+    return byteArray;
 }
 
 static const JNINativeMethod methods[] = {
-    { "x11_native", "([B)[B", (void *) hash11_native }
+    { "x11_native", "([B)[B", (void *) x11_native }
 };
 
 jint JNI_OnLoad(JavaVM *vm, void *reserved) {
