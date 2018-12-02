@@ -1,0 +1,3 @@
+[submodule "wallet/cpp/dashj-bls/bls-signatures"]
+	path = wallet/cpp/dashj-bls/bls-signatures
+	url = https://github.com/Chia-Network/bls-signatures.git
