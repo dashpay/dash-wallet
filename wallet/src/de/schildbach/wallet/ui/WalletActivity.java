@@ -67,6 +67,7 @@ import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
@@ -95,8 +96,11 @@ import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.Toolbar;
 import android.telephony.TelephonyManager;
+import android.text.Html;
+import android.text.Spanned;
 import android.text.format.DateUtils;
 import android.view.ContextMenu;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -179,6 +183,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (savedInstanceState == null) {
             //Add BIP44 support and PIN if missing
             upgradeWalletKeyChains(Constants.BIP44_PATH, false);
+        }
+
+        if (!config.getFastestNetworkAnncmntShown()) {
+            showFastestNetworkAnncmnt();
         }
     }
 
@@ -1253,4 +1261,27 @@ public final class WalletActivity extends AbstractBindServiceActivity
         dialogBuilder.show();
     }
 
+    private void showFastestNetworkAnncmnt() {
+        LayoutInflater layoutInflater = LayoutInflater.from(this);
+        @SuppressLint("InflateParams")
+        View customView = layoutInflater.inflate(R.layout.fastest_payment_network_dialog, null);
+        TextView messageView = customView.findViewById(R.id.message);
+        Spanned message = Html.fromHtml(getString(R.string.fastest_payment_network_dialog_message));
+        messageView.setText(message);
+
+        final AlertDialog alertDialog = new AlertDialog.Builder(this)
+                .setView(customView)
+                .setCancelable(false)
+                .create();
+
+        customView.findViewById(R.id.button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                alertDialog.dismiss();
+                config.setFastestNetworkAnncmntShown();
+            }
+        });
+
+        alertDialog.show();
+    }
 }

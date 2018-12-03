@@ -33,8 +33,6 @@ import org.dash.wallet.common.data.ExchangeRate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.dash.wallet.common.R;
-
 /**
  * @author Andreas Schildbach
  */
@@ -74,6 +72,7 @@ public class Configuration {
     private static final String PREFS_KEY_LAST_BACKUP_SEED = "last_backup_seed";
     public static final String PREFS_KEY_INSTANTX_ENABLED = "labs_instantx_enabled";
     public static final String PREFS_KEY_LITE_MODE = "labs_lite_mode";
+    public static final String PREFS_KEY_FASTEST_NETWORK_ANNCMNT_SHOWN = "fastest_network_anncmnt_shown";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 4;
@@ -341,5 +340,13 @@ public class Configuration {
 
     public boolean getLiteMode() {
         return prefs.getBoolean(PREFS_KEY_LITE_MODE, true);
+    }
+
+    public boolean getFastestNetworkAnncmntShown() {
+        return prefs.getBoolean(PREFS_KEY_FASTEST_NETWORK_ANNCMNT_SHOWN, false);
+    }
+
+    public void setFastestNetworkAnncmntShown() {
+        prefs.edit().putBoolean(PREFS_KEY_FASTEST_NETWORK_ANNCMNT_SHOWN, true).apply();
     }
 }

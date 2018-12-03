@@ -378,7 +378,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 textColor = colorError;
                 lessSignificantColor = colorError;
                 valueColor = colorError;
-            } else if (DefaultCoinSelector.isSelectable(tx)) {
+            } else if (DefaultCoinSelector.get().isSelectable(tx)) {
                 textColor = colorSignificant;
                 lessSignificantColor = colorLessSignificant;
                 valueColor = txCache.sent ? colorValueNegative : colorValuePositve;
