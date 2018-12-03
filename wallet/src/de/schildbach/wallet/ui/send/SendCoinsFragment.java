@@ -1360,6 +1360,9 @@ public final class SendCoinsFragment extends Fragment {
                 break;
             }
         }
+
+        sendRequest.ensureMinRequiredFee = sendRequest.useInstantSend;
+
         sendRequest.signInputs = false;
         Coin walletBalance = wallet.getBalance(BalanceType.ESTIMATED);
         sendRequest.emptyWallet = this.paymentIntent.mayEditAmount() && walletBalance.equals(paymentIntent.getAmount());
