@@ -129,6 +129,13 @@ public class WalletApplication extends Application {
         }
         refWatcher = LeakCanary.install(this);
 
+        registerActivityLifecycleCallbacks(new ActivitiesTracker() {
+            @Override
+            public void onStartedFirst() {
+                lockWalletIfNeeded();
+            }
+        });
+
         new LinuxSecureRandom(); // init proper random number generator
 
         initLogging();
