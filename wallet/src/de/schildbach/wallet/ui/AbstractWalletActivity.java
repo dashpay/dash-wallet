@@ -40,6 +40,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.WindowManager;
 
 /**
  * @author Andreas Schildbach
@@ -62,6 +63,9 @@ public abstract class AbstractWalletActivity extends AppCompatActivity implement
 
         WalletLock.getInstance().addListener(this);
         registerFinishAllReceiver();
+
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+
         super.onCreate(savedInstanceState);
     }
 
