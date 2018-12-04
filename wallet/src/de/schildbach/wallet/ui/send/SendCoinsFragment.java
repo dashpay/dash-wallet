@@ -43,6 +43,7 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.uri.BitcoinURI;
+import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.InstantXCoinSelector;
 import org.bitcoinj.wallet.KeyChain.KeyPurpose;
@@ -1036,7 +1037,7 @@ public final class SendCoinsFragment extends Fragment {
         RequestType requestType = RequestType.from(dryrunSendRequest);
         switch (requestType) {
             case INSTANT_SEND: {
-                showUpgradeToInstantSendDialog(encryptionKey, pin);
+                showUpgradeToInstantSendDialog(encryptionKey, pin, dryrunSendRequest.tx.getFee());
                 break;
             }
             case INSTANT_SEND_AUTO_LOCK:
@@ -1763,8 +1764,21 @@ public final class SendCoinsFragment extends Fragment {
                     .requestPaymentRequest(paymentIntent.paymentRequestUrl);
     }
 
-    private void showUpgradeToInstantSendDialog(final KeyParameter encryptionKey, final String pin) {
-        Spanned message = Html.fromHtml(getString(R.string.send_coins_upgrade_to_instant_send_dialog_message, "$0.15"));
+    private void showUpgradeToInstantSendDialog(final KeyParameter encryptionKey, final String pin, Coin fee) {
+
+        CharSequence feeLabel;
+        try {
+            Fiat fiatFee = amountCalculatorLink.getExchangeRate().coinToFiat(fee);
+            final Spannable hintLocalFee = new MonetarySpannable(Constants.LOCAL_FORMAT, fiatFee)
+                    .applyMarkup(null, MonetarySpannable.STANDARD_INSIGNIFICANT_SPANS);
+            feeLabel = fiatFee.currencyCode + " " + hintLocalFee;
+        } catch (NullPointerException x) {
+            //only show the fee in DASH
+            final MonetaryFormat btcFormat = config.getFormat();
+            feeLabel = btcFormat.format(fee);
+        }
+
+        Spanned message = Html.fromHtml(getString(R.string.send_coins_upgrade_to_instant_send_dialog_message, feeLabel));
         final DialogBuilder dialog = new DialogBuilder(getActivity());
         dialog.setTitle(R.string.send_coins_upgrade_to_instant_send_dialog_title)
                 .setMessage(message)
