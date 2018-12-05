@@ -33,11 +33,13 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Transaction.Purpose;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
+import org.bitcoinj.core.TransactionLockRequest;
 import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.DefaultCoinSelector;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.CurrencyTextView;
+import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.common.ui.Formats;
 
 import de.schildbach.wallet.Constants;
@@ -61,6 +63,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
@@ -315,6 +318,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         private final ImageButton menuView;
         private final TextView ixStatusView;
         private final TextView ixStatusExtendedView;
+        private final ImageView ixInfoButtonView;
 
 
         private TransactionViewHolder(final View itemView) {
@@ -335,6 +339,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             //Dash
             ixStatusView = (TextView) itemView.findViewById(R.id.transaction_row_ix);
             ixStatusExtendedView = (TextView) itemView.findViewById(R.id.transaction_row_ix_extended);
+            ixInfoButtonView = itemView.findViewById(R.id.transaction_row_info_button);
         }
 
         private void bind(final Transaction tx) {
@@ -605,6 +610,23 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 messageView.setText(memo[0]);
                 messageView.setTextColor(colorInsignificant);
                 messageView.setSingleLine(!itemView.isActivated());
+            }
+
+            ixInfoButtonView.setVisibility(View.GONE);
+            boolean isSimple = TransactionLockRequest.isSimple(tx);
+            boolean isBuilding = confidenceType == ConfidenceType.BUILDING;
+            if (isOwn && isSimple && isBuilding) {
+                ixInfoButtonView.setVisibility(isLocked ? View.GONE : View.VISIBLE);
+                ixInfoButtonView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        new DialogBuilder(context)
+                                .setTitle(R.string.regular_transaction_info_title)
+                                .setMessage(R.string.regular_transaction_info_message)
+                                .setPositiveButton(R.string.button_ok, null)
+                                .show();
+                    }
+                });
             }
         }
     }

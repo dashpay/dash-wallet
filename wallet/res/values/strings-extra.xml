@@ -9,8 +9,10 @@
 	<string name="transaction_row_message_received_unconfirmed_instantx">Unconfirmed InstantSend</string>
 	<string name="transaction_row_message_received_instantx_locked2">Locked InstantSend</string>
 	<string name="transaction_row_message_sent_to_single_peer">This payment has been sent.</string>
+
 	<string name="regular_transaction_info_title">Regular transaction</string>
 	<string name="regular_transaction_info_message">This transaction couldn\'t be sent instantly.\n\nHence this transaction requires at least 6 confirmations to be completed.\n\nHowever the Dash received in this transaction is ready to be spent.</string>
+
 	<string name="wallet_options_disconnect">Disconnect</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
