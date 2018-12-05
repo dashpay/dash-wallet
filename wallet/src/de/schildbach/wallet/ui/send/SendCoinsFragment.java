@@ -1058,7 +1058,7 @@ public final class SendCoinsFragment extends Fragment {
         final PaymentIntent finalPaymentIntent = paymentIntent.mergeWithEditedValues(amountCalculatorLink.getAmount(),
                 validatedAddress != null ? validatedAddress.address : null);
 
-        SendRequest sendRequest = createSendRequest(finalPaymentIntent, requestType);
+        SendRequest sendRequest = createSendRequest(finalPaymentIntent, requestType, true);
 
         final Coin finalAmount = finalPaymentIntent.getAmount();
 
@@ -1261,6 +1261,8 @@ public final class SendCoinsFragment extends Fragment {
                 return;
             }
 
+            final PaymentIntent finalPaymentIntent = paymentIntent.mergeWithEditedValues(amount, dummyAddress);
+
             boolean instantSendActive = wallet.getContext().sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED);
             if (instantSendActive) {
 
@@ -1269,7 +1271,7 @@ public final class SendCoinsFragment extends Fragment {
 
                     try {
                         // initially check the preferred way (Instant Send auto lock)
-                        final SendRequest sendRequest = createSendRequest(dummyAddress, amount, RequestType.INSTANT_SEND_AUTO_LOCK);
+                        final SendRequest sendRequest = createSendRequest(finalPaymentIntent, RequestType.INSTANT_SEND_AUTO_LOCK, false);
 
                         wallet.completeTx(sendRequest);
                         if (TransactionLockRequest.isSimple(sendRequest.tx)) {
@@ -1286,7 +1288,7 @@ public final class SendCoinsFragment extends Fragment {
 
                 try {
                     // if Instant Send auto lock can't be performed check standard Instant Send (higher fee)
-                    final SendRequest sendRequest = createSendRequest(dummyAddress, amount, RequestType.INSTANT_SEND);
+                    final SendRequest sendRequest = createSendRequest(finalPaymentIntent, RequestType.INSTANT_SEND, false);
 
                     wallet.completeTx(sendRequest);
                     dryrunSendRequest = sendRequest;
@@ -1301,7 +1303,7 @@ public final class SendCoinsFragment extends Fragment {
 
             try {
                 // check regular payment
-                final SendRequest sendRequest = createSendRequest(dummyAddress, amount, RequestType.REGULAR_PAYMENT);
+                final SendRequest sendRequest = createSendRequest(finalPaymentIntent, RequestType.REGULAR_PAYMENT, false);
 
                 wallet.completeTx(sendRequest);
                 dryrunSendRequest = sendRequest;
@@ -1332,14 +1334,11 @@ public final class SendCoinsFragment extends Fragment {
         }
     }
 
-    private SendRequest createSendRequest(Address address, Coin amount, RequestType requestType) {
-        if (fees == null || amount == null) {
+    private SendRequest createSendRequest(PaymentIntent paymentIntent, RequestType requestType, boolean signInputs) {
+        if (fees == null) {
             throw new IllegalStateException();
         }
-        return createSendRequest(paymentIntent.mergeWithEditedValues(amount, address), requestType);
-    }
-
-    private SendRequest createSendRequest(PaymentIntent paymentIntent, RequestType requestType) {
+        paymentIntent.setInstantX(requestType == RequestType.INSTANT_SEND); //to make sure the correct instance of Transaction class is used in toSendRequest() method
         final SendRequest sendRequest = paymentIntent.toSendRequest();
         switch (requestType) {
             case INSTANT_SEND_AUTO_LOCK: {
@@ -1363,8 +1362,8 @@ public final class SendCoinsFragment extends Fragment {
         }
 
         sendRequest.ensureMinRequiredFee = sendRequest.useInstantSend;
+        sendRequest.signInputs = signInputs;
 
-        sendRequest.signInputs = false;
         Coin walletBalance = wallet.getBalance(BalanceType.ESTIMATED);
         sendRequest.emptyWallet = this.paymentIntent.mayEditAmount() && walletBalance.equals(paymentIntent.getAmount());
 
