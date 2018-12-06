@@ -78,6 +78,7 @@ import de.schildbach.wallet.data.PaymentIntent.Standard;
 import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.offline.DirectPaymentTask;
+import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
@@ -100,6 +101,8 @@ import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
 import android.bluetooth.BluetoothAdapter;
 import android.content.ComponentName;
 import android.content.ContentResolver;
@@ -121,10 +124,10 @@ import android.os.HandlerThread;
 import android.os.Process;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
-import android.support.v4.content.ContextCompat;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.content.res.ResourcesCompat;
@@ -754,6 +757,15 @@ public final class SendCoinsFragment extends Fragment {
                 }
 
                 updateView();
+            }
+        });
+
+        ExchangeRatesViewModel exchangeRatesViewModel = ViewModelProviders
+                .of((FragmentActivity) getActivity()).get(ExchangeRatesViewModel.class);
+        exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this, new Observer<de.schildbach.wallet.rates.ExchangeRate>() {
+            @Override
+            public void onChanged(@android.support.annotation.Nullable de.schildbach.wallet.rates.ExchangeRate exchangeRate) {
+
             }
         });
 
