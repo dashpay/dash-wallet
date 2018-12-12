@@ -48,7 +48,6 @@ import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.TransactionsAdapter.Warning;
 import de.schildbach.wallet.ui.send.RaiseFeeDialogFragment;
-import de.schildbach.wallet.ui.widget.FingerprintView;
 import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.FingerprintHelper;
@@ -751,6 +750,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         }
         if (fingerprintHelper.init() && fingerprintHelper.isFingerprintEnabled()) {
             fingerprintGroup.setVisibility(View.VISIBLE);
+            hideFingerprintError();
             fingerprintCancellationSignal = new CancellationSignal();
             fingerprintHelper.getPassword(fingerprintCancellationSignal, new FingerprintHelper.Callback() {
                 @Override
@@ -760,15 +760,15 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
                 }
 
                 @Override
-                public void onFailure(String message, boolean canceled) {
+                public void onFailure(String message, boolean canceled, boolean exceededMaxAttempts) {
                     if (!canceled) {
-                        showFingerprintError();
+                        showFingerprintError(exceededMaxAttempts);
                     }
                 }
 
                 @Override
                 public void onHelp(int helpCode, String helpString) {
-                    showFingerprintError();
+                    showFingerprintError(false);
                 }
             });
         }
@@ -780,11 +780,15 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         fingerprintText.setText(R.string.or_unlock_with_fingerprint);
     }
 
-    public void showFingerprintError() {
+    public void showFingerprintError(boolean exceededMaxAttempts) {
         Animation shakeAnimation = AnimationUtils.loadAnimation(getActivity(), R.anim.shake);
         fingerprintIcon.startAnimation(shakeAnimation);
         fingerprintIcon.setColorFilter(ContextCompat.getColor(getActivity(), R.color.fg_error));
-        fingerprintText.setText(R.string.unlock_with_fingerprint_error);
+        if (exceededMaxAttempts) {
+            fingerprintText.setText(R.string.unlock_with_fingerprint_error_max_attempts);
+        } else {
+            fingerprintText.setText(R.string.unlock_with_fingerprint_error);
+        }
     }
 
     @Override

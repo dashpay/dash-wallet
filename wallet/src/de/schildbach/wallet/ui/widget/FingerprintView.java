@@ -58,14 +58,18 @@ public class FingerprintView extends LinearLayout {
         setText(getContext().getString(stringRes));
     }
 
-    public void showError() {
+    public void showError(boolean exceededMaxAttempts) {
         Context context = getContext();
         Animation shakeAnimation = AnimationUtils.loadAnimation(context, R.anim.shake);
         initialText = fingerprintText.getText().toString();
 
         fingerprintIcon.startAnimation(shakeAnimation);
         fingerprintIcon.setColorFilter(ContextCompat.getColor(context, R.color.fg_error));
-        fingerprintText.setText(R.string.unlock_with_fingerprint_error);
+        if (exceededMaxAttempts) {
+            fingerprintText.setText(R.string.unlock_with_fingerprint_error_max_attempts);
+        } else {
+            fingerprintText.setText(R.string.unlock_with_fingerprint_error);
+        }
     }
 
     public void hideError() {

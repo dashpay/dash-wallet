@@ -61,7 +61,7 @@ public class FingerprintHelper {
     public interface Callback {
         void onSuccess(String savedPass);
 
-        void onFailure(String message, boolean canceled);
+        void onFailure(String message, boolean canceled, boolean exceededMaxAttempts);
 
         void onHelp(int helpCode, String helpString);
     }
@@ -161,10 +161,13 @@ public class FingerprintHelper {
                 FingerprintManagerCompat.CryptoObject crypto = new FingerprintManagerCompat.CryptoObject(cipher);
                 fingerprintManager.authenticate(crypto, 0, cancellationSignal, authListener, null);
             } else {
-                authListener.getCallback().onFailure("User hasn't granted permission to use Fingerprint", false);
+                authListener.getCallback()
+                        .onFailure("User hasn't granted permission to use Fingerprint",
+                                false, false);
             }
         } catch (Throwable t) {
-            authListener.getCallback().onFailure("An error occurred: " + t.getMessage(), false);
+            authListener.getCallback().onFailure("An error occurred: " + t.getMessage(),
+                    false, false);
         }
     }
 
@@ -328,7 +331,9 @@ public class FingerprintHelper {
 
         public void onAuthenticationError(int errorCode, CharSequence errString) {
             boolean canceled = FingerprintManager.FINGERPRINT_ERROR_CANCELED == errorCode;
-            callback.onFailure("Authentication error [" + errorCode + "] " + errString, canceled);
+            boolean exceededMaxAttempts = FingerprintManager.FINGERPRINT_ERROR_LOCKOUT == errorCode;
+            callback.onFailure("Authentication error [" + errorCode + "] " + errString,
+                    canceled, exceededMaxAttempts);
         }
 
         /**
@@ -353,7 +358,7 @@ public class FingerprintHelper {
          * Called when a fingerprint is valid but not recognized.
          */
         public void onAuthenticationFailed() {
-            callback.onFailure("Authentication failed", false);
+            callback.onFailure("Authentication failed", false, false);
         }
 
         public @NonNull
@@ -381,12 +386,12 @@ public class FingerprintHelper {
                     callback.onSuccess("Encrypted");
                 } else {
                     log.info("failed to encrypt password");
-                    callback.onFailure("Encryption failed", false);
+                    callback.onFailure("Encryption failed", false, false);
                 }
             } catch (Exception e) {
                 String message = "Encryption failed " + e.getMessage();
                 log.info(message);
-                callback.onFailure(message, false);
+                callback.onFailure(message, false, false);
             }
         }
     }
@@ -407,12 +412,12 @@ public class FingerprintHelper {
                     callback.onSuccess(savedPass);
                 } else {
                     log.info("failed to decrypt password");
-                    callback.onFailure("Failed deciphering", false);
+                    callback.onFailure("Failed deciphering", false, false);
                 }
             } catch (Exception e) {
                 String message = "Deciphering failed " + e.getMessage();
                 log.info(message);
-                callback.onFailure(message, false);
+                callback.onFailure(message, false, false);
             }
         }
     }

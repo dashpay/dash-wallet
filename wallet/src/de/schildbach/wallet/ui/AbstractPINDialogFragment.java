@@ -140,15 +140,15 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
             }
 
             @Override
-            public void onFailure(String message, boolean canceled) {
+            public void onFailure(String message, boolean canceled, boolean exceededMaxAttempts) {
                 if (!canceled) {
-                    fingerprintView.showError();
+                    fingerprintView.showError(exceededMaxAttempts);
                 }
             }
 
             @Override
             public void onHelp(int helpCode, String helpString) {
-                fingerprintView.showError();
+                fingerprintView.showError(false);
             }
         });
     }

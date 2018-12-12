@@ -987,15 +987,15 @@ public final class SendCoinsFragment extends Fragment {
                 }
 
                 @Override
-                public void onFailure(String message, boolean canceled) {
+                public void onFailure(String message, boolean canceled, boolean exceededMaxAttempts) {
                     if (!canceled) {
-                        showFingerprintError();
+                        showFingerprintError(exceededMaxAttempts);
                     }
                 }
 
                 @Override
                 public void onHelp(int helpCode, String helpString) {
-                    showFingerprintError();
+                    showFingerprintError(false);
                 }
             });
         }
@@ -1539,11 +1539,15 @@ public final class SendCoinsFragment extends Fragment {
         }
     }
 
-    protected void showFingerprintError() {
+    protected void showFingerprintError(boolean exceededMaxAttempts) {
         fingerprintIcon.setColorFilter(ContextCompat.getColor(getActivity(), R.color.fg_error));
         Animation shakeAnimation = AnimationUtils.loadAnimation(getActivity(), R.anim.shake);
         fingerprintIcon.startAnimation(shakeAnimation);
-        privateKeyBadPasswordView.setText(R.string.unlock_with_fingerprint_error);
+        if (exceededMaxAttempts) {
+            privateKeyBadPasswordView.setText(R.string.unlock_with_fingerprint_error_max_attempts);
+        } else {
+            privateKeyBadPasswordView.setText(R.string.unlock_with_fingerprint_error);
+        }
         privateKeyBadPasswordView.setVisibility(View.VISIBLE);
     }
 
