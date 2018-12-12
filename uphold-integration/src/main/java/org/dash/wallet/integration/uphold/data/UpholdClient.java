@@ -24,6 +24,7 @@ import android.util.Log;
 import com.securepreferences.SecurePreferences;
 import com.squareup.moshi.Moshi;
 
+import org.dash.wallet.common.data.BigDecimalAdapter;
 import org.json.JSONObject;
 
 import java.io.IOException;

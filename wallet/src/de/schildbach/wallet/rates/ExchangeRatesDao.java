@@ -14,7 +14,7 @@ import java.util.List;
 @Dao
 public interface ExchangeRatesDao {
 
-    @Query("SELECT * FROM exchange_rates")
+    @Query("SELECT * FROM exchange_rates ORDER BY currencyCode")
     LiveData<List<ExchangeRate>> getAll();
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -23,5 +23,13 @@ public interface ExchangeRatesDao {
     @Query("SELECT * FROM exchange_rates WHERE currencyCode = :currencyCode LIMIT 1")
     LiveData<ExchangeRate> getRate(String currencyCode);
 
+    @Query("SELECT * FROM exchange_rates WHERE currencyCode = :currencyCode LIMIT 1")
+    ExchangeRate getRateSync(String currencyCode);
+
+    @Query("SELECT * FROM exchange_rates WHERE currencyCode LIKE :currencyCode || '%' ORDER BY currencyCode")
+    LiveData<List<ExchangeRate>> searchRates(String currencyCode);
+
+    @Query("SELECT count(*) FROM exchange_rates")
+    int count();
 
 }

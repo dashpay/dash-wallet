@@ -70,9 +70,6 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.DynamicFeeLoader;
-import org.dash.wallet.common.data.ExchangeRate;
-import de.schildbach.wallet.data.ExchangeRatesLoader;
-import de.schildbach.wallet.data.ExchangeRatesProvider;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.data.PaymentIntent.Standard;
 import de.schildbach.wallet.data.WalletLock;
@@ -124,7 +121,6 @@ import android.os.HandlerThread;
 import android.os.Process;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
@@ -217,10 +213,9 @@ public final class SendCoinsFragment extends Fragment {
     private boolean forceInstantSend = false;
 
     private static final int ID_DYNAMIC_FEES_LOADER = 0;
-    private static final int ID_RATE_LOADER = 1;
-    private static final int ID_BLOCKCHAIN_STATE_LOADER = 2;
-    private static final int ID_RECEIVING_ADDRESS_BOOK_LOADER = 3;
-    private static final int ID_RECEIVING_ADDRESS_NAME_LOADER = 4;
+    private static final int ID_BLOCKCHAIN_STATE_LOADER = 1;
+    private static final int ID_RECEIVING_ADDRESS_BOOK_LOADER = 2;
+    private static final int ID_RECEIVING_ADDRESS_NAME_LOADER = 3;
 
     private static final int REQUEST_CODE_SCAN = 0;
     private static final int REQUEST_CODE_ENABLE_BLUETOOTH_FOR_PAYMENT_REQUEST = 1;
@@ -391,28 +386,6 @@ public final class SendCoinsFragment extends Fragment {
 
         @Override
         public void onLoaderReset(final Loader<Map<FeeCategory, Coin>> loader) {
-        }
-    };
-
-    private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>() {
-        @Override
-        public Loader<Cursor> onCreateLoader(final int id, final Bundle args) {
-            return new ExchangeRatesLoader(activity, config);
-        }
-
-        @Override
-        public void onLoadFinished(final Loader<Cursor> loader, final Cursor data) {
-            if (data != null && data.getCount() > 0) {
-                data.moveToFirst();
-                final ExchangeRate exchangeRate = ExchangeRatesProvider.getExchangeRate(data);
-
-                if (state == null || state.compareTo(State.INPUT) <= 0)
-                    amountCalculatorLink.setExchangeRate(exchangeRate.rate);
-            }
-        }
-
-        @Override
-        public void onLoaderReset(final Loader<Cursor> loader) {
         }
     };
 
@@ -760,12 +733,17 @@ public final class SendCoinsFragment extends Fragment {
             }
         });
 
-        ExchangeRatesViewModel exchangeRatesViewModel = ViewModelProviders
-                .of((FragmentActivity) getActivity()).get(ExchangeRatesViewModel.class);
-        exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this, new Observer<de.schildbach.wallet.rates.ExchangeRate>() {
-            @Override
-            public void onChanged(@android.support.annotation.Nullable de.schildbach.wallet.rates.ExchangeRate exchangeRate) {
 
+        ExchangeRatesViewModel exchangeRatesViewModel = ViewModelProviders.of(this)
+                .get(ExchangeRatesViewModel.class);
+        exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this,
+                new Observer<de.schildbach.wallet.rates.ExchangeRate>() {
+            @Override
+            public void onChanged(de.schildbach.wallet.rates.ExchangeRate exchangeRate) {
+                if (exchangeRate != null) {
+                    amountCalculatorLink.setExchangeRate(new org.bitcoinj.utils.ExchangeRate(
+                            Coin.COIN, exchangeRate.getFiat()));
+                }
             }
         });
 
@@ -790,7 +768,6 @@ public final class SendCoinsFragment extends Fragment {
         privateKeyPasswordView.addTextChangedListener(privateKeyPasswordListener);
 
         loaderManager.initLoader(ID_DYNAMIC_FEES_LOADER, null, dynamicFeesLoaderCallbacks);
-        loaderManager.initLoader(ID_RATE_LOADER, null, rateLoaderCallbacks);
         loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
         loaderManager.initLoader(ID_RECEIVING_ADDRESS_BOOK_LOADER, null, receivingAddressLoaderCallbacks);
         loaderManager.initLoader(ID_RECEIVING_ADDRESS_NAME_LOADER, null, receivingAddressLoaderCallbacks);
@@ -804,7 +781,6 @@ public final class SendCoinsFragment extends Fragment {
         loaderManager.destroyLoader(ID_RECEIVING_ADDRESS_NAME_LOADER);
         loaderManager.destroyLoader(ID_RECEIVING_ADDRESS_BOOK_LOADER);
         loaderManager.destroyLoader(ID_BLOCKCHAIN_STATE_LOADER);
-        loaderManager.destroyLoader(ID_RATE_LOADER);
         loaderManager.destroyLoader(ID_DYNAMIC_FEES_LOADER);
 
         privateKeyPasswordView.removeTextChangedListener(privateKeyPasswordListener);

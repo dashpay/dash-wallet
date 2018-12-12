@@ -1,19 +1,16 @@
 package de.schildbach.wallet.rates;
 
-import java.io.IOException;
+import android.support.annotation.Nullable;
+
 import java.util.List;
 
-import retrofit2.Response;
 
 /**
  * @author Samuel Barbosa
  */
-public abstract class ExchangeRatesClient extends RetrofitClient {
+public interface ExchangeRatesClient {
 
-    protected ExchangeRatesClient(String baseUrl) {
-        super(baseUrl);
-    }
-
-    public abstract Response<List<ExchangeRate>> getRates() throws IOException;
+    @Nullable
+    List<ExchangeRate> getRates() throws Exception;
 
 }

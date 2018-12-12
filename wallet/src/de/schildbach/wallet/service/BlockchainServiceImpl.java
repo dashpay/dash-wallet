@@ -73,6 +73,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.AddressBookProvider;
+import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.service.BlockchainState.Impediment;
 import de.schildbach.wallet.ui.WalletActivity;
 import de.schildbach.wallet.util.BlockchainStateUtils;
@@ -173,9 +174,10 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
             long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
             boolean insideTxExchangeRateTimeThreshold = (now - blockChainHeadTime) < TX_EXCHANGE_RATE_TIME_THRESHOLD_MS;
 
-            final ExchangeRate exchangeRate = config.getCachedExchangeRate().rate;
+            final de.schildbach.wallet.rates.ExchangeRate exchangeRate = AppDatabase.getAppDatabase()
+                    .exchangeRatesDao().getRateSync(config.getExchangeCurrencyCode());
             if (tx.getExchangeRate() == null && exchangeRate != null && !replaying && insideTxExchangeRateTimeThreshold) {
-                tx.setExchangeRate(exchangeRate);
+                tx.setExchangeRate(new ExchangeRate(Coin.COIN, exchangeRate.getFiat()));
                 application.saveWallet();
             }
 
@@ -193,7 +195,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                     final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && replaying;
 
                     if (isReceived && !isReplayedTx)
-                        notifyCoinsReceived(address, amount, exchangeRate);
+                        notifyCoinsReceived(address, amount, tx.getExchangeRate());
                 }
             });
         }

@@ -36,8 +36,6 @@ public class ExchangeRateListMoshiAdapter {
         jsonReader.beginObject();
         while (jsonReader.hasNext()) {
             String currency = jsonReader.nextName();
-            //TODO: or remove
-            //BigDecimal rate = new BigDecimal(jsonReader.nextString());
             list.add(new ExchangeRate(currency, jsonReader.nextString()));
         }
 

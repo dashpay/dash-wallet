@@ -1,22 +1,29 @@
 package de.schildbach.wallet.rates;
 
 import android.support.annotation.Nullable;
-import android.support.annotation.WorkerThread;
 
 import com.squareup.moshi.Moshi;
 
-import java.io.IOException;
 import java.util.List;
 
-import retrofit2.Response;
+import retrofit2.Call;
 import retrofit2.converter.moshi.MoshiConverterFactory;
+import retrofit2.http.GET;
 
 /**
  * @author Samuel Barbosa
  */
-public class DashRatesClient extends ExchangeRatesClient {
+public class DashRatesClient extends RetrofitClient implements ExchangeRatesClient {
 
     private static DashRatesClient instance;
+
+    public static DashRatesClient getInstance() {
+        if (instance == null) {
+            instance = new DashRatesClient();
+        }
+        return instance;
+    }
+
     private DashRatesService dashRatesService;
 
     private DashRatesClient() {
@@ -26,17 +33,19 @@ public class DashRatesClient extends ExchangeRatesClient {
         dashRatesService = retrofit.create(DashRatesService.class);
     }
 
-    public static DashRatesClient getInstance() {
-        if (instance == null) {
-            instance = new DashRatesClient();
+    @Override
+    @Nullable
+    public List<ExchangeRate> getRates() throws Exception {
+        List<ExchangeRate> rates = dashRatesService.getRates().execute().body();
+        if (rates == null || rates.isEmpty()) {
+            throw new IllegalStateException("Failed to fetch prices from DashRates source");
         }
-        return instance;
+        return rates;
     }
 
-    @Override
-    @WorkerThread
-    @Nullable
-    public Response<List<ExchangeRate>> getRates() throws IOException {
-        return dashRatesService.getRates().execute();
+    private interface DashRatesService {
+        @GET("list")
+        Call<List<ExchangeRate>> getRates();
     }
+
 }

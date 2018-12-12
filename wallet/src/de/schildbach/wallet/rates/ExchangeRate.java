@@ -11,27 +11,30 @@ import java.math.BigDecimal;
 /**
  * @author Samuel Barbosa
  */
-//TODO: check how to use ExchangeRate from BitcoinJ (only if needed)
-
 @Entity(tableName = "exchange_rates")
 public class ExchangeRate {
 
     @PrimaryKey
     @NonNull
-    private final String currencyCode;
-    private final String rate;
+    private String currencyCode;
+    private String rate;
 
-    public ExchangeRate(String currencyCode, String rate) {
+    public ExchangeRate(@NonNull String currencyCode, String rate) {
         this.currencyCode = currencyCode;
         this.rate = rate;
     }
 
+    @NonNull
     public String getCurrencyCode() {
         return currencyCode;
     }
 
     public String getRate() {
         return rate;
+    }
+
+    public void setRate(String rate) {
+        this.rate = rate;
     }
 
     public Fiat getFiat() {

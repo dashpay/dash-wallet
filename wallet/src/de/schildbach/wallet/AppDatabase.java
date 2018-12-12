@@ -1,10 +1,11 @@
-package de.schildbach.wallet.rates;
+package de.schildbach.wallet;
 
 import android.arch.persistence.room.Database;
 import android.arch.persistence.room.Room;
 import android.arch.persistence.room.RoomDatabase;
 
-import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.rates.ExchangeRate;
+import de.schildbach.wallet.rates.ExchangeRatesDao;
 
 /**
  * @author Samuel Barbosa

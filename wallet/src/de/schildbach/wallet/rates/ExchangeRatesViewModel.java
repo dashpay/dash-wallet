@@ -17,12 +17,27 @@ public class ExchangeRatesViewModel extends ViewModel {
     }
 
     public LiveData<List<ExchangeRate>> getRates() {
-        //TODO: Implement refresh logic (only if needed to refresh rates while app is focused).
         return exchangeRatesRepository.getRates();
     }
 
     public LiveData<ExchangeRate> getRate(String currencyCode) {
         return exchangeRatesRepository.getRate(currencyCode);
+    }
+
+    public LiveData<List<ExchangeRate>> searchRates(String query) {
+        if (query != null) {
+            return exchangeRatesRepository.searchRates(query);
+        } else {
+            return exchangeRatesRepository.getRates();
+        }
+    }
+
+    public LiveData<Boolean> isLoading() {
+        return exchangeRatesRepository.isLoading;
+    }
+
+    public LiveData<Boolean> hasError() {
+        return exchangeRatesRepository.hasError;
     }
 
 }

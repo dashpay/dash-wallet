@@ -1,26 +1,39 @@
 package de.schildbach.wallet.rates;
 
 import android.arch.lifecycle.LiveData;
+import android.arch.lifecycle.MutableLiveData;
 
-import java.io.IOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
-import retrofit2.Response;
+import de.schildbach.wallet.AppDatabase;
 
 /**
  * @author Samuel Barbosa
  */
 public class ExchangeRatesRepository {
 
+    private static final Logger log = LoggerFactory.getLogger(ExchangeRatesRepository.class);
     private static ExchangeRatesRepository instance;
 
     private AppDatabase appDatabase;
     private Executor executor;
     private Deque<ExchangeRatesClient> exchangeRatesClients = new ArrayDeque<>();
+
+    private static final long UPDATE_FREQ_MS = TimeUnit.SECONDS.toMillis(30);
+    private long lastUpdated;
+
+    public MutableLiveData<Boolean> isLoading = new MutableLiveData<>();
+    public MutableLiveData<Boolean> hasError = new MutableLiveData<>();
+
+    private boolean isRefreshing = false;
 
     private ExchangeRatesRepository() {
         appDatabase = AppDatabase.getAppDatabase();
@@ -40,49 +53,89 @@ public class ExchangeRatesRepository {
         if (!exchangeRatesClients.isEmpty()) {
             exchangeRatesClients.clear();
         }
-        //TODO: Push fallbacks first
+
+        exchangeRatesClients.push(DashRatesSecondFallback.getInstance());
+        exchangeRatesClients.push(DashRatesFirstFallback.getInstance());
         exchangeRatesClients.push(DashRatesClient.getInstance());
     }
 
-    public LiveData<List<ExchangeRate>> getRates() {
-        refreshRates();
-
-        return appDatabase.exchangeRatesDao().getAll();
+    private void refreshRates() {
+        this.refreshRates(false);
     }
 
-    private void refreshRates() {
-        //TODO: When Populate list again?
-        //Maybe only when restarting the app
-        if (!exchangeRatesClients.isEmpty()) {
-            final ExchangeRatesClient exchangeRatesClient = exchangeRatesClients.pop();
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    //TODO: Check if needs to Fetch rates (or before calling this method?)
-                    Response<List<ExchangeRate>> response = null;
-                    try {
-                        response = exchangeRatesClient.getRates();
-                        List<ExchangeRate> rates = response.body();
-                        if (response.isSuccessful() && rates != null && !rates.isEmpty()) {
-                            appDatabase.exchangeRatesDao().insertAll(rates);
-                        } else if (!exchangeRatesClients.isEmpty()) {
-                            refreshRates();
-                        } else {
-                            //TODO: (?) Handle error? Show notification to user?
-                        }
-                    } catch (IOException e) {
-                        //TODO: Handle Error
-                        refreshRates();
+    private void refreshRates(boolean forceRefresh) {
+        if (!shouldRefresh()) {
+            return;
+        }
+        if (exchangeRatesClients.isEmpty()) {
+            populateExchangeRatesStack();
+        }
+        if (!forceRefresh && isRefreshing) {
+            return;
+        }
+        isRefreshing = true;
+        final ExchangeRatesClient exchangeRatesClient = exchangeRatesClients.pop();
+        isLoading.postValue(true);
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                List<ExchangeRate> rates;
+                try {
+                    rates = exchangeRatesClient.getRates();
+                    if (rates != null && !rates.isEmpty()) {
+                        appDatabase.exchangeRatesDao().insertAll(rates);
+                        lastUpdated = System.currentTimeMillis();
+                        populateExchangeRatesStack();
+                        hasError.postValue(false);
+                        isRefreshing = false;
+                        log.info("exchange rates updated successfully with {}", exchangeRatesClient);
+                    } else if (!exchangeRatesClients.isEmpty()) {
+                        refreshRates(true);
+                    } else {
+                        handleRefreshError();
                     }
+                } catch (Exception e) {
+                    log.error("failed to fetch exchange rates with {}", exchangeRatesClient, e);
+                    if (!exchangeRatesClients.isEmpty()) {
+                        refreshRates(true);
+                    } else {
+                        handleRefreshError();
+                    }
+                } finally {
+                    isLoading.postValue(false);
                 }
-            });
+            }
+        });
+    }
+
+    private void handleRefreshError() {
+        isRefreshing = false;
+        if (appDatabase.exchangeRatesDao().count() == 0) {
+            hasError.postValue(true);
         }
     }
 
+    private boolean shouldRefresh() {
+        long now = System.currentTimeMillis();
+        return lastUpdated == 0 || now - lastUpdated > UPDATE_FREQ_MS;
+    }
+
+    public LiveData<List<ExchangeRate>> getRates() {
+        if (shouldRefresh()) {
+            refreshRates();
+        }
+        return appDatabase.exchangeRatesDao().getAll();
+    }
+
     public LiveData<ExchangeRate> getRate(String currencyCode) {
-        //TODO: Check if it's empty before returning.
-        //TODO: Check if we need to call refresh here
+        if (shouldRefresh()) {
+            refreshRates();
+        }
         return appDatabase.exchangeRatesDao().getRate(currencyCode);
+    }
+
+    public LiveData<List<ExchangeRate>> searchRates(String query) {
+        return appDatabase.exchangeRatesDao().searchRates(query);
     }
 
 
