@@ -25,4 +25,8 @@
         android:id="@+id/wallet_options_encrypt_keys"
         android:title="@string/encrypt_keys_dialog_title"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/wallet_options_enable_fingerprint"
+        android:title="@string/enable_fingerprint"
+        app:showAsAction="never" />
 </menu>
