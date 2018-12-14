@@ -147,10 +147,11 @@ public final class Constants {
             ? CoinDefinition.DONATION_ADDRESS : null;
 
     /** Recipient e-mail address for reports. */
-    public static final String REPORT_EMAIL = "hashengineeringsolutions@gmail.com";
+    public static final String REPORT_EMAIL = "support@dash.org";
 
     /** Subject line for manually reported issues. */
-    public static final String REPORT_SUBJECT_ISSUE = "Dash Wallet: Reported issue";
+    public static final String REPORT_SUBJECT_BEGIN = "Android Dash Wallet:  ";
+    public static final String REPORT_SUBJECT_ISSUE = "Reported issue";
 
     /** Subject line for crash reports. */
     public static final String REPORT_SUBJECT_CRASH = "Crash report";
