@@ -3,13 +3,13 @@ package de.schildbach.wallet.ui;
 import android.app.Activity;
 
 import android.app.Dialog;
-import android.app.DialogFragment;
 import android.content.DialogInterface;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
+import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AlertDialog;
 import android.text.Editable;
 import android.text.TextWatcher;

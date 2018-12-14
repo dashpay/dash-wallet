@@ -56,17 +56,12 @@ import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
-import android.app.Fragment;
-import android.app.LoaderManager;
-import android.app.LoaderManager.LoaderCallbacks;
 import android.app.admin.DevicePolicyManager;
-import android.content.AsyncTaskLoader;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.Loader;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.database.ContentObserver;
@@ -78,6 +73,11 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.AsyncTaskLoader;
+import android.support.v4.content.ContextCompat;
+import android.support.v4.content.Loader;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -103,7 +103,7 @@ import android.widget.ViewAnimator;
 /**
  * @author Andreas Schildbach
  */
-public class WalletTransactionsFragment extends Fragment implements LoaderCallbacks<List<Transaction>>,
+public class WalletTransactionsFragment extends Fragment implements LoaderManager.LoaderCallbacks<List<Transaction>>,
         TransactionsAdapter.OnClickListener, OnSharedPreferenceChangeListener, WalletLock.OnLockChangeListener {
 
 
