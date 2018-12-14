@@ -235,7 +235,7 @@ public final class RestoreWalletActivity extends AbstractWalletActivity
                 // Tell the user that the wallet is being upgraded (BIP44)
                 // and they will have to enter a PIN.
                 //
-                UpgradeWalletDisclaimerDialog.show(getFragmentManager());
+                UpgradeWalletDisclaimerDialog.show(getSupportFragmentManager());
             }
         }
         else {
@@ -292,6 +292,6 @@ public final class RestoreWalletActivity extends AbstractWalletActivity
 
     @Override
     public void onNewKeyChainEncrypted() {
-        BackupWalletToSeedDialogFragment.show(getFragmentManager(), true);
+        BackupWalletToSeedDialogFragment.show(getSupportFragmentManager(), true);
     }
 }

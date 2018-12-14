@@ -170,7 +170,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         handleIntent(getIntent());
 
-        MaybeMaintenanceFragment.add(getFragmentManager());
+        MaybeMaintenanceFragment.add(getSupportFragmentManager());
 
         initUphold();
         initView();
@@ -447,7 +447,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
-            BackupWalletDialogFragment.show(getFragmentManager());
+            BackupWalletDialogFragment.show(getSupportFragmentManager());
         else
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     REQUEST_CODE_BACKUP_WALLET);
@@ -464,7 +464,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     public void handleBackupWalletToSeed() {
         //if (ContextCompat.checkSelfPermission(this,
         //        Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
-        BackupWalletToSeedDialogFragment.show(getFragmentManager());
+        BackupWalletToSeedDialogFragment.show(getSupportFragmentManager());
         //else
         //    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
         //            REQUEST_CODE_BACKUP_WALLET);
@@ -699,7 +699,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void showRestoreWalletFromSeedDialog() {
-        RestoreWalletFromSeedDialogFragment.show(getFragmentManager());
+        RestoreWalletFromSeedDialogFragment.show(getSupportFragmentManager());
     }
 
     private void checkLowStorageAlert() {
@@ -1149,7 +1149,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 // Tell the user that the wallet is being upgraded (BIP44)
                 // and they will have to enter a PIN.
                 //
-                UpgradeWalletDisclaimerDialog.show(getFragmentManager());
+                UpgradeWalletDisclaimerDialog.show(getSupportFragmentManager());
             }
         }
         else {
@@ -1174,7 +1174,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     @Override
     public void onNewKeyChainEncrypted() {
-        BackupWalletToSeedDialogFragment.show(getFragmentManager(), true);
+        BackupWalletToSeedDialogFragment.show(getSupportFragmentManager(), true);
     }
 
     /**
