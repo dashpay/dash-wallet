@@ -28,6 +28,7 @@ dependencies {
     implementation "com.android.support:support-core-utils:$androidSupportVersion"
     implementation "com.android.support:recyclerview-v7:$androidSupportVersion"
     implementation "com.android.support:cardview-v7:$androidSupportVersion"
+    implementation "com.android.support:preference-v7:$androidSupportVersion"
     implementation 'org.dashj:dashj-core:0.14.7'
     implementation 'com.google.protobuf:protobuf-java:2.6.1'
     implementation 'com.google.guava:guava:20.0'

@@ -100,7 +100,12 @@
         <item name="android:textStyle">normal</item>
     </style>
 
-    <style name="My.Theme.Fullscreen" parent="@android:style/Theme.Holo.NoActionBar.Fullscreen" />
+    <style name="My.Theme.Fullscreen" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
 
     <style name="My.Theme.Dialog" parent="Theme.AppCompat.Light.Dialog.Alert" />
 

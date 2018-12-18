@@ -35,14 +35,12 @@ import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.os.Bundle;
-import android.preference.Preference;
-import android.preference.PreferenceFragment;
-import android.preference.PreferenceScreen;
+import android.support.v7.preference.PreferenceFragmentCompat;
 
 /**
  * @author Andreas Schildbach
  */
-public final class DiagnosticsFragment extends PreferenceFragment {
+public final class DiagnosticsFragment extends PreferenceFragmentCompat {
 	private Activity activity;
 	private WalletApplication application;
 
@@ -61,14 +59,12 @@ public final class DiagnosticsFragment extends PreferenceFragment {
 	}
 
 	@Override
-    public void onCreate(final Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-
-		addPreferencesFromResource(R.xml.preference_diagnostics);
+	public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+		setPreferencesFromResource(R.xml.preference_diagnostics, rootKey);
 	}
 
 	@Override
-    public boolean onPreferenceTreeClick(final PreferenceScreen preferenceScreen, final Preference preference) {
+	public boolean onPreferenceTreeClick(android.support.v7.preference.Preference preference) {
 		final String key = preference.getKey();
 
 		if (PREFS_KEY_REPORT_ISSUE.equals(key)) {
@@ -77,13 +73,14 @@ public final class DiagnosticsFragment extends PreferenceFragment {
 		} else if (PREFS_KEY_INITIATE_RESET.equals(key)) {
 			handleInitiateReset();
 			return true;
-        } else if (PREFS_KEY_EXTENDED_PUBLIC_KEY.equals(key)) {
+		} else if (PREFS_KEY_EXTENDED_PUBLIC_KEY.equals(key)) {
 			handleExtendedPublicKey();
 			return true;
 		}
 
 		return false;
 	}
+
 	private void handleReportIssue()
 	{
 		final ReportIssueDialogBuilder dialog = new ReportIssueDialogBuilder(activity, R.string.report_issue_dialog_title_issue,
