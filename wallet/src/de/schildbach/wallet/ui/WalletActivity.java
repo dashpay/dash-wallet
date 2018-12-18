@@ -1224,6 +1224,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 config.setExchangeCurrencyCode(newCurrencyCode);
             }
         }
+
+        //Fallback to default
+        if (config.getExchangeCurrencyCode() == null) {
+            config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
+        }
     }
 
     /**
