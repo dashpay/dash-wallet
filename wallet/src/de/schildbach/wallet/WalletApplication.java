@@ -47,11 +47,11 @@ import com.squareup.leakcanary.RefWatcher;
 import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
+import de.schildbach.wallet.ui.AbstractWalletActivity;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet_test.R;
 
 import android.annotation.TargetApi;
-import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlarmManager;
 import android.app.Application;
@@ -65,7 +65,6 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.StrictMode;
 import android.preference.PreferenceManager;
 import android.support.annotation.StringRes;
@@ -83,11 +82,10 @@ import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 /**
  * @author Andreas Schildbach
  */
-public class WalletApplication extends Application implements Application.ActivityLifecycleCallbacks {
+public class WalletApplication extends Application {
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
-    private Activity currentActivity;
 
     private Intent blockchainServiceIntent;
     private Intent blockchainServiceCancelCoinsReceivedIntent;
@@ -97,7 +95,6 @@ public class WalletApplication extends Application implements Application.Activi
     private Wallet wallet;
     private PackageInfo packageInfo;
 
-    private int numStarted;
     private boolean backupDisclaimerDismissed = false;
 
     public static final String ACTION_WALLET_REFERENCE_CHANGED = WalletApplication.class.getPackage().getName()
@@ -132,7 +129,12 @@ public class WalletApplication extends Application implements Application.Activi
         }
         refWatcher = LeakCanary.install(this);
 
-        registerActivityLifecycleCallbacks(this);
+        registerActivityLifecycleCallbacks(new ActivitiesTracker() {
+            @Override
+            public void onStartedFirst() {
+                lockWalletIfNeeded();
+            }
+        });
 
         new LinuxSecureRandom(); // init proper random number generator
 
@@ -635,48 +637,6 @@ public void updateDashMode()
         }
     }
 
-    @Override
-    public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
-
-    }
-
-    @Override
-    public void onActivityStarted(Activity activity) {
-        if (numStarted == 0) {
-            lockWalletIfNeeded();
-        }
-        numStarted++;
-        currentActivity = activity;
-    }
-
-    @Override
-    public void onActivityResumed(Activity activity) {
-
-    }
-
-    @Override
-    public void onActivityPaused(Activity activity) {
-
-    }
-
-    @Override
-    public void onActivityStopped(Activity activity) {
-        numStarted--;
-        if (numStarted == 0) {
-            // app went to background
-        }
-    }
-
-    @Override
-    public void onActivitySaveInstanceState(Activity activity, Bundle outState) {
-
-    }
-
-    @Override
-    public void onActivityDestroyed(Activity activity) {
-
-    }
-
     /**
       Replace the wallet with an new wallet as part of a wallet wipe
      */
@@ -712,11 +672,7 @@ public void updateDashMode()
     }
 
     public void killAllActivities() {
-        if (currentActivity != null) {
-            currentActivity.finishAffinity();
-        } else {
-            System.exit(0);
-        }
+        AbstractWalletActivity.finishAll(this);
     }
 
 }

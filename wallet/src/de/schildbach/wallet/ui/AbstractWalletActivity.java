@@ -17,7 +17,12 @@
 
 package de.schildbach.wallet.ui;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.support.annotation.LayoutRes;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.widget.Toolbar;
 
@@ -44,6 +49,8 @@ public abstract class AbstractWalletActivity extends AppCompatActivity implement
 
     protected static final Logger log = LoggerFactory.getLogger(AbstractWalletActivity.class);
 
+    private static final String FINISH_ALL_ACTIVITIES_ACTION = "dash.wallet.action.CLOSE_ALL_ACTIVITIES_ACTION";
+
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         application = (WalletApplication) getApplication();
@@ -54,12 +61,14 @@ public abstract class AbstractWalletActivity extends AppCompatActivity implement
         PinRetryController.handleLockedForever(this);
 
         WalletLock.getInstance().addListener(this);
+        registerFinishAllReceiver();
         super.onCreate(savedInstanceState);
     }
 
     @Override
     protected void onDestroy() {
         WalletLock.getInstance().removeListener(this);
+        unregisterFinishAllReceiver();
         super.onDestroy();
     }
 
@@ -114,5 +123,27 @@ public abstract class AbstractWalletActivity extends AppCompatActivity implement
 
     protected WalletApplication getWalletApplication() {
         return application;
+    }
+
+    private BroadcastReceiver finishAllReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            LocalBroadcastManager.getInstance(application).unregisterReceiver(this);
+            AbstractWalletActivity.this.finish();
+        }
+    };
+
+    private void registerFinishAllReceiver() {
+        IntentFilter finishAllFilter = new IntentFilter(FINISH_ALL_ACTIVITIES_ACTION);
+        LocalBroadcastManager.getInstance(application).registerReceiver(finishAllReceiver, finishAllFilter);
+    }
+
+    private void unregisterFinishAllReceiver() {
+        LocalBroadcastManager.getInstance(application).unregisterReceiver(finishAllReceiver);
+    }
+
+    public static void finishAll(Context context) {
+        Intent localIntent = new Intent(FINISH_ALL_ACTIVITIES_ACTION);
+        LocalBroadcastManager.getInstance(context).sendBroadcast(localIntent);
     }
 }
