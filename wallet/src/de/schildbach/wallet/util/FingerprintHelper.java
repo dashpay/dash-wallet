@@ -199,6 +199,10 @@ public class FingerprintHelper {
         return getSavedEncryptedPassword() != null;
     }
 
+    public void clear() {
+        getSharedPreferences().edit().clear().commit();
+    }
+
     private void saveEncryptedPassword(String encryptedPassword) {
         SharedPreferences.Editor edit = getSharedPreferences().edit();
         edit.putString(ENCRYPTED_PASS_SHARED_PREF_KEY, encryptedPassword);
