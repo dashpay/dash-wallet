@@ -320,12 +320,8 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                         if (state == State.DONE) {
                             application.backupWallet();
 
-                            //Clear fingerprint stored password
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-                                    && fingerprintHelper.init() && fingerprintHelper.isFingerprintEnabled()) {
-                                fingerprintHelper.clear();
-                                WalletApplication.getInstance().getConfiguration().setRemindEnableFingerprint(true);
-                            }
+                            //Clear fingerprint data
+                            fingerprintHelper.clear();
                             delayedDismiss();
 
                             WalletLock.getInstance().setWalletLocked(wallet.isEncrypted());

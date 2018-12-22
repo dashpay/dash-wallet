@@ -1016,6 +1016,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
         config.disarmBackupReminder();
         this.wallet = application.getWallet();
         upgradeWalletKeyChains(Constants.BIP44_PATH, true);
+
+        if (fingerprintHelper != null) {
+            fingerprintHelper.clear();
+        }
     }
 
     private void resetBlockchain() {

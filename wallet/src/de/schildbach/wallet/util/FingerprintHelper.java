@@ -56,6 +56,7 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 
+import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.EncryptKeysDialogFragment;
 
 import static android.content.Context.KEYGUARD_SERVICE;
@@ -200,6 +201,10 @@ public class FingerprintHelper {
     }
 
     public void clear() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                && init() && isFingerprintEnabled()) {
+            WalletApplication.getInstance().getConfiguration().setRemindEnableFingerprint(true);
+        }
         getSharedPreferences().edit().clear().commit();
     }
 
