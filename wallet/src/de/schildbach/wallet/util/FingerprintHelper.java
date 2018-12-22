@@ -57,13 +57,12 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.ui.EncryptKeysDialogFragment;
 
 import static android.content.Context.KEYGUARD_SERVICE;
 
 public class FingerprintHelper {
 
-    private static final Logger log = LoggerFactory.getLogger(EncryptKeysDialogFragment.class);
+    private static final Logger log = LoggerFactory.getLogger(FingerprintHelper.class);
 
     private static final String FINGERPRINT_PREFS_NAME = "FINGERPRINT_HELPER_PREFS";
     private static final String ENCRYPTED_PASS_SHARED_PREF_KEY = "ENCRYPTED_PASS_PREFS_KEY";
