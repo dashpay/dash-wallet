@@ -1274,7 +1274,7 @@ public final class SendCoinsFragment extends Fragment {
                         final SendRequest sendRequest = createSendRequest(finalPaymentIntent, RequestType.INSTANT_SEND_AUTO_LOCK, false);
 
                         wallet.completeTx(sendRequest);
-                        if (TransactionLockRequest.isSimple(sendRequest.tx)) {
+                        if (sendRequest.tx.isSimple()) {
                             dryrunSendRequest = sendRequest;
                             return;
                         }
