@@ -53,6 +53,7 @@ import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards;
 import org.bitcoinj.wallet.Wallet.DustySendRequested;
 import org.bitcoinj.wallet.ZeroConfCoinSelector;
+import org.darkcoinj.InstantSend;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.ExchangeRate;
 import org.dash.wallet.common.ui.CurrencyAmountView;
@@ -1266,7 +1267,7 @@ public final class SendCoinsFragment extends Fragment {
             boolean instantSendActive = wallet.getContext().sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED);
             if (instantSendActive) {
 
-                boolean autoLocksActive = wallet.getContext().sporkManager.isSporkActive(SporkManager.SPORK_16_INSTANTSEND_AUTOLOCKS);
+                boolean autoLocksActive = InstantSend.canAutoLock();
                 if (autoLocksActive) {
 
                     try {
