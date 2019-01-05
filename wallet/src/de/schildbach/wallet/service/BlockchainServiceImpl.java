@@ -139,7 +139,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
     //Settings to bypass dashj default dns seeds
     private final SeedPeers seedPeerDiscovery = new SeedPeers(Constants.NETWORK_PARAMETERS);
     private final String dnsSeeds[] = { "dnsseed.dash.org" };
-    private final DnsDiscovery dnsDiscovery = new DnsDiscovery(dnsSeeds, Constants.NETWORK_PARAMETERS);
+    private final String dnsSeedsTestNet[] = { "95.183.51.146", "35.161.101.35", "54.91.130.170" };
+    private final DnsDiscovery dnsDiscovery = new DnsDiscovery(Constants.TEST ? dnsSeedsTestNet : dnsSeeds, Constants.NETWORK_PARAMETERS);
     ArrayList<PeerDiscovery> peerDiscoveryList = new ArrayList<>(2);
 
 
