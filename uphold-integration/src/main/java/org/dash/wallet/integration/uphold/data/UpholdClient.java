@@ -310,6 +310,10 @@ public class UpholdClient {
         return encryptionKey;
     }
 
+    public UpholdCard getCurrentDashCard() {
+        return dashCard;
+    }
+
     public interface Callback<T> {
         void onSuccess(T data);
         void onError(Exception e, boolean otpRequired);

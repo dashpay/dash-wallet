@@ -197,24 +197,12 @@
             </intent-filter>
 
         </activity>
-        <activity android:name="org.dash.wallet.integration.uphold.ui.UpholdWebViewActivity"
-            android:label="@string/uphold_buy_dash_activity_title"
-            android:launchMode="singleTop"
-            android:theme="@style/My.Theme.ChildActivity"
-            android:configChanges="keyboard|keyboardHidden|orientation|screenSize">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:host="sandbox.uphold.com"
-                    android:scheme="https"
-                    android:pathPrefix="/confirm"/>
-            </intent-filter>
-        </activity>
         <activity android:name="org.dash.wallet.integration.uphold.ui.UpholdSplashActivity"
-            android:theme="@style/My.Theme.ChildActivity"/>
+            android:theme="@style/My.Theme.ChildActivity"
+            android:launchMode="singleTask"/>
         <activity android:name="org.dash.wallet.integration.uphold.ui.UpholdAccountActivity"
             android:theme="@style/My.Theme.ChildActivity"/>
+
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"
             android:authorities="${applicationId}.address_book"
