@@ -21,7 +21,7 @@ public class DashCasaClient extends RetrofitClient {
 
     public static DashCasaClient getInstance() {
         if (instance == null) {
-            instance = new DashCasaClient("http://dash.casa/");
+            instance = new DashCasaClient("https://dash.casa/");
         }
         return instance;
     }
