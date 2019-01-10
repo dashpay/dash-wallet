@@ -123,8 +123,8 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
         });
         exchangeRatesViewModel.hasError().observe(this, new Observer<Boolean>() {
             @Override
-            public void onChanged(@android.support.annotation.Nullable Boolean aBoolean) {
-                if (Boolean.TRUE.equals(true)) {
+            public void onChanged(Boolean hasError) {
+                if (Boolean.TRUE.equals(hasError)) {
                     showOnly(loadingErrorView);
                 }
             }
