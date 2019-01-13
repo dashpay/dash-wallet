@@ -174,11 +174,17 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
             long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
             boolean insideTxExchangeRateTimeThreshold = (now - blockChainHeadTime) < TX_EXCHANGE_RATE_TIME_THRESHOLD_MS;
 
-            final de.schildbach.wallet.rates.ExchangeRate exchangeRate = AppDatabase.getAppDatabase()
-                    .exchangeRatesDao().getRateSync(config.getExchangeCurrencyCode());
-            if (tx.getExchangeRate() == null && exchangeRate != null && !replaying && insideTxExchangeRateTimeThreshold) {
-                tx.setExchangeRate(new ExchangeRate(Coin.COIN, exchangeRate.getFiat()));
-                application.saveWallet();
+            if (tx.getExchangeRate() == null && !replaying && insideTxExchangeRateTimeThreshold) {
+                try {
+                    final de.schildbach.wallet.rates.ExchangeRate exchangeRate = AppDatabase.getAppDatabase()
+                            .exchangeRatesDao().getRateSync(config.getExchangeCurrencyCode());
+                    if (exchangeRate != null) {
+                        tx.setExchangeRate(new ExchangeRate(Coin.COIN, exchangeRate.getFiat()));
+                        application.saveWallet();
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to get exchange rate", e);
+                }
             }
 
             transactionsReceived.incrementAndGet();
