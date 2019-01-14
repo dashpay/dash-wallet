@@ -1195,7 +1195,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 String networkCountry = tm.getNetworkCountryIso();
                 if (networkCountry != null && networkCountry.length() == 2) { // network country code is available
                     updateCurrencyExchange(networkCountry.toUpperCase());
+                } else {
+                    //Couldn't obtain country code - Use Default
+                    config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
                 }
+            } else {
+                //No cellular network - Wifi Only
+                config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
             }
         } catch (Exception e) {
             //fail safe
