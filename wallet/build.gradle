@@ -90,13 +90,12 @@ android {
         generatedDensities = ['hdpi', 'xhdpi']
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         ndk {
-            abiFilters 'armeabi', 'armeabi-v7a', 'x86'
+            abiFilters 'armeabi-v7a', 'x86', 'arm64-v8a', 'x86_64'
         }
         externalNativeBuild {
             cmake {
-                cFlags '-DHAVE_CONFIG_H'
+                cFlags '-DHAVE_CONFIG_H -DWORD=32'
                 cppFlags ""
-                arguments "-DANDROID_STL=c++_shared"
             }
         }
     }
