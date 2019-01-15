@@ -614,8 +614,9 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
             ixInfoButtonView.setVisibility(View.GONE);
             boolean isSimple = tx.isSimple();
-            boolean isBuilding = confidenceType == ConfidenceType.BUILDING;
-            if (isOwn && isSimple && isBuilding) {
+            TransactionConfidence.IXType ixType = confidence.getIXType();
+            boolean ixLockFailed = ixType == TransactionConfidence.IXType.IX_LOCK_FAILED;
+            if (isOwn && isSimple && ixLockFailed) {
                 ixInfoButtonView.setVisibility(isLocked ? View.GONE : View.VISIBLE);
                 ixInfoButtonView.setOnClickListener(new View.OnClickListener() {
                     @Override
