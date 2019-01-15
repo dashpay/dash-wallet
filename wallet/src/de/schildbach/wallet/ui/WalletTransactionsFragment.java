@@ -38,7 +38,6 @@ import org.bitcoinj.core.Transaction.Purpose;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
-import org.darkcoinj.InstantSendEventListener;
 import org.dash.wallet.common.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -148,15 +147,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         }
     };
 
-    private InstantSendEventListener instantSendEventListener = new InstantSendEventListener() {
-        @Override
-        public void onConfidenceChanged(Transaction transaction) {
-            if (adapter != null) {
-                adapter.notifyDataSetChanged();
-            }
-        }
-    };
-
     @Override
     public void onAttach(final Activity activity) {
         super.onAttach(activity);
@@ -168,14 +158,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderCallba
         this.resolver = activity.getContentResolver();
         this.loaderManager = getLoaderManager();
         this.devicePolicyManager = (DevicePolicyManager) application.getSystemService(Context.DEVICE_POLICY_SERVICE);
-
-        wallet.getContext().instantSend.addEventListener(instantSendEventListener);
-    }
-
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        wallet.getContext().instantSend.removeEventListener(instantSendEventListener);
     }
 
     @Override

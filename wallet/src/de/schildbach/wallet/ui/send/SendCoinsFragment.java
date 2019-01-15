@@ -732,6 +732,9 @@ public final class SendCoinsFragment extends Fragment {
         privateKeyBadPasswordView = view.findViewById(R.id.send_coins_private_key_bad_password);
         attemptsRemainingTextView = (TextView) view.findViewById(R.id.pin_attempts);
 
+        TextView instantSendEnabledByDefaultView = view.findViewById(R.id.instant_send_enabled_by_default);
+        instantSendEnabledByDefaultView.setVisibility(InstantSend.canAutoLock() ? View.VISIBLE : View.GONE);
+
         viewGo = (Button) view.findViewById(R.id.send_coins_go);
         viewGo.setOnClickListener(new OnClickListener() {
             @Override

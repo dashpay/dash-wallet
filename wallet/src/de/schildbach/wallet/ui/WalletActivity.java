@@ -38,6 +38,7 @@ import org.bitcoinj.core.VersionedChecksummedBytes;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
+import org.darkcoinj.InstantSend;
 import org.dash.wallet.common.ui.DialogBuilder;
 
 import org.dash.wallet.integration.uphold.data.UpholdClient;
@@ -185,7 +186,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             upgradeWalletKeyChains(Constants.BIP44_PATH, false);
         }
 
-        if (!config.getFastestNetworkAnncmntShown()) {
+        if (InstantSend.canAutoLock() && !config.getFastestNetworkAnncmntShown()) {
             showFastestNetworkAnncmnt();
         }
     }
