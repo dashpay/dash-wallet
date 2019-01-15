@@ -1,4 +1,7 @@
 Dash Wallet
+v6.2.1
+* Fix crash on Android 9 (API 28)
+
 v6.2.0
 * Target API 28
 * Add Adaptive Icons

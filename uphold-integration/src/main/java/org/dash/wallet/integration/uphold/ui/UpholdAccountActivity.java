@@ -143,7 +143,7 @@ public class UpholdAccountActivity extends AppCompatActivity {
         MonetaryFormat inputFormat = config.getMaxPrecisionFormat();
         MonetaryFormat hintFormat = config.getFormat();
 
-        UpholdWithdrawalDialog.show(getFragmentManager(), balance,
+        UpholdWithdrawalDialog.show(getSupportFragmentManager(), balance,
                 receivingAddress, currencyCode, inputFormat, hintFormat,
                 new UpholdWithdrawalDialog.OnTransferListener() {
                     @Override

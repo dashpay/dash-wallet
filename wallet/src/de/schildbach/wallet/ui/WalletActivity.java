@@ -175,7 +175,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         handleIntent(getIntent());
 
-        MaybeMaintenanceFragment.add(getFragmentManager());
+        MaybeMaintenanceFragment.add(getSupportFragmentManager());
 
         initUphold();
         initView();
@@ -420,7 +420,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 return true;
 
             case R.id.wallet_options_help:
-                HelpDialogFragment.page(getFragmentManager(), R.string.help_wallet);
+                HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_wallet);
                 return true;
         }
 
@@ -443,7 +443,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         //Only allow to backup when wallet is unlocked
         final WalletLock walletLock = WalletLock.getInstance();
         if (WalletLock.getInstance().isWalletLocked(wallet)) {
-            UnlockWalletDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
+            UnlockWalletDialogFragment.show(getSupportFragmentManager(), new DialogInterface.OnDismissListener() {
                 @Override
                 public void onDismiss(DialogInterface dialog) {
                     if (!walletLock.isWalletLocked(wallet)) {
@@ -456,7 +456,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
-            BackupWalletDialogFragment.show(getFragmentManager());
+            BackupWalletDialogFragment.show(getSupportFragmentManager());
         else
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     REQUEST_CODE_BACKUP_WALLET);
@@ -473,7 +473,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     public void handleBackupWalletToSeed() {
         //if (ContextCompat.checkSelfPermission(this,
         //        Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
-        BackupWalletToSeedDialogFragment.show(getFragmentManager());
+        BackupWalletToSeedDialogFragment.show(getSupportFragmentManager());
         //else
         //    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
         //            REQUEST_CODE_BACKUP_WALLET);
@@ -484,11 +484,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     public void handleEncryptKeys() {
-        EncryptKeysDialogFragment.show(getFragmentManager());
+        EncryptKeysDialogFragment.show(getSupportFragmentManager());
     }
 
     public void handleEncryptKeysRestoredWallet() {
-        EncryptKeysDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
+        EncryptKeysDialogFragment.show(getSupportFragmentManager(), new DialogInterface.OnDismissListener() {
             @Override
             public void onDismiss(DialogInterface dialog) {
                 resetBlockchain();
@@ -501,7 +501,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 R.string.report_issue_dialog_title_issue, R.string.report_issue_dialog_message_issue) {
             @Override
             protected CharSequence subject() {
-                return Constants.REPORT_SUBJECT_ISSUE + " " + application.packageInfo().versionName;
+                return Constants.REPORT_SUBJECT_BEGIN + application.packageInfo().versionName + " " + Constants.REPORT_SUBJECT_ISSUE;
             }
 
             @Override
@@ -708,7 +708,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void showRestoreWalletFromSeedDialog() {
-        RestoreWalletFromSeedDialogFragment.show(getFragmentManager());
+        RestoreWalletFromSeedDialogFragment.show(getSupportFragmentManager());
     }
 
     private void checkLowStorageAlert() {
@@ -812,7 +812,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     R.string.report_issue_dialog_title_crash, R.string.report_issue_dialog_message_crash) {
                 @Override
                 protected CharSequence subject() {
-                    return Constants.REPORT_SUBJECT_CRASH + " " + packageInfo.versionName;
+                    return  Constants.REPORT_SUBJECT_BEGIN + packageInfo.versionName + " " + Constants.REPORT_SUBJECT_CRASH;
                 }
 
                 @Override
@@ -1061,7 +1061,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     public boolean onContextItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.wallet_options_safety:
-                HelpDialogFragment.page(getFragmentManager(), R.string.help_safety);
+                HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_safety);
                 return true;
 
             case R.id.wallet_options_backup_wallet:
@@ -1147,7 +1147,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         isRestoringBackup = restoreBackup;
         if (!wallet.hasKeyChain(path)) {
             if (wallet.isEncrypted()) {
-                EncryptNewKeyChainDialogFragment.show(getFragmentManager(), path);
+                EncryptNewKeyChainDialogFragment.show(getSupportFragmentManager(), path);
             } else {
                 //
                 // Upgrade the wallet now
@@ -1158,7 +1158,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 // Tell the user that the wallet is being upgraded (BIP44)
                 // and they will have to enter a PIN.
                 //
-                UpgradeWalletDisclaimerDialog.show(getFragmentManager());
+                UpgradeWalletDisclaimerDialog.show(getSupportFragmentManager());
             }
         }
         else {
@@ -1183,7 +1183,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     @Override
     public void onNewKeyChainEncrypted() {
-        BackupWalletToSeedDialogFragment.show(getFragmentManager(), true);
+        BackupWalletToSeedDialogFragment.show(getSupportFragmentManager(), true);
     }
 
     /**
