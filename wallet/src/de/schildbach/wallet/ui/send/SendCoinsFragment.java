@@ -1077,7 +1077,7 @@ public final class SendCoinsFragment extends Fragment {
             @Override
             protected void onSuccess(final Transaction transaction) {
                 if (pin != null) {
-                    pinRetryController.successfulAttempt();
+                    pinRetryController.successfulAttempt(config);
                 }
                 sentTransaction = transaction;
 

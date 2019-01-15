@@ -6,6 +6,10 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 
+import org.dash.wallet.common.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
@@ -26,7 +30,9 @@ public class PinRetryController {
     private final static int RETRY_FAIL_TOLERANCE = 3;
     private final static int POW_LOCK_TIME_BASE = 6;
     private final static int FAIL_LIMIT = 8;
-    private final static long ONE_MINUTE_MILLIS = TimeUnit.MINUTES.toMillis(1);
+    private final static long THREE_MINUTE_MILLIS = TimeUnit.MINUTES.toMillis(3);
+
+    private static final Logger log = LoggerFactory.getLogger(PinRetryController.class);
 
     public PinRetryController(Context context) {
         this.context = context;
@@ -39,11 +45,11 @@ public class PinRetryController {
         long failHeight = prefs.getLong(PREFS_FAIL_HEIGHT, 0);
         long now = System.currentTimeMillis();
 
-        boolean locked = secureTime + now < failHeight + pow(POW_LOCK_TIME_BASE, failCount - RETRY_FAIL_TOLERANCE) * ONE_MINUTE_MILLIS
+        boolean locked = secureTime + now < failHeight + pow(POW_LOCK_TIME_BASE, failCount - RETRY_FAIL_TOLERANCE) * THREE_MINUTE_MILLIS
                 && failCount >= RETRY_FAIL_TOLERANCE;
         //TODO: Null secureTime Edge Case
         long lockTimeMillis = (long) (failHeight + pow(POW_LOCK_TIME_BASE, failCount - RETRY_FAIL_TOLERANCE)
-                * ONE_MINUTE_MILLIS - secureTime - now);
+                * THREE_MINUTE_MILLIS - secureTime - now);
         long lockTimeMinutes = TimeUnit.MILLISECONDS.toMinutes(lockTimeMillis);
 
         if (locked) {
@@ -68,6 +74,17 @@ public class PinRetryController {
 
     public void successfulAttempt() {
         clearPreferences();
+    }
+
+    /**
+     * When the PIN is entered successfully, save the time it was entered.
+     * @param config
+     */
+    public void successfulAttempt(Configuration config) {
+        long secureTime = prefs.getLong(PREFS_SECURE_TIME, System.currentTimeMillis());
+        config.setLastUnlockTime(secureTime);
+        successfulAttempt();
+        log.info("PIN entered successfully at " + secureTime/1000);
     }
 
     public void failedAttempt(String pin) {
@@ -131,6 +148,7 @@ public class PinRetryController {
         dialogBuilder.setNegativeButton(R.string.wallet_lock_reset_wallet_title, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
+                log.info("Clearing all app data and exiting.");
                 clearPreferences();
                 WalletApplication.getInstance().eraseAndCreateNewWallet();
                 WalletApplication.getInstance().killAllActivities();

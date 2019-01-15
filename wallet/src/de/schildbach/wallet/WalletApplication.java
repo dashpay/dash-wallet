@@ -131,7 +131,7 @@ public class WalletApplication extends Application {
 
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
             @Override
-            public void onStartedFirst() {
+            public void onStartedAny() {
                 lockWalletIfNeeded();
             }
         });
@@ -632,7 +632,7 @@ public void updateDashMode()
 
     private void lockWalletIfNeeded() {
         WalletLock walletLock = WalletLock.getInstance();
-        if (wallet.isEncrypted() && !walletLock.isWalletLocked(wallet)) {
+        if (walletLock.isWalletLocked(wallet)) {
             walletLock.setWalletLocked(true);
         }
     }

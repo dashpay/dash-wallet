@@ -18,6 +18,7 @@ public abstract class ActivitiesTracker implements Application.ActivityLifecycle
         if (numStarted == 0) {
             onStartedFirst();
         }
+        onStartedAny();
         numStarted++;
     }
 
@@ -55,6 +56,10 @@ public abstract class ActivitiesTracker implements Application.ActivityLifecycle
     }
 
     protected void onStartedFirst() {
+
+    }
+
+    protected void onStartedAny() {
 
     }
 }
