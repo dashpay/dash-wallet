@@ -18,10 +18,12 @@
 package de.schildbach.wallet.ui;
 
 import android.content.DialogInterface;
+import android.os.Build;
 import android.support.v4.app.FragmentManager;
 import android.view.View;
-import de.schildbach.wallet.data.WalletLock;
 
+import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet_test.R;
 
 public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
@@ -43,11 +45,20 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
         this.dialogLayout = R.layout.unlock_wallet_dialog;
     }
 
+    @Override
+    public void onDismiss(DialogInterface dialog) {
+        if (fingerprintCancellationSignal != null) {
+            fingerprintCancellationSignal.cancel();
+        }
+        super.onDismiss(dialog);
+    }
+
     protected void checkPassword(final String password) {
         if (pinRetryController.isLocked()) {
             return;
         }
 
+        fingerprintView.hideError();
         unlockButton.setEnabled(false);
         unlockButton.setText(getText(R.string.encrypt_keys_dialog_state_decrypting));
         pinView.setEnabled(false);
@@ -58,7 +69,16 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
                 if (getActivity() != null && isAdded()) {
                     pinRetryController.successfulAttempt();
                     WalletLock.getInstance().setWalletLocked(false);
+
                     dismissAllowingStateLoss();
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && fingerprintHelper != null) {
+                        if (!fingerprintHelper.isFingerprintEnabled() && WalletApplication
+                                .getInstance().getConfiguration().getRemindEnableFingerprint()) {
+                            EnableFingerprintDialog.show(password,
+                                    getActivity().getFragmentManager());
+                        }
+                    }
                 }
             }
 
