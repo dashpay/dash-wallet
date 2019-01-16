@@ -70,14 +70,12 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.DynamicFeeLoader;
-import org.dash.wallet.common.data.ExchangeRate;
-import de.schildbach.wallet.data.ExchangeRatesLoader;
-import de.schildbach.wallet.data.ExchangeRatesProvider;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.data.PaymentIntent.Standard;
 import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.offline.DirectPaymentTask;
+import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
@@ -95,11 +93,15 @@ import de.schildbach.wallet.ui.UnlockWalletDialogFragment;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.util.Bluetooth;
 import org.dash.wallet.common.util.MonetarySpannable;
+
+import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
 import android.bluetooth.BluetoothAdapter;
 import android.content.ComponentName;
 import android.content.ContentResolver;
@@ -115,19 +117,22 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
+import android.support.annotation.RequiresApi;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
-import android.support.v4.content.ContextCompat;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.content.res.ResourcesCompat;
+import android.support.v4.os.CancellationSignal;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.Spannable;
@@ -141,6 +146,8 @@ import android.view.View.OnClickListener;
 import android.view.View.OnFocusChangeListener;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
@@ -150,6 +157,7 @@ import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.CursorAdapter;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 /**
@@ -189,7 +197,8 @@ public final class SendCoinsFragment extends Fragment {
     private TransactionsAdapter sentTransactionAdapter;
     private RecyclerView.ViewHolder sentTransactionViewHolder;
     private EditText privateKeyPasswordView;
-    private View privateKeyBadPasswordView;
+    private TextView privateKeyBadPasswordView;
+    private ImageView fingerprintIcon;
     private TextView attemptsRemainingTextView;
     private Button viewGo;
 
@@ -210,14 +219,14 @@ public final class SendCoinsFragment extends Fragment {
     private Transaction dryrunTransaction;
     private Exception dryrunException;
     private PinRetryController pinRetryController;
+    private CancellationSignal fingerprintCancellationSignal;
 
     private boolean forceInstantSend = false;
 
     private static final int ID_DYNAMIC_FEES_LOADER = 0;
-    private static final int ID_RATE_LOADER = 1;
-    private static final int ID_BLOCKCHAIN_STATE_LOADER = 2;
-    private static final int ID_RECEIVING_ADDRESS_BOOK_LOADER = 3;
-    private static final int ID_RECEIVING_ADDRESS_NAME_LOADER = 4;
+    private static final int ID_BLOCKCHAIN_STATE_LOADER = 1;
+    private static final int ID_RECEIVING_ADDRESS_BOOK_LOADER = 2;
+    private static final int ID_RECEIVING_ADDRESS_NAME_LOADER = 3;
 
     private static final int REQUEST_CODE_SCAN = 0;
     private static final int REQUEST_CODE_ENABLE_BLUETOOTH_FOR_PAYMENT_REQUEST = 1;
@@ -388,28 +397,6 @@ public final class SendCoinsFragment extends Fragment {
 
         @Override
         public void onLoaderReset(final Loader<Map<FeeCategory, Coin>> loader) {
-        }
-    };
-
-    private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>() {
-        @Override
-        public Loader<Cursor> onCreateLoader(final int id, final Bundle args) {
-            return new ExchangeRatesLoader(activity, config);
-        }
-
-        @Override
-        public void onLoadFinished(final Loader<Cursor> loader, final Cursor data) {
-            if (data != null && data.getCount() > 0) {
-                data.moveToFirst();
-                final ExchangeRate exchangeRate = ExchangeRatesProvider.getExchangeRate(data);
-
-                if (state == null || state.compareTo(State.INPUT) <= 0)
-                    amountCalculatorLink.setExchangeRate(exchangeRate.rate);
-            }
-        }
-
-        @Override
-        public void onLoaderReset(final Loader<Cursor> loader) {
         }
     };
 
@@ -742,6 +729,7 @@ public final class SendCoinsFragment extends Fragment {
         privateKeyPasswordView = (EditText) view.findViewById(R.id.send_coins_private_key_password);
         privateKeyBadPasswordView = view.findViewById(R.id.send_coins_private_key_bad_password);
         attemptsRemainingTextView = (TextView) view.findViewById(R.id.pin_attempts);
+        fingerprintIcon = view.findViewById(R.id.fingerprint_icon);
 
         viewGo = (Button) view.findViewById(R.id.send_coins_go);
         viewGo.setOnClickListener(new OnClickListener() {
@@ -754,6 +742,20 @@ public final class SendCoinsFragment extends Fragment {
                 }
 
                 updateView();
+            }
+        });
+
+
+        ExchangeRatesViewModel exchangeRatesViewModel = ViewModelProviders.of(this)
+                .get(ExchangeRatesViewModel.class);
+        exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this,
+                new Observer<de.schildbach.wallet.rates.ExchangeRate>() {
+            @Override
+            public void onChanged(de.schildbach.wallet.rates.ExchangeRate exchangeRate) {
+                if (exchangeRate != null) {
+                    amountCalculatorLink.setExchangeRate(new org.bitcoinj.utils.ExchangeRate(
+                            Coin.COIN, exchangeRate.getFiat()));
+                }
             }
         });
 
@@ -778,13 +780,16 @@ public final class SendCoinsFragment extends Fragment {
         privateKeyPasswordView.addTextChangedListener(privateKeyPasswordListener);
 
         loaderManager.initLoader(ID_DYNAMIC_FEES_LOADER, null, dynamicFeesLoaderCallbacks);
-        loaderManager.initLoader(ID_RATE_LOADER, null, rateLoaderCallbacks);
         loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
         loaderManager.initLoader(ID_RECEIVING_ADDRESS_BOOK_LOADER, null, receivingAddressLoaderCallbacks);
         loaderManager.initLoader(ID_RECEIVING_ADDRESS_NAME_LOADER, null, receivingAddressLoaderCallbacks);
 
         updateView();
         handler.post(dryrunRunnable);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            initFingerprintHelper();
+        }
     }
 
     @Override
@@ -792,7 +797,6 @@ public final class SendCoinsFragment extends Fragment {
         loaderManager.destroyLoader(ID_RECEIVING_ADDRESS_NAME_LOADER);
         loaderManager.destroyLoader(ID_RECEIVING_ADDRESS_BOOK_LOADER);
         loaderManager.destroyLoader(ID_BLOCKCHAIN_STATE_LOADER);
-        loaderManager.destroyLoader(ID_RATE_LOADER);
         loaderManager.destroyLoader(ID_DYNAMIC_FEES_LOADER);
 
         privateKeyPasswordView.removeTextChangedListener(privateKeyPasswordListener);
@@ -800,6 +804,9 @@ public final class SendCoinsFragment extends Fragment {
 
         contentResolver.unregisterContentObserver(contentObserver);
 
+        if (fingerprintCancellationSignal != null) {
+            fingerprintCancellationSignal.cancel();
+        }
         super.onPause();
     }
 
@@ -953,6 +960,34 @@ public final class SendCoinsFragment extends Fragment {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private void initFingerprintHelper() {
+        FingerprintHelper fingerprintHelper = new FingerprintHelper(getActivity());
+        if (fingerprintHelper.init() && fingerprintHelper.isFingerprintEnabled()) {
+            fingerprintIcon.setVisibility(View.VISIBLE);
+            fingerprintCancellationSignal = new CancellationSignal();
+            fingerprintHelper.getPassword(fingerprintCancellationSignal, new FingerprintHelper.Callback() {
+                @Override
+                public void onSuccess(String savedPass) {
+                    privateKeyPasswordView.setText(savedPass);
+                    removeFingerprintError();
+                }
+
+                @Override
+                public void onFailure(String message, boolean canceled, boolean exceededMaxAttempts) {
+                    if (!canceled) {
+                        showFingerprintError(exceededMaxAttempts);
+                    }
+                }
+
+                @Override
+                public void onHelp(int helpCode, String helpString) {
+                    showFingerprintError(false);
+                }
+            });
+        }
     }
 
     private void validateReceivingAddress() {
@@ -1187,6 +1222,7 @@ public final class SendCoinsFragment extends Fragment {
                 setState(State.INPUT);
 
                 pinRetryController.failedAttempt(pin);
+                privateKeyBadPasswordView.setText(R.string.private_key_bad_password);
                 privateKeyBadPasswordView.setVisibility(View.VISIBLE);
                 attemptsRemainingTextView.setVisibility(View.VISIBLE);
                 attemptsRemainingTextView.setText(pinRetryController.getRemainingAttemptsMessage());
@@ -1234,6 +1270,9 @@ public final class SendCoinsFragment extends Fragment {
                 @Override
                 public void onDismiss(DialogInterface dialog) {
                     if (!walletLock.isWalletLocked(wallet)) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            initFingerprintHelper();
+                        }
                         handleEmpty();
                     }
                 }
@@ -1483,6 +1522,23 @@ public final class SendCoinsFragment extends Fragment {
         } else {
             getView().setVisibility(View.GONE);
         }
+    }
+
+    protected void showFingerprintError(boolean exceededMaxAttempts) {
+        fingerprintIcon.setColorFilter(ContextCompat.getColor(getActivity(), R.color.fg_error));
+        Animation shakeAnimation = AnimationUtils.loadAnimation(getActivity(), R.anim.shake);
+        fingerprintIcon.startAnimation(shakeAnimation);
+        if (exceededMaxAttempts) {
+            privateKeyBadPasswordView.setText(R.string.unlock_with_fingerprint_error_max_attempts);
+        } else {
+            privateKeyBadPasswordView.setText(R.string.unlock_with_fingerprint_error);
+        }
+        privateKeyBadPasswordView.setVisibility(View.VISIBLE);
+    }
+
+    protected void removeFingerprintError() {
+        fingerprintIcon.setColorFilter(ContextCompat.getColor(getActivity(), android.R.color.transparent));
+        privateKeyBadPasswordView.setVisibility(View.INVISIBLE);
     }
 
     private void initStateFromIntentExtras(final Bundle extras) {

@@ -1,25 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ViewAnimator xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/wallet_transactions_group"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
     <ProgressBar
+        android:id="@+id/loading"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center" />
 
-    <TextView
-        app:fontFamily="@font/montserrat"
-        android:id="@+id/wallet_transactions_empty"
+    <LinearLayout
+        android:id="@+id/empty_locked_group"
+        android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_margin="56dp"
+        android:layout_height="wrap_content"
         android:gravity="center"
-        android:textSize="@dimen/font_size_small" />
+        android:clipToPadding="false"
+        android:layout_gravity="center"
+        android:layout_margin="56dp">
+
+        <TextView
+            android:id="@+id/wallet_transactions_empty"
+            app:fontFamily="@font/montserrat"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            tools:text="wallet_lock_unlock_to_see_txs_title"
+            android:textSize="@dimen/font_size_small" />
+
+        <LinearLayout
+            android:id="@+id/fingerprint_group"
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <ImageView
+                android:id="@+id/fingerprint_icon"
+                android:src="@drawable/ic_fingerprint_black_24dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="@dimen/list_entry_padding"
+                android:layout_width="36dp"
+                android:layout_height="36dp" />
+
+            <TextView
+                android:id="@+id/fingerprint_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/or_unlock_with_fingerprint"
+                android:gravity="center"
+                style="@style/MontserratMedium.DB.14"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/transaction_list_container"
         android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -37,4 +79,4 @@
 
     </LinearLayout>
 
-</ViewAnimator>
+</FrameLayout>

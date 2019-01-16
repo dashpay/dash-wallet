@@ -50,6 +50,7 @@ import de.schildbach.wallet.ui.TransactionsAdapter.Warning;
 import de.schildbach.wallet.ui.send.RaiseFeeDialogFragment;
 import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.CrashReporter;
+import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.Qr;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet.util.WalletUtils;
@@ -73,12 +74,14 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
+import android.support.annotation.RequiresApi;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
-import android.support.v4.content.ContextCompat;
 import android.support.v4.content.Loader;
 import android.support.v4.content.LocalBroadcastManager;
+import android.support.v4.os.CancellationSignal;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.Spannable;
@@ -95,10 +98,12 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.PopupMenu.OnMenuItemClickListener;
 import android.widget.TextView;
-import android.widget.ViewAnimator;
 
 /**
  * @author Andreas Schildbach
@@ -118,9 +123,13 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     private ContentResolver resolver;
     private LoaderManager loaderManager;
     private DevicePolicyManager devicePolicyManager;
-    private ViewAnimator viewGroup;
 
     private TextView emptyView;
+    private View loading;
+    private View transactionListContainer;
+    private View fingerprintGroup;
+    private ImageView fingerprintIcon;
+    private TextView fingerprintText;
     private RecyclerView recyclerView;
     private View backupDisclaimerView;
     private TextView backupDisclaimerTitle;
@@ -128,6 +137,9 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     private MenuItem filterMenuItem;
     @Nullable
     private Direction direction;
+
+    private FingerprintHelper fingerprintHelper;
+    private CancellationSignal fingerprintCancellationSignal;
 
     private final Handler handler = new Handler();
 
@@ -184,9 +196,12 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
             final Bundle savedInstanceState) {
         final View view = inflater.inflate(R.layout.wallet_transactions_fragment, container, false);
 
-        viewGroup = (ViewAnimator) view.findViewById(R.id.wallet_transactions_group);
-
-        emptyView = (TextView) view.findViewById(R.id.wallet_transactions_empty);
+        emptyView = view.findViewById(R.id.wallet_transactions_empty);
+        fingerprintGroup = view.findViewById(R.id.fingerprint_group);
+        fingerprintIcon = fingerprintGroup.findViewById(R.id.fingerprint_icon);
+        fingerprintText = fingerprintGroup.findViewById(R.id.fingerprint_text);
+        loading = view.findViewById(R.id.loading);
+        transactionListContainer = view.findViewById(R.id.transaction_list_container);
 
         backupDisclaimerView = view.findViewById(R.id.backup_wallet_disclaimer);
         backupDisclaimerTitle = (TextView) view.findViewById(R.id.backup_warning_title);
@@ -250,6 +265,9 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         updateView();
 
         WalletLock.getInstance().addListener(this);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            initFingerprintHelper();
+        }
     }
 
     @Override
@@ -268,6 +286,9 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
         WalletLock.getInstance().removeListener(this);
 
+        if (fingerprintCancellationSignal != null) {
+            fingerprintCancellationSignal.cancel();
+        }
         super.onPause();
     }
 
@@ -473,20 +494,33 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     public void onLoadFinished(final Loader<List<Transaction>> loader, final List<Transaction> transactions) {
         final Direction direction = ((TransactionsLoader) loader).getDirection();
 
+        loading.setVisibility(View.GONE);
         adapter.replace(transactions);
         updateView();
 
         if (WalletLock.getInstance().isWalletLocked(wallet)) {
-            hideTransactions();
+            showLockedView();
         } else if (transactions.isEmpty()) {
             showEmptyTransactions(direction);
         } else {
-            viewGroup.setDisplayedChild(2);
+            showTransactionList();
         }
     }
 
-    private void hideTransactions() {
-        viewGroup.setDisplayedChild(1);
+    private void showTransactionList() {
+        fingerprintGroup.setVisibility(View.GONE);
+        emptyView.setVisibility(View.GONE);
+        transactionListContainer.setVisibility(View.VISIBLE);
+    }
+
+    private void showEmptyView() {
+        emptyView.setVisibility(View.VISIBLE);
+        fingerprintGroup.setVisibility(View.GONE);
+        transactionListContainer.setVisibility(View.GONE);
+    }
+
+    private void showLockedView() {
+        showEmptyView();
 
         final SpannableStringBuilder lockedWalletText = new SpannableStringBuilder(
                 getString(R.string.wallet_lock_unlock_to_see_txs_title));
@@ -508,10 +542,12 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         }
 
         emptyView.setText(lockedWalletText);
+        fingerprintGroup.setVisibility(fingerprintHelper != null &&
+                fingerprintHelper.isFingerprintEnabled() ? View.VISIBLE : View.GONE);
     }
 
     private void showEmptyTransactions(Direction direction) {
-        viewGroup.setDisplayedChild(1);
+        showEmptyView();
 
         final SpannableStringBuilder emptyText = new SpannableStringBuilder(
                 getString(direction == Direction.SENT ? R.string.wallet_transactions_fragment_empty_text_sent
@@ -707,10 +743,58 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
             return null;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    public void initFingerprintHelper() {
+        if (fingerprintHelper == null) {
+            fingerprintHelper = new FingerprintHelper(getActivity());
+        }
+        if (fingerprintHelper.init() && fingerprintHelper.isFingerprintEnabled()) {
+            fingerprintGroup.setVisibility(View.VISIBLE);
+            hideFingerprintError();
+            fingerprintCancellationSignal = new CancellationSignal();
+            fingerprintHelper.getPassword(fingerprintCancellationSignal, new FingerprintHelper.Callback() {
+                @Override
+                public void onSuccess(String savedPass) {
+                    hideFingerprintError();
+                    WalletLock.getInstance().setWalletLocked(false);
+                }
+
+                @Override
+                public void onFailure(String message, boolean canceled, boolean exceededMaxAttempts) {
+                    if (!canceled) {
+                        showFingerprintError(exceededMaxAttempts);
+                    }
+                }
+
+                @Override
+                public void onHelp(int helpCode, String helpString) {
+                    showFingerprintError(false);
+                }
+            });
+        }
+    }
+
+    public void hideFingerprintError() {
+        fingerprintIcon.setColorFilter(ContextCompat.getColor(getContext(),
+                android.R.color.transparent));
+        fingerprintText.setText(R.string.or_unlock_with_fingerprint);
+    }
+
+    public void showFingerprintError(boolean exceededMaxAttempts) {
+        Animation shakeAnimation = AnimationUtils.loadAnimation(getActivity(), R.anim.shake);
+        fingerprintIcon.startAnimation(shakeAnimation);
+        fingerprintIcon.setColorFilter(ContextCompat.getColor(getActivity(), R.color.fg_error));
+        if (exceededMaxAttempts) {
+            fingerprintText.setText(R.string.unlock_with_fingerprint_error_max_attempts);
+        } else {
+            fingerprintText.setText(R.string.unlock_with_fingerprint_error);
+        }
+    }
+
     @Override
     public void onLockChanged(boolean locked) {
         if (locked) {
-            hideTransactions();
+            showLockedView();
         } else {
             reloadTransactions();
         }

@@ -18,8 +18,9 @@
 package de.schildbach.wallet.ui;
 
 import android.app.Activity;
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
 import android.content.Intent;
-import android.database.Cursor;
 import android.os.Bundle;
 
 import android.support.v4.app.Fragment;
@@ -43,11 +44,10 @@ import javax.annotation.Nullable;
 
 import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.data.ExchangeRatesProvider;
-import org.dash.wallet.common.data.ExchangeRate;
-import de.schildbach.wallet.data.ExchangeRatesLoader;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.WalletLock;
+import de.schildbach.wallet.rates.ExchangeRate;
+import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet.util.BlockchainStateUtils;
@@ -75,6 +75,8 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 
 	private String progressMessage;
 
+	private ExchangeRatesViewModel exchangeRatesViewModel;
+
 	@Nullable
 	private Coin balance = null;
 	@Nullable
@@ -85,9 +87,8 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 	private int masternodeSyncStatus = MasternodeSync.MASTERNODE_SYNC_FINISHED;
 
 	private static final int ID_BALANCE_LOADER = 0;
-	private static final int ID_RATE_LOADER = 1;
-	private static final int ID_BLOCKCHAIN_STATE_LOADER = 2;
-	private static final int ID_MASTERNODE_SYNC_LOADER = 3;
+	private static final int ID_BLOCKCHAIN_STATE_LOADER = 1;
+	private static final int ID_MASTERNODE_SYNC_LOADER = 2;
 
 	private static final long BLOCKCHAIN_UPTODATE_THRESHOLD_MS = DateUtils.HOUR_IN_MILLIS;
 	private static final Coin TOO_MUCH_BALANCE_THRESHOLD = Coin.COIN.multiply(30);
@@ -121,6 +122,7 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 		super.onActivityCreated(savedInstanceState);
 		appBarMessageView = activity.findViewById(R.id.toolbar_message);
 		appBarBottom = activity.findViewById(R.id.toolbar_bottom);
+		exchangeRatesViewModel = ViewModelProviders.of(this).get(ExchangeRatesViewModel.class);
 	}
 
 	@Override
@@ -162,12 +164,22 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 		super.onResume();
 
 		loaderManager.initLoader(ID_BALANCE_LOADER, null, balanceLoaderCallbacks);
-		loaderManager.initLoader(ID_RATE_LOADER, null, rateLoaderCallbacks);
 		if(!initComplete) {
 			loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
 			initComplete = true;
 		}
 		else loaderManager.restartLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
+
+		exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this,
+				new Observer<de.schildbach.wallet.rates.ExchangeRate>() {
+			@Override
+			public void onChanged(de.schildbach.wallet.rates.ExchangeRate rate) {
+				if (rate != null) {
+					exchangeRate = rate;
+					updateView();
+				}
+			}
+		});
 
 		updateView();
 
@@ -178,7 +190,6 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 	public void onPause()
 	{
 		loaderManager.destroyLoader(ID_BLOCKCHAIN_STATE_LOADER);
-		loaderManager.destroyLoader(ID_RATE_LOADER);
 		loaderManager.destroyLoader(ID_BALANCE_LOADER);
 		//loaderManager.destroyLoader(ID_MASTERNODE_SYNC_LOADER);
 
@@ -222,7 +233,9 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 				{
 					if (exchangeRate != null)
 					{
-						final Fiat localValue = exchangeRate.rate.coinToFiat(balance);
+						org.bitcoinj.utils.ExchangeRate rate = new org.bitcoinj.utils.ExchangeRate(Coin.COIN,
+								exchangeRate.getFiat());
+						final Fiat localValue = rate.coinToFiat(balance);
 						viewBalanceLocal.setVisibility(View.VISIBLE);
 						viewBalanceLocal.setFormat(Constants.LOCAL_FORMAT.code(0,
 								org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO + exchangeRate.getCurrencyCode()));
@@ -352,31 +365,6 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 
 		@Override
 		public void onLoaderReset(final Loader<Coin> loader)
-		{
-		}
-	};
-
-	private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>()
-	{
-		@Override
-		public Loader<Cursor> onCreateLoader(final int id, final Bundle args)
-		{
-			return new ExchangeRatesLoader(activity, config);
-		}
-
-		@Override
-		public void onLoadFinished(final Loader<Cursor> loader, final Cursor data)
-		{
-			if (data != null && data.getCount() > 0)
-			{
-				data.moveToFirst();
-				exchangeRate = ExchangeRatesProvider.getExchangeRate(data);
-				updateView();
-			}
-		}
-
-		@Override
-		public void onLoaderReset(final Loader<Cursor> loader)
 		{
 		}
 	};

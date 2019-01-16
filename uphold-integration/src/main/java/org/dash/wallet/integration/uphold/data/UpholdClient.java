@@ -23,6 +23,7 @@ import android.content.SharedPreferences;
 import com.securepreferences.SecurePreferences;
 import com.squareup.moshi.Moshi;
 
+import org.dash.wallet.common.data.BigDecimalAdapter;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

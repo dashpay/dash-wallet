@@ -179,16 +179,32 @@
 				android:layout_marginStart="3dp"
 				style="@style/MontserratSemiBold.DB.14" />
 
-			<EditText
-				android:id="@+id/send_coins_private_key_password"
+			<RelativeLayout
 				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				style="@style/MontserratMedium"
-				android:textSize="14sp"
-				android:hint="@string/private_key_password"
-				android:imeOptions="flagNoExtractUi"
-				android:inputType="numberPassword"
-				android:singleLine="true" />
+				android:layout_height="wrap_content">
+
+				<ImageView
+					android:id="@+id/fingerprint_icon"
+					android:src="@drawable/ic_fingerprint_black_24dp"
+					android:layout_alignParentRight="true"
+					android:layout_alignParentEnd="true"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:visibility="gone"
+					tools:visibility="visible"/>
+
+				<EditText
+					android:id="@+id/send_coins_private_key_password"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					style="@style/MontserratMedium"
+					android:textSize="14sp"
+					android:hint="@string/private_key_password"
+					android:imeOptions="flagNoExtractUi"
+					android:inputType="numberPassword"
+					android:singleLine="true" />
+
+			</RelativeLayout>
 
 			<TextView
 				android:id="@+id/send_coins_private_key_bad_password"
