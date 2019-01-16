@@ -46,6 +46,7 @@ dependencies {
     implementation 'com.google.code.findbugs:jsr305:2.0.3'
 
     implementation project(path: ':common')
+    annotationProcessor "android.arch.persistence.room:compiler:1.1.1"
     //releaseImplementation project(path: ':common', configuration: 'release')
     //Uphold Integration
     implementation project(path: ':uphold-integration')

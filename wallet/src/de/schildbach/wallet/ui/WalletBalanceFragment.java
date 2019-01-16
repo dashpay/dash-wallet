@@ -27,9 +27,7 @@ import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import org.dash.wallet.common.data.ExchangeRate;
-import de.schildbach.wallet.data.ExchangeRatesLoader;
-import de.schildbach.wallet.data.ExchangeRatesProvider;
+import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet.ui.send.FeeCategory;
@@ -37,8 +35,9 @@ import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
 import android.content.Intent;
-import android.database.Cursor;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
@@ -64,6 +63,7 @@ public final class WalletBalanceFragment extends Fragment {
     private Configuration config;
     private Wallet wallet;
     private LoaderManager loaderManager;
+    private ExchangeRatesViewModel exchangeRatesViewModel;
 
     private View viewBalance;
     private CurrencyTextView viewBalanceBtc;
@@ -77,7 +77,7 @@ public final class WalletBalanceFragment extends Fragment {
     @Nullable
     private Coin balance = null;
     @Nullable
-    private ExchangeRate exchangeRate = null;
+    private de.schildbach.wallet.rates.ExchangeRate exchangeRate = null;
     @Nullable
     private BlockchainState blockchainState = null;
 
@@ -145,6 +145,7 @@ public final class WalletBalanceFragment extends Fragment {
         viewBalanceLocal.setStrikeThru(Constants.TEST);
 
         viewProgress = (TextView) view.findViewById(R.id.wallet_balance_progress);
+        exchangeRatesViewModel = ViewModelProviders.of(this).get(ExchangeRatesViewModel.class);
     }
 
     @Override
@@ -152,8 +153,20 @@ public final class WalletBalanceFragment extends Fragment {
         super.onResume();
 
         loaderManager.initLoader(ID_BALANCE_LOADER, null, balanceLoaderCallbacks);
-        loaderManager.initLoader(ID_RATE_LOADER, null, rateLoaderCallbacks);
         loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
+
+
+        exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this,
+                new Observer<de.schildbach.wallet.rates.ExchangeRate>() {
+                    @Override
+                    public void onChanged(de.schildbach.wallet.rates.ExchangeRate rate) {
+                        if (rate != null) {
+                            exchangeRate = rate;
+                            updateView();
+                        }
+                    }
+                });
+
 
         updateView();
     }
@@ -248,7 +261,9 @@ public final class WalletBalanceFragment extends Fragment {
 
                 if (showLocalBalance) {
                     if (exchangeRate != null) {
-                        final Fiat localValue = exchangeRate.rate.coinToFiat(balance);
+                        org.bitcoinj.utils.ExchangeRate rate = new org.bitcoinj.utils.ExchangeRate(Coin.COIN,
+                                exchangeRate.getFiat());
+                        final Fiat localValue = rate.coinToFiat(balance);
                         viewBalanceLocal.setVisibility(View.VISIBLE);
                         viewBalanceLocal.setFormat(Constants.LOCAL_FORMAT.code(0,
                                 PREFIX_ALMOST_EQUAL_TO + exchangeRate.getCurrencyCode()));
@@ -303,26 +318,6 @@ public final class WalletBalanceFragment extends Fragment {
 
         @Override
         public void onLoaderReset(final Loader<Coin> loader) {
-        }
-    };
-
-    private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>() {
-        @Override
-        public Loader<Cursor> onCreateLoader(final int id, final Bundle args) {
-            return new ExchangeRatesLoader(activity, config);
-        }
-
-        @Override
-        public void onLoadFinished(final Loader<Cursor> loader, final Cursor data) {
-            if (data != null && data.getCount() > 0) {
-                data.moveToFirst();
-                exchangeRate = ExchangeRatesProvider.getExchangeRate(data);
-                updateView();
-            }
-        }
-
-        @Override
-        public void onLoaderReset(final Loader<Cursor> loader) {
         }
     };
 }

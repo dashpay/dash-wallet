@@ -61,6 +61,8 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.DynamicFeeLoader;
 import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.rates.ExchangeRate;
+import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
@@ -71,6 +73,7 @@ import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.arch.lifecycle.Observer;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -95,6 +98,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
+import android.arch.lifecycle.ViewModelProviders;
 
 /**
  * @author Andreas Schildbach
@@ -127,6 +131,7 @@ public class SweepWalletFragment extends Fragment {
 	private RecyclerView.ViewHolder sweepTransactionViewHolder;
 	private Button viewGo;
 	private FloatingActionButton viewFabScanQr;
+	private ExchangeRate currentExchangeRate;
 
 	private MenuItem reloadAction;
 	private MenuItem scanAction;
@@ -248,6 +253,18 @@ public class SweepWalletFragment extends Fragment {
 					handleSweep();
 			}
 		});
+
+		ExchangeRatesViewModel exchangeRatesViewModel = ViewModelProviders.of(this)
+				.get(ExchangeRatesViewModel.class);
+		exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this,
+				new Observer<ExchangeRate>() {
+					@Override
+					public void onChanged(de.schildbach.wallet.rates.ExchangeRate exchangeRate) {
+						if (exchangeRate != null) {
+							currentExchangeRate = exchangeRate;
+						}
+					}
+				});
 
 		return view;
 	}
@@ -671,6 +688,11 @@ public class SweepWalletFragment extends Fragment {
 
 		final SendRequest sendRequest = SendRequest.emptyWallet(application.getWallet().freshReceiveAddress());
 		sendRequest.feePerKb = fees.get(FeeCategory.NORMAL);
+
+		if (currentExchangeRate != null) {
+			sendRequest.exchangeRate = new org.bitcoinj.utils.ExchangeRate(
+					Coin.COIN, currentExchangeRate.getFiat());
+		}
 
 		new SendCoinsOfflineTask(walletToSweep, backgroundHandler) {
 			@Override
