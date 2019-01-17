@@ -186,7 +186,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             upgradeWalletKeyChains(Constants.BIP44_PATH, false);
         }
 
-        if (InstantSend.canAutoLock() && !config.getFastestNetworkAnncmntShown()) {
+        if (!config.getFastestNetworkAnncmntShown()) {
             showFastestNetworkAnncmnt();
         }
     }
