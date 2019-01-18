@@ -630,7 +630,7 @@ public void updateDashMode()
 		context.setLiteMode(config.getLiteMode());
 		}
 
-    private void lockWalletIfNeeded() {
+    public void lockWalletIfNeeded() {
         WalletLock walletLock = WalletLock.getInstance();
         if (walletLock.isWalletLocked(wallet)) {
             walletLock.setWalletLocked(true);

@@ -55,6 +55,7 @@ import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
+import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.preference.PreferenceActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
@@ -262,6 +263,14 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         checkLowStorageAlert();
         detectUserCountry();
+
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                invalidateOptionsMenu();
+                application.lockWalletIfNeeded();
+            }
+        }, PinRetryController.THREE_MINUTE_MILLIS);
     }
 
     @Override
@@ -346,13 +355,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     @Override
     public boolean onCreateOptionsMenu(final Menu menu) {
-        super.onCreateOptionsMenu(menu);
-
         getMenuInflater().inflate(R.menu.wallet_options, menu);
-
-        MenuItem walletLockMenuItem = menu.findItem(R.id.wallet_options_lock);
-        walletLockMenuItem.setVisible(WalletLock.getInstance().isWalletLocked(wallet));
-
+        super.onCreateOptionsMenu(menu);
         return true;
     }
 

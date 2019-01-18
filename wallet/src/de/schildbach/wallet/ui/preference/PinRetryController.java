@@ -30,7 +30,7 @@ public class PinRetryController {
     private final static int RETRY_FAIL_TOLERANCE = 3;
     private final static int POW_LOCK_TIME_BASE = 6;
     private final static int FAIL_LIMIT = 8;
-    private final static long THREE_MINUTE_MILLIS = TimeUnit.MINUTES.toMillis(3);
+    public final static long THREE_MINUTE_MILLIS = TimeUnit.MINUTES.toMillis(3);
 
     private static final Logger log = LoggerFactory.getLogger(PinRetryController.class);
 
@@ -81,7 +81,7 @@ public class PinRetryController {
      * @param config
      */
     public void successfulAttempt(Configuration config) {
-        long secureTime = prefs.getLong(PREFS_SECURE_TIME, System.currentTimeMillis());
+        long secureTime = System.currentTimeMillis();
         config.setLastUnlockTime(secureTime);
         successfulAttempt();
         log.info("PIN entered successfully at " + secureTime/1000);
