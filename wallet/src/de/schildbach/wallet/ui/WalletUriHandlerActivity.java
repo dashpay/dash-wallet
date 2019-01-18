@@ -28,6 +28,10 @@ import android.support.annotation.Nullable;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
+import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
+
+import java.util.Set;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
@@ -75,58 +79,72 @@ public final class WalletUriHandlerActivity extends Activity {
         final String scheme = intentUri != null ? intentUri.getScheme() : null;
 
         if (Intent.ACTION_VIEW.equals(action) && Constants.WALLET_URI_SCHEME.equals(scheme)) {
-
-            new InputParser.WalletUriParser(intentUri) {
-                @Override
-                protected void handlePaymentIntent(final PaymentIntent paymentIntent, boolean forceInstantSend) {
-                    SendCoinsActivity.sendFromWalletUri(
-                            WalletUriHandlerActivity.this, REQUEST_CODE_SEND_FROM_WALLET_URI, paymentIntent, forceInstantSend);
+            if (intentUri.getHost().equalsIgnoreCase("brokers")) {
+                if (intentUri.getPath().contains("uphold")) {
+                    String code = intentUri.getQueryParameter("code");
+                    String state = intentUri.getQueryParameter("state");
+                    if (code != null && state != null) {
+                        Intent upholdActivityIntent = new Intent(this, UpholdSplashActivity.class);
+                        upholdActivityIntent.putExtra(UpholdSplashActivity.UPHOLD_EXTRA_CODE, code);
+                        upholdActivityIntent.putExtra(UpholdSplashActivity.UPHOLD_EXTRA_STATE,
+                                intentUri.getQueryParameter("state"));
+                        startActivity(upholdActivityIntent);
+                    }
                 }
+                finish();
+            } else {
+                new InputParser.WalletUriParser(intentUri) {
+                    @Override
+                    protected void handlePaymentIntent(final PaymentIntent paymentIntent, boolean forceInstantSend) {
+                        SendCoinsActivity.sendFromWalletUri(
+                                WalletUriHandlerActivity.this, REQUEST_CODE_SEND_FROM_WALLET_URI, paymentIntent, forceInstantSend);
+                    }
 
-                protected void handleMasterPublicKeyRequest(String sender) {
-                    String confirmationMessage = getString(R.string.wallet_uri_handler_public_key_request_dialog_msg, sender);
-                    showConfirmationDialog(confirmationMessage, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            String watchingKey = wallet.getWatchingKey().serializePubB58(wallet.getNetworkParameters());
-                            Uri requestData = getIntent().getData();
-                            Intent result = WalletUri.createMasterPublicKeyResult(requestData, watchingKey, null, getAppName());
-                            setResult(RESULT_OK, result);
-                            finish();
-                        }
-                    });
-                }
+                    protected void handleMasterPublicKeyRequest(String sender) {
+                        String confirmationMessage = getString(R.string.wallet_uri_handler_public_key_request_dialog_msg, sender);
+                        showConfirmationDialog(confirmationMessage, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                String watchingKey = wallet.getWatchingKey().serializePubB58(wallet.getNetworkParameters());
+                                Uri requestData = getIntent().getData();
+                                Intent result = WalletUri.createMasterPublicKeyResult(requestData, watchingKey, null, getAppName());
+                                setResult(RESULT_OK, result);
+                                finish();
+                            }
+                        });
+                    }
 
-                protected void handleAddressRequest(String sender) {
-                    String confirmationMessage = getString(R.string.wallet_uri_handler_address_request_dialog_msg, sender);
-                    showConfirmationDialog(confirmationMessage, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            Address address = wallet.freshReceiveAddress();
-                            Uri requestData = getIntent().getData();
-                            Intent result = WalletUri.createAddressResult(requestData, address.toBase58(), getAppName());
-                            setResult(RESULT_OK, result);
-                            finish();
-                        }
-                    });
-                }
+                    protected void handleAddressRequest(String sender) {
+                        String confirmationMessage = getString(R.string.wallet_uri_handler_address_request_dialog_msg, sender);
+                        showConfirmationDialog(confirmationMessage, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                Address address = wallet.freshReceiveAddress();
+                                Uri requestData = getIntent().getData();
+                                Intent result = WalletUri.createAddressResult(requestData, address.toBase58(), getAppName());
+                                setResult(RESULT_OK, result);
+                                finish();
+                            }
+                        });
+                    }
 
-                @Override
-                protected void error(final int messageResId, final Object... messageArgs) {
-                    dialog(WalletUriHandlerActivity.this, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            finish();
-                        }
-                    }, 0, messageResId, messageArgs);
-                }
+                    @Override
+                    protected void error(final int messageResId, final Object... messageArgs) {
+                        dialog(WalletUriHandlerActivity.this, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                finish();
+                            }
+                        }, 0, messageResId, messageArgs);
+                    }
 
-                private String getAppName() {
-                    ApplicationInfo applicationInfo = getApplicationInfo();
-                    int stringId = applicationInfo.labelRes;
-                    return stringId == 0 ? applicationInfo.nonLocalizedLabel.toString() : getString(stringId);
-                }
-            }.parse();
+                    private String getAppName() {
+                        ApplicationInfo applicationInfo = getApplicationInfo();
+                        int stringId = applicationInfo.labelRes;
+                        return stringId == 0 ? applicationInfo.nonLocalizedLabel.toString() : getString(stringId);
+                    }
+                }.parse();
+            }
         }
     }
 

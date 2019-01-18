@@ -19,12 +19,14 @@ package org.dash.wallet.integration.uphold.data;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.util.Log;
 
 import com.securepreferences.SecurePreferences;
 import com.squareup.moshi.Moshi;
 
+import org.dash.wallet.common.data.BigDecimalAdapter;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -49,8 +51,8 @@ public class UpholdClient {
     private String accessToken;
     private String otpToken;
     private UpholdCard dashCard;
+    private static final Logger log = LoggerFactory.getLogger(UpholdClient.class);
 
-    public static final String UPHOLD_AUTH_REDIRECT_URL = "www.dash.org";
     private static final String UPHOLD_PREFS = "uphold_prefs.xml";
     private static final String UPHOLD_ACCESS_TOKEN = "access_token";
 
@@ -113,16 +115,19 @@ public class UpholdClient {
             @Override
             public void onResponse(Call<UpholdAccessToken> call, Response<UpholdAccessToken> response) {
                 if (response.isSuccessful()) {
+                    log.info("Uphold access token obtained");
                     accessToken = response.body().getAccessToken();
                     storeAccessToken();
                     getCards(callback, null);
                 } else {
+                    log.error("Error to obtain Uphold access token", response.message());
                     callback.onError(new Exception(response.message()), false);
                 }
             }
 
             @Override
             public void onFailure(Call<UpholdAccessToken> call, Throwable t) {
+                log.error("Error to obtain Uphold access token", t.getMessage());
                 callback.onError(new Exception(t), false);
             }
         });
@@ -141,11 +146,14 @@ public class UpholdClient {
             @Override
             public void onResponse(Call<List<UpholdCard>> call, Response<List<UpholdCard>> response) {
                 if (response.isSuccessful()) {
+                    log.info("get cards success");
                     dashCard = getDashCard(response.body());
                     if (dashCard == null) {
+                        log.info("Dash Card not available");
                         createDashCard(callback, getDashCardCb);
                     } else {
                         if (dashCard.getAddress().getCryptoAddress() == null) {
+                            log.info("Dash Card has no addresses");
                             createDashAddress(dashCard.getId());
                         }
                         callback.onSuccess(dashCard.getId());
@@ -154,6 +162,7 @@ public class UpholdClient {
                         }
                     }
                 } else {
+                    log.error("Error to obtain cards", response.message());
                     callback.onError(new Exception(response.message()), false);
                 }
             }
@@ -173,6 +182,7 @@ public class UpholdClient {
             @Override
             public void onResponse(Call<UpholdCard> call, Response<UpholdCard> response) {
                 if (response.isSuccessful()) {
+                    log.info("Dash Card created successfully");
                     dashCard = response.body();
                     String dashCardId = dashCard.getId();
                     callback.onSuccess(dashCardId);
@@ -181,13 +191,13 @@ public class UpholdClient {
                         getDashCardCb.onSuccess(response.body());
                     }
                 } else {
-                    //TODO: Handle error
+                    log.error("Error to create Dash Card", response.message());
                 }
             }
 
             @Override
             public void onFailure(Call<UpholdCard> call, Throwable t) {
-                t.printStackTrace();
+                log.error("Error to create Dash Card", t.getMessage());
             }
         });
     }
@@ -198,12 +208,12 @@ public class UpholdClient {
         service.createCardAddress(cardId, body).enqueue(new retrofit2.Callback<UpholdCryptoCardAddress>() {
             @Override
             public void onResponse(Call<UpholdCryptoCardAddress> call, Response<UpholdCryptoCardAddress> response) {
-                Log.d("Uphold", "UpholdAddress created: " + response.body().getAddress());
+                log.info("Dash Card address created");
             }
 
             @Override
             public void onFailure(Call<UpholdCryptoCardAddress> call, Throwable t) {
-                //TODO: Handle error
+                log.error("Error to create Dash Card address");
             }
         });
     }
@@ -231,12 +241,13 @@ public class UpholdClient {
         }, new Callback<UpholdCard>() {
             @Override
             public void onSuccess(UpholdCard card) {
+                log.info("Dash balance loaded");
                 callback.onSuccess(new BigDecimal(card.getAvailable()));
             }
 
             @Override
             public void onError(Exception e, boolean otpRequired) {
-
+                log.error("Error to load Dash balance", e.getMessage());
             }
         });
     }
@@ -254,8 +265,10 @@ public class UpholdClient {
             @Override
             public void onResponse(Call<UpholdTransaction> call, Response<UpholdTransaction> response) {
                 if (response.isSuccessful()) {
+                    log.info("Transaction created successfully");
                     callback.onSuccess(response.body());
                 } else {
+                    log.info("Error to create transaction", response.message());
                     boolean otpRequired = OTP_REQUIRED_VALUE.equals(response.headers().get(OTP_REQUIRED_KEY));
                     callback.onError(new Exception(response.errorBody().toString()), otpRequired);
                 }
@@ -263,6 +276,7 @@ public class UpholdClient {
 
             @Override
             public void onFailure(Call<UpholdTransaction> call, Throwable t) {
+                log.info("Error to create transaction", t.getMessage());
                 callback.onError(new Exception(t), false);
             }
         });
@@ -273,9 +287,11 @@ public class UpholdClient {
             @Override
             public void onResponse(Call call, Response response) {
                 if (response.isSuccessful()) {
+                    log.info("Transaction committed successfully");
                     callback.onSuccess(null);
                     otpToken = null;
                 } else {
+                    log.info("Error to commit transaction", response.message());
                     boolean otpRequired = OTP_REQUIRED_VALUE.equals(response.headers().get(OTP_REQUIRED_KEY));
                     //Check for invalid token error
                     if (!otpRequired && otpToken != null) {
@@ -293,6 +309,7 @@ public class UpholdClient {
 
             @Override
             public void onFailure(Call call, Throwable t) {
+                log.error("Error to commit transaction", t.getMessage());
                 callback.onError(new Exception(t), false);
             }
         });
@@ -308,6 +325,10 @@ public class UpholdClient {
 
     public String getEncryptionKey() {
         return encryptionKey;
+    }
+
+    public UpholdCard getCurrentDashCard() {
+        return dashCard;
     }
 
     public interface Callback<T> {

@@ -1,4 +1,14 @@
 Dash Wallet
+
+v6.3.0
+* Unlock wallet with fingerprint
+* Lower transaction fees on small transactions
+* Change price sourcing to match iOS app and Spark
+* Fix for Uphold Integration login using custom tabs/external browser
+* Fix context menu of icon
+* Prevent brute forcing PIN
+* Change support email to support@dash.org
+
 v6.2.1
 * Fix crash on Android 9 (API 28)
 
