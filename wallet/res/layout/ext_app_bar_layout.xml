@@ -33,7 +33,7 @@
             android:layout_height="@dimen/app_bar_logo_height" />
 
         <TextView
-            android:id="@+id/testnet_indicator"
+            android:id="@+id/net_type_indicator"
             android:layout_alignBottom="@id/toolbar_logo"
             android:layout_toRightOf="@id/toolbar_logo"
             android:layout_toEndOf="@id/toolbar_logo"
@@ -41,9 +41,8 @@
             android:layout_height="wrap_content"
             android:textSize="12sp"
             android:textColor="@android:color/white"
-            android:text="Testnet"
+            android:text="@string/net_type_indicator"
             tools:ignore="HardcodedText"
-            android:visibility="gone"
             tools:visibility="visible"
             style="@style/MontserratMedium" />
 

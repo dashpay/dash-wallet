@@ -131,6 +131,9 @@ android {
         beta {
             res.srcDirs = ["beta/res"]
         }
+        devNet {
+            res.srcDirs = ["devNet/res"]
+        }
     }
     flavorDimensions "default"
     productFlavors {
@@ -142,6 +145,9 @@ android {
         }
         _testNet3 {
             applicationId = "hashengineering.darkcoin.wallet_test"
+        }
+        devNet {
+            applicationId = "hashengineering.darkcoin.wallet.devnet"
         }
     }
     externalNativeBuild {

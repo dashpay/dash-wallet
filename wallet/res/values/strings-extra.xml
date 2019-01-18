@@ -83,4 +83,6 @@
 	<string name="notification_synchronization_channel_name">Synchronization</string>
 	<string name="notification_synchronization_channel_description">Shows a notification when the app is synchronizing with the network.</string>
 
+    <string name="net_type_indicator" />
+
 </resources>

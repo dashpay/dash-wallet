@@ -50,8 +50,6 @@ public class ExtAppBarLayout extends AppBarLayout {
                 openUrl(DASH_WEBPAGE_URL);
             }
         });
-
-        findViewById(R.id.testnet_indicator).setVisibility(Constants.TEST ? VISIBLE : GONE);
     }
 
     private void openUrl(String url) {

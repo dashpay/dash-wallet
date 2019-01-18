@@ -24,6 +24,8 @@ import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.kits.EvolutionWalletAppKit;
+import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.MonetaryFormat;
@@ -47,10 +49,50 @@ import android.text.format.DateUtils;
  * @author Andreas Schildbach
  */
 public final class Constants {
-    public static final boolean TEST = BuildConfig.APPLICATION_ID.contains("_test");
 
     /** Network this wallet is on (e.g. testnet or mainnet). */
-    public static final NetworkParameters NETWORK_PARAMETERS = TEST ? TestNet3Params.get() : MainNetParams.get();
+    public static final NetworkParameters NETWORK_PARAMETERS;
+
+    public static final String[] DNS_SEED;
+
+    public static final boolean IS_PROD_BUILD;
+
+    static {
+        switch (BuildConfig.FLAVOR) {
+            case "prod":
+            case "beta": {
+                DNS_SEED = new String[]{"dnsseed.dash.org"};
+                BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH;
+                NETWORK_PARAMETERS = MainNetParams.get();
+                IS_PROD_BUILD = true;
+                break;
+            }
+            case "_testNet3": {
+                DNS_SEED = new String[]{"95.183.51.146", "35.161.101.35", "54.91.130.170"};
+                BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
+                NETWORK_PARAMETERS = TestNet3Params.get();
+                IS_PROD_BUILD = false;
+                break;
+            }
+            case "devNet": {
+                DNS_SEED = new String[]{
+                        "devnet-maithai.thephez.com", "34.212.238.34", "34.222.226.15",
+                        "52.25.134.163", "18.237.18.236", "54.201.32.143",
+                        "18.237.223.92", "54.187.24.244", "34.216.182.200",
+                        "54.244.102.48", "34.222.227.120", "34.222.92.227",
+                        "54.185.85.42", "34.209.237.218"};
+                BIP44_PATH = EvolutionWalletAppKit.EVOLUTION_ACCOUNT_PATH;
+                NETWORK_PARAMETERS = DevNetParams.get("maithai", "yMtULrhoxd8vRZrsnFobWgRTidtjg2Rnjm", 20001, DNS_SEED);
+                IS_PROD_BUILD = false;
+                break;
+
+            }
+            default: {
+                throw new IllegalStateException("Unsupported flavor " + BuildConfig.FLAVOR);
+            }
+        }
+        org.dash.wallet.common.Constants.NETWORK_PARAMETERS = NETWORK_PARAMETERS;
+    }
 
     /** Bitcoinj global context. */
     public static final Context CONTEXT = new Context(NETWORK_PARAMETERS);
@@ -240,7 +282,7 @@ public final class Constants {
     public static final String WALLET_LOCK_PREFS_NAME = "wallet_lock_prefs";
 
     //BIP44 Support
-    public static final ImmutableList<ChildNumber> BIP44_PATH = TEST ? DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET : DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH;
+    public static final ImmutableList<ChildNumber> BIP44_PATH;
 
     //Backup Warnings (true = both seed and backup file, false = seed only)
     public static final boolean SUPPORT_BOTH_BACKUP_WARNINGS = false;

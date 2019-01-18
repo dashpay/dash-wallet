@@ -14,9 +14,7 @@ public class Constants {
     public static final char CURRENCY_MINUS_SIGN = '\uff0d';
     public static final String PREFIX_ALMOST_EQUAL_TO = Character.toString(CHAR_ALMOST_EQUAL_TO) + CHAR_THIN_SPACE;
 
-    //This is used for UI only
-    public static final boolean TEST = BuildConfig.DEBUG;
     /** Network this wallet is on (e.g. testnet or mainnet). */
-    public static final NetworkParameters NETWORK_PARAMETERS = TEST ? TestNet3Params.get() : MainNetParams.get();
+    public static NetworkParameters NETWORK_PARAMETERS = BuildConfig.DEBUG ? TestNet3Params.get() : MainNetParams.get();
 
 }
