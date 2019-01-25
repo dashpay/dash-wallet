@@ -7,6 +7,10 @@ ext {
 repositories {
     mavenLocal()
     maven {
+        url 'http://oss.jfrog.org/artifactory/oss-snapshot-local'
+        name 'OJO snapshots'
+    }
+    maven {
         url 'https://maven.google.com/'
         name 'Google'
     }
