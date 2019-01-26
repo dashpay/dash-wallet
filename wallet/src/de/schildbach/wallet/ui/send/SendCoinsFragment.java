@@ -51,6 +51,7 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards;
 import org.bitcoinj.wallet.Wallet.DustySendRequested;
+import org.bitcoinj.wallet.ZeroConfCoinSelector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.params.KeyParameter;
@@ -233,8 +234,6 @@ public final class SendCoinsFragment extends Fragment {
     private static final int REQUEST_CODE_ENABLE_BLUETOOTH_FOR_DIRECT_PAYMENT = 2;
 
     private static final Logger log = LoggerFactory.getLogger(SendCoinsFragment.class);
-
-    InstantXCoinSelector ixCoinSelector = new InstantXCoinSelector();
 
     private enum State {
         REQUEST_PAYMENT_REQUEST, //
@@ -1094,8 +1093,7 @@ public final class SendCoinsFragment extends Fragment {
         finalPaymentIntent.setInstantX(usingInstantSend);
         final SendRequest sendRequest = finalPaymentIntent.toSendRequest();
         sendRequest.useInstantSend = usingInstantSend;
-        ixCoinSelector.setUsingInstantX(sendRequest.useInstantSend);
-        sendRequest.coinSelector = ixCoinSelector;
+        sendRequest.coinSelector = sendRequest.useInstantSend ? InstantXCoinSelector.get() : ZeroConfCoinSelector.get();
         sendRequest.emptyWallet = paymentIntent.mayEditAmount()
                 && finalAmount.equals(wallet.getBalance(BalanceType.ESTIMATED));
         sendRequest.feePerKb = fees.get(feeCategory);
@@ -1306,8 +1304,7 @@ public final class SendCoinsFragment extends Fragment {
                     // committed
                     final SendRequest sendRequest = paymentIntent.mergeWithEditedValues(amount, dummy).toSendRequest();
                     sendRequest.useInstantSend = (instantXenable.isChecked());
-                    ixCoinSelector.setUsingInstantX(sendRequest.useInstantSend);
-                    sendRequest.coinSelector = ixCoinSelector;
+                    sendRequest.coinSelector = sendRequest.useInstantSend ? InstantXCoinSelector.get() : ZeroConfCoinSelector.get();
                     sendRequest.signInputs = false;
                     sendRequest.emptyWallet = paymentIntent.mayEditAmount()
                             && amount.equals(wallet.getBalance(BalanceType.ESTIMATED));
