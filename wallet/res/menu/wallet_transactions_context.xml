@@ -13,10 +13,6 @@
         android:showAsAction="ifRoom|withText"
         android:title="@string/action_show_qr"/>
     <item
-        android:id="@+id/wallet_transactions_context_raise_fee"
-        android:showAsAction="never"
-        android:title="@string/raise_fee_dialog_title"/>
-    <item
         android:id="@+id/wallet_transactions_context_report_issue"
         android:showAsAction="never"
         android:title="@string/preferences_report_issue_title"/>
