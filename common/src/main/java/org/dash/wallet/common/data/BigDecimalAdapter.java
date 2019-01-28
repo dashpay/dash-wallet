@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integration.uphold.data;
+package org.dash.wallet.common.data;
 
 import com.squareup.moshi.FromJson;
 import com.squareup.moshi.ToJson;

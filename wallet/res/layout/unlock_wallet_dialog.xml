@@ -52,4 +52,11 @@
         android:visibility="gone"
         style="@style/MontserratSemiBold"/>
 
+    <de.schildbach.wallet.ui.widget.FingerprintView
+        android:id="@+id/fingerprint_view"
+        android:visibility="gone"
+        tools:visibility="visible"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
 </LinearLayout>
