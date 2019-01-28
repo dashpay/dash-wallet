@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui;
 import javax.annotation.Nullable;
 
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.CurrencyTextView;
 
@@ -29,25 +30,21 @@ import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
-import org.dash.wallet.common.data.ExchangeRate;
-import de.schildbach.wallet.data.ExchangeRatesProvider;
 import de.schildbach.wallet.data.WalletLock;
+import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet_test.R;
-
 import android.app.Activity;
 import android.content.Context;
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
-import android.database.Cursor;
 import android.graphics.Color;
-import android.net.Uri;
 import android.os.Bundle;
-import android.provider.BaseColumns;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
-import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -66,6 +63,8 @@ import android.support.v7.widget.SearchView.OnQueryTextListener;
 import android.widget.TextView;
 import android.widget.ViewAnimator;
 
+import java.util.List;
+
 /**
  * @author Andreas Schildbach
  */
@@ -74,12 +73,15 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
     private WalletApplication application;
     private Configuration config;
     private Wallet wallet;
-    private Uri contentUri;
     private LoaderManager loaderManager;
 
+    private View loading;
+    private View loadingErrorView;
+    private View emptySearchView;
     private ViewAnimator viewGroup;
     private RecyclerView recyclerView;
     private ExchangeRatesAdapter adapter;
+    private ExchangeRatesViewModel exchangeRatesViewModel;
 
     private String query = null;
     @Nullable
@@ -97,7 +99,6 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
         this.application = (WalletApplication) activity.getApplication();
         this.config = application.getConfiguration();
         this.wallet = application.getWallet();
-        this.contentUri = ExchangeRatesProvider.contentUri(activity.getPackageName(), false);
         this.loaderManager = getLoaderManager();
     }
 
@@ -112,7 +113,29 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
         adapter.setRateBase(config.getBtcBase());
         adapter.setDefaultCurrency(config.getExchangeCurrencyCode());
 
-        loaderManager.initLoader(ID_RATE_LOADER, null, rateLoaderCallbacks);
+        exchangeRatesViewModel = ViewModelProviders.of(this)
+                .get(ExchangeRatesViewModel.class);
+        exchangeRatesViewModel.isLoading().observe(this, new Observer<Boolean>() {
+            @Override
+            public void onChanged(Boolean isLoading) {
+                loading.setVisibility(Boolean.TRUE.equals(isLoading) ? View.VISIBLE : View.GONE);
+            }
+        });
+        exchangeRatesViewModel.hasError().observe(this, new Observer<Boolean>() {
+            @Override
+            public void onChanged(Boolean hasError) {
+                if (Boolean.TRUE.equals(hasError)) {
+                    showOnly(loadingErrorView);
+                }
+            }
+        });
+        exchangeRatesViewModel.getRates().observe(this,
+                new Observer<List<de.schildbach.wallet.rates.ExchangeRate>>() {
+                    @Override
+                    public void onChanged(List<de.schildbach.wallet.rates.ExchangeRate> exchangeRates) {
+                        updateView(exchangeRates);
+                    }
+                });
         config.registerOnSharedPreferenceChangeListener(this);
     }
 
@@ -121,6 +144,11 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
             final Bundle savedInstanceState) {
         final View view = inflater.inflate(R.layout.exchange_rates_fragment, container, false);
         viewGroup = (ViewAnimator) view.findViewById(R.id.exchange_rates_list_group);
+
+        loading = view.findViewById(R.id.exchange_rates_loading);
+        emptySearchView = view.findViewById(R.id.exchange_rates_empty_search);
+        loadingErrorView = view.findViewById(R.id.exchange_rates_loading_error);
+
         recyclerView = (RecyclerView) view.findViewById(R.id.exchange_rates_list);
         recyclerView.setLayoutManager(new LinearLayoutManager(activity));
         recyclerView.setAdapter(adapter);
@@ -132,6 +160,7 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
     public void onResume() {
         super.onResume();
 
+        exchangeRatesViewModel.getRates();
         loaderManager.initLoader(ID_BALANCE_LOADER, null, balanceLoaderCallbacks);
         loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
     }
@@ -148,7 +177,7 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
     public void onDestroy() {
         config.unregisterOnSharedPreferenceChangeListener(this);
 
-        loaderManager.destroyLoader(ID_RATE_LOADER);
+        //loaderManager.destroyLoader(ID_RATE_LOADER);
 
         super.onDestroy();
     }
@@ -165,8 +194,13 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
             @Override
             public boolean onQueryTextChange(final String newText) {
                 query = Strings.emptyToNull(newText.trim());
-                getLoaderManager().restartLoader(ID_RATE_LOADER, null, rateLoaderCallbacks);
-
+                exchangeRatesViewModel.searchRates(query).observe(ExchangeRatesFragment.this,
+                        new Observer<List<de.schildbach.wallet.rates.ExchangeRate>>() {
+                    @Override
+                    public void onChanged(List<de.schildbach.wallet.rates.ExchangeRate> exchangeRates) {
+                        updateView(exchangeRates);
+                    }
+                });
                 return true;
             }
 
@@ -195,62 +229,36 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
             adapter.setRateBase(config.getBtcBase());
     }
 
-    private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>() {
-        @Override
-        public Loader<Cursor> onCreateLoader(final int id, final Bundle args) {
-            if (query == null)
-                return new CursorLoader(activity, contentUri, null, null, null, null);
-            else
-                return new CursorLoader(activity, contentUri, null, ExchangeRatesProvider.QUERY_PARAM_Q,
-                        new String[] { query }, null);
-        }
+    private void showOnly(View view) {
+        loading.setVisibility(View.GONE);
+        loadingErrorView.setVisibility(View.GONE);
+        emptySearchView.setVisibility(View.GONE);
+        recyclerView.setVisibility(View.GONE);
 
-        @Override
-        public void onLoadFinished(final Loader<Cursor> loader, final Cursor data) {
-            adapter.setCursor(data);
-            if (adapter.getItemCount() == 0 && query == null) {
-                viewGroup.setDisplayedChild(1);
-            } else if (adapter.getItemCount() == 0 && query != null) {
-                viewGroup.getHandler().post(new Runnable() {
-                    @Override
-                    public void run() {
-                        viewGroup.setDisplayedChild(2);
-                    }
-                });
-            } else {
-                viewGroup.setDisplayedChild(3);
-                final int positionToScrollTo = adapter.getDefaultCurrencyPosition();
-                if (positionToScrollTo != RecyclerView.NO_POSITION)
-                    recyclerView.scrollToPosition(positionToScrollTo);
-                if (activity instanceof ExchangeRatesActivity) {
-                    data.moveToPosition(0);
-//                    final String source = ExchangeRatesProvider.getExchangeRate(data).source;
-//                    activity.getActionBar().setSubtitle(
-//                            source != null ? getString(R.string.exchange_rates_fragment_source, source) : null);
+        view.setVisibility(View.VISIBLE);
+    }
+
+    private void updateView(List<de.schildbach.wallet.rates.ExchangeRate> exchangeRates) {
+        adapter.setExchangeRates(exchangeRates);
+
+        if (adapter.getItemCount() == 0 && query == null) {
+            showOnly(loadingErrorView);
+        } else if (adapter.getItemCount() == 0 && query != null) {
+            viewGroup.getHandler().post(new Runnable() {
+                @Override
+                public void run() {
+                    showOnly(emptySearchView);
                 }
-            }
+            });
+        } else {
+            showOnly(recyclerView);
         }
 
-       /*@Override
-        public void onLoadFinished(final Loader<Cursor> loader, final Cursor data)
-        {
-            final Cursor oldCursor = adapter.swapCursor(data);
-
-            if (data != null && oldCursor == null && defaultCurrency != null)
-            {
-                final int defaultCurrencyPosition = findCurrencyCode(data, defaultCurrency);
-                if (defaultCurrencyPosition >= 0)
-                    getListView().setSelection(defaultCurrencyPosition); // scroll to selection
-            }
-
-            setEmptyText(WholeStringBuilder.bold(getString(query != null ? R.string.exchange_rates_fragment_empty_search
-                    : R.string.exchange_rates_fragment_empty_text)));
-        }*/
-
-        @Override
-        public void onLoaderReset(final Loader<Cursor> loader) {
+        final int positionToScrollTo = adapter.getDefaultCurrencyPosition();
+        if (positionToScrollTo != RecyclerView.NO_POSITION) {
+            recyclerView.scrollToPosition(positionToScrollTo);
         }
-    };
+    }
 
     private final LoaderManager.LoaderCallbacks<Coin> balanceLoaderCallbacks = new LoaderManager.LoaderCallbacks<Coin>() {
         @Override
@@ -287,7 +295,8 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
     private final class ExchangeRatesAdapter extends RecyclerView.Adapter<ExchangeRateViewHolder> {
         private final LayoutInflater inflater = LayoutInflater.from(activity);
 
-        private Cursor cursor = null;
+        //private Cursor cursor = null;
+        private List<de.schildbach.wallet.rates.ExchangeRate> exchangeRates;
         private Coin rateBase = Coin.COIN;
         @Nullable
         private String defaultCurrency = null;
@@ -298,11 +307,6 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
 
         private ExchangeRatesAdapter() {
             setHasStableIds(true);
-        }
-
-        public void setCursor(final Cursor cursor) {
-            this.cursor = cursor;
-            notifyDataSetChanged();
         }
 
         public void setDefaultCurrency(final String defaultCurrency) {
@@ -326,26 +330,29 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
         }
 
         public int getDefaultCurrencyPosition() {
-            if (cursor == null || defaultCurrency == null)
+            if (exchangeRates == null || defaultCurrency == null) {
                 return RecyclerView.NO_POSITION;
+            }
 
-            cursor.moveToPosition(-1);
-            while (cursor.moveToNext())
-                if (cursor.getString(cursor.getColumnIndexOrThrow(ExchangeRatesProvider.KEY_CURRENCY_CODE))
-                        .equals(defaultCurrency))
-                    return cursor.getPosition();
+            int i = 0;
+            for (de.schildbach.wallet.rates.ExchangeRate rate : exchangeRates) {
+                if (rate.getCurrencyCode().equalsIgnoreCase(defaultCurrency)) {
+                    return i;
+                }
+                i++;
+            }
+
             return RecyclerView.NO_POSITION;
         }
 
         @Override
         public int getItemCount() {
-            return cursor != null ? cursor.getCount() : 0;
+            return exchangeRates != null ? exchangeRates.size() : 0;
         }
 
         @Override
         public long getItemId(final int position) {
-            cursor.moveToPosition(position);
-            return cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID));
+            return exchangeRates.get(position).getCurrencyCode().hashCode();
         }
 
         @Override
@@ -355,8 +362,12 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
 
         @Override
         public void onBindViewHolder(final ExchangeRateViewHolder holder, final int position) {
-            cursor.moveToPosition(position);
-            final ExchangeRate exchangeRate = ExchangeRatesProvider.getExchangeRate(cursor);
+            final de.schildbach.wallet.rates.ExchangeRate exchangeRate = exchangeRates.get(position);
+
+            //TODO: Try to remove it from here (?) Maybe cache the creation in exchangeRate?
+            ExchangeRate rate = new org.bitcoinj.utils.ExchangeRate(
+                    Coin.COIN, exchangeRate.getFiat());
+
             final boolean isDefaultCurrency = exchangeRate.getCurrencyCode().equals(defaultCurrency);
 
             holder.itemView.setBackgroundResource(isDefaultCurrency ? R.color.bg_list_selected : R.color.bg_list);
@@ -372,11 +383,11 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
 
             holder.rateView.setFormat(!rateBase.isLessThan(Coin.COIN) ? Constants.LOCAL_FORMAT.minDecimals(2)
                     : Constants.LOCAL_FORMAT.minDecimals(4));
-            holder.rateView.setAmount(exchangeRate.rate.coinToFiat(rateBase));
+            holder.rateView.setAmount(rate.coinToFiat(rateBase));
 
             holder.walletView.setFormat(Constants.LOCAL_FORMAT);
             if (balance != null && (blockchainState == null || !blockchainState.replaying)) {
-                holder.walletView.setAmount(exchangeRate.rate.coinToFiat(balance));
+                holder.walletView.setAmount(rate.coinToFiat(balance));
                 holder.walletView.setStrikeThru(Constants.TEST);
             } else {
                 holder.walletView.setText("n/a");
@@ -405,6 +416,11 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
                     popupMenu.show();
                 }
             });
+        }
+
+        public void setExchangeRates(List<de.schildbach.wallet.rates.ExchangeRate> exchangeRates) {
+            this.exchangeRates = exchangeRates;
+            notifyDataSetChanged();
         }
     }
 

@@ -32,6 +32,8 @@ import com.google.common.base.Strings;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.preference.PinRetryController;
+
+import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet_test.R;
 
@@ -40,13 +42,13 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnShowListener;
 import android.graphics.Typeface;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.os.CancellationSignal;
 import android.support.v7.app.AlertDialog;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -98,6 +100,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
     private final Handler handler = new Handler();
     private HandlerThread backgroundThread;
     private Handler backgroundHandler;
+    private FingerprintHelper fingerprintHelper;
 
     private enum State {
         INPUT, CRYPTING, DONE
@@ -141,6 +144,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);
         backgroundThread.start();
         backgroundHandler = new Handler(backgroundThread.getLooper());
+        fingerprintHelper = new FingerprintHelper(getActivity());
     }
 
     @Override
@@ -315,7 +319,11 @@ public class EncryptKeysDialogFragment extends DialogFragment {
 
                         if (state == State.DONE) {
                             application.backupWallet();
+
+                            //Clear fingerprint data
+                            fingerprintHelper.clear();
                             delayedDismiss();
+
                             WalletLock.getInstance().setWalletLocked(wallet.isEncrypted());
                         } else {
                             updateView();
@@ -327,6 +335,13 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                             @Override
                             public void run() {
                                 dismiss();
+
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                                        && fingerprintHelper.init() && !fingerprintHelper.isFingerprintEnabled()
+                                        && oldPassword == null && state == State.DONE) {
+                                    EnableFingerprintDialog.show(newPassword,
+                                            getActivity().getFragmentManager());
+                                }
                             }
                         }, 2000);
                     }

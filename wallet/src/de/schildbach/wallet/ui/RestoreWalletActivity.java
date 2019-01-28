@@ -37,6 +37,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.Crypto;
+import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -67,6 +68,7 @@ public final class RestoreWalletActivity extends AbstractWalletActivity
     private ContentResolver contentResolver;
 
     private Uri backupFileUri;
+    private FingerprintHelper fingerprintHelper;
 
     enum State {
         INPUT, UPGRADE, PINSET, DONE;
@@ -83,6 +85,8 @@ public final class RestoreWalletActivity extends AbstractWalletActivity
         contentResolver = getContentResolver();
 
         backupFileUri = getIntent().getData();
+
+        fingerprintHelper = new FingerprintHelper(this);
 
         showDialog(DIALOG_RESTORE_WALLET);
     }
@@ -200,6 +204,7 @@ public final class RestoreWalletActivity extends AbstractWalletActivity
         this.wallet = application.getWallet();
 
         config.disarmBackupReminder();
+        fingerprintHelper.clear();
 
         upgradeWalletKeyChains(Constants.BIP44_PATH);
     }

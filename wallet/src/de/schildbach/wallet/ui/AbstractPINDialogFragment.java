@@ -9,6 +9,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
+import android.support.annotation.RequiresApi;
+import android.support.v4.os.CancellationSignal;
 import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AlertDialog;
 import android.text.Editable;
@@ -22,10 +24,10 @@ import android.widget.TextView;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.DialogBuilder;
 
-import java.util.concurrent.TimeUnit;
-
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.preference.PinRetryController;
+import de.schildbach.wallet.ui.widget.FingerprintView;
+import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet_test.R;
 
@@ -42,11 +44,14 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
     protected Handler backgroundHandler;
     protected Wallet wallet;
     protected PinRetryController pinRetryController;
+    protected FingerprintHelper fingerprintHelper;
+    protected CancellationSignal fingerprintCancellationSignal;
 
     protected EditText pinView;
     protected TextView badPinView;
     protected Button unlockButton;
     protected TextView messageTextView;
+    protected FingerprintView fingerprintView;
 
     protected int dialogLayout;
     protected int dialogTitle;
@@ -69,6 +74,7 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
         badPinView = (TextView) view.findViewById(R.id.bad_pin);
         unlockButton = (Button) view.findViewById(R.id.unlock);
         messageTextView = (TextView) view.findViewById(R.id.new_key_chain_dialog_message_text);
+        fingerprintView = view.findViewById(R.id.fingerprint_view);
 
         pinView.addTextChangedListener(privateKeyPasswordListener);
         unlockButton.setOnClickListener(new View.OnClickListener() {
@@ -77,6 +83,21 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
                 checkPassword(pinView.getText().toString());
             }
         });
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            fingerprintHelper = new FingerprintHelper(getActivity());
+            if (fingerprintHelper.init()) {
+                boolean isFingerprintEnabled = fingerprintHelper.isFingerprintEnabled();
+                if (isFingerprintEnabled) {
+                    fingerprintView.setVisibility(View.VISIBLE);
+                    startFingerprintListener();
+                } else {
+                    fingerprintView.setText(R.string.touch_fingerprint_to_enable);
+                }
+            } else {
+                fingerprintHelper = null;
+            }
+        }
 
         if (wallet.isEncrypted()) {
             HandlerThread backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);
@@ -89,7 +110,7 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
         builder.setView(view);
         builder.setCancelable(false);
 
-        AlertDialog alertDialog = builder.create();
+        final AlertDialog alertDialog = builder.create();
         alertDialog.setOnShowListener(new DialogInterface.OnShowListener() {
             @Override
             public void onShow(DialogInterface dialog) {
@@ -107,6 +128,29 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
         });
 
         return alertDialog;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private void startFingerprintListener() {
+        fingerprintCancellationSignal = new CancellationSignal();
+        fingerprintHelper.getPassword(fingerprintCancellationSignal, new FingerprintHelper.Callback() {
+            @Override
+            public void onSuccess(String savedPass) {
+                checkPassword(savedPass);
+            }
+
+            @Override
+            public void onFailure(String message, boolean canceled, boolean exceededMaxAttempts) {
+                if (!canceled) {
+                    fingerprintView.showError(exceededMaxAttempts);
+                }
+            }
+
+            @Override
+            public void onHelp(int helpCode, String helpString) {
+                fingerprintView.showError(false);
+            }
+        });
     }
 
     @Override

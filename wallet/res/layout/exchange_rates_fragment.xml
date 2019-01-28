@@ -5,30 +5,37 @@
     android:layout_height="match_parent" >
 
     <ProgressBar
+        android:id="@+id/exchange_rates_loading"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center" />
+        android:layout_gravity="center"
+        android:visibility="gone"/>
 
     <TextView
+        android:id="@+id/exchange_rates_loading_error"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center"
         android:text="@string/exchange_rates_fragment_empty_text"
         android:textColor="@color/fg_less_significant"
-        android:textSize="@dimen/font_size_small" />
+        android:textSize="@dimen/font_size_small"
+        android:visibility="gone"/>
 
     <TextView
+        android:id="@+id/exchange_rates_empty_search"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center"
         android:text="@string/exchange_rates_fragment_empty_search"
         android:textColor="@color/fg_less_significant"
-        android:textSize="@dimen/font_size_small" />
+        android:textSize="@dimen/font_size_small"
+        android:visibility="gone"/>
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/exchange_rates_list"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:scrollbars="vertical" />
+        android:scrollbars="vertical"
+        android:visibility="gone"/>
 
 </ViewAnimator>

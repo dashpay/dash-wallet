@@ -62,6 +62,7 @@ import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Crypto;
+import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
@@ -87,6 +88,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.support.annotation.RequiresApi;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.v4.app.ActivityCompat;
@@ -120,7 +122,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback,
         NavigationView.OnNavigationItemSelectedListener,
         WalletLock.OnLockChangeListener, UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
-        EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
+        EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
+        EnableFingerprintDialog.OnFingerprintEnabledListener {
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
     private static final int DIALOG_RESTORE_WALLET = 2;
@@ -131,6 +134,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private WalletApplication application;
     private Configuration config;
     private Wallet wallet;
+    private FingerprintHelper fingerprintHelper;
 
     private DrawerLayout viewDrawer;
     private View viewFakeForSafetySubmenu;
@@ -188,6 +192,14 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         if (!config.getFastestNetworkAnncmntShown()) {
             showFastestNetworkAnncmnt();
+        }
+
+        //Init fingerprint helper
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            fingerprintHelper = new FingerprintHelper(this);
+            if (!fingerprintHelper.init()) {
+                fingerprintHelper = null;
+            }
         }
     }
 
@@ -524,6 +536,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
         };
         dialog.show();
+    }
+
+    private void enableFingerprint() {
+        config.setRemindEnableFingerprint(true);
+        UnlockWalletDialogFragment.show(getSupportFragmentManager());
     }
 
     @Override
@@ -1008,6 +1025,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
         config.disarmBackupReminder();
         this.wallet = application.getWallet();
         upgradeWalletKeyChains(Constants.BIP44_PATH, true);
+
+        if (fingerprintHelper != null) {
+            fingerprintHelper.clear();
+        }
     }
 
     private void resetBlockchain() {
@@ -1054,6 +1075,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
             menu.findItem(R.id.wallet_options_backup_wallet).setEnabled(Environment.MEDIA_MOUNTED.equals(externalStorageState));
             menu.findItem(R.id.wallet_options_encrypt_keys).setTitle(
                     wallet.isEncrypted() ? R.string.wallet_options_encrypt_keys_change : R.string.wallet_options_encrypt_keys_set);
+
+            boolean showFingerprintOption = fingerprintHelper != null && !fingerprintHelper.isFingerprintEnabled();
+            menu.findItem(R.id.wallet_options_enable_fingerprint).setVisible(showFingerprintOption);
         }
     }
 
@@ -1081,6 +1105,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
             case R.id.wallet_options_restore_wallet_from_seed:
                 handleRestoreWalletFromSeed();
+                return true;
+
+            case R.id.wallet_options_enable_fingerprint:
+                enableFingerprint();
                 return true;
         }
 
@@ -1204,7 +1232,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 String networkCountry = tm.getNetworkCountryIso();
                 if (networkCountry != null && networkCountry.length() == 2) { // network country code is available
                     updateCurrencyExchange(networkCountry.toUpperCase());
+                } else {
+                    //Couldn't obtain country code - Use Default
+                    config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
                 }
+            } else {
+                //No cellular network - Wifi Only
+                config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
             }
         } catch (Exception e) {
             //fail safe
@@ -1232,6 +1266,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 config.setExchangeCurrencyCodeDetected(true);
                 config.setExchangeCurrencyCode(newCurrencyCode);
             }
+        }
+
+        //Fallback to default
+        if (config.getExchangeCurrencyCode() == null) {
+            config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
         }
     }
 
@@ -1285,4 +1324,15 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         alertDialog.show();
     }
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    @Override
+    public void onFingerprintEnabled() {
+        WalletTransactionsFragment walletTransactionsFragment = (WalletTransactionsFragment)
+                getSupportFragmentManager().findFragmentById(R.id.wallet_transactions_fragment);
+        if (walletTransactionsFragment != null) {
+            walletTransactionsFragment.initFingerprintHelper();
+            walletTransactionsFragment.onLockChanged(WalletLock.getInstance().isWalletLocked(wallet));
+        }
+    }
+
 }

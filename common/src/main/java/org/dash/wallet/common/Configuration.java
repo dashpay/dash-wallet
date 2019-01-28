@@ -27,9 +27,7 @@ import android.text.format.DateUtils;
 import com.google.common.base.Strings;
 
 import org.bitcoinj.core.Coin;
-import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
-import org.dash.wallet.common.data.ExchangeRate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,9 +59,6 @@ public class Configuration {
     private static final String PREFS_KEY_LAST_VERSION = "last_version";
     private static final String PREFS_KEY_LAST_USED = "last_used";
     private static final String PREFS_KEY_BEST_CHAIN_HEIGHT_EVER = "best_chain_height_ever";
-    private static final String PREFS_KEY_CACHED_EXCHANGE_CURRENCY = "cached_exchange_currency";
-    private static final String PREFS_KEY_CACHED_EXCHANGE_RATE_COIN = "cached_exchange_rate_coin";
-    private static final String PREFS_KEY_CACHED_EXCHANGE_RATE_FIAT = "cached_exchange_rate_fiat";
     private static final String PREFS_KEY_LAST_EXCHANGE_DIRECTION = "last_exchange_direction";
     private static final String PREFS_KEY_CHANGE_LOG_VERSION = "change_log_version";
     public static final String PREFS_KEY_REMIND_BACKUP = "remind_backup";
@@ -73,6 +68,7 @@ public class Configuration {
     public static final String PREFS_KEY_INSTANTX_ENABLED = "labs_instantx_enabled";
     public static final String PREFS_KEY_LITE_MODE = "labs_lite_mode";
     public static final String PREFS_KEY_FASTEST_NETWORK_ANNCMNT_SHOWN = "fastest_network_anncmnt_shown";
+    private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 4;
@@ -284,29 +280,7 @@ public class Configuration {
             prefs.edit().putInt(PREFS_KEY_BEST_CHAIN_HEIGHT_EVER, bestChainHeightEver).apply();
     }
 
-    public ExchangeRate getCachedExchangeRate() {
-        if (prefs.contains(PREFS_KEY_CACHED_EXCHANGE_CURRENCY) && prefs.contains(PREFS_KEY_CACHED_EXCHANGE_RATE_COIN)
-                && prefs.contains(PREFS_KEY_CACHED_EXCHANGE_RATE_FIAT)) {
-            final String cachedExchangeCurrency = prefs.getString(PREFS_KEY_CACHED_EXCHANGE_CURRENCY, null);
-            final Coin cachedExchangeRateCoin = Coin.valueOf(prefs.getLong(PREFS_KEY_CACHED_EXCHANGE_RATE_COIN, 0));
-            final Fiat cachedExchangeRateFiat = Fiat.valueOf(cachedExchangeCurrency,
-                    prefs.getLong(PREFS_KEY_CACHED_EXCHANGE_RATE_FIAT, 0));
-            return new ExchangeRate(new org.bitcoinj.utils.ExchangeRate(cachedExchangeRateCoin, cachedExchangeRateFiat),
-                    null);
-        } else {
-            return null;
-        }
-    }
-
-    public void setCachedExchangeRate(final ExchangeRate cachedExchangeRate) {
-        final Editor edit = prefs.edit();
-        edit.putString(PREFS_KEY_CACHED_EXCHANGE_CURRENCY, cachedExchangeRate.getCurrencyCode());
-        edit.putLong(PREFS_KEY_CACHED_EXCHANGE_RATE_COIN, cachedExchangeRate.rate.coin.value);
-        edit.putLong(PREFS_KEY_CACHED_EXCHANGE_RATE_FIAT, cachedExchangeRate.rate.fiat.value);
-        edit.apply();
-    }
-
-    public boolean getLastExchangeDirection() {
+        public boolean getLastExchangeDirection() {
         return prefs.getBoolean(PREFS_KEY_LAST_EXCHANGE_DIRECTION, true);
     }
 
@@ -348,5 +322,13 @@ public class Configuration {
 
     public void setFastestNetworkAnncmntShown() {
         prefs.edit().putBoolean(PREFS_KEY_FASTEST_NETWORK_ANNCMNT_SHOWN, true).apply();
+    }
+
+    public boolean getRemindEnableFingerprint() {
+        return prefs.getBoolean(PREFS_REMIND_ENABLE_FINGERPRINT, true);
+    }
+
+    public void setRemindEnableFingerprint(boolean remind) {
+        prefs.edit().putBoolean(PREFS_REMIND_ENABLE_FINGERPRINT, remind).apply();
     }
 }
