@@ -31,7 +31,7 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'com.android.support:appcompat-v7:28.0.0'
     api 'com.android.support:customtabs:28.0.0'
-    implementation 'org.dashj:dashj-core:0.14.7'
+    implementation "org.dashj:dashj-core:$dashjVersion"
 
     //Retrofit + OkHttp
     api 'com.squareup.okhttp:okhttp:2.7.5'
