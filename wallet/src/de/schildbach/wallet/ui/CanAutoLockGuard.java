@@ -9,7 +9,7 @@ public class CanAutoLockGuard implements SharedPreferences.OnSharedPreferenceCha
     private Configuration config;
     private OnAutoLockStatusChangedListener listener;
 
-    CanAutoLockGuard(Configuration config, OnAutoLockStatusChangedListener listener) {
+    public CanAutoLockGuard(Configuration config, OnAutoLockStatusChangedListener listener) {
         this.config = config;
         this.listener = listener;
     }
@@ -38,7 +38,7 @@ public class CanAutoLockGuard implements SharedPreferences.OnSharedPreferenceCha
         }
     }
 
-    interface OnAutoLockStatusChangedListener {
+    public interface OnAutoLockStatusChangedListener {
 
         void onAutoLockStatusChanged(boolean active);
     }
