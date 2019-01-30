@@ -206,6 +206,7 @@ public final class SendCoinsFragment extends Fragment {
     private TextView privateKeyBadPasswordView;
     private ImageView fingerprintIcon;
     private TextView attemptsRemainingTextView;
+    private TextView instantSendEnabledByDefaultView;
     private Button viewGo;
 
     @Nullable
@@ -719,7 +720,7 @@ public final class SendCoinsFragment extends Fragment {
         attemptsRemainingTextView = (TextView) view.findViewById(R.id.pin_attempts);
         fingerprintIcon = view.findViewById(R.id.fingerprint_icon);
 
-        TextView instantSendEnabledByDefaultView = view.findViewById(R.id.instant_send_enabled_by_default);
+        instantSendEnabledByDefaultView = view.findViewById(R.id.instant_send_enabled_by_default);
         instantSendEnabledByDefaultView.setVisibility(InstantSend.canAutoLock() ? View.VISIBLE : View.GONE);
 
         viewGo = (Button) view.findViewById(R.id.send_coins_go);
@@ -1311,6 +1312,8 @@ public final class SendCoinsFragment extends Fragment {
                 boolean autoLocksActive = InstantSend.canAutoLock();
                 if (autoLocksActive) {
 
+                    instantSendEnabledByDefaultView.setVisibility(View.VISIBLE);
+
                     try {
                         // initially check the preferred way (Instant Send auto lock)
                         final SendRequest sendRequest = createSendRequest(finalPaymentIntent, RequestType.INSTANT_SEND_AUTO_LOCK, false);
@@ -1343,6 +1346,8 @@ public final class SendCoinsFragment extends Fragment {
                 }
             }
 
+            instantSendEnabledByDefaultView.setVisibility(View.GONE);
+
             try {
                 // check regular payment
                 final SendRequest sendRequest = createSendRequest(finalPaymentIntent, RequestType.REGULAR_PAYMENT, false);
@@ -1355,6 +1360,7 @@ public final class SendCoinsFragment extends Fragment {
                 // using the less restrictive method (REGULAR_PAYMENT), which means we are unable
                 // to do it at all
                 dryrunException = x;
+                instantSendEnabledByDefaultView.setVisibility(InstantSend.canAutoLock() ? View.VISIBLE : View.GONE);
             }
         }
     };
