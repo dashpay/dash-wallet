@@ -41,9 +41,12 @@ import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.CheckpointManager;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.FilteredBlock;
+import org.bitcoinj.core.InstantSend;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.SporkManager;
+import org.bitcoinj.core.SporkMessage;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
@@ -51,6 +54,7 @@ import org.bitcoinj.core.listeners.AbstractPeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
+import org.bitcoinj.core.listeners.SporkUpdatedEventListener;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.net.discovery.MasternodePeerDiscovery;
@@ -681,6 +685,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         application.getWallet().addCoinsSentEventListener(Threading.SAME_THREAD, walletEventListener);
         application.getWallet().addChangeEventListener(Threading.SAME_THREAD, walletEventListener);
 
+        application.getWallet().getContext().sporkManager.addEventListener(sporkUpdatedEventListener, Threading.SAME_THREAD);
+
         registerReceiver(tickReceiver, new IntentFilter(Intent.ACTION_TIME_TICK));
 
         wallet.getContext().initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
@@ -760,6 +766,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         application.getWallet().removeChangeEventListener(walletEventListener);
         application.getWallet().removeCoinsSentEventListener(walletEventListener);
         application.getWallet().removeCoinsReceivedEventListener(walletEventListener);
+
+        application.getWallet().getContext().sporkManager.removeEventListener(sporkUpdatedEventListener);
 
         unregisterReceiver(connectivityReceiver);
 
@@ -904,4 +912,17 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
             }
         }
     }
+
+    private SporkUpdatedEventListener sporkUpdatedEventListener = new SporkUpdatedEventListener() {
+
+        @Override
+        public void onSporkUpdated(final SporkMessage sporkMessage) {
+            if (sporkMessage.getSporkID() == SporkManager.SPORK_16_INSTANTSEND_AUTOLOCKS) {
+                boolean autoLockStatusChanged = InstantSend.canAutoLock() != config.getCanAutoLock();
+                if (autoLockStatusChanged) {
+                    config.setCanAutoLock(InstantSend.canAutoLock());
+                }
+            }
+        }
+    };
 }
