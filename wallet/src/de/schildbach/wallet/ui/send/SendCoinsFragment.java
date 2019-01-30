@@ -87,6 +87,7 @@ import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.AddressAndLabel;
 
+import de.schildbach.wallet.ui.CanAutoLockGuard;
 import de.schildbach.wallet.ui.CurrencyCalculatorLink;
 
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
@@ -206,6 +207,7 @@ public final class SendCoinsFragment extends Fragment {
     private TextView privateKeyBadPasswordView;
     private ImageView fingerprintIcon;
     private TextView attemptsRemainingTextView;
+    private TextView instantSendEnabledByDefaultView;
     private Button viewGo;
 
     @Nullable
@@ -239,6 +241,8 @@ public final class SendCoinsFragment extends Fragment {
     private static final int REQUEST_CODE_ENABLE_BLUETOOTH_FOR_DIRECT_PAYMENT = 2;
 
     private static final Logger log = LoggerFactory.getLogger(SendCoinsFragment.class);
+
+    private CanAutoLockGuard canAutoLockGuard;
 
     private enum State {
         REQUEST_PAYMENT_REQUEST, //
@@ -719,8 +723,7 @@ public final class SendCoinsFragment extends Fragment {
         attemptsRemainingTextView = (TextView) view.findViewById(R.id.pin_attempts);
         fingerprintIcon = view.findViewById(R.id.fingerprint_icon);
 
-        TextView instantSendEnabledByDefaultView = view.findViewById(R.id.instant_send_enabled_by_default);
-        instantSendEnabledByDefaultView.setVisibility(InstantSend.canAutoLock() ? View.VISIBLE : View.GONE);
+        instantSendEnabledByDefaultView = view.findViewById(R.id.instant_send_enabled_by_default);
 
         viewGo = (Button) view.findViewById(R.id.send_coins_go);
         viewGo.setOnClickListener(new OnClickListener() {
@@ -750,6 +753,9 @@ public final class SendCoinsFragment extends Fragment {
             }
         });
 
+        canAutoLockGuard = new CanAutoLockGuard(config, onAutoLockStatusChangedListener);
+        canAutoLockGuard.register(true);
+
         return view;
     }
 
@@ -758,6 +764,7 @@ public final class SendCoinsFragment extends Fragment {
         super.onDestroyView();
 
         config.setLastExchangeDirection(amountCalculatorLink.getExchangeDirection());
+        canAutoLockGuard.unregister();
     }
 
     @Override
@@ -1856,4 +1863,10 @@ public final class SendCoinsFragment extends Fragment {
                 .show();
     }
 
+    private CanAutoLockGuard.OnAutoLockStatusChangedListener onAutoLockStatusChangedListener = new CanAutoLockGuard.OnAutoLockStatusChangedListener() {
+        @Override
+        public void onAutoLockStatusChanged(boolean active) {
+            instantSendEnabledByDefaultView.setVisibility(active ? View.VISIBLE : View.GONE);
+        }
+    };
 }
