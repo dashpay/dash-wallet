@@ -622,7 +622,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                     @Override
                     public void onClick(View v) {
                         new DialogBuilder(context)
-                                .setTitle(R.string.regular_transaction_info_title)
                                 .setMessage(R.string.regular_transaction_info_message)
                                 .setPositiveButton(R.string.button_ok, null)
                                 .show();
