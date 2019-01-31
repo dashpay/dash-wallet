@@ -1318,8 +1318,6 @@ public final class SendCoinsFragment extends Fragment {
                 boolean autoLocksActive = InstantSend.canAutoLock();
                 if (autoLocksActive) {
 
-                    instantSendEnabledByDefaultView.setVisibility(View.VISIBLE);
-
                     try {
                         // initially check the preferred way (Instant Send auto lock)
                         final SendRequest sendRequest = createSendRequest(finalPaymentIntent, RequestType.INSTANT_SEND_AUTO_LOCK, false);
@@ -1347,12 +1345,10 @@ public final class SendCoinsFragment extends Fragment {
 
                 } catch (final Exception x) {
                     // ignore once again
-                    // also this exception doesn't meas we are not able to perform payment,
+                    // also this exception doesn't mean we are not able to perform payment,
                     // it just means we are not able to do this using INSTANT_SEND
                 }
             }
-
-            instantSendEnabledByDefaultView.setVisibility(View.GONE);
 
             try {
                 // check regular payment
@@ -1366,7 +1362,6 @@ public final class SendCoinsFragment extends Fragment {
                 // using the less restrictive method (REGULAR_PAYMENT), which means we are unable
                 // to do it at all
                 dryrunException = x;
-                instantSendEnabledByDefaultView.setVisibility(InstantSend.canAutoLock() ? View.VISIBLE : View.GONE);
             }
         }
     };
@@ -1616,6 +1611,18 @@ public final class SendCoinsFragment extends Fragment {
             privateKeyPasswordView.setNextFocusForwardId(R.id.send_coins_go);
             viewGo.setNextFocusUpId(
                     privateKeyPasswordViewVisible ? R.id.send_coins_private_key_password : activeAmountViewId);
+
+            instantSendEnabledByDefaultView.setVisibility(canAutoLockGuard.canAutoLock() ? View.VISIBLE : View.GONE);
+            if (dryrunSendRequest != null && dryrunException == null) {
+                // it means there is too less funds to perform IS but enough to perform regular payment,
+                // so most probably some are waiting for 6 confirmations.
+                // in such a case we should hide the instantSendEnabledByDefaultView message
+                if (RequestType.from(dryrunSendRequest) == RequestType.REGULAR_PAYMENT) {
+                    instantSendEnabledByDefaultView.setVisibility(View.GONE);
+                }
+            }
+
+
         } else {
             getView().setVisibility(View.GONE);
         }

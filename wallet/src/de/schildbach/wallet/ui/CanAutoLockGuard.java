@@ -38,6 +38,10 @@ public class CanAutoLockGuard implements SharedPreferences.OnSharedPreferenceCha
         }
     }
 
+    public boolean canAutoLock() {
+        return config.getCanAutoLock();
+    }
+
     public interface OnAutoLockStatusChangedListener {
 
         void onAutoLockStatusChanged(boolean active);
