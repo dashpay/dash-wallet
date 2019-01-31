@@ -10,8 +10,7 @@
 	<string name="transaction_row_message_received_instantx_locked2">Locked InstantSend</string>
 	<string name="transaction_row_message_sent_to_single_peer">This payment has been sent.</string>
 
-	<string name="regular_transaction_info_title">Regular transaction</string>
-	<string name="regular_transaction_info_message">This transaction couldn\'t be sent instantly.\n\nHence this transaction requires at least 6 confirmations to be completed.\n\nHowever the Dash received in this transaction is ready to be spent.</string>
+	<string name="regular_transaction_info_message">This transaction was sent without InstantSend. It requires more confirmations to be completed.</string>
 
 	<string name="wallet_options_disconnect">Disconnect</string>
 
@@ -33,8 +32,8 @@
 	<string name="send_coins_options_fee_category_zero">No Fee</string>
 	<string name="send_coins_fragment_hint_fee_zero">No fee of will be paid. Use \'no fee\' only if you don\'t care about confirmation time.</string>
 	<string name="send_coins_upgrade_to_instant_send_dialog_title">Upgrade to InstantSend?</string>
-	<string name="send_coins_upgrade_to_instant_send_dialog_message">Due to the complexity of this transaction, this couldn\'t be send instantly. Would you like to upgrade it to InstantSend for <![CDATA[<b>%1$s additional fee</b>]]>?</string>
-	<string name="send_coins_upgrade_to_instant_send_dialog_upgrade">Upgrade</string>
+	<string name="send_coins_upgrade_to_instant_send_dialog_message">This transaction needs more time to send securely. Would you like to speed up the process for <![CDATA[<b>%1$s via InstantSend</b>]]>?</string>
+	<string name="send_coins_upgrade_to_instant_send_dialog_upgrade">Yes</string>
 	<string name="send_coins_upgrade_to_instant_send_dialog_no">No</string>
 	<string name="send_coins_instant_send_enabled_by_default">InstantSend has been enabled by default at\u00A0Zero\u00A0Extra\u00A0Fee</string>
 
@@ -91,9 +90,9 @@
 	<string name="notification_synchronization_channel_name">Synchronization</string>
 	<string name="notification_synchronization_channel_description">Shows a notification when the app is synchronizing with the network.</string>
 
-	<string name="fastest_payment_network_dialog_title">Fastest Payment Network</string>
-	<string name="fastest_payment_network_dialog_message"><![CDATA[Payments are now <b>Instantly Sent and Received</b> on the Dash network at&nbsp;<b>Zero&nbsp;Extra&nbsp;Fee</b>]]></string>
-	<string name="fastest_payment_network_dialog_button">Cool</string>
+	<string name="fastest_payment_network_dialog_title">Your Money, Your Way</string>
+	<string name="fastest_payment_network_dialog_message">Send and Receive Dash in an Instant with no extra fee</string>
+	<string name="fastest_payment_network_dialog_button">Got it</string>
 
 	<string name="unlock_with_fingerprint">Use your fingerprint to unlock.</string>
 	<string name="unlock_with_fingerprint_error">Failed to recognize fingerprint, please try again.</string>
