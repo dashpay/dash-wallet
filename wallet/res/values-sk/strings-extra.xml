@@ -3,12 +3,6 @@
 
 	<string name="send_coins_fragment_instantx_enable">Použiť InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Táto InstantSend platba nebola ešte odoslaná.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Táto InstantSend platba čaká na overenie.</string>
-	<string name="transaction_row_message_own_instantx_locked">Odoslaná InstantSend transakcia (uzamknutá)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Táto InstantSend platba čaká na overenie.</string>
-	<string name="transaction_row_message_received_instantx_locked">Overené InstantSend</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">Nepotvrdená InstantSend platba</string>
-	<string name="transaction_row_message_received_instantx_locked2">Uzamknutá InstantSend platba</string>
 	<string name="transaction_row_message_sent_to_single_peer">Táto platba bola odoslaná.</string>
 	<string name="wallet_options_disconnect">Odpojiť</string>
 

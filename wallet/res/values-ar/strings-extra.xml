@@ -3,12 +3,6 @@
 
 	<string name="send_coins_fragment_instantx_enable">إستخدم الإرسال الفوري</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">لم تتم معاملة هذا الإرسال الفوري بعد .</string>
-	<string name="transaction_row_message_own_instantx_lock_request">هذا الدفع الفوري هو في انتظار التحقق</string>
-	<string name="transaction_row_message_own_instantx_locked">عملية إرسال الفوري (مغلق)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">هذا الدفع الفوري هو في انتظار التحقق</string>
-	<string name="transaction_row_message_received_instantx_locked">التحقق من الإرسال الفوري </string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">الإرسال الفوري غير مؤكد</string>
-	<string name="transaction_row_message_received_instantx_locked2">الإرسال الفوري مغلق</string>
 	<string name="transaction_row_message_sent_to_single_peer">لقد تم إرسال هذه الدفعة.</string>
 	<string name="wallet_options_disconnect">إنقطع الاتصال</string>
 

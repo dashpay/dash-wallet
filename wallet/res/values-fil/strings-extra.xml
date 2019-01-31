@@ -3,12 +3,6 @@
 
 	<string name="send_coins_fragment_instantx_enable">Gamitin ang InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Ang bayad sa InstantSend ay kasalukuyang hindi pa naililipat.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Ang InstantSend payment ay naghihintay ng beripikasyon.</string>
-	<string name="transaction_row_message_own_instantx_locked">Magpadala ng InstantSend transaksiyon (nakalock)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Ang InstantSend payment ay naghihintay ng beripikasyon.</string>
-	<string name="transaction_row_message_received_instantx_locked">Naberipika na ang InstantSend</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">Walang patunay na InstantSend</string>
-	<string name="transaction_row_message_received_instantx_locked2">Nakakandado ang InstantSend</string>
 	<string name="transaction_row_message_sent_to_single_peer">Naipadala na ang bayad na ito.</string>
 	<string name="wallet_options_disconnect">Idiskonekta</string>
 

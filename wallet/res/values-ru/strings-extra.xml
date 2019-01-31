@@ -3,12 +3,6 @@
 
 	<string name="send_coins_fragment_instantx_enable">Использовать InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Этот платёж InstantSend пока ещё не выполнен.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Этот платёж InstantSend ожидает проверки.</string>
-	<string name="transaction_row_message_own_instantx_locked">Транзакция InstantSend отправлена (подтверждена).</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Этот платёж InstantSend ожидает проверки.</string>
-	<string name="transaction_row_message_received_instantx_locked">Платёж InstantSend проверен</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">Неподтверждённый InstantSend</string>
-	<string name="transaction_row_message_received_instantx_locked2">Подтверждённый InstantSend</string>
 	<string name="transaction_row_message_sent_to_single_peer">Этот платёж был передан в сеть.</string>
 	<string name="wallet_options_disconnect">Отключить</string>
 

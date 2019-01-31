@@ -3,9 +3,6 @@
 
 	<string name="send_coins_fragment_instantx_enable">Uporabite instantno plačilo</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Instantno plačilo še ni bilo poslano.</string>
-	<string name="transaction_row_message_own_instantx_locked">Uporabi Instantno plačilo (onemogočeno)</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">Nepotrjeno instantno plačilo</string>
-	<string name="transaction_row_message_received_instantx_locked2">Onemogočeno instantno plačilo</string>
 	<string name="wallet_options_disconnect">Odjava</string>
 
 	<string name="network_monitor_masternodes_title">Napredna vozlišča</string>

@@ -3,12 +3,6 @@
 
 	<string name="send_coins_fragment_instantx_enable">Utiliser InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Ce paiement InstantSend n\'a pas encore été transmis.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Ce paiement InstantSend est en attente de vérification.</string>
-	<string name="transaction_row_message_own_instantx_locked">Transaction InstantSend envoyée (verrouillée)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Ce paiement InstantSend est en attente de vérification.</string>
-	<string name="transaction_row_message_received_instantx_locked">InstantSend vérifié</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">InstantSend non confirmé</string>
-	<string name="transaction_row_message_received_instantx_locked2">InstantSend verrouillé</string>
 	<string name="transaction_row_message_sent_to_single_peer">Ce paiement a été envoyé.</string>
 	<string name="wallet_options_disconnect">Déconnecter</string>
 

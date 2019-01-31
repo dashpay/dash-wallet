@@ -112,21 +112,6 @@
             android:layout_height="wrap_content"
             style="@style/MontserratMedium.MG.12" />
 
-        <TextView
-            android:id="@+id/transaction_row_ix"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_toRightOf="@id/transaction_row_info_button"
-            android:layout_toEndOf="@id/transaction_row_info_button"
-            android:layout_toLeftOf="@id/transaction_row_value"
-            android:layout_toStartOf="@id/transaction_row_value"
-            android:layout_marginRight="5dp"
-            android:layout_marginLeft="5dp"
-            android:maxLines="1"
-            android:ellipsize="end"
-            tools:text="InstantSend Verified"
-            style="@style/MontserratMedium.B.12" />
-
         <ImageView
             android:id="@+id/transaction_row_info_button"
             android:layout_width="18dp"

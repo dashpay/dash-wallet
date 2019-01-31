@@ -4,12 +4,6 @@
 
 	<string name="send_coins_fragment_instantx_enable">AnındaGönder\'i Kullan</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Bu AnındaGönder ödemesi henüz aktarılmadı.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Bu AnındaGönder ödemesi Dash Ağından onay bekliyor.</string>
-	<string name="transaction_row_message_own_instantx_locked">AnındaGönder işlemi gönderildi (kilitli)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Bu AnındaGönder ödemesi Dash Ağından onay bekliyor.</string>
-	<string name="transaction_row_message_received_instantx_locked">Bu AnındaGönder ödemesi Dash Ağı tarafından onaylandı.</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">Onaylanmamış AnındaGönder</string>
-	<string name="transaction_row_message_received_instantx_locked2">Kilitli AnındaGönder</string>
 
 	<string name="wallet_options_disconnect">Bağlantıyı Kes</string>
 

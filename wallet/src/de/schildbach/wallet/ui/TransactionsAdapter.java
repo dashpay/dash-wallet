@@ -316,8 +316,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         private final View extendMessageView;
         private final TextView messageView;
         private final ImageButton menuView;
-        private final TextView ixStatusView;
-        private final TextView ixStatusExtendedView;
         private final ImageView ixInfoButtonView;
 
 
@@ -337,8 +335,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             messageView = (TextView) itemView.findViewById(R.id.transaction_row_message);
             menuView = (ImageButton) itemView.findViewById(R.id.transaction_row_menu);
             //Dash
-            ixStatusView = (TextView) itemView.findViewById(R.id.transaction_row_ix);
-            ixStatusExtendedView = (TextView) itemView.findViewById(R.id.transaction_row_ix_extended);
             ixInfoButtonView = itemView.findViewById(R.id.transaction_row_info_button);
         }
 
@@ -529,18 +525,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             extendMessageView.setVisibility(View.GONE);
             messageView.setSingleLine(false);
 
-            TextView ixView = itemView.isActivated() ? ixStatusExtendedView : ixStatusView;
-            ixStatusExtendedView.setVisibility(View.GONE);
-            ixStatusView.setVisibility(View.GONE);
-
-            //
-            // Display Building, but with InstantX info, if available.
-            //
-            if (isLocked) {
-                ixView.setText(R.string.transaction_row_message_received_instantx_locked);
-                ixView.setVisibility(View.VISIBLE);
-            }
-
             if (purpose == Purpose.KEY_ROTATION) {
                 extendMessageView.setVisibility(View.VISIBLE);
                 messageView.setText(
@@ -563,12 +547,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 if (txCache.isIX) {
                     messageView.setText(R.string.transaction_row_message_own_instantx_lock_request_notsent);
                 }
-            } else if (txCache.sent && confidenceType == ConfidenceType.PENDING && txCache.isIX) // Added for sending IX
-            {
-                ixView.setVisibility(View.VISIBLE);
-                ixView.setText(R.string.transaction_row_message_own_instantx_lock_request);
-                if (isLocked)
-                    ixView.setText(R.string.transaction_row_message_received_instantx_locked);
             } else if (!isOwn && confidenceType == ConfidenceType.PENDING && confidence.numBroadcastPeers() == 0) {
                 extendMessageView.setVisibility(View.VISIBLE);
                 messageView.setText(R.string.transaction_row_message_received_direct);
@@ -587,12 +565,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 extendMessageView.setVisibility(View.VISIBLE);
                 messageView.setText(R.string.transaction_row_message_received_unconfirmed_unlocked);
                 messageView.setTextColor(colorInsignificant);
-                if (txCache.isIX) {
-                    ixView.setVisibility(View.VISIBLE);
-                    ixView.setText(R.string.transaction_row_message_received_instantx_lock_request);
-                    if (isLocked)
-                        ixView.setText(R.string.transaction_row_message_received_instantx_locked);
-                }
             } else if (!txCache.sent && confidenceType == ConfidenceType.IN_CONFLICT) {
                 extendMessageView.setVisibility(View.VISIBLE);
                 messageView.setText(R.string.transaction_row_message_received_in_conflict);
