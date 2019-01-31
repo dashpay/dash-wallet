@@ -25,8 +25,11 @@ public class FastestNetworkAnncmntDialog extends DialogFragment {
     private static final String FRAGMENT_TAG = FastestNetworkAnncmntDialog.class.getName();
 
     public static FastestNetworkAnncmntDialog show(FragmentManager fm) {
-        final FastestNetworkAnncmntDialog dialogFragment = new FastestNetworkAnncmntDialog();
-        dialogFragment.show(fm, FRAGMENT_TAG);
+        FastestNetworkAnncmntDialog dialogFragment = (FastestNetworkAnncmntDialog) fm.findFragmentByTag(FRAGMENT_TAG);
+        if (dialogFragment == null) {
+            dialogFragment = new FastestNetworkAnncmntDialog();
+            dialogFragment.show(fm, FRAGMENT_TAG);
+        }
         return dialogFragment;
     }
 
