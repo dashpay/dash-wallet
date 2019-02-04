@@ -39,6 +39,7 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.core.TransactionLockRequest;
+import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
@@ -1096,18 +1097,19 @@ public final class SendCoinsFragment extends Fragment {
 
     private void signAndSendPayment(final KeyParameter encryptionKey, final String pin) {
         RequestType requestType = RequestType.from(dryrunSendRequest);
+        boolean forceEnsureMinRequiredFee = dryrunSendRequest.ensureMinRequiredFee;
         switch (requestType) {
             case INSTANT_SEND: {
                 if (instantXenable.isChecked()) {
-                    signAndSendPayment(encryptionKey, pin, RequestType.INSTANT_SEND);
+                    signAndSendPayment(encryptionKey, pin, RequestType.INSTANT_SEND, forceEnsureMinRequiredFee);
                 } else {
-                    signAndSendPayment(encryptionKey, pin, RequestType.REGULAR_PAYMENT);
+                    signAndSendPayment(encryptionKey, pin, RequestType.REGULAR_PAYMENT, forceEnsureMinRequiredFee);
                 }
                 break;
             }
             case INSTANT_SEND_AUTO_LOCK:
             case REGULAR_PAYMENT: {
-                signAndSendPayment(encryptionKey, pin, requestType);
+                signAndSendPayment(encryptionKey, pin, requestType, forceEnsureMinRequiredFee);
                 break;
             }
             default: {
@@ -1116,14 +1118,14 @@ public final class SendCoinsFragment extends Fragment {
         }
     }
 
-    private void signAndSendPayment(final KeyParameter encryptionKey, final String pin, RequestType requestType) {
+    private void signAndSendPayment(final KeyParameter encryptionKey, final String pin, RequestType requestType, boolean forceEnsureMinRequiredFee) {
         setState(State.SIGNING);
 
         // final payment intent
         final PaymentIntent finalPaymentIntent = paymentIntent.mergeWithEditedValues(amountCalculatorLink.getAmount(),
                 validatedAddress != null ? validatedAddress.address : null);
 
-        SendRequest sendRequest = createSendRequest(finalPaymentIntent, requestType, true);
+        SendRequest sendRequest = createSendRequest(finalPaymentIntent, requestType, true, forceEnsureMinRequiredFee);
 
         final Coin finalAmount = finalPaymentIntent.getAmount();
 
@@ -1340,9 +1342,13 @@ public final class SendCoinsFragment extends Fragment {
 
                     try {
                         // initially check the preferred way (Instant Send auto lock)
-                        final SendRequest sendRequest = createSendRequest(finalPaymentIntent, RequestType.INSTANT_SEND_AUTO_LOCK, false);
+                        SendRequest sendRequest = createSendRequest(finalPaymentIntent, RequestType.INSTANT_SEND_AUTO_LOCK, false, false);
 
                         wallet.completeTx(sendRequest);
+                        if(checkDust(sendRequest)) {
+                            sendRequest = createSendRequest(finalPaymentIntent, RequestType.INSTANT_SEND_AUTO_LOCK, false, true);
+                            wallet.completeTx(sendRequest);
+                        }
                         if (sendRequest.tx.isSimple()) {
                             dryrunSendRequest = sendRequest;
                             return;
@@ -1357,7 +1363,7 @@ public final class SendCoinsFragment extends Fragment {
 
                 try {
                     // if Instant Send auto lock can't be performed check standard Instant Send (higher fee)
-                    final SendRequest sendRequest = createSendRequest(finalPaymentIntent, RequestType.INSTANT_SEND, false);
+                    final SendRequest sendRequest = createSendRequest(finalPaymentIntent, RequestType.INSTANT_SEND, false, false);
 
                     wallet.completeTx(sendRequest);
                     dryrunSendRequest = sendRequest;
@@ -1372,9 +1378,13 @@ public final class SendCoinsFragment extends Fragment {
 
             try {
                 // check regular payment
-                final SendRequest sendRequest = createSendRequest(finalPaymentIntent, RequestType.REGULAR_PAYMENT, false);
+                SendRequest sendRequest = createSendRequest(finalPaymentIntent, RequestType.REGULAR_PAYMENT, false, false);
 
                 wallet.completeTx(sendRequest);
+                if(checkDust(sendRequest)) {
+                    sendRequest = createSendRequest(finalPaymentIntent, RequestType.INSTANT_SEND_AUTO_LOCK, false, true);
+                    wallet.completeTx(sendRequest);
+                }
                 dryrunSendRequest = sendRequest;
 
             } catch (final Exception x) {
@@ -1403,7 +1413,7 @@ public final class SendCoinsFragment extends Fragment {
         }
     }
 
-    private SendRequest createSendRequest(PaymentIntent paymentIntent, RequestType requestType, boolean signInputs) {
+    private SendRequest createSendRequest(PaymentIntent paymentIntent, RequestType requestType, boolean signInputs, boolean forceEnsureMinRequiredFee) {
         if (fees == null) {
             throw new IllegalStateException();
         }
@@ -1430,7 +1440,7 @@ public final class SendCoinsFragment extends Fragment {
             }
         }
 
-        sendRequest.ensureMinRequiredFee = sendRequest.useInstantSend;
+        sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee ? true : sendRequest.useInstantSend;
         sendRequest.signInputs = signInputs;
 
         Coin walletBalance = wallet.getBalance(BalanceType.ESTIMATED);
@@ -1880,4 +1890,14 @@ public final class SendCoinsFragment extends Fragment {
             handler.post(dryrunRunnable);
         }
     };
+
+    private boolean checkDust(SendRequest req) {
+        if(req.tx != null) {
+            for(TransactionOutput output : req.tx.getOutputs()) {
+                if(output.isDust())
+                    return true;
+            }
+        }
+        return false;
+    }
 }
