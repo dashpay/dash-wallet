@@ -17,18 +17,34 @@
 
 package org.dash.wallet.integration.uphold.ui;
 
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.customtabs.CustomTabsIntent;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
 import android.view.View;
 
+import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
 import org.dash.wallet.integration.uphold.R;
+import org.dash.wallet.integration.uphold.data.UpholdClient;
+import org.dash.wallet.integration.uphold.data.UpholdConstants;
 
 public class UpholdSplashActivity extends AppCompatActivity {
+
+    public static final String UPHOLD_EXTRA_CODE = "uphold_extra_code";
+    public static final String UPHOLD_EXTRA_STATE = "uphold_extra_state";
+
+    private ProgressDialog loadingDialog;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -47,22 +63,100 @@ public class UpholdSplashActivity extends AppCompatActivity {
             actionBar.setTitle(R.string.uphold_link_account);
         }
 
+        loadingDialog = new ProgressDialog(this);
+        loadingDialog.setIndeterminate(true);
+        loadingDialog.setCancelable(false);
+        loadingDialog.setMessage(getString(R.string.loading));
+
         findViewById(R.id.uphold_link_account).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startWebViewActivity();
+                openLoginUrl();
             }
         });
     }
 
-    private void startWebViewActivity() {
-        Intent intent = new Intent(this, UpholdWebViewActivity.class);
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        Bundle extras = intent.getExtras();
+        if (extras != null && extras.containsKey(UPHOLD_EXTRA_CODE)
+                && extras.containsKey(UPHOLD_EXTRA_STATE)) {
+            String code = extras.getString(UPHOLD_EXTRA_CODE);
+            String state = extras.getString(UPHOLD_EXTRA_STATE);
+            getAccessToken(code, state);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        loadingDialog.dismiss();
+        super.onDestroy();
+    }
+
+    private void getAccessToken(String code, String state) {
+        if (code != null && UpholdClient.getInstance().getEncryptionKey().equals(state)) {
+            loadingDialog.show();
+            UpholdClient.getInstance().getAccessToken(code, new UpholdClient.Callback<String>() {
+                @Override
+                public void onSuccess(String dashCardId) {
+                    loadingDialog.hide();
+                    startUpholdAccountActivity();
+                }
+
+                @Override
+                public void onError(Exception e, boolean otpRequired) {
+                    loadingDialog.hide();
+                    showLoadingErrorAlert();
+                }
+            });
+        } else {
+            showLoadingErrorAlert();
+        }
+    }
+
+    private void showLoadingErrorAlert() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setCancelable(false);
+        builder.setMessage(R.string.loading_error);
+        builder.setPositiveButton(android.R.string.ok, null);
+        Dialog dialog = builder.show();
+        dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                finish();
+            }
+        });
+    }
+
+    private void startUpholdAccountActivity() {
+        Intent intent = new Intent(this, UpholdAccountActivity.class);
         Bundle extras = getIntent().getExtras();
         if (extras != null) {
             intent.putExtras(extras);
         }
         startActivity(intent);
         finish();
+    }
+
+    private void openLoginUrl() {
+        final String url = String.format(UpholdConstants.INITIAL_URL,
+                UpholdClient.getInstance().getEncryptionKey());
+
+        CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
+        int toolbarColor = ContextCompat.getColor(this, R.color.colorPrimary);
+        CustomTabsIntent customTabsIntent = builder.setShowTitle(true)
+                .setToolbarColor(toolbarColor).build();
+
+        CustomTabActivityHelper.openCustomTab(this, customTabsIntent, Uri.parse(url),
+                new CustomTabActivityHelper.CustomTabFallback() {
+            @Override
+            public void openUri(Activity activity, Uri uri) {
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setData(Uri.parse(url));
+                startActivity(intent);
+            }
+        });
     }
 
     @Override

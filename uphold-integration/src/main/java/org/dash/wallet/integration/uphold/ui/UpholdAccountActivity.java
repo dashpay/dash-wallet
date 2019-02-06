@@ -17,11 +17,15 @@
 
 package org.dash.wallet.integration.uphold.ui;
 
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
+import android.support.customtabs.CustomTabsIntent;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -31,10 +35,13 @@ import android.view.View;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.integration.uphold.R;
+import org.dash.wallet.integration.uphold.data.UpholdCard;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
+import org.dash.wallet.integration.uphold.data.UpholdConstants;
 
 import java.math.BigDecimal;
 
@@ -82,7 +89,7 @@ public class UpholdAccountActivity extends AppCompatActivity {
         findViewById(R.id.uphold_buy_dash_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showWebViewActivity();
+                openBuyDashUrl();
             }
         });
     }
@@ -102,12 +109,6 @@ public class UpholdAccountActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         loadUserBalance();
-    }
-
-    private void showWebViewActivity() {
-        Intent intent = new Intent(this, UpholdWebViewActivity.class);
-        intent.putExtra(UpholdWebViewActivity.BUYING_EXTRA, true);
-        startActivity(intent);
     }
 
     private void loadUserBalance() {
@@ -131,6 +132,30 @@ public class UpholdAccountActivity extends AppCompatActivity {
                 showErrorAlert();
             }
         });
+    }
+
+    private void openBuyDashUrl() {
+        UpholdCard dashCard = UpholdClient.getInstance().getCurrentDashCard();
+        if (dashCard != null) {
+            final String url = String.format(UpholdConstants.CARD_URL_BASE, dashCard.getId());
+
+            CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
+            int toolbarColor = ContextCompat.getColor(this, R.color.colorPrimary);
+            CustomTabsIntent customTabsIntent = builder.setShowTitle(true)
+                    .setToolbarColor(toolbarColor).build();
+
+            CustomTabActivityHelper.openCustomTab(this, customTabsIntent, Uri.parse(url),
+                    new CustomTabActivityHelper.CustomTabFallback() {
+                        @Override
+                        public void openUri(Activity activity, Uri uri) {
+                            Intent intent = new Intent(Intent.ACTION_VIEW);
+                            intent.setData(Uri.parse(url));
+                            startActivity(intent);
+                        }
+                    });
+        } else {
+            showErrorAlert();
+        }
     }
 
     private void showErrorAlert() {
