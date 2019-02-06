@@ -81,7 +81,7 @@ public final class Constants {
                         "18.237.223.92", "54.187.24.244", "34.216.182.200",
                         "54.244.102.48", "34.222.227.120", "34.222.92.227",
                         "54.185.85.42", "34.209.237.218"};
-                BIP44_PATH = EvolutionWalletAppKit.EVOLUTION_ACCOUNT_PATH;
+                BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
                 NETWORK_PARAMETERS = DevNetParams.get("maithai", "yMtULrhoxd8vRZrsnFobWgRTidtjg2Rnjm", 20001, DNS_SEED);
                 IS_PROD_BUILD = false;
                 break;
