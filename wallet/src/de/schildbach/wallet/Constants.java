@@ -91,7 +91,7 @@ public final class Constants {
                 throw new IllegalStateException("Unsupported flavor " + BuildConfig.FLAVOR);
             }
         }
-        org.dash.wallet.common.Constants.NETWORK_PARAMETERS = NETWORK_PARAMETERS;
+        org.dash.wallet.common.Constants.MAX_MONEY = NETWORK_PARAMETERS.getMaxMoney();
     }
 
     /** Bitcoinj global context. */
