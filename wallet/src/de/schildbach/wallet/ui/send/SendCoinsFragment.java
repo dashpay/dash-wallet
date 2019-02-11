@@ -1640,10 +1640,10 @@ public final class SendCoinsFragment extends Fragment {
                     final Spannable hintLocalFee = new MonetarySpannable(Constants.LOCAL_FORMAT, fiatFeeValue)
                             .applyMarkup(null, MonetarySpannable.STANDARD_INSIGNIFICANT_SPANS);
                     final String currencySymbol = GenericUtils.currencySymbol(fiatFeeValue.currencyCode);
-                    instantSendInfo.setText(getString(hintResId, currencySymbol + hintLocalFee));
+                    instantSendInfo.setText(getString(hintResId, currencySymbol, hintLocalFee));
                 } catch (NullPointerException x) {
                     //only show the fee in DASH
-                    instantSendInfo.setText(getString(hintResId, btcFormat.format(dryrunSendRequest.tx.getFee())));
+                    instantSendInfo.setText(getString(hintResId, btcFormat.format(dryrunSendRequest.tx.getFee()), ""));
                 }
                 instantSendInfo.setVisibility(View.VISIBLE);
                 instantXenable.setVisibility(View.VISIBLE);
