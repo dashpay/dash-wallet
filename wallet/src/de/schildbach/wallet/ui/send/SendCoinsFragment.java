@@ -43,6 +43,7 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.uri.BitcoinURI;
+import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.InstantXCoinSelector;
 import org.bitcoinj.wallet.KeyChain.KeyPurpose;
@@ -1634,10 +1635,10 @@ public final class SendCoinsFragment extends Fragment {
             case INSTANT_SEND: {
                 int hintResId = R.string.send_coins_auto_lock_not_feasible;
                 try {
-                    final Spannable hintLocalFee = new MonetarySpannable(Constants.LOCAL_FORMAT, amountCalculatorLink.getExchangeRate().coinToFiat(dryrunSendRequest.tx.getFee()))
+                    Fiat fiatFeeValue = amountCalculatorLink.getExchangeRate().coinToFiat(dryrunSendRequest.tx.getFee());
+                    final Spannable hintLocalFee = new MonetarySpannable(Constants.LOCAL_FORMAT, fiatFeeValue)
                             .applyMarkup(null, MonetarySpannable.STANDARD_INSIGNIFICANT_SPANS);
-                    instantSendInfo.setText(getString(hintResId, btcFormat.format(dryrunSendRequest.tx.getFee())
-                            + (hintLocalFee != null ? (" (" + amountCalculatorLink.getExchangeRate().coinToFiat(dryrunSendRequest.tx.getFee()).currencyCode + " " + hintLocalFee + ")") : "")));
+                    instantSendInfo.setText(getString(hintResId, fiatFeeValue.currencyCode + " " + hintLocalFee));
                 } catch (NullPointerException x) {
                     //only show the fee in DASH
                     instantSendInfo.setText(getString(hintResId, btcFormat.format(dryrunSendRequest.tx.getFee())));
