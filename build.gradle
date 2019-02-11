@@ -1,3 +1,7 @@
+ext {
+    dashjVersion = "0.15-SNAPSHOT"
+}
+
 buildscript {
     repositories {
         google()
