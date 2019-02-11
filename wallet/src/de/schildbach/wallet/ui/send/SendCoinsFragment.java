@@ -56,6 +56,7 @@ import org.bitcoinj.wallet.ZeroConfCoinSelector;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.CurrencyAmountView;
 import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.util.GenericUtils;
 import org.dash.wallet.common.util.MonetarySpannable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1638,7 +1639,8 @@ public final class SendCoinsFragment extends Fragment {
                     Fiat fiatFeeValue = amountCalculatorLink.getExchangeRate().coinToFiat(dryrunSendRequest.tx.getFee());
                     final Spannable hintLocalFee = new MonetarySpannable(Constants.LOCAL_FORMAT, fiatFeeValue)
                             .applyMarkup(null, MonetarySpannable.STANDARD_INSIGNIFICANT_SPANS);
-                    instantSendInfo.setText(getString(hintResId, fiatFeeValue.currencyCode + " " + hintLocalFee));
+                    final String currencySymbol = GenericUtils.currencySymbol(fiatFeeValue.currencyCode);
+                    instantSendInfo.setText(getString(hintResId, currencySymbol + hintLocalFee));
                 } catch (NullPointerException x) {
                     //only show the fee in DASH
                     instantSendInfo.setText(getString(hintResId, btcFormat.format(dryrunSendRequest.tx.getFee())));
