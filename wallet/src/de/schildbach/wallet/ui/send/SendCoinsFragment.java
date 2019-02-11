@@ -58,6 +58,7 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.CurrencyAmountView;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.common.util.MonetarySpannable;
+import org.bitcoinj.wallet.ZeroConfCoinSelector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.params.KeyParameter;

@@ -29,18 +29,27 @@ import de.schildbach.wallet.WalletApplication;
 import org.dash.wallet.common.ui.DialogBuilder;
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder;
 import de.schildbach.wallet.util.CrashReporter;
+import de.schildbach.wallet.util.Qr;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
+import android.content.Intent;
+import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
-import android.support.v7.preference.PreferenceFragmentCompat;
+
+import android.preference.Preference;
+import android.preference.PreferenceFragment;
+import android.preference.PreferenceScreen;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.ImageView;
 
 /**
  * @author Andreas Schildbach
  */
-public final class DiagnosticsFragment extends PreferenceFragmentCompat {
+public final class DiagnosticsFragment extends PreferenceFragment {
 	private Activity activity;
 	private WalletApplication application;
 
@@ -59,12 +68,14 @@ public final class DiagnosticsFragment extends PreferenceFragmentCompat {
 	}
 
 	@Override
-	public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
-		setPreferencesFromResource(R.xml.preference_diagnostics, rootKey);
+	public void onCreate(final Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+
+		addPreferencesFromResource(R.xml.preference_diagnostics);
 	}
 
 	@Override
-	public boolean onPreferenceTreeClick(android.support.v7.preference.Preference preference) {
+	public boolean onPreferenceTreeClick(PreferenceScreen preferenceScreen, Preference preference) {
 		final String key = preference.getKey();
 
 		if (PREFS_KEY_REPORT_ISSUE.equals(key)) {
@@ -143,6 +154,32 @@ public final class DiagnosticsFragment extends PreferenceFragmentCompat {
 		final DeterministicKey extendedKey = application.getWallet().getWatchingKey();
         final String xpub = String.format(Locale.US, "%s?c=%d&h=bip32",
                 extendedKey.serializePubB58(Constants.NETWORK_PARAMETERS), extendedKey.getCreationTimeSeconds());
-		ExtendedPublicKeyFragment.show(getFragmentManager(), (CharSequence) xpub);
+		showExtendedPublicKeyDialog(xpub);
+	}
+
+	private void showExtendedPublicKeyDialog(final String xpub) {
+		final View view = LayoutInflater.from(activity).inflate(R.layout.extended_public_key_dialog, null);
+
+		final BitmapDrawable bitmap = new BitmapDrawable(getResources(), Qr.bitmap(xpub));
+		bitmap.setFilterBitmap(false);
+		final ImageView imageView = (ImageView) view.findViewById(R.id.extended_public_key_dialog_image);
+		imageView.setImageDrawable(bitmap);
+
+		final DialogBuilder dialog = new DialogBuilder(activity);
+		dialog.setView(view);
+		dialog.setNegativeButton(R.string.button_dismiss, null);
+		dialog.setPositiveButton(R.string.button_share, new OnClickListener() {
+			@Override
+			public void onClick(final DialogInterface dialog, final int which) {
+				final Intent intent = new Intent(Intent.ACTION_SEND);
+				intent.setType("text/plain");
+				intent.putExtra(Intent.EXTRA_TEXT, xpub);
+				intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.extended_public_key_fragment_title));
+				startActivity(Intent.createChooser(intent, getString(R.string.extended_public_key_fragment_share)));
+				log.info("xpub shared via intent: {}", xpub);
+			}
+		});
+
+		dialog.show();
 	}
 }
