@@ -1382,7 +1382,7 @@ public final class SendCoinsFragment extends Fragment {
 
                 wallet.completeTx(sendRequest);
                 if(checkDust(sendRequest)) {
-                    sendRequest = createSendRequest(finalPaymentIntent, RequestType.INSTANT_SEND_AUTO_LOCK, false, true);
+                    sendRequest = createSendRequest(finalPaymentIntent, RequestType.REGULAR_PAYMENT, false, true);
                     wallet.completeTx(sendRequest);
                 }
                 dryrunSendRequest = sendRequest;
