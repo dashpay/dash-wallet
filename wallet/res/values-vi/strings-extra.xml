@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-	<string name="send_coins_fragment_instantx_enable">Sử dụng InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Giao dịch InstantSend này chưa được bắt đầu thực hiện.</string>
 	<string name="transaction_row_message_own_instantx_lock_request">Giao dịch InstantSend này đang đợi xác thực.</string>
 	<string name="transaction_row_message_own_instantx_locked">Giao dịch InstantSend đã được gửi (được khoá)</string>

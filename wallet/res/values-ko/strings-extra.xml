@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-	<string name="send_coins_fragment_instantx_enable">즉시송금 사용</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">해당 즉시송금 결제가 아직 전송되지 않았습니다.</string>
 	<string name="transaction_row_message_own_instantx_lock_request">이 즉시송금 거래는 승인 대기중입니다.</string>
 	<string name="transaction_row_message_own_instantx_locked">즉시송금 거래 (잠금)가 완료되었습니다.</string>

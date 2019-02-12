@@ -70,9 +70,6 @@
 	<string name="send_coins_fragment_pending">(%s menunggu konfirmasi)</string>
 	<string name="send_coins_fragment_amount_label">Jumlah pembayaran</string>
 	<string name="send_coins_fragment_pin_label">Masukkan pin</string>
-	<string name="send_coins_fragment_hint_fee_economic">Biaya ekonomis %s akan dibayarkan. Gunakan \'ekonomis\' hanya jika Anda tidak peduli tentang waktu konfirmasi.</string>
-	<string name="send_coins_fragment_hint_fee">Biaya jaringan %s akan dibayarkan.</string>
-	<string name="send_coins_fragment_hint_fee_priority">Biaya prioritas %s akan dibayarkan. Jika Anda peduli dengan biaya rendah, gunakan \'prioritas\' hanya jika Anda perlu konfirmasi sesegera mungkin.</string>
 	<string name="send_coins_fragment_hint_dusty_send">Jumlah yang terlalu kecil untuk dikirim.</string>
 	<string name="send_coins_fragment_hint_insufficient_money">Tidak cukup koin yang tersedia. Anda kehilangan %s.</string>
 	<string name="send_coins_fragment_hint_empty_wallet_failed">Jumlah pembayaran kecil di dompet Anda tidak menambah nilai yang dapat dikirim.</string>

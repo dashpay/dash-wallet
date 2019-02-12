@@ -1,8 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-
-	<string name="send_coins_fragment_instantx_enable">Použít InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Tato platba nebyla ještě odeslána.</string>
 	<string name="transaction_row_message_own_instantx_lock_request">Tato platba čeká na ověření systémem Dash.</string>
 	<string name="transaction_row_message_own_instantx_locked">Zaslaná InstantSend transakce (uzamčeno)</string>

@@ -67,9 +67,6 @@
     <string name="send_coins_fragment_receiving_address_complex">complex\naddress</string>
     <string name="send_coins_fragment_pending">(%s αναμονή για επιβεβαίωση)</string>
     <string name="send_coins_fragment_amount_label">Ποσό για πληρωμή</string>
-    <string name="send_coins_fragment_hint_fee_economic">Θα πληρώστε οικονομικό τέλος %s. Χρησιμοποιήστε την επιλογή \"οικονομική\" μόνο αν δεν σας ενδιαφέρει ο χρόνος επιβεβαίωσης.</string>
-    <string name="send_coins_fragment_hint_fee">Θα πληρώσετε %s για το δίκτυο.</string>
-    <string name="send_coins_fragment_hint_fee_priority">Θα πληρώσετε τέλη προτεραιότητας %s. Αν σας ενδιαφέρουν χαμηλά τέλη, χρησιμοποιήστε την επιλογή \"προτεραιότητα\" μόνο αν χρειάζεστε επιβεβαίωση το συντομότερο δυνατόν.</string>
     <string name="send_coins_fragment_hint_dusty_send">Το ποσό είναι πολύ μικρό για να σταλθεί.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Δεν έχετε αρκετά νομίσματα. Σας λείπουν %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Το ποσό των μικρών πληρωμών στο πορτοφόλι σας δεν επαρκεί για το ποσό που είναι προς αποστολή.</string>

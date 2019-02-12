@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-	<string name="send_coins_fragment_instantx_enable">使用即時到帳功能</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">這個即時到帳交易尚未發送。</string>
 	<string name="transaction_row_message_own_instantx_lock_request">這個即時到帳交易正在等待確認。</string>
 	<string name="transaction_row_message_own_instantx_locked">發送即時到帳交易(已鎖定)</string>

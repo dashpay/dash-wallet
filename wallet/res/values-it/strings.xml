@@ -68,9 +68,6 @@
     <string name="send_coins_fragment_pending">(%s in attesa di conferma)</string>
     <string name="send_coins_fragment_amount_label">Importo da pagare</string>
     <string name="send_coins_fragment_pin_label">Immetti il PIN</string>
-    <string name="send_coins_fragment_hint_fee_economic">Una tassa economica  %ssara pagata. Usa \'economico\' solo se non ti interessa il tempo di conferma.</string>
-    <string name="send_coins_fragment_hint_fee">Sarà pagata una piccola commissione di rete di %s.</string>
-    <string name="send_coins_fragment_hint_fee_priority">Una tassa di priorità %s sara pagata. Usa \'priorità\' solo se hai bisogno di una conferma il prima possibile.</string>
     <string name="send_coins_fragment_hint_dusty_send">L\'importo è troppo piccolo per l\'invio.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Non ci sono abbastanza monete disponibili. %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">La quantità di piccoli pagamenti nel vostro portamonete non raggiunge valori inviabili.</string>

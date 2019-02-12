@@ -68,9 +68,6 @@
 	<string name="send_coins_fragment_pending">(%sが確認待ちです)</string>
 	<string name="send_coins_fragment_amount_label">合計支払</string>
 	<string name="send_coins_fragment_pin_label">PINを入力</string>
-	<string name="send_coins_fragment_hint_fee_economic">必要最小限の手数料%s が支払われます。承認時間を気にされない場合のみ”必要最小限の手数料”をお使いください。</string>
-	<string name="send_coins_fragment_hint_fee">ネットワーク手数料 %s が支払われます。</string>
-	<string name="send_coins_fragment_hint_fee_priority">優先手数料%s が支払われます。手数料が高くなっても、できるだけ承認時間を短縮したい場合のみ「優先」をお使いください。 If you care about low fees, use \'priority\' only if you need confirmation as soon as possible.</string>
 	<string name="send_coins_fragment_hint_dusty_send">送金額が小さすぎます</string>
 	<string name="send_coins_fragment_hint_insufficient_money">ご利用できるコインが足りません。%sが不足です。</string>
 	<string name="send_coins_fragment_hint_empty_wallet_failed">ウォレット中の少額の支払いを合計しても送信可能な額には足りませんでした。</string>

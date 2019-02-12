@@ -68,9 +68,6 @@
     <string name="send_coins_fragment_pending">(%s 正在等待确认)</string>
     <string name="send_coins_fragment_amount_label">要支付的金额</string>
     <string name="send_coins_fragment_pin_label">输入 PIN</string>
-    <string name="send_coins_fragment_hint_fee_economic">将支付 %s 的经济型手续费. 若您不介意较长的确认时间, 可以使用\'经济型\'.</string>
-    <string name="send_coins_fragment_hint_fee">将支付 %s 的网络费用.</string>
-    <string name="send_coins_fragment_hint_fee_priority">将支付 %s 作为优先确认费用. 如果您不在意些许的手续费, 使用\'优先确认\'可以使您的交易尽快完成确认.</string>
     <string name="send_coins_fragment_hint_dusty_send">该金额太小了，无法支付。</string>
     <string name="send_coins_fragment_hint_insufficient_money">达世币余额不足。您还缺少 %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">您钱包中的微小付款金额无法达到可支付的金额。</string>

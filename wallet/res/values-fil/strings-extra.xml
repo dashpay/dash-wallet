@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-	<string name="send_coins_fragment_instantx_enable">Gamitin ang InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Ang bayad sa InstantSend ay kasalukuyang hindi pa naililipat.</string>
 	<string name="transaction_row_message_own_instantx_lock_request">Ang InstantSend payment ay naghihintay ng beripikasyon.</string>
 	<string name="transaction_row_message_own_instantx_locked">Magpadala ng InstantSend transaksiyon (nakalock)</string>

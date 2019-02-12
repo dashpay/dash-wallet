@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-	<string name="send_coins_fragment_instantx_enable">Использовать InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Этот платёж InstantSend пока ещё не выполнен.</string>
 	<string name="transaction_row_message_own_instantx_lock_request">Этот платёж InstantSend ожидает проверки.</string>
 	<string name="transaction_row_message_own_instantx_locked">Транзакция InstantSend отправлена (подтверждена).</string>
