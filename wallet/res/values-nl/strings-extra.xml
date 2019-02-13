@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-	<string name="send_coins_fragment_instantx_enable">InstantSend gebruiken</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Deze InstantSend betaling is nog niet verzonden.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Deze betaling is verzonden.</string>
 	<string name="wallet_options_disconnect">Verbinding verbreken</string>

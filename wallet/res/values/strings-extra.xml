@@ -1,6 +1,11 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
+    <string name="send_coins_auto_lock_feasible">This transaction will settle instantly at no extra fee.</string>
+	<string name="send_coins_auto_lock_not_feasible">This transaction may take several minutes to settle. Complete instantly for an extra %1$s%2$s?</string>
+	<string name="send_coins_instant_send_not_feasible">This transaction may take several minutes to settle.</string>
+	<string name="send_coins_instant_send_enabled_by_default">InstantSend has been enabled by default at\u00A0Zero\u00A0Extra\u00A0Fee</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">This InstantSend payment has not been transmitted yet.</string>
 	<string name="transaction_row_message_sent_to_single_peer">This payment has been sent.</string>
 
@@ -25,11 +30,6 @@
 
 	<string name="send_coins_options_fee_category_zero">No Fee</string>
 	<string name="send_coins_fragment_hint_fee_zero">No fee of will be paid. Use \'no fee\' only if you don\'t care about confirmation time.</string>
-	<string name="send_coins_upgrade_to_instant_send_dialog_title">Upgrade to InstantSend?</string>
-	<string name="send_coins_upgrade_to_instant_send_dialog_message">This transaction needs more time to send securely. Would you like to speed up the process for <![CDATA[<b>%1$s via InstantSend</b>]]>?</string>
-	<string name="send_coins_upgrade_to_instant_send_dialog_upgrade">Yes</string>
-	<string name="send_coins_upgrade_to_instant_send_dialog_no">No</string>
-	<string name="send_coins_instant_send_enabled_by_default">InstantSend has been enabled by default at\u00A0Zero\u00A0Extra\u00A0Fee</string>
 
 	<string name="wallet_uri_handler_public_key_request_dialog_msg">Application %s would like to receive your Master Public Key.  This can be used to keep track of your wallet, this can not be used to move your Dash.</string>
 	<string name="wallet_uri_handler_address_request_dialog_msg">Application %s is requesting an address so it can pay you.  Would you like to authorize this?</string>

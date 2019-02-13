@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-	<string name="send_coins_fragment_instantx_enable">Gunakan InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Pembayaran InstantSend ini belum terkirim.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Pembayaran ini telah dikirim.</string>
 	<string name="wallet_options_disconnect">Terputus</string>

@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-	<string name="send_coins_fragment_instantx_enable">즉시송금 사용</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">해당 즉시송금 결제가 아직 전송되지 않았습니다.</string>
 	<string name="transaction_row_message_sent_to_single_peer">송금이 완료되었습니다.</string>
 	<string name="wallet_options_disconnect">연결해제</string>

@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-	<string name="send_coins_fragment_instantx_enable">使用即时支付</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">此项即时支付交易尚未传输。</string>
 	<string name="transaction_row_message_sent_to_single_peer">此交易已被发送。</string>
 	<string name="wallet_options_disconnect">未连接</string>

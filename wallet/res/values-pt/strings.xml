@@ -68,9 +68,6 @@
     <string name="send_coins_fragment_pending">(%s esperando confirmação)</string>
     <string name="send_coins_fragment_amount_label">Quantidade a pagar</string>
     <string name="send_coins_fragment_pin_label">Inserir PIN</string>
-    <string name="send_coins_fragment_hint_fee_economic">Uma taxa econômica de%s será paga. Use \"econômico\" somente se você não se importa com o tempo de confirmação.</string>
-    <string name="send_coins_fragment_hint_fee">Uma taxa de rede de %s será paga.</string>
-    <string name="send_coins_fragment_hint_fee_priority">Uma taxa para a prioridade de%s será paga. Se você se preocupa com baixas taxas, use \"prioridade\" apenas se você precisar de confirmação mais rapido possível.</string>
     <string name="send_coins_fragment_hint_dusty_send">A quantidade de moedas na carteira é muito pequena para enviar.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Saldo insuficiente. Faltam %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">A quantidade de pequenos pagamentos em sua carteira não somam um valor para envio.</string>

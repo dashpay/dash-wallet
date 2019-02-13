@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-	<string name="send_coins_fragment_instantx_enable">Usar InstantSend</string>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Este pago enviado por InstantSend aún no ha sido transmitido.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Este pago ha sido enviado.</string>
 	<string name="wallet_options_disconnect">Desconectar</string>

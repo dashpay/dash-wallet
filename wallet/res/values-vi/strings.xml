@@ -68,9 +68,6 @@
     <string name="send_coins_fragment_pending">(%s đợi xác nhận)</string>
     <string name="send_coins_fragment_amount_label">Số lượng chi trả</string>
     <string name="send_coins_fragment_pin_label">Nhập mã PIN!</string>
-    <string name="send_coins_fragment_hint_fee_economic">Mức phí tiết kiệm %s sẽ được trả. Sử dụng mức phí \'tiết kiệm\' chỉ khi bạn không quan tâm đến thời gian xác thực lâu hay chóng.</string>
-    <string name="send_coins_fragment_hint_fee">Một phần phí giao dịch của %s sẽ được trả.</string>
-    <string name="send_coins_fragment_hint_fee_priority">Một mức phí ưu tiên %s sẽ được trả. Nếu bạn quan tâm đến mức phí thấp, hãy sử dụng \'ưu tiên\' chỉ khi bạn cần xác thực càng nhanh càng tốt.</string>
     <string name="send_coins_fragment_hint_dusty_send">Khoản này quá nhỏ để có thể gửi.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Số tiền hiện tại không đủ. Bạn đang thiếu %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Một khoản thanh toán nhỏ xíu trong ví của bạn không làm tăng thêm giá trị có thể tiêu được.</string>
