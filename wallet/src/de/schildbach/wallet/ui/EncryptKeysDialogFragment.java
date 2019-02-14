@@ -48,6 +48,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
 import android.support.v4.app.DialogFragment;
+import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AlertDialog;
 import android.text.Editable;
@@ -65,12 +66,20 @@ import android.widget.TextView;
  * @author Andreas Schildbach
  */
 public class EncryptKeysDialogFragment extends DialogFragment {
+
     private static final String FRAGMENT_TAG = EncryptKeysDialogFragment.class.getName();
+
+    private static final String ONBOARDING_ARG = "onboarding_arg";
 
     protected DialogInterface.OnDismissListener onDismissListener;
 
     public static void show(final FragmentManager fm) {
         final DialogFragment newFragment = new EncryptKeysDialogFragment();
+
+        final Bundle args = new Bundle();
+        args.putBoolean(ONBOARDING_ARG, true);
+        newFragment.setArguments(args);
+
         newFragment.show(fm, FRAGMENT_TAG);
     }
 
@@ -336,11 +345,20 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                             public void run() {
                                 dismiss();
 
+                                Bundle args = getArguments();
+                                boolean onboarding = args != null && args.getBoolean(ONBOARDING_ARG);
+
+                                FragmentActivity activity = getActivity();
+
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
                                         && fingerprintHelper.init() && !fingerprintHelper.isFingerprintEnabled()
                                         && oldPassword == null && state == State.DONE) {
-                                    EnableFingerprintDialog.show(newPassword,
-                                            getActivity().getFragmentManager());
+                                    //noinspection ConstantConditions
+                                    EnableFingerprintDialog.show(newPassword, onboarding, activity.getFragmentManager());
+                                } else {
+                                    if (onboarding && activity instanceof OnOnboardingCompleteListener) {
+                                        ((OnOnboardingCompleteListener) activity).onOnboardingComplete();
+                                    }
                                 }
                             }
                         }, 2000);
@@ -405,5 +423,10 @@ public class EncryptKeysDialogFragment extends DialogFragment {
             positiveButton.setEnabled(false);
             negativeButton.setEnabled(false);
         }
+    }
+
+    public interface OnOnboardingCompleteListener {
+
+        void onOnboardingComplete();
     }
 }

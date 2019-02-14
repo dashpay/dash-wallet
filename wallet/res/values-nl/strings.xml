@@ -68,9 +68,6 @@
     <string name="send_coins_fragment_pending">(%s bezig met wachten op bevestiging)</string>
     <string name="send_coins_fragment_amount_label">Te betalen bedrag</string>
     <string name="send_coins_fragment_pin_label">Voer pin in</string>
-    <string name="send_coins_fragment_hint_fee_economic">Een economische toeslag van %s wordt betaald. Gebruik \'economisch\' alleen als de bevestigingstijd niet belangrijk voor je is.</string>
-    <string name="send_coins_fragment_hint_fee">Netwerkkosten %s worden betaald.</string>
-    <string name="send_coins_fragment_hint_fee_priority">Een prioriteitstoeslag van %s wordt betaald. Als je een lage toeslag belangrijk vindt, gebruik \'prioriteit\' alleen als je zo spoedig mogelijk bevestiging nodig hebt.</string>
     <string name="send_coins_fragment_hint_dusty_send">Het bedrag is te laag om verstuurd te kunnen worden.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Er zijn onvoldoende beschikbare munten; u komt %s tekort.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Het saldo van kleine betalingen in uw Dash-portemonnee is bij elkaar niet hoog genoeg om te kunnen versturen.</string>

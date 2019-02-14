@@ -68,9 +68,6 @@
     <string name="send_coins_fragment_pending">(%s ожидание подтверждения)</string>
     <string name="send_coins_fragment_amount_label">Величина оплаты</string>
     <string name="send_coins_fragment_pin_label">Введите PIN-код</string>
-    <string name="send_coins_fragment_hint_fee_economic">Экономный размер платы составит %s. Используйте эту опцию только в том случае, если вам не важно время подтверждения транзакции.</string>
-    <string name="send_coins_fragment_hint_fee">Будет заплачена комиссия %s.</string>
-    <string name="send_coins_fragment_hint_fee_priority">Приоритетный размер платы составит %s. Если размер комиссии имеет для вас значение, используйте опцию приоритета только когда вам необходимо срочное подтверждение транзакции.</string>
     <string name="send_coins_fragment_hint_dusty_send">Сумма слишком мала для отправки.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Недостаточно средств. Не хватает %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Количества малых платежей в вашем кошельке недостаточно для отправки средств.</string>

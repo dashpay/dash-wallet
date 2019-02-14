@@ -67,9 +67,6 @@
     <string name="send_coins_fragment_receiving_address_complex">adresse\ncomplexe</string>
     <string name="send_coins_fragment_pending">(%s en attente de confirmation)</string>
     <string name="send_coins_fragment_amount_label">Montant à payer</string>
-    <string name="send_coins_fragment_hint_fee_economic">Des frais économique de %s seront appliqués. Utilisez l\'option \"économique\" seulement si le temps de confirmation ne vous importe pas.</string>
-    <string name="send_coins_fragment_hint_fee">Des frais de réseau de %s seront appliqués.</string>
-    <string name="send_coins_fragment_hint_fee_priority">Des frais prioritaires de %s seront appliqués. Si vous préférez des frais plus bas, n\'utilisez l\'option \"prioritaire\" que s\'il vous faut une confirmation la plus rapide possible.</string>
     <string name="send_coins_fragment_hint_dusty_send">Le montant est trop faible pour être envoyé.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Pas assez de fonds disponibles. Il vous manque %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Le total des petits montants dans votre portefeuille ne forme pas une somme pouvant être envoyée.</string>
