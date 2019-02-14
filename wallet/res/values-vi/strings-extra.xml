@@ -1,12 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Giao dịch InstantSend này chưa được bắt đầu thực hiện.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Giao dịch InstantSend này đang đợi xác thực.</string>
-	<string name="transaction_row_message_own_instantx_locked">Giao dịch InstantSend đã được gửi (được khoá)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Giao dịch InstantSend này đang đợi xác thực.</string>
-	<string name="transaction_row_message_received_instantx_locked">InstantSend đã được xác thực</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">Giao dịch InstantSend chưa được xác thực</string>
-	<string name="transaction_row_message_received_instantx_locked2">InstantSend đã được khoá</string>
 	<string name="transaction_row_message_sent_to_single_peer">Giao dịch đã được gửi.</string>
 	<string name="wallet_options_disconnect">Cắt kết nối</string>
 

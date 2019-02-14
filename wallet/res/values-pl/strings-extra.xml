@@ -1,12 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Ta płatność InstantSend nie została jeszcze przesłana.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Ta płatność InstantSend oczekuje na weryfikację.</string>
-	<string name="transaction_row_message_own_instantx_locked">Wysłana transakcja InstantSend (zablokowana)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Ta płatność InstantSend oczekuje na weryfikację.</string>
-	<string name="transaction_row_message_received_instantx_locked">Zweryfikowana InstantSend</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">Niepotwierdzone InstantSend</string>
-	<string name="transaction_row_message_received_instantx_locked2">Zablokowana InstantSend</string>
 	<string name="transaction_row_message_sent_to_single_peer">Ta płatność została przesłana.</string>
 	<string name="wallet_options_disconnect">Rozłącz</string>
 

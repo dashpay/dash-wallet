@@ -1,12 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">InstantSend นี้ ยังไม่ได้รับการชำระเงิน</string>
-	<string name="transaction_row_message_own_instantx_lock_request">การชำระเงิน  InstantSend นี้กำลังรอการยืนยัน</string>
-	<string name="transaction_row_message_own_instantx_locked">ธุรกรรมที่ส่งโดย InstantSend (ล็อค)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">การชำระเงิน  InstantSend นี้กำลังรอการยืนยัน</string>
-	<string name="transaction_row_message_received_instantx_locked">InstantSend ยืนยันแล้ว</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">InstantSend ยังไม่มีการยืนยัน</string>
-	<string name="transaction_row_message_received_instantx_locked2">InstantSend ล็อค</string>
 	<string name="transaction_row_message_sent_to_single_peer">การชำระเงินนี้ถูกส่งแล้ว</string>
 	<string name="wallet_options_disconnect">ไม่เชื่อมต่อ</string>
 

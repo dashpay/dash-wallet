@@ -1,12 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Pembayaran InstantSend ini belum terkirim.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Pembayaran InstantSend ini sedang menunggu verifikasi.</string>
-	<string name="transaction_row_message_own_instantx_locked">Mengirim transaksi InstantSend (dikunci)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Pembayaran InstantSend ini sedang menunggu verifikasi.</string>
-	<string name="transaction_row_message_received_instantx_locked">InstantSend diverifikasi</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">InstantSend Belum dikonfirmasi</string>
-	<string name="transaction_row_message_received_instantx_locked2">InstantSend Terkunci</string>
 	<string name="transaction_row_message_sent_to_single_peer">Pembayaran ini telah dikirim.</string>
 	<string name="wallet_options_disconnect">Terputus</string>
 
