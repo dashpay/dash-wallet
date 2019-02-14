@@ -34,7 +34,7 @@ dependencies {
     androidTestImplementation('com.android.support.test.espresso:espresso-core:3.0.1', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
-    implementation 'org.dashj:dashj-core:0.14.7'
+    implementation "org.dashj:dashj-core:$dashjVersion"
     implementation 'com.scottyab:secure-preferences-lib:0.1.4'
 
     implementation project(path: ':common')
