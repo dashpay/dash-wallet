@@ -274,7 +274,7 @@
     <string name="report_issue_dialog_title_issue">Segnala un problema</string>
     <string name="report_issue_dialog_title_crash">\"Crash\" precedente rilevato</string>
     <string name="report_issue_dialog_title_transaction">Segnala un problema con il pagamento selezionato</string>
-    <string name="report_issue_dialog_message_issue">Si prega di descrivere il problema dettagliatamente cosi che venga esaminato accuratamente. Preferibilmente scrivici in Inglese</string>
+    <string name="report_issue_dialog_message_issue">Si prega di descrivere il problema con sufficiente precisione per essere riprodotto. Usa la lingua inglese se puoi. Aspettati un\'e-mail dall\'assistenza Dash in merito al tuo problema entro 24 ore.</string>
     <string name="report_issue_dialog_message_crash">Vorresti inviare una segnalazione di crash, aiutando a correggere questo problema nel futuro?</string>
     <string name="report_issue_dialog_description">descrizione del problema</string>
     <string name="report_issue_dialog_report">Segnala</string>

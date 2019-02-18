@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="loading">Chargement...</string>
+    <string name="loading_error">Une erreur est survenue. Veuillez réessayer plus tard.</string>
+    <string name="dash_available">%1$s disponibles</string>
+
+</resources>

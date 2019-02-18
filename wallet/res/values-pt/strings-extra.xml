@@ -1,7 +1,16 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
+
+    <string name="send_coins_auto_lock_feasible">Esta transação será concretizada imediatamente sem taxa adicional. </string>
+	<string name="send_coins_auto_lock_not_feasible">Esta transação poderá levar vários minutos para se concretizar. Completar imediatamente por um extra de %1$s%2$s?</string>
+	<string name="send_coins_instant_send_not_feasible">Esta transação poderá levar vários minutos para se concretizar.</string>
+	<string name="send_coins_instant_send_enabled_by_default">InstantSend foi ativado por padrão sem taxa adicional.</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Este pagamento InstantSend ainda não foi transmitido.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Esse pagamento foi enviado</string>
+
+	<string name="regular_transaction_info_message">Esta transação foi enviada sem InstantSend. Requer mais confirmações para ser completa.</string>
+
 	<string name="wallet_options_disconnect">Desconectado</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
@@ -67,5 +76,22 @@
 
 	<string name="remind_later">Lembrar mais tarde</string>
 	<string name="backup_now">Fazer backup</string>
+	
+	<string name="notification_transactions_channel_name">Transações</string>
+	<string name="notification_transactions_channel_description">Receba alerta sobre transações entrantes</string>
+	<string name="notification_synchronization_channel_name">Sincronização</string>
+	<string name="notification_synchronization_channel_description">Mostra uma notificação enquanto o app está sincronizando com a rede.</string>
+
+	<string name="fastest_payment_network_dialog_title">Seu Dinheiro, Seu Jeito</string>
+	<string name="fastest_payment_network_dialog_message">Envia e Recebe Dash em um instante sem taxa adicional</string>
+	<string name="fastest_payment_network_dialog_button">Entendido</string>
+
+	<string name="unlock_with_fingerprint">Use sua digital para desbloquear.</string>
+	<string name="unlock_with_fingerprint_error">Falha ao reconhecer digital, por favor tente novamente.</string>
+	<string name="unlock_with_fingerprint_error_max_attempts">Numero máximo de tentativas de digital excedido. Por favor tente novamente mais tarde.</string>
+	<string name="or_unlock_with_fingerprint">Ou use sua digital para desbloquear.</string>
+	<string name="enable_fingerprint">Habilitar digital</string>
+	<string name="touch_fingerprint_sensor">Toque o sensor de digital.</string>
+	<string name="touch_fingerprint_to_enable">Toque o sensor de digital para habilitar o desbloqueio por digital.</string>
 
 </resources>

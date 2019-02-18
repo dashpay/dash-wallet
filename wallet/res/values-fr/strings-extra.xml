@@ -1,7 +1,16 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
+
+    <string name="send_coins_auto_lock_feasible">Cette transaction sera confirmée instantanément sans frais.</string>
+	<string name="send_coins_auto_lock_not_feasible">La confirmation de cette transaction peut prendre plusieurs minutes. La confirmer instantanément avec un supplément de %1$s%2$s ?</string>
+	<string name="send_coins_instant_send_not_feasible">La confirmation de cette transaction peut prendre plusieurs minutes.</string>
+	<string name="send_coins_instant_send_enabled_by_default">InstantSend a été activé par défaut, sans frais supplémentaires.</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Ce paiement InstantSend n\'a pas encore été transmis.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Ce paiement a été envoyé.</string>
+
+	<string name="regular_transaction_info_message">Cette transaction a été envoyée sans InstantSend. Elle nécessite davantage de confirmations pour se terminer.</string>
+
 	<string name="wallet_options_disconnect">Déconnecter</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
@@ -32,7 +41,7 @@
 	<string name="wallet_lock_unlock_dialog_title">Déverrouiller votre portefeuille</string>
 	<string name="wallet_lock_unlock_dialog_message">Votre portefeuille est protégé par un code PIN pour les dépenses. Saisissez votre code PIN et appuyez sur Déverrouiller pour continuer.</string>
 	<string name="wallet_lock_reset_wallet_title">Réinitialiser le portefeuille</string>
-	<string name="wallet_lock_reset_wallet_message">Êtes-vous certain de vouloir réinitialiser ? Toutes les données stockées seront effacées, et votre portefeuille ne sera récupérable qu\'avec une sauvegarde ou une \"graine\" de restauration.</string>
+	<string name="wallet_lock_reset_wallet_message">Êtes-vous certain(e) ? Votre portefeuille sera effacé et tous vos dashs seront perdus.\n\nLe seul moyen de récupérer vos dashs est un fichier de sauvegarde ou une phrase de récupération.</string>
 
 	<string name="wallet_lock_wallet_disabled">Portefeuille désactivé</string>
 	<string name="wallet_lock_try_again">Veuillez réessayer dans %1$d %2$s</string>
@@ -64,5 +73,25 @@
 	<string name="change_exchange_currency_code_message">Votre monnaie locale est %1$s, mais dans cette application votre monnaie par défaut est réglée sur %2$s. Voulez-vous la changer en %1$s ou la garder en %2$s?</string>
 	<string name="change_to">Changer en %s</string>
 	<string name="leave_as">Garder en %s</string>
+
+	<string name="remind_later">Le rappeler plus tard</string>
+	<string name="backup_now">Sauvegarder maintenant</string>
+	
+	<string name="notification_transactions_channel_name">Transactions</string>
+	<string name="notification_transactions_channel_description">Recevoir des alertes sur les transactions entrantes.</string>
+	<string name="notification_synchronization_channel_name">Synchronisation</string>
+	<string name="notification_synchronization_channel_description">Affiche une notification quand l\'application se synchronise au réseau.</string>
+
+	<string name="fastest_payment_network_dialog_title">Votre argent, comme vous le souhaitez</string>
+	<string name="fastest_payment_network_dialog_message">Envoyez et recevez des dashs instantanément, sans frais supplémentaire</string>
+	<string name="fastest_payment_network_dialog_button">J\'ai compris</string>
+
+	<string name="unlock_with_fingerprint">Utilisez votre empreinte digitale pour déverrouiller</string>
+	<string name="unlock_with_fingerprint_error">Impossible de reconnaître l\'empreinte, veuillez réessayer</string>
+	<string name="unlock_with_fingerprint_error_max_attempts">Le nombre maximal de reconnaissances d\'empreinte a été atteint. Veuillez réessayer plus tard.</string>
+	<string name="or_unlock_with_fingerprint">Ou utilisez votre empreinte digitale pour déverrouiller.</string>
+	<string name="enable_fingerprint">Activer l\'empreinte digitale</string>
+	<string name="touch_fingerprint_sensor">Touchez le capteur d\'empreinte digitale.</string>
+	<string name="touch_fingerprint_to_enable">Touchez le capteur d\'empreinte digitale pour activer le déverrouillage par empreinte.</string>
 
 </resources>

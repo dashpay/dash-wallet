@@ -274,7 +274,7 @@
     <string name="report_issue_dialog_title_issue">Informar problema</string>
     <string name="report_issue_dialog_title_crash">Detectado problema grave anteriormente</string>
     <string name="report_issue_dialog_title_transaction">Comunicar um problema com o pagamento selecionado</string>
-    <string name="report_issue_dialog_message_issue">Descreva seu problema com precisão para ser analisado. Use inglês se você puder.</string>
+    <string name="report_issue_dialog_message_issue">Por favor descreva o seu problema de forma suficientemente precisa para ser reproduzido. Use o idioma Inglês se possível. Aguarde um email de Suporte Dash sobre o seu problema dentro de 24 horas.</string>
     <string name="report_issue_dialog_message_crash">Você gostaria de enviar um relatório de problemas para ajudar a resolvê-los no futuro?</string>
     <string name="report_issue_dialog_description">descrição do problema</string>
     <string name="report_issue_dialog_report">Reportar</string>

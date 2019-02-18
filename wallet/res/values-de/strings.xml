@@ -275,7 +275,7 @@
     <string name="report_issue_dialog_title_issue">Problem melden</string>
     <string name="report_issue_dialog_title_crash">Absturz erkannt</string>
     <string name="report_issue_dialog_title_transaction">Melde ein Problem mit der ausgewählten Bezahlmethode</string>
-    <string name="report_issue_dialog_message_issue">Bitte beschreibe Dein Problem so genau wir möglich, damit es von uns nachvollzogen werden kann. Sollte es Dir möglich sein verwende bitte Englisch.</string>
+    <string name="report_issue_dialog_message_issue">Bitte beschreibe Dein Problem so genau wir möglich, damit es von uns nachvollzogen werden kann. Sollte es Dir möglich sein verwende bitte Englisch. Der Dash Support wird sich innerhalb von 24 Stunden bei dir melden.</string>
     <string name="report_issue_dialog_message_crash">Möchtest Du einen Fehlerbericht senden, um bei der Fehlerbehebung zu helfen?</string>
     <string name="report_issue_dialog_description">Problembeschreibung</string>
     <string name="report_issue_dialog_report">Senden</string>

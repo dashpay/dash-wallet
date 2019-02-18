@@ -1,7 +1,16 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
+
+    <string name="send_coins_auto_lock_feasible">تراکنش بدون هر نوع کارمزد اضافی صورت می‌گیرد.</string>
+	<string name="send_coins_auto_lock_not_feasible">تکمیل این تراکنش ممکن است چند دقیقه طول بکشد. آیا مایلید به ازای پرداخت %1$s%2$s تراکنش خود را به صورت آنی انجام دهید؟ </string>
+	<string name="send_coins_instant_send_not_feasible">تکمیل این تراکنش ممکن است چند دقیقه طول بکشد.</string>
+	<string name="send_coins_instant_send_enabled_by_default">قابلیت «ارسال‌آنی» به صورت پیش‌فرض و بدون دریافت کارمزد اضافی فعال شده است.</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">پرداخت با استفاده از «ارسال‌سریع» هنوز انجام نشده است.</string>
 	<string name="transaction_row_message_sent_to_single_peer">این پرداخت ارسال شده است.</string>
+
+	<string name="regular_transaction_info_message">این تراکنش از طریق قابلیت «ارسال‌آنی» ارسال شده است. برای تکمیل آن، باید تایید بیشتری از سوی گره‌های شبکه صورت گیرد. </string>
+
 	<string name="wallet_options_disconnect">عدم ارتباط با شبکه</string>
 
 	<string name="network_monitor_masternodes_title">مسترنودها</string>
@@ -67,5 +76,22 @@
 
 	<string name="remind_later">بعدا یادآوری کن</string>
 	<string name="backup_now">همین الان نسخه پشتیبان بگیر</string>
+	
+	<string name="notification_transactions_channel_name">تراکنش‌ها</string>
+	<string name="notification_transactions_channel_description">دریافت پیعام درباره تراکنش‌های دریافتی</string>
+	<string name="notification_synchronization_channel_name">همزمان‌سازی</string>
+	<string name="notification_synchronization_channel_description">وقتی اولیکیشن در حال همزمان‌سازی خود با شبکه است، پیغامی را نشان بده.</string>
+
+	<string name="fastest_payment_network_dialog_title">پول شما، به همان شکلی که می‌پسندید</string>
+	<string name="fastest_payment_network_dialog_message">ارسال و دریافت دش به صورت آنی بدون هزینه اضافی</string>
+	<string name="fastest_payment_network_dialog_button">متوجه شدم!</string>
+
+	<string name="unlock_with_fingerprint">از اثرانگشت برای باز کردن قفل استفاده کنید.</string>
+	<string name="unlock_with_fingerprint_error">اثرانگشت شناسایی نشد. لطفا دوباره امتحان کنید.</string>
+	<string name="unlock_with_fingerprint_error_max_attempts">تعداد دفعات استفاده از اثرانگشت از حد مجاز بیشتر شده است. لطفا بعدا دوباره امتحان کنید.</string>
+	<string name="or_unlock_with_fingerprint">همچنین می‌توانید از اثرانگشت برای بازکردن قفل استفاده کنید. </string>
+	<string name="enable_fingerprint">فعال‌سازی باز کردن قفل با اثرانگشت</string>
+	<string name="touch_fingerprint_sensor">لطفا حسگر اثرانگشت را لمس کنید.</string>
+	<string name="touch_fingerprint_to_enable">برای باز کردن قفل با اثرانگشت، لطفا حسگر اثرانگشت را لمس کنید.</string>
 
 </resources>

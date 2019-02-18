@@ -274,7 +274,7 @@
     <string name="report_issue_dialog_title_issue">گزارش مشکل</string>
     <string name="report_issue_dialog_title_crash">مشکل قبلی شناسایی شده</string>
     <string name="report_issue_dialog_title_transaction">گزارش مشکل درباره یک پرداخت مشخص</string>
-    <string name="report_issue_dialog_message_issue">لطفا مشکل خود را به شکل دقیق و با جزییات توضیح دهید تا قابلیت پیگیری داشته باشد. در صورت امکان به انگلیسی توضیح دهید.</string>
+    <string name="report_issue_dialog_message_issue">لطفا مشکلی را که با آن روبرو شده‌اید، به صورت دقیق شرح دهید. بهتر است از زبان انگلیسی برای این کار استفاده کنید. طی ۲۴ ساعت آینده، ایمیلی از سوی بخش پشتیبانی دش دریافت خواهید کرد. </string>
     <string name="report_issue_dialog_message_crash">آیا مایلید گزارش خرابی را ارسال کنید تا به حل این مشکل در آینده کمک کنید؟</string>
     <string name="report_issue_dialog_description">توضیحات درباره مشکل</string>
     <string name="report_issue_dialog_report">گزارش</string>

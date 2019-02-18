@@ -1,7 +1,16 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
+
+    <string name="send_coins_auto_lock_feasible">Ta transakcja zostanie uregulowana natychmiast bez dodatkowych opłat.</string>
+	<string name="send_coins_auto_lock_not_feasible">Ta transakcja może zając kilka minut aby została uregulowana. Czy chcesz ją natychmiast wysłać za dodatkowe %1$s%2$s?</string>
+	<string name="send_coins_instant_send_not_feasible">Ta transakcja może zająć kilka minut zanim zostanie uregulowana.</string>
+	<string name="send_coins_instant_send_enabled_by_default">InstantSend został aktywowany domyślnie bez dodatkowych opłat.</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Ta płatność InstantSend nie została jeszcze przesłana.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Ta płatność została przesłana.</string>
+
+	<string name="regular_transaction_info_message">Ta transakcja została wysłana bez InstantSend. Potrzeba więcej potwierdzeń aby została ukończona.</string>
+
 	<string name="wallet_options_disconnect">Rozłącz</string>
 
 	<string name="network_monitor_masternodes_title">Masternody</string>
@@ -10,11 +19,11 @@
 	<string name="backup_to_seed_wallet_dialog_message">To jest twoja fraza odzyskiwania portfela. Proszę zapisz ją.</string>
 	<string name="backup_wallet_to_seed_dialog_warning">Nie pozwól aby ktokolwiek zobaczył twoją frazę odzyskiwania portfela, gdyż umożliwi mu to przejęcie Twoich monet.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Twój portfel jest zabezpieczony przed wydaniem środków za pomocą PIN. Wpisz PIN i naciśnij Enter aby zobaczyć twoją frazę odzyskiwania portfela.</string>
-	<string name="import_keys_from_seed_dialog_message">Tutaj wpisz frazę odzyskiwania portfela.</string>
+    <string name="import_keys_from_seed_dialog_message">Tutaj wpisz frazę odzyskiwania portfela.</string>
 	<string name="import_export_keys_dialog_password_phrase">Miejsce na frazę odzyskiwania portfela.</string>
 	<string name="preferences_report_issue_summary">Zbierz informacje dotyczące twojego problemu i wyślij je do deweloperów.</string>
 	<string name="navigation_configuration">Konfiguracja</string>
-	<string name="button_copy_address">Kopiuj adres</string>
+    <string name="button_copy_address">Kopiuj adres</string>
 	<string name="request_coins_clipboard_address_msg">Adres Dash został skopiowany do schowka</string>
 	<string name="backup_wallet_to_seed_show_recovery_phrase">Pokaż</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%s jest nieprawidłowym słowem.</string>
@@ -73,5 +82,22 @@
 
 	<string name="remind_later">Przypomnij później</string>
 	<string name="backup_now">Wykonaj kopie zapasową</string>
+	
+	<string name="notification_transactions_channel_name">Transakcje</string>
+	<string name="notification_transactions_channel_description">Otrzymuj powiadomienia o nadchodzących transakcjach.</string>
+	<string name="notification_synchronization_channel_name">Synchronizacja</string>
+	<string name="notification_synchronization_channel_description">Wyświetla powiadomienie gdy aplikacja sie synchronizuje z siecią.</string>
+
+	<string name="fastest_payment_network_dialog_title">Twoje Pieniądze, na Twój Sposób</string>
+	<string name="fastest_payment_network_dialog_message">Wysyłaj i Otrzymuj Dash natychmiast i bez dodatkowych opłat</string>
+	<string name="fastest_payment_network_dialog_button">Mam je</string>
+
+	<string name="unlock_with_fingerprint">Użyj odcisku palca by odblokować.</string>
+	<string name="unlock_with_fingerprint_error">Odczyt odcisku palca nie powiódł się, spróbuj ponownie.</string>
+	<string name="unlock_with_fingerprint_error_max_attempts">Osiągnięto maksymalna ilość prób odczytu odcisku palca. Proszę spróbować poźniej.</string>
+	<string name="or_unlock_with_fingerprint">Lub użyj odcisku palca by odblokować.</string>
+	<string name="enable_fingerprint">Aktywuj odcisk palca</string>
+	<string name="touch_fingerprint_sensor">Dotknij czytnik odcisku palca.</string>
+	<string name="touch_fingerprint_to_enable">Dotknij czytnik odcisku palca aby aktywować odblokowywanie za jego pomocą.</string>
 
 </resources>

@@ -274,7 +274,7 @@
     <string name="report_issue_dialog_title_issue">Zgłoś problem</string>
     <string name="report_issue_dialog_title_crash">Wykryto poprzednią awarię</string>
     <string name="report_issue_dialog_title_transaction">Zgłoś problem z wybraną płatnością</string>
-    <string name="report_issue_dialog_message_issue">Opisz proszę problem na tyle dokładnie by twórca mógł go odtworzyć. Jeśli to możliwe zrób to w języku angielskim.</string>
+    <string name="report_issue_dialog_message_issue">Prosimy o dokładne opisanie Twojego problemu tak abyśmy mogli je odwzorować. Jeśli to możliwe użyj języka angielskiego. Oczekuj email z Dash Support odnośnie Twojego problemu w ciągu 24 godzin.</string>
     <string name="report_issue_dialog_message_crash">Czy chcesz wysłać raport o błędzie, by pomóc naprawić ten problem?</string>
     <string name="report_issue_dialog_description">opis problemu</string>
     <string name="report_issue_dialog_report">Zgłoś</string>

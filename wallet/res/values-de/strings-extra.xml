@@ -1,7 +1,16 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
+
+    <string name="send_coins_auto_lock_feasible">Diese Transaktion wird sofort und ohne Zusatzkosten bestätigt.</string>
+	<string name="send_coins_auto_lock_not_feasible">Diese Transaktion benötigt einige Minuten, um bestätigt zu werden. Soll sie für %1$s%2$s sofort bestätigt werden?</string>
+	<string name="send_coins_instant_send_not_feasible">Diese Transaktion benötigt einige Minuten, um bestätigt zu werden.</string>
+	<string name="send_coins_instant_send_enabled_by_default">InstantSend wurde automatisch und ohne Zusatzkosten aktiviert</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">InstantSend-Zahlung wurde noch nicht übermittelt.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Die Zahlung wurde gesendet.</string>
+
+	<string name="regular_transaction_info_message">Diese Transaktion wurde ohne InstantSend versandt. Sie benötigt weitere Bestätigungen, um abgeschlossen zu werden.</string>
+
 	<string name="wallet_options_disconnect">Verbindungen trennen</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
@@ -30,7 +39,7 @@
 	<string name="wallet_lock_unlock_to_see_txs_title">Wallet verschlossen.</string>
 	<string name="wallet_lock_unlock_to_see_txs_txt">Tippe auf das Schloßsymbol, damit die Wallet entsperrt und der Transaktionsverlauf sichtbar wird.</string>
 	<string name="wallet_lock_unlock_dialog_title">Entsperre deine Wallet</string>
-	<string name="wallet_lock_unlock_dialog_message">Deine Wallet wird durch einen Zahlungs-PIN geschützt. Gebe den PIN ein und tippe auf Entsperren, um fortzufahren.</string>
+	<string name="wallet_lock_unlock_dialog_message">Deine Wallet wird durch einen Zahlungs-PIN geschützt. Gib nun den PIN ein und tippe auf Entsperren, um fortzufahren.</string>
 	<string name="wallet_lock_reset_wallet_title">Wallet zurücksetzen</string>
 	<string name="wallet_lock_reset_wallet_message">Bist du sicher? Die Wallet wird gelöscht und der Inhalt wird verloren gehen.\n\nDie Dash können danach nur noch über eine Backup-Datei oder eine Wiederherstellungsphrase wiederhergestellt werden.</string>
 
@@ -67,5 +76,22 @@
 
 	<string name="remind_later">Später erinnern</string>
 	<string name="backup_now">Backup erstellen</string>
+	
+	<string name="notification_transactions_channel_name">Transaktionen</string>
+	<string name="notification_transactions_channel_description">Benachrichtigungen zu eingehenden Transaktionen erhalten.</string>
+	<string name="notification_synchronization_channel_name">Synchronisierung</string>
+	<string name="notification_synchronization_channel_description">Eine Benachrichtigung anzeigen, wenn die App sich mit dem Netzwerk synchronisiert.</string>
+
+	<string name="fastest_payment_network_dialog_title">Dein Geld, dein Weg</string>
+	<string name="fastest_payment_network_dialog_message">Dash sofort und ohne Zusatzkosten empfangen und versenden </string>
+	<string name="fastest_payment_network_dialog_button">Verstanden</string>
+
+	<string name="unlock_with_fingerprint">Fingerabdruck zum Entsperren verwenden.</string>
+	<string name="unlock_with_fingerprint_error">Fingerabdruck nicht erkannt. Bitte erneut versuchen.</string>
+	<string name="unlock_with_fingerprint_error_max_attempts">Maximale Anzahl an Fingerabdruckversuchen überschritte. Bitte später erneut versuchen.</string>
+	<string name="or_unlock_with_fingerprint">Oder den Fingerabdruck zum Entsperren verwenden.</string>
+	<string name="enable_fingerprint">Fingerabdruck aktivieren</string>
+	<string name="touch_fingerprint_sensor">Den Fingerabdrucksensor berühren.</string>
+	<string name="touch_fingerprint_to_enable">Den Fingerabdrucksensor berühren, um das Entsperren per Fingerabdruck zu aktivieren.</string>
 
 </resources>

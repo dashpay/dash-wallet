@@ -274,7 +274,7 @@
     <string name="report_issue_dialog_title_issue">Báo cáo về lỗi</string>
     <string name="report_issue_dialog_title_crash">Nhận dạng được lần tự động tắt trước đó</string>
     <string name="report_issue_dialog_title_transaction">Báo cáo vấn đề với giao dịch được chọn</string>
-    <string name="report_issue_dialog_message_issue">Hãy mô tả vấn đề của bạn một cách chính xác đủ để chúng tôi có thể tái tạo được lỗi. Hãy sử dụng tiếng Anh nếu bạn có thể.</string>
+    <string name="report_issue_dialog_message_issue">Hãy mô tả vấn đề của bạn một cách cụ thể đủ để có thể tái tạo được nó. Hãy sử dụng tiếng Anh nếu bạn có thể. Bạn sẽ nhận được email từ Hỗ trợ của Dash về vấn đề của bạn trong vòng 24 giờ.</string>
     <string name="report_issue_dialog_message_crash">Bạn có muốn gửi đi báo cáo về lỗi gặp phải hay không, hãy giúp chúng tôi giải quyết các vấn đề tương tự?</string>
     <string name="report_issue_dialog_description">mô tả về lỗi</string>
     <string name="report_issue_dialog_report">Báo cáo</string>

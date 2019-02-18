@@ -274,7 +274,7 @@
     <string name="report_issue_dialog_title_issue">Nahlásiť problém</string>
     <string name="report_issue_dialog_title_crash">Zistené predchádzajúce zlyhanie aplikácie</string>
     <string name="report_issue_dialog_title_transaction">Nahlásiť problém s vybranou platbou</string>
-    <string name="report_issue_dialog_message_issue">Popíšte čo najpodrobnejšie problém, aby sa dal zreprodukovať. Ak je to možné, použite Anglický jazyk</string>
+    <string name="report_issue_dialog_message_issue">Popíšte čo najpodrobnejšie problém, aby sa dal zreprodukovať. Ak je to možné, použite Anglický jazyk. Očakávajte email od podporného tímu Dash do 24 hodín.</string>
     <string name="report_issue_dialog_message_crash">Chcete odoslať správu o probléme a tým pomôcť opraviť tento problém?</string>
     <string name="report_issue_dialog_description">popis problému</string>
     <string name="report_issue_dialog_report">Odoslať</string>

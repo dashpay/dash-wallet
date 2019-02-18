@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">錢包已經重置，\n更新恢復需要一點時間完成。</string>
     <string name="wallet_disclaimer_fragment_remind_safety">使用注意安全風險，請詳讀&lt;u&gt;安全提示&lt;/u&gt;。</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">你需要&lt;u&gt;備份你的錢包&lt;/u&gt;!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">你需要備份你的錢包!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d 小時延遲</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d 天延遲</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d 星期延遲</string>
@@ -28,7 +28,7 @@
     <string name="wallet_transactions_fragment_empty_text_received">尚未收到達世幣</string>
     <string name="wallet_transactions_fragment_empty_text_sent">尚未付出達世幣</string>
     <string name="wallet_transactions_fragment_empty_text_howto">如何獲得達世幣?\\n\\n用傳統貨幣交易,\\n賣物品或是服務或\\n線上挖掘。</string>
-    <string name="wallet_transactions_row_warning_backup">恭喜你收到第一筆付款! 你是否已經&lt;u&gt;備份好你的錢包&lt;/u&gt;來防止意外發生?</string>
+    <string name="wallet_transactions_row_warning_backup">恭喜你收到第一筆付款! 你是否已經備份好你的錢包來防止意外發生?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">提示 : 為了增加你的錢包的安全性，你可以 &lt;u&gt;加密您的裝置&lt;/u&gt;. 這同時也會保護其他應用程式的數據。</string>
     <string name="wallet_transactions_fragment_coinbase">已採礦</string>
     <string name="wallet_transactions_fragment_internal">內部</string>
@@ -67,6 +67,7 @@
     <string name="send_coins_fragment_receiving_address_complex">複雜\n地址</string>
     <string name="send_coins_fragment_pending">(%s 等候確認)</string>
     <string name="send_coins_fragment_amount_label">總金額</string>
+    <string name="send_coins_fragment_pin_label">輸入 PIN</string>
     <string name="send_coins_fragment_hint_dusty_send">這個金額太小，無法發送。</string>
     <string name="send_coins_fragment_hint_insufficient_money">餘額不足。你還差 %s 的達世幣才能發送。</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">在你的錢包微小金額加起來不足以發送。</string>
@@ -102,7 +103,7 @@
     <string name="raise_fee_dialog_button_raise">增加</string>
     <string name="sweep_wallet_activity_title">移轉只錢包</string>
     <string name="sweep_wallet_fragment_intro">你將移轉一個紙錢包或點卷，這將把紙錢包裡的所有幣一次轉到目前裝置錢包裡，當交易完成確認，該紙錢包變無價值，同時為了安全性，請勿再次使用。</string>
-    <string name="sweep_wallet_fragment_hint">紙錢包常用於冷存放，一些比特幣提款機印出紙錢包而不是直接轉帳到你手機，人們有時用預付紙錢包方式來傳遞比特幣(不建議)。</string>
+    <string name="sweep_wallet_fragment_hint">紙錢包常用於冷存放，一些達世幣提款機印出紙錢包而不是直接轉帳到你手機，人們有時用預付紙錢包方式來傳遞達世幣(不建議)。</string>
     <string name="sweep_wallet_fragment_wallet_unknown">開始掃描紙錢包的私鑰，使用鏡頭的動作按鈕。</string>
     <string name="sweep_wallet_fragment_encrypted">該私鑰受密碼保護。</string>
     <string name="sweep_wallet_fragment_password">密碼</string>
@@ -178,7 +179,7 @@
     <string name="restore_wallet_permission_dialog_message">為了在外部存儲器上搜索錢包備份，您需要授予讀取權限。</string>
     <string name="import_keys_dialog_title">回復錢包</string>
     <string name="import_keys_dialog_message">從外部或是app內部存放區選取一個備份錢包檔案</string>
-    <string name="restore_wallet_dialog_replace_warning">你打算更換現有錢包，如無另外備份，任何現有錢包裡的比特幣將會消失。</string>
+    <string name="restore_wallet_dialog_replace_warning">你打算更換現有錢包，如無另外備份，任何現有錢包裡的達世幣將會消失。</string>
     <string name="import_keys_dialog_warning">重要: 不要自不安全地方載入私鑰，可能導致你的錢包被控制。</string>
     <string name="import_keys_dialog_file_security_encrypted">密碼加密</string>
     <string name="import_keys_dialog_file_security_unencrypted">未加密</string>
@@ -200,7 +201,7 @@
     <string name="export_keys_dialog_failure">你的錢包無法備份 :\n%s</string>
     <string name="export_keys_dialog_button_archive">歸檔</string>
     <string name="export_keys_dialog_mail_subject">達世幣錢包備份</string>
-    <string name="export_keys_dialog_mail_text">附件加密檔案包含比特幣私人金鑰，請保持該檔案安全並記得你的密碼。</string>
+    <string name="export_keys_dialog_mail_text">附件加密檔案包含達世幣私人金鑰，請保持該檔案安全並記得你的密碼。</string>
     <string name="export_keys_dialog_mail_intent_chooser">歸檔錢包使用…</string>
     <string name="export_keys_dialog_mail_intent_failed">歸檔錢包失敗</string>
     <string name="import_export_keys_dialog_password">密碼</string>
@@ -273,7 +274,6 @@
     <string name="report_issue_dialog_title_issue">問題報告</string>
     <string name="report_issue_dialog_title_crash">發現前次當機</string>
     <string name="report_issue_dialog_title_transaction">於選定的付款中報告問題</string>
-    <string name="report_issue_dialog_message_issue">請準確描述您的問題以方便重現刻問題。 如果可以的話請使用英文。</string>
     <string name="report_issue_dialog_message_crash">你是否要寄送當機報告幫助解決問題?</string>
     <string name="report_issue_dialog_description">問題描述</string>
     <string name="report_issue_dialog_report">報告</string>
@@ -323,8 +323,8 @@
     <string name="button_paste">貼上</string>
     <string name="button_share">分享</string>
     <string name="button_set_as_default">設為預設</string>
-    <string name="button_request_coins">收比特幣</string>
-    <string name="button_send_coins">付比特幣</string>
+    <string name="button_request_coins">索取達世幣</string>
+    <string name="button_send_coins">達世幣付款</string>
     <string name="button_scan">掃描</string>
     <string name="button_settings">設定</string>
     <string name="action_show_qr">展示QR二維條碼</string>

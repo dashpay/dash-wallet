@@ -274,7 +274,7 @@
     <string name="report_issue_dialog_title_issue">Докладвай проблем</string>
     <string name="report_issue_dialog_title_crash">Открит е предишен провал</string>
     <string name="report_issue_dialog_title_transaction">Докладвай за проблема с избраното плащане</string>
-    <string name="report_issue_dialog_message_issue">Моля опишете вашият проблем достатъчно точно за да бъде възпроизведен. Използвайте Английски език ако можете.</string>
+    <string name="report_issue_dialog_message_issue">Моля, опишете проблема си достатъчно точно, за да бъде възпроизведен. Използвайте английски език, ако можете. Очаквайте имейл от Dash поддръжка  относно вашия проблем в рамките на 24 часа.</string>
     <string name="report_issue_dialog_message_crash">Желаете ли да изпратите доклад за грешките, помагайки да бъдат решени проблемите в бъдеще?</string>
     <string name="report_issue_dialog_description">Описание на проблема</string>
     <string name="report_issue_dialog_report">Докладвай</string>

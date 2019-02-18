@@ -1,32 +1,32 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-    <string name="toast_wallet_reset">钱包已重置，\n需要一些时间才能恢复</string>
-    <string name="wallet_disclaimer_fragment_remind_safety">使用时请您自担风险。请务必阅读 &lt;u&gt;安全提示&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">您需要备份您的钱包！</string>
+    <string name="toast_wallet_reset">钱包已重置!\nIt 需要一些时间才能恢复.</string>
+    <string name="wallet_disclaimer_fragment_remind_safety">使用时请您自担风险. 请务必阅读 &lt;u&gt;安全提示&lt;/u&gt;.</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">您需要备份您的钱包!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d 小时延迟</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d 天延迟</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d 星期延迟</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d 月延迟</string>
     <string name="blockchain_state_progress_downloading">与网络同步</string>
     <string name="blockchain_state_progress_stalled">同步已停滞</string>
-    <string name="blockchain_state_progress_problem_storage">同步：存储出现了问题</string>
-    <string name="blockchain_state_progress_problem_network">同步：网络出现了问题</string>
+    <string name="blockchain_state_progress_problem_storage">同步: 存储出现了问题</string>
+    <string name="blockchain_state_progress_problem_network">同步: 网络出现了问题</string>
     <string name="wallet_address_fragment_clipboard_msg">达世币地址已复制到剪切板</string>
-    <string name="wallet_address_dialog_fragment_hint">为了保护您的隐私，当您收到一笔交易后您的钱包地址将改变。</string>
-    <string name="wallet_balance_fragment_too_much">该金额太庞大了，随身携带存在安全风险。请将一部分资金转移到一个安全的地方。</string>
-    <string name="wallet_balance_fragment_replaying">重放过程中无法显示余额。</string>
+    <string name="wallet_address_dialog_fragment_hint">为了保护您的隐私, 当您收到一笔交易后您的钱包地址将改变.</string>
+    <string name="wallet_balance_fragment_too_much">该金额太庞大了, 随身携带存在安全风险. 请将一部分资金转移到一个安全的地方.</string>
+    <string name="wallet_balance_fragment_replaying">重放过程中无法显示余额.</string>
     <string name="exchange_rates_activity_title">汇率</string>
-    <string name="exchange_rates_fragment_empty_text">无法加载汇率。</string>
-    <string name="exchange_rates_fragment_empty_search">汇率未找到。</string>
+    <string name="exchange_rates_fragment_empty_text">无法加载汇率.</string>
+    <string name="exchange_rates_fragment_empty_search">汇率未找到.</string>
     <string name="exchange_rates_fragment_default">(默认)</string>
     <string name="exchange_rates_fragment_rate">比率</string>
     <string name="exchange_rates_fragment_balance">余额</string>
     <string name="exchange_rates_fragment_source">价格来自 %s</string>
     <string name="exchange_rates_options_search">搜索汇率</string>
     <string name="exchange_rates_context_set_as_default_title">设为默认</string>
-    <string name="wallet_transactions_fragment_empty_text_received">尚未收到达世币。</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">尚未发送达世币。</string>
+    <string name="wallet_transactions_fragment_empty_text_received">尚未收到达世币.</string>
+    <string name="wallet_transactions_fragment_empty_text_sent">尚未发送达世币.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">如何获得达世币？\\n\\n用传统货币进行交易，\\n出售商品或服务，或者\\n通过劳动赚取。</string>
     <string name="wallet_transactions_row_warning_backup">恭喜，您收到了第一笔交易！您已经做好备份钱包以防丢失的准备了吗？</string>
     <string name="wallet_transactions_row_warning_storage_encryption">提示：为了增加钱包的安全度，您可以 &lt;u&gt;加密您的设备&lt;/u&gt;. 这样也可以同样其他app的数据。</string>
@@ -274,7 +274,7 @@
     <string name="report_issue_dialog_title_issue">报告问题</string>
     <string name="report_issue_dialog_title_crash">检测到了之前的一次奔溃</string>
     <string name="report_issue_dialog_title_transaction">对选定的支付提交问题报告</string>
-    <string name="report_issue_dialog_message_issue">请详细的描述您如何遇到的此问题. 如果可以, 请使用英语.</string>
+    <string name="report_issue_dialog_message_issue">请您尽量详细完整地描述您所遇到的问题. 如果可以请使用英语. 预计24小时内Dash Support会针对您的问题给予回复.</string>
     <string name="report_issue_dialog_message_crash">您想发送崩溃报告，帮助在未来解决这个问题？</string>
     <string name="report_issue_dialog_description">问题描述</string>
     <string name="report_issue_dialog_report">报告</string>
