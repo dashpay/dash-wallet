@@ -76,11 +76,12 @@ public final class Constants {
             }
             case "devNet": {
                 DNS_SEED = new String[]{
-                        "devnet-maithai.thephez.com", "34.212.238.34", "34.222.226.15",
-                        "52.25.134.163", "18.237.18.236", "54.201.32.143",
-                        "18.237.223.92", "54.187.24.244", "34.216.182.200",
-                        "54.244.102.48", "34.222.227.120", "34.222.92.227",
-                        "54.185.85.42", "34.209.237.218"};
+                        "devnet-maithai.thephez.com",
+                        "54.187.113.35", "54.200.201.200", "34.216.233.163",
+                        "34.221.188.185", "54.189.63.67", "52.40.117.135",
+                        "54.187.111.107", "34.212.68.164", "18.237.142.23",
+                        "54.202.73.177"
+                };
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
                 NETWORK_PARAMETERS = DevNetParams.get("maithai", "yMtULrhoxd8vRZrsnFobWgRTidtjg2Rnjm", 20001, DNS_SEED);
                 IS_PROD_BUILD = false;
