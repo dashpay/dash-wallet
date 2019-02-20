@@ -1563,12 +1563,12 @@ public final class SendCoinsFragment extends Fragment {
                     hintView.setVisibility(View.VISIBLE);
                     hintView.setText(R.string.send_coins_fragment_hint_replaying);
                 } else if (dryrunSendRequest != null && dryrunSendRequest.tx.getFee() != null) {
-
-                    RequestType requestType = RequestType.from(dryrunSendRequest);
                     hintView.setTextColor(getResources().getColor(R.color.fg_insignificant));
-                    hintView.setVisibility(View.VISIBLE);
+                    if (!instantXenable.isChecked()) {
+                        hintView.setVisibility(View.VISIBLE);
+                    }
                     final int hintResId;
-                    if (feeCategory == FeeCategory.PRIORITY && requestType != RequestType.INSTANT_SEND_AUTO_LOCK && !instantXenable.isChecked())
+                    if (feeCategory == FeeCategory.PRIORITY)
                         hintResId = R.string.send_coins_fragment_hint_fee_priority;
                     else if (feeCategory == FeeCategory.ZERO)
                         hintResId = R.string.send_coins_fragment_hint_fee_zero;
