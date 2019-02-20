@@ -4,7 +4,6 @@
     <string name="send_coins_auto_lock_feasible">Тази транзакция ще бъде установена мигновено без допълнителна такса.</string>
 	<string name="send_coins_auto_lock_not_feasible">Тази транзакция може да отнеме няколко минути за да бъде установена. Направете я мигновена за допълнително%1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Тази транзакция ще отнеме няколко минути.</string>
-	<string name="send_coins_instant_send_enabled_by_default">InstantSend е активиран по подразбиране без допълнителна такса</string>
 
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">InstantSend плащането все още не е предадено.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Плащането е изпратено.</string>

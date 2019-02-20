@@ -86,7 +86,6 @@
 	<string name="send_coins_error_msg">Probléma az érmeküldésben!</string>
 	<string name="send_coins_options_fee_category">Díj</string>
 	<string name="send_coins_options_fee_category_economic">Gazdaságos</string>
-	<string name="send_coins_options_fee_category_normal">Normál</string>
 	<string name="send_coins_options_fee_category_priority">Elsőbbségi</string>
 	<string name="send_coins_options_empty">Üres tárca</string>
 	<string name="raise_fee_dialog_title">Hálózati díj emelése</string>

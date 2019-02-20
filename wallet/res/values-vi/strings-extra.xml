@@ -4,7 +4,6 @@
     <string name="send_coins_auto_lock_feasible">Giao dịch này sẽ được thực hiện tức thời mà không tốn thêm phí.</string>
 	<string name="send_coins_auto_lock_not_feasible">Giao dịch này có thể mất vài phút để thực hiện. Thực hiện tức thời với khoản phụ thêm %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Giao dịch này có thể mất vài phút để thực hiện.</string>
-	<string name="send_coins_instant_send_enabled_by_default">InstantSend đã được bật một cách ngầm định mà không tốn thêm phí.</string>
 
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Giao dịch InstantSend này chưa được bắt đầu thực hiện.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Giao dịch đã được gửi.</string>

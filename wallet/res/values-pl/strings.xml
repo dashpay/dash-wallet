@@ -68,6 +68,8 @@
     <string name="send_coins_fragment_pending">(%s oczekuję na potwierdzenie)</string>
     <string name="send_coins_fragment_amount_label">Kwota do zapłacenia</string>
     <string name="send_coins_fragment_pin_label">Wpisz PIN</string>
+    <string name="send_coins_fragment_hint_fee_economic">Opłata sieci %s zostanie pobrana.</string>
+    <string name="send_coins_fragment_hint_fee_priority">zostanie pobrana opłata priorytetowa  %s. Jeśli zależy ci na niskich opłatach, używaj \'opłaty priorytetowej\', jedynie gdy potrzebujesz szybkiego potwierdzenia transakcji.</string>
     <string name="send_coins_fragment_hint_dusty_send">Ta kwota jest zbyt mała do wysłania.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Brak wystarczających środków. Brakuje ci %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Ilość małych płatności w twoim portfelu nie dodaje się do wartości możliwej do wysyłki.</string>
@@ -91,7 +93,6 @@
     <string name="send_coins_error_msg">Problem z wysłaniem monet!</string>
     <string name="send_coins_options_fee_category">Opłata</string>
     <string name="send_coins_options_fee_category_economic">Ekonomiczny</string>
-    <string name="send_coins_options_fee_category_normal">Normalny</string>
     <string name="send_coins_options_fee_category_priority">Priorytetowy</string>
     <string name="send_coins_options_empty">Opróżnij portfel</string>
     <string name="raise_fee_dialog_title">Podnieś opłatę sieci</string>

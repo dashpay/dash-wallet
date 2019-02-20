@@ -68,6 +68,8 @@
     <string name="send_coins_fragment_pending">(%s đợi xác nhận)</string>
     <string name="send_coins_fragment_amount_label">Số lượng chi trả</string>
     <string name="send_coins_fragment_pin_label">Nhập mã PIN!</string>
+    <string name="send_coins_fragment_hint_fee_economic">Một phần phí giao dịch của %s sẽ được trả.</string>
+    <string name="send_coins_fragment_hint_fee_priority">Một mức phí ưu tiên %s sẽ được trả. Nếu bạn quan tâm đến mức phí thấp, hãy sử dụng \'ưu tiên\' chỉ khi bạn cần xác thực càng nhanh càng tốt.</string>
     <string name="send_coins_fragment_hint_dusty_send">Khoản này quá nhỏ để có thể gửi.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Số tiền hiện tại không đủ. Bạn đang thiếu %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Một khoản thanh toán nhỏ xíu trong ví của bạn không làm tăng thêm giá trị có thể tiêu được.</string>
@@ -91,7 +93,6 @@
     <string name="send_coins_error_msg">Xảy ra vấn đề khi gửi coin!</string>
     <string name="send_coins_options_fee_category">Phí</string>
     <string name="send_coins_options_fee_category_economic">Kinh tế</string>
-    <string name="send_coins_options_fee_category_normal">Bình thường</string>
     <string name="send_coins_options_fee_category_priority">Ưu tiên</string>
     <string name="send_coins_options_empty">Ví rỗng</string>
     <string name="raise_fee_dialog_title">Tăng phí giao dịch</string>
