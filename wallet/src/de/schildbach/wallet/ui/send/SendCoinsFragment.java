@@ -1568,7 +1568,7 @@ public final class SendCoinsFragment extends Fragment {
                     hintView.setTextColor(getResources().getColor(R.color.fg_insignificant));
                     hintView.setVisibility(View.VISIBLE);
                     final int hintResId;
-                    if (feeCategory == FeeCategory.PRIORITY && requestType != RequestType.INSTANT_SEND_AUTO_LOCK)
+                    if (feeCategory == FeeCategory.PRIORITY && requestType != RequestType.INSTANT_SEND_AUTO_LOCK && !instantXenable.isChecked())
                         hintResId = R.string.send_coins_fragment_hint_fee_priority;
                     else if (feeCategory == FeeCategory.ZERO)
                         hintResId = R.string.send_coins_fragment_hint_fee_zero;
