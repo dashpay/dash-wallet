@@ -2,13 +2,13 @@
 <resources>
 
     <string name="send_coins_auto_lock_feasible">Esta transação será concretizada imediatamente sem taxa adicional. </string>
-	<string name="send_coins_auto_lock_not_feasible">Esta transação poderá levar vários minutos para se concretizar. Completar imediatamente por um extra de %1$s%2$s?</string>
+	<string name="send_coins_auto_lock_not_feasible">Esta transação poderá levar vários minutos para se concretizar. Completar imediatamente por %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Esta transação poderá levar vários minutos para se concretizar.</string>
 
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">Este pagamento InstantSend ainda não foi transmitido.</string>
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">Este pagamento ainda não foi transmitido.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Esse pagamento foi enviado</string>
 
-	<string name="regular_transaction_info_message">Esta transação foi enviada sem InstantSend. Requer mais confirmações para ser completa.</string>
+	<string name="regular_transaction_info_message">Esta transação não se concretizou de forma instantânea.</string>
 
 	<string name="wallet_options_disconnect">Desconectado</string>
 
