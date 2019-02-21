@@ -69,6 +69,8 @@
     <string name="send_coins_fragment_pending">(%s warten auf Bestätigung)</string>
     <string name="send_coins_fragment_amount_label">Betrag</string>
     <string name="send_coins_fragment_pin_label">PIN eingeben</string>
+    <string name="send_coins_fragment_hint_fee_economic">Eine Netzwerk-Gebühr von %szahlen.</string>
+    <string name="send_coins_fragment_hint_fee_priority">Eine Vorzugs-Gebühr von %s zahlen. Wenn Dir eine geringe Gebühr wichtig ist, verwende diese Einstellung nur, wenn Du sehr schnell eine Bestätigung brauchst.</string>
     <string name="send_coins_fragment_hint_dusty_send">Der Betrag ist zu klein zum Senden.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Nicht genug Dash verfügbar. Dir fehlen %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Die Summe an winzigen Zahlungen in Deiner Wallet ist zu klein, um verschickt zu werden.</string>
@@ -92,7 +94,6 @@
     <string name="send_coins_error_msg">Problem beim Versenden der Dash!</string>
     <string name="send_coins_options_fee_category">Netzwerk-Gebühr</string>
     <string name="send_coins_options_fee_category_economic">Kostengünstig</string>
-    <string name="send_coins_options_fee_category_normal">Normal</string>
     <string name="send_coins_options_fee_category_priority">Express</string>
     <string name="send_coins_options_empty">Wallet entleeren</string>
     <string name="raise_fee_dialog_title">Netzwerk-Gebühr erhöhen</string>

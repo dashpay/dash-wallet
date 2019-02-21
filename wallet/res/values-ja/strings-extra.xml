@@ -4,7 +4,6 @@
     <string name="send_coins_auto_lock_feasible">このトランザクションは追加料金なしで即時に決済されます。</string>
 	<string name="send_coins_auto_lock_not_feasible">このトランザクションは決済に数分がかかります。  %1$s%2$sの追加で即時に完了させますか？</string>
 	<string name="send_coins_instant_send_not_feasible">このトランザクションは決済に数分がかかります。</string>
-	<string name="send_coins_instant_send_enabled_by_default">インスタントセンドは追加料金なしでデフォルトで有効になっています</string>
 
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">この即時送金による支払いはまだ送信されていません。</string>
 	<string name="transaction_row_message_sent_to_single_peer">この支払いは送信されました。</string>

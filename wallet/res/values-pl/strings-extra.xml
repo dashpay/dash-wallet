@@ -4,7 +4,6 @@
     <string name="send_coins_auto_lock_feasible">Ta transakcja zostanie uregulowana natychmiast bez dodatkowych opłat.</string>
 	<string name="send_coins_auto_lock_not_feasible">Ta transakcja może zając kilka minut aby została uregulowana. Czy chcesz ją natychmiast wysłać za dodatkowe %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Ta transakcja może zająć kilka minut zanim zostanie uregulowana.</string>
-	<string name="send_coins_instant_send_enabled_by_default">InstantSend został aktywowany domyślnie bez dodatkowych opłat.</string>
 
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Ta płatność InstantSend nie została jeszcze przesłana.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Ta płatność została przesłana.</string>

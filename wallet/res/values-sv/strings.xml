@@ -87,7 +87,6 @@
 	<string name="send_coins_error_msg">Problem att skicka Dash!</string>
 	<string name="send_coins_options_fee_category">Avgift</string>
 	<string name="send_coins_options_fee_category_economic">Ekonomi</string>
-	<string name="send_coins_options_fee_category_normal">Normal</string>
 	<string name="send_coins_options_fee_category_priority">Prioritet</string>
 	<string name="send_coins_options_empty">Tom wallet</string>
 	<string name="raise_fee_dialog_title">Höj nätverksavgift</string>

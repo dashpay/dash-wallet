@@ -687,7 +687,7 @@ public class SweepWalletFragment extends Fragment {
 		setState(State.PREPARATION);
 
 		final SendRequest sendRequest = SendRequest.emptyWallet(application.getWallet().freshReceiveAddress());
-		sendRequest.feePerKb = fees.get(FeeCategory.NORMAL);
+		sendRequest.feePerKb = fees.get(FeeCategory.ECONOMIC);
 
 		if (currentExchangeRate != null) {
 			sendRequest.exchangeRate = new org.bitcoinj.utils.ExchangeRate(

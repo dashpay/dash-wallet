@@ -68,6 +68,8 @@
     <string name="send_coins_fragment_pending">(%s чака за потвърждение)</string>
     <string name="send_coins_fragment_amount_label">Сума за плащане</string>
     <string name="send_coins_fragment_pin_label">Въведи PIN</string>
+    <string name="send_coins_fragment_hint_fee_economic">Мрежова такса от %s ще бъде платена.</string>
+    <string name="send_coins_fragment_hint_fee_priority">Приоритетна такса от %s ще бъде платена. Ако се интересувате от ниски такси, използвайте \'приоритетна\' само ако се нуждаете от бързо потвърждение.</string>
     <string name="send_coins_fragment_hint_dusty_send">Тази сума е прекалено малка за да бъде изпратена.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Няма достатъчно налични монети. Липсват ви %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Сумата на малките плащания във вашият портфейл не може да се добави към стойността за изпращане.</string>
@@ -91,7 +93,6 @@
     <string name="send_coins_error_msg">Проблем с изпращане на монети!</string>
     <string name="send_coins_options_fee_category">Такса</string>
     <string name="send_coins_options_fee_category_economic">Икономичен</string>
-    <string name="send_coins_options_fee_category_normal">Нормален</string>
     <string name="send_coins_options_fee_category_priority">Приоритетен</string>
     <string name="send_coins_options_empty">Празен портфейл</string>
     <string name="raise_fee_dialog_title">Нарастване таксата на мрежата</string>

@@ -4,7 +4,6 @@
     <string name="send_coins_auto_lock_feasible">تراکنش بدون هر نوع کارمزد اضافی صورت می‌گیرد.</string>
 	<string name="send_coins_auto_lock_not_feasible">تکمیل این تراکنش ممکن است چند دقیقه طول بکشد. آیا مایلید به ازای پرداخت %1$s%2$s تراکنش خود را به صورت آنی انجام دهید؟ </string>
 	<string name="send_coins_instant_send_not_feasible">تکمیل این تراکنش ممکن است چند دقیقه طول بکشد.</string>
-	<string name="send_coins_instant_send_enabled_by_default">قابلیت «ارسال‌آنی» به صورت پیش‌فرض و بدون دریافت کارمزد اضافی فعال شده است.</string>
 
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">پرداخت با استفاده از «ارسال‌سریع» هنوز انجام نشده است.</string>
 	<string name="transaction_row_message_sent_to_single_peer">این پرداخت ارسال شده است.</string>

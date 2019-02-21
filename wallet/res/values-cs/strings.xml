@@ -89,7 +89,6 @@
     <string name="send_coins_error_msg">Problém při zasílání!</string>
     <string name="send_coins_options_fee_category">Poplatek</string>
     <string name="send_coins_options_fee_category_economic">Úsporný</string>
-    <string name="send_coins_options_fee_category_normal">Běžný</string>
     <string name="send_coins_options_fee_category_priority">Priorita</string>
     <string name="send_coins_options_empty">Prázdná peněženka</string>
     <string name="raise_fee_dialog_title">Navýšit poplatek</string>

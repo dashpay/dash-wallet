@@ -68,6 +68,8 @@
 	<string name="send_coins_fragment_pending">(جاري تأكيد مبلغ %s)</string>
 	<string name="send_coins_fragment_amount_label">المبلغ المطلوب دفعه</string>
 	<string name="send_coins_fragment_pin_label">أدخل الرقم السري</string>
+	<string name="send_coins_fragment_hint_fee_economic">سيتم دفع رسم شبكة%s.</string>
+	<string name="send_coins_fragment_hint_fee_priority">سيتم دفع رسم أولوية بنسبة%s إذا كنت تهتم بالرسوم المنخفضة، استخدم \"الأولوية\" فقط إذا كنت بحاجة إلى تأكيد في أقرب وقت ممكن.</string>
 	<string name="send_coins_fragment_hint_dusty_send">المبلغ صغير جدا بحيث لا يمكن إرساله.</string>
 	<string name="send_coins_fragment_hint_insufficient_money">لا تتوفر ما يكفي من القطع النقدية. أنت مفقود%s</string>
 	<string name="send_coins_fragment_hint_empty_wallet_failed">كمية المدفوعات الصغيرة في محفظتك لا تضيف ما يصل إلى قيمة يمكن إرسالها.</string>
@@ -91,7 +93,6 @@
 	<string name="send_coins_error_msg">تمت مواجهة مشكلة خلال الإرسال!</string>
 	<string name="send_coins_options_fee_category">رسوم</string>
 	<string name="send_coins_options_fee_category_economic">اقتصادي</string>
-	<string name="send_coins_options_fee_category_normal">عادي</string>
 	<string name="send_coins_options_fee_category_priority">أفضلية</string>
 	<string name="send_coins_options_empty">تفريغ المحفظة</string>
 	<string name="raise_fee_dialog_title">رفع رسوم الشبكة</string>

@@ -4,7 +4,6 @@
     <string name="send_coins_auto_lock_feasible">此交易將進行即時結算，無需支付額外費用。</string>
 	<string name="send_coins_auto_lock_not_feasible">此交易可能需要幾分鐘才能結算。 支付額外的 %1$s%2$s費用來立即完成該交易嗎?</string>
 	<string name="send_coins_instant_send_not_feasible">此交易可能需要幾分鐘才能結算。</string>
-	<string name="send_coins_instant_send_enabled_by_default">即時到帳預設為啟用狀態，無需支付額外費用</string>
 
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">這個即時到帳交易尚未發送。</string>
 	<string name="transaction_row_message_sent_to_single_peer">此款項經已完成發送。</string>

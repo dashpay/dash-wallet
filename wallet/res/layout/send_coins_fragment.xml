@@ -258,17 +258,6 @@
 
 			</LinearLayout>
 
-			<TextView
-				style="@style/MontserratRegular"
-				android:id="@+id/instant_send_enabled_by_default"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:layout_marginLeft="3dp"
-				android:layout_marginStart="3dp"
-				android:textColor="@color/colorPrimary"
-				android:textSize="@dimen/font_size_small"
-				android:text="@string/send_coins_instant_send_enabled_by_default" />
-
 			<LinearLayout
 				android:id="@+id/is_direct_group"
 				android:orientation="vertical"

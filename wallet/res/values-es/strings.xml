@@ -68,6 +68,8 @@
     <string name="send_coins_fragment_pending">(%s esperando confirmación)</string>
     <string name="send_coins_fragment_amount_label">Cantidad a pagar</string>
     <string name="send_coins_fragment_pin_label">Ingresar PIN</string>
+    <string name="send_coins_fragment_hint_fee_economic">Una comisión de red de %s será pagada.</string>
+    <string name="send_coins_fragment_hint_fee_priority">Una comisión prioritaria de %s será pagada. Si te importan las comisiones bajas, usa \"Prioritaria\" solo si necesitas confirmación lo más pronto posible.</string>
     <string name="send_coins_fragment_hint_dusty_send">La cantidad es demasiado baja para enviar.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Dash insuficientes. Te faltan %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">La cantidad de pequeños pagos en tu billetera no es suficiente para poder enviarlos.</string>
@@ -91,7 +93,6 @@
     <string name="send_coins_error_msg">¡Problema enviando monedas!</string>
     <string name="send_coins_options_fee_category">Comisión</string>
     <string name="send_coins_options_fee_category_economic">Económica</string>
-    <string name="send_coins_options_fee_category_normal">Normal</string>
     <string name="send_coins_options_fee_category_priority">Prioritaria</string>
     <string name="send_coins_options_empty">Vaciar billetera</string>
     <string name="raise_fee_dialog_title">Aumento de la comisión de red</string>

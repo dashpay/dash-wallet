@@ -44,6 +44,7 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.uri.BitcoinURI;
+import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.InstantXCoinSelector;
@@ -208,14 +209,13 @@ public final class SendCoinsFragment extends Fragment {
     private TextView privateKeyBadPasswordView;
     private ImageView fingerprintIcon;
     private TextView attemptsRemainingTextView;
-    private TextView instantSendEnabledByDefaultView;
     private Button viewGo;
 
     @Nullable
     private State state = null;
 
     private PaymentIntent paymentIntent = null;
-    private FeeCategory feeCategory = FeeCategory.NORMAL;
+    private FeeCategory feeCategory = FeeCategory.ECONOMIC;
     private AddressAndLabel validatedAddress = null;
 
     @Nullable
@@ -227,6 +227,7 @@ public final class SendCoinsFragment extends Fragment {
 
     private SendRequest dryrunSendRequest;
     private Exception dryrunException;
+    private Coin dryrunReqularPaymentFee;
     private PinRetryController pinRetryController;
     private CancellationSignal fingerprintCancellationSignal;
 
@@ -740,8 +741,6 @@ public final class SendCoinsFragment extends Fragment {
         attemptsRemainingTextView = (TextView) view.findViewById(R.id.pin_attempts);
         fingerprintIcon = view.findViewById(R.id.fingerprint_icon);
 
-        instantSendEnabledByDefaultView = view.findViewById(R.id.instant_send_enabled_by_default);
-
         viewGo = (Button) view.findViewById(R.id.send_coins_go);
         viewGo.setOnClickListener(new OnClickListener() {
             @Override
@@ -940,8 +939,6 @@ public final class SendCoinsFragment extends Fragment {
             menu.findItem(R.id.send_coins_options_fee_category_zero).setChecked(true);
         if (feeCategory == FeeCategory.ECONOMIC)
             menu.findItem(R.id.send_coins_options_fee_category_economic).setChecked(true);
-        else if (feeCategory == FeeCategory.NORMAL)
-            menu.findItem(R.id.send_coins_options_fee_category_normal).setChecked(true);
         else if (feeCategory == FeeCategory.PRIORITY)
             menu.findItem(R.id.send_coins_options_fee_category_priority).setChecked(true);
 
@@ -961,9 +958,6 @@ public final class SendCoinsFragment extends Fragment {
                 return true;
             case R.id.send_coins_options_fee_category_economic:
                 handleFeeCategory(FeeCategory.ECONOMIC);
-                return true;
-            case R.id.send_coins_options_fee_category_normal:
-                handleFeeCategory(FeeCategory.NORMAL);
                 return true;
             case R.id.send_coins_options_fee_category_priority:
                 handleFeeCategory(FeeCategory.PRIORITY);
@@ -1324,6 +1318,7 @@ public final class SendCoinsFragment extends Fragment {
 
             dryrunSendRequest = null;
             dryrunException = null;
+            dryrunReqularPaymentFee = null;
 
             final Coin amount = amountCalculatorLink.getAmount();
             final Address dummyAddress = wallet.currentReceiveAddress(); // won't be used, tx is never committed
@@ -1367,6 +1362,8 @@ public final class SendCoinsFragment extends Fragment {
 
                     wallet.completeTx(sendRequest);
                     dryrunSendRequest = sendRequest;
+
+                    calculateDryrunReqularPaymentFee(finalPaymentIntent); //it should never throw an exception since the INSTANT_SEND payment is more restrictive
                     return;
 
                 } catch (final Exception x) {
@@ -1395,6 +1392,13 @@ public final class SendCoinsFragment extends Fragment {
             }
         }
     };
+
+    // calculate the fee for a REGULAR_PAYMENT in order to display it to the user
+    private void calculateDryrunReqularPaymentFee(PaymentIntent paymentIntent) throws InsufficientMoneyException {
+        SendRequest sendRequest = createSendRequest(paymentIntent, RequestType.REGULAR_PAYMENT, false, false);
+        wallet.completeTx(sendRequest);
+        dryrunReqularPaymentFee = sendRequest.tx.getFee();
+    }
 
     private enum RequestType {
 
@@ -1558,6 +1562,31 @@ public final class SendCoinsFragment extends Fragment {
                     hintView.setTextColor(getResources().getColor(R.color.fg_error));
                     hintView.setVisibility(View.VISIBLE);
                     hintView.setText(R.string.send_coins_fragment_hint_replaying);
+                } else if (dryrunSendRequest != null && dryrunSendRequest.tx.getFee() != null) {
+                    hintView.setTextColor(getResources().getColor(R.color.fg_insignificant));
+                    if (!instantXenable.isChecked()) {
+                        hintView.setVisibility(View.VISIBLE);
+                    }
+                    final int hintResId;
+                    if (feeCategory == FeeCategory.PRIORITY)
+                        hintResId = R.string.send_coins_fragment_hint_fee_priority;
+                    else if (feeCategory == FeeCategory.ZERO)
+                        hintResId = R.string.send_coins_fragment_hint_fee_zero;
+                    else
+                        hintResId = R.string.send_coins_fragment_hint_fee_economic;
+
+                    Coin regularPaymentFee = dryrunReqularPaymentFee != null ? dryrunReqularPaymentFee : dryrunSendRequest.tx.getFee();
+                    try {
+                        ExchangeRate exchangeRate = amountCalculatorLink.getExchangeRate();
+                        final Spannable hintLocalFee = new MonetarySpannable(Constants.LOCAL_FORMAT, exchangeRate.coinToFiat(regularPaymentFee))
+                                .applyMarkup(null, MonetarySpannable.STANDARD_INSIGNIFICANT_SPANS);
+                        hintView.setText(getString(hintResId, btcFormat.format(regularPaymentFee)
+                                + (hintLocalFee != null ? (" (" + exchangeRate.coinToFiat(regularPaymentFee).currencyCode + " " + hintLocalFee + ")") : "")));
+                    } catch (NullPointerException x)
+                    {
+                        //only show the fee in DASH
+                        hintView.setText(getString(hintResId, btcFormat.format(regularPaymentFee)));
+                    }
                 } else if (paymentIntent.mayEditAddress() && validatedAddress != null
                         && wallet.isPubKeyHashMine(validatedAddress.address.getHash160())) {
                     hintView.setTextColor(getResources().getColor(R.color.fg_insignificant));
@@ -1622,11 +1651,9 @@ public final class SendCoinsFragment extends Fragment {
 
             if (dryrunSendRequest != null && dryrunSendRequest.tx.getFee() != null) {
                 setupInstantSendInfo(btcFormat);
-                instantSendEnabledByDefaultView.setVisibility(View.GONE);
             } else {
                 instantSendInfo.setVisibility(View.GONE);
                 instantXenable.setVisibility(View.GONE);
-                instantSendEnabledByDefaultView.setVisibility(canAutoLockGuard.canAutoLock() ? View.VISIBLE : View.GONE);
             }
 
         } else {
@@ -1644,16 +1671,17 @@ public final class SendCoinsFragment extends Fragment {
                 break;
             }
             case INSTANT_SEND: {
-                int hintResId = R.string.send_coins_auto_lock_not_feasible;
+                int instantSendInfoResId = R.string.send_coins_auto_lock_not_feasible;
+                Coin instantSendFee = dryrunSendRequest.tx.getFee();
                 try {
-                    Fiat fiatFeeValue = amountCalculatorLink.getExchangeRate().coinToFiat(dryrunSendRequest.tx.getFee());
-                    final Spannable hintLocalFee = new MonetarySpannable(Constants.LOCAL_FORMAT, fiatFeeValue)
+                    Fiat fiatValueOfInstantSendFee = amountCalculatorLink.getExchangeRate().coinToFiat(instantSendFee);
+                    final Spannable hintLocalFee = new MonetarySpannable(Constants.LOCAL_FORMAT, fiatValueOfInstantSendFee)
                             .applyMarkup(null, MonetarySpannable.STANDARD_INSIGNIFICANT_SPANS);
-                    final String currencySymbol = GenericUtils.currencySymbol(fiatFeeValue.currencyCode);
-                    instantSendInfo.setText(getString(hintResId, currencySymbol, hintLocalFee));
+                    final String currencySymbol = GenericUtils.currencySymbol(fiatValueOfInstantSendFee.currencyCode);
+                    instantSendInfo.setText(getString(instantSendInfoResId, currencySymbol, hintLocalFee));
                 } catch (NullPointerException x) {
                     //only show the fee in DASH
-                    instantSendInfo.setText(getString(hintResId, btcFormat.format(dryrunSendRequest.tx.getFee()), ""));
+                    instantSendInfo.setText(getString(instantSendInfoResId, btcFormat.format(instantSendFee), ""));
                 }
                 instantSendInfo.setVisibility(View.VISIBLE);
                 instantXenable.setVisibility(View.VISIBLE);

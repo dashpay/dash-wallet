@@ -4,7 +4,6 @@
     <string name="send_coins_auto_lock_feasible">Diese Transaktion wird sofort und ohne Zusatzkosten bestätigt.</string>
 	<string name="send_coins_auto_lock_not_feasible">Diese Transaktion benötigt einige Minuten, um bestätigt zu werden. Soll sie für %1$s%2$s sofort bestätigt werden?</string>
 	<string name="send_coins_instant_send_not_feasible">Diese Transaktion benötigt einige Minuten, um bestätigt zu werden.</string>
-	<string name="send_coins_instant_send_enabled_by_default">InstantSend wurde automatisch und ohne Zusatzkosten aktiviert</string>
 
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">InstantSend-Zahlung wurde noch nicht übermittelt.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Die Zahlung wurde gesendet.</string>

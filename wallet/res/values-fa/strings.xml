@@ -68,6 +68,8 @@
     <string name="send_coins_fragment_pending">(%sانتظار برای تایید تراکنش)</string>
     <string name="send_coins_fragment_amount_label">میزان پرداخت</string>
     <string name="send_coins_fragment_pin_label">رمز را وارد کنید</string>
+    <string name="send_coins_fragment_hint_fee_economic">کارمزد شبکه معادل با %s پرداخت خواهد شد. </string>
+    <string name="send_coins_fragment_hint_fee_priority">کارمزد اولویت معادل با %s پرداخت خواهد شد. اگر به دنبال کارمزد پایین هستید، از گزینه «اولویت» فقط در مواردی که نیازمند تایید سریع تراکنش از سوی شبکه هستید استفاده کنید. </string>
     <string name="send_coins_fragment_hint_dusty_send">مبلغ وارد شده بیش از حد پایین است و امکان ارسال آن وجود ندارد.</string>
     <string name="send_coins_fragment_hint_insufficient_money">موجودی به اندازه کافی نیست. به میزان %s کمبود موجودی دارید. </string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">پرداخت‌های جزیی در کیف پول‌تان روی هم رفته آن قدر نیست که بتواند به یک میزان قابل ارسال برسد. </string>
@@ -91,7 +93,6 @@
     <string name="send_coins_error_msg">مشکل در ارسال مبلغ مورد نظر!</string>
     <string name="send_coins_options_fee_category">کارمزد</string>
     <string name="send_coins_options_fee_category_economic">اقتصادی</string>
-    <string name="send_coins_options_fee_category_normal">معمولی</string>
     <string name="send_coins_options_fee_category_priority">اولویت‌دار</string>
     <string name="send_coins_options_empty">کیف پول را خالی کنید</string>
     <string name="raise_fee_dialog_title">کارمزد شبکه را افزایش دهید</string>

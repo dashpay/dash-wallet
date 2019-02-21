@@ -4,7 +4,6 @@
     <string name="send_coins_auto_lock_feasible">此项交易确认将即时完成, 无需额外费用.</string>
 	<string name="send_coins_auto_lock_not_feasible">此项交易确认需要几分钟. 立即完成需要额外%1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">此项交易确认需要几分钟.</string>
-	<string name="send_coins_instant_send_enabled_by_default">即时支付已经被默认开启, 无需额外费用</string>
 
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">此项即时支付交易尚未传输.</string>
 	<string name="transaction_row_message_sent_to_single_peer">此项交易已被发送.</string>
