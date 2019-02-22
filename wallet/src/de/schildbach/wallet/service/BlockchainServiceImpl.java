@@ -472,13 +472,27 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                         }
 
                         if (!connectTrustedPeerOnly) {
-                            peers.addAll(
-                                    Arrays.asList(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                            try {
+                                peers.addAll(
+                                        Arrays.asList(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                            } catch (PeerDiscoveryException x) {
+                                //swallow and continue with another method of connection.
+                                log.info("DNS peer discovery failed: "+ x.getMessage());
+                                if(x.getCause() != null)
+                                    log.info(  "cause:  " + x.getCause().getMessage());
+                            }
                             if(peers.size() < 10) {
                                 log.info("DNS peer discovery returned less than 10 nodes.  Adding DMN peers to the list to increase connections");
-                                SimplifiedMasternodeList mnlist =  org.bitcoinj.core.Context.get().masternodeListManager.getListAtChainTip();
-                                MasternodePeerDiscovery discovery = new MasternodePeerDiscovery(mnlist);
-                                peers.addAll(Arrays.asList(discovery.getPeers(services, timeoutValue, timeoutUnit)));
+                                try {
+                                    SimplifiedMasternodeList mnlist = org.bitcoinj.core.Context.get().masternodeListManager.getListAtChainTip();
+                                    MasternodePeerDiscovery discovery = new MasternodePeerDiscovery(mnlist);
+                                    peers.addAll(Arrays.asList(discovery.getPeers(services, timeoutValue, timeoutUnit)));
+                                } catch (PeerDiscoveryException x) {
+                                    //swallow and continue with another method of connection
+                                    log.info("DMN List peer discovery failed: "+ x.getMessage());
+
+                                }
+
                                 if(peers.size() < 10) {
                                     log.info("DMN peer discovery returned less than 10 nodes.  Adding seed peers to the list to increase connections");
                                     peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
