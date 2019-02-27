@@ -1,15 +1,15 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-	<string name="send_coins_fragment_instantx_enable">Použiť InstantSend</string>
+    <string name="send_coins_auto_lock_feasible">Táto transakcia sa okamžite potvrdí bez dodatočného poplatku.</string>
+	<string name="send_coins_auto_lock_not_feasible">Táto transakcia môže trvať niekoľko minút. Potvrdiť ihneď za navýšenie %1$s%2$s? </string>
+	<string name="send_coins_instant_send_not_feasible">Táto transakcia môže trvať niekoľko minút.</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Táto InstantSend platba nebola ešte odoslaná.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Táto InstantSend platba čaká na overenie.</string>
-	<string name="transaction_row_message_own_instantx_locked">Odoslaná InstantSend transakcia (uzamknutá)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Táto InstantSend platba čaká na overenie.</string>
-	<string name="transaction_row_message_received_instantx_locked">Overené InstantSend</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">Nepotvrdená InstantSend platba</string>
-	<string name="transaction_row_message_received_instantx_locked2">Uzamknutá InstantSend platba</string>
 	<string name="transaction_row_message_sent_to_single_peer">Táto platba bola odoslaná.</string>
+
+	<string name="regular_transaction_info_message">Táto transakcia bola odoslaná bez InstantSend. Aby bola dokončená, vyžaduje si ďalšie potvrdenia.</string>
+
 	<string name="wallet_options_disconnect">Odpojiť</string>
 
 	<string name="network_monitor_masternodes_title">Masternódy</string>
@@ -81,5 +81,22 @@
 
 	<string name="remind_later">Pripomenúť neskôr </string>
 	<string name="backup_now">Teraz zálohovať</string>
+	
+	<string name="notification_transactions_channel_name">Transakcie</string>
+	<string name="notification_transactions_channel_description">Dostávať upozornenia o prichádzajúcich transakciách.</string>
+	<string name="notification_synchronization_channel_name">Synchronizácia</string>
+	<string name="notification_synchronization_channel_description">Zobrazí sa upozornenie, keď sa aplikácia synchronizuje so sieťou.</string>
+
+	<string name="fastest_payment_network_dialog_title">Vaše peniaze, Vaša cesta</string>
+	<string name="fastest_payment_network_dialog_message">Odoslať a prijať Dash okamžite bez zvýšeného poplatku</string>
+	<string name="fastest_payment_network_dialog_button">Mám to</string>
+
+	<string name="unlock_with_fingerprint">Pre odomknutie použite otlačok prsta.</string>
+	<string name="unlock_with_fingerprint_error">Nepodarilo sa rozpoznať odtlačok prsta, skúste to znova.</string>
+	<string name="unlock_with_fingerprint_error_max_attempts">Prekročený maximálny počet pokusov o odtlačok prsta. Skúste neskôr prosím.</string>
+	<string name="or_unlock_with_fingerprint">Alebo na odomknutie použite odtlačok prsta.</string>
+	<string name="enable_fingerprint">Povoliť odtlačok prsta</string>
+	<string name="touch_fingerprint_sensor">Dotknite sa snímača odtlačkov prstov.</string>
+	<string name="touch_fingerprint_to_enable">Pre povolenie odomknutia otlačkom prsta, sa dotknite snímača odtlačkov prstov.</string>
 
 </resources>

@@ -41,9 +41,12 @@ import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.CheckpointManager;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.FilteredBlock;
+import org.bitcoinj.core.InstantSend;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.SporkManager;
+import org.bitcoinj.core.SporkMessage;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
@@ -51,7 +54,10 @@ import org.bitcoinj.core.listeners.AbstractPeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
+import org.bitcoinj.core.listeners.SporkUpdatedEventListener;
+import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.net.discovery.DnsDiscovery;
+import org.bitcoinj.net.discovery.MasternodePeerDiscovery;
 import org.bitcoinj.net.discovery.MultiplexingDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscoveryException;
@@ -140,7 +146,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
     //Settings to bypass dashj default dns seeds
     private final SeedPeers seedPeerDiscovery = new SeedPeers(Constants.NETWORK_PARAMETERS);
     private final String dnsSeeds[] = { "dnsseed.dash.org" };
-    private final DnsDiscovery dnsDiscovery = new DnsDiscovery(dnsSeeds, Constants.NETWORK_PARAMETERS);
+    private final String dnsSeedsTestNet[] = { "95.183.51.146", "35.161.101.35", "54.91.130.170" };
+    private final DnsDiscovery dnsDiscovery = new DnsDiscovery(Constants.TEST ? dnsSeedsTestNet : dnsSeeds, Constants.NETWORK_PARAMETERS);
     ArrayList<PeerDiscovery> peerDiscoveryList = new ArrayList<>(2);
 
 
@@ -465,16 +472,17 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                         }
 
                         if (!connectTrustedPeerOnly) {
-                            try {
-                                peers.addAll(
-                                        Arrays.asList(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                            peers.addAll(
+                                    Arrays.asList(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                            if(peers.size() < 10) {
+                                log.info("DNS peer discovery returned less than 10 nodes.  Adding DMN peers to the list to increase connections");
+                                SimplifiedMasternodeList mnlist =  org.bitcoinj.core.Context.get().masternodeListManager.getListAtChainTip();
+                                MasternodePeerDiscovery discovery = new MasternodePeerDiscovery(mnlist);
+                                peers.addAll(Arrays.asList(discovery.getPeers(services, timeoutValue, timeoutUnit)));
                                 if(peers.size() < 10) {
-                                    log.info("DNS peer discovery returned less than 10 nodes.  Adding seed peers to the list to increase connections");
+                                    log.info("DMN peer discovery returned less than 10 nodes.  Adding seed peers to the list to increase connections");
                                     peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
                                 }
-                            } catch (PeerDiscoveryException x) {
-                                log.info("DNS peers returned no nodes.  Adding seed peers to the list to ensure connections");
-                                peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
                             }
                         }
 
@@ -677,6 +685,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         application.getWallet().addCoinsSentEventListener(Threading.SAME_THREAD, walletEventListener);
         application.getWallet().addChangeEventListener(Threading.SAME_THREAD, walletEventListener);
 
+        application.getWallet().getContext().sporkManager.addEventListener(sporkUpdatedEventListener, Threading.SAME_THREAD);
+
         registerReceiver(tickReceiver, new IntentFilter(Intent.ACTION_TIME_TICK));
 
         wallet.getContext().initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
@@ -756,6 +766,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         application.getWallet().removeChangeEventListener(walletEventListener);
         application.getWallet().removeCoinsSentEventListener(walletEventListener);
         application.getWallet().removeCoinsReceivedEventListener(walletEventListener);
+
+        application.getWallet().getContext().sporkManager.removeEventListener(sporkUpdatedEventListener);
 
         unregisterReceiver(connectivityReceiver);
 
@@ -900,4 +912,17 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
             }
         }
     }
+
+    private SporkUpdatedEventListener sporkUpdatedEventListener = new SporkUpdatedEventListener() {
+
+        @Override
+        public void onSporkUpdated(final SporkMessage sporkMessage) {
+            if (sporkMessage.getSporkID() == SporkManager.SPORK_16_INSTANTSEND_AUTOLOCKS) {
+                boolean autoLockStatusChanged = InstantSend.canAutoLock() != config.getCanAutoLock();
+                if (autoLockStatusChanged) {
+                    config.setCanAutoLock(InstantSend.canAutoLock());
+                }
+            }
+        }
+    };
 }

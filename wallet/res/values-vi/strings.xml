@@ -68,8 +68,7 @@
     <string name="send_coins_fragment_pending">(%s đợi xác nhận)</string>
     <string name="send_coins_fragment_amount_label">Số lượng chi trả</string>
     <string name="send_coins_fragment_pin_label">Nhập mã PIN!</string>
-    <string name="send_coins_fragment_hint_fee_economic">Mức phí tiết kiệm %s sẽ được trả. Sử dụng mức phí \'tiết kiệm\' chỉ khi bạn không quan tâm đến thời gian xác thực lâu hay chóng.</string>
-    <string name="send_coins_fragment_hint_fee">Một phần phí giao dịch của %s sẽ được trả.</string>
+    <string name="send_coins_fragment_hint_fee_economic">Một phần phí giao dịch của %s sẽ được trả.</string>
     <string name="send_coins_fragment_hint_fee_priority">Một mức phí ưu tiên %s sẽ được trả. Nếu bạn quan tâm đến mức phí thấp, hãy sử dụng \'ưu tiên\' chỉ khi bạn cần xác thực càng nhanh càng tốt.</string>
     <string name="send_coins_fragment_hint_dusty_send">Khoản này quá nhỏ để có thể gửi.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Số tiền hiện tại không đủ. Bạn đang thiếu %s.</string>
@@ -94,7 +93,6 @@
     <string name="send_coins_error_msg">Xảy ra vấn đề khi gửi coin!</string>
     <string name="send_coins_options_fee_category">Phí</string>
     <string name="send_coins_options_fee_category_economic">Kinh tế</string>
-    <string name="send_coins_options_fee_category_normal">Bình thường</string>
     <string name="send_coins_options_fee_category_priority">Ưu tiên</string>
     <string name="send_coins_options_empty">Ví rỗng</string>
     <string name="raise_fee_dialog_title">Tăng phí giao dịch</string>
@@ -277,7 +275,7 @@
     <string name="report_issue_dialog_title_issue">Báo cáo về lỗi</string>
     <string name="report_issue_dialog_title_crash">Nhận dạng được lần tự động tắt trước đó</string>
     <string name="report_issue_dialog_title_transaction">Báo cáo vấn đề với giao dịch được chọn</string>
-    <string name="report_issue_dialog_message_issue">Hãy mô tả vấn đề của bạn một cách chính xác đủ để chúng tôi có thể tái tạo được lỗi. Hãy sử dụng tiếng Anh nếu bạn có thể.</string>
+    <string name="report_issue_dialog_message_issue">Hãy mô tả vấn đề của bạn một cách cụ thể đủ để có thể tái tạo được nó. Hãy sử dụng tiếng Anh nếu bạn có thể. Bạn sẽ nhận được email từ Hỗ trợ của Dash về vấn đề của bạn trong vòng 24 giờ.</string>
     <string name="report_issue_dialog_message_crash">Bạn có muốn gửi đi báo cáo về lỗi gặp phải hay không, hãy giúp chúng tôi giải quyết các vấn đề tương tự?</string>
     <string name="report_issue_dialog_description">mô tả về lỗi</string>
     <string name="report_issue_dialog_report">Báo cáo</string>

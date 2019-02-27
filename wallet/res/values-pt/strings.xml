@@ -68,8 +68,7 @@
     <string name="send_coins_fragment_pending">(%s esperando confirmação)</string>
     <string name="send_coins_fragment_amount_label">Quantidade a pagar</string>
     <string name="send_coins_fragment_pin_label">Inserir PIN</string>
-    <string name="send_coins_fragment_hint_fee_economic">Uma taxa econômica de%s será paga. Use \"econômico\" somente se você não se importa com o tempo de confirmação.</string>
-    <string name="send_coins_fragment_hint_fee">Uma taxa de rede de %s será paga.</string>
+    <string name="send_coins_fragment_hint_fee_economic">Uma taxa de rede de %s será paga.</string>
     <string name="send_coins_fragment_hint_fee_priority">Uma taxa para a prioridade de%s será paga. Se você se preocupa com baixas taxas, use \"prioridade\" apenas se você precisar de confirmação mais rapido possível.</string>
     <string name="send_coins_fragment_hint_dusty_send">A quantidade de moedas na carteira é muito pequena para enviar.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Saldo insuficiente. Faltam %s.</string>
@@ -94,7 +93,6 @@
     <string name="send_coins_error_msg">Erro ao enviar Dash!</string>
     <string name="send_coins_options_fee_category">Taxa</string>
     <string name="send_coins_options_fee_category_economic">Econômico</string>
-    <string name="send_coins_options_fee_category_normal">Normal</string>
     <string name="send_coins_options_fee_category_priority">Prioridade</string>
     <string name="send_coins_options_empty">Esvaziar carteira</string>
     <string name="raise_fee_dialog_title">Aumentar a taxa da rede</string>
@@ -277,7 +275,7 @@
     <string name="report_issue_dialog_title_issue">Informar problema</string>
     <string name="report_issue_dialog_title_crash">Detectado problema grave anteriormente</string>
     <string name="report_issue_dialog_title_transaction">Comunicar um problema com o pagamento selecionado</string>
-    <string name="report_issue_dialog_message_issue">Descreva seu problema com precisão para ser analisado. Use inglês se você puder.</string>
+    <string name="report_issue_dialog_message_issue">Por favor descreva o seu problema de forma suficientemente precisa para ser reproduzido. Use o idioma Inglês se possível. Aguarde um email de Suporte Dash sobre o seu problema dentro de 24 horas.</string>
     <string name="report_issue_dialog_message_crash">Você gostaria de enviar um relatório de problemas para ajudar a resolvê-los no futuro?</string>
     <string name="report_issue_dialog_description">descrição do problema</string>
     <string name="report_issue_dialog_report">Reportar</string>

@@ -86,7 +86,6 @@
     <string name="send_coins_error_msg">Problem under afsendelse af Dash!</string>
     <string name="send_coins_options_fee_category">Gebyr</string>
     <string name="send_coins_options_fee_category_economic">Økonomisk</string>
-    <string name="send_coins_options_fee_category_normal">Normal</string>
     <string name="send_coins_options_fee_category_priority">Prioriteret</string>
     <string name="send_coins_options_empty">Tøm tegnebog</string>
     <string name="raise_fee_dialog_title">Forhøj netværksgebyr</string>

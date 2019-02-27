@@ -1,15 +1,15 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-	<string name="send_coins_fragment_instantx_enable">Usar InstantSend</string>
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">Este pago enviado por InstantSend aún no ha sido transmitido.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Este pago de InstantSend está esperando verificación.</string>
-	<string name="transaction_row_message_own_instantx_locked">Transacción enviada por InstantSend (confirmada)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Este pago de InstantSend está esperando verificación.</string>
-	<string name="transaction_row_message_received_instantx_locked">InstantSend verificado</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">InstantSend no confirmado</string>
-	<string name="transaction_row_message_received_instantx_locked2">InstantSend confirmado</string>
+    <string name="send_coins_auto_lock_feasible">Esta transacción se concretará instantáneamente sin tasa adicional.</string>
+	<string name="send_coins_auto_lock_not_feasible">Esta transacción podrá tomar varios minutos para concretarse. ¿Completar instantáneamente por %1$s%2$s?</string>
+	<string name="send_coins_instant_send_not_feasible">Esta transacción podrá tomar varios minutos para concretarse.</string>
+
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">Este pago aún no se ha transmitido.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Este pago ha sido enviado.</string>
+
+	<string name="regular_transaction_info_message">Esta transacción no fue concretada instantáneamente.</string>
+
 	<string name="wallet_options_disconnect">Desconectar</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
@@ -75,5 +75,22 @@
 
 	<string name="remind_later">Recordar más tarde</string>
 	<string name="backup_now">Hacer backup</string>
+	
+	<string name="notification_transactions_channel_name">Transacciones</string>
+	<string name="notification_transactions_channel_description">Recibir alerta sobre transacciones entrantes</string>
+	<string name="notification_synchronization_channel_name">Sincronización</string>
+	<string name="notification_synchronization_channel_description">Muestra una notificación cuando la app está sincronizando con la red.</string>
+
+	<string name="fastest_payment_network_dialog_title">Tu Dinero, Tu Modo</string>
+	<string name="fastest_payment_network_dialog_message">Envíe y Reciba Dash en un instante sin tasa adicional</string>
+	<string name="fastest_payment_network_dialog_button">Entendido</string>
+
+	<string name="unlock_with_fingerprint">Use tu huella para desbloquear.</string>
+	<string name="unlock_with_fingerprint_error">No se pudo reconocer tu huella, por favor intente nuevamente.</string>
+	<string name="unlock_with_fingerprint_error_max_attempts">Máximo número de intentos de huella superado. Intente nuevamente más tarde por favor.</string>
+	<string name="or_unlock_with_fingerprint">O use tu huella para desbloquear.</string>
+	<string name="enable_fingerprint">Habilitar huella.</string>
+	<string name="touch_fingerprint_sensor">Toque el sensor de huellas.</string>
+	<string name="touch_fingerprint_to_enable">Toque el sensor de huellas para habilitar desbloqueo con huella.</string>
 
 </resources>

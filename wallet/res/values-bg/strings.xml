@@ -68,8 +68,7 @@
     <string name="send_coins_fragment_pending">(%s чака за потвърждение)</string>
     <string name="send_coins_fragment_amount_label">Сума за плащане</string>
     <string name="send_coins_fragment_pin_label">Въведи PIN</string>
-    <string name="send_coins_fragment_hint_fee_economic">Икономична такса от %s ще бъде платена. Използвайте \'икономична\' само ако не ви интересува времето за потвърждение.</string>
-    <string name="send_coins_fragment_hint_fee">Мрежова такса от %s ще бъде платена.</string>
+    <string name="send_coins_fragment_hint_fee_economic">Мрежова такса от %s ще бъде платена.</string>
     <string name="send_coins_fragment_hint_fee_priority">Приоритетна такса от %s ще бъде платена. Ако се интересувате от ниски такси, използвайте \'приоритетна\' само ако се нуждаете от бързо потвърждение.</string>
     <string name="send_coins_fragment_hint_dusty_send">Тази сума е прекалено малка за да бъде изпратена.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Няма достатъчно налични монети. Липсват ви %s.</string>
@@ -94,7 +93,6 @@
     <string name="send_coins_error_msg">Проблем с изпращане на монети!</string>
     <string name="send_coins_options_fee_category">Такса</string>
     <string name="send_coins_options_fee_category_economic">Икономичен</string>
-    <string name="send_coins_options_fee_category_normal">Нормален</string>
     <string name="send_coins_options_fee_category_priority">Приоритетен</string>
     <string name="send_coins_options_empty">Празен портфейл</string>
     <string name="raise_fee_dialog_title">Нарастване таксата на мрежата</string>
@@ -277,7 +275,7 @@
     <string name="report_issue_dialog_title_issue">Докладвай проблем</string>
     <string name="report_issue_dialog_title_crash">Открит е предишен провал</string>
     <string name="report_issue_dialog_title_transaction">Докладвай за проблема с избраното плащане</string>
-    <string name="report_issue_dialog_message_issue">Моля опишете вашият проблем достатъчно точно за да бъде възпроизведен. Използвайте Английски език ако можете.</string>
+    <string name="report_issue_dialog_message_issue">Моля, опишете проблема си достатъчно точно, за да бъде възпроизведен. Използвайте английски език, ако можете. Очаквайте имейл от Dash поддръжка  относно вашия проблем в рамките на 24 часа.</string>
     <string name="report_issue_dialog_message_crash">Желаете ли да изпратите доклад за грешките, помагайки да бъдат решени проблемите в бъдеще?</string>
     <string name="report_issue_dialog_description">Описание на проблема</string>
     <string name="report_issue_dialog_report">Докладвай</string>

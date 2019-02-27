@@ -44,6 +44,19 @@ public class EnableFingerprintDialog extends DialogFragment {
     private CancellationSignal fingerprintCancellationSignal;
 
     private static final String PASSWORD_ARG = "fingerprint_password";
+    private static final String ONBOARDING_ARG = "onboarding";
+
+    public static EnableFingerprintDialog show(String password, boolean onboarding, FragmentManager fragmentManager) {
+        EnableFingerprintDialog enableFingerprintDialog = new EnableFingerprintDialog();
+
+        Bundle args = new Bundle();
+        args.putString(PASSWORD_ARG, password);
+        args.putBoolean(ONBOARDING_ARG, onboarding);
+
+        enableFingerprintDialog.setArguments(args);
+        enableFingerprintDialog.show(fragmentManager, EnableFingerprintDialog.class.getSimpleName());
+        return enableFingerprintDialog;
+    }
 
     public static EnableFingerprintDialog show(String password, FragmentManager fragmentManager) {
         EnableFingerprintDialog enableFingerprintDialog = new EnableFingerprintDialog();
@@ -118,6 +131,13 @@ public class EnableFingerprintDialog extends DialogFragment {
     public void onDismiss(DialogInterface dialog) {
         if (fingerprintCancellationSignal != null) {
             fingerprintCancellationSignal.cancel();
+        }
+
+        Activity activity = getActivity();
+        Bundle args = getArguments();
+        boolean onboarding = args != null && args.getBoolean(ONBOARDING_ARG);
+        if (onboarding && activity instanceof EncryptKeysDialogFragment.OnOnboardingCompleteListener) {
+            ((EncryptKeysDialogFragment.OnOnboardingCompleteListener) activity).onOnboardingComplete();
         }
         super.onDismiss(dialog);
     }

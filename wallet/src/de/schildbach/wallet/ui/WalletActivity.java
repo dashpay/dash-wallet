@@ -17,57 +17,6 @@
 
 package de.schildbach.wallet.ui;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Currency;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Locale;
-
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.VersionedChecksummedBytes;
-import org.bitcoinj.crypto.ChildNumber;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.Wallet.BalanceType;
-import org.dash.wallet.common.ui.DialogBuilder;
-
-import org.dash.wallet.integration.uphold.data.UpholdClient;
-import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
-import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableList;
-import com.squareup.okhttp.HttpUrl;
-
-import org.dash.wallet.common.Configuration;
-import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.WalletBalanceWidgetProvider;
-import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.data.WalletLock;
-import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
-import de.schildbach.wallet.ui.InputParser.StringInputParser;
-import de.schildbach.wallet.ui.preference.PinRetryController;
-import de.schildbach.wallet.ui.preference.PreferenceActivity;
-import de.schildbach.wallet.ui.send.SendCoinsActivity;
-import de.schildbach.wallet.ui.send.SweepWalletActivity;
-import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
-import de.schildbach.wallet.util.CrashReporter;
-import de.schildbach.wallet.util.Crypto;
-import de.schildbach.wallet.util.FingerprintHelper;
-import de.schildbach.wallet.util.Io;
-import de.schildbach.wallet.util.Nfc;
-import de.schildbach.wallet.util.WalletUtils;
-import de.schildbach.wallet_test.R;
-
 import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
@@ -111,6 +60,57 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
+import com.squareup.okhttp.HttpUrl;
+
+import org.bitcoinj.core.InstantSend;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.Wallet.BalanceType;
+import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.integration.uphold.data.UpholdClient;
+import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
+import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
+
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Currency;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Locale;
+
+import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.WalletBalanceWidgetProvider;
+import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.data.WalletLock;
+import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
+import de.schildbach.wallet.ui.InputParser.StringInputParser;
+import de.schildbach.wallet.ui.preference.PreferenceActivity;
+import de.schildbach.wallet.ui.send.SendCoinsActivity;
+import de.schildbach.wallet.ui.send.SweepWalletActivity;
+import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
+import de.schildbach.wallet.util.CrashReporter;
+import de.schildbach.wallet.util.Crypto;
+import de.schildbach.wallet.util.FingerprintHelper;
+import de.schildbach.wallet.util.Io;
+import de.schildbach.wallet.util.Nfc;
+import de.schildbach.wallet.util.WalletUtils;
+import de.schildbach.wallet_test.R;
+
 /**
  * @author Andreas Schildbach
  */
@@ -119,7 +119,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         NavigationView.OnNavigationItemSelectedListener,
         WalletLock.OnLockChangeListener, UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
-        EnableFingerprintDialog.OnFingerprintEnabledListener {
+        EnableFingerprintDialog.OnFingerprintEnabledListener,
+        EncryptKeysDialogFragment.OnOnboardingCompleteListener {
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
     private static final int DIALOG_RESTORE_WALLET = 2;
@@ -142,6 +143,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private static final int REQUEST_CODE_RESTORE_WALLET = 2;
 
     private boolean isRestoringBackup;
+
+    private boolean veryFirstLaunch;
+
+    private CanAutoLockGuard canAutoLockGuard;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -172,6 +177,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             checkAlerts();
         }
 
+        veryFirstLaunch = !config.hasBeenUsed();
         config.touchLastUsed();
 
         handleIntent(getIntent());
@@ -194,7 +200,27 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 fingerprintHelper = null;
             }
         }
+
+        canAutoLockGuard = new CanAutoLockGuard(config, onAutoLockStatusChangedListener);
+        if (!veryFirstLaunch) {
+            canAutoLockGuard.register(true);
+        }
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        canAutoLockGuard.unregister();
+    }
+
+    private CanAutoLockGuard.OnAutoLockStatusChangedListener onAutoLockStatusChangedListener = new CanAutoLockGuard.OnAutoLockStatusChangedListener() {
+        @Override
+        public void onAutoLockStatusChanged(boolean active) {
+            if (active && !config.getFastestNetworkAnncmntShown()) {
+                FastestNetworkAnncmntDialog.show(getSupportFragmentManager());
+            }
+        }
+    };
 
     private void initUphold() {
         //Uses Sha256 hash of excerpt of xpub as Uphold authentication salt
@@ -1308,4 +1334,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }
     }
 
+    @Override
+    public void onOnboardingComplete() {
+        if (veryFirstLaunch) {
+            canAutoLockGuard.register(true);
+        }
+    }
 }

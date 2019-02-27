@@ -31,8 +31,6 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.dash.wallet.common.R;
-
 /**
  * @author Andreas Schildbach
  */
@@ -70,7 +68,9 @@ public class Configuration {
     public static final String PREFS_KEY_INSTANTX_ENABLED = "labs_instantx_enabled";
     public static final String PREFS_KEY_LITE_MODE = "labs_lite_mode";
     public final static String PREFS_LAST_UNLOCK_TIME = "last_unlock_time";
+    public static final String PREFS_KEY_FASTEST_NETWORK_ANNCMNT_SHOWN = "fastest_network_anncmnt_shown";
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
+    public static final String PREFS_KEY_CAN_AUTO_LOCK = "can_auto_lock";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 4;
@@ -326,11 +326,27 @@ public class Configuration {
         prefs.edit().putLong(PREFS_LAST_UNLOCK_TIME, unlockTime).apply();
     }
 
+    public boolean getFastestNetworkAnncmntShown() {
+        return prefs.getBoolean(PREFS_KEY_FASTEST_NETWORK_ANNCMNT_SHOWN, false);
+    }
+
+    public void setFastestNetworkAnncmntShown() {
+        prefs.edit().putBoolean(PREFS_KEY_FASTEST_NETWORK_ANNCMNT_SHOWN, true).apply();
+    }
+
     public boolean getRemindEnableFingerprint() {
         return prefs.getBoolean(PREFS_REMIND_ENABLE_FINGERPRINT, true);
     }
 
     public void setRemindEnableFingerprint(boolean remind) {
         prefs.edit().putBoolean(PREFS_REMIND_ENABLE_FINGERPRINT, remind).apply();
+    }
+
+    public boolean getCanAutoLock() {
+        return prefs.getBoolean(PREFS_KEY_CAN_AUTO_LOCK, false);
+    }
+
+    public void setCanAutoLock(boolean enabled) {
+        prefs.edit().putBoolean(PREFS_KEY_CAN_AUTO_LOCK, enabled).apply();
     }
 }

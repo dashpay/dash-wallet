@@ -68,8 +68,7 @@
     <string name="send_coins_fragment_pending">(승인을 위해 기다는 중 : %s)</string>
     <string name="send_coins_fragment_amount_label">송금액</string>
     <string name="send_coins_fragment_pin_label">PIN 입력하기</string>
-    <string name="send_coins_fragment_hint_fee_economic">경제적 수수료 설정으로 %s가 수수료로 지불됩니다. 위험: 대쉬 거래 시 네트워크를 통해 승인이 되어야 거래가 완료됩니다. 낮은 수수료 설정 시 승인에 오랜 시간이 걸릴 수 있습니다.</string>
-    <string name="send_coins_fragment_hint_fee">네트워크 승인을 위해 %s가 지불됩니다.</string>
+    <string name="send_coins_fragment_hint_fee_economic">네트워크 승인을 위해 %s가 지불됩니다.</string>
     <string name="send_coins_fragment_hint_fee_priority">급행 수수료 설정으로 %s가 수수료로 지불됩니다. 네트워크 상에서 빠른 승인을 원한다면, 급행 수수료로 설정하시기 바랍니다.</string>
     <string name="send_coins_fragment_hint_dusty_send">송금액이 너무 적어 전송할 수 없습니다.</string>
     <string name="send_coins_fragment_hint_insufficient_money">보유하고 있는 금액이 %s 부족합니다.</string>
@@ -94,7 +93,6 @@
     <string name="send_coins_error_msg">송금 중 알 수 없는 문제가 발생했습니다!</string>
     <string name="send_coins_options_fee_category">수수료</string>
     <string name="send_coins_options_fee_category_economic">경제적</string>
-    <string name="send_coins_options_fee_category_normal">보통</string>
     <string name="send_coins_options_fee_category_priority">급행</string>
     <string name="send_coins_options_empty">입력한 금액 지우기</string>
     <string name="raise_fee_dialog_title">수수료 높이기</string>
