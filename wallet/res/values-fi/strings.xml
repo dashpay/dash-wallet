@@ -86,7 +86,6 @@
     <string name="send_coins_error_msg">Ongelma kolikoita lähetettäessä!</string>
     <string name="send_coins_options_fee_category">Maksukulu</string>
     <string name="send_coins_options_fee_category_economic">Taloudellinen</string>
-    <string name="send_coins_options_fee_category_normal">Tavallinen</string>
     <string name="send_coins_options_fee_category_priority">Prioriteetti</string>
     <string name="send_coins_options_empty">Tyhjä lompakko</string>
     <string name="raise_fee_dialog_title">Korota verkon maksukulua</string>

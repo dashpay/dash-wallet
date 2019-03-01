@@ -1,33 +1,33 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-	<string name="send_coins_fragment_instantx_enable">使用即时支付</string>
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">此项即时支付交易尚未传输。</string>
-	<string name="transaction_row_message_own_instantx_lock_request">此项即时支付交易正在等待确认。</string>
-	<string name="transaction_row_message_own_instantx_locked">发送即时支付交易(锁定)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">此项即时支付交易正在等待确认。</string>
-	<string name="transaction_row_message_received_instantx_locked">即时支付已确认</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">未确认的即时支付</string>
-	<string name="transaction_row_message_received_instantx_locked2">被锁定的即时支付</string>
-	<string name="transaction_row_message_sent_to_single_peer">此交易已被发送。</string>
+    <string name="send_coins_auto_lock_feasible">此项交易确认将即时完成, 无需额外费用.</string>
+	<string name="send_coins_auto_lock_not_feasible">此项交易确认需要几分钟. 立即完成需要额外%1$s%2$s?</string>
+	<string name="send_coins_instant_send_not_feasible">此项交易确认需要几分钟.</string>
+
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">此项即时支付交易尚未传输.</string>
+	<string name="transaction_row_message_sent_to_single_peer">此项交易已被发送.</string>
+
+	<string name="regular_transaction_info_message">此项交易并未以即时支付发送. 交易完成需要更多确认.</string>
+
 	<string name="wallet_options_disconnect">未连接</string>
 
 	<string name="network_monitor_masternodes_title">主节点</string>
 	<string name="export_keys_dialog_title_to_seed">查看恢复密语</string>
 	<string name="import_keys_dialog_title_from_seed">使用恢复密语复原</string>
-	<string name="backup_to_seed_wallet_dialog_message">这是你的恢复密语. 请记录下来.</string>
+	<string name="backup_to_seed_wallet_dialog_message">这是您的恢复密语. 请记录下来.</string>
 	<string name="backup_wallet_to_seed_dialog_warning">请不要让任何人看到您的恢复密语, 否则他们将可以使用您的达世币.</string>
-	<string name="backup_to_seed_wallet_dialog_enter_pin_message">资金密码可以保护你的钱包. 输入密码并点击显示, 浏览你的恢复密语.</string>
-    <string name="import_keys_from_seed_dialog_message">在这里输入你的恢复密语.</string>
-	<string name="import_export_keys_dialog_password_phrase">这里是你的恢复密语.</string>
-	<string name="preferences_report_issue_summary">请描述你所遇到的问题并用邮箱给开发者发送报告.</string>
+	<string name="backup_to_seed_wallet_dialog_enter_pin_message">资金密码可以保护您的钱包. 输入密码并点击显示, 浏览您的恢复密语.</string>
+    <string name="import_keys_from_seed_dialog_message">在这里输入您的恢复密语.</string>
+	<string name="import_export_keys_dialog_password_phrase">这里是您的恢复密语.</string>
+	<string name="preferences_report_issue_summary">请描述您所遇到的问题并通过邮箱给开发者发送报告.</string>
 	<string name="navigation_configuration">恭喜</string>
     <string name="button_copy_address">复制地址</string>
 	<string name="request_coins_clipboard_address_msg">达世币地址已复制</string>
 	<string name="backup_wallet_to_seed_show_recovery_phrase">显示</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%s 是无效字.</string>
 
-	<string name="send_coins_options_fee_category_zero">不支付手续费</string>
+	<string name="send_coins_options_fee_category_zero">无手续费</string>
 	<string name="send_coins_fragment_hint_fee_zero">不支付任何交易手续费. 仅在您不在意确认时间长短的情况下使用此选项.</string>
 
 	<string name="wallet_uri_handler_public_key_request_dialog_msg">应用程序 %s 想要获取您的主公钥. 这可以被用来追踪您的钱包, 但无法支配您的达世币.</string>
@@ -40,7 +40,7 @@
 	<string name="wallet_lock_unlock_dialog_title">解锁您的钱包</string>
 	<string name="wallet_lock_unlock_dialog_message">您的钱包受到密码保护. 输入您的PIN码并按解锁以继续.</string>
 	<string name="wallet_lock_reset_wallet_title">重置钱包</string>
-	<string name="wallet_lock_reset_wallet_message">您确定吗？您的钱包将会被删除，您所有的达世币将会丢失.\n\n找回您达世币的唯一途径是通过备份文件或恢复短语。</string>
+	<string name="wallet_lock_reset_wallet_message">您确定吗? 您的钱包将会被删除, 您所有的达世币将会丢失.\n\n找回您达世币的唯一途径是通过备份文件或恢复短语.</string>
 
 	<string name="wallet_lock_wallet_disabled">钱包被禁用</string>
 	<string name="wallet_lock_try_again">请在 %1$d %2$s 后再试</string>
@@ -66,11 +66,28 @@
 	<string name="pin_code_required_dialog_message">这个应用程序需要PIN码来发送交易和查看交易余额.</string>
     <string name="backup_wallet_seed_private_key_written_down_box">我已经记下了恢复密语</string>
 	
-	<string name="change_exchange_currency_code_message">你的本地货币是%1$s，但是在这个应用程序中默认货币设置为%2$s。请问您想要改为%1$s 或保持%2$s?</string>
+	<string name="change_exchange_currency_code_message">您的本地货币是%1$s, 但是在这个应用程序中默认货币设置为%2$s. 请问您想要改为%1$s 或保持%2$s?</string>
 	<string name="change_to">改为%s</string>
 	<string name="leave_as">保持%s</string>
 
 	<string name="remind_later">稍后提醒</string>
 	<string name="backup_now">立刻备份</string>
+	
+	<string name="notification_transactions_channel_name">交易</string>
+	<string name="notification_transactions_channel_description">接收关于新转入交易的提醒.</string>
+	<string name="notification_synchronization_channel_name">同步</string>
+	<string name="notification_synchronization_channel_description">当app正在同步网络时显示通知.</string>
+
+	<string name="fastest_payment_network_dialog_title">你的财富, 你做主</string>
+	<string name="fastest_payment_network_dialog_message">立即发送和接收达世币, 无需额外费用</string>
+	<string name="fastest_payment_network_dialog_button">了解</string>
+
+	<string name="unlock_with_fingerprint">使用您的指纹解锁.</string>
+	<string name="unlock_with_fingerprint_error">指纹验证失败, 请重试.</string>
+	<string name="unlock_with_fingerprint_error_max_attempts">超过最大指纹解锁次数. 请稍后再试.</string>
+	<string name="or_unlock_with_fingerprint">或使用您的指纹解锁.</string>
+	<string name="enable_fingerprint">开启指纹</string>
+	<string name="touch_fingerprint_sensor">触摸指纹传感器.</string>
+	<string name="touch_fingerprint_to_enable">触摸指纹传感器来解锁.</string>
 
 </resources>

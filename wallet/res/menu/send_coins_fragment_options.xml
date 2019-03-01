@@ -13,9 +13,6 @@
                     android:id="@+id/send_coins_options_fee_category_economic"
                     android:title="@string/send_coins_options_fee_category_economic"/>
                 <item
-                    android:id="@+id/send_coins_options_fee_category_normal"
-                    android:title="@string/send_coins_options_fee_category_normal"/>
-                <item
                     android:id="@+id/send_coins_options_fee_category_priority"
                     android:title="@string/send_coins_options_fee_category_priority"/>
             </group>

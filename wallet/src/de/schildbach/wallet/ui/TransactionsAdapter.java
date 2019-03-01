@@ -33,11 +33,13 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Transaction.Purpose;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
+import org.bitcoinj.core.TransactionLockRequest;
 import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.DefaultCoinSelector;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.CurrencyTextView;
+import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.common.ui.Formats;
 
 import de.schildbach.wallet.Constants;
@@ -61,6 +63,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
@@ -313,8 +316,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         private final View extendMessageView;
         private final TextView messageView;
         private final ImageButton menuView;
-        private final TextView ixStatusView;
-        private final TextView ixStatusExtendedView;
+        private final ImageView ixInfoButtonView;
 
 
         private TransactionViewHolder(final View itemView) {
@@ -333,8 +335,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             messageView = (TextView) itemView.findViewById(R.id.transaction_row_message);
             menuView = (ImageButton) itemView.findViewById(R.id.transaction_row_menu);
             //Dash
-            ixStatusView = (TextView) itemView.findViewById(R.id.transaction_row_ix);
-            ixStatusExtendedView = (TextView) itemView.findViewById(R.id.transaction_row_ix_extended);
+            ixInfoButtonView = itemView.findViewById(R.id.transaction_row_info_button);
         }
 
         private void bind(final Transaction tx) {
@@ -378,7 +379,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 textColor = colorError;
                 lessSignificantColor = colorError;
                 valueColor = colorError;
-            } else if (DefaultCoinSelector.isSelectable(tx)) {
+            } else if (DefaultCoinSelector.get().isSelectable(tx)) {
                 textColor = colorSignificant;
                 lessSignificantColor = colorLessSignificant;
                 valueColor = txCache.sent ? colorValueNegative : colorValuePositve;
@@ -524,18 +525,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             extendMessageView.setVisibility(View.GONE);
             messageView.setSingleLine(false);
 
-            TextView ixView = itemView.isActivated() ? ixStatusExtendedView : ixStatusView;
-            ixStatusExtendedView.setVisibility(View.GONE);
-            ixStatusView.setVisibility(View.GONE);
-
-            //
-            // Display Building, but with InstantX info, if available.
-            //
-            if (isLocked) {
-                ixView.setText(R.string.transaction_row_message_received_instantx_locked);
-                ixView.setVisibility(View.VISIBLE);
-            }
-
             if (purpose == Purpose.KEY_ROTATION) {
                 extendMessageView.setVisibility(View.VISIBLE);
                 messageView.setText(
@@ -558,12 +547,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 if (txCache.isIX) {
                     messageView.setText(R.string.transaction_row_message_own_instantx_lock_request_notsent);
                 }
-            } else if (txCache.sent && confidenceType == ConfidenceType.PENDING && txCache.isIX) // Added for sending IX
-            {
-                ixView.setVisibility(View.VISIBLE);
-                ixView.setText(R.string.transaction_row_message_own_instantx_lock_request);
-                if (isLocked)
-                    ixView.setText(R.string.transaction_row_message_received_instantx_locked);
             } else if (!isOwn && confidenceType == ConfidenceType.PENDING && confidence.numBroadcastPeers() == 0) {
                 extendMessageView.setVisibility(View.VISIBLE);
                 messageView.setText(R.string.transaction_row_message_received_direct);
@@ -582,12 +565,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 extendMessageView.setVisibility(View.VISIBLE);
                 messageView.setText(R.string.transaction_row_message_received_unconfirmed_unlocked);
                 messageView.setTextColor(colorInsignificant);
-                if (txCache.isIX) {
-                    ixView.setVisibility(View.VISIBLE);
-                    ixView.setText(R.string.transaction_row_message_received_instantx_lock_request);
-                    if (isLocked)
-                        ixView.setText(R.string.transaction_row_message_received_instantx_locked);
-                }
             } else if (!txCache.sent && confidenceType == ConfidenceType.IN_CONFLICT) {
                 extendMessageView.setVisibility(View.VISIBLE);
                 messageView.setText(R.string.transaction_row_message_received_in_conflict);
@@ -605,6 +582,23 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 messageView.setText(memo[0]);
                 messageView.setTextColor(colorInsignificant);
                 messageView.setSingleLine(!itemView.isActivated());
+            }
+
+            ixInfoButtonView.setVisibility(View.GONE);
+            boolean isSimple = tx.isSimple();
+            TransactionConfidence.IXType ixType = confidence.getIXType();
+            boolean ixLockFailed = ixType == TransactionConfidence.IXType.IX_LOCK_FAILED;
+            if (isOwn && isSimple && ixLockFailed) {
+                ixInfoButtonView.setVisibility(isLocked ? View.GONE : View.VISIBLE);
+                ixInfoButtonView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        new DialogBuilder(context)
+                                .setMessage(R.string.regular_transaction_info_message)
+                                .setPositiveButton(R.string.button_ok, null)
+                                .show();
+                    }
+                });
             }
         }
     }

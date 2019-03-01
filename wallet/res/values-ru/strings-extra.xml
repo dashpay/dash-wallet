@@ -1,15 +1,15 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-	<string name="send_coins_fragment_instantx_enable">Использовать InstantSend</string>
+    <string name="send_coins_auto_lock_feasible">Эта транзакция будет совершена мгновенно без дополнительной комиссии.</string>
+	<string name="send_coins_auto_lock_not_feasible">Подтверждение этой транзакции может занять несколько минут. Подтвердить её мгновенно за дополнительную плату %1$s%2$s?</string>
+	<string name="send_coins_instant_send_not_feasible">Подтверждение этой транзакции может занять несколько минут.</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Этот платёж InstantSend пока ещё не выполнен.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Этот платёж InstantSend ожидает проверки.</string>
-	<string name="transaction_row_message_own_instantx_locked">Транзакция InstantSend отправлена (подтверждена).</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Этот платёж InstantSend ожидает проверки.</string>
-	<string name="transaction_row_message_received_instantx_locked">Платёж InstantSend проверен</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">Неподтверждённый InstantSend</string>
-	<string name="transaction_row_message_received_instantx_locked2">Подтверждённый InstantSend</string>
 	<string name="transaction_row_message_sent_to_single_peer">Этот платёж был передан в сеть.</string>
+
+	<string name="regular_transaction_info_message">Эта транзакция была отправлена ​​без InstantSend. Потребуется больше подтверждений для завершения.</string>
+
 	<string name="wallet_options_disconnect">Отключить</string>
 
 	<string name="network_monitor_masternodes_title">Мастерноды</string>
@@ -81,5 +81,22 @@
 
 	<string name="remind_later">Напомнить позже</string>
 	<string name="backup_now">Создать резервную копию сейчас</string>
+	
+	<string name="notification_transactions_channel_name">Транзакции</string>
+	<string name="notification_transactions_channel_description">Получать оповещения о входящих транзакциях.</string>
+	<string name="notification_synchronization_channel_name"> Синхронизация</string>
+	<string name="notification_synchronization_channel_description">Показывает уведомление, когда приложение синхронизируется с сетью.</string>
+
+	<string name="fastest_payment_network_dialog_title">Ваши деньги, Ваш выбор</string>
+	<string name="fastest_payment_network_dialog_message">Отправить и получить Dash мгновенно без дополнительной комиссии</string>
+	<string name="fastest_payment_network_dialog_button">Понятно</string>
+
+	<string name="unlock_with_fingerprint">Используйте свой отпечаток пальца, чтобы разблокировать.</string>
+	<string name="unlock_with_fingerprint_error">Не удалось распознать отпечаток пальца, повторите попытку.</string>
+	<string name="unlock_with_fingerprint_error_max_attempts">Превышено максимальное количество попыток разблокировки с помощью отпечатка пальцев. Пожалуйста, попробуйте позже.</string>
+	<string name="or_unlock_with_fingerprint">Или используйте свой отпечаток пальца, чтобы разблокировать.</string>
+	<string name="enable_fingerprint">Включить разблокировку с помощью отпечатка пальца.</string>
+	<string name="touch_fingerprint_sensor">Коснитесь датчика отпечатков пальцев.</string>
+	<string name="touch_fingerprint_to_enable">Коснитесь датчика отпечатков пальцев, чтобы разблокировать с помощью отпечатка пальца.</string>
 
 </resources>

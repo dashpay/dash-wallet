@@ -7,6 +7,10 @@ ext {
 repositories {
     mavenLocal()
     maven {
+        url 'http://oss.jfrog.org/artifactory/oss-snapshot-local'
+        name 'OJO snapshots'
+    }
+    maven {
         url 'https://maven.google.com/'
         name 'Google'
     }
@@ -29,7 +33,8 @@ dependencies {
     implementation "com.android.support:recyclerview-v7:$androidSupportVersion"
     implementation "com.android.support:cardview-v7:$androidSupportVersion"
     implementation "com.android.support:preference-v7:$androidSupportVersion"
-    implementation 'org.dashj:dashj-core:0.15-SNAPSHOT'
+    implementation "com.android.support.constraint:constraint-layout:1.1.3"
+    implementation "org.dashj:dashj-core:$dashjVersion"
     implementation 'com.google.protobuf:protobuf-java:2.6.1'
     implementation 'com.google.guava:guava:20.0'
     implementation 'com.google.zxing:core:3.3.0'

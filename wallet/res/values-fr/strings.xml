@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Votre portefeuille a été réinitialisé !\nSa récupération va prendre un certain temps.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">L\'utilisation est à vos risques et périls. Veuillez lire les &lt;u&gt;notes de sécurité&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Vous devez &lt;u&gt;sauvegarder votre portefeuille&lt;/u&gt; !</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Vous devez sauvegarder votre portefeuille !</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d heures en retard</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d jours en retard</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d semaines en retard</string>
@@ -20,15 +20,15 @@
     <string name="exchange_rates_fragment_empty_text">Impossible de charger les taux de change.</string>
     <string name="exchange_rates_fragment_empty_search">Taux de change introuvables.</string>
     <string name="exchange_rates_fragment_default">(par défaut)</string>
-    <string name="exchange_rates_fragment_rate">taux</string>
-    <string name="exchange_rates_fragment_balance">solde</string>
+    <string name="exchange_rates_fragment_rate">Taux</string>
+    <string name="exchange_rates_fragment_balance">Solde</string>
     <string name="exchange_rates_fragment_source">Cours de %s</string>
     <string name="exchange_rates_options_search">Rechercher le taux de change</string>
     <string name="exchange_rates_context_set_as_default_title">Définir comme valeur défaut</string>
     <string name="wallet_transactions_fragment_empty_text_received">Aucun dash reçu à ce jour</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Aucun dash envoyé à ce jour</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Comment obtenir des dashs ?\n\nÉchangez-en contre de l\'argent traditionnel,\nvendez des biens ou des services ou\ngagnez-en en travaillant.</string>
-    <string name="wallet_transactions_row_warning_backup">Félicitations, vous avez reçu votre premier paiement ! Avez-vous déjà &lt;u&gt;sauvegardé votre portefeuille&lt;/u&gt; afin de le protéger de toute perte ?</string>
+    <string name="wallet_transactions_row_warning_backup">Félicitations, vous avez reçu votre premier paiement ! Avez-vous déjà sauvegardé votre portefeuille afin de le protéger de toute perte ?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Astuce : pour augmenter la sécurité de votre portefeuille, vous pouvez &lt;u&gt;chiffrer votre appareil&lt;/u&gt;. Cela protégera également les données des autres applications.</string>
     <string name="wallet_transactions_fragment_coinbase">miné</string>
     <string name="wallet_transactions_fragment_internal">interne</string>
@@ -46,7 +46,7 @@
     <string name="wallet_low_storage_dialog_msg">Le portefeuille Dash utilise l\'espace de stockage interne pour enregistrer les transactions et les blocs. En cas d\'espace insuffisant, le portefeuille ne marchera plus et il y aura un risque pour vos dashs !\n\nSouhaitez-vous ouvrir le gestionnaire d\'applications pour supprimer celles dont vous n\'avez pas besoin ?</string>
     <string name="wallet_low_storage_dialog_button_apps">Gérer les applications</string>
     <string name="wallet_timeskew_dialog_title">Veuillez vérifier les réglages de date &amp; heure.</string>
-    <string name="wallet_timeskew_dialog_msg">L\'horloge de votre appareil est décalée de %d minutes. Vous ne pouvez sans doute pas envoyer ou recevoir de dashs pour cette raison.\\n\\nVeuillez vérifier et éventuellement corriger la date, l\'heure et le fuseau horaire de votre appareil.</string>
+    <string name="wallet_timeskew_dialog_msg">L\'horloge de votre appareil est décalée de %d minutes. Vous ne pouvez sans doute pas envoyer ou recevoir de dashs pour cette raison.\n\nVeuillez vérifier et éventuellement corriger la date, l\'heure et le fuseau horaire de votre appareil.</string>
     <string name="wallet_version_dialog_title">Une nouvelle version est disponible !</string>
     <string name="wallet_version_dialog_msg">Cette version corrige des bugs importants. Pour plus de détails, voir le journal des changements sur Google Play Store.</string>
     <string name="wallet_version_dialog_msg_deprecated">Si aucune mise à jour ne vous est proposée, ceci signifie sans doute que votre version d\'Android n\'est plus prise en charge.</string>
@@ -67,8 +67,7 @@
     <string name="send_coins_fragment_receiving_address_complex">adresse\ncomplexe</string>
     <string name="send_coins_fragment_pending">(%s en attente de confirmation)</string>
     <string name="send_coins_fragment_amount_label">Montant à payer</string>
-    <string name="send_coins_fragment_hint_fee_economic">Des frais économique de %s seront appliqués. Utilisez l\'option \"économique\" seulement si le temps de confirmation ne vous importe pas.</string>
-    <string name="send_coins_fragment_hint_fee">Des frais de réseau de %s seront appliqués.</string>
+    <string name="send_coins_fragment_hint_fee_economic">Des frais de réseau de %s seront appliqués.</string>
     <string name="send_coins_fragment_hint_fee_priority">Des frais prioritaires de %s seront appliqués. Si vous préférez des frais plus bas, n\'utilisez l\'option \"prioritaire\" que s\'il vous faut une confirmation la plus rapide possible.</string>
     <string name="send_coins_fragment_hint_dusty_send">Le montant est trop faible pour être envoyé.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Pas assez de fonds disponibles. Il vous manque %s.</string>
@@ -93,7 +92,6 @@
     <string name="send_coins_error_msg">Problème durant l\'envoi  des fonds !</string>
     <string name="send_coins_options_fee_category">Frais</string>
     <string name="send_coins_options_fee_category_economic">Économique</string>
-    <string name="send_coins_options_fee_category_normal">Normal</string>
     <string name="send_coins_options_fee_category_priority">Prioritaire</string>
     <string name="send_coins_options_empty">Vider le portefeuille</string>
     <string name="raise_fee_dialog_title">Augmenter les frais de réseau</string>
@@ -276,7 +274,7 @@
     <string name="report_issue_dialog_title_issue">Signaler un problème</string>
     <string name="report_issue_dialog_title_crash">Un plantage précédent a été détecté</string>
     <string name="report_issue_dialog_title_transaction">Signaler un problème avec le paiement sélectionné</string>
-    <string name="report_issue_dialog_message_issue">Veuillez décrire votre problème de façon assez précise pour qu\'il soit reproduit. Utilisez la langue anglaise si possible.</string>
+    <string name="report_issue_dialog_message_issue">Veuillez décrire votre problème de façon assez précise pour qu\'il soit reproduit. Utilisez la langue anglaise si possible. Un message e-mail du support Dash concernant votre problème devrait vous parvenir sous 24 heures.</string>
     <string name="report_issue_dialog_message_crash">Souhaitez-vous envoyer un rapport de plantage pour aider à corriger ce problème à l\'avenir ?</string>
     <string name="report_issue_dialog_description">description du problème</string>
     <string name="report_issue_dialog_report">Signaler</string>
@@ -326,8 +324,8 @@
     <string name="button_paste">Coller</string>
     <string name="button_share">Partager</string>
     <string name="button_set_as_default">Définir par défaut</string>
-    <string name="button_request_coins">Demander de l\'argent</string>
-    <string name="button_send_coins">Envoyer de l\'argent</string>
+    <string name="button_request_coins">Demander des dashs</string>
+    <string name="button_send_coins">Envoyer des dashs</string>
     <string name="button_scan">Scanner</string>
     <string name="button_settings">Paramètres</string>
     <string name="action_show_qr">Afficher le QR-code</string>
@@ -337,7 +335,7 @@
     <string name="time_today">aujourd\'hui</string>
     <string name="address_unlabeled">(sans étiquette)</string>
     <string name="private_key_password">code PIN</string>
-    <string name="private_key_bad_password">code PIN erroné !</string>
+    <string name="private_key_bad_password">Mauvais code PIN !</string>
 
     <!-- generic error messages -->
     <string name="error_io">Erreur E/S : %s</string>

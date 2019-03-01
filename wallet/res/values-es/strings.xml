@@ -68,8 +68,7 @@
     <string name="send_coins_fragment_pending">(%s esperando confirmación)</string>
     <string name="send_coins_fragment_amount_label">Cantidad a pagar</string>
     <string name="send_coins_fragment_pin_label">Ingresar PIN</string>
-    <string name="send_coins_fragment_hint_fee_economic">Una comisión económica de %s será pagada. Usa \"Económica\" solo si no te importa el tiempo de confirmación.</string>
-    <string name="send_coins_fragment_hint_fee">Una comisión de red de %s será pagada.</string>
+    <string name="send_coins_fragment_hint_fee_economic">Una comisión de red de %s será pagada.</string>
     <string name="send_coins_fragment_hint_fee_priority">Una comisión prioritaria de %s será pagada. Si te importan las comisiones bajas, usa \"Prioritaria\" solo si necesitas confirmación lo más pronto posible.</string>
     <string name="send_coins_fragment_hint_dusty_send">La cantidad es demasiado baja para enviar.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Dash insuficientes. Te faltan %s.</string>
@@ -94,7 +93,6 @@
     <string name="send_coins_error_msg">¡Problema enviando monedas!</string>
     <string name="send_coins_options_fee_category">Comisión</string>
     <string name="send_coins_options_fee_category_economic">Económica</string>
-    <string name="send_coins_options_fee_category_normal">Normal</string>
     <string name="send_coins_options_fee_category_priority">Prioritaria</string>
     <string name="send_coins_options_empty">Vaciar billetera</string>
     <string name="raise_fee_dialog_title">Aumento de la comisión de red</string>
@@ -277,7 +275,7 @@
     <string name="report_issue_dialog_title_issue">Informar de incidencia</string>
     <string name="report_issue_dialog_title_crash">Detectado error grave anterior</string>
     <string name="report_issue_dialog_title_transaction">Reportar problema con el pago seleccionado</string>
-    <string name="report_issue_dialog_message_issue">Por favor describe tu problema con suficiente precisión para ser reproducido. Usa el idioma Inglés si te es posible.</string>
+    <string name="report_issue_dialog_message_issue">Por favor describa tu problema de forma suficientemente precisa para ser reproducido. Use el idioma Inglés si posible. Aguarde un email de Soporte Dash acerca de tu problema dentro de 24 horas.</string>
     <string name="report_issue_dialog_message_crash">¿Deseas enviar un informe de error para ayudar a resolver la incidencia en un futuro?</string>
     <string name="report_issue_dialog_description">Descripción del problema</string>
     <string name="report_issue_dialog_report">Informe</string>

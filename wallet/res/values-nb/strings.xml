@@ -86,7 +86,6 @@
 	<string name="send_coins_error_msg">Problem under sending av mynter!</string>
 	<string name="send_coins_options_fee_category">Gebyr</string>
 	<string name="send_coins_options_fee_category_economic">Økonomisk</string>
-	<string name="send_coins_options_fee_category_normal">Normal</string>
 	<string name="send_coins_options_fee_category_priority">Prioritert</string>
 	<string name="send_coins_options_empty">Tøm lommebok</string>
 	<string name="raise_fee_dialog_title">Øk nettverksgebyret</string>

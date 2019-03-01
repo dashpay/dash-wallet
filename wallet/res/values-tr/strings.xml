@@ -67,8 +67,7 @@
     <string name="send_coins_fragment_receiving_address_complex">kompleks\nadres</string>
     <string name="send_coins_fragment_pending">(%s onay bekleniliyor)</string>
     <string name="send_coins_fragment_amount_label">Ödenecek tutar</string>
-    <string name="send_coins_fragment_hint_fee_economic">%s tutarında ekonomik ücret ödenecektir. \'Ekonomik\' seçeneğini sadece onay süresinin önemli olmadığı durumlarda kullanın.</string>
-    <string name="send_coins_fragment_hint_fee">%s tutarında bir ağ ücreti ödenecektir.</string>
+    <string name="send_coins_fragment_hint_fee_economic">%s tutarında bir ağ ücreti ödenecektir.</string>
     <string name="send_coins_fragment_hint_fee_priority">%s tutarında bir öncelik ücreti ödenecektir. Eğer düşük ücretler sizin için önemliyse, \'öncelikli\' seçeneğini sadece mümkün olduğunca hızlı bir şekilde onaya ihtiyacınız olduğu durumlarda kullanın.</string>
     <string name="send_coins_fragment_hint_dusty_send">Bu miktar göndermek için çok düşüktür.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Yeterince Dash\'iniz yok. %s eksiktir.</string>
@@ -92,7 +91,6 @@
     <string name="send_coins_error_msg">Dash gönderim problemi!</string>
     <string name="send_coins_options_fee_category">Ücret</string>
     <string name="send_coins_options_fee_category_economic">Ekonomik</string>
-    <string name="send_coins_options_fee_category_normal">Normal</string>
     <string name="send_coins_options_fee_category_priority">Öncelikli</string>
     <string name="send_coins_options_empty">Boş cüzdan</string>
     <string name="raise_fee_dialog_title">Ağ ücretini arttır</string>
