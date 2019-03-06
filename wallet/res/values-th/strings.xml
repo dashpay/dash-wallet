@@ -68,8 +68,7 @@
     <string name="send_coins_fragment_pending">(%sกำลังรอการยืนยัน​)</string>
     <string name="send_coins_fragment_amount_label">จำนวนเงินที่ต้องจ่าย</string>
     <string name="send_coins_fragment_pin_label">ใส่รหัส PIN</string>
-    <string name="send_coins_fragment_hint_fee_economic">ค่าธรรมเนียมทางเศรษฐกิจของ %s จะถูกจ่าย ,  ใช้  \'economic\'  เฉพาะในกรณีที่คุณไม่สนใจเกี่ยวกับเวลาในการยืนยัน </string>
-    <string name="send_coins_fragment_hint_fee">ค่าธรรมเนียมระบบเครือข่ายของ %s จะถูกจ่าย</string>
+    <string name="send_coins_fragment_hint_fee_economic">ค่าธรรมเนียมระบบเครือข่ายของ %s จะถูกจ่าย</string>
     <string name="send_coins_fragment_hint_fee_priority">ค่าธรรมเนียมพิเศษของ %s จะถูกจ่าย หากคุณสนใจค่าธรรมเนียมพิเศษนี้ โปรดใช้ \'priority\' เมื่อต้องการการยืนยันอย่างรวดเร็ว</string>
     <string name="send_coins_fragment_hint_dusty_send">จำนวนเงินน้อยเกินไปที่จะส่ง</string>
     <string name="send_coins_fragment_hint_insufficient_money">เหรียญของคุณไม่เพียงพอ ขาดอีก %s</string>
@@ -94,7 +93,6 @@
     <string name="send_coins_error_msg">การส่งเหรียญมีปัญหา!</string>
     <string name="send_coins_options_fee_category">ค่าธรรมเนียม</string>
     <string name="send_coins_options_fee_category_economic">ประหยัด</string>
-    <string name="send_coins_options_fee_category_normal">ธรรมดา</string>
     <string name="send_coins_options_fee_category_priority">สิทธิพิเศษ</string>
     <string name="send_coins_options_empty">wallet ว่างเปล่า</string>
     <string name="raise_fee_dialog_title">เพิ่มค่าบริการเครือข่าย</string>

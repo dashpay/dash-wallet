@@ -68,8 +68,7 @@
     <string name="send_coins_fragment_pending">(%s ожидание подтверждения)</string>
     <string name="send_coins_fragment_amount_label">Величина оплаты</string>
     <string name="send_coins_fragment_pin_label">Введите PIN-код</string>
-    <string name="send_coins_fragment_hint_fee_economic">Экономный размер платы составит %s. Используйте эту опцию только в том случае, если вам не важно время подтверждения транзакции.</string>
-    <string name="send_coins_fragment_hint_fee">Будет заплачена комиссия %s.</string>
+    <string name="send_coins_fragment_hint_fee_economic">Будет заплачена комиссия %s.</string>
     <string name="send_coins_fragment_hint_fee_priority">Приоритетный размер платы составит %s. Если размер комиссии имеет для вас значение, используйте опцию приоритета только когда вам необходимо срочное подтверждение транзакции.</string>
     <string name="send_coins_fragment_hint_dusty_send">Сумма слишком мала для отправки.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Недостаточно средств. Не хватает %s.</string>
@@ -94,7 +93,6 @@
     <string name="send_coins_error_msg">Проблема с отправкой средств!</string>
     <string name="send_coins_options_fee_category">Комиссия</string>
     <string name="send_coins_options_fee_category_economic">Экономичная</string>
-    <string name="send_coins_options_fee_category_normal">Нормальная</string>
     <string name="send_coins_options_fee_category_priority">Приоритетная</string>
     <string name="send_coins_options_empty">Опустошить кошелёк</string>
     <string name="raise_fee_dialog_title">Увеличить комиссию за платёж</string>
@@ -277,7 +275,7 @@
     <string name="report_issue_dialog_title_issue">Сообщить о проблеме</string>
     <string name="report_issue_dialog_title_crash">Обнаружено аварийное завершение</string>
     <string name="report_issue_dialog_title_transaction">Сообщите о проблемах с выбранным платежом.</string>
-    <string name="report_issue_dialog_message_issue">Пожалуйста опишите вашу проблему во всех подробностях. По возможности - используйте английский язык.</string>
+    <string name="report_issue_dialog_message_issue">Пожалуйста опишите вашу проблему во всех подробностях. По возможности - используйте английский язык. Ожидайте ответа от службы поддержки Dash в течение 24 часов.</string>
     <string name="report_issue_dialog_message_crash">Хотите отправить отчёт об ошибке, тем самым помогая исправить эту проблему в будущем?</string>
     <string name="report_issue_dialog_description">описание проблемы</string>
     <string name="report_issue_dialog_report">Отчёт</string>

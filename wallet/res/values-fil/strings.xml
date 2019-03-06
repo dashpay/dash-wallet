@@ -68,8 +68,7 @@
     <string name="send_coins_fragment_pending">(%s naghihintay ng kumpirmasyon)</string>
     <string name="send_coins_fragment_amount_label">Halaga ng babayaran</string>
     <string name="send_coins_fragment_pin_label">I-enter ang PIN</string>
-    <string name="send_coins_fragment_hint_fee_economic">Ang economic fee na %s ay mababayaran. Gamitin lamang ang \'economic\' kung walang pakialam sa oras ng kumpirmasyon.</string>
-    <string name="send_coins_fragment_hint_fee">Ang network fee na %s ay mababayaran na.</string>
+    <string name="send_coins_fragment_hint_fee_economic">Ang network fee na %s ay mababayaran na.</string>
     <string name="send_coins_fragment_hint_fee_priority">Ang priority fee na %say mababayaran. Kung alintana ang mababang bayad, gamitin lamang ang \'priority\' kung kailangan ng kumpirmasyon sa lalong madaling panahon.</string>
     <string name="send_coins_fragment_hint_dusty_send">Ang halaga ay sobrang liit para maipadala.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Hindi sapat ang iyong barya. Kulang ka ng %s.</string>
@@ -94,7 +93,6 @@
     <string name="send_coins_error_msg">Nagkaproblema sa pagpapadala ng barya!</string>
     <string name="send_coins_options_fee_category">Bayad</string>
     <string name="send_coins_options_fee_category_economic">Ekonomiya</string>
-    <string name="send_coins_options_fee_category_normal">Normal</string>
     <string name="send_coins_options_fee_category_priority">Prayoridad</string>
     <string name="send_coins_options_empty">Walang laman ang pitaka</string>
     <string name="raise_fee_dialog_title">Taasan ang network fee</string>

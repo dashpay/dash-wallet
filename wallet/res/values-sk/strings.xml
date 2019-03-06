@@ -68,8 +68,7 @@
     <string name="send_coins_fragment_pending">(%s čaká na potvrdenie)</string>
     <string name="send_coins_fragment_amount_label">Suma na zaplatenie</string>
     <string name="send_coins_fragment_pin_label">Zadať PIN</string>
-    <string name="send_coins_fragment_hint_fee_economic">Bude zaplatený ekonomický poplatok %s. Použite \"ekonomický\" ak Vám nezáleží na čase potvrdenia.</string>
-    <string name="send_coins_fragment_hint_fee">Bude zaplatený sieťový poplatok %s.</string>
+    <string name="send_coins_fragment_hint_fee_economic">Bude zaplatený sieťový poplatok %s.</string>
     <string name="send_coins_fragment_hint_fee_priority">Bude zaplatený prioritný poplatok %s. Ak Vám záleží na nízkych poplatkoch, používajte \"prioritu\" iba ak potrebujete rýchle potvrdenie.</string>
     <string name="send_coins_fragment_hint_dusty_send">Čiastka je príliš nízka pre odoslanie.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Nemáte dostatok mincí. Chýba vám %s.</string>
@@ -94,7 +93,6 @@
     <string name="send_coins_error_msg">Problém pri odosielaní!</string>
     <string name="send_coins_options_fee_category">Poplatok</string>
     <string name="send_coins_options_fee_category_economic">Ekonomický</string>
-    <string name="send_coins_options_fee_category_normal">Normálny</string>
     <string name="send_coins_options_fee_category_priority">Prioritný</string>
     <string name="send_coins_options_empty">Vyprázdniť peňaženku</string>
     <string name="raise_fee_dialog_title">Zvýšiť sieťový poplatok </string>
@@ -277,7 +275,7 @@
     <string name="report_issue_dialog_title_issue">Nahlásiť problém</string>
     <string name="report_issue_dialog_title_crash">Zistené predchádzajúce zlyhanie aplikácie</string>
     <string name="report_issue_dialog_title_transaction">Nahlásiť problém s vybranou platbou</string>
-    <string name="report_issue_dialog_message_issue">Popíšte čo najpodrobnejšie problém, aby sa dal zreprodukovať. Ak je to možné, použite Anglický jazyk</string>
+    <string name="report_issue_dialog_message_issue">Popíšte čo najpodrobnejšie problém, aby sa dal zreprodukovať. Ak je to možné, použite Anglický jazyk. Očakávajte email od podporného tímu Dash do 24 hodín.</string>
     <string name="report_issue_dialog_message_crash">Chcete odoslať správu o probléme a tým pomôcť opraviť tento problém?</string>
     <string name="report_issue_dialog_description">popis problému</string>
     <string name="report_issue_dialog_report">Odoslať</string>

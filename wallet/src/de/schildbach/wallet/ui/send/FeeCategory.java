@@ -28,12 +28,6 @@ public enum FeeCategory {
     ECONOMIC,
 
     /**
-     * Under normal network conditions, confirms within the next 15 minutes. Can take longer, but this should
-     * be an exception. And it should not take days or weeks.
-     */
-    NORMAL,
-
-    /**
      * Confirms within the next 15 minutes.
      */
     PRIORITY;

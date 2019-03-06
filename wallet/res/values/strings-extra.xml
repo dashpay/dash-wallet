@@ -1,15 +1,15 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-	<string name="send_coins_fragment_instantx_enable">Use InstantSend</string>
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">This InstantSend payment has not been transmitted yet.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">This InstantSend payment is awaiting verification.</string>
-	<string name="transaction_row_message_own_instantx_locked">Sent InstantSend transaction (locked)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">This InstantSend payment is awaiting verification.</string>
-	<string name="transaction_row_message_received_instantx_locked">InstantSend verified</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">Unconfirmed InstantSend</string>
-	<string name="transaction_row_message_received_instantx_locked2">Locked InstantSend</string>
+    <string name="send_coins_auto_lock_feasible">This transaction will settle instantly at no extra fee.</string>
+	<string name="send_coins_auto_lock_not_feasible">This transaction may take several minutes to settle. Complete instantly for %1$s%2$s?</string>
+	<string name="send_coins_instant_send_not_feasible">This transaction may take several minutes to settle.</string>
+
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">This payment has not been transmitted yet.</string>
 	<string name="transaction_row_message_sent_to_single_peer">This payment has been sent.</string>
+
+	<string name="regular_transaction_info_message">This transaction was not settled instantly.</string>
+
 	<string name="wallet_options_disconnect">Disconnect</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
@@ -82,6 +82,10 @@
 	<string name="notification_transactions_channel_description">Receive alerts about incoming transactions.</string>
 	<string name="notification_synchronization_channel_name">Synchronization</string>
 	<string name="notification_synchronization_channel_description">Shows a notification when the app is synchronizing with the network.</string>
+
+	<string name="fastest_payment_network_dialog_title">Your Money, Your Way</string>
+	<string name="fastest_payment_network_dialog_message">Send and Receive Dash in an Instant at no extra fee</string>
+	<string name="fastest_payment_network_dialog_button">Got it</string>
 
     <string name="net_type_indicator" />
 

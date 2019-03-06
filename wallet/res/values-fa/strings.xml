@@ -68,8 +68,7 @@
     <string name="send_coins_fragment_pending">(%sانتظار برای تایید تراکنش)</string>
     <string name="send_coins_fragment_amount_label">میزان پرداخت</string>
     <string name="send_coins_fragment_pin_label">رمز را وارد کنید</string>
-    <string name="send_coins_fragment_hint_fee_economic"> کارمزد اقتصادی معادل %s پرداخت خواهد شد. از گزینه «اقتصادی» فقط در مواردی که بازه زمانی تایید برایتان اهمیت ندارد استفاده کنید. </string>
-    <string name="send_coins_fragment_hint_fee">کارمزد شبکه معادل با %s پرداخت خواهد شد. </string>
+    <string name="send_coins_fragment_hint_fee_economic">کارمزد شبکه معادل با %s پرداخت خواهد شد. </string>
     <string name="send_coins_fragment_hint_fee_priority">کارمزد اولویت معادل با %s پرداخت خواهد شد. اگر به دنبال کارمزد پایین هستید، از گزینه «اولویت» فقط در مواردی که نیازمند تایید سریع تراکنش از سوی شبکه هستید استفاده کنید. </string>
     <string name="send_coins_fragment_hint_dusty_send">مبلغ وارد شده بیش از حد پایین است و امکان ارسال آن وجود ندارد.</string>
     <string name="send_coins_fragment_hint_insufficient_money">موجودی به اندازه کافی نیست. به میزان %s کمبود موجودی دارید. </string>
@@ -94,7 +93,6 @@
     <string name="send_coins_error_msg">مشکل در ارسال مبلغ مورد نظر!</string>
     <string name="send_coins_options_fee_category">کارمزد</string>
     <string name="send_coins_options_fee_category_economic">اقتصادی</string>
-    <string name="send_coins_options_fee_category_normal">معمولی</string>
     <string name="send_coins_options_fee_category_priority">اولویت‌دار</string>
     <string name="send_coins_options_empty">کیف پول را خالی کنید</string>
     <string name="raise_fee_dialog_title">کارمزد شبکه را افزایش دهید</string>
@@ -277,7 +275,7 @@
     <string name="report_issue_dialog_title_issue">گزارش مشکل</string>
     <string name="report_issue_dialog_title_crash">مشکل قبلی شناسایی شده</string>
     <string name="report_issue_dialog_title_transaction">گزارش مشکل درباره یک پرداخت مشخص</string>
-    <string name="report_issue_dialog_message_issue">لطفا مشکل خود را به شکل دقیق و با جزییات توضیح دهید تا قابلیت پیگیری داشته باشد. در صورت امکان به انگلیسی توضیح دهید.</string>
+    <string name="report_issue_dialog_message_issue">لطفا مشکلی را که با آن روبرو شده‌اید، به صورت دقیق شرح دهید. بهتر است از زبان انگلیسی برای این کار استفاده کنید. طی ۲۴ ساعت آینده، ایمیلی از سوی بخش پشتیبانی دش دریافت خواهید کرد. </string>
     <string name="report_issue_dialog_message_crash">آیا مایلید گزارش خرابی را ارسال کنید تا به حل این مشکل در آینده کمک کنید؟</string>
     <string name="report_issue_dialog_description">توضیحات درباره مشکل</string>
     <string name="report_issue_dialog_report">گزارش</string>

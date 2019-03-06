@@ -69,8 +69,7 @@
     <string name="send_coins_fragment_pending">(%s warten auf Bestätigung)</string>
     <string name="send_coins_fragment_amount_label">Betrag</string>
     <string name="send_coins_fragment_pin_label">PIN eingeben</string>
-    <string name="send_coins_fragment_hint_fee_economic">Eine ökonomische Gebühr von %szahlen. Du solltest \'ökonomisch\' nur verwenden, wenn die Bestätigungszeit für Dich nicht relevant ist.</string>
-    <string name="send_coins_fragment_hint_fee">Eine Netzwerk-Gebühr von %szahlen.</string>
+    <string name="send_coins_fragment_hint_fee_economic">Eine Netzwerk-Gebühr von %szahlen.</string>
     <string name="send_coins_fragment_hint_fee_priority">Eine Vorzugs-Gebühr von %s zahlen. Wenn Dir eine geringe Gebühr wichtig ist, verwende diese Einstellung nur, wenn Du sehr schnell eine Bestätigung brauchst.</string>
     <string name="send_coins_fragment_hint_dusty_send">Der Betrag ist zu klein zum Senden.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Nicht genug Dash verfügbar. Dir fehlen %s.</string>
@@ -95,7 +94,6 @@
     <string name="send_coins_error_msg">Problem beim Versenden der Dash!</string>
     <string name="send_coins_options_fee_category">Netzwerk-Gebühr</string>
     <string name="send_coins_options_fee_category_economic">Kostengünstig</string>
-    <string name="send_coins_options_fee_category_normal">Normal</string>
     <string name="send_coins_options_fee_category_priority">Express</string>
     <string name="send_coins_options_empty">Wallet entleeren</string>
     <string name="raise_fee_dialog_title">Netzwerk-Gebühr erhöhen</string>
@@ -278,7 +276,7 @@
     <string name="report_issue_dialog_title_issue">Problem melden</string>
     <string name="report_issue_dialog_title_crash">Absturz erkannt</string>
     <string name="report_issue_dialog_title_transaction">Melde ein Problem mit der ausgewählten Bezahlmethode</string>
-    <string name="report_issue_dialog_message_issue">Bitte beschreibe Dein Problem so genau wir möglich, damit es von uns nachvollzogen werden kann. Sollte es Dir möglich sein verwende bitte Englisch.</string>
+    <string name="report_issue_dialog_message_issue">Bitte beschreibe Dein Problem so genau wir möglich, damit es von uns nachvollzogen werden kann. Sollte es Dir möglich sein verwende bitte Englisch. Der Dash Support wird sich innerhalb von 24 Stunden bei dir melden.</string>
     <string name="report_issue_dialog_message_crash">Möchtest Du einen Fehlerbericht senden, um bei der Fehlerbehebung zu helfen?</string>
     <string name="report_issue_dialog_description">Problembeschreibung</string>
     <string name="report_issue_dialog_report">Senden</string>

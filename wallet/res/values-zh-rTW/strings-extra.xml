@@ -1,15 +1,15 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-	<string name="send_coins_fragment_instantx_enable">使用即時到帳功能</string>
+    <string name="send_coins_auto_lock_feasible">此交易將進行即時結算，無需支付額外費用。</string>
+	<string name="send_coins_auto_lock_not_feasible">此交易可能需要幾分鐘才能結算。 支付額外的 %1$s%2$s費用來立即完成該交易嗎?</string>
+	<string name="send_coins_instant_send_not_feasible">此交易可能需要幾分鐘才能結算。</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">這個即時到帳交易尚未發送。</string>
-	<string name="transaction_row_message_own_instantx_lock_request">這個即時到帳交易正在等待確認。</string>
-	<string name="transaction_row_message_own_instantx_locked">發送即時到帳交易(已鎖定)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">這個即時到帳交易正在等待確認。</string>
-	<string name="transaction_row_message_received_instantx_locked">即時到帳交易已被確認</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">未確認的即時到帳交易。</string>
-	<string name="transaction_row_message_received_instantx_locked2">被鎖定的即時到帳交易。</string>
 	<string name="transaction_row_message_sent_to_single_peer">此款項經已完成發送。</string>
+
+	<string name="regular_transaction_info_message">此交易是在沒有即時到帳的情況下發送的。 它需要更多確認才能完成。</string>
+
 	<string name="wallet_options_disconnect">離線</string>
 
 	<string name="network_monitor_masternodes_title">主節點</string>
@@ -40,7 +40,7 @@
 	<string name="wallet_lock_unlock_dialog_title">解鎖你的錢包</string>
 	<string name="wallet_lock_unlock_dialog_message">您的錢包受個人密碼保護。輸入您的PIN碼並按 解鎖以繼續。</string>
 	<string name="wallet_lock_reset_wallet_title">重置錢包</string>
-	<string name="wallet_lock_reset_wallet_message">你確定嗎? 所有存儲的數據將被刪除，您的錢包只能通過備份文件或恢復種子來進行恢復。</string>
+	<string name="wallet_lock_reset_wallet_message">你確定嗎?  您的錢包將被刪除，而您的所有達世幣都將會丟失。\n\n你只能透過備份文件或恢復詞組來找回你的達世幣。</string>
 
 	<string name="wallet_lock_wallet_disabled">錢包被禁用</string>
 	<string name="wallet_lock_try_again">請在 %1$d %2$s 後再試</string>
@@ -69,5 +69,25 @@
 	<string name="change_exchange_currency_code_message">您的本地貨幣是 %1$s，但在此應用中您的貨幣設置為%2$s。您是否要將其更改為 %1$s 還是保留使用 %2$s?</string>
 	<string name="change_to">變更為 %s</string>
 	<string name="leave_as">保留使用 %s</string>
+
+	<string name="remind_later">稍後提醒</string>
+	<string name="backup_now">立刻備份</string>
+	
+	<string name="notification_transactions_channel_name">交易</string>
+	<string name="notification_transactions_channel_description">接收有關接收交易的警報。</string>
+	<string name="notification_synchronization_channel_name">同步</string>
+	<string name="notification_synchronization_channel_description">應用程序與網絡同步時顯示通知。</string>
+
+	<string name="fastest_payment_network_dialog_title">你的錢，你的方式</string>
+	<string name="fastest_payment_network_dialog_message">免費發送和接收達世幣，無需額外費用</string>
+	<string name="fastest_payment_network_dialog_button">明白了</string>
+
+	<string name="unlock_with_fingerprint">使用指紋解鎖。</string>
+	<string name="unlock_with_fingerprint_error">無法識別指紋，請再試一次。</string>
+	<string name="unlock_with_fingerprint_error_max_attempts">超出最大指紋嘗試次數 請稍後再試。</string>
+	<string name="or_unlock_with_fingerprint">或者使用指紋解鎖。</string>
+	<string name="enable_fingerprint">啟用指紋解鎖</string>
+	<string name="touch_fingerprint_sensor">觸摸指紋傳感器。</string>
+	<string name="touch_fingerprint_to_enable">觸摸指紋傳感器以啟用指紋解鎖。</string>
 
 </resources>

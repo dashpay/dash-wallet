@@ -67,8 +67,7 @@
     <string name="send_coins_fragment_receiving_address_complex">kompleksna\nadresa</string>
     <string name="send_coins_fragment_pending">(%s čeka se potvrda)</string>
     <string name="send_coins_fragment_amount_label">Iznos za uplatu</string>
-    <string name="send_coins_fragment_hint_fee_economic">Ekonomik provizija od %s će biti plaćena. Koristite \"ekonomik\" samo ako vam vreme potvrde nije bitno.</string>
-    <string name="send_coins_fragment_hint_fee">Mrežna provizija od %s će biti plaćena.</string>
+    <string name="send_coins_fragment_hint_fee_economic">Mrežna provizija od %s će biti plaćena.</string>
     <string name="send_coins_fragment_hint_fee_priority">Prioritetna provizija od %s će biti plaćena. Ako vam je bitna mala provizija koristite \"prioritet\" samo ukoliko vam je bitno da dobijete potvrdu što pre.</string>
     <string name="send_coins_fragment_hint_dusty_send">Iznos je suviše mali da bi bio poslat.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Nemate dovoljno novčića na raspolaganju. Nedostaje vam %s.</string>
@@ -93,7 +92,6 @@
     <string name="send_coins_error_msg">Problem u slanju novčića!</string>
     <string name="send_coins_options_fee_category">Provizija</string>
     <string name="send_coins_options_fee_category_economic">Ekonomik</string>
-    <string name="send_coins_options_fee_category_normal">Normalna</string>
     <string name="send_coins_options_fee_category_priority">Prioritet</string>
     <string name="send_coins_options_empty">Prazan novčanik</string>
     <string name="raise_fee_dialog_title">Povećaj mrežnu proviziju</string>

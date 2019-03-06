@@ -1,5 +1,14 @@
 Dash Wallet
 
+v6.4.0
+* Support Dash Core 0.13 (InstantSend, BLS, ...)
+    with dashj 0.15 (dashj-core and dashj-bls)
+* Update UI for InstantSend / Autolocks
+* Fix rare bug when sending transactions (dust)
+* Optimize X11 hash algorithm
+* Use Deterministic Masternode Lists as a backup for seeds
+* Fix Testnet connectivity and Icons
+
 v6.3.1
 * Fix Settings | Diagnostics crash
 

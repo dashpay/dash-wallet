@@ -1,15 +1,15 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-	<string name="send_coins_fragment_instantx_enable">Sử dụng InstantSend</string>
+    <string name="send_coins_auto_lock_feasible">Giao dịch này sẽ được thực hiện tức thời mà không tốn thêm phí.</string>
+	<string name="send_coins_auto_lock_not_feasible">Giao dịch này có thể mất vài phút để thực hiện. Thực hiện tức thời với khoản phụ thêm %1$s%2$s?</string>
+	<string name="send_coins_instant_send_not_feasible">Giao dịch này có thể mất vài phút để thực hiện.</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Giao dịch InstantSend này chưa được bắt đầu thực hiện.</string>
-	<string name="transaction_row_message_own_instantx_lock_request">Giao dịch InstantSend này đang đợi xác thực.</string>
-	<string name="transaction_row_message_own_instantx_locked">Giao dịch InstantSend đã được gửi (được khoá)</string>
-	<string name="transaction_row_message_received_instantx_lock_request">Giao dịch InstantSend này đang đợi xác thực.</string>
-	<string name="transaction_row_message_received_instantx_locked">InstantSend đã được xác thực</string>
-	<string name="transaction_row_message_received_unconfirmed_instantx">Giao dịch InstantSend chưa được xác thực</string>
-	<string name="transaction_row_message_received_instantx_locked2">InstantSend đã được khoá</string>
 	<string name="transaction_row_message_sent_to_single_peer">Giao dịch đã được gửi.</string>
+
+	<string name="regular_transaction_info_message">Giao dịch này được gửi mà không có InstantSend. Nó cần có thêm một số xác thực để được hoàn thành.</string>
+
 	<string name="wallet_options_disconnect">Cắt kết nối</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
@@ -72,5 +72,22 @@
 
 	<string name="remind_later">Hãy nhắc tôi sau</string>
 	<string name="backup_now">Sao lưu dự phòng</string>
+	
+	<string name="notification_transactions_channel_name">Các giao dịch</string>
+	<string name="notification_transactions_channel_description">Nhận thông báo khi nhận được giao dịch.</string>
+	<string name="notification_synchronization_channel_name">Đồng bộ</string>
+	<string name="notification_synchronization_channel_description">Hiển thị thông báo khi app đang đồng bộ với mạng lưới.</string>
+
+	<string name="fastest_payment_network_dialog_title">Tiền của bạn, cách của bạn.</string>
+	<string name="fastest_payment_network_dialog_message">Gửi và Nhận Dash một cách tức thời mà không tốn thêm phí</string>
+	<string name="fastest_payment_network_dialog_button">Đã nhận được</string>
+
+	<string name="unlock_with_fingerprint">Sử dụng vân tay để mở khoá.</string>
+	<string name="unlock_with_fingerprint_error">Không nhận ra vân tay, hãy thử lại.</string>
+	<string name="unlock_with_fingerprint_error_max_attempts">Đã vượt quá số lần thử vân tay tối đa cho phép. Hãy thử lại sau nhé.</string>
+	<string name="or_unlock_with_fingerprint">Hoặc sử dụng vân tay để mở khoá.</string>
+	<string name="enable_fingerprint">Cho phép vân tay</string>
+	<string name="touch_fingerprint_sensor">Hãy chạm ngón tay vào cảm biến vân tay.</string>
+	<string name="touch_fingerprint_to_enable">Hãy chạm vào cảm biến vân tay để bật tính năng mở khoá vằng vân tay.</string>
 
 </resources>

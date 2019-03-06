@@ -1,8 +1,8 @@
-ユーザ自身の責任でご使用ください！（Android 4.0以上の端末が必要）
+自己責任でご利用下さい！（Android 4.0以上の端末が必要）
 
-いつもポケットにあなたのDashを！QRコードを読み取ってすぐに支払いができます。事業者の方は確実かつ瞬時に支払いを受け取ることができます。Dashウォレットは間違いなく最も安全なモバイル用アプリです。
+<b>Dashをいつもポケットに！</b> QRコードを読み取ってすぐに支払いができます。事業者の方は確実かつ瞬時に支払いを受け取ることができます。Dashウォレットは最初のモバイルDashアプ​​リであり、間違いなく最も安全です！
 
-特長
+<b>特長</b>
 
 ・ウェブサービスやクラウドは不要で登録なしでご利用いただけます！このウォレットは分散型でP2Pです。
 ・Dashの額はDASH、mDASH、μDASHの各単位で表示できます。
@@ -15,12 +15,12 @@
 ・Dash残高が表示されるウィジェット機能があります。
 
 
-<b>CONTRIBUTE</b>
+<b>貢献</b>
 
-Dash Wallet is <b>open source</b> and <b>free software</b>. License: GPLv3
+Dashウォレットは <b>オープンソース</b> で <b>フリーソフトウェア</b>です。 ライセンス：GPLv3
 https://www.gnu.org/licenses/gpl-3.0.ja.html
 
-Our source code is available at GitHub:
+ソースコードはGitHubで入手できます：
 https://github.com/HashEngineering/dash-wallet
 
 すべての翻訳はTransifexで管理されています。
@@ -29,8 +29,8 @@ https://www.transifex.com/dash/dash-wallet/
 Dashについて詳しくはこちら
 https://www.dash.org/
 
-<b>TESTIMONIALS</b>
+<b>推薦</b>
 
 • https://www.dash.org で推奨されているモバイルウォレットです
 
-<i>ユーザ自身の責任でご使用ください！</i>
+<i>自己責任でご利用下さい！</i>

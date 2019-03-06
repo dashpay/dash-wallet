@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">Uphold 帳戶</string>
+    <string name="uphold_buy_dash_activity_title">用Uphold帳戶來 購買/出售 達世幣</string>
+    <string name="uphold_buy_dash_with_uphold">用Uphold帳戶來購買達世幣</string>
+    <string name="uphold_buy_dash_button">購買達世幣</string>
+    <string name="uphold_transfer_to_this_wallet_button">從Uphold帳戶轉帳</string>
+    <string name="uphold_link_account">鏈接Uphold帳戶</string>
+    <string name="uphold_account_dash_balance">您的Uphold帳戶內的達世幣餘額是</string>
+    <string name="uphold_transfer_to_this_wallet">將達世幣從您的Uphold帳戶轉移到此錢包</string>
+    <string name="uphold_withdrawal_amount">金額</string>
+    <string name="uphold_withdrawal_fee">費用</string>
+    <string name="uphold_withdrawal_total">總共</string>
+    <string name="uphold_withdrawal_title">將達世幣轉帳到這個錢包</string>
+    <string name="uphold_withdrawal_message">您的Uphold帳戶中有 &lt;b>%1$s Dash&lt;/b> 。你想把你想 &lt;u>這個金額的錢轉帳到這個錢包嗎&lt;/u>?</string>
+    <string name="uphold_withdrawal_confirm_title">確認交易</string>
+    <string name="uphold_withdrawal_confirm_message">基本金額: %1$f\n費用: %2$f\n總計: %3$f\n\n是否要確認此交易?</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">費用將從要求的金額中扣除。</string>
+    <string name="uphold_withdrawal_instructions">在下面輸入要轉帳的金額</string>
+    <string name="uphold_withdrawal_success_title">成功</string>
+    <string name="uphold_withdrawal_success_message">您的交易已發送，金額應在幾分鐘內在您的錢包中顯示。\n\n交易ID: %s</string>
+    <string name="uphold_otp_dialog_title">請在下面輸入您的2FA代碼:</string>
+    <string name="uphold_transfer">轉帳</string>
+    <string name="uphold_see_on_uphold">參見Uphold</string>
+
+</resources>
