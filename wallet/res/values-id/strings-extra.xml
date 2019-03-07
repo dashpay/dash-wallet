@@ -1,7 +1,15 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">Pembayaran InstantSend ini belum terkirim.</string>
+
+    <string name="send_coins_auto_lock_feasible">Transaksi ini akan diselesaikan secara instan tanpa biaya tambahan.</string>
+	<string name="send_coins_auto_lock_not_feasible">Transaksi ini mungkin perlu beberapa menit untuk diselesaikan. Selesaikan instan untuk %1$s%2$s?</string>
+	<string name="send_coins_instant_send_not_feasible">Transaksi ini mungkin perlu beberapa menit untuk diselesaikan.</string>
+
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">Pembayaran ini belum disiarkan.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Pembayaran ini telah dikirim.</string>
+
+	<string name="regular_transaction_info_message">Transaksi ini tidak diselesaikan secara instan.</string>
+
 	<string name="wallet_options_disconnect">Terputus</string>
 
 	<string name="network_monitor_masternodes_title">Masternode</string>
@@ -64,5 +72,22 @@
 
 	<string name="remind_later">Ingatkan nanti</string>
 	<string name="backup_now">Cadangkan sekarang</string>
+	
+	<string name="notification_transactions_channel_name">Transaksi</string>
+	<string name="notification_transactions_channel_description">Terima peringatan untuk transaksi masuk.</string>
+	<string name="notification_synchronization_channel_name">Sinkronisasi</string>
+	<string name="notification_synchronization_channel_description">Perlihatkan pemberitahuan saat aplikasi menyinkronkan dengan jaringan.</string>
+
+	<string name="fastest_payment_network_dialog_title">Uang Anda, Jalan Anda</string>
+	<string name="fastest_payment_network_dialog_message">Kirim dan Terima Dash dalam Sekejap tanpa biaya tambahan</string>
+	<string name="fastest_payment_network_dialog_button">Mengerti</string>
+
+	<string name="unlock_with_fingerprint">Gunakan sidik jari Anda untuk membuka kunci.</string>
+	<string name="unlock_with_fingerprint_error">Gagal mengenali sidik jari, silakan coba lagi.</string>
+	<string name="unlock_with_fingerprint_error_max_attempts">Upaya sidik jari maksimum terlampaui. Silakan coba lagi nanti.</string>
+	<string name="or_unlock_with_fingerprint">Atau gunakan sidik jari Anda untuk membuka kunci.</string>
+	<string name="enable_fingerprint">Aktifkan sidik jari</string>
+	<string name="touch_fingerprint_sensor">Sentuh sensor sidik jari.</string>
+	<string name="touch_fingerprint_to_enable">Sentuh sensor sidik jari untuk mengaktifkan membuka kunci dengan sidik jari.</string>
 
 </resources>

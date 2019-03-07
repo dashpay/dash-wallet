@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Cüzdanınız sıfırlandı reset!\nIt normale dönmesi biraz vakit alacaktır.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Riskin size ait olduğunu bilerek kullanın. &lt;u&gt;Güvenlik notlarını&lt;/u&gt; okuyunuz.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">&lt;u&gt;Cüzdanınızı yedeklemeniz&lt;/u&gt; gerekmektedir!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Cüzdanınızı yedeklemeniz gerekmektedir!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d saat geride</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d gün geride</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d hafta geride</string>
@@ -20,15 +20,15 @@
     <string name="exchange_rates_fragment_empty_text">Döviz kurları yüklenemedi.</string>
     <string name="exchange_rates_fragment_empty_search">Döviz kuru bulunamadı.</string>
     <string name="exchange_rates_fragment_default">(varsayılan)</string>
-    <string name="exchange_rates_fragment_rate">oran</string>
-    <string name="exchange_rates_fragment_balance">bakiye</string>
+    <string name="exchange_rates_fragment_rate">Oran</string>
+    <string name="exchange_rates_fragment_balance">Bakiye</string>
     <string name="exchange_rates_fragment_source">%s unsurundan fiyat</string>
     <string name="exchange_rates_options_search">Döviz kuru ara</string>
     <string name="exchange_rates_context_set_as_default_title">Varsayılan olarak ayarla</string>
     <string name="wallet_transactions_fragment_empty_text_received">Şu ana kadar hiçbir Dash alınmadı.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Şu ana kadar hiçbir Dash gönderilmedi.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Dash nasıl elde edilir?\n Geleneksel para ile \ntakas ederek, mal ve hizmetler \nsatarak ya da \nçalışarak kazanabilirsiniz.</string>
-    <string name="wallet_transactions_row_warning_backup">Tebrikler, ilk ödemenizi almış bulunuyorsunuz! Kayba karşı korunmak için &lt;u&gt;cüzdanınızı yedeklediniz mi&lt;/u&gt;?</string>
+    <string name="wallet_transactions_row_warning_backup">Tebrikler, ilk ödemenizi almış bulunuyorsunuz! Kayba karşı korunmak için cüzdanınızı yedeklediniz mi?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">İpucu: Cüzdanınızın güvenliğini arttırmak için, &lt;u&gt;cihazınızı şifreleyebilirsiniz&lt;/u&gt;. Bu aynı zamanda diğer uygulamaların verilerini de korur.</string>
     <string name="wallet_transactions_fragment_coinbase">Üretilen</string>
     <string name="wallet_transactions_fragment_internal">Dahili</string>
@@ -67,11 +67,13 @@
     <string name="send_coins_fragment_receiving_address_complex">kompleks\nadres</string>
     <string name="send_coins_fragment_pending">(%s onay bekleniliyor)</string>
     <string name="send_coins_fragment_amount_label">Ödenecek tutar</string>
+    <string name="send_coins_fragment_pin_label">PIN Girin</string>
     <string name="send_coins_fragment_hint_fee_economic">%s tutarında bir ağ ücreti ödenecektir.</string>
     <string name="send_coins_fragment_hint_fee_priority">%s tutarında bir öncelik ücreti ödenecektir. Eğer düşük ücretler sizin için önemliyse, \'öncelikli\' seçeneğini sadece mümkün olduğunca hızlı bir şekilde onaya ihtiyacınız olduğu durumlarda kullanın.</string>
     <string name="send_coins_fragment_hint_dusty_send">Bu miktar göndermek için çok düşüktür.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Yeterince Dash\'iniz yok. %s eksiktir.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Cüzdanınıza gelen küçük ödemelerin toplamı göndermek için yetersiz kalıyor.</string>
+    <string name="send_coins_fragment_hint_replaying">Bir yeniden oynatma devrede olduğu için şu anda ödeme yapmak mümkün değil.</string>
     <string name="send_coins_fragment_direct_payment_enable">Ödemeyi doğrudan alıcıya gönder.</string>
     <string name="send_coins_fragment_direct_payment_ack">Ödemeniz başarıyla doğrudan gönderilmiştir.</string>
     <string name="send_coins_fragment_direct_payment_nack">Ödemeniz doğrudan bağlantı tarafından reddedilmiştir.</string>
@@ -160,7 +162,7 @@
     <string name="transaction_row_message_own_unbroadcasted">Bu ödeme henüz aktarılmadı.</string>
     <string name="transaction_row_message_received_direct">Bu ödeme doğrudan alındı. Hiçbir zaman harcanmaya uygun olamama riski vardır.</string>
     <string name="transaction_row_message_received_unconfirmed_delayed">Muhtemelen Dash ağının aşırı yoğunluğu nedeniyle, bu ödemenin onayı geçikmiştir.</string>
-    <string name="transaction_row_message_received_unconfirmed_unlocked">Bu ödeme birkaç dakika içerisinde harcanabilir hâle gelecektir.</string>
+    <string name="transaction_row_message_received_unconfirmed_unlocked">Bu ödeme artık onaya gerek olmadan harcanabilir.</string>
     <string name="transaction_row_message_received_in_conflict">Bu ödemenin gönderici tarafından iptal edilme ihtimali yüksektir! Mümkünse, onay bekleyiniz.</string>
     <string name="transaction_row_message_received_dead">Bu ödeme gönderici tarafından iptal edilmiştir.</string>
     <string name="transaction_row_message_received_dust">Bu düşük miktar muhtemelen hiçbir zaman ekonomik olarak harcanılamayacaktır.</string>
@@ -273,7 +275,7 @@
     <string name="report_issue_dialog_title_issue">Sorun rapor et</string>
     <string name="report_issue_dialog_title_crash">Önceki çöküş tespit edildi</string>
     <string name="report_issue_dialog_title_transaction">Seçilmiş ödeme için sorun rapor et</string>
-    <string name="report_issue_dialog_message_issue">Lütfen sorunu çoğaltılabilecek bir şekilde ayrıntılı olarak açıklayınız. Mümkünse, İngilizce kullanmaya çalışın.</string>
+    <string name="report_issue_dialog_message_issue">Lütfen sorunu tekrarlanabilecek şekilde detaylı olarak anlatın. Mümkünse İngilizce dilinde yazın. 24 saat içinde Dash Destek\'ten sorununuzla ilgili bir eposta alacaksınız.</string>
     <string name="report_issue_dialog_message_crash">Gelecekte bu sorunu çözmemize yardımcı olabilecek bir çökme raporu göndermek ister misiniz?</string>
     <string name="report_issue_dialog_description">Sorun tanımı</string>
     <string name="report_issue_dialog_report">Rapor et</string>
@@ -323,8 +325,8 @@
     <string name="button_paste">Yapıştır</string>
     <string name="button_share">Paylaş</string>
     <string name="button_set_as_default">Varsayılan olarak ayarla</string>
-    <string name="button_request_coins">Dash talep et</string>
-    <string name="button_send_coins">Dash gönder</string>
+    <string name="button_request_coins">Dash Talep Et</string>
+    <string name="button_send_coins">Dash Gönder</string>
     <string name="button_scan">Tara</string>
     <string name="button_settings">Ayarlar</string>
     <string name="action_show_qr">QR kodu göster</string>

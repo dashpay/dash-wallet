@@ -2,13 +2,13 @@
 <resources>
 
     <string name="send_coins_auto_lock_feasible">Cette transaction sera confirmée instantanément sans frais.</string>
-	<string name="send_coins_auto_lock_not_feasible">La confirmation de cette transaction peut prendre plusieurs minutes. La confirmer instantanément avec un supplément de %1$s%2$s ?</string>
+	<string name="send_coins_auto_lock_not_feasible">Cette transaction peut prendre plusieurs minutes à régler. Terminez instantanément pour%1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">La confirmation de cette transaction peut prendre plusieurs minutes.</string>
 
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">Ce paiement InstantSend n\'a pas encore été transmis.</string>
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">Ce paiement n\'a pas encore été transmis.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Ce paiement a été envoyé.</string>
 
-	<string name="regular_transaction_info_message">Cette transaction a été envoyée sans InstantSend. Elle nécessite davantage de confirmations pour se terminer.</string>
+	<string name="regular_transaction_info_message">Cette transaction n\'a pas été réglée instantanément.</string>
 
 	<string name="wallet_options_disconnect">Déconnecter</string>
 

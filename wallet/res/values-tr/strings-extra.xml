@@ -1,6 +1,14 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">Bu AnındaGönder ödemesi henüz aktarılmadı.</string>
+
+    <string name="send_coins_auto_lock_feasible">Bu işlem hiçbir ek ücret gerekmeden anında gerçekleşecek.</string>
+	<string name="send_coins_auto_lock_not_feasible">Bu işlemin gerçekleşmesi birkaç dakika sürebilir. %1$s%2$s ile anında tamamlansın mı?</string>
+	<string name="send_coins_instant_send_not_feasible">Bu işlemin gerçekleşmesi birkaç dakika sürebilir.</string>
+
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">Bu ödeme henüz aktarılmadı.</string>
+	<string name="transaction_row_message_sent_to_single_peer">Bu ödeme gönderildi.</string>
+
+	<string name="regular_transaction_info_message">Bu işlem anında gerçekleşmedi.</string>
 
 	<string name="wallet_options_disconnect">Bağlantıyı Kes</string>
 
@@ -8,7 +16,7 @@
 	<string name="export_keys_dialog_title_to_seed">Kurtarma Sözcük Grubunu Göster</string>
 	<string name="import_keys_dialog_title_from_seed">Kurtarma sözcük grubundan geri yükle</string>
 	<string name="backup_to_seed_wallet_dialog_message">Bu sizin kurtarma sözcük grubunuzdur. Lütfen bir yere yazınız.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">Kurtarma sözcük grubunuzu kimselere ASLA göstermeyin, yoksa Dash\'lerinizi harcayabilirler. Bu sözcük grubu başka Dash yazılımları ile uyumlu değildir.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">Kurtarma sözcük grubunuzu kimselere ASLA göstermeyin, yoksa Dash\'lerinizi harcayabilirler.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Cüzdanınız bir harcama PİN\'i ile korunur. PİN\'inizi girin ve Göster\'e tıklayarak kurtarma sözcük grubunuzu görüntüleyin.</string>
     <string name="import_keys_from_seed_dialog_message">Kurtarma sözcük grubunuzu girin.</string>
 	<string name="import_export_keys_dialog_password_phrase">Kurtarma sözcük grubunuz buraya.</string>
@@ -19,8 +27,70 @@
 	<string name="backup_wallet_to_seed_show_recovery_phrase">Göster</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%s geçersiz bir sözcüktür.</string>
 
+	<string name="send_coins_options_fee_category_zero">Ücret Yok</string>
+	<string name="send_coins_fragment_hint_fee_zero">Ücret ödenmeyecek. Sadece onay süresi sizin için önemli değilse \'ücret yok\' seçeneğini kullanın.</string>
 
+	<string name="wallet_uri_handler_public_key_request_dialog_msg">%s uygulaması size ait Ana Herkese Açık Anahtarı istiyor. Bunun sayesinde cüzdanınız takip edilebilir ama Dashlerinizi başka bir yere aktarmakta kullanılamaz.</string>
+	<string name="wallet_uri_handler_address_request_dialog_msg">%s uygulaması size ödeme yapabilmek için bir adres talep ediyor. Onay veriyor musunuz?</string>
 
+	<string name="wallet_lock_unlock">Kilidi Aç</string>
+	<string name="wallet_lock_unlock_wallet">Cüzdanın kilidini aç</string>
+	<string name="wallet_lock_unlock_to_see_txs_title">Cüzdan kilitli.</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">Cüzdanınızın kilidi açıp işlem geçmişinizi görmek için yukarıdaki kilit simgesine dokunun.</string>
+	<string name="wallet_lock_unlock_dialog_title">Cüzdanının kilidini aç</string>
+	<string name="wallet_lock_unlock_dialog_message">Cüzdanınız bir harcama PIN kodu ile korunuyor. Devam etmek için PIN kodunuzu girin ve Kilidi Aça basın.</string>
+	<string name="wallet_lock_reset_wallet_title">Cüzdanı sıfırla</string>
+	<string name="wallet_lock_reset_wallet_message">Emin misiniz? Cüzdanınız silinecek ve tüm Dash\'iniz kaybolacak.\n\nDash\'inizi geri almanın tek yolu yedek dosyası veya kurtarma sözcükleridir.</string>
 
+	<string name="wallet_lock_wallet_disabled">Cüzdan devredışı</string>
+	<string name="wallet_lock_try_again">%1$d %2$s içinde tekrar dene</string>
+	<string name="wallet_lock_reset">Yeniden Başlat</string>
+	<string name="wallet_lock_wrong_pin">Yanlış PIN! %s</string>
+
+	<plurals name="wallet_lock_attempts_remaining">
+		<item quantity="one">%d deneme hakkı kaldı</item>
+		<item quantity="other">%d deneme hakkı kaldı</item>
+	</plurals>
+
+	<plurals name="minute">
+		<item quantity="one">dakika</item>
+		<item quantity="other">dakika</item>
+	</plurals>
+	
+	<plurals name="hour">
+		<item quantity="one">saat</item>
+		<item quantity="other">saat</item>
+	</plurals>
+
+	<string name="encrypt_new_key_chain_upgrade_button">Yükselt</string>
+	<string name="encrypt_new_key_chain_dialog_title">Cüzdanı yükselt</string>
+	<string name="encrypt_new_key_chain_dialog_message">Cüzdanınız daha fazla uygulama arasında içeri ve dışarı aktarım yapmayı desteklemek için yükseltilecek.</string>
+	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Yükseltme işlemini bitirmek için PIN kodunu girmelisiniz.</string>
+	<string name="pin_code_required_dialog_message">Bu uygulama artık para harcamak, bakiye ve işlemleri görmek için PIN kodu soracak.</string>
+    <string name="backup_wallet_seed_private_key_written_down_box">Kurtarma sözcüklerini not aldım</string>
+	
+	<string name="change_exchange_currency_code_message">Yerel para biriminiz %1$s ama bu uygulamada varsayılan para birimi %2$s olarak ayarlanmış. %1$s olarak değiştirmek ister misiniz yoksa %2$s olarak mı kalsın?</string>
+	<string name="change_to">%s olarak değiştir</string>
+	<string name="leave_as">%s olarak kalsın</string>
+
+	<string name="remind_later">Sonra hatırlat</string>
+	<string name="backup_now">Hemen yedekle</string>
+	
+	<string name="notification_transactions_channel_name">İşlemler</string>
+	<string name="notification_transactions_channel_description">Yaklaşan işlemlerle ilgili uyarı al.</string>
+	<string name="notification_synchronization_channel_name">Eşleştirme</string>
+	<string name="notification_synchronization_channel_description">Uygulama ağ ile eşleşirken bir bildirim gösterir.</string>
+
+	<string name="fastest_payment_network_dialog_title">Senin Paran, Senin Yöntemin</string>
+	<string name="fastest_payment_network_dialog_message">Hiçbir ek ücret ödemeden Anında Dash Gönder ve Al</string>
+	<string name="fastest_payment_network_dialog_button">Anlaşıldı</string>
+
+	<string name="unlock_with_fingerprint">Açmak için parmak izini kullan.</string>
+	<string name="unlock_with_fingerprint_error">Parmak izi tanınamadı, lütfen tekrar dene.</string>
+	<string name="unlock_with_fingerprint_error_max_attempts">Parmak izi deneme sınırı aşıldı. Lütfen daha sonra tekrar dene.</string>
+	<string name="or_unlock_with_fingerprint">Ya da açmak için parmak izini kullan.</string>
+	<string name="enable_fingerprint">Parmak izini etkinleştir</string>
+	<string name="touch_fingerprint_sensor">Parmak izi okuyucusuna dokun.</string>
+	<string name="touch_fingerprint_to_enable">Parmak izi ile kilit açma için parmak izi okuyucusuna dokun.</string>
 
 </resources>

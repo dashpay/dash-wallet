@@ -1,7 +1,15 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">해당 즉시송금 결제가 아직 전송되지 않았습니다.</string>
+
+    <string name="send_coins_auto_lock_feasible">이 거래는 추가 수수료 없이 즉각적으로 처리됩니다.</string>
+	<string name="send_coins_auto_lock_not_feasible">이 거래가 처리되는 데에는 수 분이 걸릴 수 있습니다. 즉시 처리하는 데에는 %1$s%2$s가 필요합니다.</string>
+	<string name="send_coins_instant_send_not_feasible">이 거래가 처리되는 데에는 수 분이 걸릴 수 있습니다. </string>
+
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">이 결제는 아직 전송되지 않았습니다.</string>
 	<string name="transaction_row_message_sent_to_single_peer">송금이 완료되었습니다.</string>
+
+	<string name="regular_transaction_info_message">이 거래는 즉시 처리되지 않았습니다.</string>
+
 	<string name="wallet_options_disconnect">연결해제</string>
 
 	<string name="network_monitor_masternodes_title">마스터 노드</string>
@@ -64,5 +72,22 @@
 
 	<string name="remind_later">다음에 알림</string>
 	<string name="backup_now">지금 백업하기</string>
+	
+	<string name="notification_transactions_channel_name">거래</string>
+	<string name="notification_transactions_channel_description">들어오는 거래에 대한 알람 수신</string>
+	<string name="notification_synchronization_channel_name">동기화</string>
+	<string name="notification_synchronization_channel_description">어플이 네트워크와 동기화될 때 알람을 보여줍니다.</string>
+
+	<string name="fastest_payment_network_dialog_title">당신의 돈, 당신의 방식으로</string>
+	<string name="fastest_payment_network_dialog_message">대시를 추가 금액 없이 즉시 보내고 받으세요</string>
+	<string name="fastest_payment_network_dialog_button">알겠습니다</string>
+
+	<string name="unlock_with_fingerprint">잠금 해제를 위해서 지문을 사용합니다</string>
+	<string name="unlock_with_fingerprint_error">지문을 인식하는 데 실패하였습니다. 다시 시도해주세요.</string>
+	<string name="unlock_with_fingerprint_error_max_attempts">지문 인식을 위한 최대 시도 횟수를 초과하였습니다. 다음에 다시 시도해주십시오.</string>
+	<string name="or_unlock_with_fingerprint">혹은 잠금 해제를 위해 지문을 사용합니다.</string>
+	<string name="enable_fingerprint">지문 활성화</string>
+	<string name="touch_fingerprint_sensor">지문 센서를 터치하세요</string>
+	<string name="touch_fingerprint_to_enable">지문으로 잠금 해제하기 위해서는 지문 센서를 터치하세요.</string>
 
 </resources>

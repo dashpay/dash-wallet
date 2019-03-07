@@ -275,7 +275,7 @@
     <string name="report_issue_dialog_title_issue">오류 보고</string>
     <string name="report_issue_dialog_title_crash">로드 중 에러 발생</string>
     <string name="report_issue_dialog_title_transaction">선택된 거래에 대한 이슈 사항 보고</string>
-    <string name="report_issue_dialog_message_issue">재현 가능하도록 이슈 사항을 구체적으로 설명해 주십시오. 이슈 내용은 영어로 작성하는 것을 권장합니다.</string>
+    <string name="report_issue_dialog_message_issue">당신의 이슈 내용을 다시 재현할 수 있을 만큼 자세히 설명해주십시오. 영어를 사용 하는 것을 권장합니다. 대시 지원팀이 당신의 이슈를 확인하고 답변을 하는 데에는 24시간 가량이 소요됩니다.</string>
     <string name="report_issue_dialog_message_crash">이 문제점을 고치기 위해 추후 비정상 종료에 대한 보고서를 보내겠습니까?</string>
     <string name="report_issue_dialog_description">오류 내용 입력</string>
     <string name="report_issue_dialog_report">전송</string>
