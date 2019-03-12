@@ -177,11 +177,13 @@ public class FingerprintHelper {
                 FingerprintManagerCompat.CryptoObject crypto = new FingerprintManagerCompat.CryptoObject(cipher);
                 fingerprintManager.authenticate(crypto, 0, cancellationSignal, authListener, null);
             } else {
+                log.warn("User hasn't granted permission to use Fingerprint");
                 authListener.getCallback()
                         .onFailure("User hasn't granted permission to use Fingerprint",
                                 false, false);
             }
         } catch (Throwable t) {
+            log.warn("An error occurred", t);
             authListener.getCallback().onFailure("An error occurred: " + t.getMessage(),
                     false, false);
         }

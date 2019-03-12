@@ -5,7 +5,7 @@
     android:layout_height="wrap_content"
     android:textColor="@color/darkest_blue"
     android:textSize="14sp"
-    android:paddingLeft="?dialogPreferredPadding"
-    android:paddingRight="?dialogPreferredPadding"
-    android:paddingTop="?dialogPreferredPadding"
+    android:paddingLeft="24dp"
+    android:paddingRight="24dp"
+    android:paddingTop="24dp"
     style="@style/MontserratSemiBold"/>
