@@ -131,8 +131,15 @@ public class WalletApplication extends Application {
 
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
             @Override
-            public void onStartedAny() {
-                lockWalletIfNeeded();
+            public void onStartedAny(boolean isTheFirstOne) {
+                if (isTheFirstOne) {
+                    lockWalletIfNeeded();
+                } else {
+                    WalletLock walletLock = WalletLock.getInstance();
+                    if (!walletLock.isWalletLocked(wallet)) {
+                        config.setLastUnlockTime(System.currentTimeMillis());
+                    }
+                }
             }
         });
 

@@ -30,7 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet_test.R;
 
@@ -38,13 +37,12 @@ import android.support.v7.app.AppCompatActivity;
 import android.app.ActivityManager.TaskDescription;
 import android.os.Build;
 import android.os.Bundle;
-import android.view.Menu;
 import android.view.MenuItem;
 
 /**
  * @author Andreas Schildbach
  */
-public abstract class AbstractWalletActivity extends AppCompatActivity implements WalletLock.OnLockChangeListener {
+public abstract class AbstractWalletActivity extends AppCompatActivity {
     private WalletApplication application;
 
     protected static final Logger log = LoggerFactory.getLogger(AbstractWalletActivity.class);
@@ -60,14 +58,12 @@ public abstract class AbstractWalletActivity extends AppCompatActivity implement
 
         PinRetryController.handleLockedForever(this);
 
-        WalletLock.getInstance().addListener(this);
         registerFinishAllReceiver();
         super.onCreate(savedInstanceState);
     }
 
     @Override
     protected void onDestroy() {
-        WalletLock.getInstance().removeListener(this);
         unregisterFinishAllReceiver();
         super.onDestroy();
     }
@@ -101,24 +97,9 @@ public abstract class AbstractWalletActivity extends AppCompatActivity implement
         return super.onOptionsItemSelected(item);
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(final Menu menu) {
-        MenuItem walletLockMenuItem = menu.findItem(R.id.wallet_options_lock);
-        if (walletLockMenuItem != null) {
-            walletLockMenuItem.setVisible(WalletLock.getInstance()
-                    .isWalletLocked(getWalletApplication().getWallet()));
-        }
-        return super.onCreateOptionsMenu(menu);
-    }
-
     private void unlockWallet() {
         if(!PinRetryController.handleLockedForever(this))
             UnlockWalletDialogFragment.show(getSupportFragmentManager());
-    }
-
-    @Override
-    public void onLockChanged(boolean locked) {
-        invalidateOptionsMenu();
     }
 
     protected WalletApplication getWalletApplication() {

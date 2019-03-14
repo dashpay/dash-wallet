@@ -67,7 +67,7 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
             @Override
             protected void onSuccess() {
                 if (getActivity() != null && isAdded()) {
-                    pinRetryController.successfulAttempt(application.getConfiguration());
+                    pinRetryController.clearPinFailPrefs();
                     WalletLock.getInstance().setWalletLocked(false);
 
                     dismissAllowingStateLoss();

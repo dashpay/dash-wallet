@@ -295,7 +295,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
             new DecryptSeedTask(backgroundHandler) {
                 @Override
                 protected void onSuccess(final DeterministicSeed seed) {
-                    pinRetryController.successfulAttempt();
+                    pinRetryController.clearPinFailPrefs();
                     showPasswordViewGroup(false);
                     showMnemonicSeed(seed);
                     updateView(true);

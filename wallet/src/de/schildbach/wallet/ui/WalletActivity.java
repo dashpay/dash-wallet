@@ -117,7 +117,7 @@ import de.schildbach.wallet_test.R;
 public final class WalletActivity extends AbstractBindServiceActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback,
         NavigationView.OnNavigationItemSelectedListener,
-        WalletLock.OnLockChangeListener, UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
+        UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
         EnableFingerprintDialog.OnFingerprintEnabledListener,
         EncryptKeysDialogFragment.OnOnboardingCompleteListener {
@@ -193,17 +193,21 @@ public final class WalletActivity extends AbstractBindServiceActivity
             upgradeWalletKeyChains(Constants.BIP44_PATH, false);
         }
 
+        initFingerprintHelper();
+
+        canAutoLockGuard = new CanAutoLockGuard(config, onAutoLockStatusChangedListener);
+        if (!veryFirstLaunch) {
+            canAutoLockGuard.register(true);
+        }
+    }
+
+    private void initFingerprintHelper() {
         //Init fingerprint helper
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             fingerprintHelper = new FingerprintHelper(this);
             if (!fingerprintHelper.init()) {
                 fingerprintHelper = null;
             }
-        }
-
-        canAutoLockGuard = new CanAutoLockGuard(config, onAutoLockStatusChangedListener);
-        if (!veryFirstLaunch) {
-            canAutoLockGuard.register(true);
         }
     }
 
@@ -301,14 +305,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         checkLowStorageAlert();
         detectUserCountry();
-
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                invalidateOptionsMenu();
-                application.lockWalletIfNeeded();
-            }
-        }, PinRetryController.THREE_MINUTE_MILLIS);
     }
 
     @Override
@@ -1329,7 +1325,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         WalletTransactionsFragment walletTransactionsFragment = (WalletTransactionsFragment)
                 getSupportFragmentManager().findFragmentById(R.id.wallet_transactions_fragment);
         if (walletTransactionsFragment != null) {
-            walletTransactionsFragment.initFingerprintHelper();
             walletTransactionsFragment.onLockChanged(WalletLock.getInstance().isWalletLocked(wallet));
         }
     }

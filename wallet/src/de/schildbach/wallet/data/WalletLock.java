@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class WalletLock {
 
@@ -31,7 +32,7 @@ public class WalletLock {
 
     private List<OnLockChangeListener> listeners = new ArrayList<>();
 
-    private static int DEFAULT_LOCK_TIMER_MILLIS = 1000 * 60 * 3; // 3 Minutes
+    public static long DEFAULT_LOCK_TIMER_MILLIS = TimeUnit.MINUTES.toMillis(3);
 
     private Configuration config;
 
@@ -53,8 +54,11 @@ public class WalletLock {
 
     public void setWalletLocked(boolean walletLocked) {
         log.info(walletLocked ? "Locking" : "Unlocking" + " wallet");
-        if(walletLocked)
+        if(walletLocked) {
             config.setLastUnlockTime(0);
+        } else {
+            config.setLastUnlockTime(System.currentTimeMillis());
+        }
         for (OnLockChangeListener listener : listeners) {
             listener.onLockChanged(walletLocked);
         }

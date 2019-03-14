@@ -30,7 +30,7 @@ public class PinRetryController {
     private final static int RETRY_FAIL_TOLERANCE = 3;
     private final static int POW_LOCK_TIME_BASE = 6;
     private final static int FAIL_LIMIT = 8;
-    public final static long THREE_MINUTE_MILLIS = TimeUnit.MINUTES.toMillis(3);
+    private final static long ONE_MINUTE_MILLIS = TimeUnit.MINUTES.toMillis(1);
 
     private static final Logger log = LoggerFactory.getLogger(PinRetryController.class);
 
@@ -45,11 +45,11 @@ public class PinRetryController {
         long failHeight = prefs.getLong(PREFS_FAIL_HEIGHT, 0);
         long now = System.currentTimeMillis();
 
-        boolean locked = secureTime + now < failHeight + pow(POW_LOCK_TIME_BASE, failCount - RETRY_FAIL_TOLERANCE) * THREE_MINUTE_MILLIS
+        boolean locked = secureTime + now < failHeight + pow(POW_LOCK_TIME_BASE, failCount - RETRY_FAIL_TOLERANCE) * ONE_MINUTE_MILLIS
                 && failCount >= RETRY_FAIL_TOLERANCE;
         //TODO: Null secureTime Edge Case
         long lockTimeMillis = (long) (failHeight + pow(POW_LOCK_TIME_BASE, failCount - RETRY_FAIL_TOLERANCE)
-                * THREE_MINUTE_MILLIS - secureTime - now);
+                * ONE_MINUTE_MILLIS - secureTime - now);
         long lockTimeMinutes = TimeUnit.MILLISECONDS.toMinutes(lockTimeMillis);
 
         if (locked) {
@@ -65,26 +65,11 @@ public class PinRetryController {
         return failCount >= FAIL_LIMIT;
     }
 
-    public void clearPreferences() {
+    public void clearPinFailPrefs() {
         SharedPreferences.Editor prefsEditor = prefs.edit();
         prefsEditor.remove(PREFS_FAIL_HEIGHT);
         prefsEditor.remove(PREFS_FAILED_PINS);
         prefsEditor.commit();
-    }
-
-    public void successfulAttempt() {
-        clearPreferences();
-    }
-
-    /**
-     * When the PIN is entered successfully, save the time it was entered.
-     * @param config
-     */
-    public void successfulAttempt(Configuration config) {
-        long secureTime = System.currentTimeMillis();
-        config.setLastUnlockTime(secureTime);
-        successfulAttempt();
-        log.info("PIN entered successfully at " + secureTime/1000);
     }
 
     public void failedAttempt(String pin) {
@@ -98,6 +83,7 @@ public class PinRetryController {
             int failCount = failedPins.size();
             SharedPreferences.Editor prefsEditor = prefs.edit();
             prefsEditor.putStringSet(PREFS_FAILED_PINS, failedPins);
+            log.info("PIN entered incorrectly " + failCount + "times");
 
             if (failCount >= FAIL_LIMIT) {
                 wipeWallet();
@@ -149,7 +135,7 @@ public class PinRetryController {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 log.info("Clearing all app data and exiting.");
-                clearPreferences();
+                clearPinFailPrefs();
                 WalletApplication.getInstance().eraseAndCreateNewWallet();
                 WalletApplication.getInstance().killAllActivities();
             }
@@ -188,7 +174,7 @@ public class PinRetryController {
     }
 
     public void storeSecureTime(Date date) {
-        prefs.edit().putLong(PREFS_SECURE_TIME, date.getTime()).commit();
+        prefs.edit().putLong(PREFS_SECURE_TIME, date.getTime()).apply();
     }
 
 }
