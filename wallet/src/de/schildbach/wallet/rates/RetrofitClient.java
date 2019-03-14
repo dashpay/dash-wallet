@@ -17,12 +17,21 @@
 
 package de.schildbach.wallet.rates;
 
+import android.support.annotation.NonNull;
+
 import com.squareup.moshi.Moshi;
 
+import java.io.IOException;
+import java.util.Date;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.ui.preference.PinRetryController;
+import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import retrofit2.Retrofit;
 
 public abstract class RetrofitClient {
@@ -33,7 +42,12 @@ public abstract class RetrofitClient {
     protected Executor executor;
 
     protected RetrofitClient(String baseUrl) {
-        OkHttpClient okClient = new OkHttpClient.Builder().build();
+        OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
+
+        PinRetryController pinRetryController = new PinRetryController(WalletApplication.getInstance());
+        clientBuilder.addInterceptor(new SecureTimeInterceptor(pinRetryController));
+
+        OkHttpClient okClient = clientBuilder.build();
 
         executor = Executors.newSingleThreadExecutor();
         moshiBuilder = new Moshi.Builder();
@@ -41,8 +55,30 @@ public abstract class RetrofitClient {
     }
 
     public interface Callback<T> {
+
         void onSuccess(T data);
+
         void onError(Exception e, boolean otpRequired);
     }
 
+    private class SecureTimeInterceptor implements Interceptor {
+
+        private PinRetryController pinRetryController;
+
+        private SecureTimeInterceptor(PinRetryController pinRetryController) {
+            this.pinRetryController = pinRetryController;
+        }
+
+        @Override
+        public Response intercept(@NonNull Chain chain) throws IOException {
+            Request request = chain.request();
+            Response response = chain.proceed(request);
+            Date headerDate = response.headers().getDate("date");
+            if (headerDate != null) {
+                pinRetryController.storeSecureTime(headerDate);
+            }
+            return response;
+
+        }
+    }
 }
