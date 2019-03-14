@@ -1,5 +1,13 @@
 Dash Wallet
 
+v6.4.1
+* Update to DashJ 0.15.1
+    - Improve connectivity to the Dash Network
+    - DMN List fix
+* Fix fingerprint crash (Android 7)
+* Fix crash when restoring backup file from before May 2018
+* Fix crash when scanning QR code if the user denies camera access (Android 6)
+
 v6.4.0
 * Support Dash Core 0.13 (InstantSend, BLS, ...)
     with dashj 0.15 (dashj-core and dashj-bls)
