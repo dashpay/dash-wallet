@@ -94,6 +94,6 @@
 	<string name="enable_fingerprint">Enable fingerprint</string>
 	<string name="touch_fingerprint_sensor">Touch the fingerprint sensor.</string>
 	<string name="touch_fingerprint_to_enable">Touch the fingerprint sensor to enable unlocking with fingerprint.</string>
-	<string name="exchange_rate_missing">Cannot get local currency value</string>
+	<string name="exchange_rate_missing">This payment is too old to calculate the fiat value.</string>
 
 </resources>
