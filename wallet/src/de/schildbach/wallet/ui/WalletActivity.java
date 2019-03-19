@@ -148,6 +148,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private CanAutoLockGuard canAutoLockGuard;
 
+    private boolean showBackupWalletDialog = false;
+
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -300,6 +302,14 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         checkLowStorageAlert();
         detectUserCountry();
+        showBackupWalletDialogIfNeeded();
+    }
+
+    private void showBackupWalletDialogIfNeeded() {
+        if (showBackupWalletDialog) {
+            BackupWalletDialogFragment.show(getSupportFragmentManager());
+            showBackupWalletDialog = false;
+        }
     }
 
     @Override
@@ -486,7 +496,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
-            BackupWalletDialogFragment.show(getSupportFragmentManager());
+            showBackupWalletDialog = true;
         else
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     REQUEST_CODE_BACKUP_WALLET);
