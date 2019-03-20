@@ -64,7 +64,6 @@ public class Configuration {
     public static final String PREFS_KEY_REMIND_BACKUP_SEED = "remind_backup_seed";
     private static final String PREFS_KEY_LAST_BACKUP_SEED = "last_backup_seed";
     public static final String PREFS_KEY_INSTANTX_ENABLED = "labs_instantx_enabled";
-    public static final String PREFS_KEY_LITE_MODE = "labs_lite_mode";
     public static final String PREFS_KEY_FASTEST_NETWORK_ANNCMNT_SHOWN = "fastest_network_anncmnt_shown";
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
     public static final String PREFS_KEY_CAN_AUTO_LOCK = "can_auto_lock";
@@ -304,10 +303,6 @@ public class Configuration {
 
     public boolean getInstantXEnabled() {
         return prefs.getBoolean(PREFS_KEY_INSTANTX_ENABLED, true);
-    }
-
-    public boolean getLiteMode() {
-        return prefs.getBoolean(PREFS_KEY_LITE_MODE, true);
     }
 
     public boolean getFastestNetworkAnncmntShown() {

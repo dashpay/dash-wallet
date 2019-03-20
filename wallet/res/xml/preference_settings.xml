@@ -69,11 +69,6 @@
 		android:summary="Allow InstantSend to be used to send and receive coins."
 		android:title="Enable InstantSend" />
 	<CheckBoxPreference
-		android:defaultValue="true"
-		android:key="labs_lite_mode"
-		android:summary="Reduce bandwidth usage."
-		android:title="Enable Lite Mode" />
-	<CheckBoxPreference
 		android:defaultValue="false"
 		android:key="labs_qr_payment_request"
 		android:summary="Use payment protocol for QR-code initiated payments"
