@@ -63,7 +63,6 @@ public class Configuration {
     private static final String PREFS_KEY_LAST_BACKUP = "last_backup";
     public static final String PREFS_KEY_REMIND_BACKUP_SEED = "remind_backup_seed";
     private static final String PREFS_KEY_LAST_BACKUP_SEED = "last_backup_seed";
-    public static final String PREFS_KEY_INSTANTX_ENABLED = "labs_instantx_enabled";
     public static final String PREFS_KEY_FASTEST_NETWORK_ANNCMNT_SHOWN = "fastest_network_anncmnt_shown";
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
     public static final String PREFS_KEY_CAN_AUTO_LOCK = "can_auto_lock";
@@ -299,10 +298,6 @@ public class Configuration {
 
     public void unregisterOnSharedPreferenceChangeListener(final OnSharedPreferenceChangeListener listener) {
         prefs.unregisterOnSharedPreferenceChangeListener(listener);
-    }
-
-    public boolean getInstantXEnabled() {
-        return prefs.getBoolean(PREFS_KEY_INSTANTX_ENABLED, true);
     }
 
     public boolean getFastestNetworkAnncmntShown() {

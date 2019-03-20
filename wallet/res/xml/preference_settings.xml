@@ -64,11 +64,6 @@
         android:title="@string/preferences_show_disclaimer_title" />
 
 	<CheckBoxPreference
-		android:defaultValue="true"
-		android:key="labs_instantx_enabled"
-		android:summary="Allow InstantSend to be used to send and receive coins."
-		android:title="Enable InstantSend" />
-	<CheckBoxPreference
 		android:defaultValue="false"
 		android:key="labs_qr_payment_request"
 		android:summary="Use payment protocol for QR-code initiated payments"
