@@ -1,14 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:paddingLeft="@dimen/space_medium"
-    android:paddingRight="@dimen/space_medium"
-    android:paddingBottom="@dimen/list_entry_padding_vertical"
-    android:divider="@drawable/divider_field"
     android:orientation="vertical"
-    android:showDividers="middle">
+    style="@style/DialogContainer">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -52,7 +46,8 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/encrypt_new_key_chain_upgrade_button" />
+            android:text="@string/encrypt_new_key_chain_upgrade_button"
+            style="@style/MontserratButton"/>
 
     </LinearLayout>
 
@@ -65,5 +60,12 @@
         android:textColor="@color/fg_error"
         android:textStyle="bold"
         android:visibility="invisible" />
+
+    <de.schildbach.wallet.ui.widget.FingerprintView
+        android:id="@+id/fingerprint_view"
+        android:visibility="gone"
+        tools:visibility="visible"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
 
 </LinearLayout>

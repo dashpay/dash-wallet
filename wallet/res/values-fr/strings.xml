@@ -67,6 +67,7 @@
     <string name="send_coins_fragment_receiving_address_complex">adresse\ncomplexe</string>
     <string name="send_coins_fragment_pending">(%s en attente de confirmation)</string>
     <string name="send_coins_fragment_amount_label">Montant à payer</string>
+    <string name="send_coins_fragment_pin_label">Saisissez le code PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Des frais de réseau de %s seront appliqués.</string>
     <string name="send_coins_fragment_hint_fee_priority">Des frais prioritaires de %s seront appliqués. Si vous préférez des frais plus bas, n\'utilisez l\'option \"prioritaire\" que s\'il vous faut une confirmation la plus rapide possible.</string>
     <string name="send_coins_fragment_hint_dusty_send">Le montant est trop faible pour être envoyé.</string>
