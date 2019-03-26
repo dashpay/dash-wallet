@@ -514,7 +514,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     public void handleEncryptKeys() {
-        EncryptKeysDialogFragment.show(getSupportFragmentManager());
+        EncryptKeysDialogFragment.show(true, getSupportFragmentManager());
     }
 
     public void handleEncryptKeysRestoredWallet() {
@@ -1066,7 +1066,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void checkWalletEncryptionDialog() {
         if (!wallet.isEncrypted()) {
-            handleEncryptKeys();
+            EncryptKeysDialogFragment.show(false, getSupportFragmentManager());
         }
     }
 
