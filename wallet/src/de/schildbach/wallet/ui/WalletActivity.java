@@ -352,7 +352,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                                            final int[] grantResults) {
         if (requestCode == REQUEST_CODE_BACKUP_WALLET) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                handleBackupWallet();
+                showBackupWalletDialog = true;
             else
                 showDialog(DIALOG_BACKUP_WALLET_PERMISSION);
         } else if (requestCode == REQUEST_CODE_RESTORE_WALLET) {
@@ -496,7 +496,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
-            showBackupWalletDialog = true;
+            BackupWalletDialogFragment.show(getSupportFragmentManager());
         else
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     REQUEST_CODE_BACKUP_WALLET);
