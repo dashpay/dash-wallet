@@ -187,7 +187,9 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         builder.setTitle(R.string.encrypt_keys_dialog_title);
         builder.setView(view);
         builder.setPositiveButton(R.string.button_ok, null); // dummy, just to make it show
-        builder.setCancelable(false);
+        if (getArguments().getBoolean(CANCELABLE_ARG)) {
+            builder.setNegativeButton(R.string.button_cancel, null);
+        }
 
         final AlertDialog dialog = builder.create();
         dialog.setCanceledOnTouchOutside(false);
