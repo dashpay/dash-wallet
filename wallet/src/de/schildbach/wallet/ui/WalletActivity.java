@@ -1252,11 +1252,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     updateCurrencyExchange(networkCountry.toUpperCase());
                 } else {
                     //Couldn't obtain country code - Use Default
-                    config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
+                    if(config.getExchangeCurrencyCode() == null)
+                        config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
                 }
             } else {
                 //No cellular network - Wifi Only
-                config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
+                if(config.getExchangeCurrencyCode() == null)
+                    config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
             }
         } catch (Exception e) {
             //fail safe
