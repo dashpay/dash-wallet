@@ -100,6 +100,7 @@ import de.schildbach.wallet.ui.ScanActivity;
 import de.schildbach.wallet.ui.TransactionsAdapter;
 import de.schildbach.wallet.ui.UnlockWalletDialogFragment;
 import de.schildbach.wallet.ui.preference.PinRetryController;
+import de.schildbach.wallet.util.AddressUtil;
 import de.schildbach.wallet.util.Bluetooth;
 
 import de.schildbach.wallet.util.FingerprintHelper;
@@ -1003,7 +1004,7 @@ public final class SendCoinsFragment extends Fragment {
         try {
             final String addressStr = receivingAddressView.getText().toString().trim();
             if (!addressStr.isEmpty()
-                    && Constants.NETWORK_PARAMETERS.equals(Address.getParametersFromAddress(addressStr))) {
+                    && Constants.NETWORK_PARAMETERS.equals(AddressUtil.getParametersFromAddress(addressStr))) {
                 final String label = AddressBookProvider.resolveLabel(activity, addressStr);
                 validatedAddress = new AddressAndLabel(Constants.NETWORK_PARAMETERS, addressStr, label);
                 receivingAddressView.setText(null);
