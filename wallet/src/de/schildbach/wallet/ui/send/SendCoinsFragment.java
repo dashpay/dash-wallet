@@ -1685,6 +1685,10 @@ public final class SendCoinsFragment extends Fragment {
                 }
                 instantSendInfo.setVisibility(View.VISIBLE);
                 instantXenable.setVisibility(View.VISIBLE);
+                if (paymentIntent.getUseInstantSend()) {
+                    instantXenable.setEnabled(false);
+                    instantXenable.setChecked(true);
+                }
                 break;
             }
             case REGULAR_PAYMENT: {
@@ -1822,6 +1826,8 @@ public final class SendCoinsFragment extends Fragment {
                         directPaymentEnableView.setChecked(bluetoothAdapter != null && bluetoothAdapter.isEnabled());
                     else if (paymentIntent.isHttpPaymentUrl())
                         directPaymentEnableView.setChecked(!Constants.BUG_OPENSSL_HEARTBLEED);
+
+                    instantXenable.setChecked(paymentIntent.getUseInstantSend());
 
                     requestFocusFirst();
                     updateView();
