@@ -1685,9 +1685,6 @@ public final class SendCoinsFragment extends Fragment {
                 }
                 instantSendInfo.setVisibility(View.VISIBLE);
                 instantXenable.setVisibility(View.VISIBLE);
-                if (paymentIntent.getUseInstantSend()) {
-                    instantXenable.setChecked(true);
-                }
                 break;
             }
             case REGULAR_PAYMENT: {
