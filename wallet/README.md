@@ -113,18 +113,14 @@ there is basically no warranty and liability. It's your responsibility to audit 
 for security issues and build, install and run the application in a secure way.
 
 The production version uses Mainnet, is built non-debuggable, space-optimized with ProGuard and the
-<<<<<<< HEAD
 wallet file is protected against access from non-root users. In the code repository, it is build with
 the 'prod' flavor.
+
 
 	# each time
 	cd dash-wallet
 	git pull
-    gradle clean build assembleProdRelease -x test
-=======
-wallet file is protected against access from non-root users. In the code repository, it lives in a
-separate 'prod' branch that gets rebased against master with each released version.
->>>>>>> 6cef7815... Improve wallet README files (words & punctuation).
+    gradle clean build assembleProdRelease
 
 The resulting production release version will be at:  wallet/build/outputs/apk/dash-wallet-prod-release-unsigned.apk
 
@@ -133,8 +129,11 @@ BUILDING ALL FLAVORS
 	# each time
 	cd dash-wallet
 	git pull
-    gradle clean build -x test
-
+    gradle clean build assembleProdRelease
+    gradle clean build assemble_testNet3Release
+    gradle clean build assembleProdDebug
+    gradle clean build assemble_testNet3Debug
+    
 All flavors (debug and release) will be at:  wallet/build/outputs/apk
 
 
