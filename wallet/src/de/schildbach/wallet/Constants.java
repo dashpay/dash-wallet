@@ -53,6 +53,11 @@ public final class Constants {
     /** Network this wallet is on (e.g. testnet or mainnet). */
     public static final NetworkParameters NETWORK_PARAMETERS;
 
+    private static String FILENAME_NETWORK_SUFFIX;
+
+    /** Currency code for the wallet name resolver. */
+    public static String WALLET_NAME_CURRENCY_CODE;
+
     public static final String[] DNS_SEED;
 
     public static final boolean IS_PROD_BUILD;
@@ -65,6 +70,8 @@ public final class Constants {
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH;
                 NETWORK_PARAMETERS = MainNetParams.get();
                 IS_PROD_BUILD = true;
+                FILENAME_NETWORK_SUFFIX = "";
+                WALLET_NAME_CURRENCY_CODE = "dash";
                 break;
             }
             case "_testNet3": {
@@ -72,6 +79,8 @@ public final class Constants {
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
                 NETWORK_PARAMETERS = TestNet3Params.get();
                 IS_PROD_BUILD = false;
+                FILENAME_NETWORK_SUFFIX = "-testnet";
+                WALLET_NAME_CURRENCY_CODE = "tdash";
                 break;
             }
             case "devNet": {
@@ -85,6 +94,8 @@ public final class Constants {
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
                 NETWORK_PARAMETERS = DevNetParams.get("maithai", "yMtULrhoxd8vRZrsnFobWgRTidtjg2Rnjm", 20001, DNS_SEED);
                 IS_PROD_BUILD = false;
+                FILENAME_NETWORK_SUFFIX = "-devnet";
+                WALLET_NAME_CURRENCY_CODE = "tdash";
                 break;
 
             }
@@ -99,8 +110,6 @@ public final class Constants {
     public static final Context CONTEXT = new Context(NETWORK_PARAMETERS);
 
     public final static class Files {
-        private static final String FILENAME_NETWORK_SUFFIX = NETWORK_PARAMETERS.getId()
-                .equals(NetworkParameters.ID_MAINNET) ? "" : "-testnet";
 
         /** Filename of the wallet. */
         public static final String WALLET_FILENAME_PROTOBUF = "wallet-protobuf" + FILENAME_NETWORK_SUFFIX;
@@ -160,10 +169,6 @@ public final class Constants {
     /** Base URL for blockchain API. */
     public static final String BITEASY_API_URL = NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET) ? BITEASY_API_URL_PROD
             : BITEASY_API_URL_TEST;
-
-    /** Currency code for the wallet name resolver. */
-    public static final String WALLET_NAME_CURRENCY_CODE = NETWORK_PARAMETERS.getId()
-            .equals(NetworkParameters.ID_MAINNET) ? "dash" : "tdash";
 
     /** URL to fetch version alerts from. */
     public static final HttpUrl VERSION_URL = HttpUrl.parse("https://wallet.schildbach.de/version");
