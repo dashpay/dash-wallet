@@ -263,6 +263,8 @@
     <string name="preferences_data_usage_summary">Zeigt Optionen, um die mobile Datennutzung einzuschränken.</string>
     <string name="preferences_remind_balance_title">An Guthaben erinnern</string>
     <string name="preferences_remind_balance_summary">Nachdem die App ein paar Wochen nicht verwendet wurde, wirst Du durch diese automatisch darauf hinweisen, dass sich weiterhin Coins in der Wallet befinden.</string>
+    <string name="preferences_show_disclaimer_title">Disclaimer anzeigen</string>
+    <string name="preferences_show_disclaimer_summary">Hast du wirklich die Sicherheitshinweise gelesen? Hast du deine Wallet bereits an einen sicheren Ort gesichert?</string>
     <string name="preferences_report_issue_title">Problem melden</string>
     <string name="preferences_initiate_reset_title">Blockchain zurücksetzen</string>
     <string name="preferences_initiate_reset_summary">Blockchain, Transaktionen und Guthaben werden zurückgesetzt. Das erneute Einspielen wird einige Zeit in Anspruch nehmen. Setze diesen Vorgang bitte nur fort, wenn Du weist warum.</string>

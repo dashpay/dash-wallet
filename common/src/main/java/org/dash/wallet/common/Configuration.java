@@ -53,7 +53,6 @@ public class Configuration {
     public static final String PREFS_KEY_REMIND_BALANCE = "remind_balance";
     public static final String PREFS_KEY_DISCLAIMER = "disclaimer";
     private static final String PREFS_KEY_LABS_QR_PAYMENT_REQUEST = "labs_qr_payment_request";
-    private static final String PREFS_KEY_LOOK_UP_WALLET_NAMES = "look_up_wallet_names";
     private static final String PREFS_KEY_PREVIOUS_VERSION = "previous_version";
 
     private static final String PREFS_KEY_LAST_VERSION = "last_version";
@@ -65,8 +64,6 @@ public class Configuration {
     private static final String PREFS_KEY_LAST_BACKUP = "last_backup";
     public static final String PREFS_KEY_REMIND_BACKUP_SEED = "remind_backup_seed";
     private static final String PREFS_KEY_LAST_BACKUP_SEED = "last_backup_seed";
-    public static final String PREFS_KEY_INSTANTX_ENABLED = "labs_instantx_enabled";
-    public static final String PREFS_KEY_LITE_MODE = "labs_lite_mode";
     public static final String PREFS_KEY_FASTEST_NETWORK_ANNCMNT_SHOWN = "fastest_network_anncmnt_shown";
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
     public static final String PREFS_KEY_CAN_AUTO_LOCK = "can_auto_lock";
@@ -230,10 +227,6 @@ public class Configuration {
         return prefs.getBoolean(PREFS_KEY_LABS_QR_PAYMENT_REQUEST, false);
     }
 
-    public boolean getLookUpWalletNames() {
-        return prefs.getBoolean(PREFS_KEY_LOOK_UP_WALLET_NAMES, false);
-    }
-
     public boolean versionCodeCrossed(final int currentVersionCode, final int triggeringVersionCode) {
         final boolean wasBelow = lastVersionCode < triggeringVersionCode;
         final boolean wasUsedBefore = lastVersionCode > 0;
@@ -307,14 +300,6 @@ public class Configuration {
 
     public void unregisterOnSharedPreferenceChangeListener(final OnSharedPreferenceChangeListener listener) {
         prefs.unregisterOnSharedPreferenceChangeListener(listener);
-    }
-
-    public boolean getInstantXEnabled() {
-        return prefs.getBoolean(PREFS_KEY_INSTANTX_ENABLED, true);
-    }
-
-    public boolean getLiteMode() {
-        return prefs.getBoolean(PREFS_KEY_LITE_MODE, true);
     }
 
     public boolean getFastestNetworkAnncmntShown() {
