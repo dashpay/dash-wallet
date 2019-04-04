@@ -43,6 +43,7 @@ import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.common.ui.Formats;
 
 import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.util.CircularProgressView;
 
@@ -514,16 +515,25 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
             // fiat value
             final ExchangeRate exchangeRate = tx.getExchangeRate();
+            fiatView.setAmount(null);  //clear the exchange rate first
             if (exchangeRate != null) {
                 fiatView.setFormat(Constants.LOCAL_FORMAT.code(0,
                         PREFIX_ALMOST_EQUAL_TO + exchangeRate.fiat.getCurrencyCode() + " "));
                 Coin absCoin = Coin.valueOf(Math.abs(txCache.value.value));
                 fiatView.setAmount(exchangeRate.coinToFiat(absCoin));
+            } else {
+                fiatView.setText(PREFIX_ALMOST_EQUAL_TO + WalletApplication.getInstance().getConfiguration().getExchangeCurrencyCode() + " ----");
             }
 
             // message
             extendMessageView.setVisibility(View.GONE);
             messageView.setSingleLine(false);
+
+            if(exchangeRate == null && itemView.isActivated()) {
+                extendMessageView.setVisibility(View.VISIBLE);
+                messageView.setSingleLine(false);
+                messageView.setText(R.string.exchange_rate_missing);
+            }
 
             if (purpose == Purpose.KEY_ROTATION) {
                 extendMessageView.setVisibility(View.VISIBLE);

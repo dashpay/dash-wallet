@@ -692,6 +692,7 @@ public class SweepWalletFragment extends Fragment {
 		if (currentExchangeRate != null) {
 			sendRequest.exchangeRate = new org.bitcoinj.utils.ExchangeRate(
 					Coin.COIN, currentExchangeRate.getFiat());
+			log.info("Using exchange rate: " + sendRequest.exchangeRate.coinToFiat(Coin.COIN).toFriendlyString());
 		}
 
 		new SendCoinsOfflineTask(walletToSweep, backgroundHandler) {
