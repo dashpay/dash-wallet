@@ -20,7 +20,7 @@ public class AddressUtil {
     }
 
     public static Address fromBase58(NetworkParameters params, String base58) throws AddressFormatException {
-        NetworkParameters networkParameters = (params != null) ? params : Address.getParametersFromAddress(base58);
+        NetworkParameters networkParameters = (params != null) ? params : getParametersFromAddress(base58);
         return Address.fromBase58(networkParameters, base58);
     }
 
@@ -29,7 +29,7 @@ public class AddressUtil {
         if (address != null) {
             NetworkParameters networkParameters = address.getParameters();
             if (networkParameters.equals(TestNet3Params.get()) && !Constants.NETWORK_PARAMETERS.equals(TestNet3Params.get())) {
-                return fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58());
+                return Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58());
             }
         }
         return address;
