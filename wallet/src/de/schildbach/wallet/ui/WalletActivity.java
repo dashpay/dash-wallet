@@ -379,6 +379,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     dialog(WalletActivity.this, null, R.string.button_scan, messageResId, messageArgs);
                 }
             }.parse();
+        } else {
+            super.onActivityResult(requestCode, resultCode, intent);
         }
     }
 
