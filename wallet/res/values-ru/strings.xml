@@ -95,13 +95,6 @@
     <string name="send_coins_options_fee_category_economic">Экономичная</string>
     <string name="send_coins_options_fee_category_priority">Приоритетная</string>
     <string name="send_coins_options_empty">Опустошить кошелёк</string>
-    <string name="raise_fee_dialog_title">Увеличить комиссию за платёж</string>
-    <string name="raise_fee_dialog_message">Вы хотите увеличить комиссию за этот платёж до %s? Это позволит получить подтверждение транзакции быстрее.</string>
-    <string name="raise_fee_dialog_determining_fee">Расчёт текущей комиссии в сети...</string>
-    <string name="raise_fee_dialog_cant_raise">Нельзя поднять комиссию для этого платежа.</string>
-    <string name="raise_fee_dialog_state_decrypting">Расшифровка...</string>
-    <string name="raise_fee_dialog_state_done">Готово.</string>
-    <string name="raise_fee_dialog_button_raise">Повысить</string>
     <string name="sweep_wallet_activity_title">Перенос бумажного кошелька</string>
     <string name="sweep_wallet_fragment_intro">Вы собираетесь перенести бумажный кошелёк или купон. Все средства перейдут на ваш кошелёк на этом устройстве. Когда эта транзакция пройдет, бумажный носитель будет бесполезен и не должен быть повторно использован в целях безопасности.</string>
     <string name="sweep_wallet_fragment_hint">Бумажные кошельки наиболее часто используются для холодного хранения. Некоторые банкоматы печатают их на бумаге, а не посылают средства на мобильное устройство напрямую. Некоторые люди используют предварительно пополненные бумажные кошельки чтобы передавать средства (это не рекомендуется).</string>
@@ -262,6 +255,8 @@
     <string name="preferences_data_usage_summary">Показать опции ограничения использования данных в мобильных сетях.</string>
     <string name="preferences_remind_balance_title">Напоминание о балансе</string>
     <string name="preferences_remind_balance_summary">Если в кошельке всё ещё есть средства, но вы не пользовались им уже несколько недель, то приложение об этом напомнит.</string>
+    <string name="preferences_show_disclaimer_title">Показать дисклеймер</string>
+    <string name="preferences_show_disclaimer_summary">Вы прочли рекомендации по безопасности? Вы уже сохранили резервную копию в безопасном месте?</string>
     <string name="preferences_report_issue_title">Сообщить о проблеме</string>
     <string name="preferences_initiate_reset_title">Перегрузить блокчейн</string>
     <string name="preferences_initiate_reset_summary">Сброс блокчейна, транзакций и баланса. Перезагрузка займёт некоторое время, поэтому прибегайте к этому только тогда, когда точно знаете, что вы делаете.</string>

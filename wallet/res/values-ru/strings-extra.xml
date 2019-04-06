@@ -1,14 +1,14 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-    <string name="send_coins_auto_lock_feasible">Эта транзакция будет совершена мгновенно без дополнительной комиссии.</string>
-	<string name="send_coins_auto_lock_not_feasible">Подтверждение этой транзакции может занять несколько минут. Подтвердить её мгновенно за дополнительную плату %1$s%2$s?</string>
-	<string name="send_coins_instant_send_not_feasible">Подтверждение этой транзакции может занять несколько минут.</string>
+    <string name="send_coins_auto_lock_feasible">Транзакция будет совершена мгновенно без дополнительной комиссии.</string>
+	<string name="send_coins_auto_lock_not_feasible">Подтверждение может занять несколько минут. Провести мгновенно за %1$s%2$s?</string>
+	<string name="send_coins_instant_send_not_feasible">Подтверждение может занять несколько минут.</string>
 
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">Этот платёж InstantSend пока ещё не выполнен.</string>
-	<string name="transaction_row_message_sent_to_single_peer">Этот платёж был передан в сеть.</string>
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">Платёж ещё не был передан в сеть.</string>
+	<string name="transaction_row_message_sent_to_single_peer">Платёж был передан в сеть.</string>
 
-	<string name="regular_transaction_info_message">Эта транзакция была отправлена ​​без InstantSend. Потребуется больше подтверждений для завершения.</string>
+	<string name="regular_transaction_info_message">Транзакция не была подтверждена мгновенно.</string>
 
 	<string name="wallet_options_disconnect">Отключить</string>
 
@@ -98,5 +98,8 @@
 	<string name="enable_fingerprint">Включить разблокировку с помощью отпечатка пальца.</string>
 	<string name="touch_fingerprint_sensor">Коснитесь датчика отпечатков пальцев.</string>
 	<string name="touch_fingerprint_to_enable">Коснитесь датчика отпечатков пальцев, чтобы разблокировать с помощью отпечатка пальца.</string>
+	<string name="exchange_rate_missing">Это давний платёж, фиатный эквивалент недоступен.</string>
 
+	<string name="preferences_enable_payment_request_summary">Используйте платёжный протокол для платежей через QR-код</string>
+	<string name="preferences_enable_payment_request_title">BIP70 для функции \"сканируй и плати\"</string>
 </resources>

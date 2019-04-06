@@ -92,5 +92,8 @@
 	<string name="enable_fingerprint">Habilitar digital</string>
 	<string name="touch_fingerprint_sensor">Toque o sensor de digital.</string>
 	<string name="touch_fingerprint_to_enable">Toque o sensor de digital para habilitar o desbloqueio por digital.</string>
+	<string name="exchange_rate_missing">Esse pagamento é muito antigo para obter-se o valor em fiat</string>
 
+	<string name="preferences_enable_payment_request_summary">Usar protocolo de pagamento para pagamentos iniciados por código QR</string>
+	<string name="preferences_enable_payment_request_title">Escanear para pagar con BIP70</string>
 </resources>
