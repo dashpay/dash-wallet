@@ -8,6 +8,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AlertDialog;
 import android.text.Html;
 import android.text.Spanned;
@@ -28,7 +29,10 @@ public class FastestNetworkAnncmntDialog extends DialogFragment {
         FastestNetworkAnncmntDialog dialogFragment = (FastestNetworkAnncmntDialog) fm.findFragmentByTag(FRAGMENT_TAG);
         if (dialogFragment == null) {
             dialogFragment = new FastestNetworkAnncmntDialog();
-            dialogFragment.show(fm, FRAGMENT_TAG);
+            FragmentTransaction ft = fm.beginTransaction();
+            ft.add(dialogFragment, FRAGMENT_TAG);
+            ft.commitAllowingStateLoss();
+
         }
         return dialogFragment;
     }
