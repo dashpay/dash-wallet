@@ -203,6 +203,8 @@
             android:launchMode="singleTask"/>
         <activity android:name="org.dash.wallet.integration.uphold.ui.UpholdAccountActivity"
             android:theme="@style/My.Theme.ChildActivity"/>
+        <activity android:name="de.schildbach.wallet.ui.ContactsActivity"
+            android:theme="@style/My.Theme.ChildActivity"/>
 
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"

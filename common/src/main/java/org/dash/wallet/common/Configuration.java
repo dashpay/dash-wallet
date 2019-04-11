@@ -68,6 +68,8 @@ public class Configuration {
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
     public static final String PREFS_KEY_CAN_AUTO_LOCK = "can_auto_lock";
 
+    public static final String PREFS_KEY_BLOCKCHAIN_USERNAME = "blockchain_username";
+
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 4;
 
@@ -324,5 +326,13 @@ public class Configuration {
 
     public void setCanAutoLock(boolean enabled) {
         prefs.edit().putBoolean(PREFS_KEY_CAN_AUTO_LOCK, enabled).apply();
+    }
+
+    public String getBlockchainUsername() {
+        return prefs.getString(PREFS_KEY_BLOCKCHAIN_USERNAME, "");
+    }
+
+    public void setBlockchainUsername(String username) {
+        prefs.edit().putString(PREFS_KEY_BLOCKCHAIN_USERNAME, username).apply();
     }
 }

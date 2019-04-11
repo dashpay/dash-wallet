@@ -19,23 +19,38 @@ package de.schildbach.wallet.ui;
 
 import android.content.DialogInterface;
 import android.os.Build;
+import android.os.Bundle;
 import android.support.v4.app.FragmentManager;
 import android.view.View;
 
+import org.spongycastle.crypto.params.KeyParameter;
+
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.WalletLock;
+import de.schildbach.wallet.ui.send.DeriveKeyTask;
 import de.schildbach.wallet_test.R;
 
 public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
 
     private static final String FRAGMENT_TAG = UnlockWalletDialogFragment.class.getName();
+    private static final String ARG_DECRYPT_WALLET = "arg_decrypt_wallet";
 
     public static void show(final FragmentManager fm) {
         new UnlockWalletDialogFragment().show(fm, FRAGMENT_TAG);
     }
 
     public static void show(FragmentManager fm, DialogInterface.OnDismissListener onDismissListener) {
+        show(fm, onDismissListener, false);
+    }
+
+    public static void show(FragmentManager fm, DialogInterface.OnDismissListener onDismissListener,
+                            boolean decryptWallet) {
         UnlockWalletDialogFragment dialogFragment = new UnlockWalletDialogFragment();
+
+        Bundle args = new Bundle();
+        args.putBoolean(ARG_DECRYPT_WALLET, decryptWallet);
+        dialogFragment.setArguments(args);
+
         dialogFragment.onDismissListener = onDismissListener;
         dialogFragment.show(fm, FRAGMENT_TAG);
     }
@@ -62,39 +77,57 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
         unlockButton.setEnabled(false);
         unlockButton.setText(getText(R.string.encrypt_keys_dialog_state_decrypting));
         pinView.setEnabled(false);
-        new CheckWalletPasswordTask(backgroundHandler) {
 
+        new CheckWalletPasswordTask(backgroundHandler) {
             @Override
             protected void onSuccess() {
-                if (getActivity() != null && isAdded()) {
-                    pinRetryController.successfulAttempt();
-                    WalletLock.getInstance().setWalletLocked(false);
-
-                    dismissAllowingStateLoss();
-
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && fingerprintHelper != null) {
-                        if (!fingerprintHelper.isFingerprintEnabled() && WalletApplication
-                                .getInstance().getConfiguration().getRemindEnableFingerprint()) {
-                            EnableFingerprintDialog.show(password,
-                                    getActivity().getFragmentManager());
+                if (getArguments().getBoolean(ARG_DECRYPT_WALLET, false)) {
+                    new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
+                        @Override
+                        protected void onSuccess(KeyParameter encryptionKey, boolean changed) {
+                            wallet.decrypt(encryptionKey);
+                            onWalletUnlocked(password);
                         }
-                    }
+                    }.deriveKey(wallet, password);
+                } else {
+                    onWalletUnlocked(password);
                 }
             }
 
             @Override
             protected void onBadPassword() {
-                if (getActivity() != null && isAdded()) {
-                    unlockButton.setEnabled(true);
-                    unlockButton.setText(getText(R.string.wallet_lock_unlock));
-                    pinView.setEnabled(true);
-                    pinRetryController.failedAttempt(password);
-                    badPinView.setText(getString(R.string.wallet_lock_wrong_pin,
-                            pinRetryController.getRemainingAttemptsMessage()));
-                    badPinView.setVisibility(View.VISIBLE);
-                }
+                UnlockWalletDialogFragment.this.onBadPassword(password);
             }
         }.checkPassword(wallet, password);
+    }
+
+    private void onWalletUnlocked(String password) {
+        if (getActivity() != null && isAdded()) {
+            pinRetryController.successfulAttempt();
+            WalletLock.getInstance().setWalletLocked(false);
+
+            dismissAllowingStateLoss();
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && fingerprintHelper != null) {
+                if (!fingerprintHelper.isFingerprintEnabled() && WalletApplication
+                        .getInstance().getConfiguration().getRemindEnableFingerprint()) {
+                    EnableFingerprintDialog.show(password,
+                            getActivity().getFragmentManager());
+                }
+            }
+        }
+    }
+
+    private void onBadPassword(String password) {
+        if (getActivity() != null && isAdded()) {
+            unlockButton.setEnabled(true);
+            unlockButton.setText(getText(R.string.wallet_lock_unlock));
+            pinView.setEnabled(true);
+            pinRetryController.failedAttempt(password);
+            badPinView.setText(getString(R.string.wallet_lock_wrong_pin,
+                    pinRetryController.getRemainingAttemptsMessage()));
+            badPinView.setVisibility(View.VISIBLE);
+        }
     }
 
 }
