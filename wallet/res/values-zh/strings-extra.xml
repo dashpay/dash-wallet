@@ -2,13 +2,13 @@
 <resources>
 
     <string name="send_coins_auto_lock_feasible">此项交易确认将即时完成, 无需额外费用.</string>
-	<string name="send_coins_auto_lock_not_feasible">此项交易确认需要几分钟. 立即完成需要额外%1$s%2$s?</string>
+	<string name="send_coins_auto_lock_not_feasible">此项交易确认需要几分钟. 立刻完成需要 %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">此项交易确认需要几分钟.</string>
 
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">此项即时支付交易尚未传输.</string>
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">此项支付尚未传输。</string>
 	<string name="transaction_row_message_sent_to_single_peer">此项交易已被发送.</string>
 
-	<string name="regular_transaction_info_message">此项交易并未以即时支付发送. 交易完成需要更多确认.</string>
+	<string name="regular_transaction_info_message">此项交易未即时完成.</string>
 
 	<string name="wallet_options_disconnect">未连接</string>
 
@@ -89,5 +89,8 @@
 	<string name="enable_fingerprint">开启指纹</string>
 	<string name="touch_fingerprint_sensor">触摸指纹传感器.</string>
 	<string name="touch_fingerprint_to_enable">触摸指纹传感器来解锁.</string>
+	<string name="exchange_rate_missing">此项支付太旧了, 无法获取法币价值.</string>
 
+	<string name="preferences_enable_payment_request_summary">使用QR码支付协议以开始支付</string>
+	<string name="preferences_enable_payment_request_title">BIP70支持扫即付</string>
 </resources>

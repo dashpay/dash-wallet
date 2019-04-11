@@ -1,7 +1,15 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">InstantSend นี้ ยังไม่ได้รับการชำระเงิน</string>
+
+    <string name="send_coins_auto_lock_feasible">ธุรกรรมนี้จะชำระทันทีโดยไม่มีค่าธรรมเนียมเพิ่มเติม</string>
+	<string name="send_coins_auto_lock_not_feasible">ธุรกรรมนี้อาจจะใช้เวลาในการชำระหลายนาที  ทำให้เสร็จสมบูรณ์ทันทีสำหรับ%1$s%2$s หรือไม่?</string>
+	<string name="send_coins_instant_send_not_feasible">ธุรกรรมนี้อาจใช้เวลาหลายนาทีในการชำระ</string>
+
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">การชำระเงินนี้ยังไม่ได้รับการส่ง</string>
 	<string name="transaction_row_message_sent_to_single_peer">การชำระเงินนี้ถูกส่งแล้ว</string>
+
+	<string name="regular_transaction_info_message">ธุรกรรมนี้ไม่ได้ถูกชำระโดยทันที</string>
+
 	<string name="wallet_options_disconnect">ไม่เชื่อมต่อ</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
@@ -64,5 +72,25 @@
 
 	<string name="remind_later">เตือนภายหลัง</string>
 	<string name="backup_now">สำรองข้อมูลตอนนี้</string>
+	
+	<string name="notification_transactions_channel_name">ธุรกรรม</string>
+	<string name="notification_transactions_channel_description">รับการแจ้งเตือนเกี่ยวกับการทำธุรกรรมที่เข้ามา</string>
+	<string name="notification_synchronization_channel_name">ซิงโครไนซ์</string>
+	<string name="notification_synchronization_channel_description">แสดงการแจ้งเตือนเมื่อแอพพลิเคชั่นกำลังซิงโครไนซ์กับเครือข่าย</string>
 
+	<string name="fastest_payment_network_dialog_title">เงินของคุณในแบบของคุณเอง</string>
+	<string name="fastest_payment_network_dialog_message">ส่งและรับ Dash ในทันทีที่ไม่มีค่าธรรมเนียมเพิ่มเติม</string>
+	<string name="fastest_payment_network_dialog_button">ได้รับแล้ว</string>
+
+	<string name="unlock_with_fingerprint">ใช้ลายนิ้วมือของคุณเพื่อปลดล็อค</string>
+	<string name="unlock_with_fingerprint_error">ลายนิ้วมือไม่ตรงกัน โปรดลองอีกครั้ง</string>
+	<string name="unlock_with_fingerprint_error_max_attempts">ความพยายามใช้ลายนิ้วมือเกินขีดจำกัด กรุณาลองใหม่อีกครั้งในภายหลัง.</string>
+	<string name="or_unlock_with_fingerprint">หรือใช้ลายนิ้วมือเพื่อปลดล็อก</string>
+	<string name="enable_fingerprint">เปิดใช้งานลายนิ้วมือ</string>
+	<string name="touch_fingerprint_sensor">แตะเซ็นเซอร์ลายนิ้วมือ</string>
+	<string name="touch_fingerprint_to_enable">แตะเซ็นเซอร์ลายนิ้วมือเพื่อเปิดใช้งานการปลดล็อคด้วยลายนิ้วมือ</string>
+	<string name="exchange_rate_missing">การชำระเงินนี้เก่าเกินไปที่จะรับ fiat value</string>
+
+	<string name="preferences_enable_payment_request_summary">ใช้โปรโตคอลการชำระเงินสำหรับการชำระเงินที่ใช้รหัส QR-code</string>
+	<string name="preferences_enable_payment_request_title">BIP70 สำหรับสแกนเพื่อจ่าย</string>
 </resources>

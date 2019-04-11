@@ -95,13 +95,6 @@
     <string name="send_coins_options_fee_category_economic">Kinh tế</string>
     <string name="send_coins_options_fee_category_priority">Ưu tiên</string>
     <string name="send_coins_options_empty">Ví rỗng</string>
-    <string name="raise_fee_dialog_title">Tăng phí giao dịch</string>
-    <string name="raise_fee_dialog_message">Bạn có muốn tăng phí cho giao dịch này lên %s? Nó sẽ làm cho giao dịch của bạn được xác thực nhanh hơn.</string>
-    <string name="raise_fee_dialog_determining_fee">Đang xác định mức phí giao dịch...</string>
-    <string name="raise_fee_dialog_cant_raise">Phí giao dịch cho thanh toán này không thể tăng lên được.</string>
-    <string name="raise_fee_dialog_state_decrypting">Đang giải mã...</string>
-    <string name="raise_fee_dialog_state_done">Xong.</string>
-    <string name="raise_fee_dialog_button_raise">Tăng</string>
     <string name="sweep_wallet_activity_title">Hãy xoá ví giấy</string>
     <string name="sweep_wallet_fragment_intro">Bạn đang định quét ví giấy hoặc phiếu tặng quà Dash. Nó sẽ chuyển tất cả số tiền trên giấy đó vào ví trên thiết bị này. Khi giao dịch được xác nhận, ví giấy sẽ không còn giá trị nữa và bạn sẽ không còn dùng được nó với lý do an toàn nữa.</string>
     <string name="sweep_wallet_fragment_hint">Ví giấy thường được sử dụng nhiều nhất cho việc lưu trữ. Một số máy ATM in chúng từ cuộn giấy in trong máy thay vì gửi tiền đến ví di động của bạn một cách trực tiếp. Nhiều người thường sử dụng các ví giấy nạp tiền sẵn để chuyển tiền (điều này không khuyến khích).</string>

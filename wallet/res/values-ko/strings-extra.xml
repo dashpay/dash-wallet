@@ -16,22 +16,22 @@
 	<string name="export_keys_dialog_title_to_seed">복구 문구 확인</string>
 	<string name="import_keys_dialog_title_from_seed">복구 문구를 이용해 복구</string>
 	<string name="backup_to_seed_wallet_dialog_message">지갑 복구 문구 입니다. 옮겨 적어주세요.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">대쉬지갑 복구 문구는 절대 공유하지 마세요. 대쉬 해킹의 위험이 있습니다.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">대시 지갑의 복구 문구는 절대 공유하지 마세요. 대시 해킹의 위험이 있습니다.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">당신의 지갑은 송금 비빌번호로 보호중입니다. 송금 비빌번호를 입력하고 보기 버튼을 눌러 복구 문구를 확인하세요.</string>
     <string name="import_keys_from_seed_dialog_message">여기에 지갑 복구 문구를 입력하세요.</string>
 	<string name="import_export_keys_dialog_password_phrase">지갑 복구 문구입니다.</string>
 	<string name="preferences_report_issue_summary">오류에 대한 정보를 수집 후 오류 보고서를 개발자에게 전달합니다.</string>
 	<string name="navigation_configuration">설정</string>
     <string name="button_copy_address">주소 복사하기</string>
-	<string name="request_coins_clipboard_address_msg">대쉬 주소가 클립보드에 복사되었습니다</string>
+	<string name="request_coins_clipboard_address_msg">대시 주소가 클립보드에 복사되었습니다</string>
 	<string name="backup_wallet_to_seed_show_recovery_phrase">보기</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%s 는 잘못된 입력입니다.</string>
 
 	<string name="send_coins_options_fee_category_zero">수수료 없음</string>
-	<string name="send_coins_fragment_hint_fee_zero">수수료는 없습니다. 확인 시간에 신경 쓰지 않는 경우에만 \'수수료 없음\'을 사용하십시오.</string>
+	<string name="send_coins_fragment_hint_fee_zero">수수료가 부과되지 않습니다. 확인 시간에 신경 쓰지 않는 경우에만 \'수수료 없음\'을 사용하십시오.</string>
 
-	<string name="wallet_uri_handler_public_key_request_dialog_msg">어플리케이션 %s 이 귀하의 마스터 공개 키를 요청합니다. 이것은 지갑을 추적하는 데 사용할 수 있으며 대쉬를 이동하는 데에는 사용할 수 없습니다.</string>
-	<string name="wallet_uri_handler_address_request_dialog_msg">어플리케이션 %s 이 귀하에게 지불할 주소를 요청하고 있습니다. 이 권한을 부여 하시겠습니까?</string>
+	<string name="wallet_uri_handler_public_key_request_dialog_msg">어플리케이션 %s 이 귀하의 마스터 공개 키를 요청합니다. 이것은 지갑을 추적하는 데 사용할 수 있으며 대시를 이동하는 데에는 사용할 수 없습니다.</string>
+	<string name="wallet_uri_handler_address_request_dialog_msg">어플리케이션 %s 이 귀하에게 지불을 위한 주소를 요청하고 있습니다. 이 권한을 부여 하시겠습니까?</string>
 
 	<string name="wallet_lock_unlock">잠금 해제</string>
 	<string name="wallet_lock_unlock_wallet">지갑 잠금 해제</string>
@@ -40,11 +40,11 @@
 	<string name="wallet_lock_unlock_dialog_title">내 지갑 잠금 해제</string>
 	<string name="wallet_lock_unlock_dialog_message">지갑은 지출 PIN으로 보호됩니다. PIN 번호를 입력하고 잠금 해제를 눌러 계속하십시오.</string>
 	<string name="wallet_lock_reset_wallet_title">지갑 리셋하기</string>
-	<string name="wallet_lock_reset_wallet_message">확실합니까? 지갑은 삭제되고 모든 대시가 손실될 수 있습니다.\n\n이 대시를 복구할 수 있는 유일한 방법은 백업파일 또는 복구 문구입니다.</string>
+	<string name="wallet_lock_reset_wallet_message">확실합니까? 지갑은 삭제되고 모든 대시가 손실될 수 있습니다.\n\n이 대시를 복구할 수 있는 유일한 방법은 백업 파일 또는 복구 문구입니다.</string>
 
 	<string name="wallet_lock_wallet_disabled">지갑 사용 중지됨</string>
 	<string name="wallet_lock_try_again">%1$d %2$s 로 재시도</string>
-	<string name="wallet_lock_reset">재동기화</string>
+	<string name="wallet_lock_reset">리셋</string>
 	<string name="wallet_lock_wrong_pin">잘못된 PIN 넘버입니다! %s</string>
 
 	<plurals name="wallet_lock_attempts_remaining">
@@ -60,13 +60,13 @@
 	</plurals>
 
 	<string name="encrypt_new_key_chain_upgrade_button">업그레이드</string>
-	<string name="encrypt_new_key_chain_dialog_title">내지갑 업그레이드 하기</string>
-	<string name="encrypt_new_key_chain_dialog_message">지갑은 더 많은 앱에 가져오기 및 내보내기를 지원하도록 업그레이드됩니다.</string>
+	<string name="encrypt_new_key_chain_dialog_title">내 지갑 업그레이드 하기</string>
+	<string name="encrypt_new_key_chain_dialog_message">당신의 지갑을 업그레이드하여 더 많은 어플을 가져오기 및 내보내기 기능을 지원합니다.</string>
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">업그레이드 프로세스를 완료하려면 PIN번호를 입력해야합니다.</string>
 	<string name="pin_code_required_dialog_message">이 앱은 잔액과 거래내역 확인시 PIN번호를 필요로 합니다.</string>
-    <string name="backup_wallet_seed_private_key_written_down_box">복구 구문을 옮겨 적었습니다.</string>
+    <string name="backup_wallet_seed_private_key_written_down_box">복구 문구를 옮겨 적었습니다.</string>
 	
-	<string name="change_exchange_currency_code_message">현지 통화는 %1$s이지만, 앱에서는 기본 통화가 %2$s로 설정됩니다.  %1$s 로 변경하시겠습니까 아니면 기본 통화인 %2$s 로 설정할까요?</string>
+	<string name="change_exchange_currency_code_message">현지 통화는 %1$s이지만, 앱에서는 기본 통화가 %2$s로 설정됩니다.  %1$s 로 변경하시겠습니까, 아니면 기본 통화인 %2$s 로 설정할까요?</string>
 	<string name="change_to">%s 로 변경</string>
 	<string name="leave_as">%s 로 설정</string>
 
@@ -89,5 +89,8 @@
 	<string name="enable_fingerprint">지문 활성화</string>
 	<string name="touch_fingerprint_sensor">지문 센서를 터치하세요</string>
 	<string name="touch_fingerprint_to_enable">지문으로 잠금 해제하기 위해서는 지문 센서를 터치하세요.</string>
+	<string name="exchange_rate_missing">이 지불은 시간이 지나 플랫 밸류를 얻을 수 없습니다.</string>
 
+	<string name="preferences_enable_payment_request_summary">QR 코드를 통한 지불을 위해서는 지불 프로토콜을 사용하십시오.</string>
+	<string name="preferences_enable_payment_request_title">스캔하여 지불하기 위한 BIP70</string>
 </resources>

@@ -95,13 +95,6 @@
     <string name="send_coins_options_fee_category_economic">ประหยัด</string>
     <string name="send_coins_options_fee_category_priority">สิทธิพิเศษ</string>
     <string name="send_coins_options_empty">wallet ว่างเปล่า</string>
-    <string name="raise_fee_dialog_title">เพิ่มค่าบริการเครือข่าย</string>
-    <string name="raise_fee_dialog_message">คุณต้องการเพิ่มค่าธรรมเนียมเครือข่ายของการชำระเงินนี้โดย%s หรือไม่? มันจะทำให้การชำระเงินนี้ยืนยันได้อย่างรวดเร็ว</string>
-    <string name="raise_fee_dialog_determining_fee">กำลังกำหนดค่าบริการเครือข่าย</string>
-    <string name="raise_fee_dialog_cant_raise">ไม่สามารถเพิ่มค่าธรรมเนียมเครือข่ายของการชำระเงินนี้ได้</string>
-    <string name="raise_fee_dialog_state_decrypting">ถอดรหัส...</string>
-    <string name="raise_fee_dialog_state_done">เสร็จแล้ว</string>
-    <string name="raise_fee_dialog_button_raise">เพิ่มขึ้น</string>
     <string name="sweep_wallet_activity_title">ปัดกวาด paper wallet</string>
     <string name="sweep_wallet_fragment_intro">คุณกำลังจะปัดกวาด paper wallet  หรือ คูปอง  วิธีนี้จะย้ายเหรียญทั้งหมดจากกระดาษดังกล่าวไปยัง wallet ของคุณบนอุปกรณ์นี้  เมื่อการทำธุรกรรมได้รับการยืนยันแล้ว กระดาษจะไม่มีราคาและไม่ควรนำมาใช้อีกครั้งเพื่อความปลอดภัย</string>
     <string name="sweep_wallet_fragment_hint">paper wallet มักจะถูกใช้สำหรับ cold storage  เครื่องเอทีเอ็มบางเครื่องพิมพ์บนใบเสร็จรับเงินแทนการส่งเหรียญไปยังโทรศัพท์มือถือโดยตรง  บางครั้งผู้คนใช้ pre-charged paper wallets เพื่อส่งหลักทรัพย์ให้กับบุคคลอื่น (ไม่แนะนำ)</string>
@@ -262,6 +255,8 @@
     <string name="preferences_data_usage_summary">แสดงตัวเลือกเพื่อจำกัดการใช้ข้อมูลในเครือข่ายมือถือ</string>
     <string name="preferences_remind_balance_title">เตือนยอดคงเหลือ</string>
     <string name="preferences_remind_balance_summary">หลังจากสองสามสัปดาห์ไม่มีการใช้งาน  แอพพลิเคชั่นจะแจ้งเตือนว่ายังมีเหรียญอยู่ใน wallet</string>
+    <string name="preferences_show_disclaimer_title">แสดงการปฏิเสธความรับผิดชอบ</string>
+    <string name="preferences_show_disclaimer_summary">คุณได้อ่านบันทึกความปลอดภัยหรือยัง?  คุณสำรอง wallet ของคุณไปยังที่ปลอดภัยหรือยัง?</string>
     <string name="preferences_report_issue_title">รายงานปัญหา</string>
     <string name="preferences_initiate_reset_title">รีเซ็ต block chain</string>
     <string name="preferences_initiate_reset_summary">รีเซ็ต block chain,  ธุรกรรม และ ยอดคงเหลือ wallet  การทำซ้ำนี้จะใช้เวลาสักพัก  ดังนั้นทำเมื่อทราบสาเหตุเท่านั้น</string>
@@ -275,7 +270,7 @@
     <string name="report_issue_dialog_title_issue">รายงานปัญหา</string>
     <string name="report_issue_dialog_title_crash">ตรวจสอบความผิดพลาดก่อนหน้านี้</string>
     <string name="report_issue_dialog_title_transaction">รายงานปัญหาเกี่ยวกับการชำระเงินที่เลือก</string>
-    <string name="report_issue_dialog_message_issue">โปรดอธิบายปัญหาของคุณที่แม่นยำเพียงพอที่จะทำสำเนาได้  ถ้าเป็นไปได้ควรใช้ภาษาอังกฤษ</string>
+    <string name="report_issue_dialog_message_issue">โปรดอธิบายปัญหาของคุณให้ละเอียดเพียงพอที่จะทำสำเนาใหม่ หากเป็นไปได้กรุณาใช้ภาษาอังกฤษ คุณจะได้รับอีเมลตอบกลับจากฝ่ายสนับสนุน Dash  เกี่ยวกับปัญหาของคุณภายใน 24 ชั่วโมง</string>
     <string name="report_issue_dialog_message_crash">คุณต้องการส่งรายงานข้อผิดพลาดเพื่อช่วยแก้ปัญหาในอนาคตหรือไม่?</string>
     <string name="report_issue_dialog_description">คำอธิบายปัญหา</string>
     <string name="report_issue_dialog_report">รายงาน</string>

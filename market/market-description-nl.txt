@@ -7,10 +7,10 @@ Gebruik op eigen risico! (Vereist Android 4 of hoger)
 • Er is geen registratie, webservice of clouddienst benodigd. Deze portemonnee werkt decentraal en peer to peer. 
 • Toon de hoeveelheid Dash in DASH, mDASH of µDASH.
 • Conversie van en naar nationale munteenheden.
-• Verzenden en ontvangen van Dash via NFC, QR-codes of Dash URL's.
+• Verzenden en ontvangen van Dash via NFC, QR-codes of Dash-URL's.
 • Adresboek voor vaak gebruikte Dash-adressen.
 • Als je offline bent, kan je via bluetooth nog steeds betalen.
-• Notificaties bij het ontvangen van coins.
+• Ssyteemnotificaties bij het ontvangen van munten.
 • Importeren van papieren portemonnees (die gebruikt worden voor koude opslag).
 • Widget met uw Dash-saldo.
 
