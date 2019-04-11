@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui;
 
 import android.content.DialogInterface;
 import android.os.Build;
-import android.os.Bundle;
 import android.support.v4.app.FragmentManager;
 import android.view.View;
 
@@ -33,24 +32,20 @@ import de.schildbach.wallet_test.R;
 public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
 
     private static final String FRAGMENT_TAG = UnlockWalletDialogFragment.class.getName();
-    private static final String ARG_DECRYPT_WALLET = "arg_decrypt_wallet";
+    private OnWalletUnlockedListener onWalletUnlockedListener;
 
     public static void show(final FragmentManager fm) {
         new UnlockWalletDialogFragment().show(fm, FRAGMENT_TAG);
     }
 
     public static void show(FragmentManager fm, DialogInterface.OnDismissListener onDismissListener) {
-        show(fm, onDismissListener, false);
+        show(fm, onDismissListener, null);
     }
 
     public static void show(FragmentManager fm, DialogInterface.OnDismissListener onDismissListener,
-                            boolean decryptWallet) {
+                            OnWalletUnlockedListener onWalletUnlockedListener) {
         UnlockWalletDialogFragment dialogFragment = new UnlockWalletDialogFragment();
-
-        Bundle args = new Bundle();
-        args.putBoolean(ARG_DECRYPT_WALLET, decryptWallet);
-        dialogFragment.setArguments(args);
-
+        dialogFragment.onWalletUnlockedListener = onWalletUnlockedListener;
         dialogFragment.onDismissListener = onDismissListener;
         dialogFragment.show(fm, FRAGMENT_TAG);
     }
@@ -81,11 +76,13 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
         new CheckWalletPasswordTask(backgroundHandler) {
             @Override
             protected void onSuccess() {
-                if (getArguments().getBoolean(ARG_DECRYPT_WALLET, false)) {
+                if (onWalletUnlockedListener != null) {
                     new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
                         @Override
                         protected void onSuccess(KeyParameter encryptionKey, boolean changed) {
-                            wallet.decrypt(encryptionKey);
+                            if (onWalletUnlockedListener != null) {
+                                onWalletUnlockedListener.onWalletUnlocked(encryptionKey);
+                            }
                             onWalletUnlocked(password);
                         }
                     }.deriveKey(wallet, password);
@@ -130,4 +127,7 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
         }
     }
 
+    public interface OnWalletUnlockedListener {
+        void onWalletUnlocked(KeyParameter encryptionKey);
+    }
 }

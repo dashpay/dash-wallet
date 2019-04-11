@@ -1,9 +1,9 @@
 package de.schildbach.wallet.ui;
 
-import android.content.DialogInterface;
 import android.os.Bundle;
 
-import de.schildbach.wallet.WalletApplication;
+import org.spongycastle.crypto.params.KeyParameter;
+
 import de.schildbach.wallet_test.R;
 
 /**
@@ -17,15 +17,13 @@ public class ContactsActivity extends AbstractBindServiceActivity {
 
         setContentView(R.layout.contacts_activity);
 
-        UnlockWalletDialogFragment.show(getSupportFragmentManager(), new DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialog) {
-                if (!WalletApplication.getInstance().getWallet().isEncrypted()) {
-                    CreateBlockchainUserDialog createBlockchainUserDialog = new CreateBlockchainUserDialog();
-                    createBlockchainUserDialog.show(getSupportFragmentManager(), "");
-                }
-            }
-        }, true);
+        UnlockWalletDialogFragment.show(getSupportFragmentManager(), null,
+                new UnlockWalletDialogFragment.OnWalletUnlockedListener() {
+                    @Override
+                    public void onWalletUnlocked(KeyParameter encryptionKey) {
+                        CreateBlockchainUserDialog.show(getSupportFragmentManager(), encryptionKey);
+                    }
+                });
     }
 
 }

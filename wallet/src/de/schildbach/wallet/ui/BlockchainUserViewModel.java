@@ -15,8 +15,8 @@ public class BlockchainUserViewModel extends ViewModel {
 
     BlockchainUserRepository repository = new BlockchainUserRepository();
 
-    public LiveData<Transaction> createBlockchainUser(String username) throws InsufficientMoneyException {
-        return repository.createBlockchainUser(username);
+    public LiveData<Transaction> createBlockchainUser(String username, byte[] encryptionKey) throws InsufficientMoneyException {
+        return repository.createBlockchainUser(username, encryptionKey);
     }
 
 }
