@@ -30,7 +30,7 @@ public class FastestNetworkAnncmntDialog extends DialogFragment {
         if (dialogFragment == null) {
             dialogFragment = new FastestNetworkAnncmntDialog();
             FragmentTransaction ft = fm.beginTransaction();
-            ft.add(dialogFragment, null);
+            ft.add(dialogFragment, FRAGMENT_TAG);
             ft.commitAllowingStateLoss();
 
         }
