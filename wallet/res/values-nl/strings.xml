@@ -95,13 +95,6 @@
     <string name="send_coins_options_fee_category_economic">Economisch</string>
     <string name="send_coins_options_fee_category_priority">Prioriteit</string>
     <string name="send_coins_options_empty">Leeg portemonnee</string>
-    <string name="raise_fee_dialog_title">Netwerkkosten verhogen</string>
-    <string name="raise_fee_dialog_message">Wil je de netwerkkosten van deze betaling verhogen met %s? Hierdoor wordt de betaling sneller bevestigd.</string>
-    <string name="raise_fee_dialog_determining_fee">Berekenen netwerkkosten...</string>
-    <string name="raise_fee_dialog_cant_raise">Netwerkkosten van deze betaling kunnen niet worden verhoogd.</string>
-    <string name="raise_fee_dialog_state_decrypting">Bezig met opheffen van versleuteling...</string>
-    <string name="raise_fee_dialog_state_done">Afgerond.</string>
-    <string name="raise_fee_dialog_button_raise">Verhogen</string>
     <string name="sweep_wallet_activity_title">Opnemen vanuit papieren portemonnee</string>
     <string name="sweep_wallet_fragment_intro">U staat op het punt geld op te nemen vanaf een papieren portemonnee of coupon. Hierbij worden alle Dash van dat papier overgebracht naar uw apparaat. Zodra deze transactie bevestigd wordt zal het papier zijn waarde verloren hebben en om veiligheidsredenen niet meer opnieuw gebruikt moeten worden.</string>
     <string name="sweep_wallet_fragment_hint">Papieren portemonnees worden gewoonlijk gebruikt als niet-apparaat gebonden, zogenaamd koude, opslag plaats. Sommige geldautomaten printen ze uit op een bon in plaats van de Dash direct naar uw mobiele apparaat te versturen. Van te voren met Dash opgewaardeerde papieren portemonnees worden door sommige mensen gebruikt om waarde aan elkaar door te geven (niet aanbevolen).</string>
@@ -119,7 +112,7 @@
     <string name="sweep_wallet_fragment_insufficient_money_msg">De hoeveelheid munten in uw portemonnee is te laag om te worden overgedragen.</string>
     <string name="sweep_wallet_options_reload">Saldo herladen</string>
     <string name="maintenance_dialog_title">Onderhoud aanbevolen</string>
-    <string name="maintenance_dialog_message">U ontving %1$s op onveilige adressen. Wilt U deze Dash overbrengen naar veilige adressen? Een kleine netwerk onkostenvergoeding ter grootte van %2$s zal worden afgedragen.</string>
+    <string name="maintenance_dialog_message">U ontving %1$s op onveilige adressen. Wilt U deze Dash overbrengen naar veilige adressen? Kleine netwerkkosten ter hoogte van %2$s zullen worden afgedragen.</string>
     <string name="maintenance_dialog_state_decrypting">Bezig met ontgrendelen...</string>
     <string name="maintenance_dialog_state_done">Klaar.</string>
     <string name="maintenance_dialog_button_move">Verplaatsen</string>
@@ -262,6 +255,8 @@
     <string name="preferences_data_usage_summary">Toon mogelijkheden geheugengebruik op mobiele netwerken te beperken.</string>
     <string name="preferences_remind_balance_title">Reminder voor het saldo</string>
     <string name="preferences_remind_balance_summary">Na enkele weken niet gebruikt te zijn zal de app waarschuwen als er nog coins in de portemonnee zijn. </string>
+    <string name="preferences_show_disclaimer_title">Toon disclaimer</string>
+    <string name="preferences_show_disclaimer_summary">Heb je de veiligheidsinstructies echt gelezen? Heb je al een back-up van je portemonnee gemaakt op een veilige plek?</string>
     <string name="preferences_report_issue_title">Meld probleem</string>
     <string name="preferences_initiate_reset_title">Reset blockchain</string>
     <string name="preferences_initiate_reset_summary">Reset blokketen, transacties en portemonnee-saldo. Replay heeft tijd nodig, doe dit alleen als je weet waarom je dit wil.</string>

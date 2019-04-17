@@ -92,5 +92,8 @@
 	<string name="enable_fingerprint">Activer l\'empreinte digitale</string>
 	<string name="touch_fingerprint_sensor">Touchez le capteur d\'empreinte digitale.</string>
 	<string name="touch_fingerprint_to_enable">Touchez le capteur d\'empreinte digitale pour activer le déverrouillage par empreinte.</string>
+	<string name="exchange_rate_missing">Ce paiement est trop ancien pour obtenir sa valeur fiduciaire.</string>
 
+	<string name="preferences_enable_payment_request_summary">Utiliser le protocole de paiement pour les paiements QR-code</string>
+	<string name="preferences_enable_payment_request_title">BIP70 pour scanner-pour-payer</string>
 </resources>

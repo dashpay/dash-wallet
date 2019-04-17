@@ -95,13 +95,6 @@
     <string name="send_coins_options_fee_category_economic">Économique</string>
     <string name="send_coins_options_fee_category_priority">Prioritaire</string>
     <string name="send_coins_options_empty">Vider le portefeuille</string>
-    <string name="raise_fee_dialog_title">Augmenter les frais de réseau</string>
-    <string name="raise_fee_dialog_message">Souhaitez-vous augmenter les frais de réseau de %s ? Cela permettra une confirmation de paiement plus rapide.</string>
-    <string name="raise_fee_dialog_determining_fee">Calcul des frais de réseau...</string>
-    <string name="raise_fee_dialog_cant_raise">Les frais de réseau pour ce paiement ne peuvent pas être augmentés.</string>
-    <string name="raise_fee_dialog_state_decrypting">Déchiffrement…</string>
-    <string name="raise_fee_dialog_state_done">Terminé.</string>
-    <string name="raise_fee_dialog_button_raise">Augmenter</string>
     <string name="sweep_wallet_activity_title">Récupérer entièrement un portefeuille papier</string>
     <string name="sweep_wallet_fragment_intro">Vous vous apprêtez à récupérer entièrement un portefeuille papier ou un coupon. Ceci enverra tous les fonds de ce papier vers le portefeuille installé sur cet appareil. Quand la transaction sera confirmée, le papier ne contiendra plus de fonds, et il ne devra pas être réutilisé pour des raisons de sécurité.</string>
     <string name="sweep_wallet_fragment_hint">Les portefeuilles papier sont habituellement utilisés pour le stockage \"à froid\". Certains distributeurs impriment les fonds sur le reçu papier plutôt que de les envoyer directement sur votre appareil mobile. Certaines personnes utilisent des portefeuilles papier préchargés pour transférer des fonds (ce n\'est pas recommandé).</string>
@@ -262,6 +255,8 @@
     <string name="preferences_data_usage_summary">Afficher les options restreignant l\'utilisation des données sur les réseaux mobiles.</string>
     <string name="preferences_remind_balance_title">Rappel du solde</string>
     <string name="preferences_remind_balance_summary">Après quelques semaines sans utilisation, l\'application notifiera s\'il reste des fonds dans le portefeuille.</string>
+    <string name="preferences_show_disclaimer_title">Voir l\'avertissement</string>
+    <string name="preferences_show_disclaimer_summary">Avez-vous vraiment lu les conseils de sécurité ? Avez-vous déjà sauvegardé votre portefeuille dans un endroit sûr ?</string>
     <string name="preferences_report_issue_title">Signaler un problème</string>
     <string name="preferences_initiate_reset_title">Réinitialiser la chaîne de blocs</string>
     <string name="preferences_initiate_reset_summary">Réinitialise la chaîne de blocs, les transactions et le solde de portefeuille. Le rebalayage prendra du temps ; ne faites donc ceci qu\'en connaissance de cause.</string>

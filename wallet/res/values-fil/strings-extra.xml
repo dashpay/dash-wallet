@@ -1,7 +1,15 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">Ang bayad sa InstantSend ay kasalukuyang hindi pa naililipat.</string>
+
+    <string name="send_coins_auto_lock_feasible">Ang transaksyon na ito ay maaayos ng mabilis ng walang ekstrang bayad.</string>
+	<string name="send_coins_auto_lock_not_feasible">Ang transaksyon na ito ay maaaring magtagal ng ilang minuto. Kumpletuhin agad sa halagang %1$s%2$s?</string>
+	<string name="send_coins_instant_send_not_feasible">Ang transaksyon na ito ay maaring magtagal ng ilang minuto.</string>
+
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">Ang  bayad ay kasalukuyang hindi pa naililipat.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Naipadala na ang bayad na ito.</string>
+
+	<string name="regular_transaction_info_message">Ang transaksyon na ito ay hindi nakumpleto ng mabilisan.</string>
+
 	<string name="wallet_options_disconnect">Idiskonekta</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
@@ -67,5 +75,21 @@
 
 	<string name="remind_later">Ipaalala mamaya</string>
 	<string name="backup_now">I-back up na ngayon</string>
+	
+	<string name="notification_transactions_channel_name">Mga transaksyon</string>
+	<string name="notification_transactions_channel_description">Makatanggap ng alerto tungkol sa parating na mga transaksyon.</string>
+	<string name="notification_synchronization_channel_name">Pagtutugma</string>
+	<string name="notification_synchronization_channel_description">Magpakita ng notipikasyon kapag ang app ay tumugma sa network.</string>
 
-</resources>
+	<string name="fastest_payment_network_dialog_title">Pera mo, Pamamaraan mo</string>
+	<string name="fastest_payment_network_dialog_message">Magpadala at tumanggap ng Dash ng mabilis ng walang ekstrang bayad.</string>
+	<string name="fastest_payment_network_dialog_button">Nakuha ko na</string>
+
+	<string name="unlock_with_fingerprint">Gamitin ang iyong fingerprint para mabuksan.</string>
+	<string name="unlock_with_fingerprint_error">Hindi kinilala ang fingerprint, subukan ulit.</string>
+	<string name="unlock_with_fingerprint_error_max_attempts">Umabot sa hangganan ang bilang ng pagsubok ng fingerprint. Subukan muli mamaya.</string>
+	<string name="or_unlock_with_fingerprint">O gamitin ang iyong fingerprint sa pagbukas.</string>
+	<string name="enable_fingerprint">I-enable ang fingerprint</string>
+	<string name="touch_fingerprint_sensor">Hawakan ang sensor ng fingerprint.</string>
+	<string name="touch_fingerprint_to_enable">Hawakan ang fingerprint sensor upang mabuksan gamit ang fingerprint.</string>
+	</resources>

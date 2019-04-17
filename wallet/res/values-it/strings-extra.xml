@@ -92,5 +92,4 @@
 	<string name="enable_fingerprint">Abilita impronta digitale</string>
 	<string name="touch_fingerprint_sensor">Tocca il sensore dell\'impronta digitale.</string>
 	<string name="touch_fingerprint_to_enable">Toccare il sensore di impronte digitali per abilitare lo sblocco con l\'impronta digitale.</string>
-
-</resources>
+	</resources>

@@ -2,13 +2,13 @@
 <resources>
 
     <string name="send_coins_auto_lock_feasible">Giao dịch này sẽ được thực hiện tức thời mà không tốn thêm phí.</string>
-	<string name="send_coins_auto_lock_not_feasible">Giao dịch này có thể mất vài phút để thực hiện. Thực hiện tức thời với khoản phụ thêm %1$s%2$s?</string>
+	<string name="send_coins_auto_lock_not_feasible">Giao dịch này phải mất vài phút để thực hiện. Hoàn thành trọn vẹn cho %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Giao dịch này có thể mất vài phút để thực hiện.</string>
 
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">Giao dịch InstantSend này chưa được bắt đầu thực hiện.</string>
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">Phần chi trả này vẫn chưa được thực hiện.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Giao dịch đã được gửi.</string>
 
-	<string name="regular_transaction_info_message">Giao dịch này được gửi mà không có InstantSend. Nó cần có thêm một số xác thực để được hoàn thành.</string>
+	<string name="regular_transaction_info_message">Giao dịch đã không được thực hiện một cách tức thời.</string>
 
 	<string name="wallet_options_disconnect">Cắt kết nối</string>
 
@@ -89,5 +89,8 @@
 	<string name="enable_fingerprint">Cho phép vân tay</string>
 	<string name="touch_fingerprint_sensor">Hãy chạm ngón tay vào cảm biến vân tay.</string>
 	<string name="touch_fingerprint_to_enable">Hãy chạm vào cảm biến vân tay để bật tính năng mở khoá vằng vân tay.</string>
+	<string name="exchange_rate_missing">Giao dịch này đã quá lâu để có thể tìm được giá quy đổi ra tiền thông thường.</string>
 
+	<string name="preferences_enable_payment_request_summary">Sử dụng giao thức thanh toán cho việc khởi tạo giao dịch bằng mã QR.</string>
+	<string name="preferences_enable_payment_request_title">BIP70 dùng cho việc quét-mã-để-thanh-toán</string>
 </resources>

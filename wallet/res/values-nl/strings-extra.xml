@@ -1,34 +1,34 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-    <string name="send_coins_auto_lock_feasible">Deze transactie wordt direct en zonder extra kosten afgehandeld.</string>
-	<string name="send_coins_auto_lock_not_feasible">De afhandeling van deze transactie kan enkele minuten duren. Direct afhandelen voor %1$s%2$s?</string>
-	<string name="send_coins_instant_send_not_feasible">De afhandeling van deze transactie kan enkele minuten duren. </string>
+    <string name="send_coins_auto_lock_feasible">Deze transactie wordt direct uitgevoerd zonder extra kosten.</string>
+	<string name="send_coins_auto_lock_not_feasible">Het uitvoeren van deze transactie kan enkele minuten duren. Direct uitvoeren voor %1$s%2$s?</string>
+	<string name="send_coins_instant_send_not_feasible">Het uitvoeren van deze transactie kan enkele minuten duren. </string>
 
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Deze betaling is nog niet verzonden.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Deze betaling is verzonden.</string>
 
-	<string name="regular_transaction_info_message">Deze transactie is niet direct afgehandeld.</string>
+	<string name="regular_transaction_info_message">Deze transactie is niet direct uitgevoerd.</string>
 
-	<string name="wallet_options_disconnect">Verbinding verbreken</string>
+	<string name="wallet_options_disconnect">Verbreek verbinding</string>
 
 	<string name="network_monitor_masternodes_title">Masternodes</string>
 	<string name="export_keys_dialog_title_to_seed">Toon herstelzin</string>
 	<string name="import_keys_dialog_title_from_seed">Herstel met herstelzin</string>
-	<string name="backup_to_seed_wallet_dialog_message">Dit is je herstelzin. Schrijf het a.u.b. op.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">Laat NIEMAND je herstelzin zien, anders kan iemand anders je Dash uitgeven.</string>
+	<string name="backup_to_seed_wallet_dialog_message">Dit is je herstelzin. Schrijf deze a.u.b. op.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">Laat NIEMAND je herstelzin zien, anders kunnen anderen je Dash uitgeven.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Betalingen vanuit je portemonnee zijn beschermd met een pin. Voer je pin in en kies Toon om je herstelzin te bekijken.</string>
     <string name="import_keys_from_seed_dialog_message">Voer je herstelzin hier in.</string>
 	<string name="import_export_keys_dialog_password_phrase">Voer hier je herstelzin in.</string>
 	<string name="preferences_report_issue_summary">Vergaar informatie over uw probleem en verstuur via e-mail een melding aan de ontwikkelaars.</string>
 	<string name="navigation_configuration">Configuratie</string>
     <string name="button_copy_address">Kopieer adres</string>
-	<string name="request_coins_clipboard_address_msg">Dash adres is gekopieerd naar het klembord</string>
+	<string name="request_coins_clipboard_address_msg">Dash-adres is gekopieerd naar het klembord</string>
 	<string name="backup_wallet_to_seed_show_recovery_phrase">Toon</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%s is een ongeldig woord.</string>
 
-	<string name="send_coins_options_fee_category_zero">Geen transactievergoeding</string>
-	<string name="send_coins_fragment_hint_fee_zero">Geen transactievergoeding zal worden betaald. Gebruik \'geen transactievergoeding\' alleen als de bevestigingstijd niet van belang is.</string>
+	<string name="send_coins_options_fee_category_zero">Geen kosten</string>
+	<string name="send_coins_fragment_hint_fee_zero">Geen kosten zullen worden betaald. Gebruik \'geen kosten\' alleen als de bevestigingstijd niet van belang is.</string>
 
 	<string name="wallet_uri_handler_public_key_request_dialog_msg">Applicatie %s wil je Master Public Key verkrijgen. Deze kan worden gebruikt om je portemonnee te volgen, maar kan niet gebruikt worden om Dash over te maken.</string>
 	<string name="wallet_uri_handler_address_request_dialog_msg">Applicatie %s verzoekt een adres om je op te betalen. Wil je dit autoriseren?</string>
@@ -92,5 +92,8 @@
 	<string name="enable_fingerprint">Vingerafdruk activeren</string>
 	<string name="touch_fingerprint_sensor">Raak de vingerafdruk sensor aan.</string>
 	<string name="touch_fingerprint_to_enable">Raak de vingerafdruk sensor aan om ontgrendelen met vingerafdruk te activeren.</string>
+	<string name="exchange_rate_missing">Deze betaling is te oud om de fiat-waarde te verkrijgen.</string>
 
+	<string name="preferences_enable_payment_request_summary">Gebruik betalingsprotocol voor QR-code geïnitieerde betalingen</string>
+	<string name="preferences_enable_payment_request_title">BIP70 voor scan-to-pay</string>
 </resources>

@@ -95,13 +95,6 @@
     <string name="send_coins_options_fee_category_economic">Ekonomiya</string>
     <string name="send_coins_options_fee_category_priority">Prayoridad</string>
     <string name="send_coins_options_empty">Walang laman ang pitaka</string>
-    <string name="raise_fee_dialog_title">Taasan ang network fee</string>
-    <string name="raise_fee_dialog_message">Gusto mo bang itaas ang network fee ng bayad nito ng %s? Mas mapapadali nito ang pagkumpirma ng bayad.</string>
-    <string name="raise_fee_dialog_determining_fee">Tinutukoy ang network fee...</string>
-    <string name="raise_fee_dialog_cant_raise">Ang bayad sa network fee ay hindi pwedeng itaas.</string>
-    <string name="raise_fee_dialog_state_decrypting">Nagde-decrypt...</string>
-    <string name="raise_fee_dialog_state_done">Tapos na.</string>
-    <string name="raise_fee_dialog_button_raise">Itaas</string>
     <string name="sweep_wallet_activity_title">I-sweep ang papel na pitaka</string>
     <string name="sweep_wallet_fragment_intro">Ikaw ay mag-sweep na ng papel na pitaka o kupon. Ang lahat ng barya mula sa papel ay malilipat sa pitaka ng iyong device. Kapag nakumpirma na ang transaksyon, ang papel na ito ay mawawalan ng bisa at hindi na dapat gamitin ulit para sa iyong seguridad.</string>
     <string name="sweep_wallet_fragment_hint">Pinakamadalas gamitin ang papel na pitaka para sa cold storage. Ang ibang ATM ay iniimprinta ito sa kanilang paper slip sa halip na ipadala ang iyong barya ng direkta sa iyong mobile device. Minsan gumagamit ang ibang tao ng pre-charged na papel na pitaka para ipasa ang halaga (hindi inirerekomenda)</string>
@@ -275,7 +268,7 @@
     <string name="report_issue_dialog_title_issue">I-report ang isyu</string>
     <string name="report_issue_dialog_title_crash">Naka-detect ng previous crash</string>
     <string name="report_issue_dialog_title_transaction">I-report ang issue kalakip ang napiling bayad</string>
-    <string name="report_issue_dialog_message_issue">Pakiusap ilarawan ang iyong isyu ng tiyak para makopya. Gumamit ng Ingles kung kaya.</string>
+    <string name="report_issue_dialog_message_issue">Ilarawan ng mabuti ang iyong isyu upang maparami ito sa tamang bilang. Gamitin ang Ingles na lengwahe hanggat maaari. Asahan ang email mula sa Dash Support tungkol sa isyu sa loob ng 24 na oras.</string>
     <string name="report_issue_dialog_message_crash">Gusto mo bang magpadala ng crash report, para makatulong na maayos ang isyu na ito sa hinaharap?</string>
     <string name="report_issue_dialog_description">Paglalarawan ng isyu</string>
     <string name="report_issue_dialog_report">I-report</string>

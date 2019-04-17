@@ -95,13 +95,6 @@
     <string name="send_coins_options_fee_category_economic">Икономичен</string>
     <string name="send_coins_options_fee_category_priority">Приоритетен</string>
     <string name="send_coins_options_empty">Празен портфейл</string>
-    <string name="raise_fee_dialog_title">Нарастване таксата на мрежата</string>
-    <string name="raise_fee_dialog_message">Желаете ли да увеличите мрежовата такса за това плащане от %s? Това ще направи потвърждението по-бързо.</string>
-    <string name="raise_fee_dialog_determining_fee">Определяне на мрежова такса…</string>
-    <string name="raise_fee_dialog_cant_raise">Мрежовата такса за това плащане не може да бъде увеличена.</string>
-    <string name="raise_fee_dialog_state_decrypting">Декриптира…</string>
-    <string name="raise_fee_dialog_state_done">Готово.</string>
-    <string name="raise_fee_dialog_button_raise">Нараства</string>
     <string name="sweep_wallet_activity_title">Извличане от хартиен портфейл</string>
     <string name="sweep_wallet_fragment_intro">Вие сте на път да направите извличане от хартиен портфейл или купон. Така ще преместите всички монети от такъв портфейл във вашият портфейл на това устройство. Когато транзакцията бъде потвърдена, хартията ще бъде безполезна и не трябва да бъде използвана отново от съображения за сигурност.</string>
     <string name="sweep_wallet_fragment_hint">Хартиените портфейли се използват предимно за студено хранилище. Някой ATM принтират на хартиен носител вместо да изпратят монетите директно на вашето мобилно устройство. Хората понякога използват предварително заредени хартиени портфейли за да заредят(не е препорачително).</string>
@@ -262,6 +255,8 @@
     <string name="preferences_data_usage_summary">Показва опциите за ограничаване използването на данни с мобилните мрежи.</string>
     <string name="preferences_remind_balance_title">Напомняне за баланс</string>
     <string name="preferences_remind_balance_summary">След няколко седмици не използване, приложението ще ви уведоми, ако все още има монети в портфейла.</string>
+    <string name="preferences_show_disclaimer_title">Показване на отказ </string>
+    <string name="preferences_show_disclaimer_summary">Наистина ли прочетохте инструкциите за безопасност? Архивирахте ли вече портфейла си на безопасно място?</string>
     <string name="preferences_report_issue_title">Докладвай проблем</string>
     <string name="preferences_initiate_reset_title">Нулирай блок верига</string>
     <string name="preferences_initiate_reset_summary">Ресет на блок-верига,транзакции и баланс на портфейла. Преглеждането ще отнеме време, така че правете това само ако е необходимо.</string>

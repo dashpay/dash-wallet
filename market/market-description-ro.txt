@@ -1,0 +1,36 @@
+Foloseşte pe propria răspundere! (Necesită Android 4 sau mai recent)
+
+<b>Poți avea Dash mereu cu tine, în propriul buzunar!</b> Plătește prin scanarea rapidă a unui cod QR. Ca și comerciant, primești plăți în mod fiabil și instantaneu. Portofelul Dash este prima aplicație mobilă Dash și, fără îndoială, cea mai sigură!
+
+<b>CARACTERISTICI</b>
+
+• Nu este nevoie de înregistrare, serviciu web sau cloud! Acest portofel este descentralizat și peer to peer.
+• Afișarea sumelor Dash în DASH, mDASH și μDASH.
+• Conversie către și din valute naționale.
+• Trimiterea și primirea Dash prin NFC, coduri QR sau adrese URL Dash.
+• Carte de adrese pentru adresele Dash utilizate în mod regulat.
+• Când ești offline, poți plăti în continuare prin Bluetooth.
+• Notificarea sistemului pentru monedele primite.
+• Sweeping pentru portofelele de hârtie (de exemplu, cele utilizate pentru depozitarea la rece).
+• Widget pentru soldul Dash.
+
+
+<b>CONTRIBUIE</b>
+
+Portofelul Dash este <b>open source</b> si <b>free software</b>. Licența: GPLv3
+https://www.gnu.org/licenses/gpl-3.0.en.html
+
+Codul sursă este disponibil pe GitHub:
+https://github.com/HashEngineering/dash-wallet
+
+Toate traducerile sunt gestionate prin intermediul Transifex:
+https://www.transifex.com/dash/dash-wallet/
+
+Poți afla mai mult despre Dash la
+https://www.dash.org/
+
+<b>MĂRTURII</b>
+
+• Un portofel mobil recomandat de https://www.dash.org
+
+<i>Folosește pe propria răspundere!</i>
