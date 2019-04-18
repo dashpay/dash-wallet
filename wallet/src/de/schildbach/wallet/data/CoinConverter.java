@@ -15,30 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui;
+package de.schildbach.wallet.data;
 
-import android.arch.lifecycle.LiveData;
-import android.arch.lifecycle.ViewModel;
+import android.arch.persistence.room.TypeConverter;
 
-import org.bitcoinj.core.InsufficientMoneyException;
-import org.bitcoinj.core.Transaction;
-
-import de.schildbach.wallet.data.BlockchainUser;
-import de.schildbach.wallet.data.BlockchainUserRepository;
+import org.bitcoinj.core.Coin;
 
 /**
  * @author Samuel Barbosa
  */
-public class BlockchainUserViewModel extends ViewModel {
+public class CoinConverter {
 
-    BlockchainUserRepository repository = BlockchainUserRepository.getInstance();
-
-    public LiveData<Transaction> createBlockchainUser(String username, byte[] encryptionKey) throws InsufficientMoneyException {
-        return repository.createBlockchainUser(username, encryptionKey);
+    @TypeConverter
+    public static Coin fromLong(long value) {
+        return Coin.valueOf(value);
     }
 
-    public LiveData<BlockchainUser> getUser() {
-        return repository.getUser();
+    @TypeConverter
+    public static long fromCoin(Coin value) {
+        return value.value;
     }
 
 }

@@ -15,30 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui;
+package de.schildbach.wallet.data;
 
 import android.arch.lifecycle.LiveData;
-import android.arch.lifecycle.ViewModel;
-
-import org.bitcoinj.core.InsufficientMoneyException;
-import org.bitcoinj.core.Transaction;
-
-import de.schildbach.wallet.data.BlockchainUser;
-import de.schildbach.wallet.data.BlockchainUserRepository;
+import android.arch.persistence.room.Dao;
+import android.arch.persistence.room.Insert;
+import android.arch.persistence.room.OnConflictStrategy;
+import android.arch.persistence.room.Query;
 
 /**
  * @author Samuel Barbosa
  */
-public class BlockchainUserViewModel extends ViewModel {
+@Dao
+public interface BlockchainUserDao {
 
-    BlockchainUserRepository repository = BlockchainUserRepository.getInstance();
+    @Query("SELECT * FROM blockchain_user LIMIT 1")
+    LiveData<BlockchainUser> get();
 
-    public LiveData<Transaction> createBlockchainUser(String username, byte[] encryptionKey) throws InsufficientMoneyException {
-        return repository.createBlockchainUser(username, encryptionKey);
-    }
-
-    public LiveData<BlockchainUser> getUser() {
-        return repository.getUser();
-    }
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    void insert(BlockchainUser blockchainUser);
 
 }
