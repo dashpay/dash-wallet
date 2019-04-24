@@ -176,6 +176,8 @@ public final class RequestWalletBalanceTask {
 					if (response.id == request.id) {
 						final Set<UTXO> utxos = new HashSet<>();
 						for (final JsonRpcResponse.Utxo responseUtxo : response.result) {
+							if (response.result == null)
+								throw new JsonDataException("empty response");
 							final Sha256Hash utxoHash = Sha256Hash.wrap(responseUtxo.tx_hash);
 							final int utxoIndex = responseUtxo.tx_pos;
 							final Coin utxoValue = Coin.valueOf(responseUtxo.value);
