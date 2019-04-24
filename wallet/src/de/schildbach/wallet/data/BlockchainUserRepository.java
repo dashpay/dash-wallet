@@ -21,17 +21,20 @@ import android.arch.lifecycle.LiveData;
 import android.arch.lifecycle.MutableLiveData;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.InsufficientMoneyException;
+import org.bitcoinj.core.RejectedTransactionException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.KeyCrypterScrypt;
 import org.bitcoinj.evolution.SubTxRegister;
-import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.DeterministicKeyChain;
+import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
 import org.spongycastle.crypto.params.KeyParameter;
@@ -39,6 +42,8 @@ import org.spongycastle.crypto.params.KeyParameter;
 import java.util.ArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+
+import javax.annotation.Nullable;
 
 import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
@@ -66,10 +71,12 @@ public class BlockchainUserRepository {
     public static final ImmutableList<ChildNumber> EVOLUTION_ACCOUNT_PATH = ImmutableList.of(new ChildNumber(5, true),
             ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED);
 
-    public LiveData<Transaction> createBlockchainUser(final String username, byte[] encryptionKeyBytes) throws InsufficientMoneyException {
+    public LiveData<Resource<Transaction>> createBlockchainUser(final String username, byte[] encryptionKeyBytes) {
         WalletApplication application = WalletApplication.getInstance();
         Wallet wallet = application.getWallet();
-        final MutableLiveData<Transaction> liveData = new MutableLiveData<>();
+        final MutableLiveData<Resource<Transaction>> liveData = new MutableLiveData<>();
+        //TODO: Evaluate decision to keep loading here
+        liveData.postValue(new Resource<>(Status.LOADING, null, null));
         executor.execute(() -> {
             Context.propagate(Constants.CONTEXT);
             KeyParameter encryptionKey = new KeyParameter(encryptionKeyBytes);
@@ -95,8 +102,24 @@ public class BlockchainUserRepository {
 
             try {
                 result = wallet.sendCoins(request);
-                result.broadcastComplete.addListener(() -> liveData.postValue(result.tx), Threading.USER_THREAD);
-                result.broadcastComplete.addListener(() -> storeBlockchainUser(result.tx, username), Threading.THREAD_POOL);
+                Futures.addCallback(result.broadcastComplete, new FutureCallback<Transaction>() {
+                    @Override public void onSuccess(@Nullable Transaction result) {
+                        storeBlockchainUser(result, username);
+                        liveData.postValue(new Resource<>(Status.SUCCESS, result, null));
+                    }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                        String rejectionMessage;
+                        if (t instanceof RejectedTransactionException) {
+                            rejectionMessage = ((RejectedTransactionException) t)
+                                    .getRejectMessage().getReasonString();
+                        } else {
+                            rejectionMessage = t.getMessage();
+                        }
+                        liveData.postValue(new Resource<>(Status.ERROR, null, rejectionMessage));
+                    }
+                });
             } catch (InsufficientMoneyException e) {
                 //TODO: Handle error
                 e.printStackTrace();
@@ -115,8 +138,22 @@ public class BlockchainUserRepository {
         AppDatabase.getAppDatabase().blockchainUserDao().insert(blockchainUser);
     }
 
-    public LiveData<BlockchainUser> getUser() {
-        return AppDatabase.getAppDatabase().blockchainUserDao().get();
+    public LiveData<Resource<BlockchainUser>> getUser() {
+        MutableLiveData<Resource<BlockchainUser>> liveData = new MutableLiveData<>();
+        liveData.postValue(new Resource<>(Status.LOADING, null, null));
+        executor.execute(() -> {
+            try {
+                BlockchainUser blockchainUser = AppDatabase.getAppDatabase().blockchainUserDao().getSync();
+                if (blockchainUser != null) {
+                    liveData.postValue(new Resource<>(Status.SUCCESS, blockchainUser, null));
+                } else {
+                    liveData.postValue(new Resource<>(Status.SUCCESS, null, "User not found"));
+                }
+            } catch (Exception e) {
+                liveData.postValue(new Resource<>(Status.ERROR, null, e.getLocalizedMessage()));
+            }
+        });
+        return liveData;
     }
 
 }

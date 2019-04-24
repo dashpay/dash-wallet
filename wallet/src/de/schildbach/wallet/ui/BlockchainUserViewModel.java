@@ -20,11 +20,11 @@ package de.schildbach.wallet.ui;
 import android.arch.lifecycle.LiveData;
 import android.arch.lifecycle.ViewModel;
 
-import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.Transaction;
 
 import de.schildbach.wallet.data.BlockchainUser;
 import de.schildbach.wallet.data.BlockchainUserRepository;
+import de.schildbach.wallet.data.Resource;
 
 /**
  * @author Samuel Barbosa
@@ -33,11 +33,11 @@ public class BlockchainUserViewModel extends ViewModel {
 
     BlockchainUserRepository repository = BlockchainUserRepository.getInstance();
 
-    public LiveData<Transaction> createBlockchainUser(String username, byte[] encryptionKey) throws InsufficientMoneyException {
+    public LiveData<Resource<Transaction>> createBlockchainUser(String username, byte[] encryptionKey) {
         return repository.createBlockchainUser(username, encryptionKey);
     }
 
-    public LiveData<BlockchainUser> getUser() {
+    public LiveData<Resource<BlockchainUser>> getUser() {
         return repository.getUser();
     }
 

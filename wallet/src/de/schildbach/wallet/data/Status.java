@@ -17,25 +17,11 @@
 
 package de.schildbach.wallet.data;
 
-import android.arch.lifecycle.LiveData;
-import android.arch.persistence.room.Dao;
-import android.arch.persistence.room.Insert;
-import android.arch.persistence.room.OnConflictStrategy;
-import android.arch.persistence.room.Query;
-
 /**
  * @author Samuel Barbosa
  */
-@Dao
-public interface BlockchainUserDao {
-
-    @Query("SELECT * FROM blockchain_user LIMIT 1")
-    LiveData<BlockchainUser> get();
-
-    @Query("SELECT * FROM blockchain_user LIMIT 1")
-    BlockchainUser getSync();
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    void insert(BlockchainUser blockchainUser);
-
+public enum Status {
+    SUCCESS,
+    ERROR,
+    LOADING
 }
