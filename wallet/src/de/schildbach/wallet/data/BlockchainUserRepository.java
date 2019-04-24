@@ -71,18 +71,16 @@ public class BlockchainUserRepository {
         Wallet wallet = application.getWallet();
         final MutableLiveData<Transaction> liveData = new MutableLiveData<>();
         executor.execute(() -> {
-            KeyParameter encryptionKey = new KeyParameter(encryptionKeyBytes);
             Context.propagate(Constants.CONTEXT);
+            KeyParameter encryptionKey = new KeyParameter(encryptionKeyBytes);
 
             if (!wallet.hasKeyChain(EVOLUTION_ACCOUNT_PATH)) {
-                if (wallet.isEncrypted()) {
-                    wallet.decrypt(encryptionKey);
-                }
-                wallet.addKeyChain(EVOLUTION_ACCOUNT_PATH);
-                if (!wallet.isEncrypted()) {
-                    final KeyCrypterScrypt keyCrypter = new KeyCrypterScrypt(application.scryptIterationsTarget());
-                    wallet.encrypt(keyCrypter, encryptionKey);
-                }
+                KeyCrypterScrypt keyCrypter = new KeyCrypterScrypt(application.scryptIterationsTarget());
+                DeterministicSeed deterministicSeed = wallet.getKeyChainSeed().decrypt(keyCrypter,
+                        null, encryptionKey);
+                DeterministicKeyChain keyChain = new DeterministicKeyChain(deterministicSeed, EVOLUTION_ACCOUNT_PATH);
+                DeterministicKeyChain encryptedKeyChain = keyChain.toEncrypted(keyCrypter, encryptionKey);
+                wallet.addAndActivateHDChain(encryptedKeyChain);
             }
 
             DeterministicKeyChain keyChain = wallet.getActiveKeyChain().toDecrypted(encryptionKey);
