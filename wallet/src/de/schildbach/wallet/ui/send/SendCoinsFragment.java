@@ -101,6 +101,9 @@ import android.app.Activity;
 import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModelProviders;
 import android.bluetooth.BluetoothAdapter;
+import android.content.ClipData;
+import android.content.ClipDescription;
+import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -232,6 +235,8 @@ public final class SendCoinsFragment extends Fragment {
     private static final Logger log = LoggerFactory.getLogger(SendCoinsFragment.class);
 
     private CanAutoLockGuard canAutoLockGuard;
+
+    private ClipboardManager clipboardManager;
 
     private enum State {
         REQUEST_PAYMENT_REQUEST, //
@@ -517,6 +522,7 @@ public final class SendCoinsFragment extends Fragment {
         this.loaderManager = getLoaderManager();
         this.fragmentManager = getFragmentManager();
         this.pinRetryController = new PinRetryController(activity);
+        this.clipboardManager = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
     }
 
     @Override
@@ -728,6 +734,24 @@ public final class SendCoinsFragment extends Fragment {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             initFingerprintHelper();
         }
+        checkClip();
+    }
+
+    private void checkClip() {
+        if (clipboardManager.hasPrimaryClip()) {
+            final ClipData clip = clipboardManager.getPrimaryClip();
+            if (clip == null) {
+                return;
+            }
+            final ClipDescription clipDescription = clip.getDescription();
+            if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
+                final CharSequence clipText = clip.getItemAt(0).getText();
+                if (clipText != null) {
+                    final String input = clipText.toString();
+                    handleString(input);
+                }
+            }
+        }
     }
 
     @Override
@@ -815,25 +839,7 @@ public final class SendCoinsFragment extends Fragment {
         if (requestCode == REQUEST_CODE_SCAN) {
             if (resultCode == Activity.RESULT_OK) {
                 final String input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT);
-
-                new StringInputParser(input) {
-                    @Override
-                    protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
-                        setState(null);
-
-                        updateStateFrom(paymentIntent);
-                    }
-
-                    @Override
-                    protected void handleDirectTransaction(final Transaction transaction) throws VerificationException {
-                        cannotClassify(input);
-                    }
-
-                    @Override
-                    protected void error(final int messageResId, final Object... messageArgs) {
-                        dialog(activity, null, R.string.button_scan, messageResId, messageArgs);
-                    }
-                }.parse();
+                handleString(input);
             }
         } else if (requestCode == REQUEST_CODE_ENABLE_BLUETOOTH_FOR_PAYMENT_REQUEST) {
             if (paymentIntent.isBluetoothPaymentRequestUrl())
@@ -842,6 +848,27 @@ public final class SendCoinsFragment extends Fragment {
             if (paymentIntent.isBluetoothPaymentUrl())
                 directPaymentEnableView.setChecked(resultCode == Activity.RESULT_OK);
         }
+    }
+
+    private void handleString(final String input) {
+        new StringInputParser(input) {
+            @Override
+            protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
+                setState(null);
+
+                updateStateFrom(paymentIntent);
+            }
+
+            @Override
+            protected void handleDirectTransaction(final Transaction transaction) throws VerificationException {
+                cannotClassify(input);
+            }
+
+            @Override
+            protected void error(final int messageResId, final Object... messageArgs) {
+                dialog(activity, null, R.string.button_scan, messageResId, messageArgs);
+            }
+        }.parse();
     }
 
     @Override
