@@ -20,13 +20,6 @@ package de.schildbach.wallet.data;
 /**
  * @author Samuel Barbosa
  */
-public class Resource<T> {
-
-    public final StatusType status;
-    public final T data;
-
-    public Resource(StatusType status, T data) {
-        this.status = status;
-        this.data = data;
-    }
+public enum LoadingType implements StatusType {
+    DEFAULT
 }

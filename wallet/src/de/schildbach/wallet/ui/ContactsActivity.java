@@ -21,7 +21,12 @@ import android.arch.lifecycle.ViewModelProviders;
 import android.os.Bundle;
 import android.widget.Toast;
 
+import java.util.Arrays;
+
 import de.schildbach.wallet.data.BlockchainUser;
+import de.schildbach.wallet.data.LoadingType;
+import de.schildbach.wallet.data.StatusType;
+import de.schildbach.wallet.data.SuccessType;
 import de.schildbach.wallet_test.R;
 
 /**
@@ -40,22 +45,19 @@ public class ContactsActivity extends AbstractBindServiceActivity {
         showLoading();
         viewModel = ViewModelProviders.of(this).get(BlockchainUserViewModel.class);
         viewModel.getUser().observe(this, buResource -> {
-            switch (buResource.status) {
-                case SUCCESS:
-                    hideLoading();
-                    if (buResource.data != null) {
-                        userLoaded(buResource.data);
-                    } else {
-                        showCreateUserDialog();
-                    }
-                    break;
-                case LOADING:
-                    showLoading();
-                    break;
-                case ERROR:
-                    hideLoading();
-                    Toast.makeText(this, buResource.message, Toast.LENGTH_SHORT).show();
-                    break;
+            StatusType status = buResource.status;
+            if (Arrays.asList(SuccessType.values()).contains(status)) {
+                hideLoading();
+                if (buResource.data != null) {
+                    userLoaded(buResource.data);
+                } else {
+                    showCreateUserDialog();
+                }
+            } else if (Arrays.asList(LoadingType.values()).contains(status)) {
+                showLoading();
+            } else {
+                hideLoading();
+                Toast.makeText(this, "Unknown error.", Toast.LENGTH_LONG).show();
             }
         });
     }

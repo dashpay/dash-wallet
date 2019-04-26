@@ -39,7 +39,13 @@ import org.bitcoinj.core.Transaction;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.spongycastle.crypto.params.KeyParameter;
 
+import java.util.Arrays;
+
+import de.schildbach.wallet.data.ErrorType;
+import de.schildbach.wallet.data.LoadingType;
 import de.schildbach.wallet.data.Resource;
+import de.schildbach.wallet.data.StatusType;
+import de.schildbach.wallet.data.SuccessType;
 import de.schildbach.wallet_test.R;
 
 /**
@@ -68,30 +74,35 @@ public class CreateBlockchainUserDialog extends DialogFragment {
         final TextView usernameTextView = (TextView) view.findViewById(R.id.buname);
 
         DialogBuilder dialogBuilder = new DialogBuilder(activity);
+        dialogBuilder.setView(view);
         //TODO: Move to resource string
         dialogBuilder.setTitle("Create Blockchain User");
-        dialogBuilder.setView(view);
         dialogBuilder.setPositiveButton("Create", null);
 
         Dialog dialog = dialogBuilder.create();
 
         dialog.setOnShowListener(dialogInterface -> {
             ((AlertDialog) dialog).getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(v -> {
+                String username = usernameTextView.getText().toString();
                 LiveData<Resource<Transaction>> liveData = viewModel
-                        .createBlockchainUser(usernameTextView.getText().toString(),
-                                getArguments().getByteArray(ARG_ENCRYPTION_KEY));
+                        .createBlockchainUser(username, getArguments().getByteArray(ARG_ENCRYPTION_KEY));
                 liveData.observe(this, transactionResource -> {
-                    switch (transactionResource.status) {
-                        case SUCCESS:
-                            dismiss();
-                            break;
-                        case LOADING:
-                            showLoading();
-                            break;
-                        case ERROR:
-                            Toast.makeText(getActivity(), transactionResource.message, Toast.LENGTH_SHORT).show();
-                            hideLoading();
-                            break;
+                    StatusType status = transactionResource.status;
+                    if (Arrays.asList(SuccessType.values()).contains(status)) {
+                        Toast.makeText(getActivity(), "Success. Username " + username + " registered.",
+                                Toast.LENGTH_SHORT).show();
+                        dismiss();
+                    } else if (Arrays.asList(LoadingType.values()).contains(status)) {
+                        showLoading();
+                    } else {
+                        hideLoading();
+                        if (ErrorType.INSUFFICIENT_MONEY.equals(status)) {
+                            Toast.makeText(getActivity(), "Not enough minerals", Toast.LENGTH_SHORT).show();
+                        } else if (ErrorType.TX_REJECT_DUP_USERNAME.equals(status)) {
+                            Toast.makeText(getActivity(), "Error. This username is already registered.", Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(getActivity(), "Unknown error.", Toast.LENGTH_LONG).show();
+                        }
                     }
                 });
             });

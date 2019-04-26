@@ -75,12 +75,13 @@ public class BlockchainUserRepository {
         WalletApplication application = WalletApplication.getInstance();
         Wallet wallet = application.getWallet();
         final MutableLiveData<Resource<Transaction>> liveData = new MutableLiveData<>();
-        //TODO: Evaluate decision to keep loading here
-        liveData.postValue(new Resource<>(Status.LOADING, null, null));
+
+        liveData.postValue(new Resource<>(LoadingType.DEFAULT, null));
         executor.execute(() -> {
             Context.propagate(Constants.CONTEXT);
             KeyParameter encryptionKey = new KeyParameter(encryptionKeyBytes);
 
+            //Add Evolution Derivation Path if it's not added yet.
             if (!wallet.hasKeyChain(EVOLUTION_ACCOUNT_PATH)) {
                 KeyCrypterScrypt keyCrypter = new KeyCrypterScrypt(application.scryptIterationsTarget());
                 DeterministicSeed deterministicSeed = wallet.getKeyChainSeed().decrypt(keyCrypter,
@@ -90,6 +91,7 @@ public class BlockchainUserRepository {
                 wallet.addAndActivateHDChain(encryptedKeyChain);
             }
 
+            //Get user private key, create and send SubTx
             DeterministicKeyChain keyChain = wallet.getActiveKeyChain().toDecrypted(encryptionKey);
             ECKey privKey = ECKey.fromPrivate(keyChain.getKeyByPath(EVOLUTION_ACCOUNT_PATH,
                     false).getPrivKeyBytes());
@@ -105,26 +107,20 @@ public class BlockchainUserRepository {
                 Futures.addCallback(result.broadcastComplete, new FutureCallback<Transaction>() {
                     @Override public void onSuccess(@Nullable Transaction result) {
                         storeBlockchainUser(result, username);
-                        liveData.postValue(new Resource<>(Status.SUCCESS, result, null));
+                        liveData.postValue(new Resource<>(SuccessType.DEFAULT, result));
                     }
 
                     @Override
                     public void onFailure(Throwable t) {
-                        String rejectionMessage;
                         if (t instanceof RejectedTransactionException) {
-                            rejectionMessage = ((RejectedTransactionException) t)
-                                    .getRejectMessage().getReasonString();
+                            liveData.postValue(new Resource<>(ErrorType.TX_REJECT_DUP_USERNAME, null));
                         } else {
-                            rejectionMessage = t.getMessage();
+                            liveData.postValue(new Resource<>(ErrorType.DEFAULT, null));
                         }
-                        liveData.postValue(new Resource<>(Status.ERROR, null, rejectionMessage));
                     }
                 });
             } catch (InsufficientMoneyException e) {
-                //TODO: Handle error
-                e.printStackTrace();
-            }
-        });
+                liveData.postValue(new Resource<>(ErrorType.INSUFFICIENT_MONEY, null)); } });
 
         return liveData;
     }
@@ -140,17 +136,17 @@ public class BlockchainUserRepository {
 
     public LiveData<Resource<BlockchainUser>> getUser() {
         MutableLiveData<Resource<BlockchainUser>> liveData = new MutableLiveData<>();
-        liveData.postValue(new Resource<>(Status.LOADING, null, null));
+        liveData.postValue(new Resource<>(LoadingType.DEFAULT, null));
         executor.execute(() -> {
             try {
                 BlockchainUser blockchainUser = AppDatabase.getAppDatabase().blockchainUserDao().getSync();
                 if (blockchainUser != null) {
-                    liveData.postValue(new Resource<>(Status.SUCCESS, blockchainUser, null));
+                    liveData.postValue(new Resource<>(SuccessType.DEFAULT, blockchainUser));
                 } else {
-                    liveData.postValue(new Resource<>(Status.SUCCESS, null, "User not found"));
+                    liveData.postValue(new Resource<>(SuccessType.DEFAULT, null));
                 }
             } catch (Exception e) {
-                liveData.postValue(new Resource<>(Status.ERROR, null, e.getLocalizedMessage()));
+                liveData.postValue(new Resource<>(ErrorType.DEFAULT, null));
             }
         });
         return liveData;

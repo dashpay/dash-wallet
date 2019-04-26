@@ -20,8 +20,6 @@ package de.schildbach.wallet.data;
 /**
  * @author Samuel Barbosa
  */
-public enum Status {
-    SUCCESS,
-    ERROR,
-    LOADING
+public enum SuccessType implements StatusType {
+    DEFAULT
 }
