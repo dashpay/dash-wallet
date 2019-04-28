@@ -20,6 +20,9 @@ package de.schildbach.wallet.ui;
 import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.ClipData;
+import android.content.ClipDescription;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnCancelListener;
@@ -148,6 +151,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private CanAutoLockGuard canAutoLockGuard;
 
+    private ClipboardManager clipboardManager;
+
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -204,6 +209,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (!veryFirstLaunch) {
             canAutoLockGuard.register(true);
         }
+        this.clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
     }
 
     @Override
@@ -357,31 +363,34 @@ public final class WalletActivity extends AbstractBindServiceActivity
     public void onActivityResult(final int requestCode, final int resultCode, final Intent intent) {
         if (requestCode == REQUEST_CODE_SCAN && resultCode == Activity.RESULT_OK) {
             final String input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT);
-
-            new StringInputParser(input) {
-                @Override
-                protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
-                    SendCoinsActivity.start(WalletActivity.this, paymentIntent);
-                }
-
-                @Override
-                protected void handlePrivateKey(final VersionedChecksummedBytes key) {
-                    SweepWalletActivity.start(WalletActivity.this, key);
-                }
-
-                @Override
-                protected void handleDirectTransaction(final Transaction tx) throws VerificationException {
-                    application.processDirectTransaction(tx);
-                }
-
-                @Override
-                protected void error(final int messageResId, final Object... messageArgs) {
-                    dialog(WalletActivity.this, null, R.string.button_scan, messageResId, messageArgs);
-                }
-            }.parse();
+            handleString(input);
         } else {
             super.onActivityResult(requestCode, resultCode, intent);
         }
+    }
+
+    private void handleString(String input) {
+        new StringInputParser(input) {
+            @Override
+            protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
+                SendCoinsActivity.start(WalletActivity.this, paymentIntent);
+            }
+
+            @Override
+            protected void handlePrivateKey(final VersionedChecksummedBytes key) {
+                SweepWalletActivity.start(WalletActivity.this, key);
+            }
+
+            @Override
+            protected void handleDirectTransaction(final Transaction tx) throws VerificationException {
+                application.processDirectTransaction(tx);
+            }
+
+            @Override
+            protected void error(final int messageResId, final Object... messageArgs) {
+                dialog(WalletActivity.this, null, R.string.button_scan, messageResId, messageArgs);
+            }
+        }.parse();
     }
 
     @Override
@@ -454,6 +463,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
             case R.id.wallet_options_help:
                 HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_wallet);
                 return true;
+
+            case R.id.options_paste:
+                handlePaste();
+                return true;
+
         }
 
         return super.onOptionsItemSelected(item);
@@ -556,6 +570,23 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
         };
         dialog.show();
+    }
+
+    private void handlePaste() {
+        if (clipboardManager.hasPrimaryClip()) {
+            final ClipData clip = clipboardManager.getPrimaryClip();
+            if (clip == null) {
+                return;
+            }
+            final ClipDescription clipDescription = clip.getDescription();
+            if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
+                final CharSequence clipText = clip.getItemAt(0).getText();
+                if (clipText != null) {
+                    final String input = clipText.toString();
+                    handleString(input);
+                }
+            }
+        }
     }
 
     private void enableFingerprint() {

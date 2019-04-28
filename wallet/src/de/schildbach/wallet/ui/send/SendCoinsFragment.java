@@ -734,24 +734,6 @@ public final class SendCoinsFragment extends Fragment {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             initFingerprintHelper();
         }
-        checkClip();
-    }
-
-    private void checkClip() {
-        if (clipboardManager.hasPrimaryClip()) {
-            final ClipData clip = clipboardManager.getPrimaryClip();
-            if (clip == null) {
-                return;
-            }
-            final ClipDescription clipDescription = clip.getDescription();
-            if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
-                final CharSequence clipText = clip.getItemAt(0).getText();
-                if (clipText != null) {
-                    final String input = clipText.toString();
-                    handleString(input);
-                }
-            }
-        }
     }
 
     @Override
@@ -915,6 +897,10 @@ public final class SendCoinsFragment extends Fragment {
 
             case R.id.send_coins_options_empty:
                 handleEmpty();
+                return true;
+
+            case R.id.options_paste:
+                handlePaste();
                 return true;
         }
 
@@ -1253,6 +1239,23 @@ public final class SendCoinsFragment extends Fragment {
 
             updateView();
             handler.post(dryrunRunnable);
+        }
+    }
+
+    private void handlePaste() {
+        if (clipboardManager.hasPrimaryClip()) {
+            final ClipData clip = clipboardManager.getPrimaryClip();
+            if (clip == null) {
+                return;
+            }
+            final ClipDescription clipDescription = clip.getDescription();
+            if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
+                final CharSequence clipText = clip.getItemAt(0).getText();
+                if (clipText != null) {
+                    final String input = clipText.toString();
+                    handleString(input);
+                }
+            }
         }
     }
 

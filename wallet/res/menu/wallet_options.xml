@@ -35,5 +35,10 @@
         android:showAsAction="never"
         android:title="@string/preferences_report_issue_title"/>
 
-
+	<item
+		android:id="@+id/options_paste"
+		android:icon="@drawable/ic_content_paste_white_24dp"
+		android:title="@string/options_paste_from_clipboard_title"
+		android:titleCondensed="@string/button_paste"
+		app:showAsAction="never" />
 </menu>
