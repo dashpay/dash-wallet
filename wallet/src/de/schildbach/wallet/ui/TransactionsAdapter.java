@@ -34,6 +34,7 @@ import org.bitcoinj.core.Transaction.Purpose;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.core.TransactionLockRequest;
+import org.bitcoinj.evolution.SubTxRegister;
 import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.DefaultCoinSelector;
@@ -481,9 +482,14 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                             Constants.ADDRESS_ROW_FORMAT_LINE_SIZE));
                 }
             } else {
-                addressView.setTextColor(lessSignificantColor);
-                addressView.setTypeface(Typeface.DEFAULT);
-                addressView.setText("?");
+                if (tx.getExtraPayloadObject() instanceof SubTxRegister) {
+                    String username = ((SubTxRegister) tx.getExtraPayloadObject()).getUserName();
+                    addressView.setText(Html.fromHtml("<b>"+ username + "</b> username registration"));
+                } else {
+                    addressView.setTextColor(lessSignificantColor);
+                    addressView.setTypeface(Typeface.DEFAULT);
+                    addressView.setText("?");
+                }
             }
             addressView.setSingleLine(!itemView.isActivated());
 
