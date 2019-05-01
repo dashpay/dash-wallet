@@ -1,4 +1,10 @@
 Dash Wallet
+v6.4.3
+* Fix Paper Wallet Sweep Crash from invalid electrum response
+* Support self-signed SSL certificates for connecting to electrum servers.
+* Reduces the likelyhood of slow sending
+* Update to DashJ 0.15.3
+    - Optimize handling of DMN Lists to speed up sending
 
 v6.4.2
 * Fix Application Not Responding error on app startup/network reconnect
