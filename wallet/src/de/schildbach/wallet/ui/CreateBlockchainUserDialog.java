@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui;
 
 import android.app.Dialog;
 import android.arch.lifecycle.LiveData;
-import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.DialogInterface;
 import android.os.Bundle;
@@ -29,17 +28,20 @@ import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AlertDialog;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.Transaction;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.spongycastle.crypto.params.KeyParameter;
 
 import java.util.Arrays;
+import java.util.regex.Pattern;
 
 import de.schildbach.wallet.data.ErrorType;
 import de.schildbach.wallet.data.LoadingType;
@@ -82,29 +84,30 @@ public class CreateBlockchainUserDialog extends DialogFragment {
         Dialog dialog = dialogBuilder.create();
 
         dialog.setOnShowListener(dialogInterface -> {
-            ((AlertDialog) dialog).getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(v -> {
-                String username = usernameTextView.getText().toString();
-                LiveData<Resource<Transaction>> liveData = viewModel
-                        .createBlockchainUser(username, getArguments().getByteArray(ARG_ENCRYPTION_KEY));
-                liveData.observe(this, transactionResource -> {
-                    StatusType status = transactionResource.status;
-                    if (Arrays.asList(SuccessType.values()).contains(status)) {
-                        Toast.makeText(getActivity(), "Success. Username " + username + " registered.",
-                                Toast.LENGTH_SHORT).show();
-                        dismiss();
-                    } else if (Arrays.asList(LoadingType.values()).contains(status)) {
-                        showLoading();
-                    } else {
-                        hideLoading();
-                        if (ErrorType.INSUFFICIENT_MONEY.equals(status)) {
-                            Toast.makeText(getActivity(), "Not enough minerals", Toast.LENGTH_SHORT).show();
-                        } else if (ErrorType.TX_REJECT_DUP_USERNAME.equals(status)) {
-                            Toast.makeText(getActivity(), "Error. This username is already registered.", Toast.LENGTH_LONG).show();
-                        } else {
-                            Toast.makeText(getActivity(), "Unknown error.", Toast.LENGTH_LONG).show();
-                        }
-                    }
-                });
+            Button createButton = ((AlertDialog) dialog).getButton(DialogInterface.BUTTON_POSITIVE);
+            createButton.setEnabled(false);
+            Pattern pattern = Pattern.compile("[^a-z0-9._]");
+            usernameTextView.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void afterTextChanged(Editable editable) {
+                    boolean valid = !pattern.matcher(editable.toString()).find();
+                    int length = editable.length();
+                    valid = valid && length >= 3 && length <= 24;
+                    createButton.setEnabled(valid);
+                }
+
+                @Override
+                public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+                }
+
+                @Override
+                public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+                }
+            });
+            createButton.setOnClickListener(v -> {
+                createBlockchainUser(usernameTextView.getText().toString(), viewModel);
             });
         });
 
@@ -115,6 +118,30 @@ public class CreateBlockchainUserDialog extends DialogFragment {
     public void onDismiss(DialogInterface dialog) {
         hideLoading();
         super.onDismiss(dialog);
+    }
+
+    private void createBlockchainUser(String username, BlockchainUserViewModel viewModel) {
+        LiveData<Resource<Transaction>> liveData = viewModel
+                .createBlockchainUser(username, getArguments().getByteArray(ARG_ENCRYPTION_KEY));
+        liveData.observe(this, transactionResource -> {
+            StatusType status = transactionResource.status;
+            if (Arrays.asList(SuccessType.values()).contains(status)) {
+                Toast.makeText(getActivity(), "Success. Username " + username + " registered.",
+                        Toast.LENGTH_SHORT).show();
+                dismiss();
+            } else if (Arrays.asList(LoadingType.values()).contains(status)) {
+                showLoading();
+            } else {
+                hideLoading();
+                if (ErrorType.INSUFFICIENT_MONEY.equals(status)) {
+                    Toast.makeText(getActivity(), "Not enough minerals", Toast.LENGTH_SHORT).show();
+                } else if (ErrorType.TX_REJECT_DUP_USERNAME.equals(status)) {
+                    Toast.makeText(getActivity(), "Error. This username is already registered.", Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(getActivity(), "Unknown error.", Toast.LENGTH_LONG).show();
+                }
+            }
+        });
     }
 
     private void showLoading() {
