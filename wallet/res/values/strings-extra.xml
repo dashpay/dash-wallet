@@ -100,4 +100,6 @@
 
 	<string name="preferences_enable_payment_request_summary">Use payment protocol for QR-code initiated payments</string>
 	<string name="preferences_enable_payment_request_title">BIP70 for scan-to-pay</string>
+
+	<string name="contacts">Contacts</string>
 </resources>

@@ -1168,6 +1168,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
             handleDisconnect();
         } else if (id == R.id.nav_report_issue) {
             handleReportIssue();
+        } else if (id == R.id.nav_contacts) {
+            startActivity(new Intent(this, ContactsActivity.class));
         }
 
         viewDrawer.closeDrawer(GravityCompat.START);
