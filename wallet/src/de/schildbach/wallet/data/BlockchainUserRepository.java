@@ -19,6 +19,7 @@ package de.schildbach.wallet.data;
 
 import android.arch.lifecycle.LiveData;
 import android.arch.lifecycle.MutableLiveData;
+import android.arch.lifecycle.Transformations;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.FutureCallback;
@@ -56,9 +57,11 @@ public class BlockchainUserRepository {
 
     private Executor executor;
     private static BlockchainUserRepository instance;
+    private MutableLiveData<Resource<BlockchainUser>> userLiveData;
 
     private BlockchainUserRepository() {
         executor = Executors.newSingleThreadExecutor();
+        userLiveData = new MutableLiveData<>();
     }
 
     public static BlockchainUserRepository getInstance() {
@@ -135,21 +138,9 @@ public class BlockchainUserRepository {
     }
 
     public LiveData<Resource<BlockchainUser>> getUser() {
-        MutableLiveData<Resource<BlockchainUser>> liveData = new MutableLiveData<>();
-        liveData.postValue(new Resource<>(LoadingType.DEFAULT, null));
-        executor.execute(() -> {
-            try {
-                BlockchainUser blockchainUser = AppDatabase.getAppDatabase().blockchainUserDao().getSync();
-                if (blockchainUser != null) {
-                    liveData.postValue(new Resource<>(SuccessType.DEFAULT, blockchainUser));
-                } else {
-                    liveData.postValue(new Resource<>(SuccessType.DEFAULT, null));
-                }
-            } catch (Exception e) {
-                liveData.postValue(new Resource<>(ErrorType.DEFAULT, null));
-            }
-        });
-        return liveData;
+        userLiveData.postValue(new Resource<>(LoadingType.DEFAULT, null));
+        LiveData<BlockchainUser> buLiveData = AppDatabase.getAppDatabase().blockchainUserDao().get();
+        return Transformations.map(buLiveData, input -> new Resource<>(SuccessType.DEFAULT, input));
     }
 
 }
