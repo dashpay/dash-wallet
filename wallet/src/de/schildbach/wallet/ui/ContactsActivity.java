@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui;
 
 import android.arch.lifecycle.ViewModelProviders;
 import android.os.Bundle;
+import android.view.MenuItem;
 import android.widget.Toast;
 
 import java.util.Arrays;
@@ -66,6 +67,17 @@ public class ContactsActivity extends AbstractBindServiceActivity {
     protected void onDestroy() {
         super.onDestroy();
         hideLoading();
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(final MenuItem item) {
+        switch (item.getItemId()) {
+        case android.R.id.home:
+            finish();
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
     }
 
     private void showCreateUserDialog() {
