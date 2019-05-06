@@ -298,7 +298,6 @@
 	<string name="notification_peers_connected_msg">%dピアが接続済</string>
 	<string name="notification_inactivity_title">あなたはまだこのデバイスにDashを保有しています！</string>
 	<string name="notification_inactivity_message">保有残高を出金せずにDashウォレットアプリをアインインストールした場合、あなたは %s を失います。</string>
-	<string name="notification_inactivity_message_donate">あなたがコインを必要としない場合は、Dashウォレットプロジェクトに寄付することもできます。</string>
 	<string name="notification_inactivity_action_dismiss">後で通知する</string>
 	<string name="notification_inactivity_action_dismiss_forever">今後通知しない</string>
 	<string name="appwidget_wallet_balance_title">Dash残高</string>

@@ -298,7 +298,6 @@
     <string name="notification_peers_connected_msg">%d peers connected</string>
     <string name="notification_inactivity_title">Mayroon ka pang Dash sa device na ito!</string>
     <string name="notification_inactivity_message">Alalahanin na ang iyong balanse na %s ay mawawala kapag in-uninstall mo ang Dash Wallet app ng hindi ito pinapamahagi muna.</string>
-    <string name="notification_inactivity_message_donate">Kung wala kang pakialam sa iyong mga barya, maaari mo rin itong ihandog sa proyekto ng Dash Wallet.</string>
     <string name="notification_inactivity_action_dismiss">Paalalahanan mo ako mamaya</string>
     <string name="notification_inactivity_action_dismiss_forever">Wag mo akong paalalahanan</string>
     <string name="appwidget_wallet_balance_title">Balanse ng Dash</string>

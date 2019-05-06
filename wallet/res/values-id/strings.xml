@@ -305,7 +305,6 @@
 	<string name="notification_peers_connected_msg">%d peer terhubung</string>
 	<string name="notification_inactivity_title">Anda masih memiliki Dash di perangkat ini!</string>
 	<string name="notification_inactivity_message">Ingat saldo Anda %sakan hilang jika Anda menghapus aplikasi Dash Wallet tanpa mengirimnya terlebih dahulu.</string>
-	<string name="notification_inactivity_message_donate">Jika Anda tidak peduli dengan koin Anda, Anda juga bisa menyumbangkannya ke proyek  dompet Dash.</string>
 	<string name="notification_inactivity_action_dismiss">Ingatkan saya nanti</string>
 	<string name="notification_inactivity_action_dismiss_forever">Jangan ingatkan saya</string>
 	<string name="appwidget_wallet_balance_title">Saldo Dash</string>

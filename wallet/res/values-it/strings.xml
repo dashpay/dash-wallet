@@ -298,7 +298,6 @@
     <string name="notification_peers_connected_msg">Connesso a %d peers</string>
     <string name="notification_inactivity_title">Hai ancora Dash su questo dispositivo!</string>
     <string name="notification_inactivity_message">Ricorda che il tuo bilancio di %s andrà perso se si disinstalla l\'app Dash Wallet , quindi esegui beckup o sposta i tuoi Dash prima di procedere.</string>
-    <string name="notification_inactivity_message_donate">Se non ti importa delle tue monete, puoi anche donarle al progetto Dash Wallet.</string>
     <string name="notification_inactivity_action_dismiss">Ricordamelo in seguito</string>
     <string name="notification_inactivity_action_dismiss_forever">Non ricordarmelo</string>
     <string name="appwidget_wallet_balance_title">Bilancio Dash</string>

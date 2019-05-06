@@ -305,7 +305,6 @@
 	<string name="notification_peers_connected_msg">الأقران المتصلة peers %d </string>
 	<string name="notification_inactivity_title">لا يزال لديك داش على هذا الجهاز!</string>
 	<string name="notification_inactivity_message">تذكر سيتم فقدان رصيدك%s إذا قمت بإلغاء تثبيت التطبيق محفظة داش دون إرساله بعيدا أولا.</string>
-	<string name="notification_inactivity_message_donate">إذا كنت لا يهتمون القطع النقدية الخاصة بك، هل يمكن أيضا التبرع لهم لمشروع محفظة داش.</string>
 	<string name="notification_inactivity_action_dismiss">ذكرني لاحقا</string>
 	<string name="notification_inactivity_action_dismiss_forever">لا تذكرني</string>
 	<string name="appwidget_wallet_balance_title">داش التوازن</string>

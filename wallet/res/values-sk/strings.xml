@@ -305,7 +305,6 @@
     <string name="notification_peers_connected_msg">%d pripojených uzlov</string>
     <string name="notification_inactivity_title">Na zariadení máte stále ešte mince!</string>
     <string name="notification_inactivity_message">Pamätajte, že stratíte zostatok %s v prípade, ak ho neodošlete skôr ako odinštalujete aplikáciu peňaženky Dash.</string>
-    <string name="notification_inactivity_message_donate">Ak je Vám to jedno, môžete tento zostatok venovať projektu Dash Wallet.</string>
     <string name="notification_inactivity_action_dismiss">Pripomenúť neskôr </string>
     <string name="notification_inactivity_action_dismiss_forever">Nepripomínať</string>
     <string name="appwidget_wallet_balance_title">Bilancia Dash</string>

@@ -298,7 +298,6 @@
     <string name="notification_peers_connected_msg">%d mạng ngang hàng đã kết nối</string>
     <string name="notification_inactivity_title">Bạn vẫn còn Dash trong thiết bị này!</string>
     <string name="notification_inactivity_message">Hãy nhớ là số dư %s của bạn sẽ bị mất nếu bạn gỡ ứng dụng Ví Dash này mà không gửi tiền đi đâu đó trước.</string>
-    <string name="notification_inactivity_message_donate">Nếu bạn không bận tâm về số tiền của bạn, bạn có thể đóng góp ủng hộ cho dự án Dash Wallet.</string>
     <string name="notification_inactivity_action_dismiss">Hãy nhắc tôi sau</string>
     <string name="notification_inactivity_action_dismiss_forever">Đừng nhắc tôi nữa</string>
     <string name="appwidget_wallet_balance_title">Số dư Dash</string>

@@ -305,7 +305,6 @@
     <string name="notification_peers_connected_msg">%d eş bağlı</string>
     <string name="notification_inactivity_title">Bu cihazda hâlâ Dash var!</string>
     <string name="notification_inactivity_message">%s Dash\'lik bakiyenizi unutmayın, bakiyenizi başka bir yere aktarmadan Dash Wallet uygulamasını silerseniz bakiyeniz kaybolacaktır.</string>
-    <string name="notification_inactivity_message_donate">Eğer Dash\'lerinizi önemsemiyorsanız, onları Dash Wallet projesine bağışlayabilirsiniz.</string>
     <string name="notification_inactivity_action_dismiss">Daha sonra hatırlat</string>
     <string name="notification_inactivity_action_dismiss_forever">Hatırlatma</string>
     <string name="appwidget_wallet_balance_title">Dash bakiyesi</string>

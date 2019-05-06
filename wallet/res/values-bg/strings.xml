@@ -300,7 +300,6 @@
     <string name="notification_peers_connected_msg">%d пиъри са свързани</string>
     <string name="notification_inactivity_title">Все още имате Dash на това устройство!</string>
     <string name="notification_inactivity_message">Запомнете, вашият баланс от %s  ще бъде загубен, ако деинсталирате приложението на Dash портфейла преди да го прехвърлите.</string>
-    <string name="notification_inactivity_message_donate">Ако не ви е грижа за вашите монети, вие може да ги дарите за Dash проекта.</string>
     <string name="notification_inactivity_action_dismiss">Напомни ми по-късно</string>
     <string name="notification_inactivity_action_dismiss_forever">Не ми напомняй</string>
     <string name="appwidget_wallet_balance_title">Dash баланс</string>

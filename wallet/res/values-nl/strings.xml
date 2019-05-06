@@ -300,7 +300,6 @@
     <string name="notification_peers_connected_msg">%d actieve verbindingen</string>
     <string name="notification_inactivity_title">U heeft nog Dash op dit apparaat!</string>
     <string name="notification_inactivity_message">Uw saldo van %s Dash zal verloren gaan als u de Dash portemonnee de-installeert zonder dit saldo eerst naar een ander adres te verzenden. </string>
-    <string name="notification_inactivity_message_donate">Als u uw coins niet meer nodig heeft, kunt u ze ook doneren aan het Dash-portemonneeproject.</string>
     <string name="notification_inactivity_action_dismiss">Herinner me later</string>
     <string name="notification_inactivity_action_dismiss_forever">Herinner me niet</string>
     <string name="appwidget_wallet_balance_title">Dash-saldo</string>

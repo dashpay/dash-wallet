@@ -300,7 +300,6 @@
     <string name="notification_peers_connected_msg">подключено %d участников</string>
     <string name="notification_inactivity_title">У вас все еще есть некоторое количество дэш на этом устройстве!</string>
     <string name="notification_inactivity_message">Помните, что при удалении приложения ваш баланс в размере %s будет потерян, если вы предварительно не отправите средства на другой адрес и не сохраните информацию для восстановления кошелька.</string>
-    <string name="notification_inactivity_message_donate">Если вы не слишком беспокоитесь о ваших средствах, то можете, например, пожертвовать их нашему проекту.</string>
     <string name="notification_inactivity_action_dismiss">Напомнить мне позже</string>
     <string name="notification_inactivity_action_dismiss_forever">Не напоминать мне</string>
     <string name="appwidget_wallet_balance_title">Баланс</string>

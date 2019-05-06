@@ -298,7 +298,6 @@
     <string name="notification_peers_connected_msg">%d peer-uri conectați </string>
     <string name="notification_inactivity_title">Încă ai Dash pe acest dispozitiv!</string>
     <string name="notification_inactivity_message">Ține minte soldul tău %s va fi pierdut dacă dezinstalezi aplicația portofelului Dash înainte să-l trimiți mai întâi.</string>
-    <string name="notification_inactivity_message_donate">Dacă nu îți pasă de monedele tale, le poți dona proiectului portofelului Dash.</string>
     <string name="notification_inactivity_action_dismiss">Amintește-mi mai târziu</string>
     <string name="notification_inactivity_action_dismiss_forever">Nu-mi aminti</string>
     <string name="appwidget_wallet_balance_title">Sold Dash</string>

@@ -286,7 +286,6 @@
     <string name="notification_peers_connected_msg">%d peerů připojeno</string>
     <string name="notification_inactivity_title">Na zařízení máte stále ještě mince!</string>
     <string name="notification_inactivity_message">Pamatujte, že v případě, že neodešlete zůstatek %s dříve než odinstalujete aplikaci peněženky Dash, přijdete o něj.</string>
-    <string name="notification_inactivity_message_donate">Pokud je vám to jedno, můžete tento zůstatek věnovat na projekt Dash Wallet.</string>
     <string name="notification_inactivity_action_dismiss">Připomenout později</string>
     <string name="notification_inactivity_action_dismiss_forever">Nepřipomínat</string>
     <!-- generic buttons -->

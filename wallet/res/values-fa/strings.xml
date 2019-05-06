@@ -305,7 +305,6 @@
     <string name="notification_peers_connected_msg">%d همتا متصل وجود دارد. </string>
     <string name="notification_inactivity_title">هنوز مقداری دش بر روی دستگاه خود دارید!</string>
     <string name="notification_inactivity_message">به یاد داشته باشید که %s موجودd شما در صورت حذف اپلیکیشن دش والت از بین خواهد رفت، مگر اینکه این موجودی را ابتدا به جایی دیگر منتقل کنید.</string>
-    <string name="notification_inactivity_message_donate">اگر برنامه خاصی برای موجودی‌تان ندارید، می‌توانید آنها را به پروژه دش والت اهدا کنید. </string>
     <string name="notification_inactivity_action_dismiss">بعدا یادآوری کن!</string>
     <string name="notification_inactivity_action_dismiss_forever">دیگر یادآوری نکن!</string>
     <string name="appwidget_wallet_balance_title">موجودی دش</string>

@@ -304,7 +304,6 @@
     <string name="notification_peers_connected_msg">%d povezanih čvorova</string>
     <string name="notification_inactivity_title">Još uvek imate Dash-a na ovom uređaju!</string>
     <string name="notification_inactivity_message">Imajte na umu da će vaše stanje od %s biti izgubljeno ako deinstalirate Dash Wallet aplikaciju pre nego što pošaljete negde taj iznos.</string>
-    <string name="notification_inactivity_message_donate">Ako vam nije stalo do vaših novčića uvek ih možete donirati Dash Wallet projektu. </string>
     <string name="notification_inactivity_action_dismiss">Podseti me kasnije</string>
     <string name="notification_inactivity_action_dismiss_forever">Nemoj me podsećati</string>
     <string name="appwidget_wallet_balance_title">Dash stanje</string>

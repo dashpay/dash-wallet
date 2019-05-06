@@ -38,6 +38,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
@@ -62,7 +63,6 @@ public final class InactivityNotificationService extends Service {
             + ".dismiss";
     private static final String ACTION_DISMISS_FOREVER = InactivityNotificationService.class.getPackage().getName()
             + ".dismiss_forever";
-    private static final String ACTION_DONATE = InactivityNotificationService.class.getPackage().getName() + ".donate";
 
     private static final Logger log = LoggerFactory.getLogger(InactivityNotificationService.class);
 
@@ -88,8 +88,6 @@ public final class InactivityNotificationService extends Service {
             handleDismiss();
         else if (ACTION_DISMISS_FOREVER.equals(intent.getAction()))
             handleDismissForever();
-        else if (ACTION_DONATE.equals(intent.getAction()))
-            handleDonate();
         else
             handleMaybeShowNotification();
 
@@ -99,25 +97,17 @@ public final class InactivityNotificationService extends Service {
     private void handleMaybeShowNotification() {
         final Coin estimatedBalance = wallet.getBalance(BalanceType.ESTIMATED_SPENDABLE);
 
-        if (estimatedBalance.isPositive()) {
+        if (estimatedBalance.isPositive() && config.remindBackupSeed()) {
             log.info("detected balance, showing inactivity notification");
-
-            final Coin availableBalance = wallet.getBalance(BalanceType.AVAILABLE_SPENDABLE);
-            final boolean canDonate = Constants.DONATION_ADDRESS != null && availableBalance.isPositive();
-
             final MonetaryFormat btcFormat = config.getFormat();
             final String title = getString(R.string.notification_inactivity_title);
             final StringBuilder text = new StringBuilder(
                     getString(R.string.notification_inactivity_message, btcFormat.format(estimatedBalance)));
-            if (canDonate)
-                text.append("\n\n").append(getString(R.string.notification_inactivity_message_donate));
 
             final Intent dismissIntent = new Intent(this, InactivityNotificationService.class);
             dismissIntent.setAction(ACTION_DISMISS);
             final Intent dismissForeverIntent = new Intent(this, InactivityNotificationService.class);
             dismissForeverIntent.setAction(ACTION_DISMISS_FOREVER);
-            final Intent donateIntent = new Intent(this, InactivityNotificationService.class);
-            donateIntent.setAction(ACTION_DONATE);
 
             final NotificationCompat.Builder notification = new NotificationCompat.Builder(this,
                     Constants.NOTIFICATION_CHANNEL_ID_TRANSACTIONS);
@@ -128,17 +118,13 @@ public final class InactivityNotificationService extends Service {
             notification
                     .setContentIntent(PendingIntent.getActivity(this, 0, new Intent(this, WalletActivity.class), 0));
             notification.setAutoCancel(true);
-            if (!canDonate)
-                notification.addAction(new NotificationCompat.Action.Builder(0,
-                        getString(R.string.notification_inactivity_action_dismiss),
-                        PendingIntent.getService(this, 0, dismissIntent, 0)).build());
             notification.addAction(new NotificationCompat.Action.Builder(0,
                     getString(R.string.notification_inactivity_action_dismiss_forever),
                     PendingIntent.getService(this, 0, dismissForeverIntent, 0)).build());
-            if (canDonate)
-                notification
-                        .addAction(new NotificationCompat.Action.Builder(0, getString(R.string.wallet_options_donate),
-                                PendingIntent.getService(this, 0, donateIntent, 0)).build());
+            notification.addAction(new NotificationCompat.Action.Builder(0,
+                    getString(R.string.button_dismiss),
+                    PendingIntent.getService(this, 0, dismissIntent, 0)).build());
+
             Notification inactivityNotification = notification.build();
             startForeground(Constants.NOTIFICATION_ID_INACTIVITY, inactivityNotification);
         } else {
@@ -149,7 +135,12 @@ public final class InactivityNotificationService extends Service {
             invisibleNotification.setPriority(Notification.PRIORITY_MIN);
             startForeground(Constants.NOTIFICATION_ID_INACTIVITY, invisibleNotification.build());
 
-            stopForeground(true);
+            new Handler().post(new Runnable() {
+                @Override
+                public void run() {
+                    stopForeground(true);
+                }
+            });
         }
     }
 
@@ -162,13 +153,5 @@ public final class InactivityNotificationService extends Service {
         log.info("dismissing inactivity notification forever");
         config.setRemindBalance(false);
         stopForeground(true);
-    }
-
-    private void handleDonate() {
-        final Coin balance = wallet.getBalance(BalanceType.AVAILABLE_SPENDABLE);
-        SendCoinsActivity.startDonate(this, balance, FeeCategory.ECONOMIC,
-                Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        stopForeground(true);
-        sendBroadcast(new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
     }
 }

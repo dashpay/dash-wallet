@@ -303,7 +303,6 @@
     <string name="notification_peers_connected_msg">%d 節點連線</string>
     <string name="notification_inactivity_title">你在這個裝置上還存放有達世幣!</string>
     <string name="notification_inactivity_message">請緊記如果您卸載達世幣錢包前沒有把餘額發送出去的話，在你的錢包中的%s餘額將會丟失。</string>
-    <string name="notification_inactivity_message_donate">如果你不在乎你的資金，你可以把它捐給達世幣錢包項目。</string>
     <string name="notification_inactivity_action_dismiss">稍後提醒我</string>
     <string name="notification_inactivity_action_dismiss_forever">不要提醒我</string>
     <string name="appwidget_wallet_balance_title">達世幣結餘</string>

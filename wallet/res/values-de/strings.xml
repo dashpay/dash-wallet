@@ -301,7 +301,6 @@
     <string name="notification_peers_connected_msg">%d Peers verbunden</string>
     <string name="notification_inactivity_title">Es befinden sich immer noch Dash auf Ihrem Gerät.</string>
     <string name="notification_inactivity_message">Vergiss bitte nicht, dass Dein Guthaben in Höhe von %s verloren gehen wird, wenn Du Deine Dash Wallet App deinstallieren, ohne vorher alles an eine andere Adresse überwiesen zu haben. </string>
-    <string name="notification_inactivity_message_donate">Wenn Du kein Interesse mehr an Deinen Coins hast, dann kannst Du diese auch dem Dash Wallet Projekt spenden.</string>
     <string name="notification_inactivity_action_dismiss">Später erinnern</string>
     <string name="notification_inactivity_action_dismiss_forever">Nicht weiter erinnern</string>
     <string name="appwidget_wallet_balance_title">Dash-Guthaben</string>

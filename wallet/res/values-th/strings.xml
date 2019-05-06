@@ -300,7 +300,6 @@
     <string name="notification_peers_connected_msg">%d peers ที่เชื่อมต่อ</string>
     <string name="notification_inactivity_title">คุณยังคงมี Dash อยู่บนอุปกรณ์นี้!</string>
     <string name="notification_inactivity_message">โปรดทราบว่ายอดคงเหลือของคุณ%sจะสูญหายไปหากคุณถอนการติดตั้งแอพพลิเคชั่น Wallet Dash โดยไม่ส่งมันออกไปก่อน</string>
-    <string name="notification_inactivity_message_donate">การสำรองข้อมูลของคุณจะได้รับการเข้ารหัสด้วยรหัสผ่านที่คุณเลือกและที่ถูกเขียนไปยังที่เก็บข้อมูลภายนอก</string>
     <string name="notification_inactivity_action_dismiss">เตือนฉันภายหลัง</string>
     <string name="notification_inactivity_action_dismiss_forever">ไม่ต้องเตือนฉัน</string>
     <string name="appwidget_wallet_balance_title">ยอดคงเหลือ Dash</string>

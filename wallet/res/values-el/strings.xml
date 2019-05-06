@@ -305,7 +305,6 @@
     <string name="notification_peers_connected_msg">%d χρήστες συνδεμένοι</string>
     <string name="notification_inactivity_title">Έχετε ακόμα Dash σε αυτή την συσκευή!</string>
     <string name="notification_inactivity_message">Να θυμάστε ότι το υπόλοιπο %s θα χαθεί αν κάνετε uninstall της Dash Wallet app χωρίς να τα έχετε στείλει πρώτα κάπου.</string>
-    <string name="notification_inactivity_message_donate">Αν δεν σας νοιάζει για τα νομίσματά σας, θα μπορούσατε να τα δωρίσετε στο Dash Wallet project.</string>
     <string name="notification_inactivity_action_dismiss">Υπενθυμίστε το μου αργότερα</string>
     <string name="notification_inactivity_action_dismiss_forever">Μήν μου το υπενθυμίσετε</string>
     <string name="appwidget_wallet_balance_title">Υπόλοιπο Dash</string>

@@ -300,7 +300,6 @@
     <string name="notification_peers_connected_msg">%d pairs connectés</string>
     <string name="notification_inactivity_title">Il vous reste des dashs sur cet appareil !</string>
     <string name="notification_inactivity_message">Attention : votre solde de %s sera perdu si vous désinstallez l\'application portefeuille Dash sans avoir fait d\'abord un virement externe.</string>
-    <string name="notification_inactivity_message_donate">Si vos fonds ne vous intéressent pas, vous pouvez faire un don au projet Dash Wallet.</string>
     <string name="notification_inactivity_action_dismiss">Me le rappeler plus tard</string>
     <string name="notification_inactivity_action_dismiss_forever">Ne plus me le rappeler</string>
     <string name="appwidget_wallet_balance_title">Solde Dash</string>

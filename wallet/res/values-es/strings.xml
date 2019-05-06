@@ -300,7 +300,6 @@
     <string name="notification_peers_connected_msg">%d pares conectados</string>
     <string name="notification_inactivity_title">¡Aún tienes Dash en este dispositivo!</string>
     <string name="notification_inactivity_message">Recuerda que tu balance de %s será perdido si desinstalas el app de Dash Wallet sin enviarlo a otra cartera antes. </string>
-    <string name="notification_inactivity_message_donate">Si no te importan tus monedas, puedes donarlas al proyecto de Dash Wallet.</string>
     <string name="notification_inactivity_action_dismiss">Recuerdame despues</string>
     <string name="notification_inactivity_action_dismiss_forever">No me recuerdes</string>
     <string name="appwidget_wallet_balance_title">Saldo en Dash</string>

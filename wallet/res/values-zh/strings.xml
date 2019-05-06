@@ -300,7 +300,6 @@
     <string name="notification_peers_connected_msg">%d 个已连接的网络节点</string>
     <string name="notification_inactivity_title">您的设备中依然存有达世币！</string>
     <string name="notification_inactivity_message">请记住，若您在卸载达世币钱包app之前没有将余额 %s 转移，那您将永远失去它。</string>
-    <string name="notification_inactivity_message_donate">如果您不想要您的币了，您也可以选择把它们捐献给达世币钱包项目。</string>
     <string name="notification_inactivity_action_dismiss">以后提醒我</string>
     <string name="notification_inactivity_action_dismiss_forever">不需要提醒</string>
     <string name="appwidget_wallet_balance_title">达世币余额</string>
