@@ -49,6 +49,7 @@ import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.ui.AbstractWalletActivity;
 import de.schildbach.wallet.util.CrashReporter;
+import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
 
 import android.annotation.TargetApi;
@@ -147,7 +148,7 @@ public class WalletApplication extends Application {
         org.bitcoinj.core.Context.enableStrictMode();
         org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
 
-        log.info("=== starting app using configuration: {}, {}", Constants.TEST ? "test" : "prod",
+        log.info("=== starting app using configuration: {}, {}", BuildConfig.FLAVOR,
                 Constants.NETWORK_PARAMETERS.getId());
 
         super.onCreate();

@@ -388,7 +388,7 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
             holder.walletView.setFormat(Constants.LOCAL_FORMAT);
             if (balance != null && (blockchainState == null || !blockchainState.replaying)) {
                 holder.walletView.setAmount(rate.coinToFiat(balance));
-                holder.walletView.setStrikeThru(Constants.TEST);
+                holder.walletView.setStrikeThru(!Constants.IS_PROD_BUILD);
             } else {
                 holder.walletView.setText("n/a");
                 holder.walletView.setStrikeThru(false);

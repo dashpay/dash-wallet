@@ -24,6 +24,8 @@ import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.kits.EvolutionWalletAppKit;
+import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.MonetaryFormat;
@@ -47,17 +49,67 @@ import android.text.format.DateUtils;
  * @author Andreas Schildbach
  */
 public final class Constants {
-    public static final boolean TEST = BuildConfig.APPLICATION_ID.contains("_test");
 
     /** Network this wallet is on (e.g. testnet or mainnet). */
-    public static final NetworkParameters NETWORK_PARAMETERS = TEST ? TestNet3Params.get() : MainNetParams.get();
+    public static final NetworkParameters NETWORK_PARAMETERS;
+
+    private static String FILENAME_NETWORK_SUFFIX;
+
+    /** Currency code for the wallet name resolver. */
+    public static String WALLET_NAME_CURRENCY_CODE;
+
+    public static final String[] DNS_SEED;
+
+    public static final boolean IS_PROD_BUILD;
+
+    static {
+        switch (BuildConfig.FLAVOR) {
+            case "prod":
+            case "beta": {
+                DNS_SEED = new String[]{"dnsseed.dash.org"};
+                BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH;
+                NETWORK_PARAMETERS = MainNetParams.get();
+                IS_PROD_BUILD = true;
+                FILENAME_NETWORK_SUFFIX = "";
+                WALLET_NAME_CURRENCY_CODE = "dash";
+                break;
+            }
+            case "_testNet3": {
+                DNS_SEED = new String[]{"95.183.51.146", "35.161.101.35", "54.91.130.170"};
+                BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
+                NETWORK_PARAMETERS = TestNet3Params.get();
+                IS_PROD_BUILD = false;
+                FILENAME_NETWORK_SUFFIX = "-testnet";
+                WALLET_NAME_CURRENCY_CODE = "tdash";
+                break;
+            }
+            case "devNet": {
+                DNS_SEED = new String[]{
+                        "devnet-maithai.thephez.com",
+                        "54.187.113.35", "54.200.201.200", "34.216.233.163",
+                        "34.221.188.185", "54.189.63.67", "52.40.117.135",
+                        "54.187.111.107", "34.212.68.164", "18.237.142.23",
+                        "54.202.73.177"
+                };
+                BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
+                NETWORK_PARAMETERS = DevNetParams.get("maithai", "yMtULrhoxd8vRZrsnFobWgRTidtjg2Rnjm", 20001, DNS_SEED);
+                IS_PROD_BUILD = false;
+                FILENAME_NETWORK_SUFFIX = "-devnet";
+                WALLET_NAME_CURRENCY_CODE = "tdash";
+                break;
+
+            }
+            default: {
+                throw new IllegalStateException("Unsupported flavor " + BuildConfig.FLAVOR);
+            }
+        }
+        org.dash.wallet.common.Constants.MAX_MONEY = NETWORK_PARAMETERS.getMaxMoney();
+    }
 
     /** Bitcoinj global context. */
     public static final Context CONTEXT = new Context(NETWORK_PARAMETERS);
 
     public final static class Files {
-        private static final String FILENAME_NETWORK_SUFFIX = NETWORK_PARAMETERS.getId()
-                .equals(NetworkParameters.ID_MAINNET) ? "" : "-testnet";
 
         /** Filename of the wallet. */
         public static final String WALLET_FILENAME_PROTOBUF = "wallet-protobuf" + FILENAME_NETWORK_SUFFIX;
@@ -117,10 +169,6 @@ public final class Constants {
     /** Base URL for blockchain API. */
     public static final String BITEASY_API_URL = NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET) ? BITEASY_API_URL_PROD
             : BITEASY_API_URL_TEST;
-
-    /** Currency code for the wallet name resolver. */
-    public static final String WALLET_NAME_CURRENCY_CODE = NETWORK_PARAMETERS.getId()
-            .equals(NetworkParameters.ID_MAINNET) ? "dash" : "tdash";
 
     /** URL to fetch version alerts from. */
     public static final HttpUrl VERSION_URL = HttpUrl.parse("https://wallet.schildbach.de/version");
@@ -240,7 +288,7 @@ public final class Constants {
     public static final String WALLET_LOCK_PREFS_NAME = "wallet_lock_prefs";
 
     //BIP44 Support
-    public static final ImmutableList<ChildNumber> BIP44_PATH = TEST ? DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET : DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH;
+    public static final ImmutableList<ChildNumber> BIP44_PATH;
 
     //Backup Warnings (true = both seed and backup file, false = seed only)
     public static final boolean SUPPORT_BOTH_BACKUP_WARNINGS = false;
