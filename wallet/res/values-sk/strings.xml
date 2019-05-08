@@ -40,8 +40,6 @@
     <string name="wallet_options_encrypt_keys_set">Nastaviť PIN pre míňanie</string>
     <string name="wallet_options_encrypt_keys_change">Zmeniť PIN pre míňanie</string>
     <string name="wallet_options_safety">Bezpečnosť</string>
-    <string name="wallet_options_donate">Prispieť</string>
-    <string name="wallet_donate_address_label">Dar pre Dash peňaženku</string>
     <string name="wallet_low_storage_dialog_title">Málo vnútornej pamäte!</string>
     <string name="wallet_low_storage_dialog_msg">Peňaženka Dash používa internú pamäť pre uchovanie transakcií a blokov. Ak dôjde miesto, prestane pracovať and Vaše Dash-e budú v ohrození!\n\nChcete otvoriť správcu aplikácií a odinštalovať nepotrebné aplikácie?</string>
     <string name="wallet_low_storage_dialog_button_apps">Spravovať aplikácie</string>

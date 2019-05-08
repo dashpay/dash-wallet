@@ -40,8 +40,6 @@
     <string name="wallet_options_encrypt_keys_set">Definir PIN</string>
     <string name="wallet_options_encrypt_keys_change">Mudar PIN</string>
     <string name="wallet_options_safety">Indicações de segurança</string>
-    <string name="wallet_options_donate">Doar</string>
-    <string name="wallet_donate_address_label">Doação para a Dash Wallet</string>
     <string name="wallet_low_storage_dialog_title">Espaço de armazenamento do dispositivo interno baixo!</string>
     <string name="wallet_low_storage_dialog_msg">Dash Wallet usa armazenamento interno para guardar transações e blocos. Se ficar sem espaço, ele parará de funcionar e seu Dash estará em risco! \ N \ nVocê deseja abrir o Gerenciador de Aplicativos para desinstalar aplicativos desnecessários?</string>
     <string name="wallet_low_storage_dialog_button_apps">Gerenciar aplicativos</string>

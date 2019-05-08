@@ -40,8 +40,6 @@
     <string name="wallet_options_encrypt_keys_set">Ορίστε το PIN ξοδέματος</string>
     <string name="wallet_options_encrypt_keys_change">Άλλαξε το PIN ξοδέματος</string>
     <string name="wallet_options_safety">Οδηγίες ασφαλείας</string>
-    <string name="wallet_options_donate">Φιλοδώρημα / Δωρεά</string>
-    <string name="wallet_donate_address_label">Δωρεά για πορτοφόλι Dash</string>
     <string name="wallet_low_storage_dialog_title">Ο εσωτερικός χώρος αποθήκευσης της συσκευής είναι πολύ χαμηλός!</string>
     <string name="wallet_low_storage_dialog_msg">Το πορτοφόλι Dash χρησιμοποιεί τον εσωτερικό χώρο αποθήκευσης για να θυμάται τις συναλλαγές και τα blocks. Εάν δεν έχει χώρο, θα σταματήσει να λειτουργεί και τα χρήματά σου θα είναι σε κίνδυνο!\n\nΘες να ανοίξεις τον διαχειριστή εφαρμογών και να απεγκαταστήσεις κάποιες εφαρμογές που δεν χρησιμοποιείς;</string>
     <string name="wallet_low_storage_dialog_button_apps">Διαχείρηση εφαρμογών</string>

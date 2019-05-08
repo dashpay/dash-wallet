@@ -40,8 +40,6 @@
     <string name="wallet_options_encrypt_keys_set">设置支付 PIN 码</string>
     <string name="wallet_options_encrypt_keys_change">更改支付 PIN 码</string>
     <string name="wallet_options_safety">安全及风险提示</string>
-    <string name="wallet_options_donate">打赏 / 捐赠</string>
-    <string name="wallet_donate_address_label">捐赠达世币钱包</string>
     <string name="wallet_low_storage_dialog_title">内部设备存储空间不足！</string>
     <string name="wallet_low_storage_dialog_msg">达世币钱包会使用内置存储空间来保存交易记录, 及区块. 如果存储空间不足, 达世币将停止工作, 您的达世币将会面临问题!/n/n您想要打开应用管理工具卸载不需要的应用么?</string>
     <string name="wallet_low_storage_dialog_button_apps">管理应用程序</string>

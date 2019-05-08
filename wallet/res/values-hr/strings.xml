@@ -23,7 +23,6 @@
   <string name="wallet_transactions_fragment_internal">unutarnja</string>
   <string name="wallet_options_safety_menu">Sigurnost</string>
   <string name="wallet_options_safety">Sigurnosne poruke</string>
-  <string name="wallet_donate_address_label">Donacije za Dash Novčanik</string>
   <string name="wallet_timeskew_dialog_title">Provjerite svoje vremenske postavke!</string>
   <string name="wallet_version_dialog_title">Nova verzija je dobavljiva!</string>
   <string name="wallet_version_dialog_msg">U ovoj verziji su uklonjene greške. Za detalje posjetite Google Play</string>

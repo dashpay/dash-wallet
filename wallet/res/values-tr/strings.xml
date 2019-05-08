@@ -40,8 +40,6 @@
     <string name="wallet_options_encrypt_keys_set">Harcama PİN\'i ayarla</string>
     <string name="wallet_options_encrypt_keys_change">Harcama PİN\'ini değiştir</string>
     <string name="wallet_options_safety">Güvenlik notları</string>
-    <string name="wallet_options_donate">Bahşiş / bağış</string>
-    <string name="wallet_donate_address_label">Dash Wallet\'a bağışta bulun</string>
     <string name="wallet_low_storage_dialog_title">Cihazın dahili depolama alanı düşük!</string>
     <string name="wallet_low_storage_dialog_msg">Dash Wallet, cihazınızdaki dahili belleği işlemleri ve blokları hatırlamak için kullanır. Eğer cihazınızda boş alan kalmazsa, çalışmayı keser ve böylece Dash\'leriniz riskte altında kalır!\n\nGereksiz uygulamaları kaldırmak için Uygulama Yöneticisi\'ni açmak ister misiniz?</string>
     <string name="wallet_low_storage_dialog_button_apps">Uygulamaları yönet</string>

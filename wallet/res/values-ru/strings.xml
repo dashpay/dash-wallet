@@ -40,8 +40,6 @@
     <string name="wallet_options_encrypt_keys_set">Установить ПИН</string>
     <string name="wallet_options_encrypt_keys_change">Изменить ПИН</string>
     <string name="wallet_options_safety">Заметки по безопасности</string>
-    <string name="wallet_options_donate">Пожертвовать</string>
-    <string name="wallet_donate_address_label">Пожертвования для разработчиков кошелька</string>
     <string name="wallet_low_storage_dialog_title">Мало места на устройстве!</string>
     <string name="wallet_low_storage_dialog_msg">Кошелёк Dash использует внутреннюю память для сохранения информации о транзакциях и блоках. Если место закончится, он перестанет работать и ваши средства окажутся под угрозой!\n\nВы хотите открыть Менеджер Приложений и освободить место, удалив неиспользуемые программы?</string>
     <string name="wallet_low_storage_dialog_button_apps">Управлять приложениями</string>

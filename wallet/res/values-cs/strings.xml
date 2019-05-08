@@ -40,8 +40,6 @@
     <string name="wallet_options_encrypt_keys_set">Nastavit PIN pro utrácení</string>
     <string name="wallet_options_encrypt_keys_change">Změnit PIN pro utrácení.</string>
     <string name="wallet_options_safety">Bezpečnost</string>
-    <string name="wallet_options_donate">Přispěj</string>
-    <string name="wallet_donate_address_label">Dar pro Dash Wallet</string>
     <string name="wallet_low_storage_dialog_title">Na vnitřním úložišti není dostatek místa!</string>
     <string name="wallet_low_storage_dialog_msg">Dash Wallet používá vnitřní úložiště pro ukládání transakcí a bloků. Pokud dojde místo v ůložišti, přestane fungovat a vaše Dashy jsou vystaveny riziku ztráty!\n\nChcete otevřít Správu Aplikací a odinstalovat nepotřebné aplikace?</string>
     <string name="wallet_low_storage_dialog_button_apps">Spravovat aplikace</string>

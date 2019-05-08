@@ -39,8 +39,6 @@
 	<string name="wallet_options_encrypt_keys_set">Sett PIN for betaling</string>
 	<string name="wallet_options_encrypt_keys_change">Endre PIN for betaling</string>
 	<string name="wallet_options_safety">Sikkerhetsnotater</string>
-	<string name="wallet_options_donate">Tips / Doner</string>
-	<string name="wallet_donate_address_label">Doner til Dash Wallet</string>
 	<string name="wallet_low_storage_dialog_title">Enhetens interne lagringsplass er lav!</string>
 	<string name="wallet_low_storage_dialog_msg">Dash Wallet bruker lagring internt for å huske transaksjoner og blokker. Hvis den løper tom for plass, vil den stoppe å virke og dine Dash vil være under risiko!\n\nVil du åpne app-håndteringen for å avinstallere ubrukte apps?</string>
 	<string name="wallet_low_storage_dialog_button_apps">Håndter apps</string>

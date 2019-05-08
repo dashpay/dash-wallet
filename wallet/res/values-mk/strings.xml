@@ -30,8 +30,6 @@
 	<string name="wallet_transactions_fragment_coinbase">ископани</string>
 	<string name="wallet_transactions_fragment_internal">внатрешен</string>
 	<string name="wallet_options_safety">Безбедносни белешки</string>
-	<string name="wallet_options_donate">Бакшиш / Донирај</string>
-	<string name="wallet_donate_address_label">Донација за Биткоин Паричник</string>
 	<string name="wallet_low_storage_dialog_title">Интерниот простор за складирање на уредот е мал!</string>
 	<string name="wallet_low_storage_dialog_msg">Биткоин Паричникот користи внатрешен склад за помнење на трансакциите и блоковите. Ако снема простор, ќе престане да функционира и твоите биткоини ќе бидат изложени на ризик!\n\nДали сакаш да го отвориш Апликацискиот Менаџер и да отстраниш непотребни апликации?</string>
 	<string name="wallet_low_storage_dialog_button_apps">Менаџирај апликации</string>

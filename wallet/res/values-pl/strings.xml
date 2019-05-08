@@ -40,8 +40,6 @@
     <string name="wallet_options_encrypt_keys_set">Ustaw PIN</string>
     <string name="wallet_options_encrypt_keys_change">Zmień PIN do wydawania</string>
     <string name="wallet_options_safety">Wskazówki bezpieczeństwa</string>
-    <string name="wallet_options_donate">Podaruj</string>
-    <string name="wallet_donate_address_label">Dotacja dla Dash Wallet</string>
     <string name="wallet_low_storage_dialog_title">Mało przestrzeni w pamięci wewnętrznej!</string>
     <string name="wallet_low_storage_dialog_msg">Portfel Dash używa wewnętrznej pamięci do przechowywania transakcji i bloków. Jeśli zabraknie miejsca na twoim urządzeniu, portfel przestanie pracować i twoje monety będą zagrożone!\n\n Czy chcesz otworzyć Menadżer Aplikacji w celu odinstalowania niepotrzebnych programów?</string>
     <string name="wallet_low_storage_dialog_button_apps">Zarządzaj aplikacjami</string>

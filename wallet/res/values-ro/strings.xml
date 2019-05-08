@@ -40,8 +40,6 @@
     <string name="wallet_options_encrypt_keys_set">Setează codul PIN de cheltuieli</string>
     <string name="wallet_options_encrypt_keys_change">Schimbă codul PIN de cheltuieli</string>
     <string name="wallet_options_safety">Note de siguranță</string>
-    <string name="wallet_options_donate">Bacșiș/doneaza</string>
-    <string name="wallet_donate_address_label">Donație pentru portofelul Dash</string>
     <string name="wallet_low_storage_dialog_title">Spațiul de stocare intern al dispozitivului este scăzut!</string>
     <string name="wallet_low_storage_dialog_msg">Portofelul Dash utilizează un spațiu de stocare intern pentru a reține tranzacțiile și block-urile. Dacă ramâne fara spațiu, acesta nu va mai funcționa și suma ta de Dash va fi în pericol!\n\nVrei să deschizi Manager de Aplicatii pentru a dezinstala aplicațiile care nu sunt necesare?</string>
     <string name="wallet_low_storage_dialog_button_apps">Management de applicatii </string>

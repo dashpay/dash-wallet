@@ -68,12 +68,6 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity {
 		callingActivity.startActivityForResult(intent, requestCode);
 	}
 
-	public static void startDonate(final Context context, final Coin amount, final @Nullable FeeCategory feeCategory,
-								   final int intentFlags) {
-		start(context, PaymentIntent.from(Constants.DONATION_ADDRESS,
-				context.getString(R.string.wallet_donate_address_label), amount), feeCategory, intentFlags);
-	}
-
 	@Override
 	protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);

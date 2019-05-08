@@ -40,8 +40,6 @@
 	<string name="wallet_options_encrypt_keys_set">送金用PINコードを設定</string>
 	<string name="wallet_options_encrypt_keys_change">送金用PINコードを変更</string>
 	<string name="wallet_options_safety">安全上の注意事項</string>
-	<string name="wallet_options_donate">チップ／寄付</string>
-	<string name="wallet_donate_address_label">Dashウォレットのために寄付をする</string>
 	<string name="wallet_low_storage_dialog_title">内部デバイスのストレージ容量が残りわずかです！</string>
 	<string name="wallet_low_storage_dialog_msg">Dashウォレットはトランザクションやブロックを記憶するのに内部ストレージを使用します。もし容量が不足した場合、動作しなくなりあなたのDashが危機にさらされるでしょう!\n\n不要なアプリを削除するためにアプリケーションマネージャを開きますか？</string>
 	<string name="wallet_low_storage_dialog_button_apps">アプリの管理</string>

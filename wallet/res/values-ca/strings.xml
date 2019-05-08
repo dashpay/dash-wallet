@@ -38,8 +38,6 @@
 	<string name="wallet_options_encrypt_keys_set">Posa un PIN de despesa</string>
 	<string name="wallet_options_encrypt_keys_change">Modifica el PIN de despesa</string>
 	<string name="wallet_options_safety">Avisos de seguretat</string>
-	<string name="wallet_options_donate">Propina / donar</string>
-	<string name="wallet_donate_address_label">Donar a Dash Wallet</string>
 	<string name="wallet_low_storage_dialog_title">Espai d\'emmagatzematge intern baix!</string>
 	<string name="wallet_low_storage_dialog_msg">La Cartera de Dash utilitza emmagatzematge intern per a recordar els blocs i les transaccions. Si es queda sense espai, deixara de funcionar i els teus Dash estaran en risc!\n\nVols obrir el Gestor d\'Aplicacions per a desinstal·lar aplicacions innecessàries?</string>
 	<string name="wallet_low_storage_dialog_button_apps">Gestiona les aplicacions</string>
