@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="dash_slogan">[testnet]</string>
+    <color name="ic_launcher_background">#FE8448</color>
 </resources>

@@ -250,7 +250,7 @@ public final class CurrencyAmountView extends FrameLayout {
                 final Monetary amount;
                 if (localCurrencyCode == null) {
                     amount = inputFormat.parse(str);
-                    if (((Coin) amount).isGreaterThan(Constants.NETWORK_PARAMETERS.getMaxMoney()))
+                    if (((Coin) amount).isGreaterThan(Constants.MAX_MONEY))
                         return false;
                 } else {
                     amount = inputFormat.parseFiat(localCurrencyCode, str);

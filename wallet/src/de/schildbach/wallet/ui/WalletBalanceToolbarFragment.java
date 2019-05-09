@@ -147,7 +147,7 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 
 		viewBalanceLocal = (CurrencyTextView) view.findViewById(R.id.wallet_balance_local);
 		viewBalanceLocal.setInsignificantRelativeSize(1);
-		viewBalanceLocal.setStrikeThru(Constants.TEST);
+		viewBalanceLocal.setStrikeThru(!Constants.IS_PROD_BUILD);
 
 		viewBalance.setOnClickListener(new OnClickListener() {
 			@Override
