@@ -87,6 +87,11 @@ public class EnableFingerprintDialog extends DialogFragment {
         });
         builder.setCancelable(false);
 
+        fingerprintView = view.findViewById(R.id.fingerprint_view);
+        fingerprintView.setVisibility(View.VISIBLE);
+        fingerprintView.hideSeparator();
+        fingerprintView.setText(R.string.touch_fingerprint_to_enable);
+
         FingerprintHelper fingerprintHelper = new FingerprintHelper(getActivity());
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && fingerprintHelper.init()) {
             fingerprintCancellationSignal = new CancellationSignal();
@@ -118,11 +123,6 @@ public class EnableFingerprintDialog extends DialogFragment {
         } else {
             dismiss();
         }
-
-        fingerprintView = view.findViewById(R.id.fingerprint_view);
-        fingerprintView.setVisibility(View.VISIBLE);
-        fingerprintView.hideSeparator();
-        fingerprintView.setText(R.string.touch_fingerprint_to_enable);
 
         return builder.create();
     }

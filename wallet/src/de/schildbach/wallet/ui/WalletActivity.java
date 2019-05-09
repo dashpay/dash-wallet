@@ -148,6 +148,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private CanAutoLockGuard canAutoLockGuard;
 
+    private boolean showBackupWalletDialog = false;
+
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -305,6 +307,14 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         checkLowStorageAlert();
         detectUserCountry();
+        showBackupWalletDialogIfNeeded();
+    }
+
+    private void showBackupWalletDialogIfNeeded() {
+        if (showBackupWalletDialog) {
+            BackupWalletDialogFragment.show(getSupportFragmentManager());
+            showBackupWalletDialog = false;
+        }
     }
 
     @Override
@@ -347,7 +357,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                                            final int[] grantResults) {
         if (requestCode == REQUEST_CODE_BACKUP_WALLET) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                handleBackupWallet();
+                showBackupWalletDialog = true;
             else
                 showDialog(DIALOG_BACKUP_WALLET_PERMISSION);
         } else if (requestCode == REQUEST_CODE_RESTORE_WALLET) {
@@ -384,6 +394,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     dialog(WalletActivity.this, null, R.string.button_scan, messageResId, messageArgs);
                 }
             }.parse();
+        } else {
+            super.onActivityResult(requestCode, resultCode, intent);
         }
     }
 
@@ -514,7 +526,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     public void handleEncryptKeys() {
-        EncryptKeysDialogFragment.show(getSupportFragmentManager());
+        EncryptKeysDialogFragment.show(true, getSupportFragmentManager());
     }
 
     public void handleEncryptKeysRestoredWallet() {
@@ -1066,7 +1078,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void checkWalletEncryptionDialog() {
         if (!wallet.isEncrypted()) {
-            handleEncryptKeys();
+            EncryptKeysDialogFragment.show(false, getSupportFragmentManager());
         }
     }
 
@@ -1252,11 +1264,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     updateCurrencyExchange(networkCountry.toUpperCase());
                 } else {
                     //Couldn't obtain country code - Use Default
-                    config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
+                    if(config.getExchangeCurrencyCode() == null)
+                        config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
                 }
             } else {
                 //No cellular network - Wifi Only
-                config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
+                if(config.getExchangeCurrencyCode() == null)
+                    config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
             }
         } catch (Exception e) {
             //fail safe

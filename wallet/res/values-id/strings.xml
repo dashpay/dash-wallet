@@ -23,9 +23,6 @@
 	<string name="exchange_rates_fragment_rate">nilai</string>
 	<string name="exchange_rates_fragment_balance">Saldo</string>
 	<string name="exchange_rates_fragment_source">Harga diambil dari %s</string>
-	<string name="wallet_transactions_options_filter_received">Diterima</string>
-	<string name="wallet_transactions_options_filter_all">Keduanya</string>
-	<string name="wallet_transactions_options_filter_sent">Dikirim</string>
 	<string name="exchange_rates_options_search">Cari nilai tukar</string>
 	<string name="exchange_rates_context_set_as_default_title">Tetapkan sebagai standar</string>
 	<string name="wallet_transactions_fragment_empty_text_received">Tidak ada Dash yg diterima.</string>
@@ -36,6 +33,9 @@
 	<string name="wallet_transactions_fragment_coinbase">ditambang</string>
 	<string name="wallet_transactions_fragment_internal">Internal</string>
 	<string name="wallet_transactions_options_filter">Menyaring</string>
+	<string name="wallet_transactions_options_filter_all">Keduanya</string>
+	<string name="wallet_transactions_options_filter_received">Diterima</string>
+	<string name="wallet_transactions_options_filter_sent">Dikirim</string>
 	<string name="wallet_options_safety_menu">Keamanan</string>
 	<string name="wallet_options_encrypt_keys_set">Setel PIN pengiriman</string>
 	<string name="wallet_options_encrypt_keys_change">Ganti PIN pengiriman</string>
@@ -46,9 +46,7 @@
 	<string name="wallet_low_storage_dialog_msg">Dompet dash menggunakan penyimpanan internal untuk meyimpan transaksi dan blok. Jika kekurangan ruang, ia akan berhenti berfungsi dan Dash Anda dalam bahaya!\n\nApakah Anda ingin buka Manajer Aplikasi untuk menghapus aplikasi tak terpakai?</string>
 	<string name="wallet_low_storage_dialog_button_apps">Mengelola Aplikasi</string>
 	<string name="wallet_timeskew_dialog_title">Periksa pengaturan tanggal &amp; waktu</string>
-
 	<string name="wallet_timeskew_dialog_msg">Waktu perangkat Anda tidak aktif dalam %d menit. Anda mungkin tidak dapat mengirim atau menerima Dash karena masalah ini.\n\nAnda harus memeriksa dan jika perlu memperbaiki pengaturan tanggal, waktu dan zona waktu Anda.</string>
-
 	<string name="wallet_version_dialog_title">Versi baru tersedia!</string>
 	<string name="wallet_version_dialog_msg">Versi ini memperbaiki bug penting. Untuk detailnya, lihat log perubahan di Google Play.</string>
 	<string name="wallet_version_dialog_msg_deprecated">Jika Anda tidak melihat pembaruan, ini mungkin berarti versi Android Anda tidak didukung lagi.</string>
@@ -277,7 +275,7 @@
 	<string name="report_issue_dialog_title_issue">Laporkan masalah</string>
 	<string name="report_issue_dialog_title_crash">Kesalahan terdeteksi</string>
 	<string name="report_issue_dialog_title_transaction">Laporkan masalah dengan pembayaran yang dipilih</string>
-	<string name="report_issue_dialog_message_issue">Jelaskan masalah Anda secara tepat agar dapat direproduksi. Gunakan bahasi inggris jika anda bisa.</string>
+	<string name="report_issue_dialog_message_issue">Tolong jelaskan masalah Anda secara tepat agar dapat kami atasi. Gunakan bahasa Inggris jika Anda bisa.  Harap tunggu email dari pusat bantuan Dash mengenai masalah Anda dalam 24 jam.</string>
 	<string name="report_issue_dialog_message_crash">Apakah Anda ingin kirim laporan kesalahan, bantu perbaiki masalah ini di akan datang?</string>
 	<string name="report_issue_dialog_description">Penjelasan masalah</string>
 	<string name="report_issue_dialog_report">Laporkan</string>

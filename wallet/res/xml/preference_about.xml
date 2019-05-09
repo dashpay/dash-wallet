@@ -5,7 +5,7 @@
         android:key="about_version"
         android:title="@string/about_version_title" />
     <Preference
-		android:summary="© 2011-2018, the Bitcoin Wallet developers\n© 2014-2018 the Dash Wallet Developers"
+		android:summary="© 2011-2019, the Bitcoin Wallet developers\n© 2014-2019 the Dash Wallet Developers"
         android:title="@string/about_copyright_title" />
     <Preference
         android:key="about_license"
@@ -31,10 +31,10 @@
     <PreferenceCategory android:title="@string/about_category_credits" >
 		<Preference
 			android:key="about_credits_bitcoinj"
-			android:summary="https://github.com/HashEngineering/dashj" >
+			android:summary="https://github.com/dashevo/dashj" >
 			<intent
 				android:action="android.intent.action.VIEW"
-				android:data="https://github.com/HashEngineering/dashj" />
+				android:data="https://github.com/dashevo/dashj" />
 		</Preference>
         <Preference
             android:key="about_credits_scrypt"

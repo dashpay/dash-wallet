@@ -87,6 +87,8 @@
 	<string name="fastest_payment_network_dialog_message">Send and Receive Dash in an Instant at no extra fee</string>
 	<string name="fastest_payment_network_dialog_button">Got it</string>
 
+    <string name="net_type_indicator" />
+
 	<string name="unlock_with_fingerprint">Use your fingerprint to unlock.</string>
 	<string name="unlock_with_fingerprint_error">Failed to recognize fingerprint, please try again.</string>
 	<string name="unlock_with_fingerprint_error_max_attempts">Maximum fingerprint attempts exceeded. Please try again later.</string>
@@ -94,5 +96,8 @@
 	<string name="enable_fingerprint">Enable fingerprint</string>
 	<string name="touch_fingerprint_sensor">Touch the fingerprint sensor.</string>
 	<string name="touch_fingerprint_to_enable">Touch the fingerprint sensor to enable unlocking with fingerprint.</string>
+	<string name="exchange_rate_missing">This payment is too old to get the fiat value.</string>
 
+	<string name="preferences_enable_payment_request_summary">Use payment protocol for QR-code initiated payments</string>
+	<string name="preferences_enable_payment_request_title">BIP70 for scan-to-pay</string>
 </resources>

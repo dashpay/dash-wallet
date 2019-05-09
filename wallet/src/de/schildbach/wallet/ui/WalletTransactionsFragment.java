@@ -47,7 +47,6 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.TransactionsAdapter.Warning;
-import de.schildbach.wallet.ui.send.RaiseFeeDialogFragment;
 import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.FingerprintHelper;
@@ -377,8 +376,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
         popupMenu.getMenu().findItem(R.id.wallet_transactions_context_show_qr)
                 .setVisible(!txRotation && txSerialized.length < SHOW_QR_THRESHOLD_BYTES);
-        popupMenu.getMenu().findItem(R.id.wallet_transactions_context_raise_fee)
-                .setVisible(RaiseFeeDialogFragment.feeCanLikelyBeRaised(wallet, tx) && CoinDefinition.feeCanBeRaised);
         popupMenu.setOnMenuItemClickListener(new OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(final MenuItem item) {
@@ -389,10 +386,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
                 case R.id.wallet_transactions_context_show_qr:
                     handleShowQr();
-                    return true;
-
-                case R.id.wallet_transactions_context_raise_fee:
-                    RaiseFeeDialogFragment.show(getFragmentManager(), tx);
                     return true;
 
                 case R.id.wallet_transactions_context_report_issue:

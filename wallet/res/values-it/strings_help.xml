@@ -1,6 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-  <string name="help_wallet">
+
+    <string name="help_wallet">
 <![CDATA[
 		<p>
 			Nella parte in alto a destra dello schermo viene visualizzato il saldo in Dash e una valuta nazionale selezionata
@@ -21,8 +22,8 @@
 			Altre opzioni sono disponibili nel menu di navigazione (in alto a sinistra) e nelle opzioni.
 		</p>
 	]]>
-	</string>
-  <string name="help_request_coins">
+</string>
+    <string name="help_request_coins">
 <![CDATA[
 		<p>
 			Usando questa finestra di dialogo, puoi richiedere monete da un\'altra persona (che dovrebbe aver già installato Dash Wallet).
@@ -40,8 +41,8 @@
 			Se il pagatore (lui/lei) è d\'accordo,  il pagamento avverrà facilmente.
 		</p>
 	]]>
-	</string>
-  <string name="help_send_coins">
+</string>
+    <string name="help_send_coins">
 <![CDATA[
 		<p>
 			Hai inizializzato la procedura di invio monete.
@@ -71,8 +72,8 @@
 			Controlla sempre l\'indirizzo di ricezione.
 		</p>
 	]]>
-	</string>
-  <string name="help_safety">
+</string>
+    <string name="help_safety">
 <![CDATA[
 		<p>
 			<b>Note importanti:</b>

@@ -95,13 +95,6 @@
     <string name="send_coins_options_fee_category_economic">Ekonomiczny</string>
     <string name="send_coins_options_fee_category_priority">Priorytetowy</string>
     <string name="send_coins_options_empty">Opróżnij portfel</string>
-    <string name="raise_fee_dialog_title">Podnieś opłatę sieci</string>
-    <string name="raise_fee_dialog_message">Czy chcesz podnieść opłatę sieci dla tej płatności o %s? Spowoduje to szybsze potwierdzenie płatności.</string>
-    <string name="raise_fee_dialog_determining_fee">Szacowanie opłaty sieciowej...</string>
-    <string name="raise_fee_dialog_cant_raise">Opłata sieciowa tej płatności nie może zostać podniesiona.</string>
-    <string name="raise_fee_dialog_state_decrypting">Odszyfrowywanie…</string>
-    <string name="raise_fee_dialog_state_done">Zrobione.</string>
-    <string name="raise_fee_dialog_button_raise">Podnieś</string>
     <string name="sweep_wallet_activity_title">Skanuj klucz papierowego portfela</string>
     <string name="sweep_wallet_fragment_intro">Zamierzasz zeskanować portfel papierowy lub kupon. Ta czynność spowoduje przeniesienie wszystkich monet z portfela papierowego na portfel na tym urządzeniu. Gdy transakcja zostanie potwierdzona, portfel papierowy będzie bezużyteczny i nie powinien być używany ponownie z powodów bezpieczeństwa.</string>
     <string name="sweep_wallet_fragment_hint">Portfele papierowe są przeważnie używane jako cold storage. Niektóre ATMy drukują papierowe portfele zamiast bezpośrednio wysyłać monety na twoje urządzenie. Ludzie czasami używają papierowych portfeli w celu przekazywania środków (nie zalecane).</string>
@@ -262,6 +255,8 @@
     <string name="preferences_data_usage_summary">Pokaż opcje ograniczenia transferu danych przez sieci mobilne</string>
     <string name="preferences_remind_balance_title">Przypomnienie salda</string>
     <string name="preferences_remind_balance_summary">Po kilku tygodniach nieużywania, aplikacja przypomni o pozostałych środkach.</string>
+    <string name="preferences_show_disclaimer_title">Pokaż zastrzeżenia</string>
+    <string name="preferences_show_disclaimer_summary">Czy naprawdę przeczytałeś notatki dotyczące bezpieczeństwa? Czy dokonałeś juz kopii zapasowej portfela w bezpieczne miejsce?</string>
     <string name="preferences_report_issue_title">Zgłoś problem</string>
     <string name="preferences_initiate_reset_title">Zresetuj łańcuch bloków</string>
     <string name="preferences_initiate_reset_summary">Zresetuj łańcuch bloków, transakcji i balans portfela. Może to zająć chwilę, dlatego też używaj tego tylko jeśli jesteś pewien.</string>

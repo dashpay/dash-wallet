@@ -49,6 +49,7 @@ import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.ui.AbstractWalletActivity;
 import de.schildbach.wallet.util.CrashReporter;
+import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
 
 import android.annotation.TargetApi;
@@ -156,7 +157,7 @@ public class WalletApplication extends Application {
         org.bitcoinj.core.Context.enableStrictMode();
         org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
 
-        log.info("=== starting app using configuration: {}, {}", Constants.TEST ? "test" : "prod",
+        log.info("=== starting app using configuration: {}, {}", BuildConfig.FLAVOR,
                 Constants.NETWORK_PARAMETERS.getId());
 
         super.onCreate();
@@ -190,7 +191,7 @@ public class WalletApplication extends Application {
 
 		org.bitcoinj.core.Context context = wallet.getContext();
 
-		wallet.getContext().initDash(config.getLiteMode(), config.getInstantXEnabled());
+		wallet.getContext().initDash(true, true);
 
         if (config.versionCodeCrossed(packageInfo.versionCode, VERSION_CODE_SHOW_BACKUP_REMINDER)
                 && !wallet.getImportedKeys().isEmpty()) {
@@ -643,16 +644,6 @@ public class WalletApplication extends Application {
         alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, now + alarmInterval, AlarmManager.INTERVAL_DAY,
                 alarmIntent);
     }
-
-
-//dash Specific
-public void updateDashMode()
-		{
-		org.bitcoinj.core.Context context = wallet.getContext();
-
-		context.setAllowInstantXinLiteMode(config.getInstantXEnabled());
-		context.setLiteMode(config.getLiteMode());
-		}
 
     public void lockWalletIfNeeded() {
         WalletLock walletLock = WalletLock.getInstance();

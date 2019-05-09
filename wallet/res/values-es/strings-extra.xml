@@ -92,5 +92,8 @@
 	<string name="enable_fingerprint">Habilitar huella.</string>
 	<string name="touch_fingerprint_sensor">Toque el sensor de huellas.</string>
 	<string name="touch_fingerprint_to_enable">Toque el sensor de huellas para habilitar desbloqueo con huella.</string>
+	<string name="exchange_rate_missing">Este pago es muy antiguo para obtenerse el valor en fiat.</string>
 
+	<string name="preferences_enable_payment_request_summary">Usar protocolo de pago para pagos iniciados por código QR</string>
+	<string name="preferences_enable_payment_request_title">Escanear para pagar con BIP70</string>
 </resources>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">Uphold hesabı</string>
+    <string name="uphold_buy_dash_activity_title">Uphold ile Dash Al/Sat</string>
+    <string name="uphold_buy_dash_with_uphold">Uphold hesabı ile Dash al</string>
+    <string name="uphold_buy_dash_button">Dash Al</string>
+    <string name="uphold_transfer_to_this_wallet_button">Uphold\'dan aktar</string>
+    <string name="uphold_link_account">Uphold hesabını bağla</string>
+    <string name="uphold_account_dash_balance">Uphold hesabınızdaki Dash bakiyesi </string>
+    <string name="uphold_transfer_to_this_wallet">Uphold hesabınızdan bu cüzdana Dash aktarın</string>
+    <string name="uphold_withdrawal_amount">Tutar</string>
+    <string name="uphold_withdrawal_fee">Ücret</string>
+    <string name="uphold_withdrawal_total">Toplam</string>
+    <string name="uphold_withdrawal_title">Bu cüzdana Dash aktar</string>
+    <string name="uphold_withdrawal_message">Uphold hesabınızda &lt;b>%1$s Dash&lt;/b> bulunuyor. &lt;u>Bu tutarı bu cüzdana aktarmak&lt;/u> istiyor musunuz?</string>
+    <string name="uphold_withdrawal_confirm_title">İşlemi onayla</string>
+    <string name="uphold_withdrawal_confirm_message">Ana tutar: %1$f\nÜcret: %2$f\nToplam: %3$f\n\nBu işlemi onaylamak istiyor musunuz?</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">Ücret talep edilen tutardan düşülecek.</string>
+    <string name="uphold_withdrawal_instructions">Aşağıda aktarılacak tutarı girin</string>
+    <string name="uphold_withdrawal_success_title">Başarılı</string>
+    <string name="uphold_withdrawal_success_message">İşleminiz gönderildi ve tutar birkaç dakika içinde cüzdanınızda belirecek.\n\nİşlem kimliği: %s</string>
+    <string name="uphold_otp_dialog_title">Aşağıda 2FA kodunuzu girin:</string>
+    <string name="uphold_transfer">Aktarım</string>
+    <string name="uphold_see_on_uphold">Uphold\'da gör</string>
+
+</resources>

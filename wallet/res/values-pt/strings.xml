@@ -95,13 +95,6 @@
     <string name="send_coins_options_fee_category_economic">Econômico</string>
     <string name="send_coins_options_fee_category_priority">Prioridade</string>
     <string name="send_coins_options_empty">Esvaziar carteira</string>
-    <string name="raise_fee_dialog_title">Aumentar a taxa da rede</string>
-    <string name="raise_fee_dialog_message">Deseja aumentar a taxa de rede deste pagamento por %s? Ele fará o pagamento confirmar mais rápido.</string>
-    <string name="raise_fee_dialog_determining_fee">Determinando taxa de rede...</string>
-    <string name="raise_fee_dialog_cant_raise">A taxa de rede deste pagamento não pode ser aumentada.</string>
-    <string name="raise_fee_dialog_state_decrypting">Desencriptando…</string>
-    <string name="raise_fee_dialog_state_done">Feito.</string>
-    <string name="raise_fee_dialog_button_raise">Aumentar</string>
     <string name="sweep_wallet_activity_title">Varrer carteira de papel</string>
     <string name="sweep_wallet_fragment_intro">Você está prestes a varrer uma carteira de papel ou cupom. Isto irá mover todas as moedas deste papel para a sua carteira neste dispositivo. Quando a transação for confirmada, o papel será inútil e não deve ser re-utilizado por razões de segurança.</string>
     <string name="sweep_wallet_fragment_hint">Carteiras de papel são mais comumente usados para armazenamento a frio. Alguns caixas eletrônicos imprimem uma folha de papel em vez de enviar as moedas para o seu dispositivo móvel diretamente. As pessoas às vezes usam carteiras de papel pré-carregadas para passar o valor adiante (não recomendado).</string>
@@ -262,6 +255,8 @@
     <string name="preferences_data_usage_summary">Mostrar opções para restringir o uso de dados em redes móveis.</string>
     <string name="preferences_remind_balance_title">Lembrete de saldo</string>
     <string name="preferences_remind_balance_summary">Após algumas semanas se não for usado, o app irá notificar se ainda existem moedas na carteira.</string>
+    <string name="preferences_show_disclaimer_title">Mostrar aviso legal</string>
+    <string name="preferences_show_disclaimer_summary">Você já leu as notas de segurança? Já fez o backup da sua carteira em um lugar seguro?</string>
     <string name="preferences_report_issue_title">Informar problema</string>
     <string name="preferences_initiate_reset_title">Reiniciar Blockchain</string>
     <string name="preferences_initiate_reset_summary">Redefinir a blockchain, transações e saldo de carteira. Voltar a realizar vai demorar um pouco, então apenas faz isso se você sabe o por quê.</string>

@@ -70,14 +70,16 @@ public class EncryptKeysDialogFragment extends DialogFragment {
     private static final String FRAGMENT_TAG = EncryptKeysDialogFragment.class.getName();
 
     private static final String ONBOARDING_ARG = "onboarding_arg";
+    private static final String CANCELABLE_ARG = "cancelable_arg";
 
     protected DialogInterface.OnDismissListener onDismissListener;
 
-    public static void show(final FragmentManager fm) {
+    public static void show(boolean cancelable, final FragmentManager fm) {
         final DialogFragment newFragment = new EncryptKeysDialogFragment();
 
         final Bundle args = new Bundle();
         args.putBoolean(ONBOARDING_ARG, true);
+        args.putBoolean(CANCELABLE_ARG, cancelable);
         newFragment.setArguments(args);
 
         newFragment.show(fm, FRAGMENT_TAG);
@@ -158,7 +160,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, @android.support.annotation.Nullable ViewGroup container, Bundle savedInstanceState) {
-        setCancelable(false);
+        setCancelable(getArguments().getBoolean(CANCELABLE_ARG));
         return super.onCreateView(inflater, container, savedInstanceState);
     }
 
@@ -185,7 +187,9 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         builder.setTitle(R.string.encrypt_keys_dialog_title);
         builder.setView(view);
         builder.setPositiveButton(R.string.button_ok, null); // dummy, just to make it show
-        builder.setCancelable(false);
+        if (getArguments().getBoolean(CANCELABLE_ARG)) {
+            builder.setNegativeButton(R.string.button_cancel, null);
+        }
 
         final AlertDialog dialog = builder.create();
         dialog.setCanceledOnTouchOutside(false);

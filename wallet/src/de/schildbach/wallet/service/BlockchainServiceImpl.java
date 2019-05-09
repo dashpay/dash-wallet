@@ -145,9 +145,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
     //Settings to bypass dashj default dns seeds
     private final SeedPeers seedPeerDiscovery = new SeedPeers(Constants.NETWORK_PARAMETERS);
-    private final String dnsSeeds[] = { "dnsseed.dash.org" };
-    private final String dnsSeedsTestNet[] = { "95.183.51.146", "35.161.101.35", "54.91.130.170" };
-    private final DnsDiscovery dnsDiscovery = new DnsDiscovery(Constants.TEST ? dnsSeedsTestNet : dnsSeeds, Constants.NETWORK_PARAMETERS);
+    private final DnsDiscovery dnsDiscovery = new DnsDiscovery(Constants.DNS_SEED, Constants.NETWORK_PARAMETERS);
     ArrayList<PeerDiscovery> peerDiscoveryList = new ArrayList<>(2);
 
 
@@ -157,7 +155,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
     private static final int MAX_HISTORY_SIZE = Math.max(IDLE_TRANSACTION_TIMEOUT_MIN, IDLE_BLOCK_TIMEOUT_MIN);
     private static final long APPWIDGET_THROTTLE_MS = DateUtils.SECOND_IN_MILLIS;
     private static final long BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS = DateUtils.SECOND_IN_MILLIS;
-    private static final long TX_EXCHANGE_RATE_TIME_THRESHOLD_MS = TimeUnit.MINUTES.toMillis(30);
+    private static final long TX_EXCHANGE_RATE_TIME_THRESHOLD_MS = TimeUnit.MINUTES.toMillis(180);
 
     private static final Logger log = LoggerFactory.getLogger(BlockchainServiceImpl.class);
 
@@ -181,11 +179,12 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
             long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
             boolean insideTxExchangeRateTimeThreshold = (now - blockChainHeadTime) < TX_EXCHANGE_RATE_TIME_THRESHOLD_MS;
 
-            if (tx.getExchangeRate() == null && !replaying && insideTxExchangeRateTimeThreshold) {
+            if (tx.getExchangeRate() == null && ((!replaying || insideTxExchangeRateTimeThreshold) || tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING)) {
                 try {
                     final de.schildbach.wallet.rates.ExchangeRate exchangeRate = AppDatabase.getAppDatabase()
                             .exchangeRatesDao().getRateSync(config.getExchangeCurrencyCode());
                     if (exchangeRate != null) {
+                        log.info("Setting exchange rate on received transaction.  Rate:  " + exchangeRate.toString() + " tx: " + tx.getHashAsString());
                         tx.setExchangeRate(new ExchangeRate(Coin.COIN, exchangeRate.getFiat()));
                         application.saveWallet();
                     }
@@ -304,9 +303,6 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences, final String key) {
             if (Configuration.PREFS_KEY_CONNECTIVITY_NOTIFICATION.equals(key))
                 changed(peerCount);
-            if (Configuration.PREFS_KEY_INSTANTX_ENABLED.equals(key)) {
-                //InstantXSystem.get(blockChain).setEnabled(sharedPreferences.getBoolean(Configuration.PREFS_KEY_INSTANTX_ENABLED, false));
-            }
         }
 
         private void changed(final int numPeers) {
@@ -472,16 +468,34 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                         }
 
                         if (!connectTrustedPeerOnly) {
-                            peers.addAll(
-                                    Arrays.asList(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                            try {
+                                peers.addAll(
+                                        Arrays.asList(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                            } catch (PeerDiscoveryException x) {
+                                //swallow and continue with another method of connection.
+                                log.info("DNS peer discovery failed: "+ x.getMessage());
+                                if(x.getCause() != null)
+                                    log.info(  "cause:  " + x.getCause().getMessage());
+                            }
                             if(peers.size() < 10) {
                                 log.info("DNS peer discovery returned less than 10 nodes.  Adding DMN peers to the list to increase connections");
-                                SimplifiedMasternodeList mnlist =  org.bitcoinj.core.Context.get().masternodeListManager.getListAtChainTip();
-                                MasternodePeerDiscovery discovery = new MasternodePeerDiscovery(mnlist);
-                                peers.addAll(Arrays.asList(discovery.getPeers(services, timeoutValue, timeoutUnit)));
+                                try {
+                                    SimplifiedMasternodeList mnlist = org.bitcoinj.core.Context.get().masternodeListManager.getListAtChainTip();
+                                    MasternodePeerDiscovery discovery = new MasternodePeerDiscovery(mnlist);
+                                    peers.addAll(Arrays.asList(discovery.getPeers(services, timeoutValue, timeoutUnit)));
+                                } catch (PeerDiscoveryException x) {
+                                    //swallow and continue with another method of connection
+                                    log.info("DMN List peer discovery failed: "+ x.getMessage());
+
+                                }
+
                                 if(peers.size() < 10) {
-                                    log.info("DMN peer discovery returned less than 10 nodes.  Adding seed peers to the list to increase connections");
-                                    peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                                    if (Constants.NETWORK_PARAMETERS.getAddrSeeds() != null) {
+                                        log.info("DNS peer discovery returned less than 10 nodes.  Adding seed peers to the list to increase connections");
+                                        peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                                    } else {
+                                        log.info("DNS peer discovery returned less than 10 nodes.  Unable to add seed peers (it is not specified for this network).");
+                                    }
                                 }
                             }
                         }

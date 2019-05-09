@@ -27,6 +27,7 @@ import org.bitcoinj.core.WrongNetworkException;
 import com.google.common.base.Objects;
 
 import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.util.AddressUtil;
 
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -45,7 +46,7 @@ public class AddressAndLabel implements Parcelable {
 
     public AddressAndLabel(final NetworkParameters addressParams, final String address, @Nullable final String label)
             throws WrongNetworkException, AddressFormatException {
-        this(Address.fromBase58(addressParams, address), label);
+        this(AddressUtil.fromBase58(addressParams, address), label);
     }
 
     @Override

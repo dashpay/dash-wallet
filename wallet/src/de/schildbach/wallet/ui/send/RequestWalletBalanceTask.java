@@ -23,21 +23,26 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.HashMap;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.Map;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.SocketFactory;
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
@@ -53,6 +58,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
+import com.google.common.hash.Hashing;
 import com.squareup.moshi.JsonAdapter;
 import com.squareup.moshi.JsonDataException;
 import com.squareup.moshi.Moshi;
@@ -125,28 +132,34 @@ public final class RequestWalletBalanceTask {
 				org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
 
 				try {
-					final Map<InetSocketAddress, String> servers = loadElectrumServers(
+					final List<ElectrumServer> servers = loadElectrumServers(
 							assets.open(Constants.Files.ELECTRUM_SERVERS_FILENAME));
-					final Map.Entry<InetSocketAddress, String> server = new LinkedList<>(servers.entrySet())
-							.get(new Random().nextInt(servers.size()));
-					final InetSocketAddress socketAddress = server.getKey();
-					final String type = server.getValue();
-					log.info("trying to request wallet balance from {}: {}", socketAddress, address);
+					final ElectrumServer server = servers.get(new Random().nextInt(servers.size()));
+					log.info("trying to request wallet balance from {}: {}", server.socketAddress, address);
 					final Socket socket;
-					if (type.equalsIgnoreCase("tls")) {
-						final SocketFactory sf = SSLSocketFactory.getDefault();
-						socket = sf.createSocket(socketAddress.getHostName(), socketAddress.getPort());
+					if (server.type == ElectrumServer.Type.TLS) {
+						final SocketFactory sf = sslTrustAllCertificates();
+						socket = sf.createSocket(server.socketAddress.getHostName(), server.socketAddress.getPort());
 						final SSLSession sslSession = ((SSLSocket) socket).getSession();
-						if (!HttpsURLConnection.getDefaultHostnameVerifier().verify(socketAddress.getHostName(),
-								sslSession))
-							throw new SSLHandshakeException("Expected " + socketAddress.getHostName() + ", got "
-									+ sslSession.getPeerPrincipal());
-					} else if (type.equalsIgnoreCase("tcp")) {
+						final Certificate certificate = sslSession.getPeerCertificates()[0];
+						final String certificateFingerprint = sslCertificateFingerprint(certificate);
+						if (server.certificateFingerprint == null) {
+							// signed by CA
+							if (!HttpsURLConnection.getDefaultHostnameVerifier()
+									.verify(server.socketAddress.getHostName(), sslSession))
+								throw new SSLHandshakeException("Expected " + server.socketAddress.getHostName()
+										+ ", got " + sslSession.getPeerPrincipal());
+						} else {
+							// self-signed
+							if (!certificateFingerprint.equals(server.certificateFingerprint))
+								throw new SSLHandshakeException("Expected " + server.certificateFingerprint + ", got "
+										+ certificateFingerprint);
+						}
+					} else if (server.type == ElectrumServer.Type.TCP) {
 						socket = new Socket();
-						socket.connect(new InetSocketAddress(socketAddress.getHostName(), socketAddress.getPort()),
-								5000);
+						socket.connect(server.socketAddress, 5000);
 					} else {
-						throw new IllegalStateException("Cannot handle: " + type);
+						throw new IllegalStateException("Cannot handle: " + server.type);
 					}
 					final BufferedSink sink = Okio.buffer(Okio.sink(socket));
 					sink.timeout().timeout(5000, TimeUnit.MILLISECONDS);
@@ -163,6 +176,8 @@ public final class RequestWalletBalanceTask {
 					if (response.id == request.id) {
 						final Set<UTXO> utxos = new HashSet<>();
 						for (final JsonRpcResponse.Utxo responseUtxo : response.result) {
+							if (response.result == null)
+								throw new JsonDataException("empty response");
 							final Sha256Hash utxoHash = Sha256Hash.wrap(responseUtxo.tx_hash);
 							final int utxoIndex = responseUtxo.tx_pos;
 							final Coin utxoValue = Coin.valueOf(responseUtxo.value);
@@ -172,12 +187,12 @@ public final class RequestWalletBalanceTask {
 							utxos.add(utxo);
 						}
 
-						log.info("fetched {} unspent outputs from {}", response.result.length, socketAddress);
+						log.info("fetched {} unspent outputs from {}", response.result.length, server.socketAddress);
 						onResult(utxos);
 					} else {
 						log.info("id mismatch response:{} vs request:{}", response.id, request.id);
 						if(!requestWalletBalanceFromBlockExplorers(address))
-							onFail(R.string.error_parse, socketAddress.toString());
+							onFail(R.string.error_parse, server.socketAddress.toString());
 					}
 				} catch (final JsonDataException x) {
 					log.info("problem parsing json", x);
@@ -210,9 +225,35 @@ public final class RequestWalletBalanceTask {
 		});
 	}
 
-	private static Map<InetSocketAddress, String> loadElectrumServers(final InputStream is) throws IOException {
-		final Splitter splitter = Splitter.on(':');
-		final Map<InetSocketAddress, String> addresses = new HashMap<>();
+	public static class ElectrumServer {
+		public enum Type {
+			TCP, TLS
+		}
+
+		public final InetSocketAddress socketAddress;
+		public final Type type;
+		public final String certificateFingerprint;
+
+		public ElectrumServer(final String type, final String host, final String port,
+				final String certificateFingerprint) {
+			this.type = Type.valueOf(type.toUpperCase());
+			if (port != null)
+				this.socketAddress = InetSocketAddress.createUnresolved(host, Integer.parseInt(port));
+			else if ("tcp".equalsIgnoreCase(type))
+				this.socketAddress = InetSocketAddress.createUnresolved(host,
+						Constants.ELECTRUM_SERVER_DEFAULT_PORT_TCP);
+			else if ("tls".equalsIgnoreCase(type))
+				this.socketAddress = InetSocketAddress.createUnresolved(host,
+						Constants.ELECTRUM_SERVER_DEFAULT_PORT_TLS);
+			else
+				throw new IllegalStateException("Cannot handle: " + type);
+			this.certificateFingerprint = certificateFingerprint;
+		}
+	}
+
+	private static List<ElectrumServer> loadElectrumServers(final InputStream is) throws IOException {
+		final Splitter splitter = Splitter.on(':').trimResults();
+		final List<ElectrumServer> servers = new LinkedList<>();
 		BufferedReader reader = null;
 		String line = null;
 		try {
@@ -228,16 +269,9 @@ public final class RequestWalletBalanceTask {
 				final Iterator<String> i = splitter.split(line).iterator();
 				final String type = i.next();
 				final String host = i.next();
-				final int port;
-				if (i.hasNext())
-					port = Integer.parseInt(i.next());
-				else if ("tcp".equalsIgnoreCase(type))
-					port = Constants.ELECTRUM_SERVER_DEFAULT_PORT_TCP;
-				else if ("tls".equalsIgnoreCase(type))
-					port = Constants.ELECTRUM_SERVER_DEFAULT_PORT_TLS;
-				else
-					throw new IllegalStateException("Cannot handle: " + type);
-				addresses.put(InetSocketAddress.createUnresolved(host, port), type);
+				final String port = i.hasNext() ? Strings.emptyToNull(i.next()) : null;
+				final String fingerprint = i.hasNext() ? Strings.emptyToNull(i.next()) : null;
+				servers.add(new ElectrumServer(type, host, port, fingerprint));
 			}
 		} catch (final Exception x) {
 			throw new RuntimeException("Error while parsing: '" + line + "'", x);
@@ -246,7 +280,43 @@ public final class RequestWalletBalanceTask {
 				reader.close();
 			is.close();
 		}
-		return addresses;
+		return servers;
+	}
+
+	private SSLSocketFactory sslTrustAllCertificates() {
+		try {
+			final SSLContext context = SSLContext.getInstance("SSL");
+			context.init(null, new TrustManager[] { TRUST_ALL_CERTIFICATES }, null);
+			final SSLSocketFactory socketFactory = context.getSocketFactory();
+			return socketFactory;
+		} catch (final Exception x) {
+			throw new RuntimeException(x);
+		}
+	}
+
+	private static final X509TrustManager TRUST_ALL_CERTIFICATES = new X509TrustManager() {
+		@Override
+		public void checkClientTrusted(final X509Certificate[] chain, final String authType)
+				throws CertificateException {
+		}
+
+		@Override
+		public void checkServerTrusted(final X509Certificate[] chain, final String authType)
+				throws CertificateException {
+		}
+
+		@Override
+		public X509Certificate[] getAcceptedIssuers() {
+			return new X509Certificate[0];
+		}
+	};
+
+	private String sslCertificateFingerprint(final Certificate certificate) {
+		try {
+			return Hashing.sha256().newHasher().putBytes(certificate.getEncoded()).hash().toString();
+		} catch (final Exception x) {
+			throw new RuntimeException(x);
+		}
 	}
 
 	enum UnspentAPI {
@@ -256,7 +326,7 @@ public final class RequestWalletBalanceTask {
 	}
 
 	boolean requestWalletBalanceFromBlockExplorers(Address address) {
-		Set<UTXO> utxos = requestWalletBalanceFromBlockExplorer("http://insight.dash.org/api/addr/", UnspentAPI.Insight, address);
+		Set<UTXO> utxos = requestWalletBalanceFromBlockExplorer("https://insight.dash.org/api/addr/", UnspentAPI.Insight, address);
 
 		if(utxos != null) {
 			onResult(utxos);
@@ -333,7 +403,6 @@ public final class RequestWalletBalanceTask {
 					byte[] scryptBytes = null;
 					Coin value = null;
 					int blockNumber = 0;
-
 
 					if(unspentAPI == UnspentAPI.ABE) {
 						hash = Sha256Hash.wrap(jsonOutput.getString("tx_hash"));

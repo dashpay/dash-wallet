@@ -58,6 +58,7 @@ import com.google.protobuf.UninitializedMessageException;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.util.AddressUtil;
 import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet.util.Qr;
 import de.schildbach.wallet_test.R;
@@ -102,7 +103,7 @@ public abstract class InputParser {
             } else if (input.startsWith(CoinDefinition.coinURIScheme + ":")) {
                 try {
                     final BitcoinURI bitcoinUri = new BitcoinURI(null, input);
-                    final Address address = bitcoinUri.getAddress();
+                    final Address address = AddressUtil.getCorrectAddress(bitcoinUri);
                     if (address != null && !Constants.NETWORK_PARAMETERS.equals(address.getParameters()))
                         throw new BitcoinURIParseException("mismatched network");
 

@@ -95,13 +95,6 @@
     <string name="send_coins_options_fee_category_economic">经济的</string>
     <string name="send_coins_options_fee_category_priority">优先级</string>
     <string name="send_coins_options_empty">清空钱包</string>
-    <string name="raise_fee_dialog_title">增加网络费用</string>
-    <string name="raise_fee_dialog_message">您是否想要为此次交易增加 %s 的网络费用. 这会使交易更快的被确认.</string>
-    <string name="raise_fee_dialog_determining_fee">正在确定网络费用...</string>
-    <string name="raise_fee_dialog_cant_raise">此支付的网络费用无法增加.</string>
-    <string name="raise_fee_dialog_state_decrypting">正在解密…</string>
-    <string name="raise_fee_dialog_state_done">已完成。</string>
-    <string name="raise_fee_dialog_button_raise">增加</string>
     <string name="sweep_wallet_activity_title">交换纸钱包上的达世币</string>
     <string name="sweep_wallet_fragment_intro">您将要扫描纸质的钱包或者优惠券。这会将纸钱上的所有达世币转移到您的当前设备上。当交易被确认后，那张纸将会分文不值，而且将不能作为安全措施重新使用该纸钱包。</string>
     <string name="sweep_wallet_fragment_hint">纸钱包常常用于进行冷存储。一些 ATM 机经常会将达世币打印在纸上，而不是直接发送到您的移动设备上。人们有时候会使用已经预付的纸钱包来互相转移金额（不推荐）。</string>
@@ -262,6 +255,8 @@
     <string name="preferences_data_usage_summary">显示限制移动网络数据使用的选项。</string>
     <string name="preferences_remind_balance_title">余额贴士</string>
     <string name="preferences_remind_balance_summary">若钱包中依然存有达世币，几周都未曾使用，app将发送通知提醒用户。</string>
+    <string name="preferences_show_disclaimer_title">显示免责声明</string>
+    <string name="preferences_show_disclaimer_summary">你是否仔细阅读了安全须知? 并且已经妥善备份了你的钱包?</string>
     <string name="preferences_report_issue_title">报告问题</string>
     <string name="preferences_initiate_reset_title">重置区块链 (blockchain)</string>
     <string name="preferences_initiate_reset_summary">重置区块链，交易，以及钱包余额。此步骤需要等待一段时间，使用前请务必了解此功能用途。</string>

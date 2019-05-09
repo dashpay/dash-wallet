@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">Cont Uphold</string>
+    <string name="uphold_buy_dash_activity_title">Vânzare/cumpărare Dash cu Uphold</string>
+    <string name="uphold_buy_dash_with_uphold">Cumpără Dash cu Uphold</string>
+    <string name="uphold_buy_dash_button">Cumpără Dash</string>
+    <string name="uphold_transfer_to_this_wallet_button">Transferă din Uphold</string>
+    <string name="uphold_link_account">Conectează contul Uphold</string>
+    <string name="uphold_account_dash_balance">Soldul tău Dash din contul Uphold este</string>
+    <string name="uphold_transfer_to_this_wallet">Transferă Dash din contul tău Uphold în acest portofel</string>
+    <string name="uphold_withdrawal_amount">Suma</string>
+    <string name="uphold_withdrawal_fee">Taxa</string>
+    <string name="uphold_withdrawal_total">Total</string>
+    <string name="uphold_withdrawal_title">Transferă Dash în acest portofel</string>
+    <string name="uphold_withdrawal_message">Ai &lt;b>%1$s Dash&lt;/b> în contul Uphold. Vrei sa &lt;u>transferi această suma către acest portofel&lt;/u>?</string>
+    <string name="uphold_withdrawal_confirm_title">Confirmă tranzacţia</string>
+    <string name="uphold_withdrawal_confirm_message">Suma de bază:: %1$f\nTaxa: %2$f\nTotal: %3$f\n\nVrei să confirmi această tranzacție?</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">Taxa va fi dedusă din suma solicitată.</string>
+    <string name="uphold_withdrawal_instructions">Introdu suma pe care doreşti să o transferi mai jos.</string>
+    <string name="uphold_withdrawal_success_title">Success</string>
+    <string name="uphold_withdrawal_success_message">Tranzacția ta a fost trimisă, iar suma ar trebui să apară în portofel în câteva minute.\n\nIDTranzacție: %s</string>
+    <string name="uphold_otp_dialog_title">Introdu codul tău 2FA mai jos:</string>
+    <string name="uphold_transfer">Transferă</string>
+    <string name="uphold_see_on_uphold">Vezi în Uphold</string>
+
+</resources>

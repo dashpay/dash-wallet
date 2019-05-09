@@ -1,6 +1,8 @@
 package de.schildbach.wallet.ui;
 
 import android.app.Dialog;
+import android.content.DialogInterface;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.FragmentManager;
@@ -15,6 +17,7 @@ import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.spongycastle.crypto.params.KeyParameter;
 
+import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.send.DecryptSeedTask;
 import de.schildbach.wallet.ui.send.DeriveKeyTask;
 import de.schildbach.wallet.util.ParcelableChainPath;
@@ -43,6 +46,14 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
     }
 
     @Override
+    public void onDismiss(DialogInterface dialog) {
+        if (fingerprintCancellationSignal != null) {
+            fingerprintCancellationSignal.cancel();
+        }
+        super.onDismiss(dialog);
+    }
+
+    @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
         setCancelable(false);
         return super.onCreateView(inflater, container, savedInstanceState);
@@ -63,6 +74,7 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
             return;
         }
 
+        fingerprintView.hideError();
         unlockButton.setEnabled(false);
         unlockButton.setText(getText(R.string.encrypt_keys_dialog_state_decrypting));
         pinView.setEnabled(false);
@@ -75,6 +87,14 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
                 dismissAllowingStateLoss();
                 if (activity != null && activity instanceof OnNewKeyChainEncryptedListener) {
                     ((OnNewKeyChainEncryptedListener) activity).onNewKeyChainEncrypted();
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && fingerprintHelper != null) {
+                    if (!fingerprintHelper.isFingerprintEnabled() && WalletApplication
+                            .getInstance().getConfiguration().getRemindEnableFingerprint()) {
+                        EnableFingerprintDialog.show(password,
+                                getActivity().getFragmentManager());
+                    }
                 }
             }
 

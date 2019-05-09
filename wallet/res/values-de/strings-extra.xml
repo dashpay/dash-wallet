@@ -2,13 +2,13 @@
 <resources>
 
     <string name="send_coins_auto_lock_feasible">Diese Transaktion wird sofort und ohne Zusatzkosten bestätigt.</string>
-	<string name="send_coins_auto_lock_not_feasible">Diese Transaktion benötigt einige Minuten, um bestätigt zu werden. Soll sie für %1$s%2$s sofort bestätigt werden?</string>
+	<string name="send_coins_auto_lock_not_feasible">Diese Transaktion benötigt einige Minuten, um bestätigt zu werden. Soll sie für zusätzlich %1$s%2$s sofort bestätigt werden?</string>
 	<string name="send_coins_instant_send_not_feasible">Diese Transaktion benötigt einige Minuten, um bestätigt zu werden.</string>
 
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">InstantSend-Zahlung wurde noch nicht übermittelt.</string>
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">Diese Zahlung ist noch nicht übertragen.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Die Zahlung wurde gesendet.</string>
 
-	<string name="regular_transaction_info_message">Diese Transaktion wurde ohne InstantSend versandt. Sie benötigt weitere Bestätigungen, um abgeschlossen zu werden.</string>
+	<string name="regular_transaction_info_message">Diese Transaktion wurde nicht sofort bestätigt.</string>
 
 	<string name="wallet_options_disconnect">Verbindungen trennen</string>
 
@@ -92,5 +92,8 @@
 	<string name="enable_fingerprint">Fingerabdruck aktivieren</string>
 	<string name="touch_fingerprint_sensor">Den Fingerabdrucksensor berühren.</string>
 	<string name="touch_fingerprint_to_enable">Den Fingerabdrucksensor berühren, um das Entsperren per Fingerabdruck zu aktivieren.</string>
+	<string name="exchange_rate_missing">Diese Transaktion ist zu alt, um den Fiatwert zu ermitteln.</string>
 
+	<string name="preferences_enable_payment_request_summary">Zahlungsprotokoll für QR-Code Zahlungen verwenden</string>
+	<string name="preferences_enable_payment_request_title">BIP70 für Scan-to-Pay</string>
 </resources>

@@ -96,13 +96,6 @@
     <string name="send_coins_options_fee_category_economic">Kostengünstig</string>
     <string name="send_coins_options_fee_category_priority">Express</string>
     <string name="send_coins_options_empty">Wallet entleeren</string>
-    <string name="raise_fee_dialog_title">Netzwerk-Gebühr erhöhen</string>
-    <string name="raise_fee_dialog_message">Möchtest Du die Netzwerks-Gebühr für diese Zahlung um%s anheben? Dadurch wird die Zahlung schneller bestätigt.</string>
-    <string name="raise_fee_dialog_determining_fee">Netzwerks-Gebühr wird bestimmt...</string>
-    <string name="raise_fee_dialog_cant_raise">Die Netzwerksgebühr dieser Zahlung kann nicht erhöht werden.</string>
-    <string name="raise_fee_dialog_state_decrypting">Entschlüsselung…</string>
-    <string name="raise_fee_dialog_state_done">Fertig.</string>
-    <string name="raise_fee_dialog_button_raise">Erhöhen</string>
     <string name="sweep_wallet_activity_title">Paper-Wallet leeren</string>
     <string name="sweep_wallet_fragment_intro">Du bist im Begriff eine Paper-Wallet oder einen Coupon einzulösen. Dadurch werden die betroffenen Dash in diese Wallet verschoben. Sobald die Transaktion bestätigt ist, wird das Papier wertlos und sollte aus Sicherheitsgründen nicht wiederverwendet werden.</string>
     <string name="sweep_wallet_fragment_hint">Paper-Wallets werden meist als Cold Storage genutzt. Einige Geldautomaten drucken sie auf das Quittungspapier, anstatt die Dash direkt an das mobile Gerät zu versenden. Manchmal werden vorgeladene Paper-Wallets als Zahlungsmittel verwendet (nicht empfohlen).</string>
@@ -263,6 +256,8 @@
     <string name="preferences_data_usage_summary">Zeigt Optionen, um die mobile Datennutzung einzuschränken.</string>
     <string name="preferences_remind_balance_title">An Guthaben erinnern</string>
     <string name="preferences_remind_balance_summary">Nachdem die App ein paar Wochen nicht verwendet wurde, wirst Du durch diese automatisch darauf hinweisen, dass sich weiterhin Coins in der Wallet befinden.</string>
+    <string name="preferences_show_disclaimer_title">Disclaimer anzeigen</string>
+    <string name="preferences_show_disclaimer_summary">Hast du die Sicherheitshinweise wirklich gelesen? Hast du wirklich ein Backup für deine Wallet, das du an einem sicheren Ort aufbewahrst?</string>
     <string name="preferences_report_issue_title">Problem melden</string>
     <string name="preferences_initiate_reset_title">Blockchain zurücksetzen</string>
     <string name="preferences_initiate_reset_summary">Blockchain, Transaktionen und Guthaben werden zurückgesetzt. Das erneute Einspielen wird einige Zeit in Anspruch nehmen. Setze diesen Vorgang bitte nur fort, wenn Du weist warum.</string>

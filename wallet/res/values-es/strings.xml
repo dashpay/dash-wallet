@@ -95,13 +95,6 @@
     <string name="send_coins_options_fee_category_economic">Económica</string>
     <string name="send_coins_options_fee_category_priority">Prioritaria</string>
     <string name="send_coins_options_empty">Vaciar billetera</string>
-    <string name="raise_fee_dialog_title">Aumento de la comisión de red</string>
-    <string name="raise_fee_dialog_message">Deseas elevar la comisión de red de este pago en %s? Hará la confirmación del pago más rápida.</string>
-    <string name="raise_fee_dialog_determining_fee">Determinando la comisión de red...</string>
-    <string name="raise_fee_dialog_cant_raise">La comisión de red de este pago no puede ser elevada.</string>
-    <string name="raise_fee_dialog_state_decrypting">Descifrando...</string>
-    <string name="raise_fee_dialog_state_done">Hecho.</string>
-    <string name="raise_fee_dialog_button_raise">Aumentar</string>
     <string name="sweep_wallet_activity_title">Barrer billetera de papel</string>
     <string name="sweep_wallet_fragment_intro">Vas a barrer una billetera de papel. Esto transferirá todas las monedas del papel a tu billetera en este dispositivo. Cuando la transacción esté confirmada, el papel ya no tendrá valor y, por razones de seguridad, no debería ser reutilizado.</string>
     <string name="sweep_wallet_fragment_hint">Las billeteras de papel normalmente se utilizan para la el depósito offline. Algunos cajeros ATM los imprimen en el recibo de papel en lugar de enviar los Dash directamente al dispositivo móvil. A veces se usan billeteras de papel prepago para enviar valores a otras personas (no recomendado).</string>
@@ -262,6 +255,8 @@
     <string name="preferences_data_usage_summary">Mostrar opciones para limitar el uso de datos en redes móviles.</string>
     <string name="preferences_remind_balance_title">Recordatorio de balance</string>
     <string name="preferences_remind_balance_summary">Despues de un par de semanas de no ser usada, el app te notificara si hay aún monedas en su billetera.</string>
+    <string name="preferences_show_disclaimer_title">Mostrar descargo de responsabilidad</string>
+    <string name="preferences_show_disclaimer_summary">¿Has leído las notas de seguridad? ¿Ya hiciste backup de tu billetera a un lugar seguro?</string>
     <string name="preferences_report_issue_title">Reportar problema</string>
     <string name="preferences_initiate_reset_title">Reevaluar cadena de bloques</string>
     <string name="preferences_initiate_reset_summary">Reevaluar la cadena de bloques, transacciones y balance de la billetera. La reproducción tomará un tiempo, solo haz esto si sabes porqué.</string>
