@@ -101,5 +101,12 @@
 	<string name="preferences_enable_payment_request_summary">Use payment protocol for QR-code initiated payments</string>
 	<string name="preferences_enable_payment_request_title">BIP70 for scan-to-pay</string>
 
+    <string name="unknown_error">Unknown error.</string>
 	<string name="contacts">Contacts</string>
+	<string name="create">Create</string>
+	<string name="create_blockchain_user">Create Blockchain User</string>
+	<string name="blockchain_user_duplicated_username_error">Error. This username is already registered.</string>
+	<string name="username_registered_success_message">Username %s registered with success.</string>
+	<string name="hello_user">Hello, %s</string>
+
 </resources>

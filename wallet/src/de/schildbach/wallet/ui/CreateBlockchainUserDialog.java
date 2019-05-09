@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui;
 
 import android.app.Dialog;
+import android.app.ProgressDialog;
 import android.arch.lifecycle.LiveData;
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.DialogInterface;
@@ -38,6 +39,7 @@ import android.widget.Toast;
 
 import org.bitcoinj.core.Transaction;
 import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.util.ProgressDialogUtils;
 import org.spongycastle.crypto.params.KeyParameter;
 
 import java.util.Arrays;
@@ -56,6 +58,7 @@ import de.schildbach.wallet_test.R;
 public class CreateBlockchainUserDialog extends DialogFragment {
 
     private static final String ARG_ENCRYPTION_KEY = "arg_encryption_key";
+    private ProgressDialog loadingDialog;
 
     public static void show(FragmentManager fm, KeyParameter encryptionKey) {
         Bundle args = new Bundle();
@@ -77,9 +80,8 @@ public class CreateBlockchainUserDialog extends DialogFragment {
 
         DialogBuilder dialogBuilder = new DialogBuilder(activity);
         dialogBuilder.setView(view);
-        //TODO: Move to resource string
-        dialogBuilder.setTitle("Create Blockchain User");
-        dialogBuilder.setPositiveButton("Create", null);
+        dialogBuilder.setTitle(R.string.create_blockchain_user);
+        dialogBuilder.setPositiveButton(R.string.create, null);
 
         Dialog dialog = dialogBuilder.create();
 
@@ -126,34 +128,37 @@ public class CreateBlockchainUserDialog extends DialogFragment {
         liveData.observe(this, transactionResource -> {
             StatusType status = transactionResource.status;
             if (Arrays.asList(SuccessType.values()).contains(status)) {
-                Toast.makeText(getActivity(), "Success. Username " + username + " registered.",
-                        Toast.LENGTH_SHORT).show();
+                String usernameSuccessMessage = getActivity()
+                        .getString(R.string.username_registered_success_message, username);
+                Toast.makeText(getActivity(), usernameSuccessMessage, Toast.LENGTH_SHORT).show();
                 dismiss();
             } else if (Arrays.asList(LoadingType.values()).contains(status)) {
                 showLoading();
             } else {
                 hideLoading();
                 if (ErrorType.INSUFFICIENT_MONEY.equals(status)) {
-                    Toast.makeText(getActivity(), "Not enough minerals", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getActivity(), R.string.send_coins_fragment_insufficient_money_title,
+                            Toast.LENGTH_SHORT).show();
                 } else if (ErrorType.TX_REJECT_DUP_USERNAME.equals(status)) {
-                    Toast.makeText(getActivity(), "Error. This username is already registered.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getActivity(), R.string.blockchain_user_duplicated_username_error,
+                            Toast.LENGTH_LONG).show();
                 } else {
-                    Toast.makeText(getActivity(), "Unknown error.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getActivity(), R.string.unknown_error, Toast.LENGTH_LONG).show();
                 }
             }
         });
     }
 
     private void showLoading() {
-        ProgressDialogFragment.showProgress(getChildFragmentManager(), getString(R.string.loading));
+        if (loadingDialog == null) {
+            loadingDialog = ProgressDialogUtils.createSpinningLoading(getActivity());
+        }
+        loadingDialog.show();
     }
 
     private void hideLoading() {
-        //TODO: Use another loading.
-        try {
-            ProgressDialogFragment.dismissProgress(getChildFragmentManager());
-        } catch (NullPointerException e) {
-            //It was not being shown after all
+        if (loadingDialog != null) {
+            loadingDialog.cancel();
         }
     }
 

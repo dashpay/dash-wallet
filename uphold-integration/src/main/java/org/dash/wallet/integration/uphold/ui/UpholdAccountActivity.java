@@ -38,6 +38,7 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.util.ProgressDialogUtils;
 import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.UpholdCard;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
@@ -112,10 +113,7 @@ public class UpholdAccountActivity extends AppCompatActivity {
     }
 
     private void loadUserBalance() {
-        final ProgressDialog loadingDialog = new ProgressDialog(this);
-        loadingDialog.setIndeterminate(true);
-        loadingDialog.setCancelable(false);
-        loadingDialog.setMessage(getString(R.string.loading));
+        final ProgressDialog loadingDialog = ProgressDialogUtils.createSpinningLoading(this);
         loadingDialog.show();
 
         UpholdClient.getInstance().getDashBalance(new UpholdClient.Callback<BigDecimal>() {

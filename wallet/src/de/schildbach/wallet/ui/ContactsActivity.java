@@ -17,10 +17,13 @@
 
 package de.schildbach.wallet.ui;
 
+import android.app.ProgressDialog;
 import android.arch.lifecycle.ViewModelProviders;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.widget.Toast;
+
+import org.dash.wallet.common.util.ProgressDialogUtils;
 
 import java.util.Arrays;
 
@@ -36,6 +39,7 @@ import de.schildbach.wallet_test.R;
 public class ContactsActivity extends AbstractBindServiceActivity {
 
     BlockchainUserViewModel viewModel;
+    private ProgressDialog loadingDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,7 +62,7 @@ public class ContactsActivity extends AbstractBindServiceActivity {
                 showLoading();
             } else {
                 hideLoading();
-                Toast.makeText(this, "Unknown error.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, R.string.unknown_error, Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -86,19 +90,20 @@ public class ContactsActivity extends AbstractBindServiceActivity {
     }
 
     private void userLoaded(BlockchainUser user) {
-        setTitle("Hello " + user.getUname());
+        String title = getString(R.string.hello_user, user.getUname());
+        setTitle(title);
     }
 
     private void showLoading() {
-        ProgressDialogFragment.showProgress(getSupportFragmentManager(), getString(R.string.loading));
+        if (loadingDialog == null) {
+            loadingDialog = ProgressDialogUtils.createSpinningLoading(this);
+        }
+        loadingDialog.show();
     }
 
     private void hideLoading() {
-        //TODO: Use another loading.
-        try {
-            ProgressDialogFragment.dismissProgress(getSupportFragmentManager());
-        } catch (NullPointerException e) {
-            //It was not being shown after all
+        if (loadingDialog != null) {
+            loadingDialog.cancel();
         }
     }
 }
