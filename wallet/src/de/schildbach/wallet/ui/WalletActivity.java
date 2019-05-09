@@ -589,7 +589,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 return;
             }
             final ClipDescription clipDescription = clip.getDescription();
-            if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
+            if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST)) {
+                final Uri clipUri = clip.getItemAt(0).getUri();
+                if (clipUri != null) {
+                    final String input = clipUri.toString();
+                    handleString(input);
+                }
+            } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
                 final CharSequence clipText = clip.getItemAt(0).getText();
                 if (clipText != null) {
                     final String input = clipText.toString();
