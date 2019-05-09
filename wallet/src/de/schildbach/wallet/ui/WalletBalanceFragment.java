@@ -142,7 +142,7 @@ public final class WalletBalanceFragment extends Fragment {
 
         viewBalanceLocal = (CurrencyTextView) view.findViewById(R.id.wallet_balance_local);
         viewBalanceLocal.setInsignificantRelativeSize(1);
-        viewBalanceLocal.setStrikeThru(Constants.TEST);
+        viewBalanceLocal.setStrikeThru(!Constants.IS_PROD_BUILD);
 
         viewProgress = (TextView) view.findViewById(R.id.wallet_balance_progress);
         exchangeRatesViewModel = ViewModelProviders.of(this).get(ExchangeRatesViewModel.class);
