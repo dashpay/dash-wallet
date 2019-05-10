@@ -40,8 +40,6 @@
     <string name="wallet_options_encrypt_keys_set">ตั้งค่า PIN การใช้จ่าย</string>
     <string name="wallet_options_encrypt_keys_change">เปลี่ยน PIN การใช้จ่าย</string>
     <string name="wallet_options_safety">บันทึกความปลอดภัย</string>
-    <string name="wallet_options_donate">ทิป/บริจาค</string>
-    <string name="wallet_donate_address_label">การบริจาคสำหรับ Dash wallet </string>
     <string name="wallet_low_storage_dialog_title">พื้นที่จัดเก็บข้อมูลภายในอุปกรณ์ต่ำ!</string>
     <string name="wallet_low_storage_dialog_msg">Wallet Dash ใช้พื้นที่เก็บข้อมูลภายในสำหรับการบันทึกการทำธุรกรรมและการบล็อก  ถ้าหากพื้นที่ไม่เพียงพอ มันจะหยุดทำงานและทำให้ Dash ของคุณจะอยู่ในความเสี่ยง คุณต้องการเปิด Application Manager เพื่อถอนการติดตั้งแอพพลิเคชั่นที่ไม่จำเป็นหรือไม่?</string>
     <string name="wallet_low_storage_dialog_button_apps">จัดการ แอพพลิเคชั่น</string>
@@ -300,7 +298,6 @@
     <string name="notification_peers_connected_msg">%d peers ที่เชื่อมต่อ</string>
     <string name="notification_inactivity_title">คุณยังคงมี Dash อยู่บนอุปกรณ์นี้!</string>
     <string name="notification_inactivity_message">โปรดทราบว่ายอดคงเหลือของคุณ%sจะสูญหายไปหากคุณถอนการติดตั้งแอพพลิเคชั่น Wallet Dash โดยไม่ส่งมันออกไปก่อน</string>
-    <string name="notification_inactivity_message_donate">การสำรองข้อมูลของคุณจะได้รับการเข้ารหัสด้วยรหัสผ่านที่คุณเลือกและที่ถูกเขียนไปยังที่เก็บข้อมูลภายนอก</string>
     <string name="notification_inactivity_action_dismiss">เตือนฉันภายหลัง</string>
     <string name="notification_inactivity_action_dismiss_forever">ไม่ต้องเตือนฉัน</string>
     <string name="appwidget_wallet_balance_title">ยอดคงเหลือ Dash</string>

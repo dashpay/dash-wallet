@@ -35,8 +35,6 @@
   <string name="wallet_options_encrypt_keys_set">Chagua PIN za malipo</string>
   <string name="wallet_options_encrypt_keys_change">Chenji PIN za malipo</string>
   <string name="wallet_options_safety">Maelezo usalama</string>
-  <string name="wallet_options_donate">Kuchangia</string>
-  <string name="wallet_donate_address_label">Mchango na pochi yako</string>
   <string name="wallet_low_storage_dialog_title">Disc yako ni chini</string>
   <string name="wallet_low_storage_dialog_msg">Pochi ya Dash anatumia disc kurekordi biashara yako. Ni matumizi ya shughuli na vitalu.</string>
   <string name="wallet_low_storage_dialog_button_apps">Kudhibiti programu</string>

@@ -40,8 +40,6 @@
     <string name="wallet_options_encrypt_keys_set">Magtalaga ng spending PIN</string>
     <string name="wallet_options_encrypt_keys_change">Palitan ang spending PIN</string>
     <string name="wallet_options_safety">Talaang pangkaligtasan</string>
-    <string name="wallet_options_donate">Tip / donasyon</string>
-    <string name="wallet_donate_address_label">Donasyon sa Dash Wallet</string>
     <string name="wallet_low_storage_dialog_title">Ang internal device storage ay mababa na!</string>
     <string name="wallet_low_storage_dialog_msg">Ang Dash Wallet ay gumagamit ng internal storage para alalahanin ang transaksyon at blocks. Kung ito ay mawalan ng espasyo, hihinto ang paggawa at ang iyong Dash ay posibleng manganib!\n\nGusto mo bang buksan ang Application Manager para i-uninstall ang hindi kailangang apps?</string>
     <string name="wallet_low_storage_dialog_button_apps">Pangasiwaan ang apps</string>
@@ -298,7 +296,6 @@
     <string name="notification_peers_connected_msg">%d peers connected</string>
     <string name="notification_inactivity_title">Mayroon ka pang Dash sa device na ito!</string>
     <string name="notification_inactivity_message">Alalahanin na ang iyong balanse na %s ay mawawala kapag in-uninstall mo ang Dash Wallet app ng hindi ito pinapamahagi muna.</string>
-    <string name="notification_inactivity_message_donate">Kung wala kang pakialam sa iyong mga barya, maaari mo rin itong ihandog sa proyekto ng Dash Wallet.</string>
     <string name="notification_inactivity_action_dismiss">Paalalahanan mo ako mamaya</string>
     <string name="notification_inactivity_action_dismiss_forever">Wag mo akong paalalahanan</string>
     <string name="appwidget_wallet_balance_title">Balanse ng Dash</string>

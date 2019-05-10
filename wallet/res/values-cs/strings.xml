@@ -40,8 +40,6 @@
     <string name="wallet_options_encrypt_keys_set">Nastavit PIN pro utrácení</string>
     <string name="wallet_options_encrypt_keys_change">Změnit PIN pro utrácení.</string>
     <string name="wallet_options_safety">Bezpečnost</string>
-    <string name="wallet_options_donate">Přispěj</string>
-    <string name="wallet_donate_address_label">Dar pro Dash Wallet</string>
     <string name="wallet_low_storage_dialog_title">Na vnitřním úložišti není dostatek místa!</string>
     <string name="wallet_low_storage_dialog_msg">Dash Wallet používá vnitřní úložiště pro ukládání transakcí a bloků. Pokud dojde místo v ůložišti, přestane fungovat a vaše Dashy jsou vystaveny riziku ztráty!\n\nChcete otevřít Správu Aplikací a odinstalovat nepotřebné aplikace?</string>
     <string name="wallet_low_storage_dialog_button_apps">Spravovat aplikace</string>
@@ -286,7 +284,6 @@
     <string name="notification_peers_connected_msg">%d peerů připojeno</string>
     <string name="notification_inactivity_title">Na zařízení máte stále ještě mince!</string>
     <string name="notification_inactivity_message">Pamatujte, že v případě, že neodešlete zůstatek %s dříve než odinstalujete aplikaci peněženky Dash, přijdete o něj.</string>
-    <string name="notification_inactivity_message_donate">Pokud je vám to jedno, můžete tento zůstatek věnovat na projekt Dash Wallet.</string>
     <string name="notification_inactivity_action_dismiss">Připomenout později</string>
     <string name="notification_inactivity_action_dismiss_forever">Nepřipomínat</string>
     <!-- generic buttons -->

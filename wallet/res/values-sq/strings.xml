@@ -39,8 +39,6 @@
 	<string name="wallet_options_encrypt_keys_set">Caktoni PIN-in</string>
 	<string name="wallet_options_encrypt_keys_change">Ndryshoni PIN-in</string>
 	<string name="wallet_options_safety">Shënime të sigurisë</string>
-	<string name="wallet_options_donate">Bakshish / Donacion</string>
-	<string name="wallet_donate_address_label">Donacion për Kuletën Dash</string>
 	<string name="wallet_low_storage_dialog_title">Hapësira e diskut në pajisjen tuaj është e ulët!</string>
 	<string name="wallet_low_storage_dialog_msg">Dash Wallet përdor memorjen interne për të ruajtur transaksionet dhe blloqet. Nëse nuk ka hapsir të mjaftueshme, nuk do të punoj dhe monedhat tuaja do jenë ne rrezik!\n\nDëshironi të hapni Menagjerin e Aplikacioneve dhe të fshini aplikacionet që nuk ju duhen?</string>
 	<string name="wallet_low_storage_dialog_button_apps">Menaxhoni programet</string>

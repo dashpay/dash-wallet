@@ -40,8 +40,6 @@
     <string name="wallet_options_encrypt_keys_set">Set spending PIN</string>
     <string name="wallet_options_encrypt_keys_change">Change spending PIN</string>
     <string name="wallet_options_safety">Safety notes</string>
-    <string name="wallet_options_donate">Tip / donate</string>
-    <string name="wallet_donate_address_label">Donation for Dash Wallet</string>
     <string name="wallet_low_storage_dialog_title">Internal device storage space low!</string>
     <string name="wallet_low_storage_dialog_msg">Dash Wallet uses internal storage for remembering transactions and blocks. If it runs out of space, it will stop working and your Dash will be at risk!\n\nDo you want to open the Application Manager to uninstall unneeded apps?</string>
     <string name="wallet_low_storage_dialog_button_apps">Manage apps</string>
@@ -299,8 +297,7 @@
     <string name="notification_coins_received_msg">Received %s</string>
     <string name="notification_peers_connected_msg">%d peers connected</string>
     <string name="notification_inactivity_title">You\'ve still got Dash on this device!</string>
-    <string name="notification_inactivity_message">Remember your balance of %s will be lost if you uninstall the Dash Wallet app without sending it away first.</string>
-    <string name="notification_inactivity_message_donate">If you don\'t care about your coins, you could also donate them to the Dash Wallet project.</string>
+        <string name="notification_inactivity_message">You still have Dash on this device! Please be sure to write down your recovery phrase before you uninstall the Dash Wallet or you will lose your balance of %s.</string>
     <string name="notification_inactivity_action_dismiss">Remind me later</string>
     <string name="notification_inactivity_action_dismiss_forever">Don\'t remind me</string>
     <string name="appwidget_wallet_balance_title">Dash balance</string>

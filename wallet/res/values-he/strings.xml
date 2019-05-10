@@ -32,8 +32,6 @@
   <string name="wallet_transactions_fragment_internal">פנימי</string>
   <string name="wallet_options_safety_menu">בטיחות</string>
   <string name="wallet_options_safety">הוראות בטיחות</string>
-  <string name="wallet_options_donate">תרומה</string>
-  <string name="wallet_donate_address_label">תרום לארנק ביטקוין</string>
   <string name="wallet_low_storage_dialog_title">אין מקום פנוי על המכשיר</string>
   <string name="wallet_low_storage_dialog_msg">ארנק הביטקוין משתמש באחסון הפנימי לצורך שמירת עסקאות ובלוקים. אם נגמר המקום, הוא יפסיק לעבוד והביטקוינים שלך יהיו בסיכון!\n\nהאם אתה רוצה לפתוח את מנהל היישומים ולהסיר יישומים שאינם נחוצים?</string>
   <string name="wallet_low_storage_dialog_button_apps">נהל יישומים</string>

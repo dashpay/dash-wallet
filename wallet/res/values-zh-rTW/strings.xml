@@ -40,8 +40,6 @@
     <string name="wallet_options_encrypt_keys_set">設置支付 PIN 碼</string>
     <string name="wallet_options_encrypt_keys_change">修改支付 PIN 碼</string>
     <string name="wallet_options_safety">安全提示</string>
-    <string name="wallet_options_donate">捐贈</string>
-    <string name="wallet_donate_address_label">捐助達世幣錢包</string>
     <string name="wallet_low_storage_dialog_title">儲存空間不足!</string>
     <string name="wallet_low_storage_dialog_msg">達世幣錢包使用內部存儲來記錄交易和區塊資料。如果空間不足，它將停止工作，你的達世幣將處於危險之中!\n\n你想打開應用程序管理器來卸載不需要的應用程式嗎?</string>
     <string name="wallet_low_storage_dialog_button_apps">管理App</string>
@@ -303,7 +301,6 @@
     <string name="notification_peers_connected_msg">%d 節點連線</string>
     <string name="notification_inactivity_title">你在這個裝置上還存放有達世幣!</string>
     <string name="notification_inactivity_message">請緊記如果您卸載達世幣錢包前沒有把餘額發送出去的話，在你的錢包中的%s餘額將會丟失。</string>
-    <string name="notification_inactivity_message_donate">如果你不在乎你的資金，你可以把它捐給達世幣錢包項目。</string>
     <string name="notification_inactivity_action_dismiss">稍後提醒我</string>
     <string name="notification_inactivity_action_dismiss_forever">不要提醒我</string>
     <string name="appwidget_wallet_balance_title">達世幣結餘</string>

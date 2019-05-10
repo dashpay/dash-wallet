@@ -32,8 +32,6 @@
   <string name="wallet_transactions_fragment_internal">внутрішній</string>
   <string name="wallet_options_safety_menu">Безпека</string>
   <string name="wallet_options_safety">Примітки по безпеці</string>
-  <string name="wallet_options_donate">Пожертвувати</string>
-  <string name="wallet_donate_address_label">Пожертвування для Dash Wallet</string>
   <string name="wallet_low_storage_dialog_title">Недостатньо внутрішньої пам\'яті на пристрої!</string>
   <string name="wallet_low_storage_dialog_msg">Dash Wallet використовує внутрішю пам\'ять для збереження транзакцій і блоків. Якщо вона закінчиться, додаток перестане працювати, що загрожуватиме вмісту Dash-гаманця!\n\nВідкрити «Управління додатками», щоб видалити непотрібні додатки?</string>
   <string name="wallet_low_storage_dialog_button_apps">Керування додатками</string>

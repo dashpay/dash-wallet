@@ -40,8 +40,6 @@
     <string name="wallet_options_encrypt_keys_set">송금 PIN 설정</string>
     <string name="wallet_options_encrypt_keys_change">송금 PIN 변경</string>
     <string name="wallet_options_safety">안전 이슈 참조</string>
-    <string name="wallet_options_donate">팁 / 기부</string>
-    <string name="wallet_donate_address_label">대쉬 앱의 기부 주소</string>
     <string name="wallet_low_storage_dialog_title">저장장치 용량 부족</string>
     <string name="wallet_low_storage_dialog_msg">대쉬 지갑은 거래 기록과 블록을 기억하기 위해 저장 장치의 공간을 사용합니다. 저장 공간이 부족할 경우 앱 작동이 중단될 수 있으며, 대쉬 보관과 거래에 문제가 있을 수 있습니다.\n\n불필요한 앱 정리를 위해 어플리케이션 매니저를 여시겠습니까?</string>
     <string name="wallet_low_storage_dialog_button_apps">앱 정리하기</string>
@@ -300,7 +298,6 @@
     <string name="notification_peers_connected_msg">피어 연결 개수 알림 : %d</string>
     <string name="notification_inactivity_title">아직 이 장치 기기에 대쉬가 남아 있습니다.</string>
     <string name="notification_inactivity_message">이 대쉬 지갑 앱을 삭제하기 전에, 잔액을 다른 곳으로 송금하지 않으면 모든 대쉬 금액%s이 사라집니다.</string>
-    <string name="notification_inactivity_message_donate">만약 남은 잔액에 관심이 없다면 대쉬 지갑 프로젝트에 기부할 수 있습니다.</string>
     <string name="notification_inactivity_action_dismiss">이후 다시 알림</string>
     <string name="notification_inactivity_action_dismiss_forever">알림 필요없음</string>
     <string name="appwidget_wallet_balance_title">대쉬 잔액</string>
