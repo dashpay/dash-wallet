@@ -54,11 +54,6 @@ public class BlockchainUser {
         this.subtx = subtx;
     }
 
-    public static BlockchainUser fromDapiClientObject(org.dashevo.dapiclient.model.BlockchainUser dapiBu) {
-        return new BlockchainUser(dapiBu.getRegtxid(), dapiBu.getUname(), dapiBu.getPubkeyid(),
-                Coin.valueOf(dapiBu.getCredits()), dapiBu.getData(), dapiBu.getState(), dapiBu.getSubtx());
-    }
-
     @NonNull
     public String getRegtxid() {
         return regtxid;

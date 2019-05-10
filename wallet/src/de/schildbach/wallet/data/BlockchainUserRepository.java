@@ -121,7 +121,7 @@ public class BlockchainUserRepository {
                             liveData.postValue(new Resource<>(ErrorType.DEFAULT, null));
                         }
                     }
-                });
+                }, executor);
             } catch (InsufficientMoneyException e) {
                 liveData.postValue(new Resource<>(ErrorType.INSUFFICIENT_MONEY, null)); } });
 
