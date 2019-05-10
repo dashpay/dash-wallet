@@ -1049,7 +1049,9 @@ public final class SendCoinsFragment extends Fragment {
 
         sendRequest.memo = paymentIntent.memo;
         sendRequest.exchangeRate = amountCalculatorLink.getExchangeRate();
-        log.info("Using exchange rate: " + sendRequest.exchangeRate.coinToFiat(Coin.COIN).toFriendlyString());
+        log.info("Using exchange rate: " + (sendRequest.exchangeRate != null
+                ? sendRequest.exchangeRate.coinToFiat(Coin.COIN).toFriendlyString() :
+                "not available"));
         sendRequest.aesKey = encryptionKey;
 
         new SendCoinsOfflineTask(wallet, backgroundHandler) {

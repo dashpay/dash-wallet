@@ -39,8 +39,6 @@
     <string name="wallet_options_encrypt_keys_set">Aseta PIN maksamista varten</string>
     <string name="wallet_options_encrypt_keys_change">Vaihda maksamiseen käytettävä PIN</string>
     <string name="wallet_options_safety">Turvallisuustiedot</string>
-    <string name="wallet_options_donate">Anna tippiä tai lahjoita</string>
-    <string name="wallet_donate_address_label">Lahjoitus Dash Walletille</string>
     <string name="wallet_low_storage_dialog_title">Sisäinen tallennustila on vähissä!</string>
     <string name="wallet_low_storage_dialog_msg">Dash Wallet käyttää sisäistä tallennustilaa muistaakseen varainsiirrot ja lohkot. Jos se ei saa tarpeeksi tallennustilaa, se lakkaa toimimasta ja Dashisi ovat silloin vaarassa!\n\nHaluatko avata ohjelmien hallinan poistaaksesi tarpeettomia ohjelmia?</string>
     <string name="wallet_low_storage_dialog_button_apps">Hallitse ohjelmia</string>

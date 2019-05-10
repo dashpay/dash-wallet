@@ -190,10 +190,6 @@ public final class Constants {
     /** Default currency to use if all default mechanisms fail. */
     public static final String DEFAULT_EXCHANGE_CURRENCY = "USD";
 
-    /** Donation address for tip/donate action. */
-    public static final String DONATION_ADDRESS = NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET)
-            ? CoinDefinition.DONATION_ADDRESS : null;
-
     /** Recipient e-mail address for reports. */
     public static final String REPORT_EMAIL = "support@dash.org";
 

@@ -40,8 +40,6 @@
 	<string name="wallet_options_encrypt_keys_set">تعيين الرقم السري الشخصي للإنفاق</string>
 	<string name="wallet_options_encrypt_keys_change">تغيير الرقم السري الشخصي للإنفاق</string>
 	<string name="wallet_options_safety">ملاحظات السلامة</string>
-	<string name="wallet_options_donate">التبرعات</string>
-	<string name="wallet_donate_address_label">التبرع لمحفظة داش</string>
 	<string name="wallet_low_storage_dialog_title">انتبه! مساحة الذاكرة الداخلية منخفضة</string>
 	<string name="wallet_low_storage_dialog_msg">تستخدم محفظة الداش وحدة التخزين الداخلية لتذكر المعاملات والكتل. إذا نفدت مساحة التخزين تلك، فإنها سوف تتوقف عن العمل، وسوف يكون داش الخاصة بك في خطر!\n\nهل تريد فتح برنامج مدير التطبيقات لحذف التطبيقات غير الضرورية؟</string>
 	<string name="wallet_low_storage_dialog_button_apps">إدارة التطبيقات</string>
@@ -305,7 +303,6 @@
 	<string name="notification_peers_connected_msg">الأقران المتصلة peers %d </string>
 	<string name="notification_inactivity_title">لا يزال لديك داش على هذا الجهاز!</string>
 	<string name="notification_inactivity_message">تذكر سيتم فقدان رصيدك%s إذا قمت بإلغاء تثبيت التطبيق محفظة داش دون إرساله بعيدا أولا.</string>
-	<string name="notification_inactivity_message_donate">إذا كنت لا يهتمون القطع النقدية الخاصة بك، هل يمكن أيضا التبرع لهم لمشروع محفظة داش.</string>
 	<string name="notification_inactivity_action_dismiss">ذكرني لاحقا</string>
 	<string name="notification_inactivity_action_dismiss_forever">لا تذكرني</string>
 	<string name="appwidget_wallet_balance_title">داش التوازن</string>

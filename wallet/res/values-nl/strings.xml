@@ -40,8 +40,6 @@
     <string name="wallet_options_encrypt_keys_set">Pincode instellen voor betalingen</string>
     <string name="wallet_options_encrypt_keys_change">Pincode voor betalingen wijzigen</string>
     <string name="wallet_options_safety">Veiligheidsvoorschriften</string>
-    <string name="wallet_options_donate">Fooi geven / doneren</string>
-    <string name="wallet_donate_address_label">Donatie aan Dash Wallet</string>
     <string name="wallet_low_storage_dialog_title">Weinig interne opslagruimte!</string>
     <string name="wallet_low_storage_dialog_msg">Dash portemonnee gebruikt interne geheugencapaciteit om transacties en blocks op te slaan. Als de beschikbare geheugenruimte tekort schiet zal uw Dash portemonnee niet meer goed kunnen functioneren en loopt u risico het beheer over uw actuele Dash saldo te verliezen!\\n\\nWilt U de Applicatie beheer instellingen openen om ongebruikte apps te verwijderen?</string>
     <string name="wallet_low_storage_dialog_button_apps">Apps beheren</string>
@@ -300,7 +298,6 @@
     <string name="notification_peers_connected_msg">%d actieve verbindingen</string>
     <string name="notification_inactivity_title">U heeft nog Dash op dit apparaat!</string>
     <string name="notification_inactivity_message">Uw saldo van %s Dash zal verloren gaan als u de Dash portemonnee de-installeert zonder dit saldo eerst naar een ander adres te verzenden. </string>
-    <string name="notification_inactivity_message_donate">Als u uw coins niet meer nodig heeft, kunt u ze ook doneren aan het Dash-portemonneeproject.</string>
     <string name="notification_inactivity_action_dismiss">Herinner me later</string>
     <string name="notification_inactivity_action_dismiss_forever">Herinner me niet</string>
     <string name="appwidget_wallet_balance_title">Dash-saldo</string>

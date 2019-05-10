@@ -32,8 +32,6 @@
   <string name="wallet_transactions_options_filter_sent">Poslano</string>
   <string name="wallet_options_safety_menu">Varnost</string>
   <string name="wallet_options_safety">O varnosti</string>
-  <string name="wallet_options_donate">Donacije</string>
-  <string name="wallet_donate_address_label">Donacija za Dash Wallet</string>
   <string name="wallet_low_storage_dialog_title">Na notranjem pomnilniškem mediju zmanjkuje prostora!</string>
   <string name="wallet_low_storage_dialog_msg">Dash Wallet uporablja notranji pomnilnik, da si zapomni nakazila in bloke. Če tu zmanjka prostora, bo denarnica prenehala delovati in vaši novci bodo v nevarnosti!\n\nŽelite odpreti Application Manager, da boste lahko odstranili odvečne aplikacije?</string>
   <string name="wallet_low_storage_dialog_button_apps">Upravljanje z aplikacijami</string>

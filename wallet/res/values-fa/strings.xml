@@ -40,8 +40,6 @@
     <string name="wallet_options_encrypt_keys_set">ایجاد رمز پرداخت</string>
     <string name="wallet_options_encrypt_keys_change">تغییر رمز پرداخت</string>
     <string name="wallet_options_safety">توصیه‌های امنیتی</string>
-    <string name="wallet_options_donate">انعام / کمک بلاعوض</string>
-    <string name="wallet_donate_address_label">کمک بلاعوضبه پروژه دش والت</string>
     <string name="wallet_low_storage_dialog_title">فضای ذخیره داخلی دستگاه‌تان کم است!</string>
     <string name="wallet_low_storage_dialog_msg">دش والت از فضای ذخیره داخلی دستگاه‌تان برای ذخیره تراکنش‌ها و بلوک‌ها استفاده می‌کند. اگر فضا به اندازه کافی در آن وجود نباشد، این قابلیت‌ها دیگر در دسترس نخواهد بود و موجودش شما نیز در خطر قرار می‌گیرد! n\n\ آیا می‌خواهید اپلیکیشن مدیریت برنامه‌ها را باز کرده و یا اپلیکیشن‌های غیرضروری را حذف کنید؟</string>
     <string name="wallet_low_storage_dialog_button_apps">مدیریت اپلیکیشن‌ها</string>
@@ -305,7 +303,6 @@
     <string name="notification_peers_connected_msg">%d همتا متصل وجود دارد. </string>
     <string name="notification_inactivity_title">هنوز مقداری دش بر روی دستگاه خود دارید!</string>
     <string name="notification_inactivity_message">به یاد داشته باشید که %s موجودd شما در صورت حذف اپلیکیشن دش والت از بین خواهد رفت، مگر اینکه این موجودی را ابتدا به جایی دیگر منتقل کنید.</string>
-    <string name="notification_inactivity_message_donate">اگر برنامه خاصی برای موجودی‌تان ندارید، می‌توانید آنها را به پروژه دش والت اهدا کنید. </string>
     <string name="notification_inactivity_action_dismiss">بعدا یادآوری کن!</string>
     <string name="notification_inactivity_action_dismiss_forever">دیگر یادآوری نکن!</string>
     <string name="appwidget_wallet_balance_title">موجودی دش</string>

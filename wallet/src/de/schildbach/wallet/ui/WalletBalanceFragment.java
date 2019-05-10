@@ -180,37 +180,6 @@ public final class WalletBalanceFragment extends Fragment {
         super.onPause();
     }
 
-    @Override
-    public void onCreateOptionsMenu(final Menu menu, final MenuInflater inflater) {
-        inflater.inflate(R.menu.wallet_balance_fragment_options, menu);
-
-        super.onCreateOptionsMenu(menu, inflater);
-    }
-
-    @Override
-    public void onPrepareOptionsMenu(final Menu menu) {
-        final boolean hasSomeBalance = balance != null && !balance.isLessThan(SOME_BALANCE_THRESHOLD);
-        menu.findItem(R.id.wallet_balance_options_donate)
-                .setVisible(Constants.DONATION_ADDRESS != null && (!installedFromGooglePlay || hasSomeBalance));
-
-        super.onPrepareOptionsMenu(menu);
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(final MenuItem item) {
-        switch (item.getItemId()) {
-        case R.id.wallet_balance_options_donate:
-            handleDonate();
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
-    private void handleDonate() {
-        SendCoinsActivity.startDonate(activity, null, FeeCategory.ECONOMIC, 0);
-    }
-
     private void updateView() {
         if (!isAdded())
             return;

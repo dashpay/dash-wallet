@@ -40,8 +40,6 @@
     <string name="wallet_options_encrypt_keys_set">Nastaviť PIN pre míňanie</string>
     <string name="wallet_options_encrypt_keys_change">Zmeniť PIN pre míňanie</string>
     <string name="wallet_options_safety">Bezpečnosť</string>
-    <string name="wallet_options_donate">Prispieť</string>
-    <string name="wallet_donate_address_label">Dar pre Dash peňaženku</string>
     <string name="wallet_low_storage_dialog_title">Málo vnútornej pamäte!</string>
     <string name="wallet_low_storage_dialog_msg">Peňaženka Dash používa internú pamäť pre uchovanie transakcií a blokov. Ak dôjde miesto, prestane pracovať and Vaše Dash-e budú v ohrození!\n\nChcete otvoriť správcu aplikácií a odinštalovať nepotrebné aplikácie?</string>
     <string name="wallet_low_storage_dialog_button_apps">Spravovať aplikácie</string>
@@ -305,7 +303,6 @@
     <string name="notification_peers_connected_msg">%d pripojených uzlov</string>
     <string name="notification_inactivity_title">Na zariadení máte stále ešte mince!</string>
     <string name="notification_inactivity_message">Pamätajte, že stratíte zostatok %s v prípade, ak ho neodošlete skôr ako odinštalujete aplikáciu peňaženky Dash.</string>
-    <string name="notification_inactivity_message_donate">Ak je Vám to jedno, môžete tento zostatok venovať projektu Dash Wallet.</string>
     <string name="notification_inactivity_action_dismiss">Pripomenúť neskôr </string>
     <string name="notification_inactivity_action_dismiss_forever">Nepripomínať</string>
     <string name="appwidget_wallet_balance_title">Bilancia Dash</string>

@@ -40,8 +40,6 @@
     <string name="wallet_options_encrypt_keys_set">Postavi PIN za potrošnju</string>
     <string name="wallet_options_encrypt_keys_change">Promeni PIN za potrošnju</string>
     <string name="wallet_options_safety">Sigurnosne preporuke</string>
-    <string name="wallet_options_donate">Bakšiš/donacija</string>
-    <string name="wallet_donate_address_label">Donacija za Dash Wallet</string>
     <string name="wallet_low_storage_dialog_title">Unutrašnja memorija uređaja je na izmaku!</string>
     <string name="wallet_low_storage_dialog_msg">Dash Wallet koristi internu memoriju kako bi pamtio transakcije i blokove. Ako ponestane memorijskog prostora, Dash Wallet će prestati da radi i vaš Dash će biti u opasnosti!\n\nDa li želite da otvorite Menadžer Aplikacija kako biste obrisali nepotrebne aplikacije?</string>
     <string name="wallet_low_storage_dialog_button_apps">Organizuj aplikacije</string>
@@ -304,7 +302,6 @@
     <string name="notification_peers_connected_msg">%d povezanih čvorova</string>
     <string name="notification_inactivity_title">Još uvek imate Dash-a na ovom uređaju!</string>
     <string name="notification_inactivity_message">Imajte na umu da će vaše stanje od %s biti izgubljeno ako deinstalirate Dash Wallet aplikaciju pre nego što pošaljete negde taj iznos.</string>
-    <string name="notification_inactivity_message_donate">Ako vam nije stalo do vaših novčića uvek ih možete donirati Dash Wallet projektu. </string>
     <string name="notification_inactivity_action_dismiss">Podseti me kasnije</string>
     <string name="notification_inactivity_action_dismiss_forever">Nemoj me podsećati</string>
     <string name="appwidget_wallet_balance_title">Dash stanje</string>

@@ -36,6 +36,6 @@
     <color name="bg_list">#40ffffff</color>
     <color name="bg_list_selected">#40808090</color>
     <color name="bg_dialog_title">@android:color/transparent</color>
-    <color name="bg_shortcut">#fff5f5f5</color>
+    <color name="bg_shortcut">@color/colorPrimary</color>
 
 </resources>
