@@ -42,6 +42,8 @@ import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
+import org.bitcoinj.uri.BitcoinURI;
+import org.bitcoinj.uri.BitcoinURIParseException;
 import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
@@ -939,11 +941,18 @@ public final class SendCoinsFragment extends Fragment {
     private void validateReceivingAddress() {
         try {
             final String addressStr = receivingAddressView.getText().toString().trim();
-            if (!addressStr.isEmpty()
-                    && Constants.NETWORK_PARAMETERS.equals(AddressUtil.getParametersFromAddress(addressStr))) {
-                final String label = AddressBookProvider.resolveLabel(activity, addressStr);
-                validatedAddress = new AddressAndLabel(Constants.NETWORK_PARAMETERS, addressStr, label);
-                receivingAddressView.setText(null);
+            try {
+                //Is the addressStr a valid Dash URI?
+                new BitcoinURI(Constants.NETWORK_PARAMETERS, addressStr);
+                initStateFromBitcoinUri(Uri.parse(addressStr));
+            } catch (BitcoinURIParseException x) {
+                //treat the string as an address or a name in the address book
+                if (!addressStr.isEmpty()
+                        && Constants.NETWORK_PARAMETERS.equals(AddressUtil.getParametersFromAddress(addressStr))) {
+                    final String label = AddressBookProvider.resolveLabel(activity, addressStr);
+                    validatedAddress = new AddressAndLabel(Constants.NETWORK_PARAMETERS, addressStr, label);
+                    receivingAddressView.setText(null);
+                }
             }
         } catch (final AddressFormatException x) {
             // swallow
