@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android" >
     <item
         android:id="@+id/send_coins_options_fee_category"
         android:showAsAction="never"
@@ -22,4 +23,10 @@
         android:id="@+id/send_coins_options_empty"
         android:showAsAction="never"
         android:title="@string/send_coins_options_empty"/>
+    <item
+        android:id="@+id/options_paste"
+        android:icon="@drawable/ic_content_paste_white_24dp"
+        android:title="@string/options_paste_from_clipboard_title"
+        android:titleCondensed="@string/button_paste"
+        app:showAsAction="ifRoom" />
 </menu>

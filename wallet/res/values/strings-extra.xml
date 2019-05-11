@@ -5,6 +5,8 @@
 	<string name="send_coins_auto_lock_not_feasible">This transaction may take several minutes to settle. Complete instantly for %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">This transaction may take several minutes to settle.</string>
 
+	<string name="options_paste_from_clipboard_title">Paste from clipboard</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">This payment has not been transmitted yet.</string>
 	<string name="transaction_row_message_sent_to_single_peer">This payment has been sent.</string>
 
