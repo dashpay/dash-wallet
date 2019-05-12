@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet_test.R;
 
@@ -55,8 +56,8 @@ public abstract class AbstractWalletActivity extends AppCompatActivity {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
             setTaskDescription(new TaskDescription(null, null, getResources().getColor(R.color.bg_action_bar)));
-
         PinRetryController.handleLockedForever(this);
+        WalletLock.getInstance().setConfiguration(application.getConfiguration());
 
         registerFinishAllReceiver();
         super.onCreate(savedInstanceState);
