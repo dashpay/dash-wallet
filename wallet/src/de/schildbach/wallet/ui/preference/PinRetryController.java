@@ -6,6 +6,10 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 
+import org.dash.wallet.common.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
@@ -27,6 +31,8 @@ public class PinRetryController {
     private final static int POW_LOCK_TIME_BASE = 6;
     private final static int FAIL_LIMIT = 8;
     private final static long ONE_MINUTE_MILLIS = TimeUnit.MINUTES.toMillis(1);
+
+    private static final Logger log = LoggerFactory.getLogger(PinRetryController.class);
 
     public PinRetryController(Context context) {
         this.context = context;
@@ -59,15 +65,11 @@ public class PinRetryController {
         return failCount >= FAIL_LIMIT;
     }
 
-    public void clearPreferences() {
+    public void clearPinFailPrefs() {
         SharedPreferences.Editor prefsEditor = prefs.edit();
         prefsEditor.remove(PREFS_FAIL_HEIGHT);
         prefsEditor.remove(PREFS_FAILED_PINS);
         prefsEditor.commit();
-    }
-
-    public void successfulAttempt() {
-        clearPreferences();
     }
 
     public void failedAttempt(String pin) {
@@ -81,6 +83,7 @@ public class PinRetryController {
             int failCount = failedPins.size();
             SharedPreferences.Editor prefsEditor = prefs.edit();
             prefsEditor.putStringSet(PREFS_FAILED_PINS, failedPins);
+            log.info("PIN entered incorrectly " + failCount + "times");
 
             if (failCount >= FAIL_LIMIT) {
                 wipeWallet();
@@ -131,7 +134,8 @@ public class PinRetryController {
         dialogBuilder.setNegativeButton(R.string.wallet_lock_reset_wallet_title, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                clearPreferences();
+                log.info("Clearing all app data and exiting.");
+                clearPinFailPrefs();
                 WalletApplication.getInstance().eraseAndCreateNewWallet();
                 WalletApplication.getInstance().killAllActivities();
             }
@@ -170,7 +174,7 @@ public class PinRetryController {
     }
 
     public void storeSecureTime(Date date) {
-        prefs.edit().putLong(PREFS_SECURE_TIME, date.getTime()).commit();
+        prefs.edit().putLong(PREFS_SECURE_TIME, date.getTime()).apply();
     }
 
 }

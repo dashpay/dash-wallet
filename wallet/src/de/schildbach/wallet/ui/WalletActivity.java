@@ -120,7 +120,7 @@ import de.schildbach.wallet_test.R;
 public final class WalletActivity extends AbstractBindServiceActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback,
         NavigationView.OnNavigationItemSelectedListener,
-        WalletLock.OnLockChangeListener, UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
+        UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
         EnableFingerprintDialog.OnFingerprintEnabledListener,
         EncryptKeysDialogFragment.OnOnboardingCompleteListener {
@@ -162,6 +162,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         application = getWalletApplication();
         config = application.getConfiguration();
         wallet = application.getWallet();
+        WalletLock.getInstance().setConfiguration(config);
 
         setContentView(R.layout.wallet_activity_onepane_vertical);
 
@@ -199,6 +200,15 @@ public final class WalletActivity extends AbstractBindServiceActivity
             upgradeWalletKeyChains(Constants.BIP44_PATH, false);
         }
 
+        initFingerprintHelper();
+
+        canAutoLockGuard = new CanAutoLockGuard(config, onAutoLockStatusChangedListener);
+        if (!veryFirstLaunch) {
+            canAutoLockGuard.register(true);
+        }
+    }
+
+    private void initFingerprintHelper() {
         //Init fingerprint helper
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             fingerprintHelper = new FingerprintHelper(this);
@@ -405,13 +415,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     @Override
     public boolean onCreateOptionsMenu(final Menu menu) {
-        super.onCreateOptionsMenu(menu);
-
         getMenuInflater().inflate(R.menu.wallet_options, menu);
-
-        MenuItem walletLockMenuItem = menu.findItem(R.id.wallet_options_lock);
-        walletLockMenuItem.setVisible(WalletLock.getInstance().isWalletLocked(wallet));
-
+        super.onCreateOptionsMenu(menu);
         return true;
     }
 
@@ -1376,7 +1381,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         WalletTransactionsFragment walletTransactionsFragment = (WalletTransactionsFragment)
                 getSupportFragmentManager().findFragmentById(R.id.wallet_transactions_fragment);
         if (walletTransactionsFragment != null) {
-            walletTransactionsFragment.initFingerprintHelper();
             walletTransactionsFragment.onLockChanged(WalletLock.getInstance().isWalletLocked(wallet));
         }
     }

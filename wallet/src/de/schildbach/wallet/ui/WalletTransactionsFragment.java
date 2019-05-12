@@ -787,6 +787,9 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     @Override
     public void onLockChanged(boolean locked) {
         if (locked) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                initFingerprintHelper();
+            }
             showLockedView();
         } else {
             reloadTransactions();

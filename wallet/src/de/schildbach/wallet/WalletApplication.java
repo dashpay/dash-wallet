@@ -59,8 +59,10 @@ import android.app.Application;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.media.AudioAttributes;
@@ -132,8 +134,15 @@ public class WalletApplication extends Application {
 
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
             @Override
-            public void onStartedFirst() {
-                lockWalletIfNeeded();
+            public void onStartedAny(boolean isTheFirstOne) {
+                if (isTheFirstOne) {
+                    lockWalletIfNeeded();
+                } else {
+                    WalletLock walletLock = WalletLock.getInstance();
+                    if (!walletLock.isWalletLocked(wallet)) {
+                        config.setLastUnlockTime(System.currentTimeMillis());
+                    }
+                }
             }
         });
 
@@ -196,9 +205,24 @@ public class WalletApplication extends Application {
 
         cleanupFiles();
 
+        registerScreenOffReceiver();
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannels();
         }
+    }
+
+    private void registerScreenOffReceiver() {
+        IntentFilter screenStateFilter = new IntentFilter();
+        screenStateFilter.addAction(Intent.ACTION_SCREEN_OFF);
+        registerReceiver(new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                // immediately reset the lock timer in order to make the
+                // wallet after turning screen off.
+                config.setLastUnlockTime(0);
+            }
+        }, screenStateFilter);
     }
 
     @TargetApi(Build.VERSION_CODES.O)
@@ -621,9 +645,9 @@ public class WalletApplication extends Application {
                 alarmIntent);
     }
 
-    private void lockWalletIfNeeded() {
+    public void lockWalletIfNeeded() {
         WalletLock walletLock = WalletLock.getInstance();
-        if (wallet.isEncrypted() && !walletLock.isWalletLocked(wallet)) {
+        if (walletLock.isWalletLocked(wallet)) {
             walletLock.setWalletLocked(true);
         }
     }
