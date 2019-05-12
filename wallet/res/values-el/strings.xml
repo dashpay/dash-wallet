@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-    <string name="toast_wallet_reset">Έγινε επανεκίννηση στο πορτοφόλι σας!\nΘα πάρει λίγο χρόνο μέχρι την ανάκτηση του,</string>
+    <string name="toast_wallet_reset">Έγινε επανεκκίνηση στο πορτοφόλι σας!\nΘα πάρει λίγο χρόνο μέχρι την ανάκτηση του,</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Χρησιμοποιήστε με δική σας ευθύνη. Διαβάστε τις &lt;u&gt;επισημάνσεις ασφάλειας&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Είναι ανάγκη να &lt;u&gt;πάρετε αντίγραφο ασφάλειας του πορτοφολιού σας&lt;/u&gt;!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Χρειάζεται να πάρετε αντίγραφο ασφαλείας του πορτοφολιού σας!</string>
     <string name="blockchain_state_progress_hours">Απομένουν %1$s, %2$d ώρες</string>
     <string name="blockchain_state_progress_days">Απομένουν %1$s, %2$d μέρες</string>
     <string name="blockchain_state_progress_weeks">Απομένουν %1$s, %2$d εβδομάδες</string>
@@ -20,16 +20,16 @@
     <string name="exchange_rates_fragment_empty_text">Δεν ήταν δυνατή η φόρτωση των ισοτιμιών.</string>
     <string name="exchange_rates_fragment_empty_search">Δε βρέθηκε η ισοτιμία.</string>
     <string name="exchange_rates_fragment_default">(προεπιλογή)</string>
-    <string name="exchange_rates_fragment_rate">ισοτιμία</string>
-    <string name="exchange_rates_fragment_balance">υπόλοιπο</string>
+    <string name="exchange_rates_fragment_rate">Ισοτιμία</string>
+    <string name="exchange_rates_fragment_balance">Υπόλοιπο</string>
     <string name="exchange_rates_fragment_source">Τιμή από %s</string>
     <string name="exchange_rates_options_search">Αναζήτηση ισοτιμίας</string>
     <string name="exchange_rates_context_set_as_default_title">Θέσε ως προεπιλογή</string>
     <string name="wallet_transactions_fragment_empty_text_received">Δεν έχουν ληφθεί Dash μέχρι στιγμής.</string>
     <string name="wallet_transactions_fragment_empty_text_sent">Δεν έχουν σταλεί Dash μέχρι στιγμής.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Πως να λάβετε Dash;\n\nΑνταλλάξτε με πραγματικά χρήματα,\nπουλήστε αγαθά ή υπηρεσίες, ή\nκερδίστε τα με την εργασία σας.</string>
-    <string name="wallet_transactions_row_warning_backup">Συγχαρητήρια, έλαβες την πρώτη σου πληρωμή! Έχεις ήδη &lt;u&gt;κρατήσει αντίγραφο ασφαλείας&lt;/u&gt;, για να το προστατέψεις από απώλεια;</string>
-    <string name="wallet_transactions_row_warning_storage_encryption">Βοήθεια: Για να αυξήσεις την ασφάλεια του πορτοφολιού σου μπορείς να &lt;u&gt;κρυπτογραφήσεις την συσκευή σου&lt;/u&gt;. Αυτό επίσης προστατεύει τα δεδομένα και από άλλες επικίνδυνες εφαρμογές.</string>
+    <string name="wallet_transactions_row_warning_backup">Συγχαρητήρια, λάβατε την πρώτη σας πληρωμή! Έχετε κρατήσει αντίγραφο ασφαλείας του πορτοφολιού σας σε περίπτωση απώλειας;</string>
+    <string name="wallet_transactions_row_warning_storage_encryption">Βοήθεια: Για να αυξήσετε την ασφάλεια του πορτοφολιού σας μπορείτε να &lt;u&gt;κρυπτογραφήσετε την συσκευή σας&lt;/u&gt;. Αυτό επίσης προστατεύει τα δεδομένα και από άλλες επικίνδυνες εφαρμογές.</string>
     <string name="wallet_transactions_fragment_coinbase">εξορυχθέντα</string>
     <string name="wallet_transactions_fragment_internal">εσωτερικός</string>
     <string name="wallet_transactions_options_filter">Φίλτρο</string>
@@ -38,16 +38,16 @@
     <string name="wallet_transactions_options_filter_sent">Απεσταλμένες πληρωμές</string>
     <string name="wallet_options_safety_menu">Ασφάλεια</string>
     <string name="wallet_options_encrypt_keys_set">Ορίστε το PIN ξοδέματος</string>
-    <string name="wallet_options_encrypt_keys_change">Άλλαξε το PIN ξοδέματος</string>
+    <string name="wallet_options_encrypt_keys_change">Αλλάξτε το PIN ξοδέματος</string>
     <string name="wallet_options_safety">Οδηγίες ασφαλείας</string>
     <string name="wallet_low_storage_dialog_title">Ο εσωτερικός χώρος αποθήκευσης της συσκευής είναι πολύ χαμηλός!</string>
-    <string name="wallet_low_storage_dialog_msg">Το πορτοφόλι Dash χρησιμοποιεί τον εσωτερικό χώρο αποθήκευσης για να θυμάται τις συναλλαγές και τα blocks. Εάν δεν έχει χώρο, θα σταματήσει να λειτουργεί και τα χρήματά σου θα είναι σε κίνδυνο!\n\nΘες να ανοίξεις τον διαχειριστή εφαρμογών και να απεγκαταστήσεις κάποιες εφαρμογές που δεν χρησιμοποιείς;</string>
-    <string name="wallet_low_storage_dialog_button_apps">Διαχείρηση εφαρμογών</string>
+    <string name="wallet_low_storage_dialog_msg">Το πορτοφόλι Dash χρησιμοποιεί τον εσωτερικό χώρο αποθήκευσης για να θυμάται τις συναλλαγές και τα blocks. Εάν δεν έχει χώρο, θα σταματήσει να λειτουργεί και τα χρήματά σας θα βρεθούν σε κίνδυνο!\n\nΘέλετε να ανοίξετε τον διαχειριστή εφαρμογών και να απεγκαταστήσετε κάποιες εφαρμογές που δεν χρησιμοποιείτε;</string>
+    <string name="wallet_low_storage_dialog_button_apps">Διαχείριση εφαρμογών</string>
     <string name="wallet_timeskew_dialog_title">Ελέξτε ρυθμίσεις ημερομηνίας &amp; χρόνου</string>
-    <string name="wallet_timeskew_dialog_msg">Ο χρόνος της συσκευής σου είναι λάθος κατά %d λεπτά. Ενδεχομένως να μην μπορείς να στείλεις ή να λάβεις Dash εξαιτίας αυτού του προβλήματος.\n\nΠρέπει να ελέγξεις και αν χρειάζεται να διορθώσεις στις ρυθμίσεις την ημερομηνία, την ώρα και την ζώνη ώρας.</string>
+    <string name="wallet_timeskew_dialog_msg">Ο χρόνος της συσκευής σας είναι λάθος κατά %d λεπτά. Ενδεχομένως να μην μπορείτε να στείλετε ή να λάβετε Dash εξαιτίας αυτού του προβλήματος.\n\nΠρέπει να ελέγξετε και αν χρειάζεται να διορθώσετε στις ρυθμίσεις την ημερομηνία, την ώρα και την ζώνη ώρας.</string>
     <string name="wallet_version_dialog_title">Μία νέα έκδοση είναι διαθέσιμη!</string>
     <string name="wallet_version_dialog_msg">Αυτή η έκδοση διορθώνει σημαντικά προβλήματα. Για λεπτομέρειες, δείτε το σύνολο των αλλαγών στο Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Αν δεν βλέπεις καμιά ενημέρωση λογισμικού, αυτό πιθανά σημαίνει όι η έκδοση του Android δεν υποστηρίζεται πια.</string>
+    <string name="wallet_version_dialog_msg_deprecated">Αν δεν βλέπετε καμιά ενημέρωση λογισμικού, αυτό πιθανά σημαίνει ότι  η έκδοση του Android δεν υποστηρίζεται πια.</string>
     <string name="wallet_version_dialog_button_market">Google Play</string>
     <string name="wallet_version_dialog_button_binary">Λήψη</string>
     <string name="wallet_old_sdk_dialog_title">Η έκδοση για Android είναι παρωχημένη</string>
@@ -65,6 +65,7 @@
     <string name="send_coins_fragment_receiving_address_complex">complex\naddress</string>
     <string name="send_coins_fragment_pending">(%s αναμονή για επιβεβαίωση)</string>
     <string name="send_coins_fragment_amount_label">Ποσό για πληρωμή</string>
+    <string name="send_coins_fragment_pin_label">Εισάγετε PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Θα πληρώσετε %s για το δίκτυο.</string>
     <string name="send_coins_fragment_hint_fee_priority">Θα πληρώσετε τέλη προτεραιότητας %s. Αν σας ενδιαφέρουν χαμηλά τέλη, χρησιμοποιήστε την επιλογή \"προτεραιότητα\" μόνο αν χρειάζεστε επιβεβαίωση το συντομότερο δυνατόν.</string>
     <string name="send_coins_fragment_hint_dusty_send">Το ποσό είναι πολύ μικρό για να σταλθεί.</string>
@@ -92,13 +93,6 @@
     <string name="send_coins_options_fee_category_economic">Οικονομικό</string>
     <string name="send_coins_options_fee_category_priority">Προτεραιότητα</string>
     <string name="send_coins_options_empty">Άδειο πορτοφόλι</string>
-    <string name="raise_fee_dialog_title">Τέλος αύξησης δικτύου</string>
-    <string name="raise_fee_dialog_message">Θα θέλατε να αυξήσετε το τέλος δικτύου της πληρωμής κατά %s; Η επιβεβαίωση της πληρωμής θα γίνει γρηγορότερα.</string>
-    <string name="raise_fee_dialog_determining_fee">Προσδιορίζουμε το τέλος δικτύου...</string>
-    <string name="raise_fee_dialog_cant_raise">Το τέλος δικτύου για την πληρωμή αυτή δεν μπορεί να αυξηθεί.</string>
-    <string name="raise_fee_dialog_state_decrypting">Αποκρυπτογράφηση…</string>
-    <string name="raise_fee_dialog_state_done">Ολοκληρώθηκε.</string>
-    <string name="raise_fee_dialog_button_raise">Αύξηση</string>
     <string name="sweep_wallet_activity_title">Σάρωση χάρτινου πορτοφολιού</string>
     <string name="sweep_wallet_fragment_intro">Πρόκειται να σαρώσετε ένα χάρτινο πορτοφόλι ή κουπόνι. Με αυτό τον τρόπο θα μεταφέρετε όλα τα νομίσματα από το χαρτί στο πορτοφόλι σας σε αυτή την συσκευή. Μόλις η συναλλαγή εγκριθεί, το χαρτί θα είναι άχρηστο και δεν θα πρέπει να ξαναχρησιμοποιηθεί για λόγους ασφαλείας.</string>
     <string name="sweep_wallet_fragment_hint">Τα χάρτινα πορτοφόλια χρησιμοποιούνται για ψυχρή αποθήκευση. Μερικά ATM τα τυπώνουν πάνω στο χαρτάκι που δίνουν αντί να στέλνουν τα νομίσματα κατευθείαν στο κινητό σας. Κάποιοι μερικές φορές χρησιμοποιούν προ-φορτισμένα χάρτινα πορτοφόλια για να μεταφέρουν αξίες (δεν συνιστάται).</string>
@@ -154,18 +148,17 @@
     <string name="edit_address_book_entry_dialog_label_label">Ετικέτα</string>
     <string name="edit_address_book_entry_dialog_button_edit">Αποθήκευση</string>
     <string name="transaction_row_fee">Τέλος δικτύου</string>
-    <string name="transaction_row_message_purpose_key_rotation">Αυτή η συναλλαγή θωρακίζει το πορτοφόλι σας από κλοπή.
-&lt;u&gt;Περισσόιτερες πληροφορίες.&lt;/u&gt;</string>
+    <string name="transaction_row_message_purpose_key_rotation">Αυτή η συναλλαγή θωρακίζει το πορτοφόλι σας από κλοπή. &lt;u&gt;Περισσότερες πληροφορίες.&lt;/u&gt;</string>
     <string name="transaction_row_message_purpose_raise_fee">Αυτή η συναλλαγή αυξάνει το τέλος δικτύου για μία προηγούμενη πληρωμή.</string>
     <string name="transaction_row_message_own_unbroadcasted">Αυτή η πληρωμή δεν έχει διαβιβαστεί ακόμη.</string>
     <string name="transaction_row_message_received_direct">Η πληρωμή παρελήφθη απευθείας. Υπάρχει ρίσκο να μην μπορεί ποτε να ξοδευτεί.</string>
     <string name="transaction_row_message_received_unconfirmed_delayed">Καθυστερεί η επιβεβαίωση αυτής της πληρωμής, πιθανότατα λόγω υπερφόρτωσης του δικτύου Dash. </string>
-    <string name="transaction_row_message_received_unconfirmed_unlocked">Αυτή η πληρωμή θα είναι διαθέσιμη σε μερικά λεπτά.</string>
-    <string name="transaction_row_message_received_in_conflict">Υπάρχει υψηλό ρίσκο αυτή η πληρωμή να αναστρέφεται από τον αποστολέα! Αν μπορείτε, περιμένετε για επιβεβαίωση.</string>
+    <string name="transaction_row_message_received_unconfirmed_unlocked">Αυτή η πληρωμή τώρα μπορεί να ξοδευτεί χωρίς να επιβεβαίωθει.</string>
+    <string name="transaction_row_message_received_in_conflict">Υπάρχει υψηλό ρίσκο αυτή η πληρωμή να αναστραφεί από τον αποστολέα! Αν μπορείτε, περιμένετε για επιβεβαίωση.</string>
     <string name="transaction_row_message_received_dead">Αυτή η πληρωμή έχει αναιρεθεί από τον αποστολέα.</string>
     <string name="transaction_row_message_received_dust">Αυτό το μικρό ποσό πιθανότατα ποτέ δεν θα μπορέσετε να το ξοδέψετε οικονομικά.</string>
-    <string name="transaction_row_message_received_pay_to_many">Αυτή η πληρωμή πληρώνει πολλά περισσότερα πορτοφόλια μαζί με το δικό σας και αυτό προκαλεί καθυστέρηση του app με την πάροδο του χρόνου. Αν μπορείτε, προσπαθήστε να λαμβάνετε πληρωμές μόνο προς εσάς.</string>
-    <string name="transaction_row_message_received_rbf">Η πληρωμή καθεστερήθηκε επειδή ο αποστολέας χρησιμοποίησε ενα μή ασφαλές τύπο συναλλαγής.</string>
+    <string name="transaction_row_message_received_pay_to_many">Αυτή η πληρωμή πληρώνει σε πολλά πορτοφόλια πέρα από το δικό σας και αυτό προκαλεί καθυστέρηση της εφαρμογής με την πάροδο του χρόνου. Αν μπορείτε, προσπαθήστε να λαμβάνετε πληρωμές μόνο προς τα εσάς.</string>
+    <string name="transaction_row_message_received_rbf">Η πληρωμή καθυστέρησε επειδή ο αποστολέας χρησιμοποίησε ένα μη ασφαλές τύπο συναλλαγής.</string>
     <string name="network_monitor_activity_title">Παρακολούθηση δικτύου</string>
     <string name="network_monitor_peer_list_title">Ομότιμοι</string>
     <string name="network_monitor_block_list_title">Τμήματα</string>
@@ -211,7 +204,7 @@
     <string name="import_keys_intent_filter_action">Επαναφορά πορτοφολιού</string>
     <string name="encrypt_keys_dialog_title">PIN δαπανών</string>
     <string name="encrypt_keys_dialog_message">Οι δαπάνες από το πορτοφόλι σας θα πρέπει να προστατεύονται με το επιλεγμένο PIN.</string>
-    <string name="encrypt_keys_dialog_warning">Σημαντικό: Μη χρησιμοποιείτε κοινούς αριθμούς (όπως ημερομηνίες γέννησης) στο PIN σας.</string>
+    <string name="encrypt_keys_dialog_warning">Σημαντικό: Πρέπει να θυμάστε το PIN σας! Μη χρησιμοποιείτε κοινούς αριθμούς (όπως ημερομηνίες γέννησης).</string>
     <string name="encrypt_keys_dialog_password_old">Παλιό PIN</string>
     <string name="encrypt_keys_dialog_password_strength_weak">αδύναμο</string>
     <string name="encrypt_keys_dialog_password_strength_fair">μέτριο</string>
@@ -224,9 +217,9 @@
     <string name="scan_camera_problem_dialog_title">Λυπούμαστε</string>
     <string name="scan_camera_problem_dialog_message">Η κάμερα αντιμετωπίζει κάποιο πρόβλημα. Πιθανόν να χρειάζεται επανεκκίνηση.</string>
     <string name="scan_camera_permission_dialog_title">Άδεια κάμερας</string>
-    <string name="scan_camera_permission_dialog_message">Για να μπορέσεις να σκανάρεις QR code, πρέπει να δώσεις δικαιώματα ώστε νσ χρησιμοποιηθεί η κάμερά σου.</string>
+    <string name="scan_camera_permission_dialog_message">Για να μπορέσετε να σκανάρετε QR code, πρέπει να δώσετε δικαίωμα ώστε να χρησιμοποιηθεί η κάμερα σας.</string>
     <string name="input_parser_io_error">Δεν είναι δυνατή η ανάγνωση δεδομένων:\n%s</string>
-    <string name="input_parser_cannot_classify">Δεν αναγνωρίζω την εισαγωγή:\n%s</string>
+    <string name="input_parser_cannot_classify">Δεν είναι δυνατή η ανάγνωση δεδομένων:\n%s</string>
     <string name="input_parser_invalid_bitcoin_uri">Μη έγκυρο Dash URI:\n%s</string>
     <string name="input_parser_invalid_address">Μη έγκυρη διεύθυνση Dash!n(Mixing up mainnet/testnet?)</string>
     <string name="input_parser_unverifyable_paymentrequest">Δεν είναι δυνατή η επαλήθευση της αίτησης πληρωμής:\n%s</string>
@@ -260,10 +253,12 @@
     <string name="preferences_data_usage_summary">Δείτε τις επιλογές για να περιορίσετε τη χρήση των δεδομένων σε κινητά δίκτυα.</string>
     <string name="preferences_remind_balance_title">Υπενθύμιση υπολοίπου</string>
     <string name="preferences_remind_balance_summary">Μετά από δύο εβδομάδων μή χρήσης, το app θα ενημερώνει αν υπάρχουν ακόμη νομίσματα στο πορτοφόλι.</string>
+    <string name="preferences_show_disclaimer_title">Εμφάνιση της αποποίησης ευθυνών</string>
+    <string name="preferences_show_disclaimer_summary">Έχετε διαβάσει πραγματικά τις οδηγίες ασφαλείας; Κρατήσατε αντίγραφο ασφαλείας του πορτοφολιού σας σε ασφαλές μέρος;</string>
     <string name="preferences_report_issue_title">Αναφέρετε το πρόβλημα</string>
     <string name="preferences_initiate_reset_title">Επαναφορά blockchain</string>
-    <string name="preferences_initiate_reset_summary">Επανακινήστε block chain, συναλλαγές και το υπόλοιπο του πορτοφολιού. Η επαναληψη θα πάρει λίγο καιρό για αυτό καταφύγετε σε αυτή την λύση μόνο όταν το κρίνετε απαραίτητο.</string>
-    <string name="preferences_initiate_reset_dialog_message">Θέλετε να επαναφέρετε και να ξαναπαίξετε το blockchain;\n\nΈτσι θα κρύψετε προσωρινά το υπόλοιπο του πορτοφολιού σας και θα αφαιρέσετε τις συναλλαγές. Και τα δύο θα επανέρθουν μόλις το block chain sync προσωρήσει. Σιγουρευτείτε ότι έχετε σταθερή και σίγουρη σύνδεση στο ίντερνετ.</string>
+    <string name="preferences_initiate_reset_summary">Επαναφορά blockchain, συναλλαγών και του υπόλοιπου του πορτοφολιού. Η επανάληψη θα πάρει λίγο χρόνο, για αυτό καταφύγετε σε αυτή την λύση μόνο όταν το κρίνετε απαραίτητο</string>
+    <string name="preferences_initiate_reset_dialog_message">Θέλετε να επαναφέρετε και να επαναλάβετε το blockchain;\n\nΑυτό θα κρύψει προσωρινά το υπόλοιπο του πορτοφολιού σας και θα αφαιρέσει τις συναλλαγές. Και τα δύο θα επανέλθουν μόλις ο συγχρονισμός του blockchain προχωρήσει. Σιγουρευτείτε ότι έχετε σταθερή σύνδεση στο ίντερνετ.</string>
     <string name="preferences_initiate_reset_dialog_positive">Επαναφορά</string>
     <string name="preferences_extended_public_key_title">Δείξε xpub</string>
     <string name="preferences_extended_public_key_summary">Δείτε το εκτετεμένο δημόσιο κλειδί από το πορτοφόλι σας, έτσι ώστε να μπορέσετε να το εισάγετε σε άλλες εφαρμογές και υπηρεσίες. Να είστε προσεκτικοί: με αυτό τον τρόπο θα αποκαλύψετε τη νομισματική προστασία της ιδιωτικής σας ζωής σε αυτή την εφαρμογή.</string>
@@ -273,7 +268,7 @@
     <string name="report_issue_dialog_title_issue">Αναφέρετε το πρόβλημα</string>
     <string name="report_issue_dialog_title_crash">Ανιχνεύθηκε προηγηθείσα κατάρρευση</string>
     <string name="report_issue_dialog_title_transaction">Δηλώστε πρόβλημα με την επιλεγμένη πληρωμή</string>
-    <string name="report_issue_dialog_message_issue">Περιγράψτε παρακαλώ το πρόβλημα με ακρίβεια για να αναπαραχθεί. Χρησιμοποιήστε την αγγλική γλώσσα αν μπορείτε.</string>
+    <string name="report_issue_dialog_message_issue">Παρακαλώ περιγράψτε το ζήτημα σας με όσο μεγαλύτερη ακρίβεια γίνεται ώστε να αναπαραχθεί. Χρησιμοποιήστε την Αγγλική γλωσσά αν μπορείτε. Να περιμένετε email από την υποστήριξη του Dash σχετικά με το ζήτημα σας μέσα σε 24 ώρες.</string>
     <string name="report_issue_dialog_message_crash">Θα θέλατε να στείλετε μια αναφορά κατάρρευσης, βοηθώντας να επιδιορθώσουμε αυτό το πρόβλημα στο μέλλον;</string>
     <string name="report_issue_dialog_description">περιγραφή ζητήματος</string>
     <string name="report_issue_dialog_report">Αναφορά</string>
@@ -302,8 +297,7 @@
     <string name="notification_coins_received_msg">Ληφθέντα %s</string>
     <string name="notification_peers_connected_msg">%d χρήστες συνδεμένοι</string>
     <string name="notification_inactivity_title">Έχετε ακόμα Dash σε αυτή την συσκευή!</string>
-    <string name="notification_inactivity_message">Να θυμάστε ότι το υπόλοιπο %s θα χαθεί αν κάνετε uninstall της Dash Wallet app χωρίς να τα έχετε στείλει πρώτα κάπου.</string>
-    <string name="notification_inactivity_action_dismiss">Υπενθυμίστε το μου αργότερα</string>
+        <string name="notification_inactivity_action_dismiss">Υπενθυμίστε το μου αργότερα</string>
     <string name="notification_inactivity_action_dismiss_forever">Μήν μου το υπενθυμίσετε</string>
     <string name="appwidget_wallet_balance_title">Υπόλοιπο Dash</string>
 
@@ -322,8 +316,8 @@
     <string name="button_paste">Επικόλληση</string>
     <string name="button_share">Μοιραστείτε</string>
     <string name="button_set_as_default">Ορισμός ως προεπιλογή</string>
-    <string name="button_request_coins">Ζητήστε νομίσματα</string>
-    <string name="button_send_coins">Αποστολή νομισμάτων</string>
+    <string name="button_request_coins">Αίτηση για Dash</string>
+    <string name="button_send_coins">Αποστολή Dash</string>
     <string name="button_scan">Ανίχνευση</string>
     <string name="button_settings">Ρυθμίσεις</string>
     <string name="action_show_qr">Εμφάνιση QR κώδικα</string>
@@ -333,10 +327,10 @@
     <string name="time_today">σήμερα</string>
     <string name="address_unlabeled">(χωρίς ετικέτα)</string>
     <string name="private_key_password">PIN</string>
-    <string name="private_key_bad_password">λάθος PIN</string>
+    <string name="private_key_bad_password">Λάθος PIN!</string>
 
     <!-- generic error messages -->
-    <string name="error_io">I/O error: %s</string>
+    <string name="error_io">I/O σφάλμα: %s</string>
     <string name="error_parse">Λάθος εισαγωγή: %s</string>
     <string name="error_http">HTTP σφάλμα %1$s:\n%2$s</string>
     <string name="error_bluetooth">Bluetooth σφάλμα: %1$s</string>

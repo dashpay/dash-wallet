@@ -1,6 +1,6 @@
 Χρησιμοποιήστε το με δική σας ευθύνη! (Απαιτεί Android 4 ή μεταγενέστερο)
 
-<b>Μεταφέρετε τα Dash πάντα μαζί σας, στην τσέπη σας!</b>Πληρώστε σκανάροντας ένα QR code. Ως έμπορος, μπορείτε να λάβετε γρήγορες και ασφαλείς πληρωμές. Το Dash Wallet είναι η πρώτη mobile Dash app και σίγουρα η πιό ασφαλής!
+<b>Μεταφέρετε τα Dash πάντα μαζί σας, στην τσέπη σας!</b>Πληρώστε σκανάροντας ένα QR code. Ως έμπορος, μπορείτε να λάβετε γρήγορες και ασφαλείς πληρωμές. Το Dash Wallet είναι η πρώτη εφαρμογή κινητού για Dash και σίγουρα η πιο ασφαλής!
 
 <b>ΧΑΡΑΚΤΗΡΙΣΤΙΚΑ</b>
 
@@ -20,7 +20,7 @@
 Το Dash Wallet είναι <b>open source</b>και <b>δωρεάν εφαρμογή</b>. Άδεια: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
-Το source code είναι διαθέσιμο στο GitHub:
+Ο πηγαίος κώδικας είναι διαθέσιμος στο GitHub:
 https://github.com/HashEngineering/dash-wallet
 
 Όλες οι μεταφράσεις γίνονται μέσω Transifex:
@@ -29,7 +29,7 @@ https://www.transifex.com/dash/dash-wallet/
 Μπορείτε να βρέιτε περισσότερες πληροφορίες για το Dash στο
 https://www.dash.org/
 
-<b>TESTIMONIALS</b>
+<b>MNEIA</b>
 
 • Προτεινόμενο mobile wallet από το https://www.dash.org
 

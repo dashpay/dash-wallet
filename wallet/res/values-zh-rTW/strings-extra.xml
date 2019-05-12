@@ -5,10 +5,12 @@
 	<string name="send_coins_auto_lock_not_feasible">此交易可能需要幾分鐘才能結算。 支付額外的 %1$s%2$s費用來立即完成該交易嗎?</string>
 	<string name="send_coins_instant_send_not_feasible">此交易可能需要幾分鐘才能結算。</string>
 
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">這個即時到帳交易尚未發送。</string>
+	<string name="options_paste_from_clipboard_title">從剪貼簿貼上</string>
+
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">付款尚未傳輸。</string>
 	<string name="transaction_row_message_sent_to_single_peer">此款項經已完成發送。</string>
 
-	<string name="regular_transaction_info_message">此交易是在沒有即時到帳的情況下發送的。 它需要更多確認才能完成。</string>
+	<string name="regular_transaction_info_message">此交易並沒有即時結算。</string>
 
 	<string name="wallet_options_disconnect">離線</string>
 
@@ -82,6 +84,8 @@
 	<string name="fastest_payment_network_dialog_message">免費發送和接收達世幣，無需額外費用</string>
 	<string name="fastest_payment_network_dialog_button">明白了</string>
 
+    <string name="net_type_indicator" />
+
 	<string name="unlock_with_fingerprint">使用指紋解鎖。</string>
 	<string name="unlock_with_fingerprint_error">無法識別指紋，請再試一次。</string>
 	<string name="unlock_with_fingerprint_error_max_attempts">超出最大指紋嘗試次數 請稍後再試。</string>
@@ -89,5 +93,8 @@
 	<string name="enable_fingerprint">啟用指紋解鎖</string>
 	<string name="touch_fingerprint_sensor">觸摸指紋傳感器。</string>
 	<string name="touch_fingerprint_to_enable">觸摸指紋傳感器以啟用指紋解鎖。</string>
+	<string name="exchange_rate_missing">這筆付款太舊，無法獲得它的法定價值。</string>
 
+	<string name="preferences_enable_payment_request_summary">使用支付協議來進行二維碼啟動的付款</string>
+	<string name="preferences_enable_payment_request_title">BIP70 用於掃描付費</string>
 </resources>
