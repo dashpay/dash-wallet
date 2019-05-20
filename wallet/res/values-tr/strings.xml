@@ -93,13 +93,6 @@
     <string name="send_coins_options_fee_category_economic">Ekonomik</string>
     <string name="send_coins_options_fee_category_priority">Öncelikli</string>
     <string name="send_coins_options_empty">Boş cüzdan</string>
-    <string name="raise_fee_dialog_title">Ağ ücretini arttır</string>
-    <string name="raise_fee_dialog_message">Bu ödemeye ait ağ ücretini %s arttırmak ister misiniz? Bu, ödemenin daha çabuk onaylanmasını sağlar.</string>
-    <string name="raise_fee_dialog_determining_fee">Ağ ücreti belirleniyor...</string>
-    <string name="raise_fee_dialog_cant_raise">Bu ödemeye ait ağ ücreti arttırılamaz.</string>
-    <string name="raise_fee_dialog_state_decrypting">Şifre Çözülüyor...</string>
-    <string name="raise_fee_dialog_state_done">Tamam.</string>
-    <string name="raise_fee_dialog_button_raise">Arttır</string>
     <string name="sweep_wallet_activity_title">Kağıt cüzdanı tara</string>
     <string name="sweep_wallet_fragment_intro">Bir kupon veya kağıt cüzdan taramak üzeresiniz. Tarama yaptığınız takdirde, buradaki tüm Dash\'ler cihazınızdaki cüzdana taşıyanacaktır. İşlem onaylandığında, kağıt cüzdanın veya kuponun hiçbir değeri kalmayacaktır ve güvenlik nedenlerinden dolayı tekrar kullanılmamalıdır.</string>
     <string name="sweep_wallet_fragment_hint">Kağıt cüzdanlar genelde soğuk depolama için kullanılır. Bazı ATMler Dashleri doğrudan mobil cihazınıza yollamak yerine kağıt çıktısına yazar. Bazı kişiler önceden doldurulmuş kağıt cüzdanları para aktarmak için kullanırlar (bu tavsiye edilmez).</string>
@@ -260,6 +253,8 @@
     <string name="preferences_data_usage_summary">Mobil şebekelerde veri kullanımını kısıtlama seçeneklerini göster.</string>
     <string name="preferences_remind_balance_title">Bakiye hatırlatıcı</string>
     <string name="preferences_remind_balance_summary">Birkaç hafta kullanım olmadığı takdirde, uygulama size cüzdanınızda Dash olup olmadığını hatırlatacaktır.</string>
+    <string name="preferences_show_disclaimer_title">Sorumluluk reddi beyanını göster</string>
+    <string name="preferences_show_disclaimer_summary">Güvenlik notlarını gerçekten okudun mu? Cüzdanını güvenli bir yere yedekledin mi?</string>
     <string name="preferences_report_issue_title">Sorun rapor et</string>
     <string name="preferences_initiate_reset_title">Blok zincirini yeniden başlat</string>
     <string name="preferences_initiate_reset_summary">Blok zincirini, işlemleri ve cüzdan bakiyesini yeniden başlat. Eski haline gelmesi vakit alacaktır, bu yüzden bunu neden yaptığınızı biliyorsanız yapınız.</string>
@@ -302,7 +297,7 @@
     <string name="notification_coins_received_msg">%s alındı</string>
     <string name="notification_peers_connected_msg">%d eş bağlı</string>
     <string name="notification_inactivity_title">Bu cihazda hâlâ Dash var!</string>
-    <string name="notification_inactivity_message">%s Dash\'lik bakiyenizi unutmayın, bakiyenizi başka bir yere aktarmadan Dash Wallet uygulamasını silerseniz bakiyeniz kaybolacaktır.</string>
+        <string name="notification_inactivity_message">Bu cihazda Dash bakiyeniz bulunmaktadır! Dash Cüzdanı\'nı kaldırmadan önce lütfen kurtarma sözcük grubunu bir yere yazdığınızdan emin olun aksi takdirde bakiyenizi kaybedebilirsiniz. Kalan bakiyeniz %s.</string>
     <string name="notification_inactivity_action_dismiss">Daha sonra hatırlat</string>
     <string name="notification_inactivity_action_dismiss_forever">Hatırlatma</string>
     <string name="appwidget_wallet_balance_title">Dash bakiyesi</string>
@@ -319,6 +314,7 @@
     <string name="button_remove">Kaldır</string>
     <string name="button_edit">Düzenle</string>
     <string name="button_copy">Kopyala</string>
+    <string name="button_copy_request">Talebi kopyala</string>
     <string name="button_paste">Yapıştır</string>
     <string name="button_share">Paylaş</string>
     <string name="button_set_as_default">Varsayılan olarak ayarla</string>

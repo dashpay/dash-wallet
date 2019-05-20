@@ -297,7 +297,7 @@
     <string name="notification_coins_received_msg">Получен %s</string>
     <string name="notification_peers_connected_msg">%d пиъри са свързани</string>
     <string name="notification_inactivity_title">Все още имате Dash на това устройство!</string>
-    <string name="notification_inactivity_message">Запомнете, вашият баланс от %s  ще бъде загубен, ако деинсталирате приложението на Dash портфейла преди да го прехвърлите.</string>
+        <string name="notification_inactivity_message">Все още имате Dash на това устройство! Моля, не забравяйте да запишете фразата за възстановяване, преди да деинсталирате Dash Wallet или ще загубите баланса си от %s.</string>
     <string name="notification_inactivity_action_dismiss">Напомни ми по-късно</string>
     <string name="notification_inactivity_action_dismiss_forever">Не ми напомняй</string>
     <string name="appwidget_wallet_balance_title">Dash баланс</string>
@@ -314,6 +314,7 @@
     <string name="button_remove">Премахни</string>
     <string name="button_edit">Редактирай</string>
     <string name="button_copy">Копирай</string>
+    <string name="button_copy_request">Копиране на заявката</string>
     <string name="button_paste">Постави</string>
     <string name="button_share">Сподели</string>
     <string name="button_set_as_default">Задай по подразбиране</string>

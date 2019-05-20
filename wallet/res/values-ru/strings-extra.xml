@@ -5,6 +5,8 @@
 	<string name="send_coins_auto_lock_not_feasible">Подтверждение может занять несколько минут. Провести мгновенно за %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Подтверждение может занять несколько минут.</string>
 
+	<string name="options_paste_from_clipboard_title">Вставить из буфера обмена</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Платёж ещё не был передан в сеть.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Платёж был передан в сеть.</string>
 
@@ -90,6 +92,8 @@
 	<string name="fastest_payment_network_dialog_title">Ваши деньги, Ваш выбор</string>
 	<string name="fastest_payment_network_dialog_message">Отправить и получить Dash мгновенно без дополнительной комиссии</string>
 	<string name="fastest_payment_network_dialog_button">Понятно</string>
+
+    <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">Используйте свой отпечаток пальца, чтобы разблокировать.</string>
 	<string name="unlock_with_fingerprint_error">Не удалось распознать отпечаток пальца, повторите попытку.</string>

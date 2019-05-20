@@ -297,7 +297,7 @@
     <string name="notification_coins_received_msg">Получено %s</string>
     <string name="notification_peers_connected_msg">подключено %d участников</string>
     <string name="notification_inactivity_title">У вас все еще есть некоторое количество дэш на этом устройстве!</string>
-    <string name="notification_inactivity_message">Помните, что при удалении приложения ваш баланс в размере %s будет потерян, если вы предварительно не отправите средства на другой адрес и не сохраните информацию для восстановления кошелька.</string>
+        <string name="notification_inactivity_message">На этом устройстве всё ещё установлен кошелёк Dash! Пожалуйста, убедитесь, что вы переписали вашу фразу для восстановления прежде чем удалите кошелёк Dash, иначе вы потеряете все ваши средства в размере %s.</string>
     <string name="notification_inactivity_action_dismiss">Напомнить мне позже</string>
     <string name="notification_inactivity_action_dismiss_forever">Не напоминать мне</string>
     <string name="appwidget_wallet_balance_title">Баланс</string>
@@ -314,6 +314,7 @@
     <string name="button_remove">Убрать</string>
     <string name="button_edit">Правка</string>
     <string name="button_copy">Копировать</string>
+    <string name="button_copy_request">Скопировать запрос</string>
     <string name="button_paste">Вставить</string>
     <string name="button_share">Поделиться</string>
     <string name="button_set_as_default">Установить по умолчанию</string>

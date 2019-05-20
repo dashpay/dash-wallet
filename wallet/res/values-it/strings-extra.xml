@@ -5,6 +5,8 @@
 	<string name="send_coins_auto_lock_not_feasible">Questa transazione potrebbe richiedere diversi minuti per essere eseguita. Vuoi eseguirla istantaneamente per un extra %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Questa transazione potrebbe richiedere diversi minuti per essere eseguita.</string>
 
+	<string name="options_paste_from_clipboard_title">Incolla dagli appunti</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Questo pagamento non è ancora stato trasmesso.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Pagamento inviato.</string>
 
@@ -85,6 +87,8 @@
 	<string name="fastest_payment_network_dialog_message">Invia e ricevi Dash istantaneamente senza costi aggiuntivi</string>
 	<string name="fastest_payment_network_dialog_button">Fatto</string>
 
+    <string name="net_type_indicator" />
+
 	<string name="unlock_with_fingerprint">Usa la tua impronta digitale per sbloccare.</string>
 	<string name="unlock_with_fingerprint_error">Impronta digitale non riconosciuta, prova ancora.</string>
 	<string name="unlock_with_fingerprint_error_max_attempts">Numero massimo di tentativi raggiunto . Per cortesia prova più tardi.</string>
@@ -92,4 +96,8 @@
 	<string name="enable_fingerprint">Abilita impronta digitale</string>
 	<string name="touch_fingerprint_sensor">Tocca il sensore dell\'impronta digitale.</string>
 	<string name="touch_fingerprint_to_enable">Toccare il sensore di impronte digitali per abilitare lo sblocco con l\'impronta digitale.</string>
-	</resources>
+	<string name="exchange_rate_missing">Questo pagamento è troppo vecchio per ottenere il valore fiat</string>
+
+	<string name="preferences_enable_payment_request_summary">Utilizza il protocollo di pagamento dal codice QR per i pagamenti avviati </string>
+	<string name="preferences_enable_payment_request_title">BIP70 per scan-to-pay</string>
+</resources>

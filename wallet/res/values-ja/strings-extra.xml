@@ -5,6 +5,8 @@
 	<string name="send_coins_auto_lock_not_feasible">このトランザクションは決済に数分かかるかもしれません。 %1$s%2$sの追加で即時に完了させますか ？</string>
 	<string name="send_coins_instant_send_not_feasible">このトランザクションは決済に数分がかかります。</string>
 
+	<string name="options_paste_from_clipboard_title">クリップボードから貼付け</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">この支払はまだ送信されていません。</string>
 	<string name="transaction_row_message_sent_to_single_peer">この支払いは送信されました。</string>
 
@@ -78,9 +80,11 @@
 	<string name="notification_synchronization_channel_name">同期</string>
 	<string name="notification_synchronization_channel_description">アプリがネットワークと同期している時に通知を表示する。</string>
 
-	<string name="fastest_payment_network_dialog_title">あなたのお金をお好きなように</string>
+	<string name="fastest_payment_network_dialog_title">自由自在なお金を、あなたに。</string>
 	<string name="fastest_payment_network_dialog_message">追加手数料なしで瞬時にDashを送受信</string>
 	<string name="fastest_payment_network_dialog_button">了解</string>
+
+    <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">ロック解除に指紋認証を使う。</string>
 	<string name="unlock_with_fingerprint_error">指紋を認識できませんでした。もう一度やり直してください。</string>
@@ -89,5 +93,8 @@
 	<string name="enable_fingerprint">指紋認証を有効にする</string>
 	<string name="touch_fingerprint_sensor">指紋認証センサーに触れて下さい。</string>
 	<string name="touch_fingerprint_to_enable">指紋認証センサーに触れて、指紋によるロック解除を有効にします。</string>
+	<string name="exchange_rate_missing">この支払いは古すぎるため額面価値を得ることができません。</string>
 
+	<string name="preferences_enable_payment_request_summary">QRコードで開始された支払いに支払いプロトコルを使用する</string>
+	<string name="preferences_enable_payment_request_title">BIP70 for scan-to-pay</string>
 </resources>

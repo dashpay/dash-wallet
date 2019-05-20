@@ -297,7 +297,7 @@
     <string name="notification_coins_received_msg">Otrzymano %s </string>
     <string name="notification_peers_connected_msg">%d połączonych partnerów</string>
     <string name="notification_inactivity_title">W twoim portfelu nadal są niewykorzystane Dash!</string>
-    <string name="notification_inactivity_message">Pamiętaj! Twoje saldo w wysokości %s zostanie utracone jeśli odinstalujesz Dash Wallet bez wypłacenia wszystkich środków.</string>
+        <string name="notification_inactivity_message">Wciąż posiadasz Dash na tym urządzeniu! Upewnij się że masz zapisane hasła odzyskiwania portfela zanim odinstalujesz Dash Wallet w innym wypadku stracisz swój balans %s</string>
     <string name="notification_inactivity_action_dismiss">Przypomnij później</string>
     <string name="notification_inactivity_action_dismiss_forever">Nie przypominaj więcej</string>
     <string name="appwidget_wallet_balance_title">Saldo Dash</string>
@@ -314,6 +314,7 @@
     <string name="button_remove">Usuń</string>
     <string name="button_edit">Zmień</string>
     <string name="button_copy">Kopiuj</string>
+    <string name="button_copy_request">Skopiuj żądanie</string>
     <string name="button_paste">Wklej</string>
     <string name="button_share">Udostępnij</string>
     <string name="button_set_as_default">Ustaw jako domyślne</string>

@@ -5,6 +5,8 @@
 	<string name="send_coins_auto_lock_not_feasible">此项交易确认需要几分钟. 立刻完成需要 %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">此项交易确认需要几分钟.</string>
 
+	<string name="options_paste_from_clipboard_title">从剪贴板中粘贴</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">此项支付尚未传输。</string>
 	<string name="transaction_row_message_sent_to_single_peer">此项交易已被发送.</string>
 
@@ -81,6 +83,8 @@
 	<string name="fastest_payment_network_dialog_title">你的财富, 你做主</string>
 	<string name="fastest_payment_network_dialog_message">立即发送和接收达世币, 无需额外费用</string>
 	<string name="fastest_payment_network_dialog_button">了解</string>
+
+    <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">使用您的指纹解锁.</string>
 	<string name="unlock_with_fingerprint_error">指纹验证失败, 请重试.</string>

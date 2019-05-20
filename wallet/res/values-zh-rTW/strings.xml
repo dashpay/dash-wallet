@@ -253,6 +253,8 @@
     <string name="preferences_data_usage_summary">顯示選項來控制行動網路流量</string>
     <string name="preferences_remind_balance_title">餘額提醒</string>
     <string name="preferences_remind_balance_summary">經過幾個星期的不用，應用程式會通知錢包裡還有錢。</string>
+    <string name="preferences_show_disclaimer_title">顯示免責聲明</string>
+    <string name="preferences_show_disclaimer_summary">你有沒有認真閱讀安全注意事項? 你已經將錢包備份到安全的地方了嗎?</string>
     <string name="preferences_report_issue_title">問題報告</string>
     <string name="preferences_initiate_reset_title">重置區塊鏈</string>
     <string name="preferences_initiate_reset_summary">重置區塊鏈，交易和錢包餘額。 重播將需要一段時間，所以只有在你明白的情況下才這樣做。</string>
@@ -295,7 +297,8 @@
     <string name="notification_coins_received_msg">收到 %s</string>
     <string name="notification_peers_connected_msg">%d 節點連線</string>
     <string name="notification_inactivity_title">你在這個裝置上還存放有達世幣!</string>
-        <string name="notification_inactivity_action_dismiss">稍後提醒我</string>
+        <string name="notification_inactivity_message">你仍然有達世幣在此設備上! 在卸載達世幣錢包之前，請務必記下您的恢復詞組，否則您將失去 %s的結餘。</string>
+    <string name="notification_inactivity_action_dismiss">稍後提醒我</string>
     <string name="notification_inactivity_action_dismiss_forever">不要提醒我</string>
     <string name="appwidget_wallet_balance_title">達世幣結餘</string>
 
@@ -311,6 +314,7 @@
     <string name="button_remove">移除</string>
     <string name="button_edit">編輯</string>
     <string name="button_copy">複製</string>
+    <string name="button_copy_request">複製請求</string>
     <string name="button_paste">貼上</string>
     <string name="button_share">分享</string>
     <string name="button_set_as_default">設為預設</string>

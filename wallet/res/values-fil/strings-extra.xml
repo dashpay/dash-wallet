@@ -5,6 +5,8 @@
 	<string name="send_coins_auto_lock_not_feasible">Ang transaksyon na ito ay maaaring magtagal ng ilang minuto. Kumpletuhin agad sa halagang %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Ang transaksyon na ito ay maaring magtagal ng ilang minuto.</string>
 
+	<string name="options_paste_from_clipboard_title">I-paste sa clipboard</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Ang  bayad ay kasalukuyang hindi pa naililipat.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Naipadala na ang bayad na ito.</string>
 
@@ -85,6 +87,8 @@
 	<string name="fastest_payment_network_dialog_message">Magpadala at tumanggap ng Dash ng mabilis ng walang ekstrang bayad.</string>
 	<string name="fastest_payment_network_dialog_button">Nakuha ko na</string>
 
+    <string name="net_type_indicator" />
+
 	<string name="unlock_with_fingerprint">Gamitin ang iyong fingerprint para mabuksan.</string>
 	<string name="unlock_with_fingerprint_error">Hindi kinilala ang fingerprint, subukan ulit.</string>
 	<string name="unlock_with_fingerprint_error_max_attempts">Umabot sa hangganan ang bilang ng pagsubok ng fingerprint. Subukan muli mamaya.</string>
@@ -92,4 +96,8 @@
 	<string name="enable_fingerprint">I-enable ang fingerprint</string>
 	<string name="touch_fingerprint_sensor">Hawakan ang sensor ng fingerprint.</string>
 	<string name="touch_fingerprint_to_enable">Hawakan ang fingerprint sensor upang mabuksan gamit ang fingerprint.</string>
-	</resources>
+	<string name="exchange_rate_missing">Abg bayad na ito ay masyado ng matagal para magkaroon ng fiat value.</string>
+
+	<string name="preferences_enable_payment_request_summary">Gamitin ang protokol sa pagbabayad para sa pinasimulang pagbabayad ng QR code</string>
+	<string name="preferences_enable_payment_request_title">BIP70 para sa scan-to-pay</string>
+</resources>

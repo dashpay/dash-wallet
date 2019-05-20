@@ -297,7 +297,8 @@
     <string name="notification_coins_received_msg">Ληφθέντα %s</string>
     <string name="notification_peers_connected_msg">%d χρήστες συνδεμένοι</string>
     <string name="notification_inactivity_title">Έχετε ακόμα Dash σε αυτή την συσκευή!</string>
-        <string name="notification_inactivity_action_dismiss">Υπενθυμίστε το μου αργότερα</string>
+        <string name="notification_inactivity_message">Εξακολουθείτε να έχετε Dash σε αυτή τη συσκευή! Βεβαιωθείτε ότι έχετε γράψει κάπου τη φράση ανάκτησης προτού απεγκαταστήσετε το Πορτοφόλι Dash αλλιώς θα χάσετε το υπόλοιπο %s.</string>
+    <string name="notification_inactivity_action_dismiss">Υπενθυμίστε το μου αργότερα</string>
     <string name="notification_inactivity_action_dismiss_forever">Μήν μου το υπενθυμίσετε</string>
     <string name="appwidget_wallet_balance_title">Υπόλοιπο Dash</string>
 
@@ -313,6 +314,7 @@
     <string name="button_remove">Αφαίρεση</string>
     <string name="button_edit">Επεξεργασία</string>
     <string name="button_copy">Αντιγραφή</string>
+    <string name="button_copy_request">Αίτημα αντιγραφής</string>
     <string name="button_paste">Επικόλληση</string>
     <string name="button_share">Μοιραστείτε</string>
     <string name="button_set_as_default">Ορισμός ως προεπιλογή</string>

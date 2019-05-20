@@ -297,7 +297,7 @@
     <string name="notification_coins_received_msg">대쉬 받음 : %s</string>
     <string name="notification_peers_connected_msg">피어 연결 개수 알림 : %d</string>
     <string name="notification_inactivity_title">아직 이 장치 기기에 대쉬가 남아 있습니다.</string>
-    <string name="notification_inactivity_message">이 대쉬 지갑 앱을 삭제하기 전에, 잔액을 다른 곳으로 송금하지 않으면 모든 대쉬 금액%s이 사라집니다.</string>
+        <string name="notification_inactivity_message">이 기기에 아직 대시를 가지고 있습니다! 현재 대시 지갑을 삭제하기 전에 당신의 복구 문구를 적어두세요. 그렇지 않으면 당신의 잔고 %s를 잃게 됩니다.</string>
     <string name="notification_inactivity_action_dismiss">이후 다시 알림</string>
     <string name="notification_inactivity_action_dismiss_forever">알림 필요없음</string>
     <string name="appwidget_wallet_balance_title">대쉬 잔액</string>
@@ -314,6 +314,7 @@
     <string name="button_remove">삭제</string>
     <string name="button_edit">수정</string>
     <string name="button_copy">복사</string>
+    <string name="button_copy_request">요청 복사</string>
     <string name="button_paste">붙여넣기</string>
     <string name="button_share">공유</string>
     <string name="button_set_as_default">기본값으로 설정</string>

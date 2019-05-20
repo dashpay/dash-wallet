@@ -1,9 +1,11 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-	<string name="send_coins_auto_lock_feasible">Тази транзакция ще бъде установена мигновено без допълнителна такса.</string>
+    <string name="send_coins_auto_lock_feasible">Тази транзакция ще бъде установена мигновено без допълнителна такса.</string>
 	<string name="send_coins_auto_lock_not_feasible">Ще отнеме няколко минути тази транзакция да бъде наредена. Завършете я мигновено за %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Тази транзакция ще отнеме няколко минути.</string>
+
+	<string name="options_paste_from_clipboard_title">Постави от клипборда</string>
 
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Това плащане все още не е предадено.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Плащането е изпратено.</string>
@@ -18,11 +20,11 @@
 	<string name="backup_to_seed_wallet_dialog_message">Това е вашата фраза за възстановяване. Моля, напишете я.</string>
 	<string name="backup_wallet_to_seed_dialog_warning">НЕ позволявайте на никого да види фразата Ви за възстановяване тъй като в възможно да похарчи вашите Dash.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Портфейлът Ви е защитен от ПИН . Въведете своя ПИН и натиснете Покажи, за да видите фразата си за възстановяване.</string>
-	<string name="import_keys_from_seed_dialog_message">Въведете фразата си за възстановяване тук.</string>
+    <string name="import_keys_from_seed_dialog_message">Въведете фразата си за възстановяване тук.</string>
 	<string name="import_export_keys_dialog_password_phrase">Фразата за възстановяване отива тук.</string>
 	<string name="preferences_report_issue_summary">Съберете информацията за проблема си и я изпратете  до разработчиците.</string>
 	<string name="navigation_configuration">Конфигурация</string>
-	<string name="button_copy_address">Копирай адрес</string>
+    <string name="button_copy_address">Копирай адрес</string>
 	<string name="request_coins_clipboard_address_msg">Dash е копиран в клипборда</string>
 	<string name="backup_wallet_to_seed_show_recovery_phrase">Покажи</string>
 	<string name="restore_wallet_from_invalid_seed_warning_message">%sе невалидна дума.</string>
@@ -67,7 +69,7 @@
 	<string name="encrypt_new_key_chain_dialog_message">Вашият портфейл ще бъде надграден, за да поддържа импортирането и експортирането в още приложения.</string>
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Трябва да въведете вашият ПИН за да завършите процесът на надграждане.</string>
 	<string name="pin_code_required_dialog_message">Това приложение вече изисква ПИН за похарчване и разглеждане историята на транзакциите.</string>
-	<string name="backup_wallet_seed_private_key_written_down_box">Записах фразата за възстановяване</string>
+    <string name="backup_wallet_seed_private_key_written_down_box">Записах фразата за възстановяване</string>
 	
 	<string name="change_exchange_currency_code_message">Вашата местна валута е %1$s, но в приложението е зададено по подразбиране %2$s. Бихте ли желали да се промени в %1$s или да остане в %2$s?</string>
 	<string name="change_to">Промени в %s</string>
@@ -84,6 +86,8 @@
 	<string name="fastest_payment_network_dialog_title">Вашите пари, Вашият път</string>
 	<string name="fastest_payment_network_dialog_message">Изпращане и получаване на  Dash мигновено без допълнителна такса</string>
 	<string name="fastest_payment_network_dialog_button">Разбрах</string>
+
+    <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">Използвайте пръстов отпечатък за отключване.</string>
 	<string name="unlock_with_fingerprint_error">Неуспешно разпознаване на пръстов отпечатък, моля опитайте отново.</string>

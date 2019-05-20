@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="uphold_account">Uphold účet</string>
+    <string name="uphold_account">Účet na Uphold</string>
     <string name="uphold_buy_dash_activity_title">Kúpiť/Predať Dash s Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Kúpiť Dash s Uphold účtom</string>
     <string name="uphold_buy_dash_button">Kúpiť Dash</string>
@@ -20,7 +20,7 @@
     <string name="uphold_withdrawal_instructions">Nižšie zadajte sumu, ktorú chcete previesť </string>
     <string name="uphold_withdrawal_success_title">Úspešné</string>
     <string name="uphold_withdrawal_success_message">Vaša transakcia bola odoslaná a suma by sa mala objaviť v peňaženke o niekoľko minút.\n\nId transakcie: %s</string>
-    <string name="uphold_otp_dialog_title">Zadajte Váš 2FA kód:</string>
+    <string name="uphold_otp_dialog_title">Zadajte váš 2FA kód:</string>
     <string name="uphold_transfer">Presun</string>
     <string name="uphold_see_on_uphold">Zobraziť na Uphold</string>
 

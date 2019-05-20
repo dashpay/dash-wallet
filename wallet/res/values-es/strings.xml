@@ -297,7 +297,7 @@
     <string name="notification_coins_received_msg">%s Recibidos</string>
     <string name="notification_peers_connected_msg">%d pares conectados</string>
     <string name="notification_inactivity_title">¡Aún tienes Dash en este dispositivo!</string>
-    <string name="notification_inactivity_message">Recuerda que tu balance de %s será perdido si desinstalas el app de Dash Wallet sin enviarlo a otra cartera antes. </string>
+        <string name="notification_inactivity_message">Aún tienes Dash en este dispositivo! Por favor escriba la frase de recuperación en un lugar seguro antes de desinstalar la Billetera Dash o perderás el saldo de %s.</string>
     <string name="notification_inactivity_action_dismiss">Recuerdame despues</string>
     <string name="notification_inactivity_action_dismiss_forever">No me recuerdes</string>
     <string name="appwidget_wallet_balance_title">Saldo en Dash</string>
@@ -314,6 +314,7 @@
     <string name="button_remove">Quitar</string>
     <string name="button_edit">Modificar</string>
     <string name="button_copy">Copiar</string>
+    <string name="button_copy_request">Copiar solicitud</string>
     <string name="button_paste">Pegar</string>
     <string name="button_share">Compartir</string>
     <string name="button_set_as_default">Establecer como predeterminado</string>

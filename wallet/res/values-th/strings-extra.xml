@@ -5,6 +5,8 @@
 	<string name="send_coins_auto_lock_not_feasible">ธุรกรรมนี้อาจจะใช้เวลาในการชำระหลายนาที  ทำให้เสร็จสมบูรณ์ทันทีสำหรับ%1$s%2$s หรือไม่?</string>
 	<string name="send_coins_instant_send_not_feasible">ธุรกรรมนี้อาจใช้เวลาหลายนาทีในการชำระ</string>
 
+	<string name="options_paste_from_clipboard_title">วางจากคลิปบอร์ด</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">การชำระเงินนี้ยังไม่ได้รับการส่ง</string>
 	<string name="transaction_row_message_sent_to_single_peer">การชำระเงินนี้ถูกส่งแล้ว</string>
 
@@ -81,6 +83,8 @@
 	<string name="fastest_payment_network_dialog_title">เงินของคุณในแบบของคุณเอง</string>
 	<string name="fastest_payment_network_dialog_message">ส่งและรับ Dash ในทันทีที่ไม่มีค่าธรรมเนียมเพิ่มเติม</string>
 	<string name="fastest_payment_network_dialog_button">ได้รับแล้ว</string>
+
+    <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">ใช้ลายนิ้วมือของคุณเพื่อปลดล็อค</string>
 	<string name="unlock_with_fingerprint_error">ลายนิ้วมือไม่ตรงกัน โปรดลองอีกครั้ง</string>

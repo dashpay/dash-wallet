@@ -5,22 +5,24 @@
 	<string name="send_coins_auto_lock_not_feasible">Táto transakcia môže trvať niekoľko minút. Potvrdiť ihneď za %1$s%2$s? </string>
 	<string name="send_coins_instant_send_not_feasible">Táto transakcia môže trvať niekoľko minút.</string>
 
+	<string name="options_paste_from_clipboard_title">Vložiť zo schránky</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Táto platba ešte nebola odoslaná.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Táto platba bola odoslaná.</string>
 
 	<string name="regular_transaction_info_message">Táto transakcia nebola potvrdená okamžite.</string>
 
-	<string name="wallet_options_disconnect">Odpojiť</string>
+	<string name="wallet_options_disconnect">Ukončiť</string>
 
 	<string name="network_monitor_masternodes_title">Masternódy</string>
 	<string name="export_keys_dialog_title_to_seed">Zobraziť frázu pre obnovenie</string>
 	<string name="import_keys_dialog_title_from_seed">Obnoviť z frázy pre obnovenie</string>
-	<string name="backup_to_seed_wallet_dialog_message">Toto je Vaša fráza pre obnovenie. Zapíšte si ju.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">NENECHÁVAJTE nikoho aby videl Vašu frázu pre obnovenie, inak môžu minúť Vaše Dash.</string>
+	<string name="backup_to_seed_wallet_dialog_message">Toto je vaša fráza pre obnovenie. Zapíšte si ju.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">NENECHÁVAJTE nikoho aby videl vašu frázu pre obnovenie, inak môžu minúť vaše Dash.</string>
 	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Vaša peňaženka je chránená PIN-om pre míňanie. Vložte Vás PIN a stlačte \"Ukázať\" pre zobrazenie frázy pre obnovenie.</string>
-    <string name="import_keys_from_seed_dialog_message">Sem vložte Vašu frázu pre obnovenie.</string>
+    <string name="import_keys_from_seed_dialog_message">Sem vložte vašu frázu pre obnovenie.</string>
 	<string name="import_export_keys_dialog_password_phrase">Fráza pre obnovenie patrí sem.</string>
-	<string name="preferences_report_issue_summary">Zozbierať informácie o Vašich problémoch a poslať report e-mailom vývojárom.</string>
+	<string name="preferences_report_issue_summary">Zozbierať informácie o vašich problémoch a poslať report e-mailom vývojárom.</string>
 	<string name="navigation_configuration">Konfigurácia</string>
     <string name="button_copy_address">Kopírovať adresu</string>
 	<string name="request_coins_clipboard_address_msg">Dash adresa skopírovaná do schránky</string>
@@ -30,17 +32,17 @@
 	<string name="send_coins_options_fee_category_zero">Bez poplatku</string>
 	<string name="send_coins_fragment_hint_fee_zero">Nebude zaplatený žiadny poplatok. Používajte \"Bez poplatku\", iba ak Vám nezáleží na čase potvrdenia.</string>
 
-	<string name="wallet_uri_handler_public_key_request_dialog_msg">Aplikácia %s by chcela získať Váš hlavný verejný kľúč. Ten môže byť použitý na sledovanie peňaženky, ale nedá sa použiť na presun Vašich Dash.</string>
+	<string name="wallet_uri_handler_public_key_request_dialog_msg">Aplikácia %s by chcela získať váš hlavný verejný kľúč. Ten môže byť použitý na sledovanie peňaženky, ale nedá sa použiť na presun vašich Dash.</string>
 	<string name="wallet_uri_handler_address_request_dialog_msg">Aplikácia %s požaduje adresu, aby vám mohla zaplatiť. Chcete túto akciu povoliť?</string>
 
 	<string name="wallet_lock_unlock">Odomknúť</string>
 	<string name="wallet_lock_unlock_wallet">Odomknúť peňaženku</string>
 	<string name="wallet_lock_unlock_to_see_txs_title">Peňaženka je zamknutá.</string>
-	<string name="wallet_lock_unlock_to_see_txs_txt">Ak chcete odomknúť Vašu peňaženku a zobraziť históriu transakcií, klepnite na ikonu zámku.</string>
-	<string name="wallet_lock_unlock_dialog_title">Odomknúť Vašu peňaženku</string>
-	<string name="wallet_lock_unlock_dialog_message">Vaša peňaženka je chránená PIN-om pre míňanie. Pre pokračovanie zadajte Váš PIN a stlačte Odomknúť.</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">Ak chcete odomknúť vašu peňaženku a zobraziť históriu transakcií, klepnite na ikonu zámku.</string>
+	<string name="wallet_lock_unlock_dialog_title">Odomknúť vašu peňaženku</string>
+	<string name="wallet_lock_unlock_dialog_message">Vaša peňaženka je chránená PIN-om pre míňanie. Pre pokračovanie zadajte váš PIN a stlačte Odomknúť.</string>
 	<string name="wallet_lock_reset_wallet_title">Resetovať peňaženku</string>
-	<string name="wallet_lock_reset_wallet_message">Ste si istý? Vaša peňaženka bude zmazaná a všetky Vaše Dashe budú stratené.\n\nJediná možnosť ako obnoviť Vaše Dashe je pomocou záložného súboru, alebo frázou pre obnovenie.</string>
+	<string name="wallet_lock_reset_wallet_message">Ste si istý? Vaša peňaženka bude zmazaná a všetky vaše Dashe budú stratené.\n\nJediná možnosť ako obnoviť vaše Dashe je pomocou záložného súboru, alebo frázou pre obnovenie.</string>
 
 	<string name="wallet_lock_wallet_disabled">Peňaženka neaktívna</string>
 	<string name="wallet_lock_try_again">Skúste znova za %1$d %2$s</string>
@@ -69,13 +71,13 @@
 	</plurals>
 
 	<string name="encrypt_new_key_chain_upgrade_button">Aktualizovať</string>
-	<string name="encrypt_new_key_chain_dialog_title">Aktualizovať Vašu peňaženku</string>
+	<string name="encrypt_new_key_chain_dialog_title">Aktualizovať vašu peňaženku</string>
 	<string name="encrypt_new_key_chain_dialog_message">Vaša peňaženka bude inovovaná aby podporovala import z a do viacero aplikácií.</string>
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Pre dokončenie aktualizácie musíte zadať Vás PIN.</string>
 	<string name="pin_code_required_dialog_message">Táto aplikácia teraz vyžaduje PIN pre míňanie a zobrazenie zostatku a transakcií.</string>
     <string name="backup_wallet_seed_private_key_written_down_box">Zapísal som si frázu pre obnovenie</string>
 	
-	<string name="change_exchange_currency_code_message">Vaša miestna mena je %1$s, ale v tejto aplikácii je Vaša mena nastavená na %2$s. Chcete you zmeniť na %1$s alebo ponechať ako %2$s?</string>
+	<string name="change_exchange_currency_code_message">Vaša miestna mena je %1$s, ale v tejto aplikácii je vaša mena nastavená na %2$s. Chcete you zmeniť na %1$s alebo ponechať ako %2$s?</string>
 	<string name="change_to">Zmeniť na %s</string>
 	<string name="leave_as">Ponechať %s</string>
 
@@ -87,9 +89,11 @@
 	<string name="notification_synchronization_channel_name">Synchronizácia</string>
 	<string name="notification_synchronization_channel_description">Zobrazí sa upozornenie, keď sa aplikácia synchronizuje so sieťou.</string>
 
-	<string name="fastest_payment_network_dialog_title">Vaše peniaze, Vaša cesta</string>
+	<string name="fastest_payment_network_dialog_title">Tvoje peniaze, tvoja cesta</string>
 	<string name="fastest_payment_network_dialog_message">Odoslať a prijať Dash okamžite bez zvýšeného poplatku</string>
 	<string name="fastest_payment_network_dialog_button">Mám to</string>
+
+    <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">Pre odomknutie použite otlačok prsta.</string>
 	<string name="unlock_with_fingerprint_error">Nepodarilo sa rozpoznať odtlačok prsta, skúste to znova.</string>
@@ -98,5 +102,8 @@
 	<string name="enable_fingerprint">Povoliť odtlačok prsta</string>
 	<string name="touch_fingerprint_sensor">Dotknite sa snímača odtlačkov prstov.</string>
 	<string name="touch_fingerprint_to_enable">Pre povolenie odomknutia otlačkom prsta, sa dotknite snímača odtlačkov prstov.</string>
+	<string name="exchange_rate_missing">Táto platba je príliš stará na to, aby sa získala hodnota v klasickej mene.</string>
 
+	<string name="preferences_enable_payment_request_summary">Použiť platobný protokol pre platby iniciované pomocou QR kódu</string>
+	<string name="preferences_enable_payment_request_title">BIP70 pre skenuj-a-plať</string>
 </resources>
