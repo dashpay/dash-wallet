@@ -57,6 +57,7 @@ public class ExchangeRatesRepository {
         exchangeRatesClients.push(DashRatesSecondFallback.getInstance());
         exchangeRatesClients.push(DashRatesFirstFallback.getInstance());
         exchangeRatesClients.push(DashRatesClient.getInstance());
+        exchangeRatesClients.push(DashRetailClient.getInstance());
     }
 
     private void refreshRates() {
