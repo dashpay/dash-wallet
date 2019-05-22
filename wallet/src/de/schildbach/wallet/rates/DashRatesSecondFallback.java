@@ -33,7 +33,7 @@ public class DashRatesSecondFallback implements ExchangeRatesClient {
         List<BitPayRate> rates = BitPayClient.getInstance().getRates().body().getRates();
         BigDecimal dashCentralPrice = DashCentralClient.getInstance().getDashBtcPrice().body().getRate();
         BigDecimal poloniexPrice = PoloniexClient.getInstance().getRates().body().getRate();
-        BigDecimal dashVesPrice = DashCasaClient.getInstance().getRates().body().getDashVesPrice();
+        BigDecimal dashVesPrice = LocalBitcoinsClient.getInstance().getRates().body().getDashVesPrice();
 
         if (rates == null || rates.isEmpty() || (dashCentralPrice == null && poloniexPrice == null)) {
             throw new IllegalStateException("Failed to fetch prices from Fallback2");
