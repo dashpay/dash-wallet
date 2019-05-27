@@ -14,7 +14,7 @@ import retrofit2.http.GET;
 public class LocalBitcoinsClient extends RetrofitClient {
 
     private static LocalBitcoinsClient instance;
-    private DashCasaService service;
+    private LocalBitcoinsService service;
 
     public static LocalBitcoinsClient getInstance() {
         if (instance == null) {
@@ -28,14 +28,14 @@ public class LocalBitcoinsClient extends RetrofitClient {
 
         Moshi moshi = moshiBuilder.add(new BigDecimalAdapter()).build();
         retrofit = retrofitBuilder.addConverterFactory(MoshiConverterFactory.create(moshi)).build();
-        service = retrofit.create(DashCasaService.class);
+        service = retrofit.create(LocalBitcoinsService.class);
     }
 
     public Response<LocalBitcoinsResponse> getRates() throws IOException {
         return service.getRates().execute();
     }
 
-    private interface DashCasaService {
+    private interface LocalBitcoinsService {
         @GET("bitcoinaverage/ticker-all-currencies")
         Call<LocalBitcoinsResponse> getRates();
     }
