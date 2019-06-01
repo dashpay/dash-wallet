@@ -549,7 +549,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     public void handleEncryptKeysRestoredWallet() {
-        EncryptKeysDialogFragment.show(getSupportFragmentManager(), new DialogInterface.OnDismissListener() {
+        EncryptKeysDialogFragment.show(false, getSupportFragmentManager(), new DialogInterface.OnDismissListener() {
             @Override
             public void onDismiss(DialogInterface dialog) {
                 resetBlockchain();
