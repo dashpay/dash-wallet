@@ -297,7 +297,7 @@
     <string name="notification_coins_received_msg">ได้รับ %s</string>
     <string name="notification_peers_connected_msg">%d peers ที่เชื่อมต่อ</string>
     <string name="notification_inactivity_title">คุณยังคงมี Dash อยู่บนอุปกรณ์นี้!</string>
-    <string name="notification_inactivity_message">โปรดทราบว่ายอดคงเหลือของคุณ%sจะสูญหายไปหากคุณถอนการติดตั้งแอพพลิเคชั่น Wallet Dash โดยไม่ส่งมันออกไปก่อน</string>
+        <string name="notification_inactivity_message">คุณยังคงมี Dash อยู่บนอุปกรณ์นี้   โปรดจดวลีการกู้คืนของคุณก่อนทำการถอนติดตั้ง Dash wallet มิฉะนั้นคุณจะเสียยอดเงินทั้งหมดที่คุณมี %s</string>
     <string name="notification_inactivity_action_dismiss">เตือนฉันภายหลัง</string>
     <string name="notification_inactivity_action_dismiss_forever">ไม่ต้องเตือนฉัน</string>
     <string name="appwidget_wallet_balance_title">ยอดคงเหลือ Dash</string>
@@ -314,6 +314,7 @@
     <string name="button_remove">ลบออก</string>
     <string name="button_edit">แก้ไข</string>
     <string name="button_copy">คัดลอก</string>
+    <string name="button_copy_request">คัดลอกคำขอ</string>
     <string name="button_paste">วาง</string>
     <string name="button_share">แบ่งปัน</string>
     <string name="button_set_as_default">ตั้งเป็นค่าเริ่มต้น</string>

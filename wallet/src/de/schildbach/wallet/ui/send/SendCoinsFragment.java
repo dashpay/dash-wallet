@@ -42,6 +42,8 @@ import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
+import org.bitcoinj.uri.BitcoinURI;
+import org.bitcoinj.uri.BitcoinURIParseException;
 import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
@@ -102,6 +104,9 @@ import android.app.Activity;
 import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModelProviders;
 import android.bluetooth.BluetoothAdapter;
+import android.content.ClipData;
+import android.content.ClipDescription;
+import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -233,6 +238,8 @@ public final class SendCoinsFragment extends Fragment {
     private static final Logger log = LoggerFactory.getLogger(SendCoinsFragment.class);
 
     private CanAutoLockGuard canAutoLockGuard;
+
+    private ClipboardManager clipboardManager;
 
     private enum State {
         REQUEST_PAYMENT_REQUEST, //
@@ -518,6 +525,7 @@ public final class SendCoinsFragment extends Fragment {
         this.loaderManager = getLoaderManager();
         this.fragmentManager = getFragmentManager();
         this.pinRetryController = new PinRetryController(activity);
+        this.clipboardManager = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
     }
 
     @Override
@@ -816,25 +824,7 @@ public final class SendCoinsFragment extends Fragment {
         if (requestCode == REQUEST_CODE_SCAN) {
             if (resultCode == Activity.RESULT_OK) {
                 final String input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT);
-
-                new StringInputParser(input) {
-                    @Override
-                    protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
-                        setState(null);
-
-                        updateStateFrom(paymentIntent);
-                    }
-
-                    @Override
-                    protected void handleDirectTransaction(final Transaction transaction) throws VerificationException {
-                        cannotClassify(input);
-                    }
-
-                    @Override
-                    protected void error(final int messageResId, final Object... messageArgs) {
-                        dialog(activity, null, R.string.button_scan, messageResId, messageArgs);
-                    }
-                }.parse();
+                handleString(input);
             }
         } else if (requestCode == REQUEST_CODE_ENABLE_BLUETOOTH_FOR_PAYMENT_REQUEST) {
             if (paymentIntent.isBluetoothPaymentRequestUrl())
@@ -843,6 +833,27 @@ public final class SendCoinsFragment extends Fragment {
             if (paymentIntent.isBluetoothPaymentUrl())
                 directPaymentEnableView.setChecked(resultCode == Activity.RESULT_OK);
         }
+    }
+
+    private void handleString(final String input) {
+        new StringInputParser(input) {
+            @Override
+            protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
+                setState(null);
+
+                updateStateFrom(paymentIntent);
+            }
+
+            @Override
+            protected void handleDirectTransaction(final Transaction transaction) throws VerificationException {
+                cannotClassify(input);
+            }
+
+            @Override
+            protected void error(final int messageResId, final Object... messageArgs) {
+                dialog(activity, null, R.string.button_scan, messageResId, messageArgs);
+            }
+        }.parse();
     }
 
     @Override
@@ -890,6 +901,10 @@ public final class SendCoinsFragment extends Fragment {
             case R.id.send_coins_options_empty:
                 handleEmpty();
                 return true;
+
+            case R.id.options_paste:
+                handlePaste();
+                return true;
         }
 
         return super.onOptionsItemSelected(item);
@@ -926,11 +941,18 @@ public final class SendCoinsFragment extends Fragment {
     private void validateReceivingAddress() {
         try {
             final String addressStr = receivingAddressView.getText().toString().trim();
-            if (!addressStr.isEmpty()
-                    && Constants.NETWORK_PARAMETERS.equals(AddressUtil.getParametersFromAddress(addressStr))) {
-                final String label = AddressBookProvider.resolveLabel(activity, addressStr);
-                validatedAddress = new AddressAndLabel(Constants.NETWORK_PARAMETERS, addressStr, label);
-                receivingAddressView.setText(null);
+            try {
+                //Is the addressStr a valid Dash URI?
+                new BitcoinURI(Constants.NETWORK_PARAMETERS, addressStr);
+                initStateFromBitcoinUri(Uri.parse(addressStr));
+            } catch (BitcoinURIParseException x) {
+                //treat the string as an address or a name in the address book
+                if (!addressStr.isEmpty()
+                        && Constants.NETWORK_PARAMETERS.equals(AddressUtil.getParametersFromAddress(addressStr))) {
+                    final String label = AddressBookProvider.resolveLabel(activity, addressStr);
+                    validatedAddress = new AddressAndLabel(Constants.NETWORK_PARAMETERS, addressStr, label);
+                    receivingAddressView.setText(null);
+                }
             }
         } catch (final AddressFormatException x) {
             // swallow
@@ -1058,7 +1080,7 @@ public final class SendCoinsFragment extends Fragment {
             @Override
             protected void onSuccess(final Transaction transaction) {
                 if (pin != null) {
-                    pinRetryController.successfulAttempt();
+                    pinRetryController.clearPinFailPrefs();
                 }
                 sentTransaction = transaction;
 
@@ -1229,6 +1251,29 @@ public final class SendCoinsFragment extends Fragment {
 
             updateView();
             handler.post(dryrunRunnable);
+        }
+    }
+
+    private void handlePaste() {
+        if (clipboardManager.hasPrimaryClip()) {
+            final ClipData clip = clipboardManager.getPrimaryClip();
+            if (clip == null) {
+                return;
+            }
+            final ClipDescription clipDescription = clip.getDescription();
+            if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST)) {
+                final Uri clipUri = clip.getItemAt(0).getUri();
+                if (clipUri != null) {
+                    final String input = clipUri.toString();
+                    handleString(input);
+                }
+            } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
+                final CharSequence clipText = clip.getItemAt(0).getText();
+                if (clipText != null) {
+                    final String input = clipText.toString();
+                    handleString(input);
+                }
+            }
         }
     }
 

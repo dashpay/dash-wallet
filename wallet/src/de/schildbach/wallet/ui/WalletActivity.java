@@ -20,6 +20,9 @@ package de.schildbach.wallet.ui;
 import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.ClipData;
+import android.content.ClipDescription;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnCancelListener;
@@ -117,7 +120,7 @@ import de.schildbach.wallet_test.R;
 public final class WalletActivity extends AbstractBindServiceActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback,
         NavigationView.OnNavigationItemSelectedListener,
-        WalletLock.OnLockChangeListener, UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
+        UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
         EnableFingerprintDialog.OnFingerprintEnabledListener,
         EncryptKeysDialogFragment.OnOnboardingCompleteListener {
@@ -148,6 +151,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private CanAutoLockGuard canAutoLockGuard;
 
+    private ClipboardManager clipboardManager;
+
     private boolean showBackupWalletDialog = false;
 
     @Override
@@ -157,6 +162,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         application = getWalletApplication();
         config = application.getConfiguration();
         wallet = application.getWallet();
+        WalletLock.getInstance().setConfiguration(config);
 
         setContentView(R.layout.wallet_activity_onepane_vertical);
 
@@ -194,6 +200,15 @@ public final class WalletActivity extends AbstractBindServiceActivity
             upgradeWalletKeyChains(Constants.BIP44_PATH, false);
         }
 
+        initFingerprintHelper();
+
+        canAutoLockGuard = new CanAutoLockGuard(config, onAutoLockStatusChangedListener);
+        if (!veryFirstLaunch) {
+            canAutoLockGuard.register(true);
+        }
+    }
+
+    private void initFingerprintHelper() {
         //Init fingerprint helper
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             fingerprintHelper = new FingerprintHelper(this);
@@ -206,6 +221,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (!veryFirstLaunch) {
             canAutoLockGuard.register(true);
         }
+        this.clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
     }
 
     @Override
@@ -367,42 +383,40 @@ public final class WalletActivity extends AbstractBindServiceActivity
     public void onActivityResult(final int requestCode, final int resultCode, final Intent intent) {
         if (requestCode == REQUEST_CODE_SCAN && resultCode == Activity.RESULT_OK) {
             final String input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT);
-
-            new StringInputParser(input) {
-                @Override
-                protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
-                    SendCoinsActivity.start(WalletActivity.this, paymentIntent);
-                }
-
-                @Override
-                protected void handlePrivateKey(final VersionedChecksummedBytes key) {
-                    SweepWalletActivity.start(WalletActivity.this, key);
-                }
-
-                @Override
-                protected void handleDirectTransaction(final Transaction tx) throws VerificationException {
-                    application.processDirectTransaction(tx);
-                }
-
-                @Override
-                protected void error(final int messageResId, final Object... messageArgs) {
-                    dialog(WalletActivity.this, null, R.string.button_scan, messageResId, messageArgs);
-                }
-            }.parse();
+            handleString(input);
         } else {
             super.onActivityResult(requestCode, resultCode, intent);
         }
     }
 
+    private void handleString(String input) {
+        new StringInputParser(input) {
+            @Override
+            protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
+                SendCoinsActivity.start(WalletActivity.this, paymentIntent);
+            }
+
+            @Override
+            protected void handlePrivateKey(final VersionedChecksummedBytes key) {
+                SweepWalletActivity.start(WalletActivity.this, key);
+            }
+
+            @Override
+            protected void handleDirectTransaction(final Transaction tx) throws VerificationException {
+                application.processDirectTransaction(tx);
+            }
+
+            @Override
+            protected void error(final int messageResId, final Object... messageArgs) {
+                dialog(WalletActivity.this, null, R.string.button_scan, messageResId, messageArgs);
+            }
+        }.parse();
+    }
+
     @Override
     public boolean onCreateOptionsMenu(final Menu menu) {
-        super.onCreateOptionsMenu(menu);
-
         getMenuInflater().inflate(R.menu.wallet_options, menu);
-
-        MenuItem walletLockMenuItem = menu.findItem(R.id.wallet_options_lock);
-        walletLockMenuItem.setVisible(WalletLock.getInstance().isWalletLocked(wallet));
-
+        super.onCreateOptionsMenu(menu);
         return true;
     }
 
@@ -464,6 +478,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
             case R.id.wallet_options_help:
                 HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_wallet);
                 return true;
+
+            case R.id.options_paste:
+                handlePaste();
+                return true;
+
         }
 
         return super.onOptionsItemSelected(item);
@@ -566,6 +585,29 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
         };
         dialog.show();
+    }
+
+    private void handlePaste() {
+        if (clipboardManager.hasPrimaryClip()) {
+            final ClipData clip = clipboardManager.getPrimaryClip();
+            if (clip == null) {
+                return;
+            }
+            final ClipDescription clipDescription = clip.getDescription();
+            if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST)) {
+                final Uri clipUri = clip.getItemAt(0).getUri();
+                if (clipUri != null) {
+                    final String input = clipUri.toString();
+                    handleString(input);
+                }
+            } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
+                final CharSequence clipText = clip.getItemAt(0).getText();
+                if (clipText != null) {
+                    final String input = clipText.toString();
+                    handleString(input);
+                }
+            }
+        }
     }
 
     private void enableFingerprint() {
@@ -1339,7 +1381,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         WalletTransactionsFragment walletTransactionsFragment = (WalletTransactionsFragment)
                 getSupportFragmentManager().findFragmentById(R.id.wallet_transactions_fragment);
         if (walletTransactionsFragment != null) {
-            walletTransactionsFragment.initFingerprintHelper();
             walletTransactionsFragment.onLockChanged(WalletLock.getInstance().isWalletLocked(wallet));
         }
     }

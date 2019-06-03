@@ -5,6 +5,8 @@
 	<string name="send_coins_auto_lock_not_feasible">Bu işlemin gerçekleşmesi birkaç dakika sürebilir. %1$s%2$s ile anında tamamlansın mı?</string>
 	<string name="send_coins_instant_send_not_feasible">Bu işlemin gerçekleşmesi birkaç dakika sürebilir.</string>
 
+	<string name="options_paste_from_clipboard_title">Panodan yapıştır</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Bu ödeme henüz aktarılmadı.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Bu ödeme gönderildi.</string>
 
@@ -85,6 +87,8 @@
 	<string name="fastest_payment_network_dialog_message">Hiçbir ek ücret ödemeden Anında Dash Gönder ve Al</string>
 	<string name="fastest_payment_network_dialog_button">Anlaşıldı</string>
 
+    <string name="net_type_indicator" />
+
 	<string name="unlock_with_fingerprint">Açmak için parmak izini kullan.</string>
 	<string name="unlock_with_fingerprint_error">Parmak izi tanınamadı, lütfen tekrar dene.</string>
 	<string name="unlock_with_fingerprint_error_max_attempts">Parmak izi deneme sınırı aşıldı. Lütfen daha sonra tekrar dene.</string>
@@ -92,5 +96,8 @@
 	<string name="enable_fingerprint">Parmak izini etkinleştir</string>
 	<string name="touch_fingerprint_sensor">Parmak izi okuyucusuna dokun.</string>
 	<string name="touch_fingerprint_to_enable">Parmak izi ile kilit açma için parmak izi okuyucusuna dokun.</string>
+	<string name="exchange_rate_missing">Bu ödeme itibari para karşılığını göstermek için çok eskidir.</string>
 
+	<string name="preferences_enable_payment_request_summary">QR-koduyla başlatılan ödemeler için ödeme protokolünü kullan</string>
+	<string name="preferences_enable_payment_request_title">ödemeyi-tara için BIP70</string>
 </resources>

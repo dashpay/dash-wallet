@@ -82,7 +82,7 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
 
             @Override
             protected void onSuccess() {
-                pinRetryController.successfulAttempt();
+                pinRetryController.clearPinFailPrefs();
                 handleDecryptPIN(password);
                 dismissAllowingStateLoss();
                 if (activity != null && activity instanceof OnNewKeyChainEncryptedListener) {
@@ -120,7 +120,7 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
             new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
                 @Override
                 protected void onSuccess(final KeyParameter encryptionKey, final boolean wasChanged) {
-                    pinRetryController.successfulAttempt();
+                    pinRetryController.clearPinFailPrefs();
                     handleDecryptSeed(encryptionKey, password);
                 }
             }.deriveKey(wallet, password);
@@ -138,7 +138,7 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
             new DecryptSeedTask(backgroundHandler) {
                 @Override
                 protected void onSuccess(final DeterministicSeed seed) {
-                    pinRetryController.successfulAttempt();
+                    pinRetryController.clearPinFailPrefs();
                     ParcelableChainPath parcelableChainPath = getArguments().getParcelable(ARGS_PATH);
                     handleAddKeyChain(seed, parcelableChainPath.getPath(), encryptionKey);
                 }

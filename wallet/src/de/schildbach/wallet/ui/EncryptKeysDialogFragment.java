@@ -306,7 +306,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                                     wallet.decrypt(oldKey);
 
                                     state = State.DONE;
-                                    pinRetryController.successfulAttempt();
+                                    pinRetryController.clearPinFailPrefs();
                                     log.info("wallet successfully decrypted");
                                 } catch (final KeyCrypterException x) {
                                     log.info("wallet decryption failed: " + x.getMessage());

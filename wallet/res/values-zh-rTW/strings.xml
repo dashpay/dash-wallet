@@ -65,6 +65,7 @@
     <string name="send_coins_fragment_receiving_address_complex">複雜\n地址</string>
     <string name="send_coins_fragment_pending">(%s 等候確認)</string>
     <string name="send_coins_fragment_amount_label">總金額</string>
+    <string name="send_coins_fragment_pin_label">輸入 PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">將收取%s作為網絡費用。</string>
     <string name="send_coins_fragment_hint_fee_priority">將支付%s優先級的手續費。如果您希望支付較低的費用，則您只有在需要盡快確認時才使用“優先級”。</string>
     <string name="send_coins_fragment_hint_dusty_send">這個金額太小，無法發送。</string>
@@ -92,13 +93,6 @@
     <string name="send_coins_options_fee_category_economic">經濟的</string>
     <string name="send_coins_options_fee_category_priority">優先處理</string>
     <string name="send_coins_options_empty">空錢包</string>
-    <string name="raise_fee_dialog_title">提高網絡費用</string>
-    <string name="raise_fee_dialog_message">你想提高這筆交易的網絡費用 %s 嗎？這將加快這個交易的確認。</string>
-    <string name="raise_fee_dialog_determining_fee">正在確定網絡費用...</string>
-    <string name="raise_fee_dialog_cant_raise">這筆款項的網絡費用不能提高。</string>
-    <string name="raise_fee_dialog_state_decrypting">正在解密...</string>
-    <string name="raise_fee_dialog_state_done">已完成。</string>
-    <string name="raise_fee_dialog_button_raise">增加</string>
     <string name="sweep_wallet_activity_title">移轉只錢包</string>
     <string name="sweep_wallet_fragment_intro">你將移轉一個紙錢包或點卷，這將把紙錢包裡的所有幣一次轉到目前裝置錢包裡，當交易完成確認，該紙錢包變無價值，同時為了安全性，請勿再次使用。</string>
     <string name="sweep_wallet_fragment_hint">紙錢包常用於冷存放，一些達世幣提款機印出紙錢包而不是直接轉帳到你手機，人們有時用預付紙錢包方式來傳遞達世幣(不建議)。</string>
@@ -259,6 +253,8 @@
     <string name="preferences_data_usage_summary">顯示選項來控制行動網路流量</string>
     <string name="preferences_remind_balance_title">餘額提醒</string>
     <string name="preferences_remind_balance_summary">經過幾個星期的不用，應用程式會通知錢包裡還有錢。</string>
+    <string name="preferences_show_disclaimer_title">顯示免責聲明</string>
+    <string name="preferences_show_disclaimer_summary">你有沒有認真閱讀安全注意事項? 你已經將錢包備份到安全的地方了嗎?</string>
     <string name="preferences_report_issue_title">問題報告</string>
     <string name="preferences_initiate_reset_title">重置區塊鏈</string>
     <string name="preferences_initiate_reset_summary">重置區塊鏈，交易和錢包餘額。 重播將需要一段時間，所以只有在你明白的情況下才這樣做。</string>
@@ -272,6 +268,7 @@
     <string name="report_issue_dialog_title_issue">問題報告</string>
     <string name="report_issue_dialog_title_crash">發現前次當機</string>
     <string name="report_issue_dialog_title_transaction">於選定的付款中報告問題</string>
+    <string name="report_issue_dialog_message_issue">請準確描述您的問題以方便重現刻問題。 如果可以的話請使用英文。預計您會於24小時內收到來自達世幣支援，關於您的問題的電子郵件。</string>
     <string name="report_issue_dialog_message_crash">你是否要寄送當機報告幫助解決問題?</string>
     <string name="report_issue_dialog_description">問題描述</string>
     <string name="report_issue_dialog_report">報告</string>
@@ -300,7 +297,7 @@
     <string name="notification_coins_received_msg">收到 %s</string>
     <string name="notification_peers_connected_msg">%d 節點連線</string>
     <string name="notification_inactivity_title">你在這個裝置上還存放有達世幣!</string>
-    <string name="notification_inactivity_message">請緊記如果您卸載達世幣錢包前沒有把餘額發送出去的話，在你的錢包中的%s餘額將會丟失。</string>
+        <string name="notification_inactivity_message">你仍然有達世幣在此設備上! 在卸載達世幣錢包之前，請務必記下您的恢復詞組，否則您將失去 %s的結餘。</string>
     <string name="notification_inactivity_action_dismiss">稍後提醒我</string>
     <string name="notification_inactivity_action_dismiss_forever">不要提醒我</string>
     <string name="appwidget_wallet_balance_title">達世幣結餘</string>
@@ -317,6 +314,7 @@
     <string name="button_remove">移除</string>
     <string name="button_edit">編輯</string>
     <string name="button_copy">複製</string>
+    <string name="button_copy_request">複製請求</string>
     <string name="button_paste">貼上</string>
     <string name="button_share">分享</string>
     <string name="button_set_as_default">設為預設</string>

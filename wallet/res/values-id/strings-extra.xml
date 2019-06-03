@@ -5,6 +5,8 @@
 	<string name="send_coins_auto_lock_not_feasible">Transaksi ini mungkin perlu beberapa menit untuk diselesaikan. Selesaikan instan untuk %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Transaksi ini mungkin perlu beberapa menit untuk diselesaikan.</string>
 
+	<string name="options_paste_from_clipboard_title">Tempelkan</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Pembayaran ini belum disiarkan.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Pembayaran ini telah dikirim.</string>
 
@@ -82,6 +84,8 @@
 	<string name="fastest_payment_network_dialog_message">Kirim dan Terima Dash dalam Sekejap tanpa biaya tambahan</string>
 	<string name="fastest_payment_network_dialog_button">Mengerti</string>
 
+    <string name="net_type_indicator" />
+
 	<string name="unlock_with_fingerprint">Gunakan sidik jari Anda untuk membuka kunci.</string>
 	<string name="unlock_with_fingerprint_error">Gagal mengenali sidik jari, silakan coba lagi.</string>
 	<string name="unlock_with_fingerprint_error_max_attempts">Upaya sidik jari maksimum terlampaui. Silakan coba lagi nanti.</string>
@@ -89,5 +93,8 @@
 	<string name="enable_fingerprint">Aktifkan sidik jari</string>
 	<string name="touch_fingerprint_sensor">Sentuh sensor sidik jari.</string>
 	<string name="touch_fingerprint_to_enable">Sentuh sensor sidik jari untuk mengaktifkan membuka kunci dengan sidik jari.</string>
+	<string name="exchange_rate_missing">Pembayaran ini terlalu lama untuk mendapatkan nilai fiat.</string>
 
+	<string name="preferences_enable_payment_request_summary">Gunakan protokol pembayaran untuk pembayaran yang dimulai dengan kode-QR</string>
+	<string name="preferences_enable_payment_request_title">BIP70 untuk pindai-untuk-bayar</string>
 </resources>

@@ -253,6 +253,8 @@
     <string name="preferences_data_usage_summary">Hiển thị các tuỳ chọn để giới hạn dung lượng dữ liệu sử dụng trên mạng di động.</string>
     <string name="preferences_remind_balance_title">Số dư nhắc nhở</string>
     <string name="preferences_remind_balance_summary">Sau một vài tuần không sử dụng, ứng dụng sẽ thông báo nếu vẫn còn tiền trong ví.</string>
+    <string name="preferences_show_disclaimer_title">Hiển thị Chối bỏ trách nhiệm</string>
+    <string name="preferences_show_disclaimer_summary">Bạn đã sẵn sàng đọc chú ý an toàn chưa? Bạn đã sao lưu dự phòng ví của bạn vào nơi an toàn chưa?</string>
     <string name="preferences_report_issue_title">Báo cáo về lỗi</string>
     <string name="preferences_initiate_reset_title">Thiết đặt lại blockchain</string>
     <string name="preferences_initiate_reset_summary">Khởi tạo lại chuỗi khối, các giao dịch và số dư trong ví. Việc tái tạo này sẽ mất một lúc, cho nên bạn chỉ nên làm điều đó khi bạn biết tại sao nên làm.</string>
@@ -295,7 +297,7 @@
     <string name="notification_coins_received_msg">đã nhận %s</string>
     <string name="notification_peers_connected_msg">%d mạng ngang hàng đã kết nối</string>
     <string name="notification_inactivity_title">Bạn vẫn còn Dash trong thiết bị này!</string>
-    <string name="notification_inactivity_message">Hãy nhớ là số dư %s của bạn sẽ bị mất nếu bạn gỡ ứng dụng Ví Dash này mà không gửi tiền đi đâu đó trước.</string>
+        <string name="notification_inactivity_message">Bạn vẫn có Dash trên thiết bị này! Hãy chắc chắn rằng bạn viết xuống dòng chữ dùng để phục hồi trước khi gỡ bỏ ví Dash Wallet nếu không bạn sẽ mất hết số dư này %s.</string>
     <string name="notification_inactivity_action_dismiss">Hãy nhắc tôi sau</string>
     <string name="notification_inactivity_action_dismiss_forever">Đừng nhắc tôi nữa</string>
     <string name="appwidget_wallet_balance_title">Số dư Dash</string>
@@ -312,6 +314,7 @@
     <string name="button_remove">Xoá</string>
     <string name="button_edit">Chỉnh sửa</string>
     <string name="button_copy">Sao chép</string>
+    <string name="button_copy_request">Chép yêu cầu</string>
     <string name="button_paste">Dán</string>
     <string name="button_share">Chia sẻ</string>
     <string name="button_set_as_default">Đặt làm mặc định</string>

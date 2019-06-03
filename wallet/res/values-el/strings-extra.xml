@@ -1,0 +1,103 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources>
+
+    <string name="send_coins_auto_lock_feasible">Αυτή η συναλλαγή θα διευθετηθεί άμεσα χωρίς πρόσθετη χρέωση.</string>
+	<string name="send_coins_auto_lock_not_feasible">Αυτή η συναλλαγή μπορεί να διαρκέσει αρκετά λεπτά για να διευθετηθεί. Να ολοκληρωθεί άμεσα για %1$s%2$s;</string>
+	<string name="send_coins_instant_send_not_feasible">Αυτή η συναλλαγή μπορεί να διαρκέσει αρκετά λεπτά για να διευθετηθεί.</string>
+
+	<string name="options_paste_from_clipboard_title">Επικόλληση από το πρόχειρο</string>
+
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">Αυτή η πληρωμή δεν έχει διαβιβαστεί ακόμη.</string>
+	<string name="transaction_row_message_sent_to_single_peer">Η πληρωμή στάλθηκε.</string>
+
+	<string name="regular_transaction_info_message">Αυτή η συναλλαγή δεν διευθετήθηκε άμεσα.</string>
+
+	<string name="wallet_options_disconnect">Αποσύνδεση</string>
+
+	<string name="network_monitor_masternodes_title">Masternodes</string>
+	<string name="export_keys_dialog_title_to_seed">Δεiτε την φράση ανάκτησης</string>
+	<string name="import_keys_dialog_title_from_seed">Επαναφορά με την φράση  ανάκτησης</string>
+	<string name="backup_to_seed_wallet_dialog_message">Αυτή είναι η δική σας φράση ανάκτησης. Παρακαλώ γράψτε την κάπου.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">ΜΗΝ ΑΦΗΣΕΤΕ κάποιον να δει την φράση επαναφοράς σας διότι θα μπορέσει να ξοδέψει τα Dash σας.</string>
+	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Το πορτοφόλι σας είναι προστατευμένο με PIN ξοδέματος. Εισάγετε το PIN σας και πιέστε Show για να δείτε την φράση ανάκτησής σας.</string>
+    <string name="import_keys_from_seed_dialog_message">Εισάγετε εδώ την φράση ανάκτησής σας.</string>
+	<string name="import_export_keys_dialog_password_phrase">Η φράση ανάκτησης μπαίνει εδώ.</string>
+	<string name="preferences_report_issue_summary">Συγκεντρώστε πληροφορίες σχετικά με το πρόβλημά σας και  στείλτε την αναφορά σας στους προγραμματιστές με email.</string>
+	<string name="navigation_configuration">Διαμόρφωση</string>
+    <string name="button_copy_address">Αντιγραφή διεύθυνσης</string>
+	<string name="request_coins_clipboard_address_msg">Η διεύθυνση Dash αντιγράφτηκε στο πρόχειρο</string>
+	<string name="backup_wallet_to_seed_show_recovery_phrase">Προβολή</string>
+	<string name="restore_wallet_from_invalid_seed_warning_message">%s δεν είναι έγκυρη λέξη.</string>
+
+	<string name="send_coins_options_fee_category_zero">Χωρίς χρέωση</string>
+	<string name="send_coins_fragment_hint_fee_zero">Κανένα ποσό δεν χρεώνεται. Χρησιμοποιήστε την επιλογή \"χωρίς χρέωση\" μόνο αν δεν σας ενδιαφέρει ο χρόνος επιβεβαίωσης.</string>
+
+	<string name="wallet_uri_handler_public_key_request_dialog_msg">Η εφαρμογή %s θέλει να λάβει το Κύριο Δημόσιο Κλειδί σας. Αυτό μπορεί να χρησιμοποιηθεί για να παρακολουθείτε το πορτοφόλι σας, αυτό δεν μπορεί να χρησιμοποιηθεί για να μετακινήσετε τα Dash σας.</string>
+	<string name="wallet_uri_handler_address_request_dialog_msg">Η εφαρμογή %s ζητά μια διεύθυνση για να σας πληρώσει. Θέλετε να το εγκρίνετε αυτό;</string>
+
+	<string name="wallet_lock_unlock">Ξεκλείδωμα</string>
+	<string name="wallet_lock_unlock_wallet">Ξεκλείδωμα πορτοφολιού</string>
+	<string name="wallet_lock_unlock_to_see_txs_title">Το πορτοφόλι κλείδωσε.</string>
+	<string name="wallet_lock_unlock_to_see_txs_txt">Πατήστε το εικονίδιο της κλειδαριάς επάνω για να ξεκλειδώσετε το πορτοφόλι σας και να δείτε το ιστορικό συναλλαγών.</string>
+	<string name="wallet_lock_unlock_dialog_title">Ξεκλειδώστε το πορτοφόλι σας</string>
+	<string name="wallet_lock_unlock_dialog_message">Το πορτοφόλι σας προστατεύεται από PIN ξοδέματος. Εισάγετε το PIN και πατήστε Ξεκλείδωμα για να συνεχίσετε.</string>
+	<string name="wallet_lock_reset_wallet_title">Επαναφορά πορτοφολιού</string>
+	<string name="wallet_lock_reset_wallet_message">Είστε σίγουροι; Το πορτοφόλι σας θα διαγράφει και όλα τα Dash σας θα χαθούν.\n\nΟ μόνος τρόπος για να ανακτήσετε τα Dash σας είναι μέσο ενός αντιγράφου ασφαλείας η με την φράση επαναφοράς.</string>
+
+	<string name="wallet_lock_wallet_disabled">Το πορτοφόλι απενεργοποιήθηκε</string>
+	<string name="wallet_lock_try_again">Δοκιμάστε ξανά σε %1$d %2$s</string>
+	<string name="wallet_lock_reset">Επαναφορά</string>
+	<string name="wallet_lock_wrong_pin">Λάθος PIN! %s</string>
+
+	<plurals name="wallet_lock_attempts_remaining">
+		<item quantity="one">%d προσπάθεια απομένει</item>
+		<item quantity="other">%d προσπάθειες απομένουν </item>
+	</plurals>
+
+	<plurals name="minute">
+		<item quantity="one">λεπτό</item>
+		<item quantity="other">λεπτά</item>
+	</plurals>
+	
+	<plurals name="hour">
+		<item quantity="one">ώρα</item>
+		<item quantity="other">ώρες</item>
+	</plurals>
+
+	<string name="encrypt_new_key_chain_upgrade_button">Αναβάθμιση</string>
+	<string name="encrypt_new_key_chain_dialog_title">Αναβαθμίστε το πορτοφόλι σας</string>
+	<string name="encrypt_new_key_chain_dialog_message">το πορτοφόλι σας θα αναβαθμιστεί για να υποστηρίζει την εισαγωγή από και την εξαγωγή σε περισσότερες εφαρμογές.</string>
+	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Θα πρέπει να εισάγετε το PIN σας για να ολοκληρωθεί η αναβάθμιση.</string>
+	<string name="pin_code_required_dialog_message">Αυτή η εφαρμογή απαιτεί τώρα PIN για να ξοδέψετε και να δείτε το υπόλοιπο και τις συναλλαγές.</string>
+    <string name="backup_wallet_seed_private_key_written_down_box">Έχω γράψει τη φράση ανάκτησης</string>
+	
+	<string name="change_exchange_currency_code_message">Το τοπικό σας νόμισμα είναι %1$s, αλλά σε αυτήν την εφαρμογή το προεπιλεγμένο νόμισμά έχει οριστεί σε %2$s. Θα θέλατε να το αλλάξετε σε %1$s η να παραμείνει ως %2$s;</string>
+	<string name="change_to">Αλλαγή σε %s</string>
+	<string name="leave_as">Ας παραμείνει ως %s</string>
+
+	<string name="remind_later">Υπενθύμιση αργότερα</string>
+	<string name="backup_now">Αντίγραφο ασφαλείας τώρα</string>
+	
+	<string name="notification_transactions_channel_name">Συναλλαγές</string>
+	<string name="notification_transactions_channel_description">Λάβετε ειδοποιήσεις για εισερχόμενες συναλλαγές</string>
+	<string name="notification_synchronization_channel_name">Συγχρονισμός</string>
+	<string name="notification_synchronization_channel_description">Εμφανίζει μια ειδοποίηση όταν η εφαρμογή συγχρονίζεται με το δίκτυο.</string>
+
+	<string name="fastest_payment_network_dialog_title">Τα δικά σου λεφτά, ο δικός σου τρόπος!</string>
+	<string name="fastest_payment_network_dialog_message">Στείλτε και λάβετε Dash χωρίς εξτρά χρέωση</string>
+	<string name="fastest_payment_network_dialog_button">Το κατάλαβα</string>
+
+    <string name="net_type_indicator" />
+
+	<string name="unlock_with_fingerprint">Χρησιμοποιήστε το δακτυλικό σας αποτύπωμα για να ξεκλειδώσετε.</string>
+	<string name="unlock_with_fingerprint_error">Αποτυχία αναγνώρισης αποτυπώματος, παρακαλώ προσπαθήστε ξανά.</string>
+	<string name="unlock_with_fingerprint_error_max_attempts">Οι μέγιστες απόπειρες δακτυλικών αποτυπωμάτων υπερέβησαν το όριο. Παρακαλώ προσπαθήστε ξανά αργότερα.</string>
+	<string name="or_unlock_with_fingerprint">η χρησιμοποιήστε το δακτυλικό σας αποτύπωμα για να ξεκλειδώσετε.</string>
+	<string name="enable_fingerprint">Ενεργοποιήστε το δακτυλικό αποτύπωμα</string>
+	<string name="touch_fingerprint_sensor">Αγγίξτε τον αισθητήρα δακτυλικών αποτυπωμάτων.</string>
+	<string name="touch_fingerprint_to_enable">Αγγίξτε τον αισθητήρα δακτυλικών αποτυπωμάτων για να ενεργοποιήσετε το ξεκλείδωμα μέσω αποτυπώματος.</string>
+	<string name="exchange_rate_missing">Αυτή η πληρωμή είναι πολύ παλιά για να δοθεί η χρηματική του τιμή.</string>
+
+	<string name="preferences_enable_payment_request_summary">Χρησιμοποιήστε το πρωτόκολλο πληρωμών για QR τύπου πληρωμές.</string>
+	<string name="preferences_enable_payment_request_title">BIP70 για scan-to-pay</string>
+</resources>

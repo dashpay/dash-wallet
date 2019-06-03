@@ -30,7 +30,7 @@
     <string name="wallet_transactions_fragment_empty_text_howto">Cum obții Dash?\n\nSchimbă în bani tradiționali,\nvinde bunuri sau servicii sau\ncâștiga prin muncă.</string>
     <string name="wallet_transactions_row_warning_backup">Felicitări, ai primit prima ta plată! Ai creat deja portofelul, pentru protecție împotriva pierderii?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Sugestie: pentru a îmbunatați siguranța portofelului tău, poți &lt;u&gt;securiza dispozitivul&lt;/u&gt;. Astfel vei proteja și datele altor aplicații.</string>
-    <string name="wallet_transactions_fragment_coinbase">minterit</string>
+    <string name="wallet_transactions_fragment_coinbase">minerit</string>
     <string name="wallet_transactions_fragment_internal">intern</string>
     <string name="wallet_transactions_options_filter">Filtru</string>
     <string name="wallet_transactions_options_filter_all">Toate plățile</string>
@@ -253,6 +253,8 @@
     <string name="preferences_data_usage_summary">Afișează opțiunile pentru a restricționa data usage în rețelele mobile.</string>
     <string name="preferences_remind_balance_title">Reminder pentru sold cont</string>
     <string name="preferences_remind_balance_summary">După câteva săptămâni de neutilizare, aplicația va notifica dacă mai există monede în portofel.</string>
+    <string name="preferences_show_disclaimer_title">Afișează declarația de exonerare a răspunderii</string>
+    <string name="preferences_show_disclaimer_summary">Ești sigur că ai citit notele de siguranță? Ai efectuat deja un back up al portofelului tău?</string>
     <string name="preferences_report_issue_title">Raportează problema</string>
     <string name="preferences_initiate_reset_title">Resetează blockchain-ul</string>
     <string name="preferences_initiate_reset_summary">Resetează blockchain-ul, tranzacțiile si soldul portofelului. Replay-ul va dura o perioada, deci resetează doar dacă ai un motiv. </string>
@@ -295,8 +297,7 @@
     <string name="notification_coins_received_msg">%s primit</string>
     <string name="notification_peers_connected_msg">%d peer-uri conectați </string>
     <string name="notification_inactivity_title">Încă ai Dash pe acest dispozitiv!</string>
-    <string name="notification_inactivity_message">Ține minte soldul tău %s va fi pierdut dacă dezinstalezi aplicația portofelului Dash înainte să-l trimiți mai întâi.</string>
-    <string name="notification_inactivity_action_dismiss">Amintește-mi mai târziu</string>
+        <string name="notification_inactivity_action_dismiss">Amintește-mi mai târziu</string>
     <string name="notification_inactivity_action_dismiss_forever">Nu-mi aminti</string>
     <string name="appwidget_wallet_balance_title">Sold Dash</string>
 

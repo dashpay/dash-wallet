@@ -5,6 +5,8 @@
 	<string name="send_coins_auto_lock_not_feasible">Esta transacción podrá tomar varios minutos para concretarse. ¿Completar instantáneamente por %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Esta transacción podrá tomar varios minutos para concretarse.</string>
 
+	<string name="options_paste_from_clipboard_title">Pegar desde el portapapeles</string>
+
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Este pago aún no se ha transmitido.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Este pago ha sido enviado.</string>
 
@@ -84,6 +86,8 @@
 	<string name="fastest_payment_network_dialog_title">Tu Dinero, Tu Modo</string>
 	<string name="fastest_payment_network_dialog_message">Envíe y Reciba Dash en un instante sin tasa adicional</string>
 	<string name="fastest_payment_network_dialog_button">Entendido</string>
+
+    <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">Use tu huella para desbloquear.</string>
 	<string name="unlock_with_fingerprint_error">No se pudo reconocer tu huella, por favor intente nuevamente.</string>

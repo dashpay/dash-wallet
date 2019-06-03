@@ -298,7 +298,7 @@
     <string name="notification_coins_received_msg">%s empfangen</string>
     <string name="notification_peers_connected_msg">%d Peers verbunden</string>
     <string name="notification_inactivity_title">Es befinden sich immer noch Dash auf Ihrem Gerät.</string>
-    <string name="notification_inactivity_message">Vergiss bitte nicht, dass Dein Guthaben in Höhe von %s verloren gehen wird, wenn Du Deine Dash Wallet App deinstallieren, ohne vorher alles an eine andere Adresse überwiesen zu haben. </string>
+        <string name="notification_inactivity_message">Auf dem Gerät befinden sich noch immer Dash! Versichere dich, dass du deine Wiederherstellungsphrase aufgeschrieben hast, bevor du die Dash Wallet deinstallierst, oder du wirst den Zugang zu deinem Guthaben in Höhe von %s verlieren.</string>
     <string name="notification_inactivity_action_dismiss">Später erinnern</string>
     <string name="notification_inactivity_action_dismiss_forever">Nicht weiter erinnern</string>
     <string name="appwidget_wallet_balance_title">Dash-Guthaben</string>
@@ -315,6 +315,7 @@
     <string name="button_remove">Entfernen</string>
     <string name="button_edit">Ändern</string>
     <string name="button_copy">Kopieren</string>
+    <string name="button_copy_request">Anfrage kopieren</string>
     <string name="button_paste">Einfügen</string>
     <string name="button_share">Teilen</string>
     <string name="button_set_as_default">Als Standard setzen</string>

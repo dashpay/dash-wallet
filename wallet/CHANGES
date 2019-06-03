@@ -1,4 +1,15 @@
 Dash Wallet
+v6.4.4
+* Fixed launcher icon menu
+* Cancel out of Change PIN
+* Lock Timer locks app 3 minutes after entering PIN/Fingerprint
+* Removed all donation text and menu items
+* Fixed backup crash on Android 6
+* Handle QR codes that request InstantSend
+* Fixed Send screen crash
+* Updated translations (including Greek)
+* Add DevNet flavor
+
 v6.4.3
 * Fix Paper Wallet Sweep Crash from invalid electrum response
 * Support self-signed SSL certificates for connecting to electrum servers.

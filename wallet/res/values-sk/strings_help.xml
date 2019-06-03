@@ -4,16 +4,16 @@
     <string name="help_wallet">
 <![CDATA[
 		<p>
-			V pravej hornej časti displeja sa zobrazuje Vaša bilancia v Dash a jednej zvolenej národnej mene.
+			V pravej hornej časti displeja sa zobrazuje vaša bilancia v Dash a jednej zvolenej národnej mene.
 			Poklepte na zoznam národných mien a zvoľte jednu ako predvolenú.
 		</p>
 		<p>
-			QR kód, ktorý obsahuje Vašu Dash adresu je dostupný z navigačného menu (v ľavo hore) a môže byť použitý pre načítanie inou osobou.
-			Poklepaním na QR kód, získate väčšiu verziu.
+			QR kód, ktorý obsahuje vašu Dash adresu je dostupný z navigačného menu (v ľavo hore) a môže byť použitý pre načítanie inou osobou.
+			Poklepaním na QR kód, získate väčší obrázok.
 		</p>
 		<p>
-			V spodnej časti obrazovky nájdete zoznam Vašich transakcií, ktorý je na začiatku prázdny.
-			Čakajúce transakcie sú zašednuté, pokiaľ nie sú potvrdené.
+			V spodnej časti obrazovky nájdete zoznam vašich transakcií, ktorý je na začiatku prázdny.
+			Čakajúce transakcie sú zošednuté, pokiaľ nie sú potvrdené.
 			Poklepaním na záznam uvidíte detaily, alebo pridáte odosielateľov či prijímateľov do adresára.
 			Adresár je dostupný z navigačného menu (vľavo hore).
 		</p>
@@ -79,7 +79,7 @@
 			<b>Dôležité informácie o bezpečnosti:</b>
 		</p>
 		<p>
-			Dash sú uložené na Vašom zariadení.
+			Dash sú uložené na vašom zariadení.
 			<b>Ak zariadenie stratíte, prídete o všetky svoje Dash.</b>
 		</p>
 		<p>
@@ -100,7 +100,7 @@
 			<b>Chráňte si svoje zariadenie!</b>
 			Nepoužívajte rootnuté zariadenie.
 			Inštalujte len aplikácie, ktorým plne dôverujete.
-			Škodlivé aplikácie sa môžu pokúsiť ukradnúť Vašu peňaženku.
+			Škodlivé aplikácie sa môžu pokúsiť ukradnúť vašu peňaženku.
 		</p>
 		<p>
 			Znížte riziko na minimum!

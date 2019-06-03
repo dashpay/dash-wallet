@@ -15,9 +15,11 @@ public abstract class ActivitiesTracker implements Application.ActivityLifecycle
 
     @Override
     public void onActivityStarted(Activity activity) {
-        if (numStarted == 0) {
+        boolean isTheFirstOne = numStarted == 0;
+        if (isTheFirstOne) {
             onStartedFirst();
         }
+        onStartedAny(isTheFirstOne);
         numStarted++;
     }
 
@@ -55,6 +57,10 @@ public abstract class ActivitiesTracker implements Application.ActivityLifecycle
     }
 
     protected void onStartedFirst() {
+
+    }
+
+    protected void onStartedAny(boolean isTheFirstOne) {
 
     }
 }

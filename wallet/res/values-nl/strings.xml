@@ -297,7 +297,7 @@
     <string name="notification_coins_received_msg">Ontvangen %s</string>
     <string name="notification_peers_connected_msg">%d actieve verbindingen</string>
     <string name="notification_inactivity_title">U heeft nog Dash op dit apparaat!</string>
-    <string name="notification_inactivity_message">Uw saldo van %s Dash zal verloren gaan als u de Dash portemonnee de-installeert zonder dit saldo eerst naar een ander adres te verzenden. </string>
+        <string name="notification_inactivity_message">Je hebt nog steeds Dash op dit apparaat! Vergeet niet om uw herstelzin te noteren voordat u de Dash portemonnee app verwijdert, anders verliest u uw saldo van %s.</string>
     <string name="notification_inactivity_action_dismiss">Herinner me later</string>
     <string name="notification_inactivity_action_dismiss_forever">Herinner me niet</string>
     <string name="appwidget_wallet_balance_title">Dash-saldo</string>
@@ -314,6 +314,7 @@
     <string name="button_remove">Verwijder</string>
     <string name="button_edit">Aanpassen</string>
     <string name="button_copy">Kopieer</string>
+    <string name="button_copy_request">Kopieer verzoek</string>
     <string name="button_paste">Plakken</string>
     <string name="button_share">Delen</string>
     <string name="button_set_as_default">Kies als standaard</string>

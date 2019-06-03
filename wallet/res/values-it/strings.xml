@@ -253,6 +253,8 @@
     <string name="preferences_data_usage_summary">Mostra le opzioni per restringere l\'utilizzo dei dati su reti mobili.</string>
     <string name="preferences_remind_balance_title">Promemoria Bilancio</string>
     <string name="preferences_remind_balance_summary">Dopo un paio di settimane di non utilizzo, l\'app comunicherà se nel portafoglio sono ancora presenti monete.</string>
+    <string name="preferences_show_disclaimer_title">Mostra disclaimer</string>
+    <string name="preferences_show_disclaimer_summary">Sei sicuro di aver letto le note sulla sicurezza? Hai già eseguito il backup del tuo portafoglio in un luogo sicuro?</string>
     <string name="preferences_report_issue_title">Segnala un problema</string>
     <string name="preferences_initiate_reset_title">Reimposta la catena di blocchi</string>
     <string name="preferences_initiate_reset_summary">Reimposta la catena di blocchi, le transazioni e il saldo del portafoglio. Il processo richiederà un po \'di tempo, quindi fallo solo se sai perché.</string>
@@ -295,7 +297,7 @@
     <string name="notification_coins_received_msg">Ricevuti %s</string>
     <string name="notification_peers_connected_msg">Connesso a %d peers</string>
     <string name="notification_inactivity_title">Hai ancora Dash su questo dispositivo!</string>
-    <string name="notification_inactivity_message">Ricorda che il tuo bilancio di %s andrà perso se si disinstalla l\'app Dash Wallet , quindi esegui beckup o sposta i tuoi Dash prima di procedere.</string>
+        <string name="notification_inactivity_message">Hai ancora Dash su questo dispositivo! Assicurati di annotare la tua frase di recupero prima di disinstallare il Dash Wallet o perderai il tuo saldo di %s.</string>
     <string name="notification_inactivity_action_dismiss">Ricordamelo in seguito</string>
     <string name="notification_inactivity_action_dismiss_forever">Non ricordarmelo</string>
     <string name="appwidget_wallet_balance_title">Bilancio Dash</string>
@@ -312,6 +314,7 @@
     <string name="button_remove">Rimuovi</string>
     <string name="button_edit">Modifica</string>
     <string name="button_copy">Copia</string>
+    <string name="button_copy_request">Copia richiesta</string>
     <string name="button_paste">Incolla</string>
     <string name="button_share">Condividi</string>
     <string name="button_set_as_default">Imposta come predefinito</string>

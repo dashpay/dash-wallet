@@ -1,8 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-  <string name="help_wallet">
 
-
+    <string name="help_wallet">
 <![CDATA[
 		<p>
 			Rechtsboven in het scherm staat je saldo in Dash. en een geselecteerde nationale valuta.
@@ -23,8 +22,8 @@
 			Meer opties zijn aanwezig in het navigatiemenu(linksboven) en het optiemenu.
 		</p>
 	]]>
-	</string>
-  <string name="help_request_coins">
+    </string>
+    <string name="help_request_coins">
 <![CDATA[
 		<p>
 			Deze dialoog kunt u gebruiken om Dash te verzoeken van iemand anders (die ook Dash Wallet of een andere Dash cliënt geïnstalleerd heeft).
@@ -42,8 +41,8 @@
 			Als de betalende partij akkoord gaat, kan de transactie eenvoudig worden uitgevoerd.
 		</p>
 	]]>
-	</string>
-  <string name="help_send_coins">
+    </string>
+    <string name="help_send_coins">
 <![CDATA[
 		<p>
 			Je hebt het dialoog gestart om Dash te verzenden.
@@ -73,8 +72,8 @@
 			Controleer altijd het ontvangst adres.
 		</p>
 	]]>
-	</string>
-  <string name="help_safety">
+    </string>
+    <string name="help_safety">
 <![CDATA[
 		<p>
 			<b>Belangrijke veiligheidsvoorschriften:</b>
@@ -108,5 +107,6 @@
 			<b>Gebruik Dash Wallet alleen voor kleine bedragen</b>voor dagelijks gebruik.
 		</p>
 	]]>
-	</string>
+    </string>
+
 </resources>

@@ -253,6 +253,8 @@
     <string name="preferences_data_usage_summary">Ipakita ang mga pagpipiian para mahigpitan ang data usage sa mga mobile network.</string>
     <string name="preferences_remind_balance_title">Paalala ng balanse</string>
     <string name="preferences_remind_balance_summary">Pagkatapos ng ilang linggong hindi paggamit, ang app ay mag-aabiso kung mayroon pang barya sa iyong pitaka.</string>
+    <string name="preferences_show_disclaimer_title">Ipakita ang disclaimer</string>
+    <string name="preferences_show_disclaimer_summary">Nabasa mo na ba talaga ang safety notes? Na-back up mo na ba ang wallet sa ligtas na lugar?</string>
     <string name="preferences_report_issue_title">I-report ang issue</string>
     <string name="preferences_initiate_reset_title">i-reset ang block chain</string>
     <string name="preferences_initiate_reset_summary">I-reset ang block chain, transaksyon at wallet balance. Magtatagal ng kaunti ang pag-replay, kaya gawin lamang ito kapag alam mo kung bakit.</string>
@@ -295,7 +297,7 @@
     <string name="notification_coins_received_msg">Natanggap %s</string>
     <string name="notification_peers_connected_msg">%d peers connected</string>
     <string name="notification_inactivity_title">Mayroon ka pang Dash sa device na ito!</string>
-    <string name="notification_inactivity_message">Alalahanin na ang iyong balanse na %s ay mawawala kapag in-uninstall mo ang Dash Wallet app ng hindi ito pinapamahagi muna.</string>
+        <string name="notification_inactivity_message">Mayroon ka pang dash sa device na ito! Siguraduhing na naisulat ang iyong recovery phrase bago i-uninstall ang Dash Walet o mawawala lahat ng iyong balanse na %s.</string>
     <string name="notification_inactivity_action_dismiss">Paalalahanan mo ako mamaya</string>
     <string name="notification_inactivity_action_dismiss_forever">Wag mo akong paalalahanan</string>
     <string name="appwidget_wallet_balance_title">Balanse ng Dash</string>
@@ -312,6 +314,7 @@
     <string name="button_remove">Tanggalin</string>
     <string name="button_edit">I-edit</string>
     <string name="button_copy">Kopyahin</string>
+    <string name="button_copy_request">Kopyahin ang hiling</string>
     <string name="button_paste">I-dikit</string>
     <string name="button_share">Ibahagi</string>
     <string name="button_set_as_default">Itakda bilang default</string>
