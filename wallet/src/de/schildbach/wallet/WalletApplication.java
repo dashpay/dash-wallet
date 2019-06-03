@@ -210,6 +210,7 @@ public class WalletApplication extends Application {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannels();
         }
+        WalletLock.getInstance().setConfiguration(config);
     }
 
     private void registerScreenOffReceiver() {
