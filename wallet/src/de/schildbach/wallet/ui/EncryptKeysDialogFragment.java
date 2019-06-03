@@ -160,7 +160,9 @@ public class EncryptKeysDialogFragment extends DialogFragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, @android.support.annotation.Nullable ViewGroup container, Bundle savedInstanceState) {
-        setCancelable(getArguments().getBoolean(CANCELABLE_ARG));
+        if (getArguments() != null) {
+            setCancelable(getArguments().getBoolean(CANCELABLE_ARG));
+        }
         return super.onCreateView(inflater, container, savedInstanceState);
     }
 
@@ -187,7 +189,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         builder.setTitle(R.string.encrypt_keys_dialog_title);
         builder.setView(view);
         builder.setPositiveButton(R.string.button_ok, null); // dummy, just to make it show
-        if (getArguments().getBoolean(CANCELABLE_ARG)) {
+        if (getArguments() != null && getArguments().getBoolean(CANCELABLE_ARG)) {
             builder.setNegativeButton(R.string.button_cancel, null);
         }
 
