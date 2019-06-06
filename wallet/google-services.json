@@ -1,0 +1,127 @@
+{
+  "project_info": {
+    "project_number": "879262207656",
+    "firebase_url": "https://dash-wallet-demo.firebaseio.com",
+    "project_id": "dash-wallet-demo",
+    "storage_bucket": "dash-wallet-demo.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:879262207656:android:989eecd6db36de6a",
+        "android_client_info": {
+          "package_name": "hashengineering.darkcoin.wallet"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "879262207656-su3j8un0cnh1cpii0e8pak3tu48p9nl1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAO3pkfubgF60clL0tq_2R3qt5J6n7jZxA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "879262207656-su3j8un0cnh1cpii0e8pak3tu48p9nl1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:879262207656:android:67503b93d496d1db",
+        "android_client_info": {
+          "package_name": "hashengineering.darkcoin.wallet.devnet"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "879262207656-su3j8un0cnh1cpii0e8pak3tu48p9nl1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAO3pkfubgF60clL0tq_2R3qt5J6n7jZxA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "879262207656-su3j8un0cnh1cpii0e8pak3tu48p9nl1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:879262207656:android:3202b16d460a1a88",
+        "android_client_info": {
+          "package_name": "hashengineering.darkcoin.wallet_test"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "879262207656-su3j8un0cnh1cpii0e8pak3tu48p9nl1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAO3pkfubgF60clL0tq_2R3qt5J6n7jZxA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "879262207656-su3j8un0cnh1cpii0e8pak3tu48p9nl1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:879262207656:android:3cb62fcbd8b7d447",
+        "android_client_info": {
+          "package_name": "hashengineering.dash.wallet.beta"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "879262207656-su3j8un0cnh1cpii0e8pak3tu48p9nl1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAO3pkfubgF60clL0tq_2R3qt5J6n7jZxA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "879262207656-su3j8un0cnh1cpii0e8pak3tu48p9nl1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
