@@ -1,4 +1,8 @@
 Dash Wallet
+v6.4.5
+* Fixed crash when restoring from recovery phrase
+* Fixed rare crash when scan is selected from the context menu
+
 v6.4.4
 * Fixed launcher icon menu
 * Cancel out of Change PIN
