@@ -209,6 +209,7 @@ typedef enum {
   SWIG_JavaIllegalArgumentException,
   SWIG_JavaNullPointerException,
   SWIG_JavaDirectorPureVirtual,
+  DashJ_JavaBLSException,
   SWIG_JavaUnknownError
 } SWIG_JavaExceptionCodes;
 
@@ -230,6 +231,7 @@ static void SWIGUNUSED SWIG_JavaThrowException(JNIEnv *jenv, SWIG_JavaExceptionC
     { SWIG_JavaNullPointerException, "java/lang/NullPointerException" },
     { SWIG_JavaDirectorPureVirtual, "java/lang/RuntimeException" },
     { SWIG_JavaUnknownError,  "java/lang/UnknownError" },
+    { DashJ_JavaBLSException, "org/dashj/bls/BLSException"},
     { (SWIG_JavaExceptionCodes)0,  "java/lang/UnknownError" }
   };
   const SWIG_JavaExceptions_t *except_ptr = java_exceptions;
@@ -241,6 +243,7 @@ static void SWIGUNUSED SWIG_JavaThrowException(JNIEnv *jenv, SWIG_JavaExceptionC
   excep = jenv->FindClass(except_ptr->java_exception);
   if (excep)
     jenv->ThrowNew(excep, msg);
+  else printf("Can't find this class %s", except_ptr->java_exception);
 }
 
 
@@ -1706,7 +1709,12 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_InsecureSignature_1FromBytes(JNI
   {
     arg1 = (uint8_t *) jenv->GetByteArrayElements(jarg1, 0);
   }
-  result = bls::InsecureSignature::FromBytes((unsigned char const *)arg1);
+  try {
+    result = bls::InsecureSignature::FromBytes((unsigned char const *)arg1);
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  }
   *(bls::InsecureSignature **)&jresult = new bls::InsecureSignature((const bls::InsecureSignature &)result); 
   {
     jenv->ReleaseByteArrayElements(jarg1, (jbyte *) arg1, 0);
