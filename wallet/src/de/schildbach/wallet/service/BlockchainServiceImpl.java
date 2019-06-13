@@ -936,6 +936,12 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                 if (autoLockStatusChanged) {
                     config.setCanAutoLock(InstantSend.canAutoLock());
                 }
+            } else if (sporkMessage.getSporkID() == SporkManager.SPORK_20_INSTANTSEND_LLMQ_BASED) {
+                boolean autoLockStatusChanged = InstantSend.canAutoLock() != config.getCanAutoLock();
+                if (autoLockStatusChanged) {
+                    //activate InstantSendAutoLock if LLMQ InstantSend is ON
+                    config.setCanAutoLock(sporkMessage.getValue() != 0);
+                }
             }
         }
     };

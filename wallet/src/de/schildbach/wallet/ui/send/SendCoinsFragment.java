@@ -1047,6 +1047,7 @@ public final class SendCoinsFragment extends Fragment {
                 }
                 break;
             }
+            case INSTANT_SEND_LLMQ:
             case INSTANT_SEND_AUTO_LOCK:
             case REGULAR_PAYMENT: {
                 signAndSendPayment(encryptionKey, pin, requestType, forceEnsureMinRequiredFee);
@@ -1302,7 +1303,8 @@ public final class SendCoinsFragment extends Fragment {
             final PaymentIntent finalPaymentIntent = paymentIntent.mergeWithEditedValues(amount, dummyAddress);
 
             boolean instantSendActive = wallet.getContext().sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED);
-            if (instantSendActive) {
+            boolean llmqInstantSendActive = wallet.getContext().sporkManager.isSporkActive(SporkManager.SPORK_20_INSTANTSEND_LLMQ_BASED);
+            if (instantSendActive || llmqInstantSendActive) {
 
                 boolean autoLocksActive = canAutoLockGuard.canAutoLock();
                 if (autoLocksActive) {
@@ -1316,7 +1318,7 @@ public final class SendCoinsFragment extends Fragment {
                             sendRequest = createSendRequest(finalPaymentIntent, RequestType.INSTANT_SEND_AUTO_LOCK, false, true);
                             wallet.completeTx(sendRequest);
                         }
-                        if (sendRequest.tx.isSimple()) {
+                        if (llmqInstantSendActive || sendRequest.tx.isSimple()) {
                             dryrunSendRequest = sendRequest;
                             return;
                         }
@@ -1376,6 +1378,7 @@ public final class SendCoinsFragment extends Fragment {
 
         INSTANT_SEND_AUTO_LOCK,
         INSTANT_SEND,
+        INSTANT_SEND_LLMQ,
         REGULAR_PAYMENT;
 
         public static RequestType from(SendRequest sendRequest) {
@@ -1393,11 +1396,14 @@ public final class SendCoinsFragment extends Fragment {
         if (fees == null) {
             throw new IllegalStateException();
         }
+        boolean llmqInstantSendActive = wallet.getContext().sporkManager.isSporkActive(SporkManager.SPORK_20_INSTANTSEND_LLMQ_BASED);
+
         paymentIntent.setInstantX(requestType == RequestType.INSTANT_SEND); //to make sure the correct instance of Transaction class is used in toSendRequest() method
         final SendRequest sendRequest = paymentIntent.toSendRequest();
         switch (requestType) {
+            case INSTANT_SEND_LLMQ:
             case INSTANT_SEND_AUTO_LOCK: {
-                sendRequest.coinSelector = InstantXCoinSelector.get();
+                sendRequest.coinSelector = llmqInstantSendActive ? ZeroConfCoinSelector.get() : InstantXCoinSelector.get();
                 sendRequest.useInstantSend = false;
                 sendRequest.feePerKb = fees.get(feeCategory);
                 break;
@@ -1635,7 +1641,13 @@ public final class SendCoinsFragment extends Fragment {
 
     private void setupInstantSendInfo(MonetaryFormat btcFormat) {
         RequestType requestType = RequestType.from(dryrunSendRequest);
+        boolean llmqInstantSendActive = application.getWallet().getContext().sporkManager.isSporkActive(SporkManager.SPORK_20_INSTANTSEND_LLMQ_BASED);
+        if(requestType == RequestType.REGULAR_PAYMENT && llmqInstantSendActive)
+            requestType = RequestType.INSTANT_SEND_LLMQ;
+
+
         switch (requestType) {
+            case INSTANT_SEND_LLMQ:
             case INSTANT_SEND_AUTO_LOCK: {
                 instantSendInfo.setText(R.string.send_coins_auto_lock_feasible);
                 instantSendInfo.setVisibility(View.VISIBLE);
