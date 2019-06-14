@@ -3836,6 +3836,14 @@ SWIGEXPORT void JNICALL Java_org_dashj_bls_JNI_AggregationInfoVector_1removeRang
   std_vector_Sl_bls_AggregationInfo_Sg__removeRange(arg1,arg2,arg3);
 }
 
+SWIGEXPORT void JNICALL Java_org_dashj_bls_JNI_delete_1AggregationInfoVector(JNIEnv *jenv, jclass jcls, jlong jarg1) {
+  std::vector< bls::AggregationInfo > *arg1 = (std::vector< bls::AggregationInfo > *) 0 ;
+
+  (void)jenv;
+  (void)jcls;
+  arg1 = *(std::vector< bls::AggregationInfo > **)&jarg1;
+  delete arg1;
+}
 
 #ifdef __cplusplus
 }
