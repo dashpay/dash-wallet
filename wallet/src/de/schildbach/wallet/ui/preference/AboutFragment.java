@@ -29,7 +29,11 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.preference.Preference;
 import android.preference.PreferenceFragment;
+import android.preference.PreferenceScreen;
+
+import com.google.firebase.iid.FirebaseInstanceId;
 
 /**
  * @author Andreas Schildbach
@@ -42,6 +46,7 @@ public final class AboutFragment extends PreferenceFragment {
     private static final String KEY_ABOUT_VERSION = "about_version";
     private static final String KEY_ABOUT_MARKET_APP = "about_market_app";
     private static final String KEY_ABOUT_CREDITS_BITCOINJ = "about_credits_bitcoinj";
+    private static final String KEY_FIREBASE_ID_LABEL = "firebase_instance_id_label";
 
     @Override
     public void onAttach(final Activity activity) {
@@ -68,5 +73,13 @@ public final class AboutFragment extends PreferenceFragment {
         findPreference(KEY_ABOUT_MARKET_APP).setIntent(marketIntent);
         findPreference(KEY_ABOUT_CREDITS_BITCOINJ)
                 .setTitle(getString(R.string.about_credits_bitcoinj_title, VersionMessage.BITCOINJ_VERSION));
+
+        Preference firebaseIdLabel = findPreference(KEY_FIREBASE_ID_LABEL);
+        if (Constants.IS_PROD_BUILD) {
+            PreferenceScreen screen = getPreferenceScreen();
+            screen.removePreference(firebaseIdLabel);
+        } else {
+            firebaseIdLabel.setSummary(FirebaseInstanceId.getInstance().getId());
+        }
     }
 }
