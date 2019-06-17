@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import de.schildbach.wallet.WalletApplication;
+
 public class WalletLock {
 
     protected static final Logger log = LoggerFactory.getLogger(WalletLock.class);
@@ -38,7 +40,9 @@ public class WalletLock {
 
     private static WalletLock instance;
 
-    private WalletLock() {}
+    private WalletLock() {
+        config = WalletApplication.getInstance().getConfiguration();
+    }
 
     public static WalletLock getInstance() {
         if (instance == null) {

@@ -85,8 +85,13 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         newFragment.show(fm, FRAGMENT_TAG);
     }
 
-    public static void show(final FragmentManager fm, DialogInterface.OnDismissListener onDismissListener) {
+    public static void show(boolean cancelable, final FragmentManager fm, DialogInterface.OnDismissListener onDismissListener) {
         final EncryptKeysDialogFragment newFragment = new EncryptKeysDialogFragment();
+
+        final Bundle args = new Bundle();
+        args.putBoolean(CANCELABLE_ARG, cancelable);
+        newFragment.setArguments(args);
+
         newFragment.onDismissListener = onDismissListener;
         newFragment.show(fm, FRAGMENT_TAG);
     }
@@ -160,7 +165,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, @android.support.annotation.Nullable ViewGroup container, Bundle savedInstanceState) {
-        setCancelable(getArguments().getBoolean(CANCELABLE_ARG));
+        setCancelable(getArguments() != null ? getArguments().getBoolean(CANCELABLE_ARG) : false);
         return super.onCreateView(inflater, container, savedInstanceState);
     }
 
@@ -187,7 +192,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         builder.setTitle(R.string.encrypt_keys_dialog_title);
         builder.setView(view);
         builder.setPositiveButton(R.string.button_ok, null); // dummy, just to make it show
-        if (getArguments().getBoolean(CANCELABLE_ARG)) {
+        if (getArguments() != null && getArguments().getBoolean(CANCELABLE_ARG)) {
             builder.setNegativeButton(R.string.button_cancel, null);
         }
 
