@@ -287,7 +287,7 @@ public final class RestoreWalletActivity extends AbstractWalletActivity
     }
 
     public void handleEncryptKeys() {
-        EncryptKeysDialogFragment.show(getSupportFragmentManager(), new DialogInterface.OnDismissListener() {
+        EncryptKeysDialogFragment.show(false, getSupportFragmentManager(), new DialogInterface.OnDismissListener() {
             @Override
             public void onDismiss(DialogInterface dialog) {
                 onUpgradeConfirmed();
