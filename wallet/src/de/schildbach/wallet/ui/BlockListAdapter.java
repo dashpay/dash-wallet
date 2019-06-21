@@ -186,6 +186,26 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
                 }
             });
         }
+
+        StoredBlock block = wallet.getContext().chainLockHandler.getBestChainLockBlock();
+        final int chainLockHeight = block != null ? block.getHeight() : 0;
+        final int mnListHeight = (int)wallet.getContext().masternodeListManager.getListAtChainTip().getHeight();
+
+        if(chainLockHeight == storedBlock.getHeight() || mnListHeight == storedBlock.getHeight()) {
+            String text = "";
+            if(chainLockHeight == storedBlock.getHeight())
+                text = "ChainLock";
+            if(mnListHeight == storedBlock.getHeight()) {
+                if(text.length() > 0)
+                    text += " / ";
+                text += "DMN List";
+            }
+
+            holder.chainLockDMNListView.setText(text);
+            holder.chainLockDMNListView.setVisibility(View.VISIBLE);
+        } else {
+            holder.chainLockDMNListView.setVisibility(View.GONE);
+        }
     }
 
     public void bindView(final View row, final Transaction tx) {
@@ -243,6 +263,7 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
         private final TextView timeView;
         private final TextView hashView;
         private final ImageButton menuView;
+        private final TextView chainLockDMNListView;
 
         private BlockViewHolder(final View itemView) {
             super(itemView);
@@ -254,6 +275,7 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
             timeView = (TextView) itemView.findViewById(R.id.block_list_row_time);
             hashView = (TextView) itemView.findViewById(R.id.block_list_row_hash);
             menuView = (ImageButton) itemView.findViewById(R.id.block_list_row_menu);
+            chainLockDMNListView = (TextView)itemView.findViewById(R.id.block_list_row_chainlock_mnlist);
         }
     }
 
