@@ -31,6 +31,8 @@ public class BlockchainState {
     private static final String EXTRA_BEST_CHAIN_HEIGHT = "best_chain_height";
     private static final String EXTRA_REPLAYING = "replaying";
     private static final String EXTRA_IMPEDIMENTS = "impediment";
+    private static final String EXTRA_CHAINLOCK_HEIGHT = "chainlock_height";
+    private static final String EXTRA_MASTERNODE_LIST_HEIGHT = "mn_list_height";
 
     public enum Impediment {
         STORAGE, NETWORK
@@ -40,13 +42,17 @@ public class BlockchainState {
     public final int bestChainHeight;
     public final boolean replaying;
     public final EnumSet<Impediment> impediments;
+    public final int chainlockHeight;
+    public final int mnlistHeight;
 
     public BlockchainState(final Date bestChainDate, final int bestChainHeight, final boolean replaying,
-            final Set<Impediment> impediments) {
+            final Set<Impediment> impediments, int chainlockHeight, int mnlistHeight) {
         this.bestChainDate = bestChainDate;
         this.bestChainHeight = bestChainHeight;
         this.replaying = replaying;
         this.impediments = EnumSet.copyOf(impediments);
+        this.chainlockHeight = chainlockHeight;
+        this.mnlistHeight = mnlistHeight;
     }
 
     public static BlockchainState fromIntent(final Intent intent) {
@@ -55,8 +61,10 @@ public class BlockchainState {
         final boolean replaying = intent.getBooleanExtra(EXTRA_REPLAYING, false);
         @SuppressWarnings("unchecked")
         final Set<Impediment> impediments = (Set<Impediment>) intent.getSerializableExtra(EXTRA_IMPEDIMENTS);
+        final int chainlockHeight = intent.getIntExtra(EXTRA_CHAINLOCK_HEIGHT, 0);
+        final int mnListHeight = intent.getIntExtra(EXTRA_MASTERNODE_LIST_HEIGHT, 0);
 
-        return new BlockchainState(bestChainDate, bestChainHeight, replaying, impediments);
+        return new BlockchainState(bestChainDate, bestChainHeight, replaying, impediments, chainlockHeight, mnListHeight);
     }
 
     public void putExtras(final Intent intent) {
@@ -64,5 +72,7 @@ public class BlockchainState {
         intent.putExtra(EXTRA_BEST_CHAIN_HEIGHT, bestChainHeight);
         intent.putExtra(EXTRA_REPLAYING, replaying);
         intent.putExtra(EXTRA_IMPEDIMENTS, impediments);
+        intent.putExtra(EXTRA_CHAINLOCK_HEIGHT, chainlockHeight);
+        intent.putExtra(EXTRA_MASTERNODE_LIST_HEIGHT, mnlistHeight);
     }
 }

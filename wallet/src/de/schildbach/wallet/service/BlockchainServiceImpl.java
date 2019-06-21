@@ -56,6 +56,7 @@ import org.bitcoinj.core.listeners.PeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
 import org.bitcoinj.core.listeners.SporkUpdatedEventListener;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
+import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.net.discovery.MasternodePeerDiscovery;
 import org.bitcoinj.net.discovery.MultiplexingDiscovery;
@@ -655,6 +656,9 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         if (!blockChainFileExists) {
             log.info("blockchain does not exist, resetting wallet");
             wallet.reset();
+            SimplifiedMasternodeListManager manager = wallet.getContext().masternodeListManager;
+            if(manager != null)
+                manager.resetMNList(true, false);
         }
 
         try {
@@ -677,6 +681,10 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
             }
         } catch (final BlockStoreException x) {
             blockChainFile.delete();
+            SimplifiedMasternodeListManager manager = application.getWallet().getContext().masternodeListManager;
+            if(manager != null) {
+                manager.resetMNList(true, false);
+            }
 
             final String msg = "blockstore cannot be created";
             log.error(msg, x);
@@ -821,6 +829,10 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         if (resetBlockchainOnShutdown) {
             log.info("removing blockchain");
             blockChainFile.delete();
+            SimplifiedMasternodeListManager manager = application.getWallet().getContext().masternodeListManager;
+            if(manager != null) {
+                manager.resetMNList(true, false);
+            }
         }
 
         super.onDestroy();
@@ -862,8 +874,11 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         final Date bestChainDate = chainHead.getHeader().getTime();
         final int bestChainHeight = chainHead.getHeight();
         final boolean replaying = chainHead.getHeight() < config.getBestChainHeightEver();
+        StoredBlock block = application.getWallet().getContext().chainLockHandler.getBestChainLockBlock();
+        final int chainLockHeight = block != null ? block.getHeight() : 0;
+        final int mnListHeight = (int)application.getWallet().getContext().masternodeListManager.getListAtChainTip().getHeight();
 
-        return new BlockchainState(bestChainDate, bestChainHeight, replaying, impediments);
+        return new BlockchainState(bestChainDate, bestChainHeight, replaying, impediments, chainLockHeight, mnListHeight);
     }
 
     @Override
