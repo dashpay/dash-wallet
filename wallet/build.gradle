@@ -54,11 +54,6 @@ dependencies {
     //Uphold Integration
     implementation project(path: ':uphold-integration')
     //releaseImplementation project(path: ':uphold-integration', configuration: 'release')
-    //Memory Leak Detection
-    debugImplementation 'com.squareup.leakcanary:leakcanary-android:1.6.1'
-    debugImplementation 'com.squareup.leakcanary:leakcanary-support-fragment:1.6.1'
-    releaseImplementation 'com.squareup.leakcanary:leakcanary-android-no-op:1.6.1'
-    testImplementation 'com.squareup.leakcanary:leakcanary-android-no-op:1.6.1'
     testImplementation 'junit:junit:4.12'
     //Espresso
     androidTestImplementation ('com.android.support.test:runner:1.0.1') {
