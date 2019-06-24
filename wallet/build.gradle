@@ -53,6 +53,9 @@ dependencies {
     //releaseImplementation project(path: ':common', configuration: 'release')
     //Uphold Integration
     implementation project(path: ':uphold-integration')
+
+    implementation 'com.android.support:multidex:1.0.3'
+
     //releaseImplementation project(path: ':uphold-integration', configuration: 'release')
     testImplementation 'junit:junit:4.12'
     //Espresso
@@ -84,6 +87,7 @@ android {
     defaultConfig {
         minSdkVersion 16
         targetSdkVersion 28
+        multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         ndk {

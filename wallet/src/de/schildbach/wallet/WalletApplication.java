@@ -69,6 +69,7 @@ import android.os.Build;
 import android.os.StrictMode;
 import android.preference.PreferenceManager;
 import android.support.annotation.StringRes;
+import android.support.multidex.MultiDexApplication;
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.format.DateUtils;
 import android.widget.Toast;
@@ -83,7 +84,7 @@ import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 /**
  * @author Andreas Schildbach
  */
-public class WalletApplication extends Application {
+public class WalletApplication extends MultiDexApplication {
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
