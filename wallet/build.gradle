@@ -56,6 +56,12 @@ dependencies {
 
     implementation 'com.android.support:multidex:1.0.3'
 
+    implementation ('com.google.firebase:firebase-inappmessaging-display:17.2.0') {
+        exclude group: 'com.google.protobuf', module: 'protobuf-lite'
+        exclude group: 'com.google.firebase', module: 'protolite-well-known-types'
+    }
+    implementation 'com.google.firebase:firebase-core:16.0.9'
+
     testImplementation 'junit:junit:4.12'
     //Espresso
     androidTestImplementation ('com.android.support.test:runner:1.0.1') {
@@ -175,3 +181,5 @@ android {
 clean {
     file('src/main/jniLibs').deleteDir()
 }
+
+apply plugin: 'com.google.gms.google-services'
