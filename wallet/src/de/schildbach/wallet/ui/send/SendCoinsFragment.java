@@ -101,8 +101,8 @@ import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
-import android.arch.lifecycle.Observer;
-import android.arch.lifecycle.ViewModelProviders;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProviders;
 import android.bluetooth.BluetoothAdapter;
 import android.content.ClipData;
 import android.content.ClipDescription;
@@ -125,17 +125,17 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
-import android.support.annotation.RequiresApi;
-import android.support.design.widget.FloatingActionButton;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.LoaderManager;
-import android.support.v4.content.CursorLoader;
-import android.support.v4.content.Loader;
-import android.support.v4.content.res.ResourcesCompat;
-import android.support.v4.os.CancellationSignal;
-import android.support.v7.widget.RecyclerView;
+import androidx.annotation.RequiresApi;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.CursorLoader;
+import androidx.loader.content.Loader;
+import androidx.core.content.res.ResourcesCompat;
+import androidx.core.os.CancellationSignal;
+import androidx.recyclerview.widget.RecyclerView;
 import android.text.Editable;
 import android.text.Spannable;
 import android.text.TextWatcher;
@@ -529,7 +529,7 @@ public final class SendCoinsFragment extends Fragment {
     }
 
     @Override
-    public void onActivityCreated(@android.support.annotation.Nullable Bundle savedInstanceState) {
+    public void onActivityCreated(@androidx.annotation.Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         initFloatingButton();
     }

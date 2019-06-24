@@ -19,7 +19,6 @@ package de.schildbach.wallet.data;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,7 +51,7 @@ import de.schildbach.wallet.util.Io;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.res.AssetManager;
-import android.support.v4.content.AsyncTaskLoader;
+import androidx.loader.content.AsyncTaskLoader;
 
 /**
  * @author Andreas Schildbach

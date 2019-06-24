@@ -19,7 +19,7 @@ package de.schildbach.wallet.ui;
 
 import android.content.DialogInterface;
 import android.os.Build;
-import android.support.v4.app.FragmentManager;
+import androidx.fragment.app.FragmentManager;
 import android.view.View;
 
 import de.schildbach.wallet.WalletApplication;

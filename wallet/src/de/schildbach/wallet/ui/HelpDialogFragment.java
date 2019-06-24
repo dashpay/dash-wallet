@@ -20,8 +20,8 @@ package de.schildbach.wallet.ui;
 import android.app.Activity;
 import android.app.Dialog;
 import android.os.Bundle;
-import android.support.v4.app.DialogFragment;
-import android.support.v4.app.FragmentManager;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.FragmentManager;
 import android.text.Html;
 
 import org.dash.wallet.common.ui.DialogBuilder;

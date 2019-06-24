@@ -22,9 +22,9 @@ import java.util.List;
 import de.schildbach.wallet_test.R;
 
 import android.os.Bundle;
-import android.support.design.widget.AppBarLayout;
-import android.support.v7.widget.Toolbar;
-import android.support.v7.app.ActionBar;
+import com.google.android.material.appbar.AppBarLayout;
+import androidx.appcompat.widget.Toolbar;
+import androidx.appcompat.app.ActionBar;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.widget.LinearLayout;

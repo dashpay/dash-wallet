@@ -18,11 +18,8 @@
 package de.schildbach.wallet.ui;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.ArrayList;
@@ -37,7 +34,6 @@ import com.google.common.base.Charsets;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.util.CrashReporter;
-import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet_test.R;
 
 import android.content.Context;
@@ -45,7 +41,7 @@ import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.net.Uri;
-import android.support.v4.content.FileProvider;
+import androidx.core.content.FileProvider;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.CheckBox;
