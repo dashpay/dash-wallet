@@ -24,7 +24,7 @@ import android.content.DialogInterface;
 import android.os.Build;
 import android.os.Bundle;
 
-import android.support.v4.os.CancellationSignal;
+import androidx.core.os.CancellationSignal;
 import android.view.LayoutInflater;
 import android.view.View;
 

@@ -16,7 +16,7 @@ package org.dash.wallet.common.customtabs;
 
 import android.app.Activity;
 import android.net.Uri;
-import android.support.customtabs.CustomTabsIntent;
+import androidx.browser.customtabs.CustomTabsIntent;
 
 /**
  * This is a helper class to manage the connection to the Custom Tabs Service.
