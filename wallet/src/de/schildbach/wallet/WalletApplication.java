@@ -41,8 +41,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
-import com.squareup.leakcanary.LeakCanary;
-import com.squareup.leakcanary.RefWatcher;
 
 import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.service.BlockchainService;
@@ -109,13 +107,6 @@ public class WalletApplication extends Application {
 
     private static final Logger log = LoggerFactory.getLogger(WalletApplication.class);
 
-    private RefWatcher refWatcher;
-
-    public static RefWatcher getRefWatcher(Context context) {
-        WalletApplication application = (WalletApplication) context.getApplicationContext();
-        return application.refWatcher;
-    }
-
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
@@ -124,14 +115,6 @@ public class WalletApplication extends Application {
 
     @Override
     public void onCreate() {
-        //Memory Leak Detection
-        if (LeakCanary.isInAnalyzerProcess(this)) {
-            // This process is dedicated to LeakCanary for heap analysis.
-            // You should not init your app in this process.
-            return;
-        }
-        refWatcher = LeakCanary.install(this);
-
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
             @Override
             public void onStartedAny(boolean isTheFirstOne) {
