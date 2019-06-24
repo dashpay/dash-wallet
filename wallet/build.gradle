@@ -35,9 +35,9 @@ dependencies {
     implementation "com.android.support:preference-v7:$androidSupportVersion"
     implementation "com.android.support.constraint:constraint-layout:1.1.3"
     implementation "org.dashj:dashj-core:$dashjVersion"
-    implementation 'com.google.protobuf:protobuf-java:2.6.1'
-    implementation 'com.google.guava:guava:20.0'
-    implementation 'com.google.zxing:core:3.3.1'
+    implementation 'com.google.protobuf:protobuf-java:3.4.0'
+    implementation 'com.google.guava:guava:27.0.1-android'
+    implementation 'com.google.zxing:core:3.3.3'
     implementation 'com.squareup.okhttp:okhttp:2.7.5'
     implementation 'com.squareup.okhttp:logging-interceptor:2.7.5'
     implementation 'com.squareup.moshi:moshi:1.5.0'
@@ -46,17 +46,16 @@ dependencies {
         exclude(group: 'com.google.android', module: 'android')
     }
     implementation 'com.github.tony19:logback-android-core:1.1.1-6'
-    implementation 'com.google.code.findbugs:jsr305:2.0.3'
+    implementation 'com.google.code.findbugs:jsr305:3.0.2'
 
     implementation project(path: ':common')
     annotationProcessor "android.arch.persistence.room:compiler:1.1.1"
-    //releaseImplementation project(path: ':common', configuration: 'release')
+
     //Uphold Integration
     implementation project(path: ':uphold-integration')
 
     implementation 'com.android.support:multidex:1.0.3'
 
-    //releaseImplementation project(path: ':uphold-integration', configuration: 'release')
     testImplementation 'junit:junit:4.12'
     //Espresso
     androidTestImplementation ('com.android.support.test:runner:1.0.1') {
@@ -176,11 +175,3 @@ android {
 clean {
     file('src/main/jniLibs').deleteDir()
 }
-
-/*task svgToPngMipmap(type: fr.avianey.androidsvgdrawable.gradle.SvgDrawableTask) {
-    from = files('graphics/mipmap')
-    to = file('res')
-    targetedDensities = ['hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']
-    outputFormat = 'PNG'
-    outputType = 'mipmap'
-}*/
