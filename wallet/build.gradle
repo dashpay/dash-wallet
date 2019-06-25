@@ -18,13 +18,13 @@ repositories {
 
 dependencies {
     implementation 'com.google.android.material:material:1.0.0'
-    implementation 'androidx.appcompat:appcompat:1.0.0'
+    implementation 'androidx.appcompat:appcompat:1.0.2'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
     }
-    implementation 'androidx.annotation:annotation:1.0.0'
-    implementation 'androidx.core:core:1.0.0'
+    implementation 'androidx.annotation:annotation:1.1.0'
+    implementation 'androidx.core:core:1.0.2'
     implementation('androidx.legacy:legacy-support-v13:1.0.0') {
         exclude(group: 'com.android.support', module: 'support-fragment')
         exclude(group: 'com.android.support', module: 'support-media-compat')
@@ -49,18 +49,18 @@ dependencies {
     implementation 'com.google.code.findbugs:jsr305:3.0.2'
 
     implementation project(path: ':common')
-    annotationProcessor 'androidx.room:room-compiler:2.0.0'
+    annotationProcessor 'androidx.room:room-compiler:2.1.0'
 
     //Uphold Integration
     implementation project(path: ':uphold-integration')
 
-    implementation 'androidx.multidex:multidex:2.0.0'
+    implementation 'androidx.multidex:multidex:2.0.1'
 
     implementation ('com.google.firebase:firebase-inappmessaging-display:17.2.0') {
         exclude group: 'com.google.protobuf', module: 'protobuf-lite'
         exclude group: 'com.google.firebase', module: 'protolite-well-known-types'
     }
-    implementation 'com.google.firebase:firebase-core:16.0.9'
+    implementation 'com.google.firebase:firebase-core:17.0.0'
 
     testImplementation 'junit:junit:4.12'
     //Espresso
