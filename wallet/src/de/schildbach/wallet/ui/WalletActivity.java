@@ -417,7 +417,26 @@ public final class WalletActivity extends AbstractBindServiceActivity
     public boolean onCreateOptionsMenu(final Menu menu) {
         getMenuInflater().inflate(R.menu.wallet_options, menu);
         super.onCreateOptionsMenu(menu);
+        MenuItem walletLockMenuItem = menu.findItem(R.id.wallet_options_lock);
+        walletLockMenuItem.setVisible(WalletLock.getInstance().isWalletLocked(wallet));
+
+        hidePersonalSettingsIfLocked();
+
         return true;
+    }
+
+    private void hidePersonalSettingsIfLocked() {
+        final NavigationView navigationView = findViewById(R.id.nav_view);
+        Menu drawerMenu = navigationView.getMenu();
+        boolean walletLocked = WalletLock.getInstance().isWalletLocked(wallet);
+        MenuItem addressBookItem = drawerMenu.findItem(R.id.nav_address_book);
+        if (addressBookItem != null) {
+            addressBookItem.setVisible(!walletLocked);
+        }
+        View upholdAccountSection = findViewById(R.id.uphold_account_section);
+        if (upholdAccountSection != null) {
+            upholdAccountSection.setVisibility(walletLocked ? View.GONE : View.VISIBLE);
+        }
     }
 
     @Override
