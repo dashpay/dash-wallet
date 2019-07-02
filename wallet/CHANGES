@@ -1,4 +1,8 @@
 Dash Wallet
+v6.5.0
+* Use DashJ 0.16 (supports DIP8, Chainlocks, InstantSendLocks)
+* Send screen changes when InstantSendLocks (Spork 20) are activated
+
 v6.4.5
 * Fixed crash when restoring from recovery phrase
 * Fixed rare crash when scan is selected from the context menu
