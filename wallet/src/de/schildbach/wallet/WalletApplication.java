@@ -84,6 +84,7 @@ import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
  * @author Andreas Schildbach
  */
 public class WalletApplication extends MultiDexApplication {
+
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
@@ -115,6 +116,14 @@ public class WalletApplication extends MultiDexApplication {
 
     @Override
     public void onCreate() {
+        super.onCreate();
+        config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
+        if(config.getOnboardingComplete()) {
+            initStuff();
+        }
+    }
+
+    public void initStuff() {
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
             @Override
             public void onStartedAny(boolean isTheFirstOne) {
@@ -133,8 +142,10 @@ public class WalletApplication extends MultiDexApplication {
 
         initLogging();
 
-        StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectAll().permitDiskReads()
-                .permitDiskWrites().penaltyLog().build());
+        if(!Constants.IS_PROD_BUILD) {
+            StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectAll().permitDiskReads()
+                    .permitDiskWrites().penaltyLog().build());
+        }
 
         Threading.throwOnLockCycles();
         org.bitcoinj.core.Context.enableStrictMode();
@@ -142,8 +153,6 @@ public class WalletApplication extends MultiDexApplication {
 
         log.info("=== starting app using configuration: {}, {}", BuildConfig.FLAVOR,
                 Constants.NETWORK_PARAMETERS.getId());
-
-        super.onCreate();
 
         packageInfo = packageInfoFromContext(this);
 
@@ -159,7 +168,6 @@ public class WalletApplication extends MultiDexApplication {
 
         initMnemonicCode();
 
-        config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
         activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
 
         blockchainServiceIntent = new Intent(this, BlockchainServiceImpl.class);
