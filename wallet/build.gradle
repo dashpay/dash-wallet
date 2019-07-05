@@ -56,6 +56,8 @@ dependencies {
 
     implementation 'androidx.multidex:multidex:2.0.1'
 
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+
     implementation ('com.google.firebase:firebase-inappmessaging-display:17.2.0') {
         exclude group: 'com.google.protobuf', module: 'protobuf-lite'
         exclude group: 'com.google.firebase', module: 'protolite-well-known-types'
@@ -183,3 +185,5 @@ clean {
 }
 
 apply plugin: 'com.google.gms.google-services'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
