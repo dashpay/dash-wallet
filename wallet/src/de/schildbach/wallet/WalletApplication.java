@@ -675,4 +675,10 @@ public class WalletApplication extends MultiDexApplication {
         AbstractWalletActivity.finishAll(this);
     }
 
+    public static void resetWalletLockTimer(final Context context) {
+        final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context),
+                context.getResources());
+        config.setLastUnlockTime(0);
+    }
+
 }
