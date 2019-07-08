@@ -690,4 +690,10 @@ public class WalletApplication extends Application {
         AbstractWalletActivity.finishAll(this);
     }
 
+    public static void resetWalletLockTimer(final Context context) {
+        final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context),
+                context.getResources());
+        config.setLastUnlockTime(0);
+    }
+
 }
