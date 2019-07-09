@@ -75,12 +75,14 @@
         <Button
             android:id="@+id/uphold_buy_dash_btn"
             style="@style/MontserratButton.Inverted"
-            android:layout_alignParentBottom="true"
+            android:layout_above="@id/uphold_logout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/uphold_buy_dash_button"
             android:maxLines="2"
-            android:layout_margin="16dp" />
+            android:layout_marginLeft="16dp"
+            android:layout_marginRight="16dp"
+            android:layout_marginTop="16dp"/>
 
         <Button
             android:id="@+id/uphold_transfer_to_this_wallet_button"
@@ -92,6 +94,16 @@
             android:maxLines="2"
             android:layout_marginLeft="16dp"
             android:layout_marginRight="16dp"/>
+
+        <Button
+            android:id="@+id/uphold_logout"
+            style="@style/MontserratButton"
+            android:layout_alignParentBottom="true"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/uphold_logout"
+            android:maxLines="2"
+            android:layout_margin="16dp" />
 
     </RelativeLayout>
 
