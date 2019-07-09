@@ -92,6 +92,13 @@ public class UpholdAccountActivity extends AppCompatActivity {
                 openBuyDashUrl();
             }
         });
+
+        findViewById(R.id.uphold_logout).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openLogOutUrl();
+            }
+        });
     }
 
     @Override
@@ -176,6 +183,46 @@ public class UpholdAccountActivity extends AppCompatActivity {
                         loadUserBalance();
                     }
                 });
+    }
+
+    private void revokeAccessToken() {
+        if (true) {
+            UpholdClient.getInstance().revokeAccessToken(new UpholdClient.Callback<String>() {
+                @Override
+                public void onSuccess(String dashCardId) {
+                    //startUpholdAccountActivity();
+                    final String url = UpholdConstants.LOGOUT_URL;
+
+                    CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
+                    int toolbarColor = ContextCompat.getColor(UpholdAccountActivity.this, R.color.colorPrimary);
+                    CustomTabsIntent customTabsIntent = builder.setShowTitle(true)
+                            .setToolbarColor(toolbarColor).build();
+
+                    CustomTabActivityHelper.openCustomTab(UpholdAccountActivity.this, customTabsIntent, Uri.parse(url),
+                            new CustomTabActivityHelper.CustomTabFallback() {
+                                @Override
+                                public void openUri(Activity activity, Uri uri) {
+                                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                                    intent.setData(Uri.parse(url));
+                                    startActivity(intent);
+                                }
+                            });
+                }
+
+                @Override
+                public void onError(Exception e, boolean otpRequired) {
+                    showErrorAlert();
+                }
+            });
+        } else {
+            showErrorAlert();
+        }
+    }
+
+    private void openLogOutUrl() {
+
+        //revoke access to the token
+        revokeAccessToken();
     }
 
 }

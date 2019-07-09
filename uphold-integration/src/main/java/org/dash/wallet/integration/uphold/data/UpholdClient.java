@@ -127,7 +127,31 @@ public class UpholdClient {
 
             @Override
             public void onFailure(Call<UpholdAccessToken> call, Throwable t) {
-                log.error("Error to obtain Uphold access token", t.getMessage());
+                log.error("Error to obtain Uphold access token " + t.getMessage());
+                callback.onError(new Exception(t), false);
+            }
+        });
+    }
+
+    public void revokeAccessToken(final Callback<String> callback) {
+        Map<String, String> body = new HashMap<>();
+        body.put("token", accessToken);
+        service.revokeAccessToken(accessToken).enqueue(new retrofit2.Callback<String>() {
+            @Override
+            public void onResponse(Call<String> call, Response<String> response) {
+                if (response.isSuccessful()) {
+                    log.info("Uphold access token revoked");
+                    accessToken = "";
+                    storeAccessToken();
+                } else {
+                    log.error("Error revoking Uphold access token: " + response.message());
+                    callback.onError(new Exception(response.message()), false);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<String> call, Throwable t) {
+                log.error("Error revoking Uphold access token: " + t.getMessage());
                 callback.onError(new Exception(t), false);
             }
         });
