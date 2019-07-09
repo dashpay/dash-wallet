@@ -120,7 +120,7 @@ public class UpholdClient {
                     storeAccessToken();
                     getCards(callback, null);
                 } else {
-                    log.error("Error to obtain Uphold access token", response.message());
+                    log.error("Error to obtain Uphold access token " + response.message());
                     callback.onError(new Exception(response.message()), false);
                 }
             }
@@ -162,7 +162,7 @@ public class UpholdClient {
                         }
                     }
                 } else {
-                    log.error("Error to obtain cards", response.message());
+                    log.error("Error to obtain cards " + response.message());
                     callback.onError(new Exception(response.message()), false);
                 }
             }
@@ -197,7 +197,7 @@ public class UpholdClient {
 
             @Override
             public void onFailure(Call<UpholdCard> call, Throwable t) {
-                log.error("Error to create Dash Card", t.getMessage());
+                log.error("Error to create Dash Card "+ t.getMessage());
             }
         });
     }
