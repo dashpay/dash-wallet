@@ -19,6 +19,7 @@ package org.dash.wallet.integration.uphold.ui;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -42,6 +43,7 @@ import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.UpholdCard;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
+import org.dash.wallet.integration.uphold.data.UpholdException;
 
 import java.math.BigDecimal;
 
@@ -137,6 +139,13 @@ public class UpholdAccountActivity extends AppCompatActivity {
             public void onError(Exception e, boolean otpRequired) {
                 loadingDialog.cancel();
                 showErrorAlert();
+                if(e instanceof UpholdException) {
+                    UpholdException ue = (UpholdException)e;
+                    if(ue.getCode() >= 400) {
+                        //we don't have the correct access token
+                        showAutoLogoutAlert();
+                    }
+                }
             }
         });
     }
@@ -189,24 +198,8 @@ public class UpholdAccountActivity extends AppCompatActivity {
         if (true) {
             UpholdClient.getInstance().revokeAccessToken(new UpholdClient.Callback<String>() {
                 @Override
-                public void onSuccess(String dashCardId) {
-                    //startUpholdAccountActivity();
-                    final String url = UpholdConstants.LOGOUT_URL;
-
-                    CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
-                    int toolbarColor = ContextCompat.getColor(UpholdAccountActivity.this, R.color.colorPrimary);
-                    CustomTabsIntent customTabsIntent = builder.setShowTitle(true)
-                            .setToolbarColor(toolbarColor).build();
-
-                    CustomTabActivityHelper.openCustomTab(UpholdAccountActivity.this, customTabsIntent, Uri.parse(url),
-                            new CustomTabActivityHelper.CustomTabFallback() {
-                                @Override
-                                public void openUri(Activity activity, Uri uri) {
-                                    Intent intent = new Intent(Intent.ACTION_VIEW);
-                                    intent.setData(Uri.parse(url));
-                                    startActivity(intent);
-                                }
-                            });
+                public void onSuccess(String result) {
+                    openUpholdToLogout();
                 }
 
                 @Override
@@ -215,14 +208,67 @@ public class UpholdAccountActivity extends AppCompatActivity {
                 }
             });
         } else {
-            showErrorAlert();
+            showAutoLogoutAlert();
+            openUpholdToLogout();
         }
+    }
+
+    private void openUpholdToLogout() {
+        final String url = UpholdConstants.LOGOUT_URL;
+
+        DialogBuilder builder = new DialogBuilder(this);
+        builder.setTitle("Logout of Uphold");
+        builder.setMessage("Go to the Uphold website to finish the logout process");
+        builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
+                int toolbarColor = ContextCompat.getColor(UpholdAccountActivity.this, R.color.colorPrimary);
+                CustomTabsIntent customTabsIntent = builder.setShowTitle(true)
+                        .setToolbarColor(toolbarColor).build();
+
+                CustomTabActivityHelper.openCustomTab(UpholdAccountActivity.this, customTabsIntent, Uri.parse(url),
+                        new CustomTabActivityHelper.CustomTabFallback() {
+                            @Override
+                            public void openUri(Activity activity, Uri uri) {
+                                Intent intent = new Intent(Intent.ACTION_VIEW);
+                                intent.setData(Uri.parse(url));
+                                startActivity(intent);
+                            }
+                        });            }
+        });
+        builder.show();
+
+
     }
 
     private void openLogOutUrl() {
 
         //revoke access to the token
         revokeAccessToken();
+    }
+
+    private void showAutoLogoutAlert() {
+        DialogBuilder builder = new DialogBuilder(this);
+        builder.setTitle("Uphold Error");
+        builder.setMessage("Dash Wallet is no longer logged into Uphold.  You will need to login again.");
+        builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                startUpholdSplashActivity();
+            }
+        });
+        builder.show();
+    }
+
+    private void startUpholdSplashActivity() {
+        Intent intent = new Intent(this, UpholdSplashActivity.class);
+        Bundle extras = getIntent().getExtras();
+        if (extras != null) {
+            intent.putExtras(extras);
+        }
+        startActivity(intent);
+        finish();
     }
 
 }
