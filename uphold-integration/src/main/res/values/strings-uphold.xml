@@ -23,6 +23,8 @@
     <string name="uphold_otp_dialog_title">Enter your 2FA code below:</string>
     <string name="uphold_transfer">Transfer</string>
     <string name="uphold_see_on_uphold">See on Uphold</string>
-    <string name="uphold_logout">Logout of Uphold</string>
+    <string name="uphold_logout">Logout from Uphold</string>
+    <string name="uphold_logout_explanation_text">You also need to logout from the Uphold website on your browser</string>
+    <string name="uphold_logout_go_to_website">Go to website</string>
 
 </resources>

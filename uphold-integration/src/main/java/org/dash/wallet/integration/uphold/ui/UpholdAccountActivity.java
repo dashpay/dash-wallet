@@ -18,7 +18,9 @@
 package org.dash.wallet.integration.uphold.ui;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
@@ -30,6 +32,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 
@@ -195,55 +198,59 @@ public class UpholdAccountActivity extends AppCompatActivity {
     }
 
     private void revokeAccessToken() {
-        if (true) {
-            UpholdClient.getInstance().revokeAccessToken(new UpholdClient.Callback<String>() {
-                @Override
-                public void onSuccess(String result) {
-                    openUpholdToLogout();
-                }
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(R.string.uphold_logout);
+        builder.setPositiveButton(R.string.uphold_logout_go_to_website, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int button) {
+                UpholdClient.getInstance().revokeAccessToken(new UpholdClient.Callback<String>() {
+                    @Override
+                    public void onSuccess(String result) {
+                        openUpholdToLogout();
+                    }
 
-                @Override
-                public void onError(Exception e, boolean otpRequired) {
-                    showErrorAlert();
-                }
-            });
-        } else {
-            showAutoLogoutAlert();
-            openUpholdToLogout();
-        }
+                    @Override
+                    public void onError(Exception e, boolean otpRequired) {
+                        showErrorAlert();
+                    }
+                });
+            }
+        });
+        builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+            }
+        });
+
+        LayoutInflater inflater = this.getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.uphold_logout_confirm, null);
+        builder.setView(dialogView);
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
     }
 
     private void openUpholdToLogout() {
         final String url = UpholdConstants.LOGOUT_URL;
 
-        DialogBuilder builder = new DialogBuilder(this);
-        builder.setTitle("Logout of Uphold");
-        builder.setMessage("Go to the Uphold website to finish the logout process");
-        builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialog) {
-                CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
-                int toolbarColor = ContextCompat.getColor(UpholdAccountActivity.this, R.color.colorPrimary);
-                CustomTabsIntent customTabsIntent = builder.setShowTitle(true)
-                        .setToolbarColor(toolbarColor).build();
+        CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
+        int toolbarColor = ContextCompat.getColor(UpholdAccountActivity.this, R.color.colorPrimary);
+        CustomTabsIntent customTabsIntent = builder.setShowTitle(true)
+                .setToolbarColor(toolbarColor).build();
 
-                CustomTabActivityHelper.openCustomTab(UpholdAccountActivity.this, customTabsIntent, Uri.parse(url),
-                        new CustomTabActivityHelper.CustomTabFallback() {
-                            @Override
-                            public void openUri(Activity activity, Uri uri) {
-                                Intent intent = new Intent(Intent.ACTION_VIEW);
-                                intent.setData(Uri.parse(url));
-                                startActivity(intent);
-                            }
-                        });            }
-        });
-        builder.show();
-
+        CustomTabActivityHelper.openCustomTab(UpholdAccountActivity.this, customTabsIntent, Uri.parse(url),
+                new CustomTabActivityHelper.CustomTabFallback() {
+                    @Override
+                    public void openUri(Activity activity, Uri uri) {
+                        Intent intent = new Intent(Intent.ACTION_VIEW);
+                        intent.setData(Uri.parse(url));
+                        startActivity(intent);
+                    }
+                });
 
     }
 
     private void openLogOutUrl() {
-
         //revoke access to the token
         revokeAccessToken();
     }
