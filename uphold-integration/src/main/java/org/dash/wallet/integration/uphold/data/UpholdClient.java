@@ -41,6 +41,7 @@ import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.moshi.MoshiConverterFactory;
+import retrofit2.converter.scalars.ScalarsConverterFactory;
 
 public class UpholdClient {
 
@@ -76,13 +77,32 @@ public class UpholdClient {
 
     };
 
+    private Interceptor loggingIntercepter = new Interceptor() {
+
+        @Override public okhttp3.Response intercept(Interceptor.Chain chain) throws IOException {
+            Request request = chain.request();
+
+            long t1 = System.nanoTime();
+            log.info(String.format("Sending request %s on %s%n%s",
+                    request.url(), chain.connection(), request.headers()));
+
+            okhttp3.Response response = chain.proceed(request);
+
+            long t2 = System.nanoTime();
+            log.info(String.format("Received response for %s in %.1fms%n%s\n%s",
+                    response.request().url(), (t2 - t1) / 1e6d, response.headers(), response.networkResponse()));
+
+            return response;
+        }
+    };
+
     private UpholdClient(Context context, String prefsEncryptionKey) {
         this.encryptionKey = prefsEncryptionKey;
         this.prefs = new SecurePreferences(context, prefsEncryptionKey, UPHOLD_PREFS);
         this.accessToken = getStoredAccessToken();
 
         String baseUrl = UpholdConstants.CLIENT_BASE_URL;
-        OkHttpClient okClient = new OkHttpClient.Builder().addInterceptor(headerInterceptor).build();
+        OkHttpClient okClient = new OkHttpClient.Builder().addInterceptor(headerInterceptor).addInterceptor(loggingIntercepter).build();
 
         Moshi moshi = new Moshi.Builder()
                 .add(new BigDecimalAdapter())
@@ -91,6 +111,7 @@ public class UpholdClient {
         Retrofit retrofit = new Retrofit.Builder()
                 .client(okClient)
                 .baseUrl(baseUrl)
+                .addConverterFactory(ScalarsConverterFactory.create())
                 .addConverterFactory(MoshiConverterFactory.create(moshi))
                 .build();
 
@@ -134,15 +155,14 @@ public class UpholdClient {
     }
 
     public void revokeAccessToken(final Callback<String> callback) {
-        Map<String, String> body = new HashMap<>();
-        body.put("token", accessToken);
         service.revokeAccessToken(accessToken).enqueue(new retrofit2.Callback<String>() {
             @Override
             public void onResponse(Call<String> call, Response<String> response) {
-                if (response.isSuccessful()) {
+                if (response.isSuccessful() && response.body().equals("OK")) {
                     log.info("Uphold access token revoked");
-                    accessToken = "";
+                    accessToken = null;
                     storeAccessToken();
+                    callback.onSuccess(response.body());
                 } else {
                     log.error("Error revoking Uphold access token: " + response.message());
                     callback.onError(new Exception(response.message()), false);
@@ -186,8 +206,8 @@ public class UpholdClient {
                         }
                     }
                 } else {
-                    log.error("Error to obtain cards " + response.message());
-                    callback.onError(new Exception(response.message()), false);
+                    log.error("Error obtaining cards " + response.message());
+                    callback.onError(new UpholdException("Error obtaining cards", response.message(), response.code()), false);
                 }
             }
 
@@ -260,7 +280,16 @@ public class UpholdClient {
 
             @Override
             public void onError(Exception e, boolean otpRequired) {
-
+                log.error("Error loading Dash balance: " + e.getMessage());
+                if(e instanceof UpholdException) {
+                    UpholdException ue = (UpholdException)e;
+                    if(ue.getCode() >= 400) {
+                        //we don't have the correct access token, let's logout
+                        accessToken = null;
+                        storeAccessToken();
+                    }
+                }
+                callback.onError(e, otpRequired);
             }
         }, new Callback<UpholdCard>() {
             @Override
@@ -271,7 +300,8 @@ public class UpholdClient {
 
             @Override
             public void onError(Exception e, boolean otpRequired) {
-                log.error("Error to load Dash balance", e.getMessage());
+                log.error("Error to load Dash balance" + e.getMessage());
+                callback.onError(e, otpRequired);
             }
         });
     }
