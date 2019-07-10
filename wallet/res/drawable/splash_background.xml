@@ -6,4 +6,9 @@
         android:drawable="@drawable/splash_activity_background"
         android:gravity="fill_vertical" />
 
+    <item
+        android:drawable="@drawable/splash_activity_slogan"
+        android:bottom="48dp"
+        android:gravity="center" />
+
 </layer-list>

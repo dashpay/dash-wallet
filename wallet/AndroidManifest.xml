@@ -61,9 +61,11 @@
         android:largeHeap="true"
         android:theme="@style/My.Theme">
 
-        <activity android:name="de.schildbach.wallet.ui.OnboardingActivity"
-            android:theme="@style/SplashActivity.Theme"
-            android:noHistory="true">
+        <activity
+            android:name="de.schildbach.wallet.ui.OnboardingActivity"
+            android:noHistory="true"
+            android:screenOrientation="portrait"
+            android:theme="@style/SplashActivity.Theme">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

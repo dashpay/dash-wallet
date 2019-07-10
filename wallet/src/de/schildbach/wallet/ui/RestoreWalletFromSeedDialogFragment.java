@@ -21,6 +21,8 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
+
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.appcompat.app.AlertDialog;
@@ -74,14 +76,14 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
     private TextView invalidWordView;
 
 
-    private WalletActivity activity;
+    private AppCompatActivity activity;
     private Wallet wallet;
 
     @Override
     public void onAttach(final Activity activity) {
         super.onAttach(activity);
 
-        this.activity = (WalletActivity) activity;
+        this.activity = (AppCompatActivity) activity;
         WalletApplication application = (WalletApplication) activity.getApplication();
         this.wallet = application.getWallet();
     }
@@ -138,7 +140,11 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
                 //    restorePrivateKeysFromBase58(file);
                 //else if (Crypto.OPENSSL_FILE_FILTER.accept(file))
                 //    restoreWalletFromEncrypted(file, password);
-                restoreWalletFromSeed(words);
+                if (activity instanceof OnboardingActivity) {
+                    ((OnboardingActivity) activity).restoreWalletFromSeed(words);
+                } else {
+                    restoreWalletFromSeed(words);
+                }
             }
         });
         builder.setNegativeButton(R.string.button_cancel, new DialogInterface.OnClickListener() {
@@ -202,6 +208,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
     }
 
     private void restoreWalletFromSeed(final List<String> words) {
+        final WalletActivity activity = (WalletActivity) this.activity;
         try {
             MnemonicCode.INSTANCE.check(words);
             activity.restoreWallet(WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS));
@@ -245,8 +252,9 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
             }
         });
 
-        final boolean hasCoins = wallet.getBalance(Wallet.BalanceType.ESTIMATED).signum() > 0;
+        boolean hasCoins = (wallet != null) && wallet.getBalance(Wallet.BalanceType.ESTIMATED).signum() > 0;
         replaceWarningView.setVisibility(hasCoins ? View.VISIBLE : View.GONE);
+
         clearPasswordView();
         setupRestoreButtonState();
         //fileView.setOnItemSelectedListener(dialogButtonEnabler);
