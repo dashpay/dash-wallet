@@ -1,7 +1,10 @@
 package org.dash.wallet.common;
 
+
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.params.MainNetParams;
+
+import okhttp3.logging.HttpLoggingInterceptor;
 
 public class Constants {
 
@@ -15,4 +18,5 @@ public class Constants {
 
     public static Coin MAX_MONEY = MainNetParams.get().getMaxMoney();
 
+    public static HttpLoggingInterceptor LOGGING_INTERCEPTOR = null;
 }

@@ -130,7 +130,9 @@ public class WalletApplication extends Application {
             // You should not init your app in this process.
             return;
         }
-        refWatcher = LeakCanary.install(this);
+//        refWatcher = LeakCanary.install(this);
+
+        org.dash.wallet.common.Constants.LOGGING_INTERCEPTOR = Constants.LOGGING_INTERCEPTOR;
 
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
             @Override

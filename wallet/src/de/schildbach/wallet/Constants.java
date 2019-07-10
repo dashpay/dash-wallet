@@ -35,14 +35,15 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.BaseEncoding;
-import com.squareup.okhttp.HttpUrl;
-import com.squareup.okhttp.OkHttpClient;
-import com.squareup.okhttp.logging.HttpLoggingInterceptor;
 
 import de.schildbach.wallet_test.BuildConfig;
+import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.logging.HttpLoggingInterceptor;
 
 import android.os.Build;
 import android.os.Environment;
+import android.support.annotation.NonNull;
 import android.text.format.DateUtils;
 
 /**
@@ -251,25 +252,28 @@ public final class Constants {
     public static final int ELECTRUM_SERVER_DEFAULT_PORT_TLS = NETWORK_PARAMETERS.getId()
             .equals(NetworkParameters.ID_MAINNET) ? 50002 : 51002;
 
-    /** Shared HTTP client, can reuse connections */
-    public static final OkHttpClient HTTP_CLIENT = new OkHttpClient();
-    static {
-        HTTP_CLIENT.setFollowRedirects(false);
-        HTTP_CLIENT.setFollowSslRedirects(true);
-        HTTP_CLIENT.setConnectTimeout(15, TimeUnit.SECONDS);
-        HTTP_CLIENT.setWriteTimeout(15, TimeUnit.SECONDS);
-        HTTP_CLIENT.setReadTimeout(15, TimeUnit.SECONDS);
+    public static final HttpLoggingInterceptor LOGGING_INTERCEPTOR = new HttpLoggingInterceptor(
+            new HttpLoggingInterceptor.Logger() {
+                @Override
+                public void log(@NonNull final String message) {
+                    log.info(message);
+                }
+            });
 
-        final HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor(
-                new HttpLoggingInterceptor.Logger() {
-                    @Override
-                    public void log(final String message) {
-                        log.debug(message);
-                    }
-                });
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BASIC);
-        HTTP_CLIENT.interceptors().add(loggingInterceptor);
+    static {
+        LOGGING_INTERCEPTOR.level(HttpLoggingInterceptor.Level.BODY);
     }
+
+    /** Shared HTTP client, can reuse connections */
+    public static final OkHttpClient.Builder HTTP_CLIENT_BUILDER = new okhttp3.OkHttpClient.Builder()
+            .followRedirects(false)
+            .followSslRedirects(true)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .addInterceptor(LOGGING_INTERCEPTOR);
+
+    public static final OkHttpClient HTTP_CLIENT = HTTP_CLIENT_BUILDER.build();
 
     private static final Logger log = LoggerFactory.getLogger(Constants.class);
 

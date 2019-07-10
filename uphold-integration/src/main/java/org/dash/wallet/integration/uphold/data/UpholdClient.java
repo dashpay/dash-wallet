@@ -23,6 +23,7 @@ import android.content.SharedPreferences;
 import com.securepreferences.SecurePreferences;
 import com.squareup.moshi.Moshi;
 
+import org.dash.wallet.common.Constants;
 import org.dash.wallet.common.data.BigDecimalAdapter;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -82,7 +83,10 @@ public class UpholdClient {
         this.accessToken = getStoredAccessToken();
 
         String baseUrl = UpholdConstants.CLIENT_BASE_URL;
-        OkHttpClient okClient = new OkHttpClient.Builder().addInterceptor(headerInterceptor).build();
+        OkHttpClient okClient = new OkHttpClient.Builder()
+                .addInterceptor(headerInterceptor)
+                .addInterceptor(Constants.LOGGING_INTERCEPTOR)
+                .build();
 
         Moshi moshi = new Moshi.Builder()
                 .add(new BigDecimalAdapter())
