@@ -141,14 +141,15 @@ public class UpholdAccountActivity extends AppCompatActivity {
             @Override
             public void onError(Exception e, boolean otpRequired) {
                 loadingDialog.cancel();
-                showErrorAlert();
+
                 if(e instanceof UpholdException) {
                     UpholdException ue = (UpholdException)e;
-                    if(ue.getCode() >= 400) {
+                    if(ue.getCode() == 401 || ue.getCode() == 400) {
                         //we don't have the correct access token
                         showAutoLogoutAlert();
-                    }
-                }
+                    } else
+                        showErrorAlert(ue.getCode());
+                } else showErrorAlert(-1);
             }
         });
     }
@@ -173,12 +174,22 @@ public class UpholdAccountActivity extends AppCompatActivity {
                         }
                     });
         } else {
-            showErrorAlert();
+            showErrorAlert(-1);
         }
     }
 
-    private void showErrorAlert() {
-        new DialogBuilder(this).setMessage(R.string.loading_error).show();
+    private void showErrorAlert(int code) {
+        int messageId = R.string.loading_error;
+
+        if(code == 400 || code == 408 || code >= 500)
+            messageId = R.string.uphold_error_not_available;
+        if(code == 400 || code == 403 || code >= 400)
+                messageId = R.string.uphold_error_report_issue;
+
+        new DialogBuilder(this)
+                .setMessage(messageId)
+                .setTitle(R.string.uphold_error)
+                .show();
     }
 
     private void showWithdrawalDialog() {
@@ -206,12 +217,17 @@ public class UpholdAccountActivity extends AppCompatActivity {
                 UpholdClient.getInstance().revokeAccessToken(new UpholdClient.Callback<String>() {
                     @Override
                     public void onSuccess(String result) {
+                        startUpholdSplashActivity();
                         openUpholdToLogout();
                     }
 
                     @Override
                     public void onError(Exception e, boolean otpRequired) {
-                        showErrorAlert();
+                        if(e instanceof UpholdException) {
+                            UpholdException ue = (UpholdException)e;
+                            showErrorAlert(ue.getCode());
+                        } else
+                            showErrorAlert(-1);
                     }
                 });
             }
@@ -256,12 +272,13 @@ public class UpholdAccountActivity extends AppCompatActivity {
     }
 
     private void showAutoLogoutAlert() {
-        DialogBuilder builder = new DialogBuilder(this);
-        builder.setTitle("Uphold Error");
-        builder.setMessage("Dash Wallet is no longer logged into Uphold.  You will need to login again.");
-        builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.My_Theme_Dialog);
+        builder.setTitle(R.string.uphold_error);
+        builder.setMessage(R.string.uphold_error_not_logged_in);
+        builder.setCancelable(false);
+        builder.setPositiveButton(R.string.uphold_link_account, new DialogInterface.OnClickListener() {
             @Override
-            public void onDismiss(DialogInterface dialog) {
+            public void onClick(DialogInterface dialog, int which) {
                 startUpholdSplashActivity();
             }
         });

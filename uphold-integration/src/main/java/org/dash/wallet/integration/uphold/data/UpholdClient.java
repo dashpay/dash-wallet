@@ -77,6 +77,7 @@ public class UpholdClient {
 
     };
 
+    //this leaks sensitive information and should not be used in production
     private Interceptor loggingIntercepter = new Interceptor() {
 
         @Override public okhttp3.Response intercept(Interceptor.Chain chain) throws IOException {
@@ -141,8 +142,8 @@ public class UpholdClient {
                     storeAccessToken();
                     getCards(callback, null);
                 } else {
-                    log.error("Error to obtain Uphold access token " + response.message());
-                    callback.onError(new Exception(response.message()), false);
+                    log.error("Error obtaining Uphold access token " + response.message() + " code: " + response.code());
+                    callback.onError(new UpholdException("Error obtaining Uphold access token", response.message(), response.code()), false);
                 }
             }
 
@@ -164,8 +165,8 @@ public class UpholdClient {
                     storeAccessToken();
                     callback.onSuccess(response.body());
                 } else {
-                    log.error("Error revoking Uphold access token: " + response.message());
-                    callback.onError(new Exception(response.message()), false);
+                    log.error("Error revoking Uphold access token: " + response.message() + " code: " + response.code());
+                    callback.onError(new UpholdException("Error revoking Uphold access token", response.message(), response.code()), false);
                 }
             }
 
@@ -206,13 +207,14 @@ public class UpholdClient {
                         }
                     }
                 } else {
-                    log.error("Error obtaining cards " + response.message());
+                    log.error("Error obtaining cards " + response.message() + " code: " + response.code());
                     callback.onError(new UpholdException("Error obtaining cards", response.message(), response.code()), false);
                 }
             }
 
             @Override
             public void onFailure(Call<List<UpholdCard>> call, Throwable t) {
+                log.error("Error obtaining cards: " + t.getMessage());
                 callback.onError(new Exception(t), false);
             }
         });
@@ -235,13 +237,14 @@ public class UpholdClient {
                         getDashCardCb.onSuccess(response.body());
                     }
                 } else {
-                    log.error("Error to create Dash Card", response.message());
+                    log.error("Error creating Dash Card: " + response.message() + " code: " + response.code());
+                    callback.onError(new UpholdException("Error creating Dash Card", response.message(), response.code()), false);
                 }
             }
 
             @Override
             public void onFailure(Call<UpholdCard> call, Throwable t) {
-                log.error("Error to create Dash Card "+ t.getMessage());
+                log.error("Error creating Dash Card " + t.getMessage());
             }
         });
     }
@@ -257,7 +260,7 @@ public class UpholdClient {
 
             @Override
             public void onFailure(Call<UpholdCryptoCardAddress> call, Throwable t) {
-                log.error("Error to create Dash Card address");
+                log.error("Error creating Dash Card address: " + t.getMessage());
             }
         });
     }
@@ -283,7 +286,7 @@ public class UpholdClient {
                 log.error("Error loading Dash balance: " + e.getMessage());
                 if(e instanceof UpholdException) {
                     UpholdException ue = (UpholdException)e;
-                    if(ue.getCode() >= 400) {
+                    if(ue.getCode() == 400 || ue.getCode() == 401) {
                         //we don't have the correct access token, let's logout
                         accessToken = null;
                         storeAccessToken();
@@ -300,7 +303,7 @@ public class UpholdClient {
 
             @Override
             public void onError(Exception e, boolean otpRequired) {
-                log.error("Error to load Dash balance" + e.getMessage());
+                log.error("Error loading Dash balance: " + e.getMessage());
                 callback.onError(e, otpRequired);
             }
         });
@@ -322,7 +325,7 @@ public class UpholdClient {
                     log.info("Transaction created successfully");
                     callback.onSuccess(response.body());
                 } else {
-                    log.info("Error to create transaction", response.message());
+                    log.info("Error creating transaction: " + response.message() + " code: " + response.code());
                     boolean otpRequired = OTP_REQUIRED_VALUE.equals(response.headers().get(OTP_REQUIRED_KEY));
                     callback.onError(new Exception(response.errorBody().toString()), otpRequired);
                 }
@@ -330,7 +333,7 @@ public class UpholdClient {
 
             @Override
             public void onFailure(Call<UpholdTransaction> call, Throwable t) {
-                log.info("Error to create transaction", t.getMessage());
+                log.info("Error creating transaction " + t.getMessage());
                 callback.onError(new Exception(t), false);
             }
         });
@@ -345,7 +348,7 @@ public class UpholdClient {
                     callback.onSuccess(null);
                     otpToken = null;
                 } else {
-                    log.info("Error to commit transaction", response.message());
+                    log.info("Error committing transaction: " + response.message() + "code: " + response.code());
                     boolean otpRequired = OTP_REQUIRED_VALUE.equals(response.headers().get(OTP_REQUIRED_KEY));
                     //Check for invalid token error
                     if (!otpRequired && otpToken != null) {
@@ -363,7 +366,7 @@ public class UpholdClient {
 
             @Override
             public void onFailure(Call call, Throwable t) {
-                log.error("Error to commit transaction", t.getMessage());
+                log.error("Error committing transaction:" + t.getMessage());
                 callback.onError(new Exception(t), false);
             }
         });
