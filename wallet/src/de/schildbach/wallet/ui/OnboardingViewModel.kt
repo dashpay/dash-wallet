@@ -1,7 +1,6 @@
 package de.schildbach.wallet.ui
 
 import android.app.Application
-import android.text.TextUtils
 import androidx.lifecycle.AndroidViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -18,6 +17,8 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
 
     private val walletApplication = application as WalletApplication
 
+    private var basicWalletStuffInitialised = false
+
     private val _showMessageAction = SingleLiveEvent<String>()
     val showToastAction
         get() = _showMessageAction
@@ -30,8 +31,15 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
     val launchWalletAction
         get() = _launchWalletAction
 
+    fun initBasicWalletStuffIfNeeded() {
+        if (!basicWalletStuffInitialised) {
+            walletApplication.initBasicWalletStuff()
+            basicWalletStuffInitialised = false
+        }
+    }
+
     fun createNewWallet() {
-        walletApplication.initBaseStuff()
+        initBasicWalletStuffIfNeeded()
         val wallet = Wallet(Constants.NETWORK_PARAMETERS)
         walletApplication.initWithNewWallet(wallet)
         _launchWalletAction.call(WalletActivity::class.java)
@@ -48,6 +56,12 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
         val wallet = WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS)
         walletApplication.initWithNewWallet(wallet)
         log.info("successfully restored wallet from seed");
+        _launchWalletAction.call(WalletActivity::class.java)
+    }
+
+    fun restoreWalletFromFile(wallet: Wallet) {
+        walletApplication.initWithNewWallet(wallet)
+        log.info("successfully restored wallet from file");
         _launchWalletAction.call(WalletActivity::class.java)
     }
 }

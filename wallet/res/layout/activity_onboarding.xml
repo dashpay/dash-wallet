@@ -46,6 +46,14 @@
             android:layout_marginTop="16dp"
             android:text="@string/onboarding_recover_wallet" />
 
+        <Button
+            android:id="@+id/restore_wallet"
+            style="@style/NewMontserratButton.Secondary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/onboarding_restore_wallet" />
+
     </LinearLayout>
 
 </androidx.appcompat.widget.LinearLayoutCompat>

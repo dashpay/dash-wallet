@@ -123,12 +123,12 @@ public class WalletApplication extends MultiDexApplication {
         super.onCreate();
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
         if(walletFile.exists()) {
-            initBaseStuff();
+            initBasicWalletStuff();
             loadWalletFromProtobuf();
         }
     }
 
-    public void initBaseStuff() {
+    public void initBasicWalletStuff() {
         new LinuxSecureRandom(); // init proper random number generator
         initLogging();
 
@@ -179,10 +179,10 @@ public class WalletApplication extends MultiDexApplication {
 
         config.armBackupReminder();
 
-        initRestStuff();
+        finalizeInitialization();
     }
 
-    public void initRestStuff() {
+    public void finalizeInitialization() {
 		wallet.getContext().initDash(true, true);
 
         if (config.versionCodeCrossed(packageInfo.versionCode, VERSION_CODE_SHOW_BACKUP_REMINDER)
@@ -421,7 +421,7 @@ public class WalletApplication extends MultiDexApplication {
         if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
             throw new Error("bad wallet network parameters: " + wallet.getParams().getId());
 
-        initRestStuff();
+        finalizeInitialization();
     }
 
     private Wallet restoreWalletFromBackup() {
