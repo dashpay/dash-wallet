@@ -418,8 +418,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         getMenuInflater().inflate(R.menu.wallet_options, menu);
         super.onCreateOptionsMenu(menu);
 
-        getMenuInflater().inflate(R.menu.wallet_options, menu);
-
         MenuItem walletLockMenuItem = menu.findItem(R.id.wallet_options_lock);
         walletLockMenuItem.setVisible(WalletLock.getInstance().isWalletLocked(wallet));
 
