@@ -2,6 +2,7 @@ package de.schildbach.wallet.ui.widget
 
 import android.content.Context
 import android.graphics.drawable.TransitionDrawable
+import android.os.Handler
 import android.util.AttributeSet
 import android.widget.FrameLayout
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -14,6 +15,14 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : FrameLayout(contex
 
     var constraintLayout: ConstraintLayout
     val pin = arrayListOf<Int>()
+    var activeIndex = 0
+
+    var mode: PinType = PinType.EXTENDED
+
+    enum class PinType {
+        STANDARD,   // standard pin - 4 digits
+        EXTENDED    // extended pin - more than 4 digits
+    }
 
     init {
         inflate(context, R.layout.pin_preview_view, this)
@@ -21,26 +30,54 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : FrameLayout(contex
         init()
     }
 
-    fun onNumber(number: Int) {
-        if (pin.size == constraintLayout.childCount - 1) {
-            addPinView()
+    fun init() {
+        for (i in 0..2) {
+            addPinItem(false)
         }
-        pin.add(number)
-        val pinItemView = constraintLayout.getChildAt(pin.lastIndex)
-        val pinItemViewBackground = pinItemView.background as TransitionDrawable
-        pinItemViewBackground.startTransition(100)
-    }
-
-    fun onBack() {
-        val pinItemView = constraintLayout.getChildAt(pin.lastIndex)
-        val pinItemViewBackground = pinItemView.background as TransitionDrawable
-        pinItemViewBackground.reverseTransition(100)
-        pin.removeAt(pin.lastIndex)
-    }
-
-    fun addPinView() {
-        addPinItem()
+        addPinItem(mode == PinType.EXTENDED)
         adjustConstraints()
+    }
+
+    fun next() {
+        if (activeIndex < 3 || mode == PinType.EXTENDED) {
+            val lastChildIndex = constraintLayout.childCount - 1
+            if (activeIndex > lastChildIndex) {
+                blinkLastItem()
+            } else {
+                setState(activeIndex, true)
+            }
+            activeIndex++
+        }
+    }
+
+    fun prev() {
+        if (activeIndex > 0) {
+            activeIndex--
+            val lastChildIndex = constraintLayout.childCount - 1
+            if (activeIndex > lastChildIndex) {
+                blinkLastItem()
+            } else {
+                setState(activeIndex, false)
+            }
+        }
+    }
+
+    private fun setState(itemIndex: Int, active: Boolean) {
+        val pinItemView = constraintLayout.getChildAt(itemIndex)
+        val pinItemViewBackground = pinItemView.background as TransitionDrawable
+        if (active) {
+            pinItemViewBackground.startTransition(100)
+        } else {
+            pinItemViewBackground.reverseTransition(100)
+        }
+    }
+
+    private fun blinkLastItem() {
+        val lastChildIndex = constraintLayout.childCount - 1
+        val pinItemView = constraintLayout.getChildAt(lastChildIndex)
+        val pinItemViewBackground = pinItemView.background as TransitionDrawable
+        pinItemViewBackground.resetTransition()
+        Handler().postDelayed({ setState(lastChildIndex, true) }, 100)
     }
 
     fun removePinView() {
@@ -50,16 +87,9 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : FrameLayout(contex
         }
     }
 
-    fun init() {
-        for (i in 0..3) {
-            addPinItem()
-        }
-        adjustConstraints()
-    }
-
-    private fun addPinItem(): FrameLayout {
+    private fun addPinItem(extendedPinIcon: Boolean): FrameLayout {
         val viewItem = FrameLayout(context)
-        viewItem.setBackgroundResource(R.drawable.pin_item_back)
+        viewItem.setBackgroundResource(if (extendedPinIcon) R.drawable.pin_item_extended else R.drawable.pin_item_back)
         viewItem.id = ViewCompat.generateViewId()
         (viewItem.background as TransitionDrawable).isCrossFadeEnabled = true
 

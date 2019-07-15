@@ -53,18 +53,19 @@ class EncryptKeysActivity : AppCompatActivity() {
 
             override fun onNumber(number: Int) {
                 val pinPreviewView = findViewById<PinPreviewView>(R.id.pin_preview)
-                pinPreviewView.onNumber(number)
+                pinPreviewView.next()
             }
 
             override fun onBack() {
                 val pinPreviewView = findViewById<PinPreviewView>(R.id.pin_preview)
 //                pinPreviewView.removePinView()
-                pinPreviewView.onBack()
+                pinPreviewView.prev()
+//                pinPreviewView.mode = PinPreviewView.PinType.EXTENDED
             }
 
             override fun onCancel() {
                 val pinPreviewView = findViewById<PinPreviewView>(R.id.pin_preview)
-                pinPreviewView.addPinView()
+//                pinPreviewView.addPinView()
             }
         }
     }
