@@ -189,6 +189,10 @@
         <item name="android:background">@drawable/secondary_button</item>
     </style>
 
+    <style name="NewMontserratButton.Secondary.Inverted" parent="MontserratButton">
+        <item name="android:background">@drawable/secondary_inverted_button</item>
+    </style>
+
     <style name="MontserratButton.Inverted">
         <item name="android:textColor">@color/inverted_button</item>
         <item name="android:background">@drawable/inverted_button</item>
