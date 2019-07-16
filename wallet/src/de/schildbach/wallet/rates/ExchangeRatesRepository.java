@@ -1,7 +1,7 @@
 package de.schildbach.wallet.rates;
 
-import android.arch.lifecycle.LiveData;
-import android.arch.lifecycle.MutableLiveData;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

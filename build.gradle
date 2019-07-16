@@ -2,17 +2,21 @@ ext {
     dashjVersion = "0.16.1"
 }
 
-buildscript {
+buildscript { 
+    ext.kotlin_version = '1.3.41'
+
     repositories {
         google()
         jcenter()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.1.4'
+        classpath 'com.android.tools.build:gradle:3.4.1'
         classpath('fr.avianey.androidsvgdrawable:gradle-plugin:3.0.0') {
             exclude group: 'xerces'
         }
+        classpath 'com.google.gms:google-services:4.3.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
@@ -20,7 +24,7 @@ allprojects {
     repositories {
         google()
         mavenLocal()
-        maven { url 'https://oss.jfrog.org/artifactory/oss-snapshot-local' }
         jcenter()
+        maven { url 'https://oss.jfrog.org/artifactory/oss-snapshot-local' }
     }
 }

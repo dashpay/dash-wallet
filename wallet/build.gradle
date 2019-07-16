@@ -3,6 +3,7 @@ apply plugin: 'com.android.application'
 ext {
     archivesBaseName = 'dash-wallet'
     androidSupportVersion = '28.0.0'
+    lifecycleVersion = "2.0.0"
 }
 repositories {
     mavenLocal()
@@ -17,27 +18,27 @@ repositories {
 }
 
 dependencies {
-    implementation "com.android.support:design:$androidSupportVersion"
-    implementation "com.android.support:appcompat-v7:$androidSupportVersion"
-    implementation "com.android.support:support-v4:$androidSupportVersion"
+    implementation 'com.google.android.material:material:1.0.0'
+    implementation 'androidx.appcompat:appcompat:1.0.2'
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
     }
-    implementation "com.android.support:support-annotations:$androidSupportVersion"
-    implementation "com.android.support:support-compat:$androidSupportVersion"
-    implementation("com.android.support:support-v13:$androidSupportVersion") {
+    implementation 'androidx.annotation:annotation:1.1.0'
+    implementation 'androidx.core:core:1.0.2'
+    implementation('androidx.legacy:legacy-support-v13:1.0.0') {
         exclude(group: 'com.android.support', module: 'support-fragment')
         exclude(group: 'com.android.support', module: 'support-media-compat')
     }
-    implementation "com.android.support:support-core-utils:$androidSupportVersion"
-    implementation "com.android.support:recyclerview-v7:$androidSupportVersion"
-    implementation "com.android.support:cardview-v7:$androidSupportVersion"
-    implementation "com.android.support:preference-v7:$androidSupportVersion"
-    implementation "com.android.support.constraint:constraint-layout:1.1.3"
+    implementation 'androidx.legacy:legacy-support-core-utils:1.0.0'
+    implementation 'androidx.recyclerview:recyclerview:1.0.0'
+    implementation 'androidx.cardview:cardview:1.0.0'
+    implementation 'androidx.preference:preference:1.0.0'
+    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
     implementation "org.dashj:dashj-core:$dashjVersion"
-    implementation 'com.google.protobuf:protobuf-java:2.6.1'
-    implementation 'com.google.guava:guava:20.0'
-    implementation 'com.google.zxing:core:3.3.1'
+    implementation 'com.google.protobuf:protobuf-java:3.4.0'
+    implementation 'com.google.guava:guava:27.0.1-android'
+    implementation 'com.google.zxing:core:3.3.3'
     implementation 'com.squareup.okhttp:okhttp:2.7.5'
     implementation 'com.squareup.okhttp:logging-interceptor:2.7.5'
     implementation 'com.squareup.moshi:moshi:1.5.0'
@@ -46,29 +47,37 @@ dependencies {
         exclude(group: 'com.google.android', module: 'android')
     }
     implementation 'com.github.tony19:logback-android-core:1.1.1-6'
-    implementation 'com.google.code.findbugs:jsr305:2.0.3'
+    implementation 'com.google.code.findbugs:jsr305:3.0.2'
 
     implementation project(path: ':common')
-    annotationProcessor "android.arch.persistence.room:compiler:1.1.1"
-    //releaseImplementation project(path: ':common', configuration: 'release')
+    annotationProcessor 'androidx.room:room-compiler:2.1.0'
+
     //Uphold Integration
     implementation project(path: ':uphold-integration')
-    //releaseImplementation project(path: ':uphold-integration', configuration: 'release')
-    //Memory Leak Detection
-    debugImplementation 'com.squareup.leakcanary:leakcanary-android:1.6.1'
-    debugImplementation 'com.squareup.leakcanary:leakcanary-support-fragment:1.6.1'
-    releaseImplementation 'com.squareup.leakcanary:leakcanary-android-no-op:1.6.1'
-    testImplementation 'com.squareup.leakcanary:leakcanary-android-no-op:1.6.1'
+
+    implementation 'androidx.multidex:multidex:2.0.1'
+
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+
+    implementation ('com.google.firebase:firebase-inappmessaging-display:17.2.0') {
+        exclude group: 'com.google.protobuf', module: 'protobuf-lite'
+        exclude group: 'com.google.firebase', module: 'protolite-well-known-types'
+    }
+    implementation 'com.google.firebase:firebase-core:17.0.0'
+
+    implementation "androidx.lifecycle:lifecycle-extensions:$lifecycleVersion"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
+
     testImplementation 'junit:junit:4.12'
     //Espresso
-    androidTestImplementation ('com.android.support.test:runner:1.0.1') {
+    androidTestImplementation ('androidx.test:runner:1.1.0') {
         exclude group: 'com.android.support', module: 'support-annotations'
     }
-    androidTestImplementation ('com.android.support.test.espresso:espresso-core:3.0.1') {
+    androidTestImplementation ('androidx.test.espresso:espresso-core:3.1.0') {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
         exclude group: 'com.android.support', module: 'support-annotations'
     }
-    androidTestImplementation ('com.android.support.test.espresso:espresso-intents:3.0.1') {
+    androidTestImplementation ('androidx.test.espresso:espresso-intents:3.1.0') {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
         exclude group: 'com.android.support', module: 'support-annotations'
     }
@@ -81,7 +90,6 @@ ext {
 
 android {
     compileSdkVersion 28
-    buildToolsVersion '28.0.2'
 
     lintOptions {
         abortOnError false
@@ -90,8 +98,9 @@ android {
     defaultConfig {
         minSdkVersion 16
         targetSdkVersion 28
+        multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             abiFilters 'armeabi-v7a', 'x86', 'arm64-v8a', 'x86_64'
         }
@@ -179,10 +188,6 @@ clean {
     file('src/main/jniLibs').deleteDir()
 }
 
-/*task svgToPngMipmap(type: fr.avianey.androidsvgdrawable.gradle.SvgDrawableTask) {
-    from = files('graphics/mipmap')
-    to = file('res')
-    targetedDensities = ['hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']
-    outputFormat = 'PNG'
-    outputType = 'mipmap'
-}*/
+apply plugin: 'com.google.gms.google-services'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'

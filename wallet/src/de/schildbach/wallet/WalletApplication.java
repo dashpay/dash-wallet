@@ -41,8 +41,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
-import com.squareup.leakcanary.LeakCanary;
-import com.squareup.leakcanary.RefWatcher;
 
 import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.service.BlockchainService;
@@ -55,7 +53,6 @@ import de.schildbach.wallet_test.R;
 import android.annotation.TargetApi;
 import android.app.ActivityManager;
 import android.app.AlarmManager;
-import android.app.Application;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -70,8 +67,9 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.StrictMode;
 import android.preference.PreferenceManager;
-import android.support.annotation.StringRes;
-import android.support.v4.content.LocalBroadcastManager;
+import androidx.annotation.StringRes;
+import androidx.multidex.MultiDexApplication;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.text.format.DateUtils;
 import android.widget.Toast;
 import ch.qos.logback.classic.Level;
@@ -85,7 +83,8 @@ import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 /**
  * @author Andreas Schildbach
  */
-public class WalletApplication extends Application {
+public class WalletApplication extends MultiDexApplication {
+
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
@@ -109,49 +108,34 @@ public class WalletApplication extends Application {
 
     private static final Logger log = LoggerFactory.getLogger(WalletApplication.class);
 
-    private RefWatcher refWatcher;
-
-    public static RefWatcher getRefWatcher(Context context) {
-        WalletApplication application = (WalletApplication) context.getApplicationContext();
-        return application.refWatcher;
-    }
-
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
         instance = this;
     }
 
+    public boolean walletFileExists() {
+        return walletFile.exists();
+    }
+
     @Override
     public void onCreate() {
-        //Memory Leak Detection
-        if (LeakCanary.isInAnalyzerProcess(this)) {
-            // This process is dedicated to LeakCanary for heap analysis.
-            // You should not init your app in this process.
-            return;
+        super.onCreate();
+        walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
+        if(walletFile.exists()) {
+            initBasicWalletStuff();
+            loadWalletFromProtobuf();
         }
-        refWatcher = LeakCanary.install(this);
+    }
 
-        registerActivityLifecycleCallbacks(new ActivitiesTracker() {
-            @Override
-            public void onStartedAny(boolean isTheFirstOne) {
-                if (isTheFirstOne) {
-                    lockWalletIfNeeded();
-                } else {
-                    WalletLock walletLock = WalletLock.getInstance();
-                    if (!walletLock.isWalletLocked(wallet)) {
-                        config.setLastUnlockTime(System.currentTimeMillis());
-                    }
-                }
-            }
-        });
-
+    public void initBasicWalletStuff() {
         new LinuxSecureRandom(); // init proper random number generator
-
         initLogging();
 
-        StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectAll().permitDiskReads()
-                .permitDiskWrites().penaltyLog().build());
+        if(!Constants.IS_PROD_BUILD) {
+            StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectAll().permitDiskReads()
+                    .permitDiskWrites().penaltyLog().build());
+        }
 
         Threading.throwOnLockCycles();
         org.bitcoinj.core.Context.enableStrictMode();
@@ -159,8 +143,6 @@ public class WalletApplication extends Application {
 
         log.info("=== starting app using configuration: {}, {}", BuildConfig.FLAVOR,
                 Constants.NETWORK_PARAMETERS.getId());
-
-        super.onCreate();
 
         packageInfo = packageInfoFromContext(this);
 
@@ -184,13 +166,23 @@ public class WalletApplication extends Application {
                 this, BlockchainServiceImpl.class);
         blockchainServiceResetBlockchainIntent = new Intent(BlockchainService.ACTION_RESET_BLOCKCHAIN, null, this,
                 BlockchainServiceImpl.class);
+    }
 
-        walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
+    public void initWithNewWallet(Wallet newWallet) {
+        this.wallet = newWallet;
+        if (!wallet.hasKeyChain(Constants.BIP44_PATH)) {
+            wallet.addKeyChain(Constants.BIP44_PATH);
+        }
 
-        loadWalletFromProtobuf();
+        saveWallet();
+        backupWallet();
 
-		org.bitcoinj.core.Context context = wallet.getContext();
+        config.armBackupReminder();
 
+        finalizeInitialization();
+    }
+
+    public void finalizeInitialization() {
 		wallet.getContext().initDash(true, true);
 
         if (config.versionCodeCrossed(packageInfo.versionCode, VERSION_CODE_SHOW_BACKUP_REMINDER)
@@ -210,6 +202,20 @@ public class WalletApplication extends Application {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannels();
         }
+
+        registerActivityLifecycleCallbacks(new ActivitiesTracker() {
+            @Override
+            public void onStartedAny(boolean isTheFirstOne) {
+                if (isTheFirstOne) {
+                    lockWalletIfNeeded();
+                } else {
+                    WalletLock walletLock = WalletLock.getInstance();
+                    if (!walletLock.isWalletLocked(wallet)) {
+                        config.setLastUnlockTime(System.currentTimeMillis());
+                    }
+                }
+            }
+        });
     }
 
     private void registerScreenOffReceiver() {
@@ -373,59 +379,49 @@ public class WalletApplication extends Application {
     }
 
     private void loadWalletFromProtobuf() {
-        if (walletFile.exists()) {
-            FileInputStream walletStream = null;
+        FileInputStream walletStream = null;
 
-            try {
-                final Stopwatch watch = Stopwatch.createStarted();
-                walletStream = new FileInputStream(walletFile);
-                wallet = new WalletProtobufSerializer().readWallet(walletStream);
-
-                if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
-                    throw new UnreadableWalletException("bad wallet network parameters: " + wallet.getParams().getId());
-
-                log.info("wallet loaded from: '{}', took {}", walletFile, watch);
-            } catch (final FileNotFoundException x) {
-                log.error("problem loading wallet", x);
-
-                Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
-
-                wallet = restoreWalletFromBackup();
-            } catch (final UnreadableWalletException x) {
-                log.error("problem loading wallet", x);
-
-                Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
-
-                wallet = restoreWalletFromBackup();
-            } finally {
-                if (walletStream != null) {
-                    try {
-                        walletStream.close();
-                    } catch (final IOException x) {
-                        // swallow
-                    }
-                }
-            }
-
-            if (!wallet.isConsistent()) {
-                Toast.makeText(this, "inconsistent wallet: " + walletFile, Toast.LENGTH_LONG).show();
-
-                wallet = restoreWalletFromBackup();
-            }
+        try {
+            final Stopwatch watch = Stopwatch.createStarted();
+            walletStream = new FileInputStream(walletFile);
+            wallet = new WalletProtobufSerializer().readWallet(walletStream);
 
             if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
-                throw new Error("bad wallet network parameters: " + wallet.getParams().getId());
-        } else {
-            wallet = new Wallet(Constants.NETWORK_PARAMETERS);
-            wallet.addKeyChain(Constants.BIP44_PATH);
+                throw new UnreadableWalletException("bad wallet network parameters: " + wallet.getParams().getId());
 
-            saveWallet();
-            backupWallet();
+            log.info("wallet loaded from: '{}', took {}", walletFile, watch);
+        } catch (final FileNotFoundException x) {
+            log.error("problem loading wallet", x);
 
-            config.armBackupReminder();
+            Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
 
-            log.info("new wallet created");
+            wallet = restoreWalletFromBackup();
+        } catch (final UnreadableWalletException x) {
+            log.error("problem loading wallet", x);
+
+            Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
+
+            wallet = restoreWalletFromBackup();
+        } finally {
+            if (walletStream != null) {
+                try {
+                    walletStream.close();
+                } catch (final IOException x) {
+                    // swallow
+                }
+            }
         }
+
+        if (!wallet.isConsistent()) {
+            Toast.makeText(this, "inconsistent wallet: " + walletFile, Toast.LENGTH_LONG).show();
+
+            wallet = restoreWalletFromBackup();
+        }
+
+        if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
+            throw new Error("bad wallet network parameters: " + wallet.getParams().getId());
+
+        finalizeInitialization();
     }
 
     private Wallet restoreWalletFromBackup() {

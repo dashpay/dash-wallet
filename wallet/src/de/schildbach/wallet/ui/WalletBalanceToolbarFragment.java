@@ -18,15 +18,15 @@
 package de.schildbach.wallet.ui;
 
 import android.app.Activity;
-import android.arch.lifecycle.Observer;
-import android.arch.lifecycle.ViewModelProviders;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProviders;
 import android.content.Intent;
 import android.os.Bundle;
 
 import android.os.Handler;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.LoaderManager;
-import android.support.v4.content.Loader;
+import androidx.fragment.app.Fragment;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.Loader;
 import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -134,7 +134,7 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 	}
 
 	@Override
-	public void onActivityCreated(@android.support.annotation.Nullable Bundle savedInstanceState)
+	public void onActivityCreated(@androidx.annotation.Nullable Bundle savedInstanceState)
 	{
 		super.onActivityCreated(savedInstanceState);
 		appBarMessageView = activity.findViewById(R.id.toolbar_message);

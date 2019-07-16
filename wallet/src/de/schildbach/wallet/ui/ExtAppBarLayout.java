@@ -6,12 +6,11 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Handler;
-import android.support.design.widget.AppBarLayout;
+import com.google.android.material.appbar.AppBarLayout;
 import android.util.AttributeSet;
 import android.view.View;
 import android.widget.Toast;
 
-import de.schildbach.wallet.Constants;
 import de.schildbach.wallet_test.R;
 
 /**

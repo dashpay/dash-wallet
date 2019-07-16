@@ -60,6 +60,19 @@
         android:label="@string/app_name"
         android:largeHeap="true"
         android:theme="@style/My.Theme">
+
+        <activity
+            android:name="de.schildbach.wallet.ui.OnboardingActivity"
+            android:noHistory="true"
+            android:screenOrientation="portrait"
+            android:theme="@style/SplashActivity.Theme">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name="de.schildbach.wallet.ui.WalletActivity"
             android:configChanges="keyboard|keyboardHidden"
@@ -71,12 +84,7 @@
 
         <activity-alias
             android:name="de.schildbach.wallet.WalletActivity"
-            android:targetActivity="de.schildbach.wallet.ui.WalletActivity" >
-            <intent-filter android:label="@string/app_name_short" >
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+            android:targetActivity="de.schildbach.wallet.ui.WalletActivity">
             <intent-filter>
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
                 <data android:mimeType="application/x-drktx" />
@@ -209,7 +217,7 @@
             android:authorities="${applicationId}.address_book"
             android:exported="false" />
         <provider
-            android:name="android.support.v4.content.FileProvider"
+            android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.file_attachment"
             android:exported="false"
             android:grantUriPermissions="true" >

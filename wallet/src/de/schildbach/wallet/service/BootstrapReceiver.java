@@ -42,7 +42,10 @@ public class BootstrapReceiver extends BroadcastReceiver {
         final boolean bootCompleted = Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction());
         final boolean packageReplaced = Intent.ACTION_MY_PACKAGE_REPLACED.equals(intent.getAction());
 
-        if (packageReplaced || bootCompleted) {
+        final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context),
+                context.getResources());
+
+        if (config.getOnboardingComplete() && (packageReplaced || bootCompleted)) {
             // make sure wallet is upgraded to HD
             if (packageReplaced)
                 UpgradeWalletService.startUpgrade(context);
@@ -51,8 +54,6 @@ public class BootstrapReceiver extends BroadcastReceiver {
             WalletApplication.scheduleStartBlockchainService(context);
 
             // if the app hasn't been used for a while and contains coins, maybe show reminder
-            final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context),
-                    context.getResources());
             if (config.remindBalance() && config.hasBeenUsed()
                     && config.getLastUsedAgo() > Constants.LAST_USAGE_THRESHOLD_INACTIVE_MS)
                 InactivityNotificationService.startMaybeShowNotification(context);
