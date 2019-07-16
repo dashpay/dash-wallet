@@ -212,6 +212,10 @@
         <activity android:name="org.dash.wallet.integration.uphold.ui.UpholdAccountActivity"
             android:theme="@style/My.Theme.ChildActivity"/>
 
+        <activity android:name="de.schildbach.wallet.ui.EncryptKeysActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity" />
+
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"
             android:authorities="${applicationId}.address_book"
