@@ -46,19 +46,57 @@ class OnboardingActivity : AppCompatActivity() {
                         or View.SYSTEM_UI_FLAG_LAYOUT_STABLE)
         setContentView(R.layout.activity_onboarding)
 
-        initViewModel()
+        viewModel = ViewModelProviders.of(this).get(OnboardingViewModel::class.java)
 
         walletApplication = (application as WalletApplication)
-        if (walletApplication.walletFileExists()) {
-            launchWallet()
+        if (walletApplication.walletConfigured()) {
+            regularFlow()
         } else {
-            onboarding()
+            if (walletApplication.wallet == null) {
+                onboarding()
+            } else {
+                if (walletApplication.wallet.isEncrypted) {
+                    walletApplication.configuration.setOnboardingComplete()
+                    regularFlow()
+                } else {
+                    startActivity(Intent(this, SetPinActivity::class.java))
+                }
+            }
+        }
+    }
+
+    private fun regularFlow() {
+        try {
+            walletApplication.fullInitialization()
+            startActivity(Intent(this, WalletActivity::class.java))
+            finish()
+        } catch (x: Exception) {
+            findViewById<View>(R.id.fatal_error_message).visibility = View.VISIBLE
+        }
+    }
+
+    private fun onboarding() {
+        initView()
+        initViewModel()
+        showButtonsDelayed()
+    }
+
+    private fun initView() {
+        findViewById<Button>(R.id.create_new_wallet).setOnClickListener {
+            viewModel.createNewWallet()
+        }
+        findViewById<Button>(R.id.recovery_wallet).setOnClickListener {
+            viewModel.initBasicWalletStuffIfNeeded()
+            RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
+        }
+        findViewById<Button>(R.id.restore_wallet).setOnClickListener {
+            viewModel.initBasicWalletStuffIfNeeded()
+            restoreWalletFromFile()
         }
     }
 
     @SuppressLint("StringFormatInvalid")
     private fun initViewModel() {
-        viewModel = ViewModelProviders.of(this).get(OnboardingViewModel::class.java)
         viewModel.showToastAction.observe(this, Observer {
             Toast.makeText(this, it, Toast.LENGTH_LONG).show()
         })
@@ -75,32 +113,9 @@ class OnboardingActivity : AppCompatActivity() {
             }
             dialog.show()
         })
-        viewModel.launchWalletAction.observe(this, Observer {
-            startWalletActivity()
+        viewModel.startActivityAction.observe(this, Observer {
+            startActivity(Intent(this, it))
         })
-    }
-
-    private fun launchWallet() {
-        startWalletActivity()
-    }
-
-    private fun onboarding() {
-        initView()
-        showButtonsDelayed()
-    }
-
-    private fun initView() {
-        findViewById<Button>(R.id.create_new_wallet).setOnClickListener {
-            viewModel.createNewWallet()
-        }
-        findViewById<Button>(R.id.recovery_wallet).setOnClickListener {
-            viewModel.initBasicWalletStuffIfNeeded()
-            RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
-        }
-        findViewById<Button>(R.id.restore_wallet).setOnClickListener {
-            viewModel.initBasicWalletStuffIfNeeded()
-            restoreWalletFromFile()
-        }
     }
 
     private fun showButtonsDelayed() {
@@ -121,11 +136,6 @@ class OnboardingActivity : AppCompatActivity() {
         } else {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_CODE_RESTORE_WALLET)
         }
-    }
-
-    private fun startWalletActivity() {
-        startActivity(Intent(this, WalletActivity::class.java))
-        finish()
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -168,5 +178,10 @@ class OnboardingActivity : AppCompatActivity() {
             DIALOG_RESTORE_WALLET -> RestoreFromFileHelper.prepareRestoreWalletDialog(this, false, dialog)
             else -> super.onPrepareDialog(id, dialog)
         }
+    }
+
+    override fun startActivity(intent: Intent?) {
+        overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
+        super.startActivity(intent)
     }
 }

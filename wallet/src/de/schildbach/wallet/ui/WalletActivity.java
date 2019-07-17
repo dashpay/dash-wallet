@@ -183,6 +183,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (!veryFirstLaunch) {
             canAutoLockGuard.register(true);
         }
+        this.clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
     }
 
     private void initFingerprintHelper() {
@@ -193,12 +194,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 fingerprintHelper = null;
             }
         }
-
-        canAutoLockGuard = new CanAutoLockGuard(config, onAutoLockStatusChangedListener);
-        if (!veryFirstLaunch) {
-            canAutoLockGuard.register(true);
-        }
-        this.clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
     }
 
     @Override

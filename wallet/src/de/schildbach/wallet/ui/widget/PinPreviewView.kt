@@ -4,20 +4,24 @@ import android.content.Context
 import android.graphics.drawable.TransitionDrawable
 import android.os.Handler
 import android.util.AttributeSet
-import android.widget.FrameLayout
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.constraintlayout.widget.ConstraintSet
-import androidx.core.view.ViewCompat
+import android.view.View
+import android.view.animation.AnimationUtils
+import android.widget.LinearLayout
 import de.schildbach.wallet_test.R
 
 
-class PinPreviewView(context: Context, attrs: AttributeSet) : FrameLayout(context, attrs) {
+class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs) {
 
-    var constraintLayout: ConstraintLayout
-    val pin = arrayListOf<Int>()
-    var activeIndex = 0
+    private var lastIndex = 0
+    private var activeIndex = 0
 
-    var mode: PinType = PinType.EXTENDED
+    var mode: PinType = PinType.STANDARD
+        set(value) {
+            field = value
+            clear()
+        }
+
+    private val pinItems = arrayListOf<View>()
 
     enum class PinType {
         STANDARD,   // standard pin - 4 digits
@@ -26,35 +30,48 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : FrameLayout(contex
 
     init {
         inflate(context, R.layout.pin_preview_view, this)
-        constraintLayout = getChildAt(0) as ConstraintLayout
-        init()
+        lastIndex = childCount - 1
+        for (i in 0..lastIndex) {
+            pinItems.add(getChildAt(i))
+        }
     }
 
-    fun init() {
-        for (i in 0..2) {
-            addPinItem(false)
+    fun clear() {
+        activeIndex = 0
+        pinItems[lastIndex].setBackgroundResource(if (mode == PinType.EXTENDED) R.drawable.pin_item_more else R.drawable.pin_item)
+        for (i in 0..lastIndex) {
+            val pinItemViewBackground = pinItems[i].background as TransitionDrawable
+            pinItemViewBackground.resetTransition()
         }
-        addPinItem(mode == PinType.EXTENDED)
-        adjustConstraints()
+    }
+
+    private fun setState(itemIndex: Int, active: Boolean) {
+        val pinItemViewBackground = pinItems[itemIndex].background as TransitionDrawable
+        pinItemViewBackground.isCrossFadeEnabled = true
+        val durationMs = 100
+        if (active) {
+            pinItemViewBackground.startTransition(durationMs)
+        } else {
+            pinItemViewBackground.reverseTransition(durationMs)
+        }
     }
 
     fun next() {
-        if (activeIndex < 3 || mode == PinType.EXTENDED) {
-            val lastChildIndex = constraintLayout.childCount - 1
-            if (activeIndex > lastChildIndex) {
-                blinkLastItem()
-            } else {
-                setState(activeIndex, true)
-            }
+        if (activeIndex <= lastIndex) {
+            setState(activeIndex, true)
             activeIndex++
+        } else {
+            if (mode == PinType.EXTENDED) {
+                blinkLastItem()
+                activeIndex++
+            }
         }
     }
 
     fun prev() {
         if (activeIndex > 0) {
             activeIndex--
-            val lastChildIndex = constraintLayout.childCount - 1
-            if (activeIndex > lastChildIndex) {
+            if (activeIndex > lastIndex) {
                 blinkLastItem()
             } else {
                 setState(activeIndex, false)
@@ -62,96 +79,15 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : FrameLayout(contex
         }
     }
 
-    private fun setState(itemIndex: Int, active: Boolean) {
-        val pinItemView = constraintLayout.getChildAt(itemIndex)
-        val pinItemViewBackground = pinItemView.background as TransitionDrawable
-        if (active) {
-            pinItemViewBackground.startTransition(100)
-        } else {
-            pinItemViewBackground.reverseTransition(100)
-        }
-    }
 
     private fun blinkLastItem() {
-        val lastChildIndex = constraintLayout.childCount - 1
-        val pinItemView = constraintLayout.getChildAt(lastChildIndex)
-        val pinItemViewBackground = pinItemView.background as TransitionDrawable
+        val pinItemViewBackground = pinItems[lastIndex].background as TransitionDrawable
         pinItemViewBackground.resetTransition()
-        Handler().postDelayed({ setState(lastChildIndex, true) }, 100)
+        Handler().postDelayed({ setState(lastIndex, true) }, 100)
     }
 
-    fun removePinView() {
-        if (constraintLayout.childCount > 4) {
-            constraintLayout.removeViewAt(constraintLayout.childCount - 1)
-            adjustConstraints()
-        }
-    }
-
-    private fun addPinItem(extendedPinIcon: Boolean): FrameLayout {
-        val viewItem = FrameLayout(context)
-        viewItem.setBackgroundResource(if (extendedPinIcon) R.drawable.pin_item_extended else R.drawable.pin_item_back)
-        viewItem.id = ViewCompat.generateViewId()
-        (viewItem.background as TransitionDrawable).isCrossFadeEnabled = true
-
-        constraintLayout.addView(viewItem)
-
-        val layoutParams = viewItem.layoutParams as ConstraintLayout.LayoutParams
-        layoutParams.run {
-            width = 0
-            height = 0
-            val marginDp = dpToPx(8.0f).toInt()
-            setMargins(marginDp, 0, marginDp, 0)
-        }
-
-        return viewItem
-    }
-
-    private fun adjustConstraints() {
-        val constraintSet = ConstraintSet()
-        constraintSet.clone(constraintLayout)
-
-        val viewIds = arrayListOf<Int>()
-
-        for (i in 0 until constraintLayout.childCount) {
-            val itemId = constraintLayout.getChildAt(i).id
-            viewIds.add(itemId)
-
-            // app:layout_constraintDimensionRatio="1:1"
-            constraintSet.setDimensionRatio(itemId, "1:1")
-            // app:layout_constraintTop_toTopOf="parent"
-            constraintSet.connect(itemId, ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP, 0)
-            // app:layout_constraintBottom_toBottomOf="parent"
-            constraintSet.connect(itemId, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM, 0)
-
-            if (i == 0) {
-                constraintSet.connect(itemId, ConstraintSet.LEFT, ConstraintSet.PARENT_ID, ConstraintSet.LEFT)
-            } else {
-                val previousItem = constraintLayout.getChildAt(i - 1)
-                constraintSet.connect(itemId, ConstraintSet.LEFT, previousItem.id, ConstraintSet.RIGHT)
-                if (i == constraintLayout.childCount - 1) {
-                    constraintSet.connect(itemId, ConstraintSet.RIGHT, ConstraintSet.PARENT_ID, ConstraintSet.RIGHT)
-                }
-            }
-        }
-
-        constraintSet.createHorizontalChain(ConstraintSet.PARENT_ID, ConstraintSet.LEFT, ConstraintSet.PARENT_ID, ConstraintSet.RIGHT, viewIds.toIntArray(), null, ConstraintSet.CHAIN_SPREAD)
-        constraintSet.applyTo(constraintLayout)
-    }
-
-    private fun tmp() {
-//        val pinItemView = findViewById<View>(R.id.pin_item_back)
-//        val pinItemViewBackground = pinItemView.background as TransitionDrawable
-//        pinItemViewBackground.isCrossFadeEnabled = true
-//        if (pinItemView.tag == null) {
-//            pinItemViewBackground.startTransition(100)
-//            pinItemView.tag = true
-//        } else {
-//            pinItemViewBackground.reverseTransition(100)
-//            pinItemView.tag = null
-//        }
-    }
-
-    fun dpToPx(dp: Float): Float {
-        return dp * context.resources.displayMetrics.density
+    fun shake() {
+        val shakeAnimation = AnimationUtils.loadAnimation(context, R.anim.shake_pin)
+        startAnimation(shakeAnimation)
     }
 }

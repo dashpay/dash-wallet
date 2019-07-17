@@ -4,9 +4,10 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.TableLayout
 import de.schildbach.wallet_test.R
 
-class NumericKeyboardView(context: Context, attrs: AttributeSet) : FrameLayout(context, attrs), View.OnClickListener {
+class NumericKeyboardView(context: Context, attrs: AttributeSet) : TableLayout(context, attrs), View.OnClickListener {
 
     companion object {
         private val NUMERIC_BUTTONS_RES_ID = arrayOf(

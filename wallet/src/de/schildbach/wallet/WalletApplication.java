@@ -114,21 +114,23 @@ public class WalletApplication extends MultiDexApplication {
         instance = this;
     }
 
-    public boolean walletFileExists() {
-        return walletFile.exists();
+    public boolean walletConfigured() {
+        return walletFile.exists() && config.getOnboardingComplete();
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
+        config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
-        if(walletFile.exists()) {
-            initBasicWalletStuff();
-            loadWalletFromProtobuf();
-        }
     }
 
-    public void initBasicWalletStuff() {
+    public void fullInitialization() {
+        initEnvironment();
+        loadWalletFromProtobuf();
+    }
+
+    public void initEnvironment() {
         new LinuxSecureRandom(); // init proper random number generator
         initLogging();
 
@@ -158,7 +160,6 @@ public class WalletApplication extends MultiDexApplication {
 
         initMnemonicCode();
 
-        config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
         activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
 
         blockchainServiceIntent = new Intent(this, BlockchainServiceImpl.class);
@@ -168,12 +169,14 @@ public class WalletApplication extends MultiDexApplication {
                 BlockchainServiceImpl.class);
     }
 
-    public void initWithNewWallet(Wallet newWallet) {
+    public void setWallet(Wallet newWallet) {
         this.wallet = newWallet;
         if (!wallet.hasKeyChain(Constants.BIP44_PATH)) {
             wallet.addKeyChain(Constants.BIP44_PATH);
         }
+    }
 
+    public void saveWalletAndFinalizeInitialization() {
         saveWallet();
         backupWallet();
 
