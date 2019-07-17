@@ -4,16 +4,34 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="center_horizontal"
-    android:orientation="vertical"
+    android:orientation="horizontal"
     tools:context="de.schildbach.wallet.ui.widget.PinPreviewView"
-    tools:parentTag="android.widget.FrameLayout">
+    tools:parentTag="android.widget.LinearLayout">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/root"
-        android:layout_width="wrap_content"
-        android:layout_height="66dp"
-        android:layout_marginStart="80dp"
-        android:layout_marginEnd="80dp"
-        android:orientation="horizontal" />
+    <FrameLayout
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginRight="16dp"
+        android:background="@drawable/pin_item" />
+
+    <FrameLayout
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginRight="16dp"
+        android:background="@drawable/pin_item" />
+
+    <FrameLayout
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginRight="16dp"
+        android:background="@drawable/pin_item" />
+
+    <FrameLayout
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:background="@drawable/pin_item" />
 
 </merge>

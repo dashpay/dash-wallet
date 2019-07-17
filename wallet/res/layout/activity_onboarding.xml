@@ -18,6 +18,17 @@
         android:layout_height="wrap_content"
         android:src="@drawable/splash_activity_slogan" />
 
+    <TextView
+        android:id="@+id/fatal_error_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="Unable to load wallet!"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/white"
+        android:visibility="gone" />
+
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
