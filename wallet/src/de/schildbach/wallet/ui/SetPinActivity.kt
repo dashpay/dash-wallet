@@ -1,5 +1,6 @@
 package de.schildbach.wallet.ui
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -11,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.widget.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
@@ -32,15 +34,26 @@ class SetPinActivity : AppCompatActivity() {
 
     val pin = arrayListOf<Int>()
 
-    var legacyPinMode = false
-
     private enum class State {
+        DECRYPT,
+        DECRYPTING,
         SET_PIN,
         CONFIRM_PIN,
         ENCRYPTING
     }
 
     private var state = State.SET_PIN
+
+    companion object {
+
+        private const val EXTRA_TITLE_RES_ID = "extra_title_res_id"
+
+        fun createIntent(context: Context, titleResId: Int): Intent {
+            val intent = Intent(context, SetPinActivity::class.java)
+            intent.putExtra(EXTRA_TITLE_RES_ID, titleResId)
+            return intent
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,11 +65,17 @@ class SetPinActivity : AppCompatActivity() {
         actionBar?.apply {
             setDisplayHomeAsUpEnabled(true)
             setDisplayShowHomeEnabled(true)
-            setTitle(R.string.create_pin_create_new_wallet)
         }
+
+        setTitle(intent.getIntExtra(EXTRA_TITLE_RES_ID, R.string.set_pin_create_new_wallet))
 
         initView()
         initViewModel()
+
+        val walletApplication = application as WalletApplication
+        if (walletApplication.wallet.isEncrypted) {
+            setState(State.DECRYPT)
+        }
     }
 
     private fun initView() {
@@ -65,17 +84,15 @@ class SetPinActivity : AppCompatActivity() {
         pageTitleView = findViewById(R.id.page_title)
         pageMessageView = findViewById(R.id.message)
         numericKeyboardView = findViewById(R.id.numeric_keyboard)
-
-        pinPreviewView.mode = if (legacyPinMode) PinPreviewView.PinType.EXTENDED else PinPreviewView.PinType.STANDARD
         numericKeyboardView.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
             override fun onNumber(number: Int) {
-                if (pin.size < 4 || legacyPinMode) {
+                if (pin.size < 4 || state == State.DECRYPT) {
                     pin.add(number)
                     pinPreviewView.next()
                 }
 
-                if (legacyPinMode) {
+                if (state == State.DECRYPT) {
                     if (pin.size == viewModel.pin.size || (state == State.CONFIRM_PIN && pin.size > viewModel.pin.size)) {
                         nextStep()
                     }
@@ -84,7 +101,6 @@ class SetPinActivity : AppCompatActivity() {
                         nextStep()
                     }
                 }
-                println("PIN: $pin")
             }
 
             override fun onBack() {
@@ -92,7 +108,6 @@ class SetPinActivity : AppCompatActivity() {
                     pin.removeAt(pin.lastIndex)
                     pinPreviewView.prev()
                 }
-                println("PIN: $pin")
             }
 
             override fun onCancel() {
@@ -109,14 +124,20 @@ class SetPinActivity : AppCompatActivity() {
                 pinPreviewView.shake()
             }
         } else {
-            setState(State.CONFIRM_PIN)
+            viewModel.setPin(pin)
+            if (state == State.DECRYPT) {
+                viewModel.checkPin()
+            } else {
+                setState(State.CONFIRM_PIN)
+            }
         }
     }
 
     private fun setState(newState: State) {
         when (newState) {
-            State.SET_PIN -> {
-                pageTitleView.setText(R.string.create_pin_set_pin)
+            State.DECRYPT -> {
+                pinPreviewView.mode = PinPreviewView.PinType.EXTENDED
+                pageTitleView.setText(R.string.set_pin_enter_pin)
                 if (pinProgressSwitcherView.currentView.id == R.id.progress) {
                     pinProgressSwitcherView.showPrevious()
                 }
@@ -124,28 +145,45 @@ class SetPinActivity : AppCompatActivity() {
                 numericKeyboardView.visibility = View.VISIBLE
                 supportActionBar!!.setDisplayHomeAsUpEnabled(true)
                 viewModel.pin.clear()
+                pin.clear()
+            }
+            State.SET_PIN -> {
+                pinPreviewView.mode = PinPreviewView.PinType.STANDARD
+                pinPreviewView.clear()
+                pageTitleView.setText(R.string.set_pin_set_pin)
+                if (pinProgressSwitcherView.currentView.id == R.id.progress) {
+                    pinProgressSwitcherView.showPrevious()
+                }
+                pageMessageView.visibility = View.VISIBLE
+                numericKeyboardView.visibility = View.VISIBLE
+                supportActionBar!!.setDisplayHomeAsUpEnabled(true)
+                viewModel.pin.clear()
+                pin.clear()
             }
             State.CONFIRM_PIN -> {
-                pageTitleView.setText(R.string.create_pin_confirm_pin)
+                pageTitleView.setText(R.string.set_pin_confirm_pin)
                 if (pinProgressSwitcherView.currentView.id == R.id.progress) {
                     pinProgressSwitcherView.showPrevious()
                 }
                 pageMessageView.visibility = View.VISIBLE
                 numericKeyboardView.visibility = View.VISIBLE
                 supportActionBar!!.setDisplayHomeAsUpEnabled(true)
-                if (legacyPinMode) {
+                Handler().postDelayed({
                     pinPreviewView.clear()
-                } else {
-                    Handler().postDelayed({
-                        pinPreviewView.clear()
-                    }, 200)
-                }
-                viewModel.pin.clear()
-                viewModel.pin.addAll(pin)
+                }, 200)
                 pin.clear()
             }
             State.ENCRYPTING -> {
-                pageTitleView.setText(R.string.create_pin_encrypting)
+                pageTitleView.setText(R.string.set_pin_encrypting)
+                if (pinProgressSwitcherView.currentView.id == R.id.pin_preview) {
+                    pinProgressSwitcherView.showNext()
+                }
+                pageMessageView.visibility = View.INVISIBLE
+                numericKeyboardView.visibility = View.INVISIBLE
+                supportActionBar!!.setDisplayHomeAsUpEnabled(false)
+            }
+            State.DECRYPTING -> {
+                pageTitleView.setText(R.string.set_pin_decrypting)
                 if (pinProgressSwitcherView.currentView.id == R.id.pin_preview) {
                     pinProgressSwitcherView.showNext()
                 }
@@ -162,14 +200,24 @@ class SetPinActivity : AppCompatActivity() {
         viewModel.encryptWalletLiveData.observe(this, Observer {
             when (it.status) {
                 Status.ERROR -> {
-                    android.widget.Toast.makeText(this, "Encrypting error", android.widget.Toast.LENGTH_LONG).show()
-                    setState(State.CONFIRM_PIN)
+                    if (state == State.DECRYPTING) {
+                        setState(State.DECRYPT)
+                        pinPreviewView.shake()
+                    } else {
+                        android.widget.Toast.makeText(this, "Encrypting error", android.widget.Toast.LENGTH_LONG).show()
+                        setState(State.CONFIRM_PIN)
+                    }
                 }
                 Status.LOADING -> {
-                    setState(State.ENCRYPTING)
+                    setState(if (state == State.DECRYPT) State.DECRYPTING else State.ENCRYPTING)
                 }
                 Status.SUCCESS -> {
-                    viewModel.initWallet()
+                    if (state == State.DECRYPTING) {
+                        pinPreviewView.mode = PinPreviewView.PinType.STANDARD
+                        setState(State.SET_PIN)
+                    } else {
+                        viewModel.initWallet()
+                    }
                 }
             }
         })
@@ -184,10 +232,7 @@ class SetPinActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
-                when(state) {
-                    State.SET_PIN -> finish()
-                    else -> setState(State.SET_PIN)
-                }
+                onBackPressed()
                 return true
             }
         }
@@ -195,8 +240,23 @@ class SetPinActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    override fun onBackPressed() {
+        if (pin.size > 0) {
+            setState(state)
+        } else {
+            if (state != State.ENCRYPTING && state != State.DECRYPTING) {
+                finish()
+            }
+        }
+    }
+
     override fun startActivity(intent: Intent?) {
         overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
         super.startActivity(intent)
+    }
+
+    override fun finish() {
+        overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
+        super.finish()
     }
 }

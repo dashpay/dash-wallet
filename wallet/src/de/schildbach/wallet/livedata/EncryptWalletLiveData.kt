@@ -15,24 +15,29 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
 
     private val log = LoggerFactory.getLogger(EncryptWalletLiveData::class.java)
 
-    private var encryptKeysTask: EncryptKeysTask? = null
+    private var encryptWalletTask: EncryptWalletTask? = null
+    private var checkPinTask: CheckPinTask? = null
+
     private var scryptIterationsTarget: Int = Constants.SCRYPT_ITERATIONS_TARGET
-    private var wallet: Wallet? = null
     private var walletApplication = application as WalletApplication
 
-    fun encrypt(wallet: Wallet, password: String, scryptIterationsTarget: Int) {
-        this.scryptIterationsTarget = scryptIterationsTarget
-        this.wallet = wallet
-        if (encryptKeysTask != null) {
-            encryptKeysTask!!.cancel(false)
-        } else {
-            encryptKeysTask = EncryptKeysTask()
-            encryptKeysTask!!.execute(password)
+    fun encrypt(password: String, scryptIterationsTarget: Int) {
+        if (encryptWalletTask == null) {
+            this.scryptIterationsTarget = scryptIterationsTarget
+            encryptWalletTask = EncryptWalletTask()
+            encryptWalletTask!!.execute(password)
+        }
+    }
+
+    fun checkPin(pin: String) {
+        if (checkPinTask == null) {
+            checkPinTask = CheckPinTask()
+            checkPinTask!!.execute(pin)
         }
     }
 
     @SuppressLint("StaticFieldLeak")
-    internal inner class EncryptKeysTask : AsyncTask<String, Void, Resource<Wallet>>() {
+    internal inner class EncryptWalletTask : AsyncTask<String, Void, Resource<Wallet>>() {
 
         override fun onPreExecute() {
             value = Resource.loading(null)
@@ -40,11 +45,12 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
 
         override fun doInBackground(vararg args: String): Resource<Wallet> {
             val password = args[0]
+            val wallet = walletApplication.wallet
             try {
                 // For the new key, we create a new key crypter according to the desired parameters.
                 val keyCrypter = KeyCrypterScrypt(scryptIterationsTarget)
                 val newKey = keyCrypter.deriveKey(password)
-                wallet!!.encrypt(keyCrypter, newKey)
+                wallet.encrypt(keyCrypter, newKey)
 
                 org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
                 walletApplication.saveWalletAndFinalizeInitialization()
@@ -60,10 +66,32 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
 
         override fun onPostExecute(result: Resource<Wallet>) {
             value = result
+            encryptWalletTask = null
+        }
+    }
+
+    @SuppressLint("StaticFieldLeak")
+    internal inner class CheckPinTask : AsyncTask<String, Void, Resource<Wallet>>() {
+
+        override fun onPreExecute() {
+            value = Resource.loading(null)
         }
 
-        override fun onCancelled(result: Resource<Wallet>?) {
-            super.onCancelled(result)
+        override fun doInBackground(vararg args: String): Resource<Wallet> {
+            val password = args[0]
+            val wallet = walletApplication.wallet
+            return try {
+                val key = wallet.keyCrypter!!.deriveKey(password)
+                wallet.decrypt(key)
+                Resource.success(wallet)
+            } catch (x: KeyCrypterException) {
+                Resource.error(x.message!!, null)
+            }
+        }
+
+        override fun onPostExecute(result: Resource<Wallet>) {
+            value = result
+            checkPinTask = null
         }
     }
 }

@@ -2,14 +2,17 @@
 <resources>
 
 	<string name="onboarding_create_wallet">Create a New Wallet</string>
-	<string name="onboarding_recover_wallet">Recover Wallet</string>
-	<string name="onboarding_restore_wallet">Restore Wallet from File</string>
+	<string name="onboarding_recover_wallet">Restore Wallet From Passphrase</string>
+	<string name="onboarding_restore_wallet">Restore Wallet From File</string>
 
-	<string name="create_pin_create_new_wallet">Create a New Wallet</string>
-	<string name="create_pin_set_pin">Set PIN</string>
-	<string name="create_pin_confirm_pin">Confirm PIN</string>
-	<string name="create_pin_encrypting">Encrypting wallet</string>
-	<string name="create_pin_message">This PIN will be required to unlock your app everytime when you use it.</string>
+	<string name="set_pin_create_new_wallet">Create a New Wallet</string>
+	<string name="set_pin_restore_wallet">Restore Wallet</string>
+	<string name="set_pin_enter_pin">Enter old PIN</string>
+	<string name="set_pin_set_pin">Set PIN</string>
+	<string name="set_pin_confirm_pin">Confirm PIN</string>
+	<string name="set_pin_encrypting">Encrypting wallet</string>
+	<string name="set_pin_decrypting">Decrypting wallet</string>
+	<string name="set_pin_message">This PIN will be required to unlock your app everytime when you use it.</string>
 
     <string name="send_coins_auto_lock_feasible">This transaction will settle instantly at no extra fee.</string>
 	<string name="send_coins_auto_lock_not_feasible">This transaction may take several minutes to settle. Complete instantly for %1$s%2$s?</string>
@@ -68,7 +71,7 @@
 		<item quantity="one">minute</item>
 		<item quantity="other">minutes</item>
 	</plurals>
-	
+
 	<plurals name="hour">
 		<item quantity="one">hour</item>
 		<item quantity="other">hours</item>
@@ -80,7 +83,7 @@
 	<string name="encrypt_new_key_chain_enter_pin_dialog_message">You must enter your PIN to finish the upgrade process.</string>
 	<string name="pin_code_required_dialog_message">This app now requires a PIN to spend and view the balance and transactions.</string>
     <string name="backup_wallet_seed_private_key_written_down_box">I have written down the recovery phrase</string>
-	
+
 	<string name="change_exchange_currency_code_message">Your local currency is %1$s, but in this app your default currency is set to %2$s. Would you like to change it to %1$s or leave it as %2$s?</string>
 	<string name="change_to">Change to %s</string>
 	<string name="leave_as">Leave as %s</string>
@@ -89,7 +92,7 @@
 
 	<string name="remind_later">Remind later</string>
 	<string name="backup_now">Backup now</string>
-	
+
 	<string name="notification_transactions_channel_name">Transactions</string>
 	<string name="notification_transactions_channel_description">Receive alerts about incoming transactions.</string>
 	<string name="notification_synchronization_channel_name">Synchronization</string>

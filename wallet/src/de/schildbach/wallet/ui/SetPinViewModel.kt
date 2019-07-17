@@ -31,17 +31,31 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
     val encryptWalletLiveData: EncryptWalletLiveData
         get() = _encryptKeysLiveData
 
+    fun setPin(pin: ArrayList<Int>) {
+        this.pin.clear()
+        this.pin.addAll(pin)
+    }
+
     fun encryptKeys() {
         val password = pin.joinToString("")
         if (!walletApplication.wallet.isEncrypted) {
-            _encryptKeysLiveData.encrypt(walletApplication.wallet, password, walletApplication.scryptIterationsTarget())
+            _encryptKeysLiveData.encrypt(password, walletApplication.scryptIterationsTarget())
         } else {
             log.warn("Trying to encrypt already encrypted wallet")
         }
     }
 
+    fun checkPin() {
+        val password = pin.joinToString("")
+        if (walletApplication.wallet.isEncrypted) {
+            _encryptKeysLiveData.checkPin(password)
+        } else {
+            log.warn("Trying to decrypt unencrypted wallet")
+        }
+    }
+
     fun initWallet() {
 //        walletApplication.saveWalletAndFinalizeInitialization()
-        _startActivityAction.call(Pair(WalletActivity::class.java, false))
+        _startActivityAction.call(Pair(WalletActivity::class.java, true))
     }
 }

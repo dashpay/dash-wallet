@@ -59,7 +59,7 @@ class OnboardingActivity : AppCompatActivity() {
                     walletApplication.configuration.setOnboardingComplete()
                     regularFlow()
                 } else {
-                    startActivity(Intent(this, SetPinActivity::class.java))
+                    startActivity(SetPinActivity.createIntent(this, R.string.set_pin_create_new_wallet))
                 }
             }
         }
@@ -114,7 +114,7 @@ class OnboardingActivity : AppCompatActivity() {
             dialog.show()
         })
         viewModel.startActivityAction.observe(this, Observer {
-            startActivity(Intent(this, it))
+            startActivity(it)
         })
     }
 

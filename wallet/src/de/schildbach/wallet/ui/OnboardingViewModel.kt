@@ -1,11 +1,12 @@
 package de.schildbach.wallet.ui
 
 import android.app.Application
+import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.livedata.InitWalletAsyncLiveData
 import de.schildbach.wallet.util.WalletUtils
+import de.schildbach.wallet_test.R
 import org.bitcoinj.crypto.MnemonicCode
 import org.bitcoinj.crypto.MnemonicException
 import org.bitcoinj.wallet.Wallet
@@ -27,7 +28,7 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
     val showRestoreWalletFailureAction
         get() = _showRestoreWalletFailureAction
 
-    private val _startActivityAction = SingleLiveEvent<Class<*>>()
+    private val _startActivityAction = SingleLiveEvent<Intent>()
     val startActivityAction
         get() = _startActivityAction
 
@@ -46,7 +47,7 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
         initBasicWalletStuffIfNeeded()
         val wallet = Wallet(Constants.NETWORK_PARAMETERS)
         walletApplication.wallet = wallet
-        _startActivityAction.call(SetPinActivity::class.java)
+        _startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_create_new_wallet))
     }
 
     fun restoreWalletFromSeed(words: MutableList<String>) {
@@ -60,13 +61,12 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
         val wallet = WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS)
         walletApplication.wallet = wallet
         log.info("successfully restored wallet from seed")
-        _startActivityAction.call(SetPinActivity::class.java)
+        _startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_restore_wallet))
     }
 
     fun restoreWalletFromFile(wallet: Wallet) {
         walletApplication.wallet = wallet
-        walletApplication.saveWalletAndFinalizeInitialization()
-        log.info("successfully restored wallet from file");
-        _startActivityAction.call(WalletActivity::class.java)
+        log.info("successfully restored wallet from file")
+        _startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_restore_wallet))
     }
 }
