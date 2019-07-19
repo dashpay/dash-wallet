@@ -56,8 +56,20 @@
             android:padding="16dp"
             android:text="@string/set_pin_message" />
 
-    </LinearLayout>
+        <Button
+            android:id="@+id/btn_confirm"
+            style="@style/NewMontserratButton.Secondary.Inverted"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginTop="32dp"
+            android:layout_marginEnd="32dp"
+            android:layout_marginRight="32dp"
+            android:text="Confirm"
+            android:textColor="@color/keyboard_button"
+            android:visibility="gone" />
 
+    </LinearLayout>
 
     <de.schildbach.wallet.ui.widget.NumericKeyboardView
         android:id="@+id/numeric_keyboard"

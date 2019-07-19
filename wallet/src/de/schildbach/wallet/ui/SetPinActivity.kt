@@ -21,15 +21,12 @@ import de.schildbach.wallet_test.R
 class SetPinActivity : AppCompatActivity() {
 
     private lateinit var numericKeyboardView: NumericKeyboardView
-
+    private lateinit var confirmButtonView: View
+    private lateinit var messageView: View
     private lateinit var viewModel: SetPinViewModel
-
     private lateinit var pinProgressSwitcherView: ViewSwitcher
-
     private lateinit var pinPreviewView: PinPreviewView
-
     private lateinit var pageTitleView: TextView
-
     private lateinit var pageMessageView: TextView
 
     val pin = arrayListOf<Int>()
@@ -83,7 +80,10 @@ class SetPinActivity : AppCompatActivity() {
         pinPreviewView = findViewById(R.id.pin_preview)
         pageTitleView = findViewById(R.id.page_title)
         pageMessageView = findViewById(R.id.message)
+        messageView = findViewById(R.id.message)
+        confirmButtonView = findViewById(R.id.btn_confirm)
         numericKeyboardView = findViewById(R.id.numeric_keyboard)
+        numericKeyboardView.setCancelEnabled(false)
         numericKeyboardView.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
             override fun onNumber(number: Int) {
@@ -111,6 +111,13 @@ class SetPinActivity : AppCompatActivity() {
             }
 
             override fun onCancel() {
+
+            }
+        }
+        confirmButtonView.setOnClickListener {
+            if (pin.size == 0) {
+                pinPreviewView.shake()
+            } else {
                 nextStep()
             }
         }
@@ -144,12 +151,13 @@ class SetPinActivity : AppCompatActivity() {
                 pageMessageView.visibility = View.VISIBLE
                 numericKeyboardView.visibility = View.VISIBLE
                 supportActionBar!!.setDisplayHomeAsUpEnabled(true)
+                messageView.visibility = View.GONE
+                confirmButtonView.visibility = View.VISIBLE
                 viewModel.pin.clear()
                 pin.clear()
             }
             State.SET_PIN -> {
                 pinPreviewView.mode = PinPreviewView.PinType.STANDARD
-                pinPreviewView.clear()
                 pageTitleView.setText(R.string.set_pin_set_pin)
                 if (pinProgressSwitcherView.currentView.id == R.id.progress) {
                     pinProgressSwitcherView.showPrevious()
@@ -157,6 +165,9 @@ class SetPinActivity : AppCompatActivity() {
                 pageMessageView.visibility = View.VISIBLE
                 numericKeyboardView.visibility = View.VISIBLE
                 supportActionBar!!.setDisplayHomeAsUpEnabled(true)
+                messageView.visibility = View.VISIBLE
+                confirmButtonView.visibility = View.GONE
+                pinPreviewView.clear()
                 viewModel.pin.clear()
                 pin.clear()
             }
@@ -168,6 +179,8 @@ class SetPinActivity : AppCompatActivity() {
                 pageMessageView.visibility = View.VISIBLE
                 numericKeyboardView.visibility = View.VISIBLE
                 supportActionBar!!.setDisplayHomeAsUpEnabled(true)
+                messageView.visibility = View.VISIBLE
+                confirmButtonView.visibility = View.GONE
                 Handler().postDelayed({
                     pinPreviewView.clear()
                 }, 200)
@@ -181,6 +194,7 @@ class SetPinActivity : AppCompatActivity() {
                 pageMessageView.visibility = View.INVISIBLE
                 numericKeyboardView.visibility = View.INVISIBLE
                 supportActionBar!!.setDisplayHomeAsUpEnabled(false)
+                confirmButtonView.visibility = View.GONE
             }
             State.DECRYPTING -> {
                 pageTitleView.setText(R.string.set_pin_decrypting)
@@ -190,6 +204,7 @@ class SetPinActivity : AppCompatActivity() {
                 pageMessageView.visibility = View.INVISIBLE
                 numericKeyboardView.visibility = View.INVISIBLE
                 supportActionBar!!.setDisplayHomeAsUpEnabled(false)
+                confirmButtonView.visibility = View.GONE
             }
         }
         state = newState
@@ -241,10 +256,10 @@ class SetPinActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
-        if (pin.size > 0) {
-            setState(state)
-        } else {
-            if (state != State.ENCRYPTING && state != State.DECRYPTING) {
+        when {
+            pin.size > 0 -> setState(state)
+            state == State.CONFIRM_PIN -> setState(State.SET_PIN)
+            else -> if (state != State.ENCRYPTING && state != State.DECRYPTING) {
                 finish()
             }
         }

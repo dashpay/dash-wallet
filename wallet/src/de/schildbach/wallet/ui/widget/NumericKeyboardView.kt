@@ -3,7 +3,6 @@ package de.schildbach.wallet.ui.widget
 import android.content.Context
 import android.util.AttributeSet
 import android.view.View
-import android.widget.FrameLayout
 import android.widget.TableLayout
 import de.schildbach.wallet_test.R
 
@@ -38,6 +37,10 @@ class NumericKeyboardView(context: Context, attrs: AttributeSet) : TableLayout(c
             R.id.btn_back -> onBackClick()
             else -> onNumberClick((v.tag as String).toInt())
         }
+    }
+
+    fun setCancelEnabled(enabled: Boolean) {
+        findViewById<View>(R.id.btn_cancel).isEnabled = enabled
     }
 
     private fun onCancelClick() {
