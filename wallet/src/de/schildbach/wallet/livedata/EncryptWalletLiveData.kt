@@ -54,7 +54,6 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
 
                 org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
                 walletApplication.saveWalletAndFinalizeInitialization()
-                walletApplication.configuration.setOnboardingComplete()
 
                 log.info("wallet successfully encrypted, using key derived by new spending password (${keyCrypter.scryptParameters.n} scrypt iterations)")
 
