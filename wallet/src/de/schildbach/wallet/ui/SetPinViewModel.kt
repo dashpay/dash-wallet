@@ -55,7 +55,6 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun initWallet() {
-//        walletApplication.saveWalletAndFinalizeInitialization()
         _startActivityAction.call(Pair(WalletActivity::class.java, true))
     }
 }
