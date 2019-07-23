@@ -49,14 +49,13 @@ class OnboardingActivity : AppCompatActivity() {
         viewModel = ViewModelProviders.of(this).get(OnboardingViewModel::class.java)
 
         walletApplication = (application as WalletApplication)
-        if (walletApplication.walletConfigured()) {
+        if (walletApplication.walletFileExists()) {
             regularFlow()
         } else {
             if (walletApplication.wallet == null) {
                 onboarding()
             } else {
                 if (walletApplication.wallet.isEncrypted) {
-                    walletApplication.configuration.setOnboardingComplete()
                     regularFlow()
                 } else {
                     startActivity(SetPinActivity.createIntent(this, R.string.set_pin_create_new_wallet))

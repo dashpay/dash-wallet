@@ -114,8 +114,8 @@ public class WalletApplication extends MultiDexApplication {
         instance = this;
     }
 
-    public boolean walletConfigured() {
-        return walletFile.exists() && config.getOnboardingComplete();
+    public boolean walletFileExists() {
+        return walletFile.exists();
     }
 
     @Override
