@@ -4,7 +4,6 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.EncryptWalletLiveData
-import org.bitcoinj.crypto.MnemonicException
 import org.slf4j.LoggerFactory
 
 class SetPinViewModel(application: Application) : AndroidViewModel(application) {
@@ -15,21 +14,8 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
 
     val pin = arrayListOf<Int>()
 
-    private val _showMessageAction = SingleLiveEvent<String>()
-    val showToastAction
-        get() = _showMessageAction
-
-    private val _showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
-    val showRestoreWalletFailureAction
-        get() = _showRestoreWalletFailureAction
-
-    private val _startActivityAction = SingleLiveEvent<Pair<Class<*>, Boolean>>()
-    val startActivityAction
-        get() = _startActivityAction
-
-    private val _encryptKeysLiveData = EncryptWalletLiveData(application)
-    val encryptWalletLiveData: EncryptWalletLiveData
-        get() = _encryptKeysLiveData
+    internal val startActivityAction = SingleLiveEvent<Pair<Class<*>, Boolean>>()
+    internal val encryptWalletLiveData = EncryptWalletLiveData(application)
 
     fun setPin(pin: ArrayList<Int>) {
         this.pin.clear()
@@ -39,7 +25,7 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
     fun encryptKeys() {
         val password = pin.joinToString("")
         if (!walletApplication.wallet.isEncrypted) {
-            _encryptKeysLiveData.encrypt(password, walletApplication.scryptIterationsTarget())
+            encryptWalletLiveData.encrypt(password, walletApplication.scryptIterationsTarget())
         } else {
             log.warn("Trying to encrypt already encrypted wallet")
         }
@@ -47,14 +33,18 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
 
     fun checkPin() {
         val password = pin.joinToString("")
+        checkPin(password)
+    }
+
+    fun checkPin(password: String) {
         if (walletApplication.wallet.isEncrypted) {
-            _encryptKeysLiveData.checkPin(password)
+            encryptWalletLiveData.checkPin(password)
         } else {
             log.warn("Trying to decrypt unencrypted wallet")
         }
     }
 
     fun initWallet() {
-        _startActivityAction.call(Pair(WalletActivity::class.java, true))
+        startActivityAction.call(Pair(WalletActivity::class.java, true))
     }
 }

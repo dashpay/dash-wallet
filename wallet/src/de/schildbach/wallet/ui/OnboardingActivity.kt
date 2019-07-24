@@ -1,10 +1,7 @@
 package de.schildbach.wallet.ui
 
-import android.Manifest
 import android.annotation.SuppressLint
-import android.app.Dialog
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.drawable.LayerDrawable
 import android.os.Bundle
 import android.os.Handler
@@ -13,26 +10,14 @@ import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
-import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.ui.DialogBuilder
 
 
-class OnboardingActivity : AppCompatActivity() {
-
-    companion object {
-        const val DIALOG_RESTORE_WALLET_PERMISSION = 1
-
-        const val DIALOG_RESTORE_WALLET = 2
-
-        const val REQUEST_CODE_RESTORE_WALLET = 1
-    }
+class OnboardingActivity : RestoreFromFileActivity() {
 
     private lateinit var viewModel: OnboardingViewModel
 
@@ -85,11 +70,10 @@ class OnboardingActivity : AppCompatActivity() {
             viewModel.createNewWallet()
         }
         findViewById<Button>(R.id.recovery_wallet).setOnClickListener {
-            viewModel.initBasicWalletStuffIfNeeded()
+            walletApplication.initEnvironmentIfNeeded()
             RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
         }
         findViewById<Button>(R.id.restore_wallet).setOnClickListener {
-            viewModel.initBasicWalletStuffIfNeeded()
             restoreWalletFromFile()
         }
     }
@@ -127,56 +111,6 @@ class OnboardingActivity : AppCompatActivity() {
 
     fun restoreWalletFromSeed(words: MutableList<String>) {
         viewModel.restoreWalletFromSeed(words)
-    }
-
-    private fun restoreWalletFromFile() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            showDialog(DIALOG_RESTORE_WALLET)
-        } else {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_CODE_RESTORE_WALLET)
-        }
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        if (requestCode == REQUEST_CODE_RESTORE_WALLET) {
-            when {
-                grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED -> restoreWalletFromFile()
-                else -> showDialog(DIALOG_RESTORE_WALLET_PERMISSION)
-            }
-        } else {
-            super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        }
-    }
-
-    override fun onCreateDialog(id: Int): Dialog {
-        return when (id) {
-            DIALOG_RESTORE_WALLET_PERMISSION -> createRestoreWalletPermissionDialog()
-            DIALOG_RESTORE_WALLET -> createRestoreWalletDialog()
-            else -> super.onCreateDialog(id)
-        }
-    }
-
-    private fun createRestoreWalletPermissionDialog(): Dialog {
-        return RestoreFromFileHelper.createRestoreWalletPermissionDialog(this)
-    }
-
-    private fun createRestoreWalletDialog(): Dialog {
-        return RestoreFromFileHelper.createRestoreWalletDialog(this, object : RestoreFromFileHelper.OnRestoreWalletListener {
-            override fun onRestoreWallet(wallet: Wallet) {
-                viewModel.restoreWalletFromFile(wallet)
-            }
-
-            override fun onRetryRequest() {
-                showDialog(DIALOG_RESTORE_WALLET)
-            }
-        })
-    }
-
-    override fun onPrepareDialog(id: Int, dialog: Dialog?) {
-        when (id) {
-            DIALOG_RESTORE_WALLET -> RestoreFromFileHelper.prepareRestoreWalletDialog(this, false, dialog)
-            else -> super.onPrepareDialog(id, dialog)
-        }
     }
 
     override fun startActivity(intent: Intent?) {

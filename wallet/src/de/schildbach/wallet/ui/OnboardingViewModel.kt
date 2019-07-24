@@ -18,36 +18,17 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
 
     private val walletApplication = application as WalletApplication
 
-    private var basicWalletStuffInitialised = false
+    internal val showToastAction = SingleLiveEvent<String>()
+    internal val showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
+    internal val startActivityAction = SingleLiveEvent<Intent>()
 
-    private val _showMessageAction = SingleLiveEvent<String>()
-    val showToastAction
-        get() = _showMessageAction
-
-    private val _showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
-    val showRestoreWalletFailureAction
-        get() = _showRestoreWalletFailureAction
-
-    private val _startActivityAction = SingleLiveEvent<Intent>()
-    val startActivityAction
-        get() = _startActivityAction
-
-//    private val _initWalletAsyncLiveData = InitWalletAsyncLiveData(application)
-//    val initWalletAsyncLiveData: InitWalletAsyncLiveData
-//        get() = _initWalletAsyncLiveData
-
-    fun initBasicWalletStuffIfNeeded() {
-        if (!basicWalletStuffInitialised) {
-            walletApplication.initEnvironment()
-            basicWalletStuffInitialised = false
-        }
-    }
+//    internal val initWalletAsyncLiveData = InitWalletAsyncLiveData(application)
 
     fun createNewWallet() {
-        initBasicWalletStuffIfNeeded()
+        walletApplication.initEnvironmentIfNeeded()
         val wallet = Wallet(Constants.NETWORK_PARAMETERS)
         walletApplication.wallet = wallet
-        _startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_create_new_wallet))
+        startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_create_new_wallet))
     }
 
     fun restoreWalletFromSeed(words: MutableList<String>) {
@@ -55,18 +36,12 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
             MnemonicCode.INSTANCE.check(words)
         } catch (x: MnemonicException) {
             log.info("problem restoring wallet from seed: ", x)
-            _showRestoreWalletFailureAction.call(x)
+            showRestoreWalletFailureAction.call(x)
             return
         }
         val wallet = WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS)
         walletApplication.wallet = wallet
         log.info("successfully restored wallet from seed")
-        _startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_restore_wallet))
-    }
-
-    fun restoreWalletFromFile(wallet: Wallet) {
-        walletApplication.wallet = wallet
-        log.info("successfully restored wallet from file")
-        _startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_restore_wallet))
+        startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_restore_wallet))
     }
 }

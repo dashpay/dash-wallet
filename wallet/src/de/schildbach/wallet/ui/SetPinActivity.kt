@@ -44,10 +44,17 @@ class SetPinActivity : AppCompatActivity() {
     companion object {
 
         private const val EXTRA_TITLE_RES_ID = "extra_title_res_id"
+        private const val EXTRA_PASSWORD = "extra_password"
 
         fun createIntent(context: Context, titleResId: Int): Intent {
             val intent = Intent(context, SetPinActivity::class.java)
             intent.putExtra(EXTRA_TITLE_RES_ID, titleResId)
+            return intent
+        }
+
+        fun createIntent(context: Context, titleResId: Int, password: String?): Intent {
+            val intent = createIntent(context, titleResId)
+            intent.putExtra(EXTRA_PASSWORD, password)
             return intent
         }
     }
@@ -71,7 +78,12 @@ class SetPinActivity : AppCompatActivity() {
 
         val walletApplication = application as WalletApplication
         if (walletApplication.wallet.isEncrypted) {
-            setState(State.DECRYPT)
+            val password = intent.getStringExtra(EXTRA_PASSWORD)
+            if (password != null) {
+                viewModel.checkPin(password)
+            } else {
+                setState(State.DECRYPT)
+            }
         }
     }
 
@@ -83,6 +95,7 @@ class SetPinActivity : AppCompatActivity() {
         messageView = findViewById(R.id.message)
         confirmButtonView = findViewById(R.id.btn_confirm)
         numericKeyboardView = findViewById(R.id.numeric_keyboard)
+
         numericKeyboardView.setCancelEnabled(false)
         numericKeyboardView.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
@@ -224,11 +237,10 @@ class SetPinActivity : AppCompatActivity() {
                     }
                 }
                 Status.LOADING -> {
-                    setState(if (state == State.DECRYPT) State.DECRYPTING else State.ENCRYPTING)
+                    setState(if (state == State.CONFIRM_PIN) State.ENCRYPTING else State.DECRYPTING)
                 }
                 Status.SUCCESS -> {
                     if (state == State.DECRYPTING) {
-                        pinPreviewView.mode = PinPreviewView.PinType.STANDARD
                         setState(State.SET_PIN)
                     } else {
                         viewModel.initWallet()
@@ -272,12 +284,12 @@ class SetPinActivity : AppCompatActivity() {
     }
 
     override fun startActivity(intent: Intent?) {
-        overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
         super.startActivity(intent)
+        overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
     }
 
     override fun finish() {
-        overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
         super.finish()
+        overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
     }
 }

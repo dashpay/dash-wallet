@@ -297,6 +297,6 @@ public final class RestoreWalletActivity extends AbstractWalletActivity
 
     @Override
     public void onNewKeyChainEncrypted() {
-        BackupWalletToSeedDialogFragment.show(getSupportFragmentManager(), true);
+
     }
 }
