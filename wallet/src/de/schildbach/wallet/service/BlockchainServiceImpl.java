@@ -656,7 +656,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
         try {
             bootStrapStream = getAssets().open(Constants.Files.MNLIST_BOOTSTRAP_FILENAME);
-            wallet.getContext().masternodeListManager.setBootStrapStream(bootStrapStream);
+            SimplifiedMasternodeListManager.setBootStrapStream(bootStrapStream);
         } catch (IOException x) {
             log.info("cannot load the boot strap stream.  " + x.getMessage());
         }
