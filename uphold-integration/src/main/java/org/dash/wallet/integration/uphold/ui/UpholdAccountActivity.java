@@ -57,6 +57,7 @@ public class UpholdAccountActivity extends AppCompatActivity {
     private CurrencyTextView balanceView;
     private BigDecimal balance;
     private String receivingAddress;
+    private final MonetaryFormat monetaryFormat = new MonetaryFormat().noCode().minDecimals(8);
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -69,7 +70,7 @@ public class UpholdAccountActivity extends AppCompatActivity {
         }
 
         balanceView = findViewById(R.id.uphold_account_balance);
-        balanceView.setFormat(new MonetaryFormat().noCode());
+        balanceView.setFormat(monetaryFormat);
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
