@@ -33,6 +33,7 @@ import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
@@ -99,12 +100,13 @@ public class UpholdAccountActivity extends AppCompatActivity {
             }
         });
 
-        findViewById(R.id.uphold_logout).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                openLogOutUrl();
-            }
-        });
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.uphold_options, menu);
+
+        return super.onCreateOptionsMenu(menu);
     }
 
     @Override
@@ -113,6 +115,10 @@ public class UpholdAccountActivity extends AppCompatActivity {
             case android.R.id.home:
                 finish();
                 return true;
+        }
+        if(item.getItemId() == R.id.uphold_logout) {
+            openLogOutUrl();
+            return true;
         }
 
         return super.onOptionsItemSelected(item);
@@ -211,7 +217,7 @@ public class UpholdAccountActivity extends AppCompatActivity {
 
     private void revokeAccessToken() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(R.string.uphold_logout);
+        builder.setTitle(R.string.uphold_logout_title);
         builder.setPositiveButton(R.string.uphold_logout_go_to_website, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int button) {
