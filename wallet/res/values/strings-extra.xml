@@ -112,4 +112,13 @@
 
 	<string name="preferences_enable_payment_request_summary">Use payment protocol for QR-code initiated payments</string>
 	<string name="preferences_enable_payment_request_title">BIP70 for scan-to-pay</string>
+
+	<string name="verify_continue">Continue</string>
+	<string name="verify">Verify</string>
+    <string name="verify_seed_title">Please write this down</string>
+	<string name="verify_seed_write_down_confirmation">I have written this down</string>
+    <string name="verify_seed_buttons_tip">Please tap on the words from your recovery phrase in the right order</string>
+	<string name="verify_seed_success_title">Verified Successfully</string>
+	<string name="verify_seed_success_message">Your wallet is secured now. You can use your recovery phrase anytime to recover your account on another device.</string>
+
 </resources>
