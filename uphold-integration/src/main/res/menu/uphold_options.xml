@@ -5,6 +5,6 @@
     <item
         android:id="@+id/uphold_logout"
         android:title="@string/uphold_logout"
-        android:showAsAction="always"/>
+        app:showAsAction="always"/>
 
 </menu>
