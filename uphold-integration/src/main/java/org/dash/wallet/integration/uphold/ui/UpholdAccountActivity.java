@@ -72,6 +72,7 @@ public class UpholdAccountActivity extends AppCompatActivity {
 
         balanceView = findViewById(R.id.uphold_account_balance);
         balanceView.setFormat(monetaryFormat);
+        balanceView.setApplyMarkup(false);
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -100,13 +101,13 @@ public class UpholdAccountActivity extends AppCompatActivity {
             }
         });
 
-    }
+        findViewById(R.id.uphold_logout).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openLogOutUrl();
+            }
+        });
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.uphold_options, menu);
-
-        return super.onCreateOptionsMenu(menu);
     }
 
     @Override
