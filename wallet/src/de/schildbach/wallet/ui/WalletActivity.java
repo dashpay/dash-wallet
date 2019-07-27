@@ -30,7 +30,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.content.res.Resources;
 import android.net.Uri;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
@@ -38,24 +37,21 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
-import androidx.annotation.RequiresApi;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.navigation.NavigationView;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.core.view.GravityCompat;
-import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.appcompat.app.ActionBarDrawerToggle;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.widget.Toolbar;
 import android.telephony.TelephonyManager;
 import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.animation.AnimationUtils;
 
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AlertDialog;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+
+import com.google.android.material.navigation.NavigationView;
 import com.google.common.collect.ImmutableList;
 import com.squareup.okhttp.HttpUrl;
 
@@ -100,7 +96,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
         EnableFingerprintDialog.OnFingerprintEnabledListener,
-        EncryptKeysDialogFragment.OnOnboardingCompleteListener {
+        EncryptKeysDialogFragment.OnOnboardingCompleteListener,
+        DialogInterface.OnDismissListener {
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
     private static final int DIALOG_RESTORE_WALLET = 2;
@@ -141,23 +138,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
         wallet = application.getWallet();
         WalletLock.getInstance().setConfiguration(config);
 
-        setContentView(R.layout.wallet_activity_onepane_vertical);
+        setContentView(R.layout.home_activity);
 
         if (savedInstanceState == null) {
-            final View contentView = findViewById(android.R.id.content);
-            final View slideInLeftView = contentView.findViewWithTag("slide_in_left");
-            if (slideInLeftView != null)
-                slideInLeftView.startAnimation(AnimationUtils.loadAnimation(this, R.anim.slide_in_left));
-            final View slideInRightView = contentView.findViewWithTag("slide_in_right");
-            if (slideInRightView != null)
-                slideInRightView.startAnimation(AnimationUtils.loadAnimation(this, R.anim.slide_in_right));
-            final View slideInTopView = contentView.findViewWithTag("slide_in_top");
-            if (slideInTopView != null)
-                slideInTopView.startAnimation(AnimationUtils.loadAnimation(this, R.anim.slide_in_top));
-            final View slideInBottomView = contentView.findViewWithTag("slide_in_bottom");
-            if (slideInBottomView != null)
-                slideInBottomView.startAnimation(AnimationUtils.loadAnimation(this, R.anim.slide_in_bottom));
-
             checkAlerts();
         }
 
@@ -221,9 +204,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void initView() {
-        Toolbar toolbarView = initToolbar();
-        initNavigationDrawer(toolbarView);
-        initFloatingButton();
+        initNavigationDrawer();
+        initQuickActions();
         findViewById(R.id.uphold_account_section).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -231,49 +213,69 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 viewDrawer.closeDrawer(GravityCompat.START);
             }
         });
-    }
-
-    private Toolbar initToolbar() {
-        Toolbar toolbarView = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbarView);
-        setTitle("");
-        return toolbarView;
-    }
-
-    private void initNavigationDrawer(Toolbar toolbarView) {
-        final NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(this);
-
-        viewDrawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, viewDrawer, toolbarView, R.string.navigation_drawer_open,
-                R.string.navigation_drawer_close) {
-
+        findViewById(R.id.pay_btn).setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onDrawerOpened(View drawerView) {
-                super.onDrawerOpened(drawerView);
-                final Resources res = getResources();
-                Menu menu = navigationView.getMenu();
-                menu.findItem(R.id.nav_exchenge_rates).setEnabled(res.getBoolean(R.bool.show_exchange_rates_option));
+            public void onClick(View v) {
+                handleSendCoins();
             }
-        };
-        viewDrawer.addDrawerListener(toggle);
-        toggle.syncState();
-
-        viewFakeForSafetySubmenu = new View(this);
-        viewFakeForSafetySubmenu.setVisibility(View.GONE);
-        viewDrawer.addView(viewFakeForSafetySubmenu);
-        registerForContextMenu(viewFakeForSafetySubmenu);
+        });
+        findViewById(R.id.receive_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                handleRequestCoins();
+            }
+        });
     }
 
-    private void initFloatingButton() {
-        FloatingActionButton fabScanQr = (FloatingActionButton) findViewById(R.id.fab_scan_qr);
-        fabScanQr.setOnClickListener(new View.OnClickListener() {
+    private void initQuickActions() {
+        showHideSecureAction();
+        findViewById(R.id.secure_action).setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
+            public void onClick(View v) {
+                if (config.remindBackupSeed()) {
+                    handleBackupWalletToSeed();
+                } else if (Constants.SUPPORT_BOTH_BACKUP_WARNINGS && config.remindBackup()) {
+                    handleBackupWallet();
+                }
+            }
+        });
+        findViewById(R.id.scan_to_pay_action).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
                 handleScan();
             }
         });
+        findViewById(R.id.buy_sell_action).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startUpholdActivity();
+            }
+        });
+        findViewById(R.id.pay_to_address_action).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                findViewById(R.id.secure_action).setVisibility(View.VISIBLE);
+            }
+        });
+    }
+
+    private void showHideSecureAction() {
+        View secureActionView = findViewById(R.id.secure_action);
+        boolean showBackupDisclaimer = (config.remindBackupSeed()
+                || (Constants.SUPPORT_BOTH_BACKUP_WARNINGS && config.remindBackup()))
+                && !WalletApplication.getInstance().isBackupDisclaimerDismissed();
+        secureActionView.setVisibility(showBackupDisclaimer ? View.VISIBLE : View.GONE);
+    }
+
+    private void initNavigationDrawer() {
+        final NavigationView navigationView = findViewById(R.id.nav_view);
+        navigationView.setNavigationItemSelectedListener(this);
+
+        viewFakeForSafetySubmenu = new View(this);
+        viewFakeForSafetySubmenu.setVisibility(View.GONE);
+        viewDrawer = findViewById(R.id.drawer_layout);
+        viewDrawer.addView(viewFakeForSafetySubmenu);
+        registerForContextMenu(viewFakeForSafetySubmenu);
     }
 
     @Override
@@ -503,13 +505,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
                     REQUEST_CODE_RESTORE_WALLET);
     }
+
     public void handleBackupWalletToSeed() {
-        //if (ContextCompat.checkSelfPermission(this,
-        //        Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
         BackupWalletToSeedDialogFragment.show(getSupportFragmentManager());
-        //else
-        //    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-        //            REQUEST_CODE_BACKUP_WALLET);
     }
 
     public void handleRestoreWalletFromSeed() {
@@ -747,7 +745,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     R.string.report_issue_dialog_title_crash, R.string.report_issue_dialog_message_crash) {
                 @Override
                 protected CharSequence subject() {
-                    return  Constants.REPORT_SUBJECT_BEGIN + packageInfo.versionName + " " + Constants.REPORT_SUBJECT_CRASH;
+                    return Constants.REPORT_SUBJECT_BEGIN + packageInfo.versionName + " " + Constants.REPORT_SUBJECT_CRASH;
                 }
 
                 @Override
@@ -878,8 +876,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private void checkRestoredWalletEncryptionDialog() {
         if (!wallet.isEncrypted()) {
             handleEncryptKeysRestoredWallet();
-        }
-        else {
+        } else {
             resetBlockchain();
         }
     }
@@ -1011,12 +1008,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 //
                 UpgradeWalletDisclaimerDialog.show(getSupportFragmentManager());
             }
-        }
-        else {
-            if(restoreBackup) {
+        } else {
+            if (restoreBackup) {
                 checkRestoredWalletEncryptionDialog();
-            }
-            else
+            } else
                 checkWalletEncryptionDialog();
         }
     }
@@ -1024,10 +1019,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
     //BIP44 Wallet Upgrade Dialog Dismissed (Ok button pressed)
     @Override
     public void onUpgradeConfirmed() {
-        if(isRestoringBackup) {
+        if (isRestoringBackup) {
             checkRestoredWalletEncryptionDialog();
-        }
-        else {
+        } else {
             checkWalletEncryptionDialog();
         }
     }
@@ -1057,12 +1051,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     updateCurrencyExchange(networkCountry.toUpperCase());
                 } else {
                     //Couldn't obtain country code - Use Default
-                    if(config.getExchangeCurrencyCode() == null)
+                    if (config.getExchangeCurrencyCode() == null)
                         config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
                 }
             } else {
                 //No cellular network - Wifi Only
-                if(config.getExchangeCurrencyCode() == null)
+                if (config.getExchangeCurrencyCode() == null)
                     config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
             }
         } catch (Exception e) {
@@ -1073,6 +1067,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     /**
      * Check whether app was ever updated or if it is an installation that was never updated.
      * Show dialog to update if it's being updated or change it automatically.
+     *
      * @param countryCode countryCode ISO 3166-1 alpha-2 country code.
      */
     private void updateCurrencyExchange(String countryCode) {
@@ -1102,6 +1097,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     /**
      * Show a Dialog and if user confirms it, set the default fiat currency exchange rate using
      * the country code to generate a Locale and get the currency code from it.
+     *
      * @param newCurrencyCode currency code.
      */
     private void showFiatCurrencyChangeDetectedDialog(final String currentCurrencyCode,
@@ -1141,5 +1137,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (veryFirstLaunch) {
             canAutoLockGuard.register(true);
         }
+    }
+
+    @Override
+    public void onDismiss(DialogInterface dialog) {
+        showHideSecureAction();
     }
 }

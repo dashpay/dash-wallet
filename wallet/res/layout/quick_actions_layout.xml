@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/quick_actions_pane"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:animateLayoutChanges="true"
+    app:layout_constraintTop_toBottomOf="@+id/quick_actions_pane">
+
+    <FrameLayout
+        android:id="@+id/secure_action"
+        style="@style/DashButton.White"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginLeft="4dp"
+        android:layout_marginRight="4dp"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintEnd_toStartOf="@+id/scan_to_pay_action"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_default="percent"
+        app:layout_constraintWidth_percent="0.24"
+        tools:ignore="UseCompoundDrawables">
+
+        <TextView
+            style="@style/TextViewStyle.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:drawableTop="@drawable/ic_secure_quick_action"
+            android:gravity="center"
+            android:text="@string/quick_action_secure_now"
+            android:textSize="12sp" />
+
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/scan_to_pay_action"
+        style="@style/DashButton.White"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginLeft="4dp"
+        android:layout_marginRight="4dp"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintStart_toEndOf="@+id/secure_action"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_default="percent"
+        app:layout_constraintWidth_percent="0.24"
+        tools:ignore="UseCompoundDrawables">
+
+        <TextView
+            style="@style/TextViewStyle.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:drawableTop="@drawable/scan_to_pay"
+            android:drawableTint="@color/dash_blue"
+            android:gravity="center"
+            android:text="@string/quick_action_scan_to_pay"
+            android:textSize="12sp" />
+
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/pay_to_address_action"
+        style="@style/DashButton.White"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginLeft="4dp"
+        android:layout_marginRight="4dp"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintStart_toEndOf="@+id/scan_to_pay_action"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_default="percent"
+        app:layout_constraintWidth_percent="0.24"
+        tools:ignore="UseCompoundDrawables">
+
+        <TextView
+            style="@style/TextViewStyle.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:drawableTop="@drawable/ic_arrow_upward_blue_24dp"
+            android:gravity="center"
+            android:text="@string/quick_action_pay_to_address"
+            android:textSize="12sp" />
+
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/buy_sell_action"
+        style="@style/DashButton.White"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginLeft="4dp"
+        android:layout_marginRight="4dp"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintStart_toEndOf="@+id/pay_to_address_action"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_default="percent"
+        app:layout_constraintWidth_percent="0.24"
+        tools:ignore="UseCompoundDrawables">
+
+        <TextView
+            style="@style/TextViewStyle.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:drawableTop="@drawable/ic_arrow_upward_blue_24dp"
+            android:gravity="center"
+            android:text="@string/quick_action_buy_sell"
+            android:textSize="12sp" />
+
+    </FrameLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

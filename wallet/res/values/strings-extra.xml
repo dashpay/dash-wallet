@@ -14,6 +14,17 @@
 	<string name="set_pin_decrypting">Decrypting wallet</string>
 	<string name="set_pin_message">This PIN will be required to unlock your app everytime when you use it.</string>
 
+	<string name="home_pay">Pay</string>
+	<string name="home_receive">Receive</string>
+	<string name="home_available_balance">Available balance</string>
+
+	<string name="quick_action_secure_now">Secure\nWallet Now</string>
+	<string name="quick_action_scan_to_pay">Scan to\nPay</string>
+	<string name="quick_action_pay_to_address">Pay to\nAddress</string>
+	<string name="quick_action_buy_sell">Buy / Sell\nDash</string>
+
+	<string name="history_title">History</string>
+
     <string name="send_coins_auto_lock_feasible">This transaction will settle instantly at no extra fee.</string>
 	<string name="send_coins_auto_lock_not_feasible">This transaction may take several minutes to settle. Complete instantly for %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">This transaction may take several minutes to settle.</string>
@@ -115,4 +126,11 @@
 
 	<string name="preferences_enable_payment_request_summary">Use payment protocol for QR-code initiated payments</string>
 	<string name="preferences_enable_payment_request_title">BIP70 for scan-to-pay</string>
+
+
+	<string-array name="history_filter">
+		<item>All</item>
+		<item>Received</item>
+		<item>Sent</item>
+	</string-array>
 </resources>

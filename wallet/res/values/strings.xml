@@ -25,9 +25,7 @@
     <string name="exchange_rates_fragment_source">Price from %s</string>
     <string name="exchange_rates_options_search">Search exchange rate</string>
     <string name="exchange_rates_context_set_as_default_title">Set as default</string>
-    <string name="wallet_transactions_fragment_empty_text_received">No Dash received so far.</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">No Dash sent so far.</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">How to get Dash?\n\nTrade for traditional money,\nsell goods or services or\nearn by working.</string>
+    <string name="wallet_transactions_fragment_empty_text">There are no transactions to display</string>
     <string name="wallet_transactions_row_warning_backup">Congratulations, you received your first payment! Have you already backed up your wallet, to protect against loss?</string>
     <string name="wallet_transactions_row_warning_storage_encryption">Hint: to increase the safety of your wallet, you can &lt;u&gt;encrypt your device&lt;/u&gt;. This also protects data of other apps.</string>
     <string name="wallet_transactions_fragment_coinbase">mined</string>
@@ -338,9 +336,6 @@
     <string name="error_bluetooth">Bluetooth error: %1$s</string>
 
     <string name="transaction_fragment_confirmations_label">Confirmations</string>
-
-    <string name="navigation_drawer_open">Open navigation drawer</string>
-    <string name="navigation_drawer_close">Close navigation drawer</string>
 
     <string name="dash_slogan">Instant - Private - Secure</string>
     <string name="dash_wallet">Wallet</string>

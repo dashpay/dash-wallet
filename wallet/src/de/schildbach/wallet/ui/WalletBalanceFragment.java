@@ -130,7 +130,7 @@ public final class WalletBalanceFragment extends Fragment {
             viewBalance.setEnabled(false);
         }
 
-        viewBalanceBtc = (CurrencyTextView) view.findViewById(R.id.wallet_balance_btc);
+        viewBalanceBtc = view.findViewById(R.id.wallet_balance_dash);
         viewBalanceBtc.setPrefixScaleX(0.9f);
 
         viewBalanceTooMuch = view.findViewById(R.id.wallet_balance_too_much);

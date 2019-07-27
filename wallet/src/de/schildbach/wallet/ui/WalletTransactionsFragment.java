@@ -72,6 +72,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
+
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
@@ -91,16 +93,17 @@ import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.PopupMenu.OnMenuItemClickListener;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 /**
@@ -129,10 +132,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     private ImageView fingerprintIcon;
     private TextView fingerprintText;
     private RecyclerView recyclerView;
-    private View backupDisclaimerView;
-    private TextView backupDisclaimerTitle;
     private TransactionsAdapter adapter;
-    private MenuItem filterMenuItem;
+
     @Nullable
     private Direction direction;
 
@@ -175,7 +176,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         super.onCreate(savedInstanceState);
 
         setRetainInstance(true);
-        setHasOptionsMenu(true);
 
         adapter = new TransactionsAdapter(activity, wallet, application.maxConnectedPeers(), this);
         adapter.setShowTransactionRowMenu(true);
@@ -190,8 +190,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     }
 
     @Override
-    public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
-            final Bundle savedInstanceState) {
+    public View onCreateView(@NonNull final LayoutInflater inflater, final ViewGroup container,
+                             final Bundle savedInstanceState) {
         final View view = inflater.inflate(R.layout.wallet_transactions_fragment, container, false);
 
         emptyView = view.findViewById(R.id.wallet_transactions_empty);
@@ -200,23 +200,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         fingerprintText = fingerprintGroup.findViewById(R.id.fingerprint_text);
         loading = view.findViewById(R.id.loading);
         transactionListContainer = view.findViewById(R.id.transaction_list_container);
-
-        backupDisclaimerView = view.findViewById(R.id.backup_wallet_disclaimer);
-        backupDisclaimerTitle = (TextView) view.findViewById(R.id.backup_warning_title);
-
-        view.findViewById(R.id.backup_now).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                onBackupNowClicked();
-            }
-        });
-        view.findViewById(R.id.remind_later).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                WalletApplication.getInstance().setBackupDisclaimerDismissed(true);
-                backupDisclaimerView.setVisibility(View.GONE);
-            }
-        });
 
         recyclerView = (RecyclerView) view.findViewById(R.id.wallet_transactions_list);
         recyclerView.setHasFixedSize(true);
@@ -239,7 +222,38 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
             }
         });
 
+        initHistoryFilter(view);
+
         return view;
+    }
+
+    private void initHistoryFilter(View rootView) {
+        Spinner spinner = rootView.findViewById(R.id.history_filter);
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(rootView.getContext(), R.array.history_filter, R.layout.custom_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(adapter);
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                switch(position) {
+                    case 0:
+                        direction = null;
+                        break;
+                    case 1:
+                        direction = Direction.RECEIVED;
+                        break;
+                    case 2:
+                        direction = Direction.SENT;
+                        break;
+                }
+                reloadTransactions();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
     }
 
     @Override
@@ -290,59 +304,10 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         super.onPause();
     }
 
-    @Override
-    public void onCreateOptionsMenu(final Menu menu, final MenuInflater inflater) {
-        inflater.inflate(R.menu.wallet_transactions_fragment_options, menu);
-        filterMenuItem = menu.findItem(R.id.wallet_transactions_options_filter);
-        super.onCreateOptionsMenu(menu, inflater);
-    }
-
-    @Override
-    public void onPrepareOptionsMenu(final Menu menu) {
-        if (direction == null) {
-            menu.findItem(R.id.wallet_transactions_options_filter_all).setChecked(true);
-            maybeSetFilterMenuItemIcon(R.drawable.ic_filter_list_white_24dp);
-        } else if (direction == Direction.RECEIVED) {
-            menu.findItem(R.id.wallet_transactions_options_filter_received).setChecked(true);
-            maybeSetFilterMenuItemIcon(R.drawable.transactions_list_filter_received);
-        } else if (direction == Direction.SENT) {
-            menu.findItem(R.id.wallet_transactions_options_filter_sent).setChecked(true);
-            maybeSetFilterMenuItemIcon(R.drawable.transactions_list_filter_sent);
-        }
-        super.onPrepareOptionsMenu(menu);
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(final MenuItem item) {
-        final int itemId = item.getItemId();
-        if (itemId == R.id.wallet_transactions_options_filter_all) {
-            direction = null;
-            maybeSetFilterMenuItemIcon(R.drawable.ic_filter_list_white_24dp);
-        } else if (itemId == R.id.wallet_transactions_options_filter_received) {
-            direction = Direction.RECEIVED;
-            maybeSetFilterMenuItemIcon(R.drawable.transactions_list_filter_received);
-        } else if (itemId == R.id.wallet_transactions_options_filter_sent) {
-            direction = Direction.SENT;
-            maybeSetFilterMenuItemIcon(R.drawable.transactions_list_filter_sent);
-        } else {
-            return false;
-        }
-        item.setChecked(true);
-
-        reloadTransactions();
-        return true;
-    }
-
     private void reloadTransactions() {
         final Bundle args = new Bundle();
         args.putSerializable(ARG_DIRECTION, direction);
         loaderManager.restartLoader(ID_TRANSACTION_LOADER, args, this);
-    }
-
-    private void maybeSetFilterMenuItemIcon(final int iconResId) {
-        // Older Android versions can't deal with width and height in XML layer-list items.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-            filterMenuItem.setIcon(iconResId);
     }
 
     @Override
@@ -460,14 +425,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         popupMenu.show();
     }
 
-    private void onBackupNowClicked() {
-        if (config.remindBackupSeed()) {
-            ((WalletActivity) activity).handleBackupWalletToSeed();
-        } else if (Constants.SUPPORT_BOTH_BACKUP_WARNINGS && config.remindBackup()) {
-            ((WalletActivity) activity).handleBackupWallet();
-        }
-    }
-
     @Override
     public void onWarningClick() {
         switch (warning()) {
@@ -490,10 +447,10 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         adapter.replace(transactions);
         updateView();
 
-        if (WalletLock.getInstance().isWalletLocked(wallet)) {
+        if (false && WalletLock.getInstance().isWalletLocked(wallet)) {
             showLockedView();
         } else if (transactions.isEmpty()) {
-            showEmptyTransactions(direction);
+            showEmptyView();
         } else {
             showTransactionList();
         }
@@ -536,33 +493,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         emptyView.setText(lockedWalletText);
         fingerprintGroup.setVisibility(fingerprintHelper != null &&
                 fingerprintHelper.isFingerprintEnabled() ? View.VISIBLE : View.GONE);
-    }
-
-    private void showEmptyTransactions(Direction direction) {
-        showEmptyView();
-
-        final SpannableStringBuilder emptyText = new SpannableStringBuilder(
-                getString(direction == Direction.SENT ? R.string.wallet_transactions_fragment_empty_text_sent
-                        : R.string.wallet_transactions_fragment_empty_text_received));
-        int titleLength = emptyText.length();
-        emptyText.setSpan(new StyleSpan(Typeface.BOLD), 0, titleLength,
-                SpannableStringBuilder.SPAN_POINT_MARK);
-        emptyText.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.darkest_blue)),
-                0, titleLength, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-
-        if (direction != Direction.SENT) {
-            emptyText.append("\n\n").append(getString(R.string.wallet_transactions_fragment_empty_text_howto));
-            emptyText.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.medium_gray)),
-                    titleLength, emptyText.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        }
-
-        Matcher matcher = Pattern.compile("\n\n").matcher(emptyText);
-        while (matcher.find()) {
-            emptyText.setSpan(new AbsoluteSizeSpan(10, true),
-                    matcher.start() + 1, matcher.end(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-        }
-
-        emptyView.setText(emptyText);
     }
 
     @Override
@@ -708,21 +638,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     private void updateView() {
         adapter.setFormat(config.getFormat());
         adapter.setWarning(warning());
-
-        boolean showBackupDisclaimer = (config.remindBackupSeed()
-                || (Constants.SUPPORT_BOTH_BACKUP_WARNINGS && config.remindBackup()))
-                && !WalletApplication.getInstance().isBackupDisclaimerDismissed();
-
-        if (showBackupDisclaimer) {
-            backupDisclaimerView.setVisibility(View.VISIBLE);
-            if (adapter.getTransactionsCount() == 1) {
-                backupDisclaimerTitle.setText(R.string.wallet_transactions_row_warning_backup);
-            } else {
-                backupDisclaimerTitle.setText(R.string.wallet_disclaimer_fragment_remind_backup);
-            }
-        } else {
-            backupDisclaimerView.setVisibility(View.GONE);
-        }
     }
 
     private Warning warning() {
@@ -785,14 +700,14 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
     @Override
     public void onLockChanged(boolean locked) {
-        if (locked) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                initFingerprintHelper();
-            }
-            showLockedView();
-        } else {
-            reloadTransactions();
-        }
+//        if (locked) {
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+//                initFingerprintHelper();
+//            }
+//            showLockedView();
+//        } else {
+//            reloadTransactions();
+//        }
     }
 
 }
