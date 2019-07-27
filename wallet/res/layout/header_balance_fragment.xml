@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/wallet_balance"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/selectable_background_light"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical|end"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginEnd="4dp"
+            android:layout_marginRight="4dp"
+            android:src="@drawable/ic_dash_d_white" />
+
+        <de.schildbach.wallet.ui.ToolbarCurrencyTextView
+            android:id="@+id/wallet_balance_dash"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLength="7"
+            android:textColor="@color/white"
+            android:textSize="24sp"
+            app:fontFamily="@font/montserrat_regular"
+            app:fontWeight="100" />
+
+    </LinearLayout>
+
+    <de.schildbach.wallet.ui.ToolbarCurrencyTextView
+        android:id="@+id/wallet_balance_local"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        app:fontFamily="@font/montserrat_regular"
+        app:fontWeight="100" />
+
+</LinearLayout>

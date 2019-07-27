@@ -225,6 +225,10 @@
         <item name="android:textSize">14sp</item>
     </style>
 
+    <style name="MontserratMedium.DB.18">
+        <item name="android:textSize">14sp</item>
+    </style>
+
     <style name="MontserratMedium.B">
         <item name="android:textColor">@color/colorPrimary</item>
     </style>
@@ -344,11 +348,6 @@
     </style>
 
     <style name="ExtendedTransactions">
-        <item name="android:layout_alignLeft">@id/transaction_row_address_container</item>
-        <item name="android:layout_alignStart">@id/transaction_row_address_container</item>
-        <item name="android:layout_alignRight">@id/transaction_row_value</item>
-        <item name="android:layout_alignEnd">@id/transaction_row_value</item>
-        <item name="android:layout_below">@id/transaction_row_address_container</item>
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
     </style>
