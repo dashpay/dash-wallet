@@ -1,4 +1,7 @@
 Dash Wallet
+v6.6.1
+* Report store information in Report Issue
+
 v6.6.0
 * Hide Settings, Diagnostics, Uphold when app is locked
 * Change price sourcing to use DashRetain (primary)
