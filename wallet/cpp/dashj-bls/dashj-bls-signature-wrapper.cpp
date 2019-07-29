@@ -690,8 +690,8 @@ SWIGEXPORT void JNICALL Java_org_dashj_bls_JNI_BLS_1SetContextError(JNIEnv *jenv
   core_get()->code = error;
 }
 
-std::string DASHJ_VERSION = "0.16.1";
-//java.lang.UnsatisfiedLinkError: No implementation found for java.lang.String org.dashj.bls.JNI.BLS_GetVersionString() (tried Java_org_dashj_bls_JNI_BLS_1GetVersionString and Java_org_dashj_bls_JNI_BLS_1GetVersionString__)
+std::string DASHJ_VERSION = "0.16.2";
+
 SWIGEXPORT jstring JNICALL Java_org_dashj_bls_JNI_BLS_1GetVersionString(JNIEnv *jenv, jclass jcls) {
   (void)jenv;
   (void)jcls;
@@ -1913,9 +1913,17 @@ SWIGEXPORT jboolean JNICALL Java_org_dashj_bls_JNI_InsecureSignature_1Verify(JNI
   if (!arg3) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< bls::PublicKey > const & reference is null");
     return 0;
-  } 
-  result = (bool)((bls::InsecureSignature const *)arg1)->Verify((std::vector< uint8_t const * > const &)*arg2,(std::vector< bls::PublicKey > const &)*arg3);
-  jresult = (jboolean)result; 
+  }
+  try {
+    result = (bool)((bls::InsecureSignature const *)arg1)->Verify((std::vector< uint8_t const * > const &)*arg2,(std::vector< bls::PublicKey > const &)*arg3);
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  } catch (...) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown error");
+    return 0;
+  }
+  jresult = (jboolean)result;
   return jresult;
 }
 
@@ -2192,9 +2200,17 @@ SWIGEXPORT jboolean JNICALL Java_org_dashj_bls_JNI_Signature_1Verify(JNIEnv *jen
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(bls::Signature **)&jarg1; 
-  result = (bool)((bls::Signature const *)arg1)->Verify();
-  jresult = (jboolean)result; 
+  arg1 = *(bls::Signature **)&jarg1;
+  try {
+    result = (bool)((bls::Signature const *)arg1)->Verify();
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  } catch (...) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown error");
+    return 0;
+  }
+  jresult = (jboolean)result;
   return jresult;
 }
 
