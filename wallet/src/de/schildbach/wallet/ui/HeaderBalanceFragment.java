@@ -21,6 +21,7 @@ import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.CurrencyTextView;
+import org.dash.wallet.common.util.GenericUtils;
 
 import javax.annotation.Nullable;
 
@@ -41,7 +42,7 @@ public final class HeaderBalanceFragment extends Fragment {
     private LoaderManager loaderManager;
 
     private View viewBalance;
-    private CurrencyTextView viewBalanceBtc;
+    private CurrencyTextView viewBalanceDash;
     private CurrencyTextView viewBalanceLocal;
 
     private boolean showLocalBalance;
@@ -55,8 +56,6 @@ public final class HeaderBalanceFragment extends Fragment {
 
     private static final int ID_BALANCE_LOADER = 0;
     private static final int ID_BLOCKCHAIN_STATE_LOADER = 1;
-
-    private static final Coin TOO_MUCH_BALANCE_THRESHOLD = Coin.COIN.multiply(30);
 
     private boolean initComplete = false;
 
@@ -92,8 +91,8 @@ public final class HeaderBalanceFragment extends Fragment {
 
         viewBalance = view.findViewById(R.id.wallet_balance);
 
-        viewBalanceBtc = view.findViewById(R.id.wallet_balance_dash);
-        viewBalanceBtc.setPrefixScaleX(0.9f);
+        viewBalanceDash = view.findViewById(R.id.wallet_balance_dash);
+        viewBalanceDash.setPrefixScaleX(0.9f);
 
         viewBalanceLocal = view.findViewById(R.id.wallet_balance_local);
         viewBalanceLocal.setInsignificantRelativeSize(1);
@@ -155,9 +154,9 @@ public final class HeaderBalanceFragment extends Fragment {
             viewBalanceLocal.setVisibility(View.GONE);
 
         if (balance != null) {
-            viewBalanceBtc.setVisibility(View.VISIBLE);
-            viewBalanceBtc.setFormat(config.getFormat().noCode());
-            viewBalanceBtc.setAmount(balance);
+            viewBalanceDash.setVisibility(View.VISIBLE);
+            viewBalanceDash.setFormat(config.getFormat().noCode());
+            viewBalanceDash.setAmount(balance);
 
             if (showLocalBalance) {
                 if (exchangeRate != null) {
@@ -165,15 +164,15 @@ public final class HeaderBalanceFragment extends Fragment {
                             exchangeRate.getFiat());
                     final Fiat localValue = rate.coinToFiat(balance);
                     viewBalanceLocal.setVisibility(View.VISIBLE);
-                    viewBalanceLocal.setFormat(Constants.LOCAL_FORMAT.code(0,
-                            org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO + exchangeRate.getCurrencyCode()));
+                    String currencySymbol = GenericUtils.currencySymbol(exchangeRate.getCurrencyCode());
+                    viewBalanceLocal.setFormat(Constants.LOCAL_FORMAT.code(0, currencySymbol));
                     viewBalanceLocal.setAmount(localValue);
                 } else {
                     viewBalanceLocal.setVisibility(View.INVISIBLE);
                 }
             }
         } else {
-            viewBalanceBtc.setVisibility(View.INVISIBLE);
+            viewBalanceDash.setVisibility(View.INVISIBLE);
         }
         viewBalance.setVisibility(View.VISIBLE);
 

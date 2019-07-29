@@ -137,11 +137,24 @@
 
     <FrameLayout
         android:id="@+id/sync_status_pane"
+        style="@style/DashButton.White"
         android:layout_width="match_parent"
         android:layout_height="80dp"
+        android:layout_margin="16dp"
         android:orientation="horizontal"
-        android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@+id/pay_btn" />
+        android:visibility="visible"
+        app:layout_constraintTop_toBottomOf="@+id/pay_btn">
+
+        <ProgressBar
+            android:id="@+id/address_looking_up"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:indeterminate="false"
+            android:progress="32"
+            android:visibility="visible" />
+
+    </FrameLayout>
 
     <include
         android:id="@+id/quick_actions_pane"

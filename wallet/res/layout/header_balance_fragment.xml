@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/wallet_balance"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
@@ -19,9 +20,10 @@
             android:layout_height="18dp"
             android:layout_marginEnd="4dp"
             android:layout_marginRight="4dp"
-            android:src="@drawable/ic_dash_d_white" />
+            android:src="@drawable/ic_dash_d_white"
+            tools:ignore="ContentDescription" />
 
-        <de.schildbach.wallet.ui.ToolbarCurrencyTextView
+        <org.dash.wallet.common.ui.CurrencyTextView
             android:id="@+id/wallet_balance_dash"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -29,19 +31,18 @@
             android:maxLength="7"
             android:textColor="@color/white"
             android:textSize="24sp"
-            app:fontFamily="@font/montserrat_regular"
-            app:fontWeight="100" />
+            app:fontFamily="@font/montserrat_regular" />
 
     </LinearLayout>
 
-    <de.schildbach.wallet.ui.ToolbarCurrencyTextView
+    <org.dash.wallet.common.ui.CurrencyTextView
         android:id="@+id/wallet_balance_local"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="end"
-        android:textColor="@color/white"
+        android:layout_gravity="center_horizontal"
+        android:textColor="@color/dash_light_gray"
         android:textSize="14sp"
         app:fontFamily="@font/montserrat_regular"
-        app:fontWeight="100" />
+        app:prefixColor="@color/dash_light_gray" />
 
 </LinearLayout>

@@ -22,6 +22,7 @@
 	<string name="quick_action_scan_to_pay">Scan to\nPay</string>
 	<string name="quick_action_pay_to_address">Pay to\nAddress</string>
 	<string name="quick_action_buy_sell">Buy / Sell\nDash</string>
+	<string name="quick_action_add_shortcut">Add\nShortcut</string>
 
 	<string name="history_title">History</string>
 

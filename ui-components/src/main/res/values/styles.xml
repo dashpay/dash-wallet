@@ -24,6 +24,12 @@
         <item name="android:background">@drawable/white_button_background</item>
     </style>
 
+
+    <style name="DashButton.Gray" parent="DashButton.Blue">
+        <item name="android:textColor">@drawable/gray_button_text</item>
+        <item name="android:background">@drawable/gray_button_background</item>
+    </style>
+
     <style name="TextViewStyle.Title" parent="android:Widget.TextView">
         <item name="android:fontFamily">@font/montserrat</item>
         <item name="android:textSize">16sp</item>

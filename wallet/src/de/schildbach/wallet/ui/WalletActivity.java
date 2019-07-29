@@ -265,6 +265,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 || (Constants.SUPPORT_BOTH_BACKUP_WARNINGS && config.remindBackup()))
                 && !WalletApplication.getInstance().isBackupDisclaimerDismissed();
         secureActionView.setVisibility(showBackupDisclaimer ? View.VISIBLE : View.GONE);
+//        findViewById(R.id.settings_action).setVisibility(showBackupDisclaimer ? View.GONE : View.VISIBLE);
     }
 
     private void initNavigationDrawer() {
