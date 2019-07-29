@@ -143,6 +143,63 @@
 
     </FrameLayout>
 
+    <RelativeLayout
+        android:id="@+id/sync_status_pane"
+        style="@style/DashButton.White"
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:layout_margin="16dp"
+        app:layout_constraintTop_toBottomOf="@+id/quick_actions_pane">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="16dp"
+            android:layout_marginLeft="16dp"
+            android:gravity="center_vertical"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/sync_status_title"
+                style="@style/TitleTextView.Primary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Syncing" />
+
+            <TextView
+                android:id="@+id/sync_status_message"
+                style="@style/TitleTextView.Secondary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="with Dash Blockchain"
+                android:textColor="@color/dash_gray" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/sync_status_percentage"
+            android:layout_width="64dp"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true"
+            android:layout_centerInParent="true"
+            android:fontFamily="@font/montserrat_regular"
+            android:text="63%"
+            android:textColor="@color/dash_blue"
+            android:textSize="24sp" />
+
+        <ProgressBar
+            android:id="@+id/sync_status_progress"
+            style="@style/ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:indeterminate="false"
+            android:progress="18"
+            android:visibility="visible" />
+
+    </RelativeLayout>
+
     <fragment
         android:id="@+id/wallet_transactions_fragment"
         android:name="de.schildbach.wallet.ui.WalletTransactionsFragment"
@@ -151,7 +208,7 @@
         android:layout_marginTop="24dp"
         android:background="@color/dash_white"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/quick_actions_pane"
+        app:layout_constraintTop_toBottomOf="@+id/sync_status_pane"
         tools:layout="@layout/wallet_transactions_fragment" />
 
     <androidx.recyclerview.widget.RecyclerView
@@ -162,7 +219,7 @@
         android:clipToPadding="false"
         android:scrollbars="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/quick_actions_pane" />
+        app:layout_constraintTop_toBottomOf="@+id/sync_status_pane" />
 
     <TextView
         android:id="@+id/message_panel"
