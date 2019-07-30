@@ -254,7 +254,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         findViewById(R.id.pay_to_address_action).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                findViewById(R.id.secure_action).setVisibility(View.VISIBLE);
+//                findViewById(R.id.secure_action).setVisibility(View.VISIBLE);
             }
         });
     }
