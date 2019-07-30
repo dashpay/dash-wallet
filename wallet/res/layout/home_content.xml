@@ -184,7 +184,7 @@
             android:layout_alignParentRight="true"
             android:layout_centerInParent="true"
             android:fontFamily="@font/montserrat_regular"
-            android:text="63%"
+            android:text="0%"
             android:textColor="@color/dash_blue"
             android:textSize="24sp" />
 
@@ -195,7 +195,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
             android:indeterminate="false"
-            android:progress="18"
+            android:progress="0"
             android:visibility="visible" />
 
     </RelativeLayout>
