@@ -5,6 +5,7 @@
     android:id="@+id/linearLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:animateLayoutChanges="true"
     android:background="@color/dash_lighter_gray"
     tools:ignore="ContentDescription">
 
@@ -170,11 +171,13 @@
 
         <TextView
             android:id="@+id/sync_status_percentage"
-            android:layout_width="64dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_alignParentRight="true"
             android:layout_centerInParent="true"
+            android:layout_marginEnd="16dp"
+            android:layout_marginRight="16dp"
             android:fontFamily="@font/montserrat_regular"
             android:text="63%"
             android:textColor="@color/dash_blue"

@@ -114,7 +114,7 @@
     </FrameLayout>
 
     <FrameLayout
-        android:id="@+id/settings_action"
+        android:id="@+id/config_action"
         style="@style/DashButton.Gray"
         android:layout_width="0dp"
         android:layout_height="0dp"
