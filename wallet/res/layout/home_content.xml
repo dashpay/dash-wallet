@@ -190,7 +190,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
             android:indeterminate="false"
-            android:progress="18"
+            android:progress="63"
             android:visibility="visible" />
 
     </RelativeLayout>

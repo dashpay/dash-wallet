@@ -50,7 +50,7 @@ dependencies {
     implementation 'com.google.code.findbugs:jsr305:3.0.2'
 
     implementation project(path: ':common')
-    implementation project(path: ':ui-components')
+    implementation project(path: ':ui-redesign')
     annotationProcessor 'androidx.room:room-compiler:2.1.0'
 
     //Uphold Integration
