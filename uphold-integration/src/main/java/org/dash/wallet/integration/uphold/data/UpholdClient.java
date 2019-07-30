@@ -77,7 +77,6 @@ public class UpholdClient {
 
     };
 
-    //this leaks sensitive information and should not be used in production
     private Interceptor loggingIntercepter = new Interceptor() {
 
         @Override public okhttp3.Response intercept(Interceptor.Chain chain) throws IOException {
@@ -90,8 +89,8 @@ public class UpholdClient {
             okhttp3.Response response = chain.proceed(request);
 
             long t2 = System.nanoTime();
-            log.info(String.format("Received response for %s in %.1fms%n%s\n%s",
-                    response.request().url(), (t2 - t1) / 1e6d, response.headers(), response.networkResponse()));
+            log.info(String.format("Received response for %s in %.1fms%n%s",
+                    response.request().url(), (t2 - t1) / 1e6d, response.networkResponse()));
 
             return response;
         }
