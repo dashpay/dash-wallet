@@ -1,141 +1,88 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/quick_actions_pane"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:animateLayoutChanges="true"
     app:layout_constraintTop_toBottomOf="@+id/quick_actions_pane">
 
-    <FrameLayout
+    <org.dash.wallet.ui.widget.QuickActionButton
         android:id="@+id/secure_action"
-        style="@style/DashButton.White"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginLeft="4dp"
         android:layout_marginRight="4dp"
+        app:action_active="true"
+        app:action_icon="@drawable/ic_quick_action_secure"
+        app:action_icon_size="32dp"
+        app:action_text="@string/quick_action_secure_now"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintEnd_toStartOf="@+id/scan_to_pay_action"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintWidth_default="percent"
-        app:layout_constraintWidth_percent="0.238"
-        tools:ignore="UseCompoundDrawables">
+        app:layout_constraintWidth_percent="0.238" />
 
-        <TextView
-            style="@style/TextViewStyle.Body"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:drawableTop="@drawable/ic_quick_action_secure"
-            android:gravity="center"
-            android:text="@string/quick_action_secure_now"
-            android:textSize="11sp" />
-
-    </FrameLayout>
-
-    <FrameLayout
+    <org.dash.wallet.ui.widget.QuickActionButton
         android:id="@+id/scan_to_pay_action"
-        style="@style/DashButton.White"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginLeft="4dp"
         android:layout_marginRight="4dp"
+        app:action_icon="@drawable/ic_quick_action_scan_to_pay"
+        app:action_icon_size="32dp"
+        app:action_text="@string/quick_action_scan_to_pay"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintStart_toEndOf="@+id/secure_action"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintWidth_default="percent"
-        app:layout_constraintWidth_percent="0.238"
-        tools:ignore="UseCompoundDrawables">
+        app:layout_constraintWidth_percent="0.238" />
 
-        <TextView
-            style="@style/TextViewStyle.Body"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:drawableTop="@drawable/ic_quick_action_scan_to_pay"
-            android:gravity="center"
-            android:text="@string/quick_action_scan_to_pay"
-            android:textSize="11sp" />
-
-    </FrameLayout>
-
-    <FrameLayout
+    <org.dash.wallet.ui.widget.QuickActionButton
         android:id="@+id/pay_to_address_action"
-        style="@style/DashButton.White"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginLeft="4dp"
         android:layout_marginRight="4dp"
+        app:action_icon="@drawable/ic_quick_action_pay_to_address"
+        app:action_icon_size="32dp"
+        app:action_text="@string/quick_action_pay_to_address"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintStart_toEndOf="@+id/scan_to_pay_action"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintWidth_default="percent"
-        app:layout_constraintWidth_percent="0.238"
-        tools:ignore="UseCompoundDrawables">
+        app:layout_constraintWidth_percent="0.238" />
 
-        <TextView
-            style="@style/TextViewStyle.Body"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:drawableTop="@drawable/ic_quick_action_pay_to_address"
-            android:gravity="center"
-            android:text="@string/quick_action_pay_to_address"
-            android:textSize="11sp" />
-
-    </FrameLayout>
-
-    <FrameLayout
+    <org.dash.wallet.ui.widget.QuickActionButton
         android:id="@+id/buy_sell_action"
-        style="@style/DashButton.White"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginLeft="4dp"
         android:layout_marginRight="4dp"
+        app:action_icon="@drawable/ic_quick_action_buy_sell_dash"
+        app:action_icon_size="32dp"
+        app:action_text="@string/quick_action_buy_sell"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintStart_toEndOf="@+id/pay_to_address_action"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintWidth_default="percent"
-        app:layout_constraintWidth_percent="0.238"
-        tools:ignore="UseCompoundDrawables">
+        app:layout_constraintWidth_percent="0.238" />
 
-        <TextView
-            style="@style/TextViewStyle.Body"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:drawableTop="@drawable/ic_quick_action_buy_sell_dash"
-            android:gravity="center"
-            android:text="@string/quick_action_buy_sell"
-            android:textSize="11sp" />
-
-    </FrameLayout>
-
-    <FrameLayout
+    <org.dash.wallet.ui.widget.QuickActionButton
         android:id="@+id/config_action"
-        style="@style/DashButton.Gray"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginLeft="4dp"
         android:layout_marginRight="4dp"
+        app:action_dark_mode="true"
+        app:action_icon="@drawable/ic_quick_action_add_shortcut"
+        app:action_icon_size="24dp"
+        app:action_text="@string/quick_action_add_shortcut"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintStart_toEndOf="@+id/buy_sell_action"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintWidth_default="percent"
-        app:layout_constraintWidth_percent="0.238">
-
-        <TextView
-            style="@style/TextViewStyle.Body"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:drawableTop="@drawable/ic_quick_action_add_shortcut"
-            android:gravity="center"
-            android:text="@string/quick_action_add_shortcut"
-            android:textSize="11sp" />
-
-    </FrameLayout>
+        app:layout_constraintWidth_percent="0.238" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
