@@ -255,6 +255,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             @Override
             public void onClick(View v) {
 //                findViewById(R.id.secure_action).setVisibility(View.VISIBLE);
+//                findViewById(R.id.secure_action_space).setVisibility(View.VISIBLE);
             }
         });
     }
@@ -265,7 +266,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 || (Constants.SUPPORT_BOTH_BACKUP_WARNINGS && config.remindBackup()))
                 && !WalletApplication.getInstance().isBackupDisclaimerDismissed();
         secureActionView.setVisibility(showBackupDisclaimer ? View.VISIBLE : View.GONE);
-//        findViewById(R.id.settings_action).setVisibility(showBackupDisclaimer ? View.GONE : View.VISIBLE);
+        findViewById(R.id.secure_action_space).setVisibility(secureActionView.getVisibility());
     }
 
     private void initNavigationDrawer() {
