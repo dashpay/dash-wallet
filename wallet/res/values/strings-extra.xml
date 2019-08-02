@@ -110,10 +110,6 @@
 	<string name="notification_synchronization_channel_name">Synchronization</string>
 	<string name="notification_synchronization_channel_description">Shows a notification when the app is synchronizing with the network.</string>
 
-	<string name="fastest_payment_network_dialog_title">Your Money, Your Way</string>
-	<string name="fastest_payment_network_dialog_message">Send and Receive Dash in an Instant at no extra fee</string>
-	<string name="fastest_payment_network_dialog_button">Got it</string>
-
     <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">Use your fingerprint to unlock.</string>

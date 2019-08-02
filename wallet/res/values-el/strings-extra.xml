@@ -83,10 +83,6 @@
 	<string name="notification_synchronization_channel_name">Συγχρονισμός</string>
 	<string name="notification_synchronization_channel_description">Εμφανίζει μια ειδοποίηση όταν η εφαρμογή συγχρονίζεται με το δίκτυο.</string>
 
-	<string name="fastest_payment_network_dialog_title">Τα δικά σου λεφτά, ο δικός σου τρόπος!</string>
-	<string name="fastest_payment_network_dialog_message">Στείλτε και λάβετε Dash χωρίς εξτρά χρέωση</string>
-	<string name="fastest_payment_network_dialog_button">Το κατάλαβα</string>
-
     <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">Χρησιμοποιήστε το δακτυλικό σας αποτύπωμα για να ξεκλειδώσετε.</string>

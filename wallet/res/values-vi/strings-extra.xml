@@ -80,10 +80,6 @@
 	<string name="notification_synchronization_channel_name">Đồng bộ</string>
 	<string name="notification_synchronization_channel_description">Hiển thị thông báo khi app đang đồng bộ với mạng lưới.</string>
 
-	<string name="fastest_payment_network_dialog_title">Tiền của bạn, cách của bạn.</string>
-	<string name="fastest_payment_network_dialog_message">Gửi và Nhận Dash một cách tức thời mà không tốn thêm phí</string>
-	<string name="fastest_payment_network_dialog_button">Đã nhận được</string>
-
     <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">Sử dụng vân tay để mở khoá.</string>

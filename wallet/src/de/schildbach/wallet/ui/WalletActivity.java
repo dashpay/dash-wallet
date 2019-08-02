@@ -121,10 +121,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private boolean isRestoringBackup;
 
-    private boolean veryFirstLaunch;
-
-    private CanAutoLockGuard canAutoLockGuard;
-
     private ClipboardManager clipboardManager;
 
     private boolean showBackupWalletDialog = false;
@@ -144,7 +140,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             checkAlerts();
         }
 
-        veryFirstLaunch = !config.hasBeenUsed();
         config.touchLastUsed();
 
         handleIntent(getIntent());
@@ -162,10 +157,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         initFingerprintHelper();
 
-        canAutoLockGuard = new CanAutoLockGuard(config, onAutoLockStatusChangedListener);
-        if (!veryFirstLaunch) {
-            canAutoLockGuard.register(true);
-        }
         this.clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
     }
 
@@ -178,21 +169,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
         }
     }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        canAutoLockGuard.unregister();
-    }
-
-    private CanAutoLockGuard.OnAutoLockStatusChangedListener onAutoLockStatusChangedListener = new CanAutoLockGuard.OnAutoLockStatusChangedListener() {
-        @Override
-        public void onAutoLockStatusChanged(boolean active) {
-            if (active && !config.getFastestNetworkAnncmntShown()) {
-                FastestNetworkAnncmntDialog.show(getSupportFragmentManager());
-            }
-        }
-    };
 
     private void initUphold() {
         //Uses Sha256 hash of excerpt of xpub as Uphold authentication salt
@@ -1136,9 +1112,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     @Override
     public void onOnboardingComplete() {
-        if (veryFirstLaunch) {
-            canAutoLockGuard.register(true);
-        }
+
     }
 
     @Override

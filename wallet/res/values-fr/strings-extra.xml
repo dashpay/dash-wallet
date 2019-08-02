@@ -83,10 +83,6 @@
 	<string name="notification_synchronization_channel_name">Synchronisation</string>
 	<string name="notification_synchronization_channel_description">Affiche une notification quand l\'application se synchronise au réseau.</string>
 
-	<string name="fastest_payment_network_dialog_title">Votre argent, comme vous le souhaitez</string>
-	<string name="fastest_payment_network_dialog_message">Envoyez et recevez des dashs instantanément, sans frais supplémentaire</string>
-	<string name="fastest_payment_network_dialog_button">J\'ai compris</string>
-
     <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">Utilisez votre empreinte digitale pour déverrouiller</string>

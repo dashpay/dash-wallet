@@ -80,10 +80,6 @@
 	<string name="notification_synchronization_channel_name">동기화</string>
 	<string name="notification_synchronization_channel_description">어플이 네트워크와 동기화될 때 알람을 보여줍니다.</string>
 
-	<string name="fastest_payment_network_dialog_title">당신의 돈, 당신의 방식으로</string>
-	<string name="fastest_payment_network_dialog_message">대시를 추가 금액 없이 즉시 보내고 받으세요</string>
-	<string name="fastest_payment_network_dialog_button">알겠습니다</string>
-
     <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">잠금 해제를 위해서 지문을 사용합니다</string>

@@ -80,10 +80,6 @@
 	<string name="notification_synchronization_channel_name">同步</string>
 	<string name="notification_synchronization_channel_description">当app正在同步网络时显示通知.</string>
 
-	<string name="fastest_payment_network_dialog_title">你的财富, 你做主</string>
-	<string name="fastest_payment_network_dialog_message">立即发送和接收达世币, 无需额外费用</string>
-	<string name="fastest_payment_network_dialog_button">了解</string>
-
     <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">使用您的指纹解锁.</string>

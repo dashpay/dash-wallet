@@ -83,10 +83,6 @@
 	<string name="notification_synchronization_channel_name">Synchronisierung</string>
 	<string name="notification_synchronization_channel_description">Eine Benachrichtigung anzeigen, wenn die App sich mit dem Netzwerk synchronisiert.</string>
 
-	<string name="fastest_payment_network_dialog_title">Dein Geld, dein Weg</string>
-	<string name="fastest_payment_network_dialog_message">Dash sofort und ohne Zusatzkosten empfangen und versenden </string>
-	<string name="fastest_payment_network_dialog_button">Verstanden</string>
-
     <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">Fingerabdruck zum Entsperren verwenden.</string>
