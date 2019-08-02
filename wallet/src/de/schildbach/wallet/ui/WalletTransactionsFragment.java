@@ -45,7 +45,6 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.WalletLock;
-import de.schildbach.wallet.ui.TransactionsAdapter.Warning;
 import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.FingerprintHelper;
@@ -426,15 +425,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     }
 
     @Override
-    public void onWarningClick() {
-        switch (warning()) {
-        case STORAGE_ENCRYPTION:
-            startActivity(new Intent(Settings.ACTION_SECURITY_SETTINGS));
-            break;
-        }
-    }
-
-    @Override
     public Loader<List<Transaction>> onCreateLoader(final int id, final Bundle args) {
         return new TransactionsLoader(activity, wallet, (Direction) args.getSerializable(ARG_DIRECTION));
     }
@@ -637,17 +627,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
     private void updateView() {
         adapter.setFormat(config.getFormat());
-        adapter.setWarning(warning());
-    }
-
-    private Warning warning() {
-        final int storageEncryptionStatus = devicePolicyManager.getStorageEncryptionStatus();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
-                && (storageEncryptionStatus == DevicePolicyManager.ENCRYPTION_STATUS_INACTIVE
-                        || storageEncryptionStatus == DevicePolicyManager.ENCRYPTION_STATUS_ACTIVE_DEFAULT_KEY))
-            return Warning.STORAGE_ENCRYPTION;
-        else
-            return null;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)

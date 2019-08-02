@@ -29,7 +29,6 @@
     <string name="wallet_transactions_fragment_empty_text_sent">ไม่มี Dash ที่ส่ง</string>
     <string name="wallet_transactions_fragment_empty_text_howto">จะได้รับ Dash ได้อย่างไร ? \n\n แลกเปลี่ยนเป็นเงินดั้งเดิม ,\n ขายสินค้าหรือบริการหรือ \n ได้รับเงินจากการทำงาน</string>
     <string name="wallet_transactions_row_warning_backup">ยินดีด้วย! คุณได้รับการชำระเงินครั้งแรก!  คุณได้สำรองข้อมูล wallet ไว้เพื่อป้องกันการสูญเสียหรือไม่?</string>
-    <string name="wallet_transactions_row_warning_storage_encryption">คำแนะนำ: เพื่อเพิ่มความปลอดภัยให้ wallet ของคุณ, คุณสามารถเข้ารหัสอุปกรณ์ของคุณ นอกจากนี้ยังช่วยปกป้องข้อมูลของแอพพลิเคชั่นอื่น ๆ ด้วย</string>
     <string name="wallet_transactions_fragment_coinbase">ศีลธรรม</string>
     <string name="wallet_transactions_fragment_internal">ภายใน</string>
     <string name="wallet_transactions_options_filter">กรอง</string>
