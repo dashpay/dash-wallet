@@ -89,6 +89,8 @@ public class WalletApplication extends MultiDexApplication {
     private Configuration config;
     private ActivityManager activityManager;
 
+    private boolean basicWalletStuffInitialised = false;
+
     private Intent blockchainServiceIntent;
     private Intent blockchainServiceCancelCoinsReceivedIntent;
     private Intent blockchainServiceResetBlockchainIntent;
@@ -114,8 +116,8 @@ public class WalletApplication extends MultiDexApplication {
         instance = this;
     }
 
-    public boolean walletConfigured() {
-        return walletFile.exists() && config.getOnboardingComplete();
+    public boolean walletFileExists() {
+        return walletFile.exists();
     }
 
     @Override
@@ -130,7 +132,15 @@ public class WalletApplication extends MultiDexApplication {
         loadWalletFromProtobuf();
     }
 
-    public void initEnvironment() {
+    public void initEnvironmentIfNeeded() {
+        if (!basicWalletStuffInitialised) {
+            initEnvironment();
+        }
+    }
+
+    private void initEnvironment() {
+        basicWalletStuffInitialised = true;
+
         new LinuxSecureRandom(); // init proper random number generator
         initLogging();
 

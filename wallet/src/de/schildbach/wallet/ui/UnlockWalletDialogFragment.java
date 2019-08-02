@@ -94,7 +94,7 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
                     badPinView.setVisibility(View.VISIBLE);
                 }
             }
-        }.checkPassword(wallet, password);
+        }.checkPassword(walletProvider.getWallet(), password);
     }
 
 }

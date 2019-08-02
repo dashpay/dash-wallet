@@ -68,7 +68,6 @@ public class Configuration {
     public static final String PREFS_KEY_FASTEST_NETWORK_ANNCMNT_SHOWN = "fastest_network_anncmnt_shown";
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
     public static final String PREFS_KEY_CAN_AUTO_LOCK = "can_auto_lock";
-    private static final String PREFS_KEY_ONBOARDING_COMPLETE = "onboarding_complete";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 4;
@@ -334,13 +333,5 @@ public class Configuration {
 
     public void setCanAutoLock(boolean enabled) {
         prefs.edit().putBoolean(PREFS_KEY_CAN_AUTO_LOCK, enabled).apply();
-    }
-
-    public boolean getOnboardingComplete() {
-        return prefs.getBoolean(PREFS_KEY_ONBOARDING_COMPLETE, false);
-    }
-
-    public void setOnboardingComplete() {
-        prefs.edit().putBoolean(PREFS_KEY_ONBOARDING_COMPLETE, true).apply();
     }
 }

@@ -1034,7 +1034,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     @Override
     public void onNewKeyChainEncrypted() {
-        BackupWalletToSeedDialogFragment.show(getSupportFragmentManager(), true);
+
     }
 
     /**
