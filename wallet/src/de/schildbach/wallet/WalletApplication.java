@@ -67,6 +67,7 @@ import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
 import android.os.StrictMode;
+import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.support.annotation.StringRes;
 import android.support.multidex.MultiDexApplication;
@@ -632,7 +633,9 @@ public class WalletApplication extends MultiDexApplication {
 
     public void lockWalletIfNeeded() {
         WalletLock walletLock = WalletLock.getInstance();
-        if (walletLock.isWalletLocked(wallet)) {
+        boolean recentReboot = SystemClock.elapsedRealtime() < WalletLock.DEFAULT_LOCK_TIMER_MILLIS &&
+                config.getLastUnlockTime() < (System.currentTimeMillis() - SystemClock.elapsedRealtime());
+        if (walletLock.isWalletLocked(wallet) || recentReboot) {
             walletLock.setWalletLocked(true);
         }
     }
@@ -673,12 +676,6 @@ public class WalletApplication extends MultiDexApplication {
 
     public void killAllActivities() {
         AbstractWalletActivity.finishAll(this);
-    }
-
-    public static void resetWalletLockTimer(final Context context) {
-        final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context),
-                context.getResources());
-        config.setLastUnlockTime(0);
     }
 
 }

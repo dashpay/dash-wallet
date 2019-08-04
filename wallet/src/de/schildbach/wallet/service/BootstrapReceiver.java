@@ -56,8 +56,6 @@ public class BootstrapReceiver extends BroadcastReceiver {
             if (config.remindBalance() && config.hasBeenUsed()
                     && config.getLastUsedAgo() > Constants.LAST_USAGE_THRESHOLD_INACTIVE_MS)
                 InactivityNotificationService.startMaybeShowNotification(context);
-
-            WalletApplication.resetWalletLockTimer(context);
         }
     }
 }
