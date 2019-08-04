@@ -152,7 +152,7 @@ public class UpholdAccountActivity extends AppCompatActivity {
 
                 if(e instanceof UpholdException) {
                     UpholdException ue = (UpholdException)e;
-                    if(ue.getCode() == 401 || ue.getCode() == 400) {
+                    if(ue.getCode() == 401) {
                         //we don't have the correct access token
                         showAutoLogoutAlert();
                     } else

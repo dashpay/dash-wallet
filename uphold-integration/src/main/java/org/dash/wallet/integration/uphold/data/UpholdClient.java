@@ -285,7 +285,7 @@ public class UpholdClient {
                 log.error("Error loading Dash balance: " + e.getMessage());
                 if(e instanceof UpholdException) {
                     UpholdException ue = (UpholdException)e;
-                    if(ue.getCode() == 400 || ue.getCode() == 401) {
+                    if(ue.getCode() == 401) {
                         //we don't have the correct access token, let's logout
                         accessToken = null;
                         storeAccessToken();
