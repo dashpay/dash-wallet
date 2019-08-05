@@ -1,0 +1,56 @@
+package de.schildbach.wallet.ui
+
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.fragment.app.Fragment
+import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.verify_seed_write_down.*
+import java.lang.StringBuilder
+
+/**
+ * @author Samuel Barbosa
+ */
+class VerifySeedWriteDownFragment private constructor() : Fragment() {
+
+    private val recoverySeedTextView by lazy { recovery_seed }
+    private val confirmCheckBox by lazy { written_down_checkbox }
+    private val confirmButton by lazy { confirm_written_down_btn }
+
+    companion object {
+        fun newInstance(seed: Array<String>): VerifySeedWriteDownFragment {
+            val fragment = VerifySeedWriteDownFragment()
+            val args = Bundle()
+            args.putStringArray("seed", seed)
+            fragment.arguments = args
+            return fragment
+        }
+    }
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        return inflater.inflate(R.layout.verify_seed_write_down, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        if (arguments?.containsKey("seed")!!) {
+            val seed = arguments!!.getStringArray("seed")
+            val sb = StringBuilder(12)
+            seed.forEach {
+                sb.append("$it  ")
+            }
+            recoverySeedTextView.text = sb.toString().trim()
+        }
+        confirmCheckBox.setOnCheckedChangeListener { _, isChecked ->
+            confirmButton.isEnabled = isChecked
+        }
+        confirmButton.setOnClickListener {
+            if (context is VerifySeedActions) {
+                (context as VerifySeedActions).onVerifyWriteDown()
+            }
+        }
+    }
+
+}

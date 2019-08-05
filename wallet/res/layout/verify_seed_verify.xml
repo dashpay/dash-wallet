@@ -10,7 +10,7 @@
     <TextView
         android:id="@+id/verify_seed_title"
         style="@style/VerifySeedTitle"
-        android:text="@string/verify_seed_title"
+        android:text="@string/verify"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -19,6 +19,7 @@
         android:id="@+id/recovery_seed"
         style="@style/VerifySeedBox"
         android:animateLayoutChanges="true"
+        android:minHeight="180dp"
         app:alignContent="stretch"
         app:alignItems="stretch"
         app:flexWrap="wrap"

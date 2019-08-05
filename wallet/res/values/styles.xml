@@ -61,6 +61,7 @@
     </style>
 
     <style name="VerifySeedWordButton" parent="NewMontserratButton.Primary">
+        <item name="android:background">@drawable/word_button_drawable</item>
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_margin">3dp</item>
