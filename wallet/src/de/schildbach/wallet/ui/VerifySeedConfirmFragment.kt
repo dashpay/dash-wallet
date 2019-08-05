@@ -68,7 +68,7 @@ class VerifySeedConfirmFragment : Fragment() {
             for (b in wordButtons) {
                 wordButtonsContainer.addView(b)
             }
-        }, 1300)
+        }, 750)
 
     }
 
