@@ -102,7 +102,7 @@
     <string name="sweep_wallet_fragment_bad_password">¡Contraseña errónea!</string>
     <string name="sweep_wallet_fragment_balance">Saldo a barrer</string>
     <string name="sweep_wallet_fragment_button_decrypt">Desencriptar</string>
-    <string name="sweep_wallet_fragment_button_sweep">Eliminar</string>
+    <string name="sweep_wallet_fragment_button_sweep">Barrer</string>
     <string name="sweep_wallet_fragment_decrypt_progress">Desencriptando…\nPuede tardar hasta 2 minutos.</string>
     <string name="sweep_wallet_fragment_request_wallet_balance_progress">Cargando saldo…</string>
     <string name="sweep_wallet_fragment_request_wallet_balance_failed_title">Error al cargar el saldo de la billetera</string>

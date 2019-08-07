@@ -1,4 +1,15 @@
 Dash Wallet
+v6.6.1
+* Report store information in Report Issue
+
+v6.6.0
+* Hide Settings, Diagnostics, Uphold when app is locked
+* Change price sourcing to use DashRetain (primary)
+* Upgrade gradle for building
+* Remove LeakCanary on debug builds
+* Add multidex support
+* Add Firebase In-App Messaging (notifications, app updates)
+
 v6.5.1
 * Use DashJ 0.16.1
 * Fix several crashes from resetting the blockchain and restoring backups

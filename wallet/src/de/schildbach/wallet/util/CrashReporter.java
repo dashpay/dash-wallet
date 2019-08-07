@@ -38,7 +38,6 @@ import java.util.TimeZone;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.BuildConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,6 +58,7 @@ import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.os.Build;
 import android.support.v4.app.ActivityManagerCompat;
+import de.schildbach.wallet_test.BuildConfig;
 
 /**
  * @author Andreas Schildbach
@@ -81,23 +81,8 @@ public class CrashReporter {
         Thread.setDefaultUncaughtExceptionHandler(new ExceptionHandler(Thread.getDefaultUncaughtExceptionHandler()));
     }
 
-    public static boolean hasSavedBackgroundTraces() {
-        return backgroundTracesFile.exists();
-    }
-
-    public static void appendSavedBackgroundTraces(final Appendable report) throws IOException {
-        BufferedReader reader = null;
-
-        try {
-            reader = new BufferedReader(
-                    new InputStreamReader(new FileInputStream(backgroundTracesFile), Charsets.UTF_8));
-            copy(reader, report);
-        } finally {
-            if (reader != null)
-                reader.close();
-
-            backgroundTracesFile.delete();
-        }
+    public static boolean collectSavedBackgroundTraces(final File file) {
+        return backgroundTracesFile.renameTo(file);
     }
 
     public static boolean hasSavedCrashTrace() {
@@ -199,7 +184,10 @@ public class CrashReporter {
 
         report.append("Version: " + pi.versionName + " (" + pi.versionCode + ")\n");
         report.append("Package: " + pi.packageName + "\n");
-        report.append("Test/Prod: " + BuildConfig.FLAVOR + "\n");
+        String installer = application.getPackageManager().getInstallerPackageName(pi.packageName);
+        report.append("Installer: " + (installer != null ? installer : "manual") + "\n");
+        report.append("Test/Prod: " + (Constants.IS_PROD_BUILD ? "prod" : "test") + "\n");
+        report.append("Flavor: " + BuildConfig.FLAVOR + "\n");
         report.append("Timezone: " + TimeZone.getDefault().getID() + "\n");
         calendar.setTimeInMillis(System.currentTimeMillis());
         report.append("Time: " + String.format(Locale.US, "%tF %tT %tZ", calendar, calendar, calendar) + "\n");
@@ -281,7 +269,7 @@ public class CrashReporter {
                         new OutputStreamWriter(new FileOutputStream(backgroundTracesFile, true), Charsets.UTF_8));
 
                 final Calendar now = new GregorianCalendar(UTC);
-                writer.println(String.format(Locale.US, "\n--- collected at %tF %tT %tZ on version %s (%d)", now, now,
+                writer.println(String.format(Locale.US, "\n--- collected at %tF %tT %tZ on version %s (%d) ---\n", now, now,
                         now, packageInfo.versionName, packageInfo.versionCode));
                 appendTrace(writer, throwable);
             } catch (final IOException x) {

@@ -18,7 +18,10 @@
 package org.dash.wallet.integration.uphold.ui;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -29,6 +32,8 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.view.LayoutInflater;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
@@ -42,6 +47,7 @@ import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.UpholdCard;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
+import org.dash.wallet.integration.uphold.data.UpholdException;
 
 import java.math.BigDecimal;
 
@@ -52,6 +58,7 @@ public class UpholdAccountActivity extends AppCompatActivity {
     private CurrencyTextView balanceView;
     private BigDecimal balance;
     private String receivingAddress;
+    private final MonetaryFormat monetaryFormat = new MonetaryFormat().noCode().minDecimals(8);
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -64,7 +71,8 @@ public class UpholdAccountActivity extends AppCompatActivity {
         }
 
         balanceView = findViewById(R.id.uphold_account_balance);
-        balanceView.setFormat(new MonetaryFormat().noCode());
+        balanceView.setFormat(monetaryFormat);
+        balanceView.setApplyMarkup(false);
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -92,6 +100,14 @@ public class UpholdAccountActivity extends AppCompatActivity {
                 openBuyDashUrl();
             }
         });
+
+        findViewById(R.id.uphold_logout).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openLogOutUrl();
+            }
+        });
+
     }
 
     @Override
@@ -100,6 +116,10 @@ public class UpholdAccountActivity extends AppCompatActivity {
             case android.R.id.home:
                 finish();
                 return true;
+        }
+        if(item.getItemId() == R.id.uphold_logout) {
+            openLogOutUrl();
+            return true;
         }
 
         return super.onOptionsItemSelected(item);
@@ -129,7 +149,15 @@ public class UpholdAccountActivity extends AppCompatActivity {
             @Override
             public void onError(Exception e, boolean otpRequired) {
                 loadingDialog.cancel();
-                showErrorAlert();
+
+                if(e instanceof UpholdException) {
+                    UpholdException ue = (UpholdException)e;
+                    if(ue.getCode() == 401) {
+                        //we don't have the correct access token
+                        showAutoLogoutAlert();
+                    } else
+                        showErrorAlert(ue.getCode());
+                } else showErrorAlert(-1);
             }
         });
     }
@@ -154,12 +182,22 @@ public class UpholdAccountActivity extends AppCompatActivity {
                         }
                     });
         } else {
-            showErrorAlert();
+            showErrorAlert(-1);
         }
     }
 
-    private void showErrorAlert() {
-        new DialogBuilder(this).setMessage(R.string.loading_error).show();
+    private void showErrorAlert(int code) {
+        int messageId = R.string.loading_error;
+
+        if(code == 400 || code == 408 || code >= 500)
+            messageId = R.string.uphold_error_not_available;
+        if(code == 400 || code == 403 || code >= 400)
+                messageId = R.string.uphold_error_report_issue;
+
+        new DialogBuilder(this)
+                .setMessage(messageId)
+                .setTitle(R.string.uphold_error)
+                .show();
     }
 
     private void showWithdrawalDialog() {
@@ -176,6 +214,93 @@ public class UpholdAccountActivity extends AppCompatActivity {
                         loadUserBalance();
                     }
                 });
+    }
+
+    private void revokeAccessToken() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(R.string.uphold_logout_title);
+        builder.setPositiveButton(R.string.uphold_logout_go_to_website, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int button) {
+                UpholdClient.getInstance().revokeAccessToken(new UpholdClient.Callback<String>() {
+                    @Override
+                    public void onSuccess(String result) {
+                        startUpholdSplashActivity();
+                        openUpholdToLogout();
+                    }
+
+                    @Override
+                    public void onError(Exception e, boolean otpRequired) {
+                        if(e instanceof UpholdException) {
+                            UpholdException ue = (UpholdException)e;
+                            showErrorAlert(ue.getCode());
+                        } else
+                            showErrorAlert(-1);
+                    }
+                });
+            }
+        });
+        builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+            }
+        });
+
+        LayoutInflater inflater = this.getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.uphold_logout_confirm, null);
+        builder.setView(dialogView);
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
+    }
+
+    private void openUpholdToLogout() {
+        final String url = UpholdConstants.LOGOUT_URL;
+
+        CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
+        int toolbarColor = ContextCompat.getColor(UpholdAccountActivity.this, R.color.colorPrimary);
+        CustomTabsIntent customTabsIntent = builder.setShowTitle(true)
+                .setToolbarColor(toolbarColor).build();
+
+        CustomTabActivityHelper.openCustomTab(UpholdAccountActivity.this, customTabsIntent, Uri.parse(url),
+                new CustomTabActivityHelper.CustomTabFallback() {
+                    @Override
+                    public void openUri(Activity activity, Uri uri) {
+                        Intent intent = new Intent(Intent.ACTION_VIEW);
+                        intent.setData(Uri.parse(url));
+                        startActivity(intent);
+                    }
+                });
+
+    }
+
+    private void openLogOutUrl() {
+        //revoke access to the token
+        revokeAccessToken();
+    }
+
+    private void showAutoLogoutAlert() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.My_Theme_Dialog);
+        builder.setTitle(R.string.uphold_error);
+        builder.setMessage(R.string.uphold_error_not_logged_in);
+        builder.setCancelable(false);
+        builder.setPositiveButton(R.string.uphold_link_account, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                startUpholdSplashActivity();
+            }
+        });
+        builder.show();
+    }
+
+    private void startUpholdSplashActivity() {
+        Intent intent = new Intent(this, UpholdSplashActivity.class);
+        Bundle extras = getIntent().getExtras();
+        if (extras != null) {
+            intent.putExtras(extras);
+        }
+        startActivity(intent);
+        finish();
     }
 
 }
