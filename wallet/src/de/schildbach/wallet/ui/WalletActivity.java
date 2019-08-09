@@ -335,13 +335,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
     public void onActivityResult(final int requestCode, final int resultCode, final Intent intent) {
         if (requestCode == REQUEST_CODE_SCAN && resultCode == Activity.RESULT_OK) {
             final String input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT);
-            handleString(input);
+            handleString(input, R.string.button_scan, R.string.input_parser_cannot_classify);
         } else {
             super.onActivityResult(requestCode, resultCode, intent);
         }
     }
 
-    private void handleString(String input) {
+    private void handleString(String input, final int errorDialogTitleResId, final int cannotClassifyCustomMessageResId) {
         new StringInputParser(input) {
             @Override
             protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
@@ -360,7 +360,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
             @Override
             protected void error(final int messageResId, final Object... messageArgs) {
-                dialog(WalletActivity.this, null, R.string.button_scan, messageResId, messageArgs);
+                dialog(WalletActivity.this, null, errorDialogTitleResId, messageResId, messageArgs);
+            }
+
+            @Override
+            protected void cannotClassify(String input) {
+                log.info("cannot classify: '{}'", input);
+                error(cannotClassifyCustomMessageResId, input);
             }
         }.parse();
     }
@@ -536,6 +542,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void handlePaste() {
+        String input = null;
         if (clipboardManager.hasPrimaryClip()) {
             final ClipData clip = clipboardManager.getPrimaryClip();
             if (clip == null) {
@@ -545,16 +552,19 @@ public final class WalletActivity extends AbstractBindServiceActivity
             if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST)) {
                 final Uri clipUri = clip.getItemAt(0).getUri();
                 if (clipUri != null) {
-                    final String input = clipUri.toString();
-                    handleString(input);
+                    input = clipUri.toString();
                 }
             } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
                 final CharSequence clipText = clip.getItemAt(0).getText();
                 if (clipText != null) {
-                    final String input = clipText.toString();
-                    handleString(input);
+                    input = clipText.toString();
                 }
             }
+        }
+        if (input != null) {
+            handleString(input, R.string.scan_to_pay_error_dialog_title, R.string.scan_to_pay_error_dialog_message);
+        } else {
+            InputParser.dialog(this, null, R.string.scan_to_pay_error_dialog_title, R.string.scan_to_pay_error_dialog_message_no_data);
         }
     }
 
