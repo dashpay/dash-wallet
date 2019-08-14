@@ -201,6 +201,7 @@
     </style>
 
     <style name="NewMontserratButton.Secondary" parent="MontserratButton">
+        <item name="android:textColor">@color/secondary_button</item>
         <item name="android:background">@drawable/secondary_button</item>
     </style>
 

@@ -74,9 +74,8 @@
         </activity>
 
         <activity android:name="de.schildbach.wallet.ui.VerifySeedActivity"
-            android:screenOrientation="portrait">
-
-        </activity>
+            android:theme="@style/My.Theme.ChildActivity"
+            android:screenOrientation="portrait"/>
 
         <activity
             android:name="de.schildbach.wallet.ui.WalletActivity"

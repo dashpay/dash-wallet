@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.Fragment
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.verify_seed_write_down.*
@@ -34,6 +35,7 @@ class VerifySeedWriteDownFragment private constructor() : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        view.findViewById<Toolbar>(R.id.toolbar).title = getString(R.string.verify_backup_wallet)
 
         if (arguments?.containsKey("seed")!!) {
             val seed = arguments!!.getStringArray("seed")

@@ -3,8 +3,9 @@ package de.schildbach.wallet.ui
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
-import java.lang.IllegalStateException
 
 /**
  * @author Samuel Barbosa
@@ -18,14 +19,33 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
         setContentView(R.layout.activity_verify_seed)
 
         seed = if (intent.extras?.containsKey("seed")!!) {
-            intent.extras.getStringArray("seed")
+            intent.extras!!.getStringArray("seed")!!
         } else {
-            throw IllegalStateException("This activity needs to receive a String[] containing " +
-                    "the recovery seed")
+            throw IllegalStateException("This activity needs to receive a String[] Intent Extra " +
+                    "containing the recovery seed.")
         }
+
+       supportFragmentManager.beginTransaction().add(R.id.container,
+                VerifySeedSecureNowFragment.newInstance()).commit()
+    }
+
+    private fun replaceFragment(fragment: Fragment) {
+        supportFragmentManager.beginTransaction().setCustomAnimations(R.anim.slide_in_right,
+                R.anim.slide_out_left).replace(R.id.container, fragment).commit()
+    }
+
+    override fun startSeedVerification() {
+        replaceFragment(VerifySeedItIsImportantFragment.newInstance())
+    }
+
+    override fun skipSeedVerification() {
+        startActivity(Intent(this, WalletActivity::class.java))
+        finish()
+    }
+
+    override fun showRecoveryPhrase() {
         val verifySeedWriteDownFragment = VerifySeedWriteDownFragment.newInstance(seed)
-        supportFragmentManager.beginTransaction().add(R.id.container,
-                verifySeedWriteDownFragment).commit()
+        replaceFragment(verifySeedWriteDownFragment)
     }
 
     override fun onVerifyWriteDown() {
@@ -34,6 +54,7 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
     }
 
     override fun onSeedVerified() {
+        WalletApplication.getInstance().configuration.disarmBackupSeedReminder()
         startActivity(Intent(this, WalletActivity::class.java))
         finish()
     }

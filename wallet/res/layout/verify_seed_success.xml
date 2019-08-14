@@ -15,7 +15,7 @@
             android:layout_width="76dp"
             android:layout_height="wrap_content"
             android:layout_marginBottom="28dp"
-            android:src="@drawable/security" />
+            android:src="@drawable/security_blue" />
 
         <TextView
             style="@style/MontserratMedium.B"

@@ -9,7 +9,7 @@ import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.widget.Button
 import android.widget.TextView
-import androidx.core.content.ContextCompat
+import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.Fragment
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.verify_seed_verify.*
@@ -20,8 +20,6 @@ import kotlinx.android.synthetic.main.verify_seed_verify.*
 class VerifySeedConfirmFragment : Fragment() {
 
     private val shakeAnimation by lazy { AnimationUtils.loadAnimation(context, R.anim.shake) }
-    private val errorButtonDrawable by lazy { context?.let { ContextCompat.getDrawable(it, R.drawable.error_button) } }
-    private val primaryButtonDrawable by lazy { context?.let { ContextCompat.getDrawable(it, R.drawable.primary_button) } }
     private val wordButtonsContainer by lazy { word_buttons_container }
     private val recoverySeedContainer by lazy { recovery_seed }
     private val wordButtons = arrayListOf<View>()
@@ -45,6 +43,7 @@ class VerifySeedConfirmFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        view.findViewById<Toolbar>(R.id.toolbar).title = getString(R.string.verify_backup_wallet)
 
         if (arguments?.containsKey("seed")!!) {
             words.addAll(arguments!!.getStringArray("seed"))
@@ -61,7 +60,6 @@ class VerifySeedConfirmFragment : Fragment() {
             wordButtonsContainer.addView(button)
             buttonsMap[word] = button
         }
-
         wordButtonsContainer.postDelayed({
             wordButtons.shuffle()
             wordButtonsContainer.removeAllViews()
@@ -69,7 +67,6 @@ class VerifySeedConfirmFragment : Fragment() {
                 wordButtonsContainer.addView(b)
             }
         }, 750)
-
     }
 
     private val addedWordClickListener = View.OnClickListener {
