@@ -1,4 +1,13 @@
 Dash Wallet
+v6.6.2
+* Use DashJ 0.16.2
+    * Improves processing of ChainLocks and InstantSendLocks
+    * Fixes several crashes
+* Add Log out command to Uphold screen
+* Add ability to reset link to Uphold account if the password was changed
+* Display entire Uphold balance (not rounded to #.##)
+* Wallet will be locked if the phone is rebooted
+
 v6.6.1
 * Report store information in Report Issue
 
