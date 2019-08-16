@@ -54,7 +54,6 @@ import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
-import android.app.admin.DevicePolicyManager;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -70,10 +69,10 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.provider.Settings;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.constraintlayout.motion.widget.MotionLayout;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.loader.app.LoaderManager;
@@ -122,7 +121,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     private Wallet wallet;
     private ContentResolver resolver;
     private LoaderManager loaderManager;
-    private DevicePolicyManager devicePolicyManager;
 
     private TextView emptyView;
     private View loading;
@@ -132,6 +130,10 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     private TextView fingerprintText;
     private RecyclerView recyclerView;
     private TransactionsAdapter adapter;
+    private Spinner filterSpinner;
+
+    private MotionLayout motionLayout;
+    private boolean motionLayoutDeactivated;
 
     @Nullable
     private Direction direction;
@@ -166,8 +168,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         this.config = application.getConfiguration();
         this.wallet = application.getWallet();
         this.resolver = activity.getContentResolver();
-        this.loaderManager = getLoaderManager();
-        this.devicePolicyManager = (DevicePolicyManager) application.getSystemService(Context.DEVICE_POLICY_SERVICE);
+        this.loaderManager = LoaderManager.getInstance(this.activity);
     }
 
     @Override
@@ -191,7 +192,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     @Override
     public View onCreateView(@NonNull final LayoutInflater inflater, final ViewGroup container,
                              final Bundle savedInstanceState) {
-        final View view = inflater.inflate(R.layout.wallet_transactions_fragment, container, false);
+        View view = inflater.inflate(R.layout.wallet_transactions_fragment, container, false);
 
         emptyView = view.findViewById(R.id.wallet_transactions_empty);
         fingerprintGroup = view.findViewById(R.id.fingerprint_group);
@@ -199,8 +200,26 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         fingerprintText = fingerprintGroup.findViewById(R.id.fingerprint_text);
         loading = view.findViewById(R.id.loading);
         transactionListContainer = view.findViewById(R.id.transaction_list_container);
+        filterSpinner = view.findViewById(R.id.history_filter);
 
-        recyclerView = (RecyclerView) view.findViewById(R.id.wallet_transactions_list);
+        return view;
+    }
+
+    @Override
+    public void onActivityCreated(@androidx.annotation.Nullable Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+
+        if (activity instanceof MotionLayoutProvider) {
+            MotionLayoutProvider motionLayoutProvider = (MotionLayoutProvider) this.activity;
+            motionLayout = motionLayoutProvider.getMotionLayout();
+            initRecyclerView(motionLayoutProvider.getRecyclerView());
+        } else {
+            initRecyclerView((RecyclerView) activity.findViewById(R.id.wallet_transactions_list));
+        }
+    }
+
+    private void initRecyclerView(RecyclerView recycler) {
+        recyclerView = recycler;
         recyclerView.setHasFixedSize(true);
         recyclerView.setLayoutManager(new LinearLayoutManager(activity));
         recyclerView.setAdapter(adapter);
@@ -221,17 +240,10 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
             }
         });
 
-        initHistoryFilter(view);
-
-        return view;
-    }
-
-    private void initHistoryFilter(View rootView) {
-        Spinner spinner = rootView.findViewById(R.id.history_filter);
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(rootView.getContext(), R.array.history_filter, R.layout.custom_spinner_item);
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(filterSpinner.getContext(), R.array.history_filter, R.layout.custom_spinner_item);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinner.setAdapter(adapter);
-        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        filterSpinner.setAdapter(adapter);
+        filterSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 switch(position) {
@@ -450,12 +462,18 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         fingerprintGroup.setVisibility(View.GONE);
         emptyView.setVisibility(View.GONE);
         transactionListContainer.setVisibility(View.VISIBLE);
+        if (motionLayoutDeactivated) {
+            motionLayout.setTransition(R.id.expanded, R.id.collapsed);
+            motionLayoutDeactivated = false;
+        }
     }
 
     private void showEmptyView() {
         emptyView.setVisibility(View.VISIBLE);
         fingerprintGroup.setVisibility(View.GONE);
         transactionListContainer.setVisibility(View.GONE);
+        motionLayout.setTransition(R.id.expanded, R.id.expanded);
+        motionLayoutDeactivated = true;
     }
 
     private void showLockedView() {
@@ -687,6 +705,13 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 //        } else {
 //            reloadTransactions();
 //        }
+    }
+
+    public interface MotionLayoutProvider {
+
+        MotionLayout getMotionLayout();
+
+        RecyclerView getRecyclerView();
     }
 
 }

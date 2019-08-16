@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.motion.widget.MotionLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/linearLayout"
+    android:id="@+id/home_content"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:animateLayoutChanges="true"
     android:background="@color/dash_lighter_gray"
+    app:layoutDescription="@xml/collapsing_toolbar"
     tools:ignore="ContentDescription">
 
     <androidx.constraintlayout.widget.Guideline
@@ -16,55 +16,49 @@
         android:orientation="vertical"
         app:layout_constraintGuide_percent="0.50" />
 
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/header_center_guideline"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.15" />
-
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/header_logo_guideline"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.07" />
-
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/header_guideline"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.30" />
-
     <FrameLayout
         android:id="@+id/header_pane"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:background="@color/colorPrimary"
-        app:layout_constraintBottom_toTopOf="@+id/header_guideline"
+        android:layout_width="0dp"
+        android:layout_height="340dp"
+        android:background="@color/dash_blue"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <ImageView
-        android:id="@+id/dash_logo"
-        android:layout_width="96dp"
+    <Space
+        android:id="@+id/quick_actions_pane_space"
+        android:layout_width="0dp"
+        android:layout_height="32dp"
+        app:layout_constraintBottom_toTopOf="@id/quick_actions_pane" />
+
+    <FrameLayout
+        android:id="@+id/header_pane_bottom"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@color/dash_lighter_gray"
+        app:layout_constraintBottom_toBottomOf="@id/header_pane"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/quick_actions_pane_space" />
+
+    <include
+        android:id="@+id/quick_actions_pane"
+        layout="@layout/quick_actions_layout"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:src="@drawable/ic_dash_logo_white"
-        app:layout_constraintBottom_toBottomOf="@+id/header_logo_guideline"
-        app:layout_constraintEnd_toEndOf="@+id/center_guideline"
-        app:layout_constraintStart_toStartOf="@+id/center_guideline"
-        app:layout_constraintTop_toTopOf="@+id/header_logo_guideline" />
+        android:layout_margin="14dp"
+        app:layout_constraintBottom_toBottomOf="@+id/header_pane" />
 
     <TextView
         android:id="@+id/available_balance"
         style="@style/TextViewStyle.Body"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="116dp"
         android:text="@string/home_available_balance"
-        app:layout_constraintBottom_toTopOf="@+id/header_center_guideline"
+        app:layout_constraintBottom_toTopOf="@+id/header_pane_bottom"
         app:layout_constraintEnd_toEndOf="@+id/center_guideline"
-        app:layout_constraintStart_toStartOf="@+id/center_guideline"
-        app:layout_constraintTop_toTopOf="@+id/header_center_guideline" />
+        app:layout_constraintStart_toStartOf="@+id/center_guideline" />
 
     <fragment
         android:id="@+id/wallet_balance_fragment"
@@ -73,8 +67,21 @@
         android:layout_height="wrap_content"
         app:layout_constraintEnd_toEndOf="@+id/center_guideline"
         app:layout_constraintStart_toStartOf="@+id/center_guideline"
-        app:layout_constraintTop_toTopOf="@+id/header_center_guideline"
+        app:layout_constraintTop_toBottomOf="@+id/available_balance"
         tools:layout="@layout/header_balance_fragment" />
+
+    <ImageView
+        android:id="@+id/dash_logo"
+        android:layout_width="0dp"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/colorPrimary"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="16dp"
+        android:src="@drawable/ic_dash_logo_white"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <FrameLayout
         android:id="@+id/body_pane"
@@ -92,10 +99,10 @@
         android:layout_marginLeft="16dp"
         android:layout_marginEnd="4dp"
         android:layout_marginRight="4dp"
-        app:layout_constraintBottom_toBottomOf="@+id/header_guideline"
+        app:layout_constraintBottom_toTopOf="@+id/header_pane_bottom"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toLeftOf="@+id/center_guideline"
-        app:layout_constraintTop_toTopOf="@+id/header_guideline"
+        app:layout_constraintTop_toTopOf="@+id/header_pane_bottom"
         tools:ignore="UseCompoundDrawables">
 
         <TextView
@@ -119,10 +126,10 @@
         android:layout_marginLeft="4dp"
         android:layout_marginEnd="16dp"
         android:layout_marginRight="16dp"
-        app:layout_constraintBottom_toBottomOf="@+id/header_guideline"
+        app:layout_constraintBottom_toTopOf="@+id/header_pane_bottom"
         app:layout_constraintLeft_toRightOf="@+id/center_guideline"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/header_guideline">
+        app:layout_constraintTop_toTopOf="@+id/header_pane_bottom">
 
         <TextView
             style="@style/TextViewStyle.Body"
@@ -136,83 +143,26 @@
 
     </FrameLayout>
 
-    <RelativeLayout
-        android:id="@+id/sync_status_pane"
-        style="@style/DashButton.White"
-        android:layout_width="match_parent"
-        android:layout_height="80dp"
-        android:layout_margin="16dp"
-        app:layout_constraintTop_toBottomOf="@+id/pay_btn">
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_centerVertical="true"
-            android:layout_marginStart="16dp"
-            android:layout_marginLeft="16dp"
-            android:gravity="center_vertical"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/sync_status_title"
-                style="@style/TitleTextView.Primary"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Syncing" />
-
-            <TextView
-                android:id="@+id/sync_status_message"
-                style="@style/TitleTextView.Secondary"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="with Dash Blockchain"
-                android:textColor="@color/dash_gray" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/sync_status_percentage"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:layout_alignParentRight="true"
-            android:layout_centerInParent="true"
-            android:layout_marginEnd="16dp"
-            android:layout_marginRight="16dp"
-            android:fontFamily="@font/montserrat_regular"
-            android:text="63%"
-            android:textColor="@color/dash_blue"
-            android:textSize="24sp" />
-
-        <ProgressBar
-            android:id="@+id/sync_status_progress"
-            style="@style/ProgressBar.Horizontal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:indeterminate="false"
-            android:progress="63"
-            android:visibility="visible" />
-
-    </RelativeLayout>
-
-    <include
-        android:id="@+id/quick_actions_pane"
-        layout="@layout/quick_actions_layout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="14dp"
-        app:layout_constraintTop_toBottomOf="@+id/sync_status_pane" />
-
     <fragment
         android:id="@+id/wallet_transactions_fragment"
         android:name="de.schildbach.wallet.ui.WalletTransactionsFragment"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="24dp"
         android:background="@color/dash_white"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/quick_actions_pane"
         tools:layout="@layout/wallet_transactions_fragment" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/home_recycler"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="55dp"
+        android:clipToPadding="false"
+        android:scrollbars="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/quick_actions_pane" />
 
     <TextView
         android:id="@+id/message_panel"
@@ -227,4 +177,4 @@
         app:layout_constraintTop_toTopOf="parent"
         tools:visibility="visible" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.constraintlayout.motion.widget.MotionLayout>
