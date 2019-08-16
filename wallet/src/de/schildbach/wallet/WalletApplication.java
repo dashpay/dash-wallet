@@ -125,6 +125,9 @@ public class WalletApplication extends MultiDexApplication {
         super.onCreate();
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
+        if(walletFileExists()) {
+            fullInitialization();
+        }
     }
 
     public void fullInitialization() {

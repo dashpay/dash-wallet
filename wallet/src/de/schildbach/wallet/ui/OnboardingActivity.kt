@@ -41,6 +41,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 onboarding()
             } else {
                 if (walletApplication.wallet.isEncrypted) {
+                    walletApplication.fullInitialization()
                     regularFlow()
                 } else {
                     startActivity(SetPinActivity.createIntent(this, R.string.set_pin_create_new_wallet))
@@ -51,7 +52,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     private fun regularFlow() {
         try {
-            walletApplication.fullInitialization()
             startActivity(Intent(this, WalletActivity::class.java))
             finish()
         } catch (x: Exception) {
