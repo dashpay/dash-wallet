@@ -36,6 +36,9 @@ public interface UpholdService {
                                            @Field("client_secret")String clientSecret,
                                            @Field("code") String code,
                                            @Field("grant_type") String grantType);
+    @FormUrlEncoded
+    @POST("oauth2/revoke")
+    Call<String> revokeAccessToken(@Field("token") String token);
 
     @GET("v0/me/cards")
     Call<List<UpholdCard>> getCards();

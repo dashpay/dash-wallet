@@ -126,6 +126,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
     private BlockStore blockStore;
     private File blockChainFile;
     private BlockChain blockChain;
+    private InputStream bootStrapStream;
     @Nullable
     private PeerGroup peerGroup;
 
@@ -653,12 +654,19 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
         final boolean blockChainFileExists = blockChainFile.exists();
 
+        try {
+            bootStrapStream = getAssets().open(Constants.Files.MNLIST_BOOTSTRAP_FILENAME);
+            SimplifiedMasternodeListManager.setBootStrapStream(bootStrapStream);
+        } catch (IOException x) {
+            log.info("cannot load the boot strap stream.  " + x.getMessage());
+        }
+
         if (!blockChainFileExists) {
             log.info("blockchain does not exist, resetting wallet");
             wallet.reset();
             SimplifiedMasternodeListManager manager = wallet.getContext().masternodeListManager;
             if(manager != null)
-                manager.resetMNList(true, false);
+                manager.resetMNList(true, true);
         }
 
         try {
@@ -683,7 +691,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
             blockChainFile.delete();
             SimplifiedMasternodeListManager manager = application.getWallet().getContext().masternodeListManager;
             if(manager != null) {
-                manager.resetMNList(true, false);
+                manager.resetMNList(true, true);
             }
 
             final String msg = "blockstore cannot be created";
@@ -832,6 +840,14 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
             SimplifiedMasternodeListManager manager = application.getWallet().getContext().masternodeListManager;
             if(manager != null) {
                 manager.resetMNList(true, false);
+            }
+        }
+
+        if(bootStrapStream != null) {
+            try {
+                bootStrapStream.close();
+            } catch (IOException x) {
+                //do nothing
             }
         }
 

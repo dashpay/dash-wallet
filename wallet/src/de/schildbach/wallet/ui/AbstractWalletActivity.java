@@ -59,7 +59,6 @@ public abstract class AbstractWalletActivity extends AppCompatActivity implement
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
             setTaskDescription(new TaskDescription(null, null, getResources().getColor(R.color.bg_action_bar)));
         PinRetryController.handleLockedForever(this);
-        WalletLock.getInstance().setConfiguration(application.getConfiguration());
 
         registerFinishAllReceiver();
         super.onCreate(savedInstanceState);

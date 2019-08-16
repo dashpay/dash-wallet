@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="uphold_account">Conta Uphold</string>
+    <string name="uphold_account">Uphold</string>
     <string name="uphold_buy_dash_activity_title">Comprar/Vender Dash com Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Comprar Dash com conta Uphold</string>
     <string name="uphold_buy_dash_button">Comprar Dash</string>
     <string name="uphold_transfer_to_this_wallet_button">Transferir de Uphold</string>
-    <string name="uphold_link_account">Enlaçar conta Uphold</string>
+    <string name="uphold_link_account">Associar conta de Uphold</string>
     <string name="uphold_account_dash_balance">O saldo da sua conta Uphold é de</string>
     <string name="uphold_transfer_to_this_wallet">Transferir Dash de sua conta Uphold para essa carteira</string>
     <string name="uphold_withdrawal_amount">Quantia</string>
@@ -23,5 +23,13 @@
     <string name="uphold_otp_dialog_title">Insira o seu código de 2FA abaixo:</string>
     <string name="uphold_transfer">Transferir</string>
     <string name="uphold_see_on_uphold">Ver na Uphold</string>
+    <string name="uphold_logout_title">Encerrar sessão de Uphold</string>
+    <string name="uphold_logout">Encerrar sessão</string>
+    <string name="uphold_logout_explanation_text">Você também precisa encerrar a sessão de Uphold em seu navegador. </string>
+    <string name="uphold_logout_go_to_website">Ir ao site</string>
+    <string name="uphold_error">Erro de Uphold</string>
+    <string name="uphold_error_not_logged_in">Sua conta de Uphold não está mais associada à Dash Wallet. Na próxima tela pressione \"Associar conta de Uphold\".</string>
+    <string name="uphold_error_not_available">O serviço de Uphold não está disponível. Tente novamente mais tarde por favor. </string>
+    <string name="uphold_error_report_issue">Por favor reporte este problema usando a opção \"Reportar Problema\" no menu principal. </string>
 
 </resources>

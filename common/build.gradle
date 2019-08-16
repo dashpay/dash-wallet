@@ -36,6 +36,7 @@ dependencies {
     api 'com.squareup.moshi:moshi:1.5.0'
     api 'com.squareup.retrofit2:retrofit:2.4.0'
     api 'com.squareup.retrofit2:converter-moshi:2.3.0'
+    api 'com.squareup.retrofit2:converter-scalars:2.3.0'
 
     //Android Arch
     api 'androidx.lifecycle:lifecycle-extensions:2.0.0'
