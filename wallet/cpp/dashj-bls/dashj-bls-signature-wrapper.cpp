@@ -663,9 +663,51 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_BLS_1DHKeyExchange(JNIEnv *jenv,
 SWIGEXPORT void JNICALL Java_org_dashj_bls_JNI_BLS_1CheckRelicErrors(JNIEnv *jenv, jclass jcls) {
   (void)jenv;
   (void)jcls;
-  bls::BLS::CheckRelicErrors();
+    try {
+    bls::BLS::CheckRelicErrors();
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+  } catch (...) {
+      SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown exception");
+  }
 }
 
+SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_BLS_1GetContext(JNIEnv *jenv, jclass jcls) {
+  (void)jenv;
+  (void)jcls;
+  return (jlong)core_get();
+}
+
+SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_BLS_1GetContextError(JNIEnv *jenv, jclass jcls) {
+  (void)jenv;
+  (void)jcls;
+  return core_get()->code;
+}
+
+SWIGEXPORT void JNICALL Java_org_dashj_bls_JNI_BLS_1SetContextError(JNIEnv *jenv, jclass jcls, jlong error) {
+  (void)jenv;
+  (void)jcls;
+  core_get()->code = error;
+}
+
+std::string DASHJ_VERSION = "0.16.2";
+
+SWIGEXPORT jstring JNICALL Java_org_dashj_bls_JNI_BLS_1GetVersionString(JNIEnv *jenv, jclass jcls) {
+  (void)jenv;
+  (void)jcls;
+
+    jstring jresult = jenv->NewStringUTF(DASHJ_VERSION.c_str());
+
+      if (jresult == NULL) {
+          SWIG_JavaThrowException(jenv, SWIG_JavaOutOfMemoryError, "Can't create new byte array");
+          return NULL; //  out of memory error thrown
+      }
+
+      // move from the temp structure to the java structure
+     // jenv->SetByteArrayRegion(jresult, 0, DASHJ_VERSION.size(), (jbyte*)DASHJ_VERSION.c_str());
+
+    return jresult;
+}
 
 SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_new_1BLS(JNIEnv *jenv, jclass jcls) {
   jlong jresult = 0 ;
@@ -711,7 +753,16 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_ChainCode_1FromBytes(JNIEnv *jen
   {
     arg1 = (uint8_t *) jenv->GetByteArrayElements(jarg1, 0);
   }
-  result = bls::ChainCode::FromBytes((unsigned char const *)arg1);
+  try {
+    result = bls::ChainCode::FromBytes((unsigned char const *)arg1);
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  } catch (...) {
+      SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown exception");
+      return 0;
+  }
+
   *(bls::ChainCode **)&jresult = new bls::ChainCode((const bls::ChainCode &)result); 
   {
     jenv->ReleaseByteArrayElements(jarg1, (jbyte *) arg1, 0);
@@ -828,7 +879,16 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_ExtendedPrivateKey_1FromBytes(JN
   {
     arg1 = (uint8_t *) jenv->GetByteArrayElements(jarg1, 0);
   }
-  result = bls::ExtendedPrivateKey::FromBytes((unsigned char const *)arg1);
+  try {
+    result = bls::ExtendedPrivateKey::FromBytes((unsigned char const *)arg1);
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  } catch (...) {
+      SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown exception");
+      return 0;
+  }
+
   *(bls::ExtendedPrivateKey **)&jresult = new bls::ExtendedPrivateKey((const bls::ExtendedPrivateKey &)result); 
   {
     jenv->ReleaseByteArrayElements(jarg1, (jbyte *) arg1, 0);
@@ -849,7 +909,16 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_ExtendedPrivateKey_1PrivateChild
   (void)jarg1_;
   arg1 = *(bls::ExtendedPrivateKey **)&jarg1; 
   arg2 = (uint32_t)jarg2; 
-  result = ((bls::ExtendedPrivateKey const *)arg1)->PrivateChild(arg2);
+  try {
+    result = ((bls::ExtendedPrivateKey const *)arg1)->PrivateChild(arg2);
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  } catch (...) {
+      SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown exception");
+      return 0;
+  }
+
   *(bls::ExtendedPrivateKey **)&jresult = new bls::ExtendedPrivateKey((const bls::ExtendedPrivateKey &)result); 
   return jresult;
 }
@@ -866,7 +935,16 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_ExtendedPrivateKey_1PublicChild(
   (void)jarg1_;
   arg1 = *(bls::ExtendedPrivateKey **)&jarg1; 
   arg2 = (uint32_t)jarg2; 
-  result = ((bls::ExtendedPrivateKey const *)arg1)->PublicChild(arg2);
+  try {
+    result = ((bls::ExtendedPrivateKey const *)arg1)->PublicChild(arg2);
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  } catch (...) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown exception");
+    return 0;
+  }
+
   *(ExtendedPublicKey **)&jresult = new ExtendedPublicKey((const ExtendedPublicKey &)result); 
   return jresult;
 }
@@ -1070,7 +1148,16 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_ExtendedPublicKey_1FromBytes(JNI
   {
     arg1 = (uint8_t *) jenv->GetByteArrayElements(jarg1, 0);
   }
-  result = bls::ExtendedPublicKey::FromBytes((unsigned char const *)arg1);
+  try {
+    result = bls::ExtendedPublicKey::FromBytes((unsigned char const *)arg1);
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  } catch (...) {
+      SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown exception");
+      return 0;
+  }
+
   *(bls::ExtendedPublicKey **)&jresult = new bls::ExtendedPublicKey((const bls::ExtendedPublicKey &)result); 
   {
     jenv->ReleaseByteArrayElements(jarg1, (jbyte *) arg1, 0);
@@ -1091,8 +1178,17 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_ExtendedPublicKey_1PublicChild(J
   (void)jarg1_;
   arg1 = *(bls::ExtendedPublicKey **)&jarg1; 
   arg2 = (uint32_t)jarg2; 
-  result = ((bls::ExtendedPublicKey const *)arg1)->PublicChild(arg2);
-  *(bls::ExtendedPublicKey **)&jresult = new bls::ExtendedPublicKey((const bls::ExtendedPublicKey &)result); 
+  try {
+    result = ((bls::ExtendedPublicKey const *)arg1)->PublicChild(arg2);
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  } catch (...) {
+      SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown exception");
+      return 0;
+  }
+
+  *(bls::ExtendedPublicKey **)&jresult = new bls::ExtendedPublicKey((const bls::ExtendedPublicKey &)result);
   return jresult;
 }
 
@@ -1277,7 +1373,16 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_PrivateKey_1FromBytes_1_1SWIG_10
     arg1 = (uint8_t *) jenv->GetByteArrayElements(jarg1, 0);
   }
   arg2 = jarg2 ? true : false; 
-  result = bls::PrivateKey::FromBytes((unsigned char const *)arg1,arg2);
+  try {
+    result = bls::PrivateKey::FromBytes((unsigned char const *)arg1,arg2);
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  } catch (...) {
+      SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown exception");
+      return 0;
+  }
+
   *(bls::PrivateKey **)&jresult = new bls::PrivateKey((const bls::PrivateKey &)result); 
   {
     jenv->ReleaseByteArrayElements(jarg1, (jbyte *) arg1, 0);
@@ -1297,7 +1402,16 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_PrivateKey_1FromBytes_1_1SWIG_11
   {
     arg1 = (uint8_t *) jenv->GetByteArrayElements(jarg1, 0);
   }
-  result = bls::PrivateKey::FromBytes((unsigned char const *)arg1);
+  try {
+    result = bls::PrivateKey::FromBytes((unsigned char const *)arg1);
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  } catch (...) {
+      SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown exception");
+      return 0;
+  }
+
   *(bls::PrivateKey **)&jresult = new bls::PrivateKey((const bls::PrivateKey &)result); 
   {
     jenv->ReleaseByteArrayElements(jarg1, (jbyte *) arg1, 0);
@@ -1364,7 +1478,16 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_PrivateKey_1AggregateInsecure(JN
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< bls::PrivateKey > const & reference is null");
     return 0;
   } 
-  result = bls::PrivateKey::AggregateInsecure((std::vector< bls::PrivateKey > const &)*arg1);
+  try {
+    result = bls::PrivateKey::AggregateInsecure((std::vector< bls::PrivateKey > const &)*arg1);
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  } catch (...) {
+      SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown exception");
+      return 0;
+  }
+
   *(bls::PrivateKey **)&jresult = new bls::PrivateKey((const bls::PrivateKey &)result); 
   return jresult;
 }
@@ -1547,7 +1670,16 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_PublicKey_1FromBytes(JNIEnv *jen
   {
     arg1 = (uint8_t *) jenv->GetByteArrayElements(jarg1, 0);
   }
-  result = bls::PublicKey::FromBytes((unsigned char const *)arg1);
+  try {
+    result = bls::PublicKey::FromBytes((unsigned char const *)arg1);
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  } catch (...) {
+      SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown exception");
+      return 0;
+  }
+
   *(bls::PublicKey **)&jresult = new bls::PublicKey((const bls::PublicKey &)result); 
   {
     jenv->ReleaseByteArrayElements(jarg1, (jbyte *) arg1, 0);
@@ -1714,6 +1846,9 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_InsecureSignature_1FromBytes(JNI
   } catch (std::string & x) {
     SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
     return 0;
+  } catch (...) {
+      SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown exception");
+      return 0;
   }
   *(bls::InsecureSignature **)&jresult = new bls::InsecureSignature((const bls::InsecureSignature &)result); 
   {
@@ -1778,9 +1913,17 @@ SWIGEXPORT jboolean JNICALL Java_org_dashj_bls_JNI_InsecureSignature_1Verify(JNI
   if (!arg3) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< bls::PublicKey > const & reference is null");
     return 0;
-  } 
-  result = (bool)((bls::InsecureSignature const *)arg1)->Verify((std::vector< uint8_t const * > const &)*arg2,(std::vector< bls::PublicKey > const &)*arg3);
-  jresult = (jboolean)result; 
+  }
+  try {
+    result = (bool)((bls::InsecureSignature const *)arg1)->Verify((std::vector< uint8_t const * > const &)*arg2,(std::vector< bls::PublicKey > const &)*arg3);
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  } catch (...) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown error");
+    return 0;
+  }
+  jresult = (jboolean)result;
   return jresult;
 }
 
@@ -1818,7 +1961,16 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_InsecureSignature_1DivideBy(JNIE
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< bls::InsecureSignature > const & reference is null");
     return 0;
   } 
-  result = ((bls::InsecureSignature const *)arg1)->DivideBy((std::vector< bls::InsecureSignature > const &)*arg2);
+  try {
+    result = ((bls::InsecureSignature const *)arg1)->DivideBy((std::vector< bls::InsecureSignature > const &)*arg2);
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  } catch (...) {
+      SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown exception");
+      return 0;
+  }
+
   *(bls::InsecureSignature **)&jresult = new bls::InsecureSignature((const bls::InsecureSignature &)result); 
   return jresult;
 }
@@ -1890,8 +2042,16 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_Signature_1FromBytes_1_1SWIG_10(
   {
     arg1 = (uint8_t *) jenv->GetByteArrayElements(jarg1, 0);
   }
-  result = bls::Signature::FromBytes((unsigned char const *)arg1);
-  *(bls::Signature **)&jresult = new bls::Signature((const bls::Signature &)result); 
+  try {
+    result = bls::Signature::FromBytes((unsigned char const *)arg1);
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  } catch (...) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown exception");
+    return 0;
+  }
+  *(bls::Signature **)&jresult = new bls::Signature((const bls::Signature &)result);
   {
     jenv->ReleaseByteArrayElements(jarg1, (jbyte *) arg1, 0);
   }
@@ -1916,7 +2076,16 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_Signature_1FromBytes_1_1SWIG_11(
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "AggregationInfo const & reference is null");
     return 0;
   } 
-  result = bls::Signature::FromBytes((unsigned char const *)arg1,(AggregationInfo const &)*arg2);
+  try {
+    result = bls::Signature::FromBytes((unsigned char const *)arg1,(AggregationInfo const &)*arg2);
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  } catch (...) {
+      SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown exception");
+      return 0;
+  }
+
   *(bls::Signature **)&jresult = new bls::Signature((const bls::Signature &)result); 
   {
     jenv->ReleaseByteArrayElements(jarg1, (jbyte *) arg1, 0);
@@ -2031,9 +2200,17 @@ SWIGEXPORT jboolean JNICALL Java_org_dashj_bls_JNI_Signature_1Verify(JNIEnv *jen
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(bls::Signature **)&jarg1; 
-  result = (bool)((bls::Signature const *)arg1)->Verify();
-  jresult = (jboolean)result; 
+  arg1 = *(bls::Signature **)&jarg1;
+  try {
+    result = (bool)((bls::Signature const *)arg1)->Verify();
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  } catch (...) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown error");
+    return 0;
+  }
+  jresult = (jboolean)result;
   return jresult;
 }
 
@@ -2050,7 +2227,16 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_Signature_1AggregateSigs(JNIEnv 
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< bls::Signature > const & reference is null");
     return 0;
   } 
-  result = bls::Signature::AggregateSigs((std::vector< bls::Signature > const &)*arg1);
+  try {
+    result = bls::Signature::AggregateSigs((std::vector< bls::Signature > const &)*arg1);
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  } catch (...) {
+      SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown exception");
+      return 0;
+  }
+
   *(bls::Signature **)&jresult = new bls::Signature((const bls::Signature &)result); 
   return jresult;
 }
@@ -2071,7 +2257,16 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_Signature_1DivideBy(JNIEnv *jenv
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< bls::Signature > const & reference is null");
     return 0;
   } 
-  result = ((bls::Signature const *)arg1)->DivideBy((std::vector< bls::Signature > const &)*arg2);
+  try {
+    result = ((bls::Signature const *)arg1)->DivideBy((std::vector< bls::Signature > const &)*arg2);
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+    return 0;
+  } catch (...) {
+      SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown exception");
+      return 0;
+  }
+
   *(bls::Signature **)&jresult = new bls::Signature((const bls::Signature &)result); 
   return jresult;
 }
@@ -2376,6 +2571,21 @@ SWIGEXPORT jboolean JNICALL Java_org_dashj_bls_JNI_AggregationInfo_1Empty(JNIEnv
   return jresult;
 }
 
+SWIGEXPORT jboolean JNICALL Java_org_dashj_bls_JNI_AggregationInfo_1Equals(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2, jobject jarg2_) {
+  jboolean jresult = 0 ;
+  bls::AggregationInfo *arg1 = (bls::AggregationInfo *) 0 ;
+  bls::AggregationInfo *arg2 = (bls::AggregationInfo *) 0 ;
+  bool result;
+
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(bls::AggregationInfo **)&jarg1;
+  arg2 = *(bls::AggregationInfo **)&jarg2;
+  result = (bool)((*(bls::AggregationInfo const *)arg1)==(*(bls::AggregationInfo const*)arg2));
+  jresult = (jboolean)result;
+  return jresult;
+}
 
 SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_new_1AggregationInfo_1_1SWIG_11(JNIEnv *jenv, jclass jcls) {
   jlong jresult = 0 ;

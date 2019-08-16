@@ -142,6 +142,8 @@ public final class Constants {
         /** Filename of the block checkpoints file. */
         public static final String CHECKPOINTS_FILENAME = "checkpoints" + FILENAME_NETWORK_SUFFIX + ".txt";
 
+        public static final String MNLIST_BOOTSTRAP_FILENAME = "mnlistdiff" + FILENAME_NETWORK_SUFFIX + ".dat";
+
         /** Filename of the fees files. */
         public static final String FEES_FILENAME = "fees" + FILENAME_NETWORK_SUFFIX + ".txt";
 

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="uphold_account">Uphold account</string>
+    <string name="uphold_account">Uphold</string>
     <string name="uphold_buy_dash_activity_title">Buy/Sell Dash with Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Buy Dash with Uphold account</string>
     <string name="uphold_buy_dash_button">Buy Dash</string>
@@ -23,5 +23,13 @@
     <string name="uphold_otp_dialog_title">Enter your 2FA code below:</string>
     <string name="uphold_transfer">Transfer</string>
     <string name="uphold_see_on_uphold">See on Uphold</string>
+    <string name="uphold_logout_title">Log Out from Uphold</string>
+    <string name="uphold_logout">Log Out</string>
+    <string name="uphold_logout_explanation_text">You also need to logout from the Uphold website on your browser.</string>
+    <string name="uphold_logout_go_to_website">Go to website</string>
+    <string name="uphold_error">Uphold Error</string>
+    <string name="uphold_error_not_logged_in">Dash Wallet is no longer linked to your Uphold account.  On the next screen press Link Uphold account.</string>
+    <string name="uphold_error_not_available">The Uphold service is not available.  Please try again later.</string>
+    <string name="uphold_error_report_issue">Please report this issue to the Dash Wallet support team using "Report Issue" from the main menu.</string>
 
 </resources>

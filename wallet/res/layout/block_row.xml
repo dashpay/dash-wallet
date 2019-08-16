@@ -84,7 +84,7 @@
             style="@style/MontserratMedium.MG.14"/>
 
         <TextView
-            android:layout_below="@id/block_list_row_hash"
+            android:layout_below="@id/block_list_row_transactions_group"
             android:paddingTop="4dp"
             android:id="@+id/block_list_row_chainlock_mnlist"
             android:layout_width="match_parent"
