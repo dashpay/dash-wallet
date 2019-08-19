@@ -29,7 +29,6 @@
     <string name="wallet_transactions_fragment_empty_text_sent">Nessun Dash ancora inviato</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Come ottenere Dash?\n\nBarattali per soldi reali,\nvendi beni o servizi oppure\nricavali lavorando.</string>
     <string name="wallet_transactions_row_warning_backup">Congratulazioni, hai ricevuto i tuoi primi pagamenti! Hai già eseguito un backup del tuo portafoglio, per proteggerlo dai danni?</string>
-    <string name="wallet_transactions_row_warning_storage_encryption">Suggerimenti: per aumentare la sicurezza del tuo portafoglio, tu puoi criptare i dati del tuo dispositivo. Questa misura proteggei  anche i dati di altre applicazioni da te installate.</string>
     <string name="wallet_transactions_fragment_coinbase">minato</string>
     <string name="wallet_transactions_fragment_internal">Interno</string>
     <string name="wallet_transactions_options_filter">Filtro</string>

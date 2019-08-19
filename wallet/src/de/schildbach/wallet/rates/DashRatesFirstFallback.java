@@ -31,21 +31,28 @@ public class DashRatesFirstFallback implements ExchangeRatesClient {
         CryptoCompareClient cryptoCompareClient = CryptoCompareClient.getInstance();
 
         List<ExchangeRate> rates = btcAvgClient.getGlobalIndices().body();
-        CryptoCompareVesBtcRate vesBtcRateResponse = cryptoCompareClient.getVESBTCRate().body();
         Rate dashBtcRate = cryptoCompareClient.getDashCustomAverage().body();
 
-        if (rates == null || rates.isEmpty() || vesBtcRateResponse == null || dashBtcRate == null) {
+        BigDecimal dashVesPrice = DashCasaClient.getInstance().getRates().body().getDashVesPrice();
+
+        if (rates == null || rates.isEmpty() || dashBtcRate == null || dashVesPrice == null) {
             throw new IllegalStateException("Failed to fetch prices from Fallback1");
         }
 
-        for(ExchangeRate rate : rates) {
-            BigDecimal currencyBtcRate;
+        boolean vesRateExists = false;
+        for (ExchangeRate rate : rates) {
             if (VES_CURRENCY_CODE.equalsIgnoreCase(rate.getCurrencyCode())) {
-                currencyBtcRate = vesBtcRateResponse.getRate();
+                vesRateExists = true;
+                if (dashVesPrice.compareTo(BigDecimal.ZERO) > 0) {
+                    rate.setRate(dashVesPrice.toPlainString());
+                }
             } else {
-                currencyBtcRate = new BigDecimal(rate.getRate());
+                BigDecimal currencyBtcRate = new BigDecimal(rate.getRate());
+                rate.setRate(currencyBtcRate.multiply(dashBtcRate.getRate()).toPlainString());
             }
-            rate.setRate(currencyBtcRate.multiply(dashBtcRate.getRate()).toPlainString());
+        }
+        if (!vesRateExists) {
+            rates.add(new ExchangeRate(VES_CURRENCY_CODE, dashVesPrice.toPlainString()));
         }
 
         return rates;

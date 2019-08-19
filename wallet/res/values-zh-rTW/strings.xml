@@ -29,7 +29,6 @@
     <string name="wallet_transactions_fragment_empty_text_sent">尚未付出達世幣</string>
     <string name="wallet_transactions_fragment_empty_text_howto">如何獲得達世幣?\\n\\n用傳統貨幣交易,\\n賣物品或是服務或\\n線上挖掘。</string>
     <string name="wallet_transactions_row_warning_backup">恭喜你收到第一筆付款! 你是否已經備份好你的錢包來防止意外發生?</string>
-    <string name="wallet_transactions_row_warning_storage_encryption">提示 : 為了增加你的錢包的安全性，你可以 &lt;u&gt;加密您的裝置&lt;/u&gt;. 這同時也會保護其他應用程式的數據。</string>
     <string name="wallet_transactions_fragment_coinbase">已採礦</string>
     <string name="wallet_transactions_fragment_internal">內部</string>
     <string name="wallet_transactions_options_filter">篩選</string>

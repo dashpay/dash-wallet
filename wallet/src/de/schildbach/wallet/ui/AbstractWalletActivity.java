@@ -59,7 +59,6 @@ public abstract class AbstractWalletActivity extends AppCompatActivity implement
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
             setTaskDescription(new TaskDescription(null, null, getResources().getColor(R.color.bg_action_bar)));
         PinRetryController.handleLockedForever(this);
-        WalletLock.getInstance().setConfiguration(application.getConfiguration());
 
         registerFinishAllReceiver();
         super.onCreate(savedInstanceState);
@@ -139,5 +138,17 @@ public abstract class AbstractWalletActivity extends AppCompatActivity implement
     @Override
     public void onWalletUpgradeComplete(String password) {
 
+    }
+
+    @Override
+    public void startActivity(Intent intent) {
+        super.startActivity(intent);
+        overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
+    }
+
+    @Override
+    public void finish() {
+        super.finish();
+        overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
     }
 }

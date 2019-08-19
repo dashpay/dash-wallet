@@ -207,6 +207,11 @@
 
     <style name="NewMontserratButton.Secondary.Inverted" parent="MontserratButton">
         <item name="android:background">@drawable/secondary_inverted_button</item>
+        <item name="fontFamily">@font/montserrat_regular</item>
+    </style>
+
+    <style name="NewMontserratButton.Secondary.Inverted.Large" parent="NewMontserratButton.Secondary.Inverted">
+        <item name="android:textSize">18sp</item>
     </style>
 
     <style name="MontserratButton.Inverted">
@@ -223,6 +228,10 @@
     </style>
 
     <style name="MontserratMedium.DB.14">
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="MontserratMedium.DB.18">
         <item name="android:textSize">14sp</item>
     </style>
 
@@ -345,11 +354,6 @@
     </style>
 
     <style name="ExtendedTransactions">
-        <item name="android:layout_alignLeft">@id/transaction_row_address_container</item>
-        <item name="android:layout_alignStart">@id/transaction_row_address_container</item>
-        <item name="android:layout_alignRight">@id/transaction_row_value</item>
-        <item name="android:layout_alignEnd">@id/transaction_row_value</item>
-        <item name="android:layout_below">@id/transaction_row_address_container</item>
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
     </style>

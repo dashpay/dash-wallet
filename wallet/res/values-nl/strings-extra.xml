@@ -83,10 +83,6 @@
 	<string name="notification_synchronization_channel_name">Synchronisatie</string>
 	<string name="notification_synchronization_channel_description">Toont een notificatie als de app met het netwerk aan het synchroniseren is.</string>
 
-	<string name="fastest_payment_network_dialog_title">Jouw geld, Op Jouw Manier</string>
-	<string name="fastest_payment_network_dialog_message">Verzend en ontvang Dash direct en zonder extra kosten.</string>
-	<string name="fastest_payment_network_dialog_button">Begrepen</string>
-
     <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">Gebruik je vingerafdruk om te ontgrendelen.</string>

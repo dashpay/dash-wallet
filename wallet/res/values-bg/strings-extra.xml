@@ -83,10 +83,6 @@
 	<string name="notification_synchronization_channel_name">Синхронизация</string>
 	<string name="notification_synchronization_channel_description">Показване на известие, когато приложението е синхронизирано с мрежата.</string>
 
-	<string name="fastest_payment_network_dialog_title">Вашите пари, Вашият път</string>
-	<string name="fastest_payment_network_dialog_message">Изпращане и получаване на  Dash мигновено без допълнителна такса</string>
-	<string name="fastest_payment_network_dialog_button">Разбрах</string>
-
     <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">Използвайте пръстов отпечатък за отключване.</string>

@@ -33,7 +33,7 @@
                     android:layout_marginRight="4dp"
                     android:src="@drawable/ic_dash_d_white_bottom"/>
 
-                <de.schildbach.wallet.ui.ToolbarCurrencyTextView
+                <org.dash.wallet.common.ui.CurrencyTextView
                     android:id="@+id/wallet_balance_btc"
                     android:maxLength="7"
                     app:fontFamily="@font/montserrat_regular"
@@ -42,11 +42,12 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textColor="@color/white"
+                    app:prefixColor="@color/white"
                     android:textSize="@dimen/app_bar_balance_font_size"/>
 
             </LinearLayout>
 
-            <de.schildbach.wallet.ui.ToolbarCurrencyTextView
+            <org.dash.wallet.common.ui.CurrencyTextView
                 android:id="@+id/wallet_balance_local"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -54,6 +55,7 @@
                 app:fontFamily="@font/montserrat_regular"
                 app:fontWeight="100"
                 android:textColor="@color/white"
+                app:prefixColor="@color/white"
                 android:textSize="@dimen/app_bar_balance_local_font_size" />
 
         </LinearLayout>

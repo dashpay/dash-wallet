@@ -29,7 +29,6 @@
     <string name="wallet_transactions_fragment_empty_text_sent">Δεν έχουν σταλεί Dash μέχρι στιγμής.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Πως να λάβετε Dash;\n\nΑνταλλάξτε με πραγματικά χρήματα,\nπουλήστε αγαθά ή υπηρεσίες, ή\nκερδίστε τα με την εργασία σας.</string>
     <string name="wallet_transactions_row_warning_backup">Συγχαρητήρια, λάβατε την πρώτη σας πληρωμή! Έχετε κρατήσει αντίγραφο ασφαλείας του πορτοφολιού σας σε περίπτωση απώλειας;</string>
-    <string name="wallet_transactions_row_warning_storage_encryption">Βοήθεια: Για να αυξήσετε την ασφάλεια του πορτοφολιού σας μπορείτε να &lt;u&gt;κρυπτογραφήσετε την συσκευή σας&lt;/u&gt;. Αυτό επίσης προστατεύει τα δεδομένα και από άλλες επικίνδυνες εφαρμογές.</string>
     <string name="wallet_transactions_fragment_coinbase">εξορυχθέντα</string>
     <string name="wallet_transactions_fragment_internal">εσωτερικός</string>
     <string name="wallet_transactions_options_filter">Φίλτρο</string>

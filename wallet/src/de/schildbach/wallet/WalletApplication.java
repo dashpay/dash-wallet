@@ -66,6 +66,7 @@ import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
 import android.os.StrictMode;
+import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import androidx.annotation.StringRes;
 import androidx.multidex.MultiDexApplication;
@@ -84,7 +85,6 @@ import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
  * @author Andreas Schildbach
  */
 public class WalletApplication extends MultiDexApplication {
-
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
@@ -125,6 +125,9 @@ public class WalletApplication extends MultiDexApplication {
         super.onCreate();
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
+        if(walletFileExists()) {
+            fullInitialization();
+        }
     }
 
     public void fullInitialization() {
@@ -215,6 +218,8 @@ public class WalletApplication extends MultiDexApplication {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannels();
         }
+
+        WalletLock.getInstance().setConfiguration(config);
 
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
             @Override
@@ -656,7 +661,9 @@ public class WalletApplication extends MultiDexApplication {
 
     public void lockWalletIfNeeded() {
         WalletLock walletLock = WalletLock.getInstance();
-        if (walletLock.isWalletLocked(wallet)) {
+        boolean recentReboot = SystemClock.elapsedRealtime() < WalletLock.DEFAULT_LOCK_TIMER_MILLIS &&
+                config.getLastUnlockTime() < (System.currentTimeMillis() - SystemClock.elapsedRealtime());
+        if (walletLock.isWalletLocked(wallet) || recentReboot) {
             walletLock.setWalletLocked(true);
         }
     }

@@ -29,7 +29,6 @@
     <string name="wallet_transactions_fragment_empty_text_sent">Walang Dash na naipapadala hanggang ngayon</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Paano makakuha ng Dash?\n\nMagtrade ng tradisyunal na pera,\nmagbenta ng paninda o serbisyo o\nkumita sa pagtatrabaho..</string>
     <string name="wallet_transactions_row_warning_backup">Pagbati, natanggap mo na ang iyong paunang bayad! Na-backed up mo na ba ang iyong pitaka, para maprotektahan sa pagkawala?</string>
-    <string name="wallet_transactions_row_warning_storage_encryption">Pahiwatig: Para mapataas ang seguridad ng iyong pitaka, maaari mong &lt;u&gt;i-encrypt ang iyong device&lt;/u&gt;. Ito rin ay nagpoprotekta ng data ng ibang apps.</string>
     <string name="wallet_transactions_fragment_coinbase">namina</string>
     <string name="wallet_transactions_fragment_internal">internal</string>
     <string name="wallet_transactions_options_filter">Salain</string>

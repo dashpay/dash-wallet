@@ -80,10 +80,6 @@
 	<string name="notification_synchronization_channel_name">同期</string>
 	<string name="notification_synchronization_channel_description">アプリがネットワークと同期している時に通知を表示する。</string>
 
-	<string name="fastest_payment_network_dialog_title">自由自在なお金を、あなたに。</string>
-	<string name="fastest_payment_network_dialog_message">追加手数料なしで瞬時にDashを送受信</string>
-	<string name="fastest_payment_network_dialog_button">了解</string>
-
     <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">ロック解除に指紋認証を使う。</string>

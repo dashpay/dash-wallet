@@ -411,7 +411,7 @@ public abstract class InputParser {
         error(R.string.input_parser_cannot_classify, input);
     }
 
-    protected void dialog(final Context context, @Nullable final OnClickListener dismissListener, final int titleResId,
+    public static void dialog(final Context context, @Nullable final OnClickListener dismissListener, final int titleResId,
             final int messageResId, final Object... messageArgs) {
         final DialogBuilder dialog = new DialogBuilder(context);
         if (titleResId != 0)

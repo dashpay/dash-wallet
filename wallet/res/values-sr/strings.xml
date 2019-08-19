@@ -29,7 +29,6 @@
     <string name="wallet_transactions_fragment_empty_text_sent">Dash još uvek nije poslat.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Kako doći do Dash-a?\n\nKupite redovnim novcem,\nprodajte robu ili usluge\nzaradite radom.</string>
     <string name="wallet_transactions_row_warning_backup">Čestitamo, dobili ste vašu prvu uplatu! Da li ste već odradili &lt;u&gt;backed up vašeg novčanika&lt;/u&gt;, da biste se zaštitili od gubitka?</string>
-    <string name="wallet_transactions_row_warning_storage_encryption">Preporuka: kako biste unapredili sigurnost vašeg novčanika možete odraditi &lt;u&gt;enkripciju vašeg uredjaja&lt;/u&gt;. Ovim ćete takođe zaštititi podatke drugih aplikacija.</string>
     <string name="wallet_transactions_fragment_coinbase">iskopano</string>
     <string name="wallet_transactions_fragment_internal">unutrašnje</string>
     <string name="wallet_transactions_options_filter">Filtriraj</string>

@@ -81,10 +81,6 @@
 	<string name="notification_synchronization_channel_name">همزمان‌سازی</string>
 	<string name="notification_synchronization_channel_description">وقتی اولیکیشن در حال همزمان‌سازی خود با شبکه است، پیغامی را نشان بده.</string>
 
-	<string name="fastest_payment_network_dialog_title">پول شما، به همان شکلی که می‌پسندید</string>
-	<string name="fastest_payment_network_dialog_message">ارسال و دریافت دش به صورت آنی بدون هزینه اضافی</string>
-	<string name="fastest_payment_network_dialog_button">متوجه شدم!</string>
-
 	<string name="unlock_with_fingerprint">از اثرانگشت برای باز کردن قفل استفاده کنید.</string>
 	<string name="unlock_with_fingerprint_error">اثرانگشت شناسایی نشد. لطفا دوباره امتحان کنید.</string>
 	<string name="unlock_with_fingerprint_error_max_attempts">تعداد دفعات استفاده از اثرانگشت از حد مجاز بیشتر شده است. لطفا بعدا دوباره امتحان کنید.</string>

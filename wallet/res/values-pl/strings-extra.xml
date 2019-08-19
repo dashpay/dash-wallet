@@ -89,10 +89,6 @@
 	<string name="notification_synchronization_channel_name">Synchronizacja</string>
 	<string name="notification_synchronization_channel_description">Wyświetla powiadomienie gdy aplikacja sie synchronizuje z siecią.</string>
 
-	<string name="fastest_payment_network_dialog_title">Twoje Pieniądze, na Twój Sposób</string>
-	<string name="fastest_payment_network_dialog_message">Wysyłaj i Otrzymuj Dash natychmiast i bez dodatkowych opłat</string>
-	<string name="fastest_payment_network_dialog_button">Mam je</string>
-
     <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">Użyj odcisku palca by odblokować.</string>
