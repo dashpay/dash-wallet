@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:layout_width="76dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="28dp"
+            android:src="@drawable/security_blue" />
+
+        <TextView
+            style="@style/MontserratMedium.B"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/verify_seed_success_title"
+            android:textColor="@android:color/black"
+            android:layout_marginBottom="14dp"
+            android:textSize="20sp" />
+
+        <TextView
+            style="@style/MontserratRegular.MG.14"
+            android:layout_marginRight="20dp"
+            android:layout_marginLeft="20dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_marginBottom="24dp"
+            android:text="@string/verify_seed_success_message" />
+
+        <Button
+            style="@style/NewMontserratButton.Primary"
+            android:text="@string/verify_continue"
+            android:textSize="12sp"
+            android:layout_width="98sp"
+            android:layout_height="36sp" />
+
+    </LinearLayout>
+
+</LinearLayout>

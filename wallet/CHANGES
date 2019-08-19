@@ -1,22 +1,4 @@
 Dash Wallet
-v6.6.1
-* Report store information in Report Issue
-
-v6.6.0
-* Hide Settings, Diagnostics, Uphold when app is locked
-* Change price sourcing to use DashRetain (primary)
-* Upgrade gradle for building
-* Remove LeakCanary on debug builds
-* Add multidex support
-* Add Firebase In-App Messaging (notifications, app updates)
-
-v6.5.1
-* Use DashJ 0.16.1
-* Fix several crashes from resetting the blockchain and restoring backups
-* Update native dashjbls code for dashj 0.16.1
-* Network Monitor:  Fix displaying of Chainlocks/DMN Lists on blocks with transactions
-* Add bootstrap DMN List file to reduce bandwidth usage and speed up DMN sync
-
 v6.5.0
 * Use DashJ 0.16 (supports DIP8, Chainlocks, InstantSendLocks)
 * Send screen changes when InstantSendLocks (Spork 20) are activated
@@ -331,7 +313,7 @@ v1.00
 * Forked bitcoin-wallet v3.23 for digitalcoin V1.00 (http://digitalcoin.co)
 
 Bitcoin Wallet
-=======
+
 v5.17
 
 * Bugfix.
@@ -345,7 +327,6 @@ v5.15
 
 * Block sending payments while blockchain replay is in progress.
 
->>>>>>> v5.17
 v5.14
 
 * Update translations from Transifex.
@@ -580,7 +561,6 @@ v4.41
 * Add blockexplorer.com to block explorers used for browsing transactions, addresses and blocks.
 * Update Dutch, Italian and Russian translations.
 
->>>>>>> c7022b0381011ed8a85b305909f2133882edb0bb
 v4.40
 
 * Bugfixes.
@@ -995,7 +975,6 @@ v3.24
 
 * fixed issue with stuck outgoing transactions
 
->>>>>>> upstream/prod
 v3.23
 
 * fixed issue with detecting online state
