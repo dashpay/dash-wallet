@@ -16,6 +16,7 @@
 
 package de.schildbach.wallet.ui
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -28,14 +29,25 @@ import de.schildbach.wallet_test.R
  */
 class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
 
+    companion object {
+
+        private const val EXTRA_SEED = "extra_seed"
+
+        fun createIntent(context: Context, seed: Array<String>): Intent {
+            val intent = Intent(context, VerifySeedActivity::class.java)
+            intent.putExtra(EXTRA_SEED, seed)
+            return intent
+        }
+    }
+
     private var seed: Array<String> = arrayOf()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_verify_seed)
 
-        seed = if (intent.extras?.containsKey("seed")!!) {
-            intent.extras!!.getStringArray("seed")!!
+        seed = if (intent.extras?.containsKey(EXTRA_SEED)!!) {
+            intent.extras!!.getStringArray(EXTRA_SEED)!!
         } else {
             throw IllegalStateException("This activity needs to receive a String[] Intent Extra " +
                     "containing the recovery seed.")

@@ -104,8 +104,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
         EnableFingerprintDialog.OnFingerprintEnabledListener,
         EncryptKeysDialogFragment.OnOnboardingCompleteListener,
-        DialogInterface.OnDismissListener,
         WalletTransactionsFragment.MotionLayoutProvider {
+
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
     private static final int DIALOG_RESTORE_WALLET = 2;
@@ -295,6 +295,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         checkLowStorageAlert();
         detectUserCountry();
         showBackupWalletDialogIfNeeded();
+        showHideSecureAction();
     }
 
     private void showBackupWalletDialogIfNeeded() {
@@ -1166,11 +1167,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @Override
     public void onOnboardingComplete() {
 
-    }
-
-    @Override
-    public void onDismiss(DialogInterface dialog) {
-        showHideSecureAction();
     }
 
     @Override

@@ -254,18 +254,15 @@ class SetPinActivity : AppCompatActivity() {
                 }
             }
         })
-        viewModel.startActivityAction.observe(this, Observer {
-            val intent = Intent(this, it.first)
-            intent.putExtra("seed", seed.toTypedArray())
-            if (it.second) {
-                intent.apply {
-                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                finish()
+        viewModel.startVerifySeedActivity.observe(this, Observer {
+            val intent = VerifySeedActivity.createIntent(this, seed.toTypedArray())
+            intent.apply {
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             startActivity(intent)
+            finish()
         })
     }
 

@@ -14,7 +14,7 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
 
     val pin = arrayListOf<Int>()
 
-    internal val startActivityAction = SingleLiveEvent<Pair<Class<*>, Boolean>>()
+    internal val startVerifySeedActivity = SingleLiveEvent<Boolean>()
     internal val encryptWalletLiveData = EncryptWalletLiveData(application)
 
     fun setPin(pin: ArrayList<Int>) {
@@ -45,7 +45,6 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun initWallet() {
-        startActivityAction.call(Pair(VerifySeedActivity::class.java, true))
-        //startActivityAction.call(Pair(WalletActivity::class.java, true))
+        startVerifySeedActivity.call(true)
     }
 }
