@@ -30,7 +30,6 @@ class SetPinActivity : AppCompatActivity() {
     private lateinit var pageMessageView: TextView
 
     val pin = arrayListOf<Int>()
-    var seed = listOf<String>()
 
     private enum class State {
         DECRYPT,
@@ -85,8 +84,6 @@ class SetPinActivity : AppCompatActivity() {
             } else {
                 setState(State.DECRYPT)
             }
-        } else {
-            seed = walletApplication.wallet.keyChainSeed.mnemonicCode!!
         }
     }
 
@@ -256,7 +253,6 @@ class SetPinActivity : AppCompatActivity() {
         })
         viewModel.startActivityAction.observe(this, Observer {
             val intent = Intent(this, it.first)
-            intent.putExtra("seed", seed.toTypedArray())
             if (it.second) {
                 intent.apply {
                     addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)

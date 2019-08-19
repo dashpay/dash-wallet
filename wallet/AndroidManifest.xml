@@ -3,7 +3,7 @@
     package="de.schildbach.wallet_test"
     android:installLocation="internalOnly"
     android:versionCode="70000"
-    android:versionName="7.0.0-redesign"
+    android:versionName="7.0.0-redesign">
 
     <!-- normal permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -70,12 +70,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
         </activity>
-
-        <activity android:name="de.schildbach.wallet.ui.VerifySeedActivity"
-            android:theme="@style/My.Theme.ChildActivity"
-            android:screenOrientation="portrait"/>
 
         <activity
             android:name="de.schildbach.wallet.ui.WalletActivity"

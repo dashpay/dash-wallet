@@ -128,29 +128,10 @@
 	<string name="preferences_enable_payment_request_summary">Use payment protocol for QR-code initiated payments</string>
 	<string name="preferences_enable_payment_request_title">BIP70 for scan-to-pay</string>
 
+
 	<string-array name="history_filter">
 		<item>All</item>
 		<item>Received</item>
 		<item>Sent</item>
 	</string-array>
-
-	<string name="verify_continue">Continue</string>
-	<string name="verify">Verify</string>
-	<string name="verify_backup_wallet">Backup Wallet</string>
-	<string name="verify_show_recovery_phrase">Show Recovery Phrase</string>
-	<string name="verify_secure_now">Secure Wallet Now</string>
-	<string name="verify_it_is_important">It\'s important</string>
-	<string name="verify_it_is_important_subtitle">We are about to show you the secret key to your wallet.</string>
-	<string name="verify_info_text_1">This recovery phrase is your access to the funds in this wallet.</string>
-	<string name="verify_info_text_2">We do not store this recovery phrase.</string>
-	<string name="verify_info_text_3">In case if this device is lost / damaged, incase if the dash wallet is uninstalled accidentally from this device, you will need this recovery phrase to access your funds.</string>
-	<string name="verify_skip">Skip</string>
-	<string name="verify_secure_now_btn">Secure Now</string>
-	<string name="verify_secure_now_message">If you lose this device, you will lose your funds. Get your UniqueSecretKey so that you can restore your wallet on another device.</string>
-  <string name="verify_seed_title">Please write this down</string>
-	<string name="verify_seed_write_down_confirmation">I have written this down</string>
-  <string name="verify_seed_buttons_tip">Please tap on the words from your recovery phrase in the right order</string>
-	<string name="verify_seed_success_title">Verified Successfully</string>
-	<string name="verify_seed_success_message">Your wallet is secured now. You can use your recovery phrase anytime to recover your account on another device.</string>
-
 </resources>
