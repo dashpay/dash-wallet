@@ -108,7 +108,7 @@ public final class HeaderBalanceFragment extends Fragment {
         viewBalance = view.findViewById(R.id.wallet_balance);
 
         viewBalanceDash = view.findViewById(R.id.wallet_balance_dash);
-        viewBalanceDash.setPrefixScaleX(0.9f);
+        viewBalanceDash.setApplyMarkup(false);
 
         viewBalanceLocal = view.findViewById(R.id.wallet_balance_local);
         viewBalanceLocal.setInsignificantRelativeSize(1);
