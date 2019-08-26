@@ -38,8 +38,6 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
     internal val showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
     internal val startActivityAction = SingleLiveEvent<Intent>()
 
-//    internal val initWalletAsyncLiveData = InitWalletAsyncLiveData(application)
-
     fun createNewWallet() {
         walletApplication.initEnvironmentIfNeeded()
         val wallet = Wallet(Constants.NETWORK_PARAMETERS)

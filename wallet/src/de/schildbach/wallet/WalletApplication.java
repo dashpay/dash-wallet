@@ -89,7 +89,7 @@ public class WalletApplication extends MultiDexApplication {
     private Configuration config;
     private ActivityManager activityManager;
 
-    private boolean basicWalletStuffInitialised = false;
+    private boolean basicWalletInitalizationFinished = false;
 
     private Intent blockchainServiceIntent;
     private Intent blockchainServiceCancelCoinsReceivedIntent;
@@ -136,13 +136,13 @@ public class WalletApplication extends MultiDexApplication {
     }
 
     public void initEnvironmentIfNeeded() {
-        if (!basicWalletStuffInitialised) {
+        if (!basicWalletInitalizationFinished) {
             initEnvironment();
         }
     }
 
     private void initEnvironment() {
-        basicWalletStuffInitialised = true;
+        basicWalletInitalizationFinished = true;
 
         new LinuxSecureRandom(); // init proper random number generator
         initLogging();
