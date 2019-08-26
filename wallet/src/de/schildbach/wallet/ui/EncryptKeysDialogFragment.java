@@ -229,8 +229,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
     }
 
     @Override
-    public void onStart()
-    {
+    public void onStart() {
         super.onStart();
         Dialog dialog = getDialog();
         if (dialog != null)
