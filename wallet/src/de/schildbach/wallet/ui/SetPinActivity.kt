@@ -256,14 +256,22 @@ class SetPinActivity : AppCompatActivity() {
         })
         viewModel.startVerifySeedActivity.observe(this, Observer {
             val intent = VerifySeedActivity.createIntent(this, seed.toTypedArray())
-            intent.apply {
-                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            startActivity(intent)
-            finish()
+            startActivityNewTask(intent)
         })
+        viewModel.startWalletActivity.observe(this, Observer {
+            val intent = Intent(this, WalletActivity::class.java)
+            startActivityNewTask(intent)
+        })
+    }
+
+    private fun startActivityNewTask(intent: Intent) {
+        intent.apply {
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(intent)
+        finish()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

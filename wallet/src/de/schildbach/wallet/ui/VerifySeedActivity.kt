@@ -87,4 +87,7 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
         finish()
     }
 
+    override fun onBackPressed() {
+        skipSeedVerification()
+    }
 }
