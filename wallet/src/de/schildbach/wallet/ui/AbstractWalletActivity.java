@@ -26,6 +26,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.widget.Toolbar;
 
+import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +44,8 @@ import android.view.MenuItem;
 /**
  * @author Andreas Schildbach
  */
-public abstract class AbstractWalletActivity extends AppCompatActivity {
+public abstract class AbstractWalletActivity extends AppCompatActivity implements AbstractPINDialogFragment.WalletProvider {
+
     private WalletApplication application;
 
     protected static final Logger log = LoggerFactory.getLogger(AbstractWalletActivity.class);
@@ -126,5 +128,15 @@ public abstract class AbstractWalletActivity extends AppCompatActivity {
     public static void finishAll(Context context) {
         Intent localIntent = new Intent(FINISH_ALL_ACTIVITIES_ACTION);
         LocalBroadcastManager.getInstance(context).sendBroadcast(localIntent);
+    }
+
+    @Override
+    public Wallet getWallet() {
+        return application.getWallet();
+    }
+
+    @Override
+    public void onWalletUpgradeComplete(String password) {
+
     }
 }

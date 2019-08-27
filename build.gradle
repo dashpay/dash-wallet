@@ -2,7 +2,7 @@ ext {
     dashjVersion = "0.16.2"
 }
 
-buildscript { 
+buildscript {
     ext.kotlin_version = '1.3.41'
 
     repositories {
@@ -11,7 +11,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.4.1'
+        classpath 'com.android.tools.build:gradle:3.4.2'
         classpath('fr.avianey.androidsvgdrawable:gradle-plugin:3.0.0') {
             exclude group: 'xerces'
         }
