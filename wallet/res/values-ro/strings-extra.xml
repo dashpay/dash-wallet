@@ -86,10 +86,6 @@
 	<string name="notification_synchronization_channel_name">Sincronizare</string>
 	<string name="notification_synchronization_channel_description">Afișează o notificare atunci când aplicația se sincronizează cu rețeaua.</string>
 
-	<string name="fastest_payment_network_dialog_title">Banii Tăi, Calea Ta</string>
-	<string name="fastest_payment_network_dialog_message">Trimite și primește Dash imediat fără taxă suplimentară</string>
-	<string name="fastest_payment_network_dialog_button">Am înțeles</string>
-
     <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">Foloseşte amprenta pentru a debloca.</string>

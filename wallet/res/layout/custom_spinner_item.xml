@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/text1"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:drawableEnd="@drawable/ic_expand_more_blue"
+    android:drawableRight="@drawable/ic_expand_more_blue"
+    android:ellipsize="marquee"
+    android:singleLine="true"
+    android:textColor="@color/dash_blue"
+    android:textAlignment="inherit" />

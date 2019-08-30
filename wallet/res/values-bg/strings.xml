@@ -29,7 +29,6 @@
     <string name="wallet_transactions_fragment_empty_text_sent">Не са изпращани Dash скоро.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Как да получите Dash?\\n\\nОбменете за конвенционална валута,\\nпродайте стоки или услуги или\\nспечелете с работа.</string>
     <string name="wallet_transactions_row_warning_backup">Поздравления, Вие получихте първото си плащане! Направихте ли вече архивно копие на вашия портфейл, за да го защитите срещу кражба?</string>
-    <string name="wallet_transactions_row_warning_storage_encryption">Съвет: за да повишите сигурноста за вашият портфейл, може  &lt;u&gt;да криптирате вашето устройство&lt;/u&gt;. Това ще предпази също данните и на други приложения.</string>
     <string name="wallet_transactions_fragment_coinbase">изкопани</string>
     <string name="wallet_transactions_fragment_internal">вътрешен</string>
     <string name="wallet_transactions_options_filter">Филтър</string>

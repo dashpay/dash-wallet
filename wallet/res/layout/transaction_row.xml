@@ -116,9 +116,12 @@
             tools:ignore="ContentDescription" />
 
         <LinearLayout
+            android:layout_alignRight="@id/transaction_row_fiat"
+            android:layout_alignLeft="@id/transaction_row_address_container"
             android:orientation="vertical"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_below="@+id/transaction_row_address_container"
             style="@style/ExtendedTransactions">
 
             <RelativeLayout

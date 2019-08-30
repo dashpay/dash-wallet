@@ -29,7 +29,6 @@
     <string name="wallet_transactions_fragment_empty_text_sent">Nie wysłano jeszcze żadnych Dashów.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Jak zdobyć Dashe?\n\nWymień za tradycyjną walutę,\nsprzedawaj dobra bądź usługi lub\nzarabiaj pracując.</string>
     <string name="wallet_transactions_row_warning_backup">Gratulacje, otrzymałeś swoją pierwszą płatność! Czy już wykonałeś kopię zapasową swojego portfela, by ochronić się przed jej utratą?</string>
-    <string name="wallet_transactions_row_warning_storage_encryption">Wskazówka: aby zwiększyć bezpieczeństwo swojego portfela możesz go &lt;u&gt;zaszyfrować&lt;/u&gt;. Zwiększy to również bezpieczeństwo innych aplikacji.</string>
     <string name="wallet_transactions_fragment_coinbase">wykopany</string>
     <string name="wallet_transactions_fragment_internal">wewnętrzny</string>
     <string name="wallet_transactions_options_filter">Filtrowanie</string>

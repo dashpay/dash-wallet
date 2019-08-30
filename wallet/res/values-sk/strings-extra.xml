@@ -89,10 +89,6 @@
 	<string name="notification_synchronization_channel_name">Synchronizácia</string>
 	<string name="notification_synchronization_channel_description">Zobrazí sa upozornenie, keď sa aplikácia synchronizuje so sieťou.</string>
 
-	<string name="fastest_payment_network_dialog_title">Tvoje peniaze, tvoja cesta</string>
-	<string name="fastest_payment_network_dialog_message">Odoslať a prijať Dash okamžite bez zvýšeného poplatku</string>
-	<string name="fastest_payment_network_dialog_button">Mám to</string>
-
     <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">Pre odomknutie použite otlačok prsta.</string>

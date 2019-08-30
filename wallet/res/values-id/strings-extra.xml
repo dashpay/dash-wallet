@@ -80,10 +80,6 @@
 	<string name="notification_synchronization_channel_name">Sinkronisasi</string>
 	<string name="notification_synchronization_channel_description">Perlihatkan pemberitahuan saat aplikasi menyinkronkan dengan jaringan.</string>
 
-	<string name="fastest_payment_network_dialog_title">Uang Anda, Jalan Anda</string>
-	<string name="fastest_payment_network_dialog_message">Kirim dan Terima Dash dalam Sekejap tanpa biaya tambahan</string>
-	<string name="fastest_payment_network_dialog_button">Mengerti</string>
-
     <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">Gunakan sidik jari Anda untuk membuka kunci.</string>

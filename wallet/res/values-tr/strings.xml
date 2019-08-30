@@ -29,7 +29,6 @@
     <string name="wallet_transactions_fragment_empty_text_sent">Şu ana kadar hiçbir Dash gönderilmedi.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Dash nasıl elde edilir?\n Geleneksel para ile \ntakas ederek, mal ve hizmetler \nsatarak ya da \nçalışarak kazanabilirsiniz.</string>
     <string name="wallet_transactions_row_warning_backup">Tebrikler, ilk ödemenizi almış bulunuyorsunuz! Kayba karşı korunmak için cüzdanınızı yedeklediniz mi?</string>
-    <string name="wallet_transactions_row_warning_storage_encryption">İpucu: Cüzdanınızın güvenliğini arttırmak için, &lt;u&gt;cihazınızı şifreleyebilirsiniz&lt;/u&gt;. Bu aynı zamanda diğer uygulamaların verilerini de korur.</string>
     <string name="wallet_transactions_fragment_coinbase">Üretilen</string>
     <string name="wallet_transactions_fragment_internal">Dahili</string>
     <string name="wallet_transactions_options_filter">Filtre</string>

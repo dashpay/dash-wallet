@@ -79,6 +79,7 @@
             android:exported="true"
             android:label="@string/app_name_short"
             android:launchMode="singleTask"
+            android:screenOrientation="portrait"
             android:theme="@style/My.Theme.NoStatusBar" />
 
         <activity-alias

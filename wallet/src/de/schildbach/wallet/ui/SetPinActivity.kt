@@ -155,9 +155,12 @@ class SetPinActivity : AppCompatActivity() {
     private fun nextStep() {
         if (state == State.CONFIRM_PIN) {
             if (pin == viewModel.pin) {
-                viewModel.encryptKeys()
+                Handler().postDelayed({
+                    viewModel.encryptKeys()
+                }, 200)
             } else {
                 pinPreviewView.shake()
+                setState(State.CONFIRM_PIN)
             }
         } else {
             viewModel.setPin(pin)

@@ -186,9 +186,6 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
     public void onCreateOptionsMenu(final Menu menu, final MenuInflater inflater) {
         inflater.inflate(R.menu.exchange_rates_fragment_options, menu);
 
-        MenuItem walletLockMenuItem = menu.findItem(R.id.wallet_options_lock);
-        walletLockMenuItem.setVisible(WalletLock.getInstance().isWalletLocked(wallet));
-
         final SearchView searchView = (SearchView) menu.findItem(R.id.exchange_rates_options_search).getActionView();
         searchView.setOnQueryTextListener(new OnQueryTextListener() {
             @Override

@@ -67,6 +67,8 @@
 
     </RelativeLayout>
 
-    <include layout="@layout/navigation_layout"/>
+    <include
+        layout="@layout/navigation_layout"
+        tools:visibility="gone" />
 
 </androidx.drawerlayout.widget.DrawerLayout>
