@@ -39,6 +39,7 @@ import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.ui.DialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +61,7 @@ import android.app.admin.DevicePolicyManager;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -741,30 +743,56 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         if (fingerprintHelper == null) {
             fingerprintHelper = new FingerprintHelper(getActivity());
         }
-        if (fingerprintHelper.init() && fingerprintHelper.isFingerprintEnabled()) {
-            fingerprintGroup.setVisibility(View.VISIBLE);
-            hideFingerprintError();
-            fingerprintCancellationSignal = new CancellationSignal();
-            fingerprintHelper.getPassword(fingerprintCancellationSignal, new FingerprintHelper.Callback() {
-                @Override
-                public void onSuccess(String savedPass) {
-                    hideFingerprintError();
-                    WalletLock.getInstance().setWalletLocked(false);
-                }
-
-                @Override
-                public void onFailure(String message, boolean canceled, boolean exceededMaxAttempts) {
-                    if (!canceled) {
-                        showFingerprintError(exceededMaxAttempts);
+        if (fingerprintHelper.init()) {
+            if (fingerprintHelper.isFingerprintEnabled()) {
+                fingerprintGroup.setVisibility(View.VISIBLE);
+                hideFingerprintError();
+                fingerprintCancellationSignal = new CancellationSignal();
+                fingerprintHelper.getPassword(fingerprintCancellationSignal, new FingerprintHelper.Callback() {
+                    @Override
+                    public void onSuccess(String savedPass) {
+                        hideFingerprintError();
+                        WalletLock.getInstance().setWalletLocked(false);
                     }
-                }
 
-                @Override
-                public void onHelp(int helpCode, String helpString) {
-                    showFingerprintError(false);
-                }
-            });
+                    @Override
+                    public void onFailure(String message, boolean canceled, boolean exceededMaxAttempts) {
+                        if (fingerprintHelper.hasFingerprintKeyChanged()) {
+                            showFingerprintKeyChangedDialog();
+                        } else if (!canceled) {
+                            showFingerprintError(exceededMaxAttempts);
+                        }
+                    }
+
+                    @Override
+                    public void onHelp(int helpCode, String helpString) {
+                        showFingerprintError(false);
+                    }
+                });
+            } else if (fingerprintHelper.hasFingerprintKeyChanged()) {
+                showFingerprintKeyChangedDialog();
+            }
         }
+    }
+
+    private void showFingerprintKeyChangedDialog() {
+        DialogBuilder dialogBuilder = new DialogBuilder(getContext());
+        dialogBuilder.setTitle(R.string.fingerprint_changed_title);
+        dialogBuilder.setMessage(R.string.fingerprint_changed_message);
+        dialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                fingerprintHelper.resetFingerprintKeyChanged();
+                UnlockWalletDialogFragment.show(getChildFragmentManager());
+            }
+        });
+        dialogBuilder.setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                fingerprintHelper.resetFingerprintKeyChanged();
+            }
+        });
+        dialogBuilder.show();
     }
 
     public void hideFingerprintError() {
