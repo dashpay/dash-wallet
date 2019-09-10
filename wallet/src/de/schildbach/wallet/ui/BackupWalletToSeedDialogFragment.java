@@ -21,6 +21,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
@@ -252,6 +253,14 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
         }
     }
 
+    private void showVerifySeedActivity(final DeterministicSeed seed) {
+        List<String> mnemonicCode = seed.getMnemonicCode();
+        String[] seedArr = new String[mnemonicCode.size()];
+        seedArr = mnemonicCode.toArray(seedArr);
+        Intent intent = VerifySeedActivity.Companion.createIntent(activity, seedArr);
+        startActivity(intent);
+    }
+
     private void showMnemonicSeed(final DeterministicSeed seed) {
         StringBuilder wordlist = new StringBuilder(255);
 
@@ -300,9 +309,8 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
                 @Override
                 protected void onSuccess(final DeterministicSeed seed) {
                     pinRetryController.clearPinFailPrefs();
-                    showPasswordViewGroup(false);
-                    showMnemonicSeed(seed);
-                    updateView(true);
+                    showVerifySeedActivity(seed);
+                    dismiss();
                 }
 
                 protected void onBadPassphrase() {

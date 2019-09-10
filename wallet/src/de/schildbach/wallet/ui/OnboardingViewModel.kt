@@ -42,6 +42,7 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
         walletApplication.initEnvironmentIfNeeded()
         val wallet = Wallet(Constants.NETWORK_PARAMETERS)
         walletApplication.wallet = wallet
+        walletApplication.configuration.armBackupSeedReminder()
         startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_create_new_wallet))
     }
 
@@ -56,6 +57,7 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
         val wallet = WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS)
         walletApplication.wallet = wallet
         log.info("successfully restored wallet from seed")
+        walletApplication.configuration.disarmBackupSeedReminder()
         startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_restore_wallet))
     }
 }

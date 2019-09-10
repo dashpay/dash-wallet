@@ -33,6 +33,7 @@ dependencies {
     implementation 'androidx.legacy:legacy-support-core-utils:1.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.0.0'
     implementation 'androidx.cardview:cardview:1.0.0'
+    implementation 'com.google.android:flexbox:1.1.0'
     implementation 'androidx.preference:preference:1.0.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.0-beta1'
     implementation "org.dashj:dashj-core:$dashjVersion"
@@ -66,9 +67,6 @@ dependencies {
         exclude group: 'com.google.firebase', module: 'protolite-well-known-types'
     }
     implementation 'com.google.firebase:firebase-core:17.0.1'
-
-    implementation "androidx.lifecycle:lifecycle-extensions:$lifecycleVersion"
-    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
 
     implementation "androidx.lifecycle:lifecycle-extensions:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"

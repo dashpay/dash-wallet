@@ -70,7 +70,12 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
         </activity>
+
+        <activity android:name="de.schildbach.wallet.ui.VerifySeedActivity"
+            android:theme="@style/My.Theme.ChildActivity"
+            android:screenOrientation="portrait"/>
 
         <activity
             android:name="de.schildbach.wallet.ui.WalletActivity"
