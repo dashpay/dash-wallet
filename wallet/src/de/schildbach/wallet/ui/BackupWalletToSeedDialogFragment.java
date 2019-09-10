@@ -203,6 +203,9 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
         if (fingerprintCancellationSignal != null) {
             fingerprintCancellationSignal.cancel();
         }
+        if (activity instanceof DialogInterface.OnDismissListener) {
+            ((DialogInterface.OnDismissListener) activity).onDismiss(getDialog());
+        }
         super.onDismiss(dialog);
     }
 
