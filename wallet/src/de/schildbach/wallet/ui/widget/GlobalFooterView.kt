@@ -28,16 +28,18 @@ import kotlinx.android.synthetic.main.global_footer_view.view.*
 
 class GlobalFooterView(context: Context, attrs: AttributeSet?) : ConstraintLayout(context, attrs) {
 
+    var onFooterActionListener: OnFooterActionListener? = null
+
     init {
         inflate(context, R.layout.global_footer_view, this)
         home_button_view.setOnClickListener {
-            println("home_button_view")
+            onFooterActionListener?.onHomeClick()
         }
         goto_button_view.setOnClickListener {
-            println("goto_button_view")
+            onFooterActionListener?.onGotoClick()
         }
         more_button_view.setOnClickListener {
-            println("more_button_view")
+            onFooterActionListener?.onMoreClick()
         }
     }
 
@@ -56,14 +58,11 @@ class GlobalFooterView(context: Context, attrs: AttributeSet?) : ConstraintLayou
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val proposedHeight = MeasureSpec.getSize(heightMeasureSpec)
-        val actualHeight = height
-
-        if (actualHeight > proposedHeight) {
+        if (height > proposedHeight) {
             onShowKeyboard()
         } else {
             onHideKeyboard()
         }
-
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
 
@@ -83,5 +82,19 @@ class GlobalFooterView(context: Context, attrs: AttributeSet?) : ConstraintLayou
         }
         content_view.visibility = View.VISIBLE
         requestLayout()
+    }
+
+    fun activateHomeButton(active: Boolean) {
+        home_button_view.isEnabled = !active
+    }
+
+    fun activateMoreButton(active: Boolean) {
+        more_button_view.isEnabled = !active
+    }
+
+    interface OnFooterActionListener {
+        fun onHomeClick()
+        fun onGotoClick()
+        fun onMoreClick()
     }
 }
