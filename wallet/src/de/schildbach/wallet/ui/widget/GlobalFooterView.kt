@@ -92,6 +92,10 @@ class GlobalFooterView(context: Context, attrs: AttributeSet?) : ConstraintLayou
         more_button_view.isEnabled = !active
     }
 
+    fun activateGotoButton(active: Boolean) {
+        goto_button_view.setImageResource(R.drawable.ic_goto_active)
+    }
+
     interface OnFooterActionListener {
         fun onHomeClick()
         fun onGotoClick()

@@ -45,7 +45,8 @@ open class GlobalFooterActivity : AppCompatActivity(), GlobalFooterView.OnFooter
     }
 
     override fun onGotoClick() {
-
+        val intent = Intent(this, PaymentsActivity::class.java)
+        startActivity(intent)
     }
 
     override fun onMoreClick() {
@@ -65,5 +66,9 @@ open class GlobalFooterActivity : AppCompatActivity(), GlobalFooterView.OnFooter
 
     fun activateMoreButton() {
         globalFooterView.activateMoreButton(true)
+    }
+
+    fun activateGotoButton() {
+        globalFooterView.activateGotoButton(true)
     }
 }
