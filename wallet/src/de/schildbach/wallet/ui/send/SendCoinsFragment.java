@@ -52,6 +52,7 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import androidx.core.content.res.ResourcesCompat;
+import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.Observer;
@@ -64,7 +65,6 @@ import org.bitcoin.protocols.payments.Protos.Payment;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.InsufficientMoneyException;
-import org.bitcoinj.core.Monetary;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.SporkManager;
 import org.bitcoinj.core.Transaction;
@@ -385,7 +385,7 @@ public final class SendCoinsFragment extends Fragment {
     }
 
     private NumericKeyboardView numericKeyboardView;
-    private StringBuilder value = new StringBuilder();
+    private StringBuilder strValueCache = new StringBuilder();
     private ExchangeRate globalExchangeRate = null;
     private Coin dashValue;
     private Fiat fiatValue;
@@ -398,7 +398,7 @@ public final class SendCoinsFragment extends Fragment {
     private TextView inputValueView;
     private TextView conversionValueView;
 
-    MonetaryFormat FRIENDLY_FORMAT = MonetaryFormat.BTC.minDecimals(2).repeatOptionalDecimals(1, 6).noCode();
+    private MonetaryFormat FRIENDLY_FORMAT = MonetaryFormat.BTC.minDecimals(2).repeatOptionalDecimals(1, 6).noCode();
 
     private void displayValue(String value) {
         if (value.length() == 0) {
@@ -414,7 +414,7 @@ public final class SendCoinsFragment extends Fragment {
         if (inputCoinIsDash) {
             dashValue = Coin.parseCoin(value);
             fiatValue = globalExchangeRate.coinToFiat(dashValue);
-            conversionValueView.setText(FRIENDLY_FORMAT.format(fiatValue));
+            conversionValueView.setText(Constants.LOCAL_FORMAT.format(fiatValue));
         } else {
             fiatValue = Fiat.parseFiat(globalExchangeRate.fiat.currencyCode, value);
             dashValue = globalExchangeRate.fiatToCoin(fiatValue);
@@ -427,17 +427,15 @@ public final class SendCoinsFragment extends Fragment {
 
     private void setDashValue(Coin value) {
         dashValue = value;
-        inputValueView.setText(FRIENDLY_FORMAT.format(value));
+        CharSequence valueStr = FRIENDLY_FORMAT.format(value);
+        inputValueView.setText(valueStr);
+        this.strValueCache = new StringBuilder(valueStr);
         if(globalExchangeRate != null) {
             fiatValue = globalExchangeRate.coinToFiat(dashValue);
             conversionValueView.setText(FRIENDLY_FORMAT.format(fiatValue));
         } else {
             conversionValueView.setText("0.00");
         }
-    }
-
-    private String removeCoinCode(String value) {
-        return value.substring(0, value.indexOf(" "));
     }
 
     private boolean inputCoinIsDash = true;
@@ -459,8 +457,9 @@ public final class SendCoinsFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 inputCoinIsDash = !inputCoinIsDash;
-                value = new StringBuilder(conversionValueView.getText());
-                displayValue(value.toString());
+                strValueCache = new StringBuilder(conversionValueView.getText());
+                conversionValueView.setText(inputValueView.getText());
+                inputValueView.setText(strValueCache);
                 inputCodeView.setVisibility(inputCoinIsDash ? View.GONE : View.VISIBLE);
                 inputCodeDashView.setVisibility(inputCoinIsDash ? View.VISIBLE : View.GONE);
                 conversionCodeView.setVisibility(inputCoinIsDash ? View.VISIBLE : View.GONE);
@@ -474,32 +473,32 @@ public final class SendCoinsFragment extends Fragment {
             @Override
             public void onNumber(int number) {
                 appendIfValidAfter(number);
-                displayValue(value.toString());
+                displayValue(strValueCache.toString());
             }
 
             @Override
             public void onBack() {
-                if (value.length() > 0) {
-                    value.deleteCharAt(value.length() - 1);
+                if (strValueCache.length() > 0) {
+                    strValueCache.deleteCharAt(strValueCache.length() - 1);
                 }
-                displayValue(value.toString());
+                displayValue(strValueCache.toString());
             }
 
             @Override
             public void onFunction() {
                 String decimalSeparator = String.valueOf(DecimalFormatSymbols.getInstance().getDecimalSeparator());
-                if (value.indexOf(decimalSeparator) == -1) {
-                    value.append(decimalSeparator);
+                if (strValueCache.indexOf(decimalSeparator) == -1) {
+                    strValueCache.append(decimalSeparator);
                 }
-                displayValue(value.toString());
+                displayValue(strValueCache.toString());
             }
 
             private void appendIfValidAfter(int number) {
                 try {
-                    value.append(number);
-                    Coin.parseCoin(value.toString());
+                    strValueCache.append(number);
+                    Coin.parseCoin(strValueCache.toString());
                 } catch (Exception e) {
-                    value.deleteCharAt(value.length() - 1);
+                    strValueCache.deleteCharAt(strValueCache.length() - 1);
                 }
             }
         });
@@ -576,7 +575,7 @@ public final class SendCoinsFragment extends Fragment {
                 validateReceivingAddress();
 
                 if (everythingPlausible()) {
-                    handleGo();
+                    showPaymentConfirmation();
                 }
 
                 updateView();
@@ -606,6 +605,16 @@ public final class SendCoinsFragment extends Fragment {
         canAutoLockGuard.register(true);
 
         return view;
+    }
+
+    private void showPaymentConfirmation() {
+        String address = paymentIntent.getAddress().toBase58();
+        String amount = FRIENDLY_FORMAT.format(dashValue).toString();
+        String amountFiat = Constants.LOCAL_FORMAT.format(fiatValue).toString();
+        String fiatSymbol = GenericUtils.currencySymbol(fiatValue.currencyCode);
+        String fee = "0.0001";
+        DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amount, amountFiat, fiatSymbol, fee);
+        dialog.show(getFragmentManager(), "ConfirmTransactionDialog");
     }
 
     @Override
@@ -855,20 +864,19 @@ public final class SendCoinsFragment extends Fragment {
     }
 
     private void handleGo() {
-
         if (wallet.isEncrypted()) {
             new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
                 @Override
                 protected void onSuccess(final KeyParameter encryptionKey, final boolean wasChanged) {
                     if (wasChanged)
                         application.backupWallet();
-                    signAndSendPayment(encryptionKey, "pin");
+                    signAndSendPayment(encryptionKey, "1234");
                 }
-            }.deriveKey(wallet, "pin");
+            }.deriveKey(wallet, "1234");
 
             setState(State.DECRYPTING);
         } else {
-            signAndSendPayment(null, "pin");
+            signAndSendPayment(null, "1234");
         }
     }
 
@@ -1698,5 +1706,9 @@ public final class SendCoinsFragment extends Fragment {
             }
         }
         return false;
+    }
+
+    public void confirmPayment() {
+        handleGo();
     }
 }

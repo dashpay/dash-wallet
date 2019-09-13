@@ -19,9 +19,6 @@ package de.schildbach.wallet.ui.send;
 
 import javax.annotation.Nullable;
 
-import org.bitcoinj.core.Coin;
-
-import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.HelpDialogFragment;
@@ -37,7 +34,8 @@ import android.view.MenuItem;
 /**
  * @author Andreas Schildbach
  */
-public final class SendCoinsActivity extends AbstractBindServiceActivity {
+public final class SendCoinsActivity extends AbstractBindServiceActivity implements ConfirmTransactionDialog.OnDialogActionListener {
+
 	public static final String INTENT_EXTRA_PAYMENT_INTENT = "payment_intent";
 	public static final String INTENT_EXTRA_FEE_CATEGORY = "fee_category";
 	public static final String INTENT_EXTRA_FORCE_INSTANT_SEND = "force_instant_send";
@@ -97,5 +95,13 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity {
 		}
 
 		return super.onOptionsItemSelected(item);
+	}
+
+	@Override
+	public void onConfirmPaymentClick() {
+		SendCoinsFragment sendCoinsFragment = (SendCoinsFragment) getSupportFragmentManager().findFragmentById(R.id.send_coins_fragment);
+		if (sendCoinsFragment != null) {
+			sendCoinsFragment.confirmPayment();
+		}
 	}
 }
