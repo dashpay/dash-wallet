@@ -40,6 +40,10 @@ class PaymentsActivity : GlobalFooterActivity() {
         setTitle(R.string.payments_title)
     }
 
+    override fun onGotoClick() {
+        finish()
+    }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
