@@ -17,12 +17,15 @@
 
 package org.dash.wallet.common;
 
+import java.util.concurrent.TimeUnit ;
+
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.content.res.Resources;
 import android.net.Uri;
 import android.text.format.DateUtils;
+
 
 import com.google.common.base.Strings;
 
@@ -171,7 +174,7 @@ public class Configuration {
     public boolean lastDismissedReminderMoreThan24hAgo() {
         long now = System.currentTimeMillis();
         long lastReminder = prefs.getLong(PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER, now);
-        return now - lastReminder > 86400000;
+        return now - lastReminder > TimeUnit.HOURS.toMillis(24);
     }
     public long getLastBackupTime() {
         return prefs.getLong(PREFS_KEY_LAST_BACKUP, 0);
