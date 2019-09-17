@@ -167,6 +167,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
         initFingerprintHelper();
 
         this.clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+
+        if (config.remindBackupSeed() && config.lastDismissedReminderMoreThan24hAgo()) {
+            BackupWalletToSeedDialogFragment.show(getSupportFragmentManager());
+        }
     }
 
     private void adjustHeaderLayout() {

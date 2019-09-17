@@ -67,6 +67,8 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
     }
 
     override fun skipSeedVerification() {
+        WalletApplication.getInstance().configuration.armBackupSeedReminder()
+        WalletApplication.getInstance().configuration.setBackupSeedLastDismissedReminder()
         startActivity(Intent(this, WalletActivity::class.java))
         finish()
     }
