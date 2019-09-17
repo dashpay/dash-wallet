@@ -60,7 +60,7 @@ import org.bitcoinj.core.SporkMessage;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
-import org.bitcoinj.core.listeners.AbstractPeerDataEventListener;
+import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
@@ -338,12 +338,13 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         }
     }
 
-    private final PeerDataEventListener blockchainDownloadListener = new AbstractPeerDataEventListener() {
+    private final PeerDataEventListener blockchainDownloadListener = new DownloadProgressTracker() {
         private final AtomicLong lastMessageTime = new AtomicLong(0);
 
         @Override
         public void onBlocksDownloaded(final Peer peer, final Block block, final FilteredBlock filteredBlock,
                 final int blocksLeft) {
+            super.onBlocksDownloaded(peer, block, filteredBlock, blocksLeft);
             delayHandler.removeCallbacksAndMessages(null);
 
             final long now = System.currentTimeMillis();
@@ -362,6 +363,18 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                 broadcastBlockchainState();
             }
         };
+
+        @Override
+        protected void progress(double pct, int blocksLeft, Date date) {
+            super.progress(pct, blocksLeft, date);
+            log.info(String.format("sync progress: %.2f", pct));
+        }
+
+        @Override
+        protected void doneDownload() {
+            super.doneDownload();
+            log.info("sync progress: DONE");
+        }
     };
 
     private final BroadcastReceiver connectivityReceiver = new BroadcastReceiver() {
