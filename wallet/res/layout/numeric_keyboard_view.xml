@@ -102,11 +102,11 @@
     <TableRow>
 
         <Button
-            android:id="@+id/btn_cancel"
+            android:id="@+id/btn_function"
             style="@style/NewMontserratButton.Secondary.Inverted.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Cancel"
+            android:text="@string/button_cancel"
             android:textColor="@color/keyboard_button" />
 
         <Button

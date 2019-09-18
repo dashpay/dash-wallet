@@ -99,7 +99,7 @@
     </RelativeLayout>
 
     <Button
-        android:id="@+id/send_coins_go"
+        android:id="@+id/confirm_button"
         style="@style/MontserratButton"
         android:layout_alignParentBottom="true"
         android:layout_width="match_parent"

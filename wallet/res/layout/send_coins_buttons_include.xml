@@ -18,7 +18,7 @@
         android:textSize="@dimen/font_size_small" />
 
     <Button
-        android:id="@+id/send_coins_go"
+        android:id="@+id/confirm_button"
         style="?android:attr/buttonBarButtonStyle"
         android:layout_width="0px"
         android:layout_height="wrap_content"

@@ -115,7 +115,7 @@ class SetPinActivity : AppCompatActivity() {
         confirmButtonView = findViewById(R.id.btn_confirm)
         numericKeyboardView = findViewById(R.id.numeric_keyboard)
 
-        numericKeyboardView.setCancelEnabled(false)
+        numericKeyboardView.setFunctionEnabled(false)
         numericKeyboardView.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
             override fun onNumber(number: Int) {
@@ -142,7 +142,7 @@ class SetPinActivity : AppCompatActivity() {
                 }
             }
 
-            override fun onCancel() {
+            override fun onFunction() {
 
             }
         }

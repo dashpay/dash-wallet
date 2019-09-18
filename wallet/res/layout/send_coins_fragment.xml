@@ -6,7 +6,7 @@
 	android:layout_width="match_parent">
 
 	<Button
-		android:id="@+id/send_coins_go"
+		android:id="@+id/confirm_button"
 		style="@style/MontserratButton"
 		android:layout_alignParentBottom="true"
 		android:layout_width="match_parent"
@@ -18,7 +18,7 @@
 	<ScrollView
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
-		android:layout_above="@id/send_coins_go"
+		android:layout_above="@id/confirm_button"
 		android:layout_alignParentTop="true">
 
 		<LinearLayout

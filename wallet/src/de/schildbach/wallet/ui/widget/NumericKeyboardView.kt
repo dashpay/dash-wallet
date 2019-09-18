@@ -17,10 +17,13 @@
 package de.schildbach.wallet.ui.widget
 
 import android.content.Context
+import android.graphics.Typeface
 import android.util.AttributeSet
 import android.view.View
 import android.widget.TableLayout
+import android.widget.TextView
 import de.schildbach.wallet_test.R
+import java.text.DecimalFormatSymbols
 
 class NumericKeyboardView(context: Context, attrs: AttributeSet) : TableLayout(context, attrs), View.OnClickListener {
 
@@ -32,7 +35,7 @@ class NumericKeyboardView(context: Context, attrs: AttributeSet) : TableLayout(c
                 R.id.btn_0)
 
         private val FUNCTION_BUTTONS_RES_ID = arrayOf(
-                R.id.btn_cancel, R.id.btn_back
+                R.id.btn_function, R.id.btn_back
         )
 
         private val ALL_BUTTONS_RES_ID = NUMERIC_BUTTONS_RES_ID + FUNCTION_BUTTONS_RES_ID
@@ -49,18 +52,29 @@ class NumericKeyboardView(context: Context, attrs: AttributeSet) : TableLayout(c
 
     override fun onClick(v: View?) {
         when (v!!.id) {
-            R.id.btn_cancel -> onCancelClick()
+            R.id.btn_function -> onFunctionClick()
             R.id.btn_back -> onBackClick()
             else -> onNumberClick((v.tag as String).toInt())
         }
     }
 
-    fun setCancelEnabled(enabled: Boolean) {
-        findViewById<View>(R.id.btn_cancel).isEnabled = enabled
+    fun setFunctionEnabled(enabled: Boolean) {
+        findViewById<View>(R.id.btn_function).isEnabled = enabled
     }
 
-    private fun onCancelClick() {
-        onKeyboardActionListener?.onCancel()
+    fun enableDecSeparator(enabled: Boolean) {
+        val functionButton = findViewById<TextView>(R.id.btn_function)
+        if (enabled) {
+            functionButton.setTypeface(null, Typeface.BOLD)
+            functionButton.text = DecimalFormatSymbols.getInstance().decimalSeparator.toString()
+        } else {
+            functionButton.setTypeface(null, Typeface.NORMAL)
+            functionButton.setText(R.string.button_cancel)
+        }
+    }
+
+    private fun onFunctionClick() {
+        onKeyboardActionListener?.onFunction()
     }
 
     private fun onBackClick() {
@@ -74,6 +88,6 @@ class NumericKeyboardView(context: Context, attrs: AttributeSet) : TableLayout(c
     interface OnKeyboardActionListener {
         fun onNumber(number: Int)
         fun onBack()
-        fun onCancel()
+        fun onFunction()
     }
 }

@@ -675,7 +675,7 @@ public final class SendCoinsFragment extends Fragment {
         attemptsRemainingTextView = (TextView) view.findViewById(R.id.pin_attempts);
         fingerprintIcon = view.findViewById(R.id.fingerprint_icon);
 
-        viewGo = (Button) view.findViewById(R.id.send_coins_go);
+        viewGo = (Button) view.findViewById(R.id.confirm_button);
         viewGo.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(final View v) {
@@ -1620,10 +1620,10 @@ public final class SendCoinsFragment extends Fragment {
             receivingAddressView.setNextFocusDownId(activeAmountViewId);
             receivingAddressView.setNextFocusForwardId(activeAmountViewId);
             amountCalculatorLink.setNextFocusId(
-                    privateKeyPasswordViewVisible ? R.id.send_coins_private_key_password : R.id.send_coins_go);
+                    privateKeyPasswordViewVisible ? R.id.send_coins_private_key_password : R.id.confirm_button);
             privateKeyPasswordView.setNextFocusUpId(activeAmountViewId);
-            privateKeyPasswordView.setNextFocusDownId(R.id.send_coins_go);
-            privateKeyPasswordView.setNextFocusForwardId(R.id.send_coins_go);
+            privateKeyPasswordView.setNextFocusDownId(R.id.confirm_button);
+            privateKeyPasswordView.setNextFocusForwardId(R.id.confirm_button);
             viewGo.setNextFocusUpId(
                     privateKeyPasswordViewVisible ? R.id.send_coins_private_key_password : activeAmountViewId);
 
