@@ -31,6 +31,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Point;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
@@ -78,6 +79,9 @@ import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
 import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.IOException;
 import java.util.Currency;
@@ -1087,6 +1091,45 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     }
 
+    @Override
+    public void onStart() {
+        super.onStart();
+        EventBus.getDefault().register(this);
+    }
+
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    public void onEvent(SyncProgressEvent event) {
+        ProgressBar syncProgressView = findViewById(R.id.sync_status_progress);
+        int percentage = (int)event.getPct();
+//        findViewById(R.id.sync_status_pane).setVisibility(percentage < 100 ? View.VISIBLE : View.GONE);
+        if (percentage != syncProgressView.getProgress()) {
+            syncProgressView.setProgress(percentage);
+            TextView syncPercentageView = findViewById(R.id.sync_status_percentage);
+            TextView syncStatusTitle = findViewById(R.id.sync_status_title);
+            TextView syncStatusMessage = findViewById(R.id.sync_status_message);
+            syncPercentageView.setText(percentage + "%");
+            if (percentage == 100) {
+                Drawable progressDrawable = syncProgressView.getProgressDrawable().mutate();
+                progressDrawable.setColorFilter(
+                        getResources().getColor(R.color.success_green),
+                        android.graphics.PorterDuff.Mode.SRC_IN
+                );
+                syncProgressView.setProgressDrawable(progressDrawable);
+                syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
+                syncStatusTitle.setText("Sync");
+                syncStatusMessage.setText("Completed");
+                findViewById(R.id.sync_status_pane).setVisibility(View.GONE);
+
+            }
+        }
+    }
+
+    @Override
+    public void onStop() {
+        EventBus.getDefault().unregister(this);
+        super.onStop();
+    }
+
     /**
      * Get ISO 3166-1 alpha-2 country code for this device (or null if not available)
      * If available, call {@link #showFiatCurrencyChangeDetectedDialog(String, String)}
@@ -1204,8 +1247,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
 
-    boolean ignoreFirstShotFlag = true;
-
     private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>() {
         @Override
         public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args) {
@@ -1214,25 +1255,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         @Override
         public void onLoadFinished(@NonNull final Loader<BlockchainState> loader, final BlockchainState blockchainState) {
-            if (ignoreFirstShotFlag) {
-                ignoreFirstShotFlag = false;
-                return;
-            }
-
 //            if (blockchainState.bestChainHeight == config.getBestChainHeightEver()) {
 //                findViewById(R.id.sync_status_pane).setVisibility(View.GONE);
 //            } else if (blockchainState.replaying) {
 //                findViewById(R.id.sync_status_pane).setVisibility(View.VISIBLE);
 //            }
-//            findViewById(R.id.sync_status_pane).setVisibility(View.VISIBLE);
-            ProgressBar syncProgressView = findViewById(R.id.sync_status_progress);
-            int percentage = blockchainState.percentageSync;
-            findViewById(R.id.sync_status_pane).setVisibility(percentage < 100 ? View.VISIBLE : View.GONE);
-            if (percentage != syncProgressView.getProgress()) {
-                syncProgressView.setProgress(percentage);
-                TextView syncPercentageView = findViewById(R.id.sync_status_percentage);
-                syncPercentageView.setText(percentage + "%");
-            }
         }
 
         @Override

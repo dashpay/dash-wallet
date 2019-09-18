@@ -182,6 +182,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_alignParentRight="true"
+            android:layout_marginRight="8dp"
             android:layout_centerInParent="true"
             android:fontFamily="@font/montserrat_regular"
             android:text="0%"
