@@ -141,9 +141,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
         config = application.getConfiguration();
         wallet = application.getWallet();
 
-        setContentView(R.layout.home_activity);
+        setContentViewFooter(R.layout.home_activity);
         setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
         adjustHeaderLayout();
+        activateHomeButton();
 
         if (savedInstanceState == null) {
             checkAlerts();

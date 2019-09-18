@@ -19,9 +19,6 @@ package de.schildbach.wallet.ui.send;
 
 import javax.annotation.Nullable;
 
-import org.bitcoinj.core.Coin;
-
-import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.HelpDialogFragment;
@@ -72,7 +69,7 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity {
 	protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		setContentView(R.layout.send_coins_content);
+		setContentViewWithFooter(R.layout.send_coins_content);
 
 		getWalletApplication().startBlockchainService(false);
 	}
