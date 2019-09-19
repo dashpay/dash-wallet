@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui.send;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.content.ComponentName;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -34,9 +33,7 @@ import android.os.HandlerThread;
 import android.os.Process;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
@@ -87,16 +84,13 @@ import javax.annotation.Nullable;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.data.PaymentIntent.Standard;
 import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.offline.DirectPaymentTask;
-import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
-import de.schildbach.wallet.ui.CurrencyCalculatorLink;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StreamInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
@@ -114,7 +108,6 @@ public final class SendCoinsFragment extends Fragment {
     private AbstractBindServiceActivity activity;
     private WalletApplication application;
     private Configuration config;
-    private ContentResolver contentResolver;
     private FragmentManager fragmentManager;
     @Nullable
     private BluetoothAdapter bluetoothAdapter;
@@ -126,7 +119,6 @@ public final class SendCoinsFragment extends Fragment {
     private TextView payeeNameView;
     private TextView payeeVerifiedByView;
     private TextView receivingStaticAddressView;
-    private CurrencyCalculatorLink amountCalculatorLink;
     private CheckBox directPaymentEnableView;
 
     private TextView hintView;
@@ -134,7 +126,6 @@ public final class SendCoinsFragment extends Fragment {
     private FrameLayout sentTransactionView;
     private TransactionsAdapter sentTransactionAdapter;
     private RecyclerView.ViewHolder sentTransactionViewHolder;
-    private Button viewGo;
 
     private static final int REQUEST_CODE_ENABLE_BLUETOOTH_FOR_PAYMENT_REQUEST = 0;
     private static final int REQUEST_CODE_ENABLE_BLUETOOTH_FOR_DIRECT_PAYMENT = 1;
@@ -142,6 +133,7 @@ public final class SendCoinsFragment extends Fragment {
     private static final Logger log = LoggerFactory.getLogger(SendCoinsFragment.class);
 
     private SendCoinsViewModel viewModel;
+    private SharedViewModel sharedViewModel;
 
     private final CurrencyAmountView.Listener amountsListener = new CurrencyAmountView.Listener() {
         @Override
@@ -230,7 +222,6 @@ public final class SendCoinsFragment extends Fragment {
         this.activity = (AbstractBindServiceActivity) context;
         this.application = (WalletApplication) activity.getApplication();
         this.config = application.getConfiguration();
-        this.contentResolver = activity.getContentResolver();
         this.fragmentManager = getFragmentManager();
     }
 
@@ -245,14 +236,20 @@ public final class SendCoinsFragment extends Fragment {
                 updateView();
             }
         });
-        ExchangeRatesViewModel exchangeRatesViewModel = ViewModelProviders.of(this).get(ExchangeRatesViewModel.class);
-        exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this, new Observer<de.schildbach.wallet.rates.ExchangeRate>() {
+        sharedViewModel = ViewModelProviders.of(activity).get(SharedViewModel.class);
+        sharedViewModel.getDashAmountData().observe(getViewLifecycleOwner(), new Observer<Coin>() {
             @Override
-            public void onChanged(de.schildbach.wallet.rates.ExchangeRate exchangeRate) {
-                if (exchangeRate != null) {
-                    amountCalculatorLink.setExchangeRate(new org.bitcoinj.utils.ExchangeRate(
-                            Coin.COIN, exchangeRate.getFiat()));
+            public void onChanged(Coin coin) {
+                handler.post(dryrunRunnable);
+            }
+        });
+        sharedViewModel.getButtonClickEvent().observe(getViewLifecycleOwner(), new Observer<Coin>() {
+            @Override
+            public void onChanged(Coin coin) {
+                if (everythingPlausible()) {
+                    handleGo();
                 }
+                updateView();
             }
         });
 
@@ -300,9 +297,6 @@ public final class SendCoinsFragment extends Fragment {
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setRetainInstance(true);
-        setHasOptionsMenu(true);
-
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
         backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);
@@ -319,17 +313,6 @@ public final class SendCoinsFragment extends Fragment {
         payeeVerifiedByView = view.findViewById(R.id.send_coins_payee_verified_by);
 
         receivingStaticAddressView = view.findViewById(R.id.send_coins_receiving_static_address);
-
-        final CurrencyAmountView btcAmountView = view.findViewById(R.id.send_coins_amount_dash);
-        btcAmountView.setCurrencySymbol(config.getFormat().code());
-        btcAmountView.setInputFormat(config.getMaxPrecisionFormat());
-        btcAmountView.setHintFormat(config.getFormat());
-
-        final CurrencyAmountView localAmountView = (CurrencyAmountView) view.findViewById(R.id.send_coins_amount_local);
-        localAmountView.setInputFormat(Constants.LOCAL_FORMAT);
-        localAmountView.setHintFormat(Constants.LOCAL_FORMAT);
-        amountCalculatorLink = new CurrencyCalculatorLink(btcAmountView, localAmountView);
-        amountCalculatorLink.setExchangeDirection(config.getLastExchangeDirection());
 
         directPaymentEnableView = view.findViewById(R.id.send_coins_direct_payment_enable);
         directPaymentEnableView.setTypeface(ResourcesCompat.getFont(getActivity(), R.font.montserrat_medium));
@@ -348,48 +331,15 @@ public final class SendCoinsFragment extends Fragment {
         directPaymentMessageView = view.findViewById(R.id.send_coins_direct_payment_message);
         sentTransactionView = view.findViewById(R.id.send_coins_sent_transaction);
 
-        viewGo = view.findViewById(R.id.confirm_button);
-        viewGo.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(final View v) {
-
-                if (everythingPlausible()) {
-                    handleGo();
-                }
-
-                updateView();
-            }
-        });
-
         return view;
-    }
-
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-
-        config.setLastExchangeDirection(amountCalculatorLink.getExchangeDirection());
     }
 
     @Override
     public void onResume() {
         super.onResume();
 
-        contentResolver.registerContentObserver(AddressBookProvider.contentUri(activity.getPackageName()), true,
-                contentObserver);
-
-        amountCalculatorLink.setListener(amountsListener);
-
         updateView();
         handler.post(dryrunRunnable);
-    }
-
-    @Override
-    public void onPause() {
-        amountCalculatorLink.setListener(null);
-
-        contentResolver.unregisterContentObserver(contentObserver);
-        super.onPause();
     }
 
     @Override
@@ -447,7 +397,7 @@ public final class SendCoinsFragment extends Fragment {
         if (viewModel.dryrunSendRequest != null)
             return viewModel.dryrunException == null;
         else if (viewModel.paymentIntent.mayEditAmount())
-            return amountCalculatorLink.hasAmount();
+            return sharedViewModel.hasAmount();
         else
             return viewModel.paymentIntent.hasAmount();
     }
@@ -489,14 +439,14 @@ public final class SendCoinsFragment extends Fragment {
 
         // final payment intent
         final PaymentIntent finalPaymentIntent = viewModel.paymentIntent.mergeWithEditedValues(
-                amountCalculatorLink.getAmount(), null);
+                sharedViewModel.getDashAmount(), null);
 
         SendRequest sendRequest = createSendRequest(finalPaymentIntent, true, viewModel.dryrunSendRequest.ensureMinRequiredFee);
 
         final Coin finalAmount = finalPaymentIntent.getAmount();
 
         sendRequest.memo = viewModel.paymentIntent.memo;
-        sendRequest.exchangeRate = amountCalculatorLink.getExchangeRate();
+        sendRequest.exchangeRate = sharedViewModel.getExchangeRate();
         log.info("Using exchange rate: " + (sendRequest.exchangeRate != null
                 ? sendRequest.exchangeRate.coinToFiat(Coin.COIN).toFriendlyString() :
                 "not available"));
@@ -583,16 +533,16 @@ public final class SendCoinsFragment extends Fragment {
                 final Coin available = wallet.getBalance(BalanceType.AVAILABLE);
                 final Coin pending = estimated.subtract(available);
 
-                final MonetaryFormat btcFormat = config.getFormat();
+                final MonetaryFormat dashFormat = config.getFormat();
 
                 final DialogBuilder dialog = DialogBuilder.warn(activity,
                         R.string.send_coins_fragment_insufficient_money_title);
                 final StringBuilder msg = new StringBuilder();
-                msg.append(getString(R.string.send_coins_fragment_insufficient_money_msg1, btcFormat.format(missing)));
+                msg.append(getString(R.string.send_coins_fragment_insufficient_money_msg1, dashFormat.format(missing)));
 
                 if (pending.signum() > 0)
                     msg.append("\n\n")
-                            .append(getString(R.string.send_coins_fragment_pending, btcFormat.format(pending)));
+                            .append(getString(R.string.send_coins_fragment_pending, dashFormat.format(pending)));
                 if (viewModel.paymentIntent.mayEditAmount())
                     msg.append("\n\n").append(getString(R.string.send_coins_fragment_insufficient_money_msg2));
                 dialog.setMessage(msg);
@@ -652,7 +602,7 @@ public final class SendCoinsFragment extends Fragment {
             });
         } else {
             final Coin available = wallet.getBalance(BalanceType.ESTIMATED);
-            amountCalculatorLink.setBtcAmount(available);
+            sharedViewModel.getChangeDashAmountEvent().setValue(available);
 
             updateView();
             handler.post(dryrunRunnable);
@@ -673,7 +623,7 @@ public final class SendCoinsFragment extends Fragment {
             viewModel.dryrunSendRequest = null;
             viewModel.dryrunException = null;
 
-            final Coin amount = amountCalculatorLink.getAmount();
+            final Coin amount = sharedViewModel.getDashAmount();
             final Wallet wallet = viewModel.wallet;
             final Address dummyAddress = wallet.currentReceiveAddress(); // won't be used, tx is never committed
 
@@ -722,117 +672,114 @@ public final class SendCoinsFragment extends Fragment {
     private void setState(final SendCoinsViewModel.State state) {
         viewModel.state = state;
 
-        activity.invalidateOptionsMenu();
         updateView();
     }
 
     private void updateView() {
 
-        final BlockchainState blockchainState = viewModel.blockchainState.getValue();
+        if (viewModel.paymentIntent == null) {
+            log.info("viewModel.paymentIntent == null");
+            return;
+        }
 
-        if (viewModel.paymentIntent != null) {
-            final MonetaryFormat btcFormat = config.getFormat();
+        if (viewModel.paymentIntent.hasPayee()) {
+            payeeNameView.setVisibility(View.VISIBLE);
+            payeeNameView.setText(viewModel.paymentIntent.payeeName);
 
-            getView().setVisibility(View.VISIBLE);
-
-            if (viewModel.paymentIntent.hasPayee()) {
-                payeeNameView.setVisibility(View.VISIBLE);
-                payeeNameView.setText(viewModel.paymentIntent.payeeName);
-
-                payeeVerifiedByView.setVisibility(View.VISIBLE);
-                final String verifiedBy = viewModel.paymentIntent.payeeVerifiedBy != null ? viewModel.paymentIntent.payeeVerifiedBy
-                        : getString(R.string.send_coins_fragment_payee_verified_by_unknown);
-                payeeVerifiedByView.setText(CHAR_CHECKMARK + String.format(getString(R.string.send_coins_fragment_payee_verified_by), verifiedBy));
-            } else {
-                payeeNameView.setVisibility(View.GONE);
-                payeeVerifiedByView.setVisibility(View.GONE);
-            }
-
-            if (viewModel.paymentIntent.hasOutputs()) {
-                receivingStaticAddressView.setVisibility(
-                        !viewModel.paymentIntent.hasPayee() || viewModel.paymentIntent.payeeVerifiedBy == null ? View.VISIBLE : View.GONE);
-
-                if (viewModel.paymentIntent.hasAddress())
-                    receivingStaticAddressView.setText(viewModel.paymentIntent.getAddress().toBase58());
-                else
-                    receivingStaticAddressView.setText(R.string.send_coins_fragment_receiving_address_complex);
-            }
-
-            amountCalculatorLink.setEnabled(viewModel.state == SendCoinsViewModel.State.INPUT && viewModel.paymentIntent.mayEditAmount());
-
-            final boolean directPaymentVisible;
-            if (viewModel.paymentIntent.hasPaymentUrl()) {
-                if (viewModel.paymentIntent.isBluetoothPaymentUrl())
-                    directPaymentVisible = bluetoothAdapter != null;
-                else
-                    directPaymentVisible = !Constants.BUG_OPENSSL_HEARTBLEED;
-            } else {
-                directPaymentVisible = false;
-            }
-            directPaymentEnableView.setVisibility(directPaymentVisible ? View.VISIBLE : View.GONE);
-            directPaymentEnableView.setEnabled(viewModel.state == SendCoinsViewModel.State.INPUT);
-
-            hintView.setVisibility(View.GONE);
-            if (viewModel.state == SendCoinsViewModel.State.INPUT) {
-                if (viewModel.dryrunException != null) {
-                    hintView.setTextColor(getResources().getColor(R.color.fg_error));
-                    hintView.setVisibility(View.VISIBLE);
-                    if (viewModel.dryrunException instanceof DustySendRequested)
-                        hintView.setText(getString(R.string.send_coins_fragment_hint_dusty_send));
-                    else if (viewModel.dryrunException instanceof InsufficientMoneyException)
-                        hintView.setText(getString(R.string.send_coins_fragment_hint_insufficient_money,
-                                btcFormat.format(((InsufficientMoneyException) viewModel.dryrunException).missing)));
-                    else if (viewModel.dryrunException instanceof CouldNotAdjustDownwards)
-                        hintView.setText(getString(R.string.send_coins_fragment_hint_empty_wallet_failed));
-                    else
-                        hintView.setText(viewModel.dryrunException.toString());
-                } else if (blockchainState != null && blockchainState.replaying) {
-                    hintView.setTextColor(getResources().getColor(R.color.fg_error));
-                    hintView.setVisibility(View.VISIBLE);
-                    hintView.setText(R.string.send_coins_fragment_hint_replaying);
-                } else if (viewModel.dryrunSendRequest != null && viewModel.dryrunSendRequest.tx.getFee() != null) {
-                    hintView.setTextColor(getResources().getColor(R.color.fg_insignificant));
-
-                }
-            }
-
-            if (viewModel.sentTransaction != null) {
-                sentTransactionView.setVisibility(View.VISIBLE);
-                sentTransactionAdapter.setFormat(btcFormat);
-                sentTransactionAdapter.replace(viewModel.sentTransaction);
-                sentTransactionAdapter.bindViewHolder(sentTransactionViewHolder, 0);
-            } else {
-                sentTransactionView.setVisibility(View.GONE);
-            }
-
-            if (viewModel.directPaymentAck != null) {
-                directPaymentMessageView.setVisibility(View.VISIBLE);
-                directPaymentMessageView.setText(viewModel.directPaymentAck ? R.string.send_coins_fragment_direct_payment_ack
-                        : R.string.send_coins_fragment_direct_payment_nack);
-            } else {
-                directPaymentMessageView.setVisibility(View.GONE);
-            }
-
-            viewGo.setEnabled(everythingPlausible() && viewModel.dryrunSendRequest != null
-                    && (blockchainState == null || !blockchainState.replaying));
-
-            if (viewModel.state == null || viewModel.state == SendCoinsViewModel.State.REQUEST_PAYMENT_REQUEST) {
-                viewGo.setText(null);
-            } else if (viewModel.state == SendCoinsViewModel.State.INPUT) {
-                viewGo.setText(R.string.send_coins_fragment_button_send);
-            } else if (viewModel.state == SendCoinsViewModel.State.DECRYPTING) {
-                viewGo.setText(R.string.send_coins_fragment_state_decrypting);
-            } else if (viewModel.state == SendCoinsViewModel.State.SIGNING) {
-                viewGo.setText(R.string.send_coins_preparation_msg);
-            } else if (viewModel.state == SendCoinsViewModel.State.SENDING) {
-                viewGo.setText(R.string.send_coins_sending_msg);
-            } else if (viewModel.state == SendCoinsViewModel.State.SENT) {
-                viewGo.setText(R.string.send_coins_sent_msg);
-            } else if (viewModel.state == SendCoinsViewModel.State.FAILED) {
-                viewGo.setText(R.string.send_coins_failed_msg);
-            }
+            payeeVerifiedByView.setVisibility(View.VISIBLE);
+            final String verifiedBy = viewModel.paymentIntent.payeeVerifiedBy != null ? viewModel.paymentIntent.payeeVerifiedBy
+                    : getString(R.string.send_coins_fragment_payee_verified_by_unknown);
+            payeeVerifiedByView.setText(CHAR_CHECKMARK + String.format(getString(R.string.send_coins_fragment_payee_verified_by), verifiedBy));
         } else {
-            getView().setVisibility(View.GONE);
+            payeeNameView.setVisibility(View.GONE);
+            payeeVerifiedByView.setVisibility(View.GONE);
+        }
+
+        if (viewModel.paymentIntent.hasOutputs()) {
+            receivingStaticAddressView.setVisibility(
+                    !viewModel.paymentIntent.hasPayee() || viewModel.paymentIntent.payeeVerifiedBy == null ? View.VISIBLE : View.GONE);
+
+            if (viewModel.paymentIntent.hasAddress())
+                receivingStaticAddressView.setText(viewModel.paymentIntent.getAddress().toBase58());
+            else
+                receivingStaticAddressView.setText(R.string.send_coins_fragment_receiving_address_complex);
+        }
+
+        sharedViewModel.getDirectionChangeEnabledData().setValue(
+                viewModel.state == SendCoinsViewModel.State.INPUT && viewModel.paymentIntent.mayEditAmount());
+
+        final boolean directPaymentVisible;
+        if (viewModel.paymentIntent.hasPaymentUrl()) {
+            if (viewModel.paymentIntent.isBluetoothPaymentUrl())
+                directPaymentVisible = bluetoothAdapter != null;
+            else
+                directPaymentVisible = !Constants.BUG_OPENSSL_HEARTBLEED;
+        } else {
+            directPaymentVisible = false;
+        }
+        directPaymentEnableView.setVisibility(directPaymentVisible ? View.VISIBLE : View.GONE);
+        directPaymentEnableView.setEnabled(viewModel.state == SendCoinsViewModel.State.INPUT);
+
+        final BlockchainState blockchainState = viewModel.blockchainState.getValue();
+        final MonetaryFormat dashFormat = config.getFormat();
+        hintView.setVisibility(View.GONE);
+        if (viewModel.state == SendCoinsViewModel.State.INPUT) {
+            if (viewModel.dryrunException != null) {
+                hintView.setTextColor(getResources().getColor(R.color.fg_error));
+                hintView.setVisibility(View.VISIBLE);
+                if (viewModel.dryrunException instanceof DustySendRequested)
+                    hintView.setText(getString(R.string.send_coins_fragment_hint_dusty_send));
+                else if (viewModel.dryrunException instanceof InsufficientMoneyException)
+                    hintView.setText(getString(R.string.send_coins_fragment_hint_insufficient_money,
+                            dashFormat.format(((InsufficientMoneyException) viewModel.dryrunException).missing)));
+                else if (viewModel.dryrunException instanceof CouldNotAdjustDownwards)
+                    hintView.setText(getString(R.string.send_coins_fragment_hint_empty_wallet_failed));
+                else
+                    hintView.setText(viewModel.dryrunException.toString());
+            } else if (blockchainState != null && blockchainState.replaying) {
+                hintView.setTextColor(getResources().getColor(R.color.fg_error));
+                hintView.setVisibility(View.VISIBLE);
+                hintView.setText(R.string.send_coins_fragment_hint_replaying);
+            } else if (viewModel.dryrunSendRequest != null && viewModel.dryrunSendRequest.tx.getFee() != null) {
+                hintView.setTextColor(getResources().getColor(R.color.fg_insignificant));
+
+            }
+        }
+
+        if (viewModel.sentTransaction != null) {
+            sentTransactionView.setVisibility(View.VISIBLE);
+            sentTransactionAdapter.setFormat(dashFormat);
+            sentTransactionAdapter.replace(viewModel.sentTransaction);
+            sentTransactionAdapter.bindViewHolder(sentTransactionViewHolder, 0);
+        } else {
+            sentTransactionView.setVisibility(View.GONE);
+        }
+
+        if (viewModel.directPaymentAck != null) {
+            directPaymentMessageView.setVisibility(View.VISIBLE);
+            directPaymentMessageView.setText(viewModel.directPaymentAck ? R.string.send_coins_fragment_direct_payment_ack
+                    : R.string.send_coins_fragment_direct_payment_nack);
+        } else {
+            directPaymentMessageView.setVisibility(View.GONE);
+        }
+
+        sharedViewModel.getButtonEnabledData().setValue(everythingPlausible() && viewModel.dryrunSendRequest != null
+                && (blockchainState == null || !blockchainState.replaying));
+
+        if (viewModel.state == null || viewModel.state == SendCoinsViewModel.State.REQUEST_PAYMENT_REQUEST) {
+            sharedViewModel.getButtonTextData().call(0);
+        } else if (viewModel.state == SendCoinsViewModel.State.INPUT) {
+            sharedViewModel.getButtonTextData().call(R.string.send_coins_fragment_button_send);
+        } else if (viewModel.state == SendCoinsViewModel.State.DECRYPTING) {
+            sharedViewModel.getButtonTextData().call(R.string.send_coins_fragment_state_decrypting);
+        } else if (viewModel.state == SendCoinsViewModel.State.SIGNING) {
+            sharedViewModel.getButtonTextData().call(R.string.send_coins_preparation_msg);
+        } else if (viewModel.state == SendCoinsViewModel.State.SENDING) {
+            sharedViewModel.getButtonTextData().call(R.string.send_coins_sending_msg);
+        } else if (viewModel.state == SendCoinsViewModel.State.SENT) {
+            sharedViewModel.getButtonTextData().call(R.string.send_coins_sent_msg);
+        } else if (viewModel.state == SendCoinsViewModel.State.FAILED) {
+            sharedViewModel.getButtonTextData().call(R.string.send_coins_failed_msg);
         }
     }
 
@@ -884,7 +831,7 @@ public final class SendCoinsFragment extends Fragment {
 
     private void initStateFromIntentUri(final String mimeType, final Uri bitcoinUri) {
         try {
-            final InputStream is = contentResolver.openInputStream(bitcoinUri);
+            final InputStream is = activity.getContentResolver().openInputStream(bitcoinUri);
 
             new StreamInputParser(mimeType, is) {
                 @Override
@@ -926,7 +873,7 @@ public final class SendCoinsFragment extends Fragment {
                 } else {
                     setState(SendCoinsViewModel.State.INPUT);
 
-                    amountCalculatorLink.setBtcAmount(paymentIntent.getAmount());
+                    sharedViewModel.getChangeDashAmountEvent().setValue(paymentIntent.getAmount());
 
                     if (paymentIntent.isBluetoothPaymentUrl())
                         directPaymentEnableView.setChecked(bluetoothAdapter != null && bluetoothAdapter.isEnabled());

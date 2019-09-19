@@ -16,31 +16,22 @@
 
 package de.schildbach.wallet.ui
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 
-class EnterAmountViewModel : ViewModel() {
+class EnterAmountViewModel(application: Application) : AndroidViewModel(application) {
 
     val dashToFiatDirectionData = MutableLiveData<Boolean>()
     val dashToFiatDirectionValue: Boolean
         get() = (dashToFiatDirectionData.value == true)
 
     val dashAmountData = MutableLiveData<Coin>()
-    val dashAmountValue: Coin?
-        get() = dashAmountData.value
 
     val fiatAmountData = MutableLiveData<Fiat>()
-    val fiatAmountValue: Fiat?
-        get() = fiatAmountData.value
-
-    var exchangeRate: ExchangeRate? = null
-        set(value) {
-            field = value
-            calculateDependent()
-        }
 
     fun setDashAmount(amount: Coin) {
         dashAmountData.value = amount
@@ -50,12 +41,12 @@ class EnterAmountViewModel : ViewModel() {
         fiatAmountData.value = amount
     }
 
-    fun calculateDependent() {
-        exchangeRate!!.also {
+    fun calculateDependent(exchangeRate: ExchangeRate) {
+        exchangeRate.run {
             if (dashToFiatDirectionValue) {
-                fiatAmountData.value = it.coinToFiat(dashAmountValue)
+                fiatAmountData.value = coinToFiat(dashAmountData.value)
             } else {
-                dashAmountData.value = it.fiatToCoin(fiatAmountValue)
+                dashAmountData.value = fiatToCoin(fiatAmountData.value)
             }
         }
     }

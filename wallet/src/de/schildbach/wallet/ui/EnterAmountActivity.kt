@@ -5,7 +5,7 @@ import androidx.appcompat.app.AppCompatActivity
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Coin
 
-class EnterAmountActivity : AppCompatActivity(), EnterAmountFragment.EnterAmountFragmentListener {
+class EnterAmountActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -16,9 +16,5 @@ class EnterAmountActivity : AppCompatActivity(), EnterAmountFragment.EnterAmount
                     .replace(R.id.container, EnterAmountFragment.newInstance(Coin.parseCoin("1.234")))
                     .commitNow()
         }
-    }
-
-    override fun onConfirmButtonClick() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 }

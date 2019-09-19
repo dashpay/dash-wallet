@@ -18,7 +18,6 @@ package de.schildbach.wallet.ui
 
 import android.content.Context
 import android.os.Bundle
-import android.os.Handler
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -27,7 +26,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.rates.ExchangeRatesViewModel
+import de.schildbach.wallet.ui.send.SharedViewModel
 import de.schildbach.wallet.ui.widget.NumericKeyboardView
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.enter_amount_fragment.*
@@ -44,9 +43,9 @@ class EnterAmountFragment : Fragment() {
 
     companion object {
         private const val ARGUMENT_INITIAL_AMOUNT = "argument_initial_amount"
-        private const val ARGUMENT_MESSAGE = "argument_message"
 
-        fun newInstance(initialAmount: Monetary): EnterAmountFragment {
+        @JvmStatic
+        fun newInstance(initialAmount: Monetary = Coin.ZERO): EnterAmountFragment {
             val args = Bundle()
             args.putSerializable(ARGUMENT_INITIAL_AMOUNT, initialAmount)
             val enterAmountFragment = EnterAmountFragment()
@@ -58,6 +57,7 @@ class EnterAmountFragment : Fragment() {
     private val friendlyFormat = MonetaryFormat.BTC.minDecimals(2).repeatOptionalDecimals(1, 6).noCode()
 
     private lateinit var viewModel: EnterAmountViewModel
+    private lateinit var sharedViewModel: SharedViewModel
 
     private var config: Configuration? = null
     var exchangeRate: ExchangeRate? = null
@@ -71,6 +71,9 @@ class EnterAmountFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         convert_direction.setOnClickListener {
             viewModel.dashToFiatDirectionData.value = !viewModel.dashToFiatDirectionValue
+        }
+        confirm_button.setOnClickListener {
+            sharedViewModel.buttonClickEvent.call(sharedViewModel.dashAmount)
         }
         numeric_keyboard.enableDecSeparator(true);
         numeric_keyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
@@ -121,21 +124,13 @@ class EnterAmountFragment : Fragment() {
                     val dashValue = Coin.parseCoin(strValue)
                     viewModel.setDashAmount(dashValue)
                 } else {
-                    val fiatValue = Fiat.parseFiat(viewModel.fiatAmountValue!!.currencyCode, strValue)
+                    val fiatValue = Fiat.parseFiat(viewModel.fiatAmountData.value!!.currencyCode, strValue)
                     viewModel.setFiatAmount(fiatValue)
                 }
-                viewModel.calculateDependent()
+                viewModel.calculateDependent(sharedViewModel.exchangeRate)
                 input_amount.text = strValue
                 displayEditedValue = true
             }
-        }
-    }
-
-    private fun getAmountToEdit(): Monetary? {
-        if (viewModel.dashToFiatDirectionValue) {
-            return viewModel.dashAmountValue
-        } else {
-            return viewModel.fiatAmountValue
         }
     }
 
@@ -147,33 +142,37 @@ class EnterAmountFragment : Fragment() {
         calc_pane.visibility = View.GONE
         convert_direction.visibility = View.GONE
 
-        arguments!!.also {
-            val initialAmount = it.getSerializable(ARGUMENT_INITIAL_AMOUNT) as Monetary
+        if (arguments != null) {
+            val initialAmount = arguments!!.getSerializable(ARGUMENT_INITIAL_AMOUNT) as Monetary
             viewModel.dashToFiatDirectionData.value = initialAmount is Coin
             if (viewModel.dashToFiatDirectionValue) {
                 viewModel.setDashAmount(initialAmount as Coin)
             } else {
                 viewModel.setFiatAmount(initialAmount as Fiat)
             }
+        } else {
+            viewModel.dashToFiatDirectionData.value = true
+            viewModel.setDashAmount(Coin.ZERO)
         }
     }
 
     private fun initViewModels() {
-        viewModel = ViewModelProviders.of(this).get(EnterAmountViewModel::class.java)
+        viewModel = ViewModelProviders.of(this)[EnterAmountViewModel::class.java]
         viewModel.dashToFiatDirectionData.observe(viewLifecycleOwner, Observer {
             input_symbol.visibility = if (it) View.GONE else View.VISIBLE
             input_symbol_dash.visibility = if (it) View.VISIBLE else View.GONE
             calc_amount_symbol.visibility = if (it) View.VISIBLE else View.GONE
             calc_amount_symbol_dash.visibility = if (it) View.GONE else View.VISIBLE
-            viewModel.dashAmountValue?.apply {
+            viewModel.dashAmountData.value?.run {
                 displayDashValue(this)
             }
-            viewModel.fiatAmountValue?.apply {
+            viewModel.fiatAmountData.value?.run {
                 displayFiatValue(this)
             }
         })
         viewModel.dashAmountData.observe(viewLifecycleOwner, Observer {
             displayDashValue(it)
+            sharedViewModel.dashAmountData.value = it
         })
         viewModel.fiatAmountData.observe(viewLifecycleOwner, Observer {
             displayFiatValue(it)
@@ -181,15 +180,30 @@ class EnterAmountFragment : Fragment() {
             input_symbol.text = currencySymbol
             calc_amount_symbol.text = currencySymbol
         })
-        val exchangeRatesViewModel = ViewModelProviders.of(this).get(ExchangeRatesViewModel::class.java)
-        exchangeRatesViewModel.getRate(config!!.exchangeCurrencyCode).observe(viewLifecycleOwner, Observer {
-            it?.also {
-                Handler().postDelayed({
-                    viewModel.exchangeRate = ExchangeRate(Coin.COIN, it.fiat)
-                    calc_pane.visibility = View.VISIBLE
-                    convert_direction.visibility = View.VISIBLE
-                }, 3000)
+        sharedViewModel = activity?.run {
+            ViewModelProviders.of(this)[SharedViewModel::class.java]
+        } ?: throw Exception("Invalid Activity")
+        sharedViewModel.directionChangeEnabledData.observe(viewLifecycleOwner, Observer {
+            convert_direction.isEnabled = it
+        })
+        sharedViewModel.buttonEnabledData.observe(viewLifecycleOwner, Observer {
+            confirm_button.isEnabled = it
+        })
+        sharedViewModel.buttonTextData.observe(viewLifecycleOwner, Observer { it ->
+            when {
+                it > 0 -> confirm_button.setText(it)
+                else -> confirm_button.text = null
             }
+        })
+        sharedViewModel.exchangeRateData.observe(viewLifecycleOwner, Observer {
+            it?.also {
+                calc_pane.visibility = View.VISIBLE
+                convert_direction.visibility = View.VISIBLE
+                viewModel.calculateDependent(sharedViewModel.exchangeRate)
+            }
+        })
+        sharedViewModel.changeDashAmountEvent.observe(viewLifecycleOwner, Observer {
+            viewModel.setDashAmount(it)
         })
     }
 
@@ -216,10 +230,5 @@ class EnterAmountFragment : Fragment() {
     override fun onAttach(context: Context?) {
         super.onAttach(context)
         this.config = (context!!.applicationContext as WalletApplication).configuration
-    }
-
-    interface EnterAmountFragmentListener {
-
-        fun onConfirmButtonClick()
     }
 }
