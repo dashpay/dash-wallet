@@ -40,11 +40,12 @@ import android.app.ActivityManager.TaskDescription;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.MenuItem;
+import android.view.View;
 
 /**
  * @author Andreas Schildbach
  */
-public abstract class AbstractWalletActivity extends AppCompatActivity implements AbstractPINDialogFragment.WalletProvider {
+public abstract class AbstractWalletActivity extends GlobalFooterActivity implements AbstractPINDialogFragment.WalletProvider {
 
     private WalletApplication application;
 
@@ -73,6 +74,13 @@ public abstract class AbstractWalletActivity extends AppCompatActivity implement
     @Override
     public void setContentView(@LayoutRes int layoutResID) {
         super.setContentView(layoutResID);
+
+        initToolbar();
+    }
+
+    @Override
+    public void setContentView(View view) {
+        super.setContentView(view);
 
         initToolbar();
     }

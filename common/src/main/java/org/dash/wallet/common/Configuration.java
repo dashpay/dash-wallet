@@ -17,6 +17,8 @@
 
 package org.dash.wallet.common;
 
+import java.util.concurrent.TimeUnit ;
+
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
@@ -24,12 +26,15 @@ import android.content.res.Resources;
 import android.net.Uri;
 import android.text.format.DateUtils;
 
+
 import com.google.common.base.Strings;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Date;
 
 /**
  * @author Andreas Schildbach
@@ -63,6 +68,7 @@ public class Configuration {
     public static final String PREFS_KEY_REMIND_BACKUP = "remind_backup";
     private static final String PREFS_KEY_LAST_BACKUP = "last_backup";
     public static final String PREFS_KEY_REMIND_BACKUP_SEED = "remind_backup_seed";
+    public static final String PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER = "backup_seed_last_dismissed_reminder";
     private static final String PREFS_KEY_LAST_BACKUP_SEED = "last_backup_seed";
     public final static String PREFS_LAST_UNLOCK_TIME = "last_unlock_time";
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
@@ -165,6 +171,11 @@ public class Configuration {
     public boolean remindBackupSeed() {
         return prefs.getBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true);
     }
+    public boolean lastDismissedReminderMoreThan24hAgo() {
+        long now = System.currentTimeMillis();
+        long lastReminder = prefs.getLong(PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER, now);
+        return now - lastReminder > TimeUnit.HOURS.toMillis(24);
+    }
     public long getLastBackupTime() {
         return prefs.getLong(PREFS_KEY_LAST_BACKUP, 0);
     }
@@ -184,6 +195,11 @@ public class Configuration {
 
     public void armBackupSeedReminder() {
         prefs.edit().putBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true).apply();
+    }
+
+    public void setBackupSeedLastDismissedReminder() {
+        long now = System.currentTimeMillis();
+        prefs.edit().putLong(PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER, now).apply();
     }
 
     public void disarmBackupSeedReminder() {

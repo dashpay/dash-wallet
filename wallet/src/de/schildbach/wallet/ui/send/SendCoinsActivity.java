@@ -23,13 +23,10 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.MenuItem;
 
-import org.bitcoinj.core.Coin;
-
 import javax.annotation.Nullable;
 
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
-import de.schildbach.wallet.ui.EnterAmountFragment;
 import de.schildbach.wallet_test.R;
 
 /**
@@ -70,7 +67,7 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity {
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setContentView(R.layout.send_coins_content);
+        setContentViewWithFooter(R.layout.send_coins_content);
 
         getWalletApplication().startBlockchainService(false);
     }
