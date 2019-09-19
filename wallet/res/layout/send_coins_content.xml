@@ -35,14 +35,4 @@
 
     </LinearLayout>
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@id/fab_scan_qr"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_marginBottom="80dp"
-        android:layout_marginRight="16dp"
-        android:src="@drawable/ic_qrcode"
-        app:backgroundTint="@color/colorPrimary" />
-
 </de.schildbach.wallet.ui.widget.KeyboardResponsiveCoordinatorLayout>
