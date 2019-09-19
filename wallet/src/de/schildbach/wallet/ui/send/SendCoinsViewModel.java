@@ -45,10 +45,10 @@ public class SendCoinsViewModel extends AndroidViewModel {
     public final BlockchainStateLiveData blockchainState;
     public final LiveData<ExchangeRate> exchangeRate;
 
+    public PaymentIntent paymentIntent = null;
+
     @Nullable
     public State state = null;
-    @Nullable
-    public PaymentIntent paymentIntent = null;
     @Nullable
     public Transaction sentTransaction = null;
     @Nullable
