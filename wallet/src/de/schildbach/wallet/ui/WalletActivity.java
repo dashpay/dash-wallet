@@ -141,9 +141,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
         config = application.getConfiguration();
         wallet = application.getWallet();
 
-        setContentView(R.layout.home_activity);
+        setContentViewFooter(R.layout.home_activity);
         setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
         adjustHeaderLayout();
+        activateHomeButton();
 
         if (savedInstanceState == null) {
             checkAlerts();
@@ -167,6 +168,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
         initFingerprintHelper();
 
         this.clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+
+        if (config.remindBackupSeed() && config.lastDismissedReminderMoreThan24hAgo()) {
+            BackupWalletToSeedDialogFragment.show(getSupportFragmentManager());
+        }
     }
 
     private void adjustHeaderLayout() {
@@ -495,7 +500,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     public void handleSendCoins() {
-        startActivity(new Intent(this, SendCoinsActivity.class));
+//        startActivity(new Intent(this, SendCoinsActivity.class));
+        startActivity(new Intent(this, EnterAmountActivity.class));
     }
 
     public void handleScan() {

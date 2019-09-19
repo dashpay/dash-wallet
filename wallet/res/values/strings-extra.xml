@@ -30,6 +30,10 @@
 
 	<string name="history_title">History</string>
 
+	<string name="more_title">More</string>
+
+	<string name="payments_title">Payments</string>
+
     <string name="send_coins_auto_lock_feasible">This transaction will settle instantly at no extra fee.</string>
 	<string name="send_coins_auto_lock_not_feasible">This transaction may take several minutes to settle. Complete instantly for %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">This transaction may take several minutes to settle.</string>
