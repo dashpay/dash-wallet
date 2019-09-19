@@ -59,8 +59,6 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
-import androidx.loader.app.LoaderManager;
-import androidx.loader.content.Loader;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.bitcoin.protocols.payments.Protos.Payment;
@@ -107,7 +105,6 @@ import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.offline.DirectPaymentTask;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.service.BlockchainState;
-import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.CanAutoLockGuard;
 import de.schildbach.wallet.ui.CurrencyCalculatorLink;
@@ -133,7 +130,6 @@ public final class SendCoinsFragment extends Fragment {
     private WalletApplication application;
     private Configuration config;
     private ContentResolver contentResolver;
-    private LoaderManager loaderManager;
     private FragmentManager fragmentManager;
     @Nullable
     private BluetoothAdapter bluetoothAdapter;
@@ -149,7 +145,6 @@ public final class SendCoinsFragment extends Fragment {
     private TextView receivingStaticAddressView;
     private CurrencyCalculatorLink amountCalculatorLink;
     private CheckBox directPaymentEnableView;
-    private TextView instantSendInfo;
 
     private TextView hintView;
     private TextView directPaymentMessageView;
@@ -162,15 +157,8 @@ public final class SendCoinsFragment extends Fragment {
     private TextView attemptsRemainingTextView;
     private Button viewGo;
 
-    @Nullable
-    private BlockchainState blockchainState = null;
-
     private PinRetryController pinRetryController;
     private CancellationSignal fingerprintCancellationSignal;
-
-    private boolean forceInstantSend = false;
-
-    private static final int ID_BLOCKCHAIN_STATE_LOADER = 0;
 
     private static final int REQUEST_CODE_SCAN = 0;
     private static final int REQUEST_CODE_ENABLE_BLUETOOTH_FOR_PAYMENT_REQUEST = 1;
@@ -272,23 +260,6 @@ public final class SendCoinsFragment extends Fragment {
         }
     };
 
-    private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>() {
-        @Override
-        public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args) {
-            return new BlockchainStateLoader(activity);
-        }
-
-        @Override
-        public void onLoadFinished(final Loader<BlockchainState> loader, final BlockchainState blockchainState) {
-            SendCoinsFragment.this.blockchainState = blockchainState;
-            updateView();
-        }
-
-        @Override
-        public void onLoaderReset(final Loader<BlockchainState> loader) {
-        }
-    };
-
     private final DialogInterface.OnClickListener activityDismissListener = new DialogInterface.OnClickListener() {
         @Override
         public void onClick(final DialogInterface dialog, final int which) {
@@ -304,7 +275,6 @@ public final class SendCoinsFragment extends Fragment {
         this.application = (WalletApplication) activity.getApplication();
         this.config = application.getConfiguration();
         this.contentResolver = activity.getContentResolver();
-        this.loaderManager = LoaderManager.getInstance(this);
         this.fragmentManager = getFragmentManager();
         this.pinRetryController = new PinRetryController(activity);
     }
@@ -317,6 +287,12 @@ public final class SendCoinsFragment extends Fragment {
         setHasOptionsMenu(true);
 
         viewModel = ViewModelProviders.of(this).get(SendCoinsViewModel.class);
+        viewModel.blockchainState.observe(this, new Observer<BlockchainState>() {
+            @Override
+            public void onChanged(final BlockchainState blockchainState) {
+                updateView();
+            }
+        });
 
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
@@ -396,8 +372,6 @@ public final class SendCoinsFragment extends Fragment {
             }
         });
 
-        instantSendInfo = view.findViewById(R.id.send_coins_instant_send_info);
-
         hintView = (TextView) view.findViewById(R.id.send_coins_hint);
 
         directPaymentMessageView = (TextView) view.findViewById(R.id.send_coins_direct_payment_message);
@@ -465,8 +439,6 @@ public final class SendCoinsFragment extends Fragment {
         amountCalculatorLink.setListener(amountsListener);
         privateKeyPasswordView.addTextChangedListener(privateKeyPasswordListener);
 
-        loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
-
         updateView();
         handler.post(dryrunRunnable);
 
@@ -477,8 +449,6 @@ public final class SendCoinsFragment extends Fragment {
 
     @Override
     public void onPause() {
-        loaderManager.destroyLoader(ID_BLOCKCHAIN_STATE_LOADER);
-
         privateKeyPasswordView.removeTextChangedListener(privateKeyPasswordListener);
         amountCalculatorLink.setListener(null);
 
@@ -920,8 +890,8 @@ public final class SendCoinsFragment extends Fragment {
     }
 
     private void updateView() {
-        if (!isResumed())
-            return;
+
+        final BlockchainState blockchainState = viewModel.blockchainState.getValue();
 
         if (viewModel.paymentIntent != null) {
             final MonetaryFormat btcFormat = config.getFormat();
@@ -1088,7 +1058,6 @@ public final class SendCoinsFragment extends Fragment {
 
     private void initStateFromIntentExtras(final Bundle extras) {
         final PaymentIntent paymentIntent = extras.getParcelable(SendCoinsActivity.INTENT_EXTRA_PAYMENT_INTENT);
-        forceInstantSend = extras.getBoolean(SendCoinsActivity.INTENT_EXTRA_FORCE_INSTANT_SEND, false);
 
         updateStateFrom(paymentIntent);
     }

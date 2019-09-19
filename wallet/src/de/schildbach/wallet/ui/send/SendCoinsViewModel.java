@@ -28,6 +28,7 @@ import org.bitcoinj.wallet.Wallet;
 import javax.annotation.Nullable;
 
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.BlockchainStateLiveData;
 import de.schildbach.wallet.data.PaymentIntent;
 
 public class SendCoinsViewModel extends AndroidViewModel {
@@ -40,6 +41,7 @@ public class SendCoinsViewModel extends AndroidViewModel {
 
     private final WalletApplication application;
     public final Wallet wallet;
+    public final BlockchainStateLiveData blockchainState;
 
     @Nullable
     public State state = null;
@@ -60,5 +62,6 @@ public class SendCoinsViewModel extends AndroidViewModel {
         super(application);
         this.application = (WalletApplication) application;
         this.wallet = this.application.getWallet();
+        this.blockchainState = new BlockchainStateLiveData(this.application);
     }
 }
