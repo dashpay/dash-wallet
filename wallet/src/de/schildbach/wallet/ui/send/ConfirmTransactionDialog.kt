@@ -17,15 +17,13 @@
 package de.schildbach.wallet.ui.send
 
 
-import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
-
+import androidx.lifecycle.ViewModelProviders
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dialog_confirm_transaction.*
 
@@ -53,7 +51,7 @@ class ConfirmTransactionDialog : BottomSheetDialogFragment() {
         }
     }
 
-    private lateinit var onDialogButtonClickListener: OnDialogActionListener
+    private lateinit var sharedViewModel: ConfirmTransactionSharedViewModel
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.dialog_confirm_transaction, container, false)
@@ -74,22 +72,14 @@ class ConfirmTransactionDialog : BottomSheetDialogFragment() {
         }
         confirm_payment.setOnClickListener {
             dismiss()
-            onDialogButtonClickListener.onConfirmPaymentClick()
+            sharedViewModel.clickConfirmButtonEvent.call(true)
         }
     }
 
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-
-        if (context is OnDialogActionListener) {
-            onDialogButtonClickListener = context
-        } else {
-            throw ClassCastException("$context must implement ConfirmTransactionDialog.OnDialogButtonClickListener")
-        }
-    }
-
-    interface OnDialogActionListener {
-
-        fun onConfirmPaymentClick();
+    override fun onActivityCreated(savedInstanceState: Bundle?) {
+        super.onActivityCreated(savedInstanceState)
+        sharedViewModel = activity?.run {
+            ViewModelProviders.of(this)[ConfirmTransactionSharedViewModel::class.java]
+        } ?: throw IllegalStateException("Invalid Activity")
     }
 }
