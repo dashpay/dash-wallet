@@ -157,6 +157,10 @@
         <item name="android:textSize">12sp</item>
     </style>
 
+    <style name="MontserratRegular.G">
+        <item name="android:textColor">@color/gray</item>
+    </style>
+
     <style name="MontserratRegular.MG">
         <item name="android:textColor">@color/medium_gray</item>
     </style>

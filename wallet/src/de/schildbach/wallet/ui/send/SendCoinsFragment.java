@@ -72,6 +72,7 @@ import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.DynamicFeeLoader;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.data.PaymentIntent.Standard;
+import de.schildbach.wallet.data.TransactionResult;
 import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.offline.DirectPaymentTask;
@@ -89,6 +90,7 @@ import de.schildbach.wallet.ui.InputParser.StreamInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
 import de.schildbach.wallet.ui.ScanActivity;
+import de.schildbach.wallet.ui.TransactionResultActivity;
 import de.schildbach.wallet.ui.TransactionsAdapter;
 import de.schildbach.wallet.ui.UnlockWalletDialogFragment;
 import de.schildbach.wallet.ui.preference.PinRetryController;
@@ -1100,6 +1102,9 @@ public final class SendCoinsFragment extends Fragment {
 
                 application.broadcastTransaction(sentTransaction);
 
+                //Show transaction Result
+                showTransactionResult(transaction);
+
                 final ComponentName callingActivity = activity.getCallingActivity();
                 if (callingActivity != null) {
                     log.info("returning result to calling activity: {}", callingActivity.flattenToString());
@@ -1219,6 +1224,19 @@ public final class SendCoinsFragment extends Fragment {
                 dialog.show();
             }
         }.sendCoinsOffline(sendRequest); // send asynchronously
+    }
+
+    private void showTransactionResult(Transaction transaction) {
+        String address = WalletUtils.getToAddressOfSent(transaction, wallet).toBase58();
+        TransactionResult transactionResult = new TransactionResult(
+                transaction.getValue(wallet), transaction.getExchangeRate(), address,
+                transaction.getFee(), transaction.getHashAsString());
+
+        Intent transactionResultIntent = new Intent(getContext(),
+                TransactionResultActivity.class);
+        transactionResultIntent.putExtra(TransactionResultActivity.TRANSACTION_RESULT_EXTRA, transactionResult);
+
+        startActivity(transactionResultIntent);
     }
 
     private void handleScan() {

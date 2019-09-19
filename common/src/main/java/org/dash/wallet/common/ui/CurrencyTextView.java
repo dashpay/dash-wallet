@@ -27,11 +27,15 @@ import android.util.AttributeSet;
 
 import androidx.appcompat.widget.AppCompatTextView;
 
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Monetary;
+import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.dash.wallet.common.Constants;
 import org.dash.wallet.common.R;
 import org.dash.wallet.common.util.MonetarySpannable;
+
+import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 
 /**
  * @author Andreas Schildbach
@@ -106,6 +110,19 @@ public class CurrencyTextView extends AppCompatTextView {
     public void setPrefixScaleX(final float prefixScaleX) {
         this.prefixScaleXSpan = new ScaleXSpan(prefixScaleX);
         updateView();
+    }
+
+    public void setFiatAmount(Coin amount, ExchangeRate exchangeRate, MonetaryFormat format,
+                              String exchangeCurrencyCode) {
+        setAmount(null);  //clear the exchange rate first
+        if (exchangeRate != null) {
+            setFormat(format.code(0,
+                    PREFIX_ALMOST_EQUAL_TO + exchangeRate.fiat.getCurrencyCode() + " "));
+            Coin absCoin = Coin.valueOf(Math.abs(amount.value));
+            setAmount(exchangeRate.coinToFiat(absCoin));
+        } else {
+            setText(PREFIX_ALMOST_EQUAL_TO + exchangeCurrencyCode + " ----");
+        }
     }
 
     @Override

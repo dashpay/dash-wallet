@@ -151,6 +151,12 @@
 	<string name="verify_seed_success_title">Verified Successfully</string>
 	<string name="verify_seed_success_message">Your wallet is secured now. You can use your recovery phrase anytime to recover your account on another device.</string>
 
+	<string name="transaction_result_view_on_explorer">View on Explorer</string>
+	<string name="transaction_result_paid_successfully">Paid successfully</string>
+	<string name="transaction_result_sent_to">Sent to</string>
+	<string name="transaction_date_and_time">Date &amp; Time</string>
+	<string name="transaction_close">Close</string>
+
 	<string-array name="history_filter">
 		<item>All</item>
 		<item>Received</item>
