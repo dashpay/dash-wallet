@@ -19,8 +19,8 @@ package de.schildbach.wallet.ui.send;
 import android.app.Application;
 
 import androidx.lifecycle.AndroidViewModel;
+import androidx.lifecycle.LiveData;
 
-import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
@@ -30,6 +30,8 @@ import javax.annotation.Nullable;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.BlockchainStateLiveData;
 import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.rates.ExchangeRate;
+import de.schildbach.wallet.rates.ExchangeRatesRepository;
 
 public class SendCoinsViewModel extends AndroidViewModel {
 
@@ -39,9 +41,9 @@ public class SendCoinsViewModel extends AndroidViewModel {
         DECRYPTING, SIGNING, SENDING, SENT, FAILED // sending states
     }
 
-    private final WalletApplication application;
     public final Wallet wallet;
     public final BlockchainStateLiveData blockchainState;
+    public final LiveData<ExchangeRate> exchangeRate;
 
     @Nullable
     public State state = null;
@@ -58,8 +60,10 @@ public class SendCoinsViewModel extends AndroidViewModel {
 
     public SendCoinsViewModel(final Application application) {
         super(application);
-        this.application = (WalletApplication) application;
-        this.wallet = this.application.getWallet();
-        this.blockchainState = new BlockchainStateLiveData(this.application);
+        WalletApplication walletApplication = (WalletApplication) application;
+        wallet = walletApplication.getWallet();
+        blockchainState = new BlockchainStateLiveData(walletApplication);
+        String currencyCode = walletApplication.getConfiguration().getExchangeCurrencyCode();
+        exchangeRate = ExchangeRatesRepository.getInstance().getRate(currencyCode);
     }
 }

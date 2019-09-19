@@ -235,25 +235,26 @@ public final class SendCoinsFragment extends Fragment {
     }
 
     @Override
-    public void onCreate(final Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-        setRetainInstance(true);
-        setHasOptionsMenu(true);
+    public void onActivityCreated(@androidx.annotation.Nullable Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
 
         viewModel = ViewModelProviders.of(this).get(SendCoinsViewModel.class);
-        viewModel.blockchainState.observe(this, new Observer<BlockchainState>() {
+        viewModel.blockchainState.observe(getViewLifecycleOwner(), new Observer<BlockchainState>() {
             @Override
             public void onChanged(final BlockchainState blockchainState) {
                 updateView();
             }
         });
-
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-
-        backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);
-        backgroundThread.start();
-        backgroundHandler = new Handler(backgroundThread.getLooper());
+        ExchangeRatesViewModel exchangeRatesViewModel = ViewModelProviders.of(this).get(ExchangeRatesViewModel.class);
+        exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this, new Observer<de.schildbach.wallet.rates.ExchangeRate>() {
+            @Override
+            public void onChanged(de.schildbach.wallet.rates.ExchangeRate exchangeRate) {
+                if (exchangeRate != null) {
+                    amountCalculatorLink.setExchangeRate(new org.bitcoinj.utils.ExchangeRate(
+                            Coin.COIN, exchangeRate.getFiat()));
+                }
+            }
+        });
 
         if (savedInstanceState == null) {
             final Intent intent = activity.getIntent();
@@ -288,6 +289,25 @@ public final class SendCoinsFragment extends Fragment {
                 updateStateFrom(PaymentIntent.blank());
             }
         }
+
+        sentTransactionAdapter = new TransactionsAdapter(activity, viewModel.wallet, application.maxConnectedPeers(), null);
+        sentTransactionViewHolder = sentTransactionAdapter.createTransactionViewHolder(sentTransactionView);
+        sentTransactionView.addView(sentTransactionViewHolder.itemView,
+                new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+    }
+
+    @Override
+    public void onCreate(final Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        setRetainInstance(true);
+        setHasOptionsMenu(true);
+
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+
+        backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);
+        backgroundThread.start();
+        backgroundHandler = new Handler(backgroundThread.getLooper());
     }
 
     @Override
@@ -325,14 +345,8 @@ public final class SendCoinsFragment extends Fragment {
         });
 
         hintView = view.findViewById(R.id.send_coins_hint);
-
         directPaymentMessageView = view.findViewById(R.id.send_coins_direct_payment_message);
-
         sentTransactionView = view.findViewById(R.id.send_coins_sent_transaction);
-        sentTransactionAdapter = new TransactionsAdapter(activity, viewModel.wallet, application.maxConnectedPeers(), null);
-        sentTransactionViewHolder = sentTransactionAdapter.createTransactionViewHolder(sentTransactionView);
-        sentTransactionView.addView(sentTransactionViewHolder.itemView,
-                new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         viewGo = view.findViewById(R.id.confirm_button);
         viewGo.setOnClickListener(new OnClickListener() {
@@ -346,19 +360,6 @@ public final class SendCoinsFragment extends Fragment {
                 updateView();
             }
         });
-
-        ExchangeRatesViewModel exchangeRatesViewModel = ViewModelProviders.of(this)
-                .get(ExchangeRatesViewModel.class);
-        exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this,
-                new Observer<de.schildbach.wallet.rates.ExchangeRate>() {
-                    @Override
-                    public void onChanged(de.schildbach.wallet.rates.ExchangeRate exchangeRate) {
-                        if (exchangeRate != null) {
-                            amountCalculatorLink.setExchangeRate(new org.bitcoinj.utils.ExchangeRate(
-                                    Coin.COIN, exchangeRate.getFiat()));
-                        }
-                    }
-                });
 
         return view;
     }
@@ -812,8 +813,6 @@ public final class SendCoinsFragment extends Fragment {
                 directPaymentMessageView.setVisibility(View.GONE);
             }
 
-            /*viewCancel.setEnabled(
-                    state != State.REQUEST_PAYMENT_REQUEST && state != State.DECRYPTING && state != State.SIGNING);*/
             viewGo.setEnabled(everythingPlausible() && viewModel.dryrunSendRequest != null
                     && (blockchainState == null || !blockchainState.replaying));
 
