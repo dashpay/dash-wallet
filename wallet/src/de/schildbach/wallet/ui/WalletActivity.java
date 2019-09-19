@@ -158,7 +158,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         setContentViewFooter(R.layout.home_activity);
         setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
-        adjustHeaderLayout();
+        adjustHeaderLayout(true);
         activateHomeButton();
 
         if (savedInstanceState == null) {
@@ -190,12 +190,17 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }
     }
 
-    private void adjustHeaderLayout() {
+    private void adjustHeaderLayout(boolean syncStatusPaneVisible) {
         Display display = getWindowManager().getDefaultDisplay();
         Point size = new Point();
         display.getSize(size);
         float screenHeight = size.y;
-        int headerHeight = (int) (screenHeight * 0.5);
+        int headerHeight;
+        if (syncStatusPaneVisible) {
+            headerHeight = (int) (screenHeight * 0.5);
+        } else {
+            headerHeight = (int) (screenHeight * 0.3);
+        }
         ViewGroup.LayoutParams headerPaneParams = findViewById(R.id.header_pane).getLayoutParams();
         headerPaneParams.height = headerHeight;
         MotionLayout motionLayout = findViewById(R.id.home_content);
@@ -1100,7 +1105,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
     public void onEvent(SyncProgressEvent event) {
         ProgressBar syncProgressView = findViewById(R.id.sync_status_progress);
-        int percentage = (int)event.getPct();
+        int percentage = (int) event.getPct();
         if (percentage != syncProgressView.getProgress()) {
             syncProgressView.setProgress(percentage);
             TextView syncPercentageView = findViewById(R.id.sync_status_percentage);
@@ -1254,9 +1259,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
         @Override
         public void onLoadFinished(@NonNull final Loader<BlockchainState> loader, final BlockchainState blockchainState) {
             if (blockchainState.bestChainHeight == config.getBestChainHeightEver()) {
-                findViewById(R.id.sync_status_pane).setVisibility(View.GONE);
+                showSyncStatusPane(false);
             } else if (blockchainState.replaying) {
-                findViewById(R.id.sync_status_pane).setVisibility(View.VISIBLE);
+                showSyncStatusPane(true);
             }
         }
 
@@ -1264,4 +1269,14 @@ public final class WalletActivity extends AbstractBindServiceActivity
         public void onLoaderReset(@NonNull final Loader<BlockchainState> loader) {
         }
     };
+
+    private void showSyncStatusPane(boolean show) {
+        int visibility = show ? ConstraintSet.VISIBLE : ConstraintSet.GONE;
+        MotionLayout motionLayout = findViewById(R.id.home_content);
+        ConstraintSet constraintSet = motionLayout.getConstraintSet(R.id.expanded);
+        constraintSet.setVisibility(R.id.sync_status_pane, visibility);
+        constraintSet = motionLayout.getConstraintSet(R.id.collapsed);
+        constraintSet.setVisibility(R.id.sync_status_pane, visibility);
+        adjustHeaderLayout(show);
+    }
 }
