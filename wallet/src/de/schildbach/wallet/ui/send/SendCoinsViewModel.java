@@ -55,8 +55,6 @@ public class SendCoinsViewModel extends AndroidViewModel {
     public SendRequest dryrunSendRequest = null;
     @Nullable
     public Exception dryrunException = null;
-    @Nullable
-    public Address validatedAddress = null;
 
     public SendCoinsViewModel(final Application application) {
         super(application);
