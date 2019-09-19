@@ -22,7 +22,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.database.ContentObserver;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.nfc.NdefMessage;
@@ -70,7 +69,6 @@ import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards;
 import org.bitcoinj.wallet.Wallet.DustySendRequested;
 import org.bitcoinj.wallet.ZeroConfCoinSelector;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.ui.CurrencyAmountView;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -134,25 +132,6 @@ public final class SendCoinsFragment extends Fragment {
 
     private SendCoinsViewModel viewModel;
     private SharedViewModel sharedViewModel;
-
-    private final CurrencyAmountView.Listener amountsListener = new CurrencyAmountView.Listener() {
-        @Override
-        public void changed() {
-            updateView();
-            handler.post(dryrunRunnable);
-        }
-
-        @Override
-        public void focusChanged(final boolean hasFocus) {
-        }
-    };
-
-    private final ContentObserver contentObserver = new ContentObserver(handler) {
-        @Override
-        public void onChange(final boolean selfChange) {
-            updateView();
-        }
-    };
 
     private final TransactionConfidence.Listener sentTransactionConfidenceListener = new TransactionConfidence.Listener() {
         @Override
@@ -353,8 +332,9 @@ public final class SendCoinsFragment extends Fragment {
     public void onDestroy() {
         backgroundThread.getLooper().quit();
 
-        if (viewModel.sentTransaction != null)
+        if (viewModel.sentTransaction != null) {
             viewModel.sentTransaction.getConfidence().removeEventListener(sentTransactionConfidenceListener);
+        }
 
         super.onDestroy();
     }
@@ -380,26 +360,25 @@ public final class SendCoinsFragment extends Fragment {
     }
 
     private void handleCancel() {
-        if (viewModel.state == null || viewModel.state.compareTo(SendCoinsViewModel.State.INPUT) <= 0)
+        if (viewModel.state == null || viewModel.state.compareTo(SendCoinsViewModel.State.INPUT) <= 0) {
             activity.setResult(Activity.RESULT_CANCELED);
+        }
 
         activity.finish();
     }
 
     private boolean isPayeePlausible() {
-        if (viewModel.paymentIntent.hasOutputs())
-            return true;
-
-        return false;
+        return viewModel.paymentIntent != null && viewModel.paymentIntent.hasOutputs();
     }
 
     private boolean isAmountPlausible() {
-        if (viewModel.dryrunSendRequest != null)
+        if (viewModel.dryrunSendRequest != null) {
             return viewModel.dryrunException == null;
-        else if (viewModel.paymentIntent.mayEditAmount())
+        } else if (viewModel.paymentIntent.mayEditAmount()) {
             return sharedViewModel.hasAmount();
-        else
+        } else {
             return viewModel.paymentIntent.hasAmount();
+        }
     }
 
     private boolean isPasswordPlausible() {
@@ -626,10 +605,6 @@ public final class SendCoinsFragment extends Fragment {
             final Coin amount = sharedViewModel.getDashAmount();
             final Wallet wallet = viewModel.wallet;
             final Address dummyAddress = wallet.currentReceiveAddress(); // won't be used, tx is never committed
-
-            if (amount == null) {
-                return;
-            }
 
             final PaymentIntent finalPaymentIntent = viewModel.paymentIntent.mergeWithEditedValues(amount, dummyAddress);
 
