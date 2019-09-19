@@ -1101,7 +1101,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     public void onEvent(SyncProgressEvent event) {
         ProgressBar syncProgressView = findViewById(R.id.sync_status_progress);
         int percentage = (int)event.getPct();
-//        findViewById(R.id.sync_status_pane).setVisibility(percentage < 100 ? View.VISIBLE : View.GONE);
         if (percentage != syncProgressView.getProgress()) {
             syncProgressView.setProgress(percentage);
             TextView syncPercentageView = findViewById(R.id.sync_status_percentage);
@@ -1118,7 +1117,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
                 syncStatusTitle.setText("Sync");
                 syncStatusMessage.setText("Completed");
-                findViewById(R.id.sync_status_pane).setVisibility(View.GONE);
 
             }
         }
@@ -1255,11 +1253,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         @Override
         public void onLoadFinished(@NonNull final Loader<BlockchainState> loader, final BlockchainState blockchainState) {
-//            if (blockchainState.bestChainHeight == config.getBestChainHeightEver()) {
-//                findViewById(R.id.sync_status_pane).setVisibility(View.GONE);
-//            } else if (blockchainState.replaying) {
-//                findViewById(R.id.sync_status_pane).setVisibility(View.VISIBLE);
-//            }
+            if (blockchainState.bestChainHeight == config.getBestChainHeightEver()) {
+                findViewById(R.id.sync_status_pane).setVisibility(View.GONE);
+            } else if (blockchainState.replaying) {
+                findViewById(R.id.sync_status_pane).setVisibility(View.VISIBLE);
+            }
         }
 
         @Override
