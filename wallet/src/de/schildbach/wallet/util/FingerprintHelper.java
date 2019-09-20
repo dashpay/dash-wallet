@@ -431,8 +431,8 @@ public class FingerprintHelper {
         }
 
         public void onAuthenticationSucceeded(FingerprintManagerCompat.AuthenticationResult result) {
-            Cipher cipher = result.getCryptoObject().getCipher();
             try {
+                Cipher cipher = result.getCryptoObject().getCipher();
                 if (encryptPassword(cipher, password)) {
                     log.info("password encrypted successfully");
                     callback.onSuccess("Encrypted");
@@ -456,8 +456,9 @@ public class FingerprintHelper {
         }
 
         public void onAuthenticationSucceeded(FingerprintManagerCompat.AuthenticationResult result) {
-            Cipher cipher = result.getCryptoObject().getCipher();
+
             try {
+                Cipher cipher = result.getCryptoObject().getCipher();
                 String savedPass = decipher(cipher);
                 if (savedPass != null) {
                     log.info("password decrypted successfully");
