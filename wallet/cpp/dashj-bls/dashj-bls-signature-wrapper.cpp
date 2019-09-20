@@ -690,7 +690,7 @@ SWIGEXPORT void JNICALL Java_org_dashj_bls_JNI_BLS_1SetContextError(JNIEnv *jenv
   core_get()->code = error;
 }
 
-std::string DASHJ_VERSION = "0.16.2";
+std::string DASHJ_VERSION = "0.17-SNAPSHOT";
 
 SWIGEXPORT jstring JNICALL Java_org_dashj_bls_JNI_BLS_1GetVersionString(JNIEnv *jenv, jclass jcls) {
   (void)jenv;
