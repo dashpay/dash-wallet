@@ -18,9 +18,12 @@ package de.schildbach.wallet.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.widget.Toolbar
+import com.google.android.material.tabs.TabLayout
 import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.activity_payments.*
 
 class PaymentsActivity : GlobalFooterActivity() {
 
@@ -31,23 +34,55 @@ class PaymentsActivity : GlobalFooterActivity() {
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
-        val actionBar = supportActionBar
-        actionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)
-            setDisplayShowHomeEnabled(true)
-        }
 
         setTitle(R.string.payments_title)
+
+        tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+
+            var flag :Boolean = true
+
+            override fun onTabReselected(tab: TabLayout.Tab) {
+                if (flag) {
+                    onTabSelected(tab)
+                }
+            }
+
+            override fun onTabUnselected(tab: TabLayout.Tab) {
+
+            }
+
+            override fun onTabSelected(tab: TabLayout.Tab) {
+                flag = false
+                val fragment = when {
+                    tab.position == 0 -> PaymentsPayFragment.newInstance("", "")
+                    else -> PaymentsReceiveFragment.newInstance()
+                }
+                supportFragmentManager.beginTransaction()
+                        .replace(R.id.fragment_container, fragment)
+                        .commitNow()
+            }
+
+        })
+    }
+
+    override fun onResume() {
+        super.onResume()
+        tabs.getTabAt(0)!!.select() // from config
     }
 
     override fun onGotoClick() {
         finish()
     }
 
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.payment_options, menu)
+        return super.onCreateOptionsMenu(menu)
+    }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            android.R.id.home -> {
-                onBackPressed()
+            R.id.option_close -> {
+                finish()
                 return true
             }
         }
