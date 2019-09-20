@@ -21,11 +21,16 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
+import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProviders
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dialog_confirm_transaction.*
+
 
 class ConfirmTransactionDialog : BottomSheetDialogFragment() {
 
@@ -73,6 +78,15 @@ class ConfirmTransactionDialog : BottomSheetDialogFragment() {
         confirm_payment.setOnClickListener {
             dismiss()
             sharedViewModel.clickConfirmButtonEvent.call(true)
+        }
+        dialog?.setOnShowListener { dialog ->
+            // apply wrap_content height
+            val d = dialog as BottomSheetDialog
+            val bottomSheet = d.findViewById<FrameLayout>(R.id.design_bottom_sheet)
+            val coordinatorLayout = bottomSheet!!.parent as CoordinatorLayout
+            val bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
+            bottomSheetBehavior.peekHeight = bottomSheet.height
+            coordinatorLayout.parent.requestLayout()
         }
     }
 
