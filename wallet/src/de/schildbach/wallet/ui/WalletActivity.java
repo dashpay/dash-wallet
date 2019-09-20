@@ -1122,7 +1122,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
                 syncStatusTitle.setText("Sync");
                 syncStatusMessage.setText("Completed");
-
+                showSyncStatusPane(false);
+            } else {
+                showSyncStatusPane(true);
             }
         }
     }
@@ -1258,11 +1260,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         @Override
         public void onLoadFinished(@NonNull final Loader<BlockchainState> loader, final BlockchainState blockchainState) {
-            if (blockchainState.bestChainHeight == config.getBestChainHeightEver()) {
-                showSyncStatusPane(false);
-            } else if (blockchainState.replaying) {
-                showSyncStatusPane(true);
-            }
         }
 
         @Override
