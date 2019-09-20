@@ -200,9 +200,13 @@ public class WalletUtils {
                                                    final NetworkParameters expectedNetworkParameters) throws IOException {
         try {
             DeterministicSeed seed =  new DeterministicSeed(words, null,"", Constants.EARLIEST_HD_SEED_CREATION_TIME);
-            KeyChainGroup group = new KeyChainGroup(Constants.NETWORK_PARAMETERS, seed);
-
-            group.addAndActivateHDChain(new DeterministicKeyChain(seed, Constants.BIP44_PATH));
+            KeyChainGroup group = KeyChainGroup.builder(Constants.NETWORK_PARAMETERS)
+                    .fromSeed(seed, Script.ScriptType.P2PKH)
+                    .addChain(DeterministicKeyChain.builder()
+                            .seed(seed)
+                            .accountPath(Constants.BIP44_PATH)
+                            .build())
+                    .build();
 
             final Wallet wallet = new Wallet(Constants.NETWORK_PARAMETERS, group);
 
@@ -224,7 +228,7 @@ public class WalletUtils {
         final BufferedReader keyReader = new BufferedReader(new InputStreamReader(is, Charsets.UTF_8));
 
         // create non-HD wallet
-        final KeyChainGroup group = new KeyChainGroup(expectedNetworkParameters);
+        final KeyChainGroup group = KeyChainGroup.builder(expectedNetworkParameters).build();
 
         group.importKeys(WalletUtils.readKeys(keyReader, expectedNetworkParameters));
         return new Wallet(expectedNetworkParameters, group);

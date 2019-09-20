@@ -161,7 +161,10 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
         }
     }
     protected void handleAddKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, final KeyParameter encryptionKey) {
-        DeterministicKeyChain keyChain = new DeterministicKeyChain(seed, path);
+        DeterministicKeyChain keyChain = DeterministicKeyChain.builder()
+                .seed(seed)
+                .accountPath(path)
+                .build();
         DeterministicKeyChain encryptedKeyChain = keyChain.toEncrypted(walletProvider.getWallet().getKeyCrypter(), encryptionKey);
         walletProvider.getWallet().addAndActivateHDChain(encryptedKeyChain);
     }
