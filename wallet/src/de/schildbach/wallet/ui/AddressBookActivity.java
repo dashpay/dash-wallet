@@ -135,7 +135,7 @@ public final class AddressBookActivity extends AbstractBindServiceActivity {
 		final ArrayList<Address> addresses = new ArrayList<Address>(derivedKeys.size() + randomKeys.size());
 
         for (final ECKey key : Iterables.concat(derivedKeys, randomKeys)) {
-			final Address address = key.toAddress(Constants.NETWORK_PARAMETERS);
+			final Address address = Address.fromKey(Constants.NETWORK_PARAMETERS, key);
 			addresses.add(address);
 		}
 

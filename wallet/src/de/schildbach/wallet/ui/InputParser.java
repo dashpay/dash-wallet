@@ -39,7 +39,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.crypto.BIP38PrivateKey;
 import org.bitcoinj.crypto.TrustStoreLoader;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
@@ -115,7 +115,7 @@ public abstract class InputParser {
                 }
             } else if (PATTERN_BITCOIN_ADDRESS.matcher(input).matches()) {
                 try {
-                    final Address address = Address.fromBase58(Constants.NETWORK_PARAMETERS, input);
+                    final Address address = Address.fromString(Constants.NETWORK_PARAMETERS, input);
 
                     handlePaymentIntent(PaymentIntent.fromAddress(address, null));
                 } catch (final AddressFormatException x) {
@@ -126,7 +126,7 @@ public abstract class InputParser {
             } else if (PATTERN_DUMPED_PRIVATE_KEY_UNCOMPRESSED.matcher(input).matches()
                     || PATTERN_DUMPED_PRIVATE_KEY_COMPRESSED.matcher(input).matches()) {
                 try {
-                    final VersionedChecksummedBytes key = DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS,
+                    final PrefixedChecksummedBytes key = DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS,
                             input);
 
                     handlePrivateKey(key);
@@ -137,7 +137,7 @@ public abstract class InputParser {
                 }
             } else if (PATTERN_BIP38_PRIVATE_KEY.matcher(input).matches()) {
                 try {
-                    final VersionedChecksummedBytes key = BIP38PrivateKey.fromBase58(Constants.NETWORK_PARAMETERS,
+                    final PrefixedChecksummedBytes key = BIP38PrivateKey.fromBase58(Constants.NETWORK_PARAMETERS,
                             input);
 
                     handlePrivateKey(key);
@@ -166,9 +166,9 @@ public abstract class InputParser {
             }
         }
 
-        protected void handlePrivateKey(final VersionedChecksummedBytes key) {
-            final Address address = new Address(Constants.NETWORK_PARAMETERS,
-                    ((DumpedPrivateKey) key).getKey().getPubKeyHash());
+        protected void handlePrivateKey(final PrefixedChecksummedBytes key) {
+            final Address address = Address.fromKey(Constants.NETWORK_PARAMETERS,
+                    ((DumpedPrivateKey) key).getKey());
 
             handlePaymentIntent(PaymentIntent.fromAddress(address, null));
         }

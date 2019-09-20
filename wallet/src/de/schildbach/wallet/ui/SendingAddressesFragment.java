@@ -361,7 +361,7 @@ public final class SendingAddressesFragment extends FancyListFragment
     public void setWalletAddresses(@Nonnull final ArrayList<Address> addresses) {
         final StringBuilder builder = new StringBuilder();
         for (final Address address : addresses)
-            builder.append(address.toBase58()).append(",");
+            builder.append(address.toString()).append(",");
         if (addresses.size() > 0)
             builder.setLength(builder.length() - 1);
 
@@ -381,7 +381,7 @@ public final class SendingAddressesFragment extends FancyListFragment
                 return null;
 
             try {
-                return Address.fromBase58(Constants.NETWORK_PARAMETERS, clipText.toString().trim());
+                return Address.fromString(Constants.NETWORK_PARAMETERS, clipText.toString().trim());
             } catch (final AddressFormatException x) {
                 return null;
             }

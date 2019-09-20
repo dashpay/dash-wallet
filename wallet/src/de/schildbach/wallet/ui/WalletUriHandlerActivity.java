@@ -118,7 +118,7 @@ public final class WalletUriHandlerActivity extends Activity {
                             public void onClick(DialogInterface dialog, int which) {
                                 Address address = wallet.freshReceiveAddress();
                                 Uri requestData = getIntent().getData();
-                                Intent result = WalletUri.createAddressResult(requestData, address.toBase58(), getAppName());
+                                Intent result = WalletUri.createAddressResult(requestData, address.toString(), getAppName());
                                 setResult(RESULT_OK, result);
                                 finish();
                             }

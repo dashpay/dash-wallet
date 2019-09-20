@@ -3,7 +3,6 @@ package de.schildbach.wallet.util;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.WrongNetworkException;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.uri.BitcoinURI;
 
@@ -20,9 +19,9 @@ public class AddressUtil {
         }
     }
 
-    public static Address fromBase58(NetworkParameters params, String base58) throws AddressFormatException {
+    public static Address fromString(NetworkParameters params, String base58) throws AddressFormatException {
         NetworkParameters networkParameters = (params != null) ? params : getParametersFromAddress(base58);
-        return Address.fromBase58(networkParameters, base58);
+        return Address.fromString(networkParameters, base58);
     }
 
     public static Address getCorrectAddress(BitcoinURI bitcoinUri) {
@@ -31,8 +30,8 @@ public class AddressUtil {
             NetworkParameters networkParameters = address.getParameters();
             if (networkParameters.equals(TestNet3Params.get()) && !Constants.NETWORK_PARAMETERS.equals(TestNet3Params.get())) {
                 try {
-                    return Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58());
-                } catch (WrongNetworkException x) {
+                    return Address.fromString(Constants.NETWORK_PARAMETERS, address.toString());
+                } catch (AddressFormatException.WrongNetwork x) {
                     return address;
                 }
             }

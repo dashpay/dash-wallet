@@ -17,7 +17,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_payments_pay.*
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
-import org.bitcoinj.core.VersionedChecksummedBytes
+import org.bitcoinj.core.PrefixedChecksummedBytes
 
 class PaymentsPayFragment : Fragment() {
 
@@ -101,7 +101,7 @@ class PaymentsPayFragment : Fragment() {
                 }
             }
 
-            override fun handlePrivateKey(key: VersionedChecksummedBytes) {
+            override fun handlePrivateKey(key: PrefixedChecksummedBytes) {
 
             }
 

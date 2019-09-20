@@ -149,7 +149,7 @@ public final class WalletAddressesFragment extends FancyListFragment {
             public boolean onPrepareActionMode(final ActionMode mode, final Menu menu) {
                 final ECKey key = getKey(position);
 
-                final String address = key.toAddress(Constants.NETWORK_PARAMETERS).toBase58();
+                final String address = Address.fromKey(Constants.NETWORK_PARAMETERS, key).toString();
                 final String label = AddressBookProvider.resolveLabel(activity, address);
                 mode.setTitle(label != null ? label
                         : WalletUtils.formatHash(address, Constants.ADDRESS_FORMAT_GROUP_SIZE, 0));
@@ -180,7 +180,7 @@ public final class WalletAddressesFragment extends FancyListFragment {
 
                 case R.id.wallet_addresses_context_browse:
                     startActivity(new Intent(Intent.ACTION_VIEW, Uri.withAppendedPath(config.getBlockExplorer(),
-                            "address/" + getAddress(position).toBase58())));
+                            "address/" + getAddress(position).toString())));
 
                     mode.finish();
                     return true;
@@ -198,7 +198,7 @@ public final class WalletAddressesFragment extends FancyListFragment {
             }
 
             private Address getAddress(final int position) {
-                return getKey(position).toAddress(Constants.NETWORK_PARAMETERS);
+                return Address.fromKey(Constants.NETWORK_PARAMETERS, getKey(position));
             }
 
             private void handleEdit(final Address address) {
@@ -211,7 +211,7 @@ public final class WalletAddressesFragment extends FancyListFragment {
             }
 
             private void handleCopyToClipboard(final Address address) {
-                clipboardManager.setPrimaryClip(ClipData.newPlainText("Bitcoin address", address.toBase58()));
+                clipboardManager.setPrimaryClip(ClipData.newPlainText("Bitcoin address", address.toString()));
                 log.info("wallet address copied to clipboard: {}", address);
                 new Toast(activity).toast(R.string.wallet_address_fragment_clipboard_msg);
             }
