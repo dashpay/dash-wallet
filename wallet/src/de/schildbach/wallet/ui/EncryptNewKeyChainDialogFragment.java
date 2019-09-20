@@ -17,7 +17,7 @@ import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.Wallet;
-import org.spongycastle.crypto.params.KeyParameter;
+import org.bouncycastle.crypto.params.KeyParameter;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.send.DecryptSeedTask;
