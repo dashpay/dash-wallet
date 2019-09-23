@@ -27,12 +27,13 @@ import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProviders
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import de.schildbach.wallet.ui.BaseBottomSheetDialogFragment
+import de.schildbach.wallet.ui.SingleActionSharedViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dialog_confirm_transaction.*
 
 
-class ConfirmTransactionDialog : BottomSheetDialogFragment() {
+class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
 
     companion object {
 
@@ -56,7 +57,7 @@ class ConfirmTransactionDialog : BottomSheetDialogFragment() {
         }
     }
 
-    private lateinit var sharedViewModel: ConfirmTransactionSharedViewModel
+    private lateinit var sharedViewModel: SingleActionSharedViewModel
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.dialog_confirm_transaction, container, false)
@@ -93,7 +94,7 @@ class ConfirmTransactionDialog : BottomSheetDialogFragment() {
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         sharedViewModel = activity?.run {
-            ViewModelProviders.of(this)[ConfirmTransactionSharedViewModel::class.java]
+            ViewModelProviders.of(this)[SingleActionSharedViewModel::class.java]
         } ?: throw IllegalStateException("Invalid Activity")
     }
 }

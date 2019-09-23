@@ -26,7 +26,7 @@ import de.schildbach.wallet.rates.ExchangeRatesRepository
 import de.schildbach.wallet.ui.SingleLiveEvent
 import org.bitcoinj.core.Coin
 
-class SharedViewModel(application: Application) : AndroidViewModel(application) {
+class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(application) {
 
     val exchangeRateData: LiveData<ExchangeRate>
 

@@ -500,8 +500,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     public void handleSendCoins() {
-//        startActivity(new Intent(this, SendCoinsActivity.class));
-        startActivity(new Intent(this, EnterAmountActivity.class));
+        startActivity(new Intent(this, SendCoinsActivity.class));
     }
 
     public void handleScan() {

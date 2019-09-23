@@ -94,6 +94,7 @@ import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StreamInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
+import de.schildbach.wallet.ui.SingleActionSharedViewModel;
 import de.schildbach.wallet.ui.TransactionsAdapter;
 import de.schildbach.wallet.ui.UnlockWalletDialogFragment;
 import de.schildbach.wallet.util.Bluetooth;
@@ -132,7 +133,7 @@ public final class SendCoinsFragment extends Fragment {
     private static final Logger log = LoggerFactory.getLogger(SendCoinsFragment.class);
 
     private SendCoinsViewModel viewModel;
-    private SharedViewModel sharedViewModel;
+    private EnterAmountSharedViewModel enterAmountSharedViewModel;
 
     private final TransactionConfidence.Listener sentTransactionConfidenceListener = new TransactionConfidence.Listener() {
         @Override
@@ -216,14 +217,14 @@ public final class SendCoinsFragment extends Fragment {
                 updateView();
             }
         });
-        sharedViewModel = ViewModelProviders.of(activity).get(SharedViewModel.class);
-        sharedViewModel.getDashAmountData().observe(getViewLifecycleOwner(), new Observer<Coin>() {
+        enterAmountSharedViewModel = ViewModelProviders.of(activity).get(EnterAmountSharedViewModel.class);
+        enterAmountSharedViewModel.getDashAmountData().observe(getViewLifecycleOwner(), new Observer<Coin>() {
             @Override
             public void onChanged(Coin coin) {
                 handler.post(dryrunRunnable);
             }
         });
-        sharedViewModel.getButtonClickEvent().observe(getViewLifecycleOwner(), new Observer<Coin>() {
+        enterAmountSharedViewModel.getButtonClickEvent().observe(getViewLifecycleOwner(), new Observer<Coin>() {
             @Override
             public void onChanged(Coin coin) {
                 if (everythingPlausible()) {
@@ -232,7 +233,7 @@ public final class SendCoinsFragment extends Fragment {
                 updateView();
             }
         });
-        ConfirmTransactionSharedViewModel confirmTransactionSharedViewModel = ViewModelProviders.of(activity).get(ConfirmTransactionSharedViewModel.class);
+        SingleActionSharedViewModel confirmTransactionSharedViewModel = ViewModelProviders.of(activity).get(SingleActionSharedViewModel.class);
         confirmTransactionSharedViewModel.getClickConfirmButtonEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean aBoolean) {
@@ -383,7 +384,7 @@ public final class SendCoinsFragment extends Fragment {
         if (viewModel.dryrunSendRequest != null) {
             return viewModel.dryrunException == null;
         } else if (viewModel.paymentIntent.mayEditAmount()) {
-            return sharedViewModel.hasAmount();
+            return enterAmountSharedViewModel.hasAmount();
         } else {
             return viewModel.paymentIntent.hasAmount();
         }
@@ -426,14 +427,14 @@ public final class SendCoinsFragment extends Fragment {
 
         // final payment intent
         final PaymentIntent finalPaymentIntent = viewModel.paymentIntent.mergeWithEditedValues(
-                sharedViewModel.getDashAmount(), null);
+                enterAmountSharedViewModel.getDashAmount(), null);
 
         SendRequest sendRequest = createSendRequest(finalPaymentIntent, true, viewModel.dryrunSendRequest.ensureMinRequiredFee);
 
         final Coin finalAmount = finalPaymentIntent.getAmount();
 
         sendRequest.memo = viewModel.paymentIntent.memo;
-        sendRequest.exchangeRate = sharedViewModel.getExchangeRate();
+        sendRequest.exchangeRate = enterAmountSharedViewModel.getExchangeRate();
         log.info("Using exchange rate: " + (sendRequest.exchangeRate != null
                 ? sendRequest.exchangeRate.coinToFiat(Coin.COIN).toFriendlyString() :
                 "not available"));
@@ -589,7 +590,7 @@ public final class SendCoinsFragment extends Fragment {
             });
         } else {
             final Coin available = wallet.getBalance(BalanceType.ESTIMATED);
-            sharedViewModel.getChangeDashAmountEvent().setValue(available);
+            enterAmountSharedViewModel.getChangeDashAmountEvent().setValue(available);
 
             updateView();
             handler.post(dryrunRunnable);
@@ -610,7 +611,7 @@ public final class SendCoinsFragment extends Fragment {
             viewModel.dryrunSendRequest = null;
             viewModel.dryrunException = null;
 
-            final Coin amount = sharedViewModel.getDashAmount();
+            final Coin amount = enterAmountSharedViewModel.getDashAmount();
             final Wallet wallet = viewModel.wallet;
             final Address dummyAddress = wallet.currentReceiveAddress(); // won't be used, tx is never committed
 
@@ -688,7 +689,7 @@ public final class SendCoinsFragment extends Fragment {
                 receivingStaticAddressView.setText(R.string.send_coins_fragment_receiving_address_complex);
         }
 
-        sharedViewModel.getDirectionChangeEnabledData().setValue(
+        enterAmountSharedViewModel.getDirectionChangeEnabledData().setValue(
                 viewModel.state == SendCoinsViewModel.State.INPUT && viewModel.paymentIntent.mayEditAmount());
 
         final boolean directPaymentVisible;
@@ -746,23 +747,23 @@ public final class SendCoinsFragment extends Fragment {
             directPaymentMessageView.setVisibility(View.GONE);
         }
 
-        sharedViewModel.getButtonEnabledData().setValue(everythingPlausible() && viewModel.dryrunSendRequest != null
+        enterAmountSharedViewModel.getButtonEnabledData().setValue(everythingPlausible() && viewModel.dryrunSendRequest != null
                 && (blockchainState == null || !blockchainState.replaying));
 
         if (viewModel.state == null || viewModel.state == SendCoinsViewModel.State.REQUEST_PAYMENT_REQUEST) {
-            sharedViewModel.getButtonTextData().call(0);
+            enterAmountSharedViewModel.getButtonTextData().call(0);
         } else if (viewModel.state == SendCoinsViewModel.State.INPUT) {
-            sharedViewModel.getButtonTextData().call(R.string.send_coins_fragment_button_send);
+            enterAmountSharedViewModel.getButtonTextData().call(R.string.send_coins_fragment_button_send);
         } else if (viewModel.state == SendCoinsViewModel.State.DECRYPTING) {
-            sharedViewModel.getButtonTextData().call(R.string.send_coins_fragment_state_decrypting);
+            enterAmountSharedViewModel.getButtonTextData().call(R.string.send_coins_fragment_state_decrypting);
         } else if (viewModel.state == SendCoinsViewModel.State.SIGNING) {
-            sharedViewModel.getButtonTextData().call(R.string.send_coins_preparation_msg);
+            enterAmountSharedViewModel.getButtonTextData().call(R.string.send_coins_preparation_msg);
         } else if (viewModel.state == SendCoinsViewModel.State.SENDING) {
-            sharedViewModel.getButtonTextData().call(R.string.send_coins_sending_msg);
+            enterAmountSharedViewModel.getButtonTextData().call(R.string.send_coins_sending_msg);
         } else if (viewModel.state == SendCoinsViewModel.State.SENT) {
-            sharedViewModel.getButtonTextData().call(R.string.send_coins_sent_msg);
+            enterAmountSharedViewModel.getButtonTextData().call(R.string.send_coins_sent_msg);
         } else if (viewModel.state == SendCoinsViewModel.State.FAILED) {
-            sharedViewModel.getButtonTextData().call(R.string.send_coins_failed_msg);
+            enterAmountSharedViewModel.getButtonTextData().call(R.string.send_coins_failed_msg);
         }
     }
 
@@ -856,7 +857,7 @@ public final class SendCoinsFragment extends Fragment {
                 } else {
                     setState(SendCoinsViewModel.State.INPUT);
 
-                    sharedViewModel.getChangeDashAmountEvent().setValue(paymentIntent.getAmount());
+                    enterAmountSharedViewModel.getChangeDashAmountEvent().setValue(paymentIntent.getAmount());
 
                     if (paymentIntent.isBluetoothPaymentUrl())
                         directPaymentEnableView.setChecked(bluetoothAdapter != null && bluetoothAdapter.isEnabled());

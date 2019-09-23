@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui.send
+package de.schildbach.wallet.ui
 
 
 import androidx.lifecycle.ViewModel
-import de.schildbach.wallet.ui.SingleLiveEvent
 
-class ConfirmTransactionSharedViewModel : ViewModel() {
+class SingleActionSharedViewModel : ViewModel() {
 
     val clickConfirmButtonEvent = SingleLiveEvent<Boolean>()
 }

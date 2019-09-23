@@ -28,6 +28,8 @@
 	<string name="scan_to_pay_error_dialog_message">Not a valid Dash Address or URL request in clipboard:\n\n%s</string>
 	<string name="scan_to_pay_error_dialog_message_no_data">Not a valid Dash Address or URL request in clipboard.</string>
 
+	<string name="receive_title">Receive</string>
+
 	<string name="history_title">History</string>
 
 	<string name="more_title">More</string>

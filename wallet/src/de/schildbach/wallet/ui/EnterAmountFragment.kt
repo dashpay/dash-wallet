@@ -26,7 +26,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.send.SharedViewModel
+import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
 import de.schildbach.wallet.ui.widget.NumericKeyboardView
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.enter_amount_fragment.*
@@ -57,7 +57,7 @@ class EnterAmountFragment : Fragment() {
     private val friendlyFormat = MonetaryFormat.BTC.minDecimals(2).repeatOptionalDecimals(1, 6).noCode()
 
     private lateinit var viewModel: EnterAmountViewModel
-    private lateinit var sharedViewModel: SharedViewModel
+    private lateinit var sharedViewModel: EnterAmountSharedViewModel
 
     private var config: Configuration? = null
     var exchangeRate: ExchangeRate? = null
@@ -157,7 +157,7 @@ class EnterAmountFragment : Fragment() {
     }
 
     private fun initViewModels() {
-        viewModel = ViewModelProviders.of(this)[EnterAmountViewModel::class.java]
+        viewModel = ViewModelProviders.of(this)[de.schildbach.wallet.ui.EnterAmountViewModel::class.java]
         viewModel.dashToFiatDirectionData.observe(viewLifecycleOwner, Observer {
             input_symbol.visibility = if (it) View.GONE else View.VISIBLE
             input_symbol_dash.visibility = if (it) View.VISIBLE else View.GONE
@@ -181,7 +181,7 @@ class EnterAmountFragment : Fragment() {
             calc_amount_symbol.text = currencySymbol
         })
         sharedViewModel = activity?.run {
-            ViewModelProviders.of(this)[SharedViewModel::class.java]
+            ViewModelProviders.of(this)[EnterAmountSharedViewModel::class.java]
         } ?: throw Exception("Invalid Activity")
         sharedViewModel.directionChangeEnabledData.observe(viewLifecycleOwner, Observer {
             convert_direction.isEnabled = it
