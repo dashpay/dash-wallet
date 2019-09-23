@@ -3,4 +3,11 @@
     <declare-styleable name="KeyboardResponsiveCoordinatorLayout">
         <attr name="viewToHideWhenSoftKeyboardIsOpen" format="reference" />
     </declare-styleable>
+    <declare-styleable name="PaymentsButtonView">
+        <attr name="pb_icon" format="integer" />
+        <attr name="pb_title" format="string" />
+        <attr name="pb_sub_title" format="string" />
+        <attr name="pb_button_title" format="string" />
+        <attr name="pb_active" format="boolean" />
+    </declare-styleable>
 </resources>
