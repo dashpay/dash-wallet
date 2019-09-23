@@ -227,8 +227,8 @@ class EnterAmountFragment : Fragment() {
         }
     }
 
-    override fun onAttach(context: Context?) {
+    override fun onAttach(context: Context) {
         super.onAttach(context)
-        this.config = (context!!.applicationContext as WalletApplication).configuration
+        this.config = (context.applicationContext as WalletApplication).configuration
     }
 }

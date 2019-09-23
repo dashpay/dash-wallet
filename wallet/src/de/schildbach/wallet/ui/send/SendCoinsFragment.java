@@ -40,6 +40,7 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import androidx.core.content.res.ResourcesCompat;
+import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.Observer;
@@ -226,9 +227,16 @@ public final class SendCoinsFragment extends Fragment {
             @Override
             public void onChanged(Coin coin) {
                 if (everythingPlausible()) {
-                    handleGo();
+                    showPaymentConfirmation();
                 }
                 updateView();
+            }
+        });
+        ConfirmTransactionSharedViewModel confirmTransactionSharedViewModel = ViewModelProviders.of(activity).get(ConfirmTransactionSharedViewModel.class);
+        confirmTransactionSharedViewModel.getClickConfirmButtonEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
+            @Override
+            public void onChanged(Boolean aBoolean) {
+                handleGo();
             }
         });
 
@@ -951,5 +959,15 @@ public final class SendCoinsFragment extends Fragment {
             }
         }
         return false;
+    }
+
+    private void showPaymentConfirmation() {
+        String address = viewModel.paymentIntent.getAddress().toBase58();
+        String amount = viewModel.paymentIntent.getAmount().toPlainString();
+        String amountFiat = "";//Constants.LOCAL_FORMAT.format(fiatValue).toString();
+        String fiatSymbol = "";//GenericUtils.currencySymbol(fiatValue.currencyCode);
+        String fee = "0.0001";
+        DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amount, amountFiat, fiatSymbol, fee);
+        dialog.show(getFragmentManager(), "ConfirmTransactionDialog");
     }
 }

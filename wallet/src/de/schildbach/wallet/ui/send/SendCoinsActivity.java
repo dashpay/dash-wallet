@@ -33,6 +33,7 @@ import de.schildbach.wallet_test.R;
  * @author Andreas Schildbach
  */
 public final class SendCoinsActivity extends AbstractBindServiceActivity {
+
     public static final String INTENT_EXTRA_PAYMENT_INTENT = "payment_intent";
     public static final String INTENT_EXTRA_FEE_CATEGORY = "fee_category";
     public static final String INTENT_EXTRA_FORCE_INSTANT_SEND = "force_instant_send";
