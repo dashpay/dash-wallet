@@ -195,6 +195,12 @@ class EnterAmountFragment : Fragment() {
                 else -> confirm_button.text = null
             }
         })
+        sharedViewModel.messageTextData.observe(viewLifecycleOwner, Observer { it ->
+            when {
+                it > 0 -> message.setText(it)
+                else -> message.text = null
+            }
+        })
         sharedViewModel.exchangeRateData.observe(viewLifecycleOwner, Observer {
             it?.also {
                 calc_pane.visibility = View.VISIBLE

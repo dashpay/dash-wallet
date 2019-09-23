@@ -38,6 +38,7 @@ class ReceiveActivity : AppCompatActivity() {
 
         enterAmountSharedViewModel = ViewModelProviders.of(this).get(EnterAmountSharedViewModel::class.java)
         enterAmountSharedViewModel.buttonTextData.call(R.string.receive_title)
+        enterAmountSharedViewModel.messageTextData.call(R.string.receive_enter_amount_message)
         enterAmountSharedViewModel.buttonClickEvent.observe(this, Observer {
             val dashAmount = enterAmountSharedViewModel.dashAmount
             val fiatAmount = enterAmountSharedViewModel.exchangeRate.coinToFiat(dashAmount)
