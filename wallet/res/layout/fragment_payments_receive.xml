@@ -1,13 +1,91 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context="de.schildbach.wallet.ui.PaymentsPayFragment">
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        android:text="@string/payments_tab_receive_label" />
+    <ImageView
+        android:id="@+id/qr_preview"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:contentDescription="@string/action_show_qr"
+        android:scaleType="fitXY"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_percent="0.8" />
 
-</FrameLayout>
+    <ImageView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:contentDescription="@string/action_show_qr"
+        android:scaleType="fitXY"
+        android:src="@drawable/ic_dash_d_circle"
+        app:layout_constraintBottom_toBottomOf="@+id/qr_preview"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintEnd_toEndOf="@+id/qr_preview"
+        app:layout_constraintStart_toStartOf="@+id/qr_preview"
+        app:layout_constraintTop_toTopOf="@+id/qr_preview"
+        app:layout_constraintWidth_percent="0.2" />
+
+    <LinearLayout
+        android:id="@+id/address_pane"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/selectable_background_dark"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/qr_preview">
+
+        <TextView
+            android:id="@+id/address_view"
+            style="@style/TitleTextView.Secondary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="XukpuUxUimEnFFWQywkeFK2p2WahEsegsq"
+            android:textColor="@color/dash_gray"
+            android:textSize="13sp" />
+
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_marginStart="4dp"
+            android:layout_marginLeft="4dp"
+            android:contentDescription="@string/action_show_qr"
+            android:src="@drawable/ic_copy_addres" />
+
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/specify_amount_button"
+        style="@style/DashButton.Transparent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/selectable_background_dark"
+        android:text="Specify Amount"
+        android:textColor="@color/dash_blue"
+        app:layout_constraintTop_toBottomOf="@+id/address_pane" />
+
+    <Button
+        android:id="@+id/share_button"
+        style="@style/DashButton.Transparent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/selectable_background_dark"
+        android:text="Share"
+        android:textColor="@color/dash_blue"
+        app:layout_constraintTop_toBottomOf="@+id/specify_amount_button" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

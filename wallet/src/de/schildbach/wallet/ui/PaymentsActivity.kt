@@ -16,6 +16,7 @@
 
 package de.schildbach.wallet.ui
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
@@ -26,6 +27,10 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.*
 
 class PaymentsActivity : GlobalFooterActivity() {
+
+    companion object {
+        private const val PREFS_RECENT_TAB = "recent_tab"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,10 +44,10 @@ class PaymentsActivity : GlobalFooterActivity() {
 
         tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
 
-            var flag :Boolean = true
+            var initialReselection: Boolean = true
 
             override fun onTabReselected(tab: TabLayout.Tab) {
-                if (flag) {
+                if (initialReselection) {
                     onTabSelected(tab)
                 }
             }
@@ -52,7 +57,7 @@ class PaymentsActivity : GlobalFooterActivity() {
             }
 
             override fun onTabSelected(tab: TabLayout.Tab) {
-                flag = false
+                initialReselection = false
                 val fragment = when {
                     tab.position == 0 -> PaymentsPayFragment.newInstance("", "")
                     else -> PaymentsReceiveFragment.newInstance()
@@ -60,14 +65,18 @@ class PaymentsActivity : GlobalFooterActivity() {
                 supportFragmentManager.beginTransaction()
                         .replace(R.id.fragment_container, fragment)
                         .commitNow()
+                val preferences = getPreferences(Context.MODE_PRIVATE)
+                preferences.edit().putInt(PREFS_RECENT_TAB, tab.position).apply()
             }
 
         })
+        activateRecentTab()
     }
 
-    override fun onResume() {
-        super.onResume()
-        tabs.getTabAt(0)!!.select() // from config
+    private fun activateRecentTab() {
+        val preferences = getPreferences(Context.MODE_PRIVATE)
+        val recentTab = preferences.getInt(PREFS_RECENT_TAB, 0)
+        tabs.getTabAt(recentTab)!!.select()
     }
 
     override fun onGotoClick() {
