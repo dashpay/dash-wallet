@@ -31,6 +31,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Point;
+import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.nfc.NdefMessage;
@@ -1113,17 +1114,14 @@ public final class WalletActivity extends AbstractBindServiceActivity
             TextView syncStatusMessage = findViewById(R.id.sync_status_message);
             syncPercentageView.setText(percentage + "%");
             if (percentage == 100) {
-                Drawable progressDrawable = syncProgressView.getProgressDrawable().mutate();
-                progressDrawable.setColorFilter(
-                        getResources().getColor(R.color.success_green),
-                        android.graphics.PorterDuff.Mode.SRC_IN
-                );
-                syncProgressView.setProgressDrawable(progressDrawable);
                 syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
                 syncStatusTitle.setText("Sync");
                 syncStatusMessage.setText("Completed");
                 showSyncStatusPane(false);
             } else {
+                syncPercentageView.setTextColor(getResources().getColor(R.color.dash_gray));
+                syncStatusTitle.setText("Syncing");
+                syncStatusMessage.setText("with Dash Blockchain");
                 showSyncStatusPane(true);
             }
         }
