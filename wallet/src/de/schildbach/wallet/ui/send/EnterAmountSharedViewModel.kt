@@ -42,6 +42,8 @@ class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(ap
 
     val buttonEnabledData = MutableLiveData<Boolean>()
 
+    val maxButtonVisibleData = MutableLiveData<Boolean>()
+
     val buttonTextData = SingleLiveEvent<Int>()
 
     val messageTextData = MutableLiveData<Int>()
@@ -51,6 +53,8 @@ class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(ap
     val changeDashAmountEvent = SingleLiveEvent<Coin>()
 
     val buttonClickEvent = SingleLiveEvent<Coin>()
+
+    val maxButtonClickEvent = SingleLiveEvent<Boolean>()
 
     init {
         val currencyCode = (application as WalletApplication).configuration.exchangeCurrencyCode

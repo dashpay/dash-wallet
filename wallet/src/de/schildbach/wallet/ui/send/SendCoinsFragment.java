@@ -240,6 +240,12 @@ public final class SendCoinsFragment extends Fragment {
                 updateView();
             }
         });
+        enterAmountSharedViewModel.getMaxButtonClickEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
+            @Override
+            public void onChanged(Boolean unused) {
+                handleEmpty();
+            }
+        });
         SingleActionSharedViewModel confirmTransactionSharedViewModel = ViewModelProviders.of(activity).get(SingleActionSharedViewModel.class);
         confirmTransactionSharedViewModel.getClickConfirmButtonEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override

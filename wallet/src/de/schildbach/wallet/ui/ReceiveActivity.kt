@@ -37,6 +37,7 @@ class ReceiveActivity : AppCompatActivity() {
         setTitle(R.string.receive_title)
 
         enterAmountSharedViewModel = ViewModelProviders.of(this).get(EnterAmountSharedViewModel::class.java)
+        enterAmountSharedViewModel.maxButtonVisibleData.value = false
         enterAmountSharedViewModel.buttonTextData.call(R.string.receive_title)
         enterAmountSharedViewModel.messageTextData.value = R.string.receive_enter_amount_message
         enterAmountSharedViewModel.buttonClickEvent.observe(this, Observer {

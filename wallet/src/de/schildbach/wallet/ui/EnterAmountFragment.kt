@@ -72,6 +72,9 @@ class EnterAmountFragment : Fragment() {
         confirm_button.setOnClickListener {
             sharedViewModel.buttonClickEvent.call(sharedViewModel.dashAmount)
         }
+        max_button.setOnClickListener {
+            sharedViewModel.maxButtonClickEvent.call(true)
+        }
         numeric_keyboard.enableDecSeparator(true);
         numeric_keyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
@@ -143,7 +146,9 @@ class EnterAmountFragment : Fragment() {
             viewModel.fiatAmountData.value = fiatAmount
         }
 
-        viewModel.calculateDependent(sharedViewModel.exchangeRate)
+        sharedViewModel.exchangeRateData.value?.run {
+            viewModel.calculateDependent(sharedViewModel.exchangeRate)
+        }
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -209,6 +214,9 @@ class EnterAmountFragment : Fragment() {
         sharedViewModel.buttonEnabledData.observe(viewLifecycleOwner, Observer {
             confirm_button.isEnabled = it
         })
+        sharedViewModel.maxButtonVisibleData.observe(viewLifecycleOwner, Observer {
+            max_button.visibility = if (it) View.VISIBLE else View.GONE
+        })
         sharedViewModel.buttonTextData.observe(viewLifecycleOwner, Observer {
             when {
                 it > 0 -> confirm_button.setText(it)
@@ -234,8 +242,10 @@ class EnterAmountFragment : Fragment() {
             }
         })
         sharedViewModel.changeDashAmountEvent.observe(viewLifecycleOwner, Observer {
-            viewModel.dashAmountData.value = it
-            viewModel.dashToFiatDirectionData.value = viewModel.dashToFiatDirectionData.value
+            //            viewModel.dashAmountData.value = it
+//            viewModel.calculateDependent(sharedViewModel.exchangeRate)
+//            viewModel.dashToFiatDirectionData.value = viewModel.dashToFiatDirectionData.value
+            applyNewValue(it.toPlainString())
         })
     }
 

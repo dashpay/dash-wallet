@@ -106,9 +106,8 @@
             android:name="de.schildbach.wallet.ui.send.SendCoinsActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:label="@string/send_coins_activity_title"
-            android:theme="@style/My.Theme.ChildActivity"
             android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustResize" >
+            android:theme="@style/My.Theme.ChildActivity">
             <intent-filter android:label="@string/send_coins_activity_title" >
                 <action android:name="android.intent.action.VIEW" />
 
