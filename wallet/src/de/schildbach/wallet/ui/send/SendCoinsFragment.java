@@ -111,7 +111,7 @@ import de.schildbach.wallet_test.R;
 
 import static org.dash.wallet.common.Constants.CHAR_CHECKMARK;
 
-public final class SendCoinsFragment extends Fragment {
+public final class SendCoinsFragment extends Fragment implements UnlockWalletDialogFragment.OnUnlockWalletListener {
 
     private AbstractBindServiceActivity activity;
     private WalletApplication application;
@@ -170,7 +170,8 @@ public final class SendCoinsFragment extends Fragment {
                                 handler.postDelayed(new Runnable() {
                                     @Override
                                     public void run() {
-                                        activity.finish();
+//                                        activity.finish();
+                                        activity.onHomeClick();
                                     }
                                 }, 500);
                             }
@@ -250,7 +251,7 @@ public final class SendCoinsFragment extends Fragment {
         confirmTransactionSharedViewModel.getClickConfirmButtonEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean aBoolean) {
-                handleGo();
+                UnlockWalletDialogFragment.show(getFragmentManager(), SendCoinsFragment.this);
             }
         });
 
@@ -402,21 +403,11 @@ public final class SendCoinsFragment extends Fragment {
         }
     }
 
-    private boolean isPasswordPlausible() {
-        final Wallet wallet = viewModel.wallet;
-        if (wallet == null)
-            return false;
-
-        return !wallet.isEncrypted();
-    }
-
     private boolean everythingPlausible() {
         return viewModel.state == SendCoinsViewModel.State.INPUT && isPayeePlausible() && isAmountPlausible();// && isPasswordPlausible();
     }
 
-    private void handleGo() {
-        final String pin = "1234";
-
+    private void handleGo(final String pin) {
         final Wallet wallet = viewModel.wallet;
         if (wallet.isEncrypted()) {
             new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
@@ -1003,5 +994,12 @@ public final class SendCoinsFragment extends Fragment {
 
         DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat, fiatSymbol, fee, total);
         dialog.show(getFragmentManager(), "ConfirmTransactionDialog");
+    }
+
+    @Override
+    public void onUnlockWallet(String password) {
+        if (password != null) {
+            handleGo(password);
+        }
     }
 }

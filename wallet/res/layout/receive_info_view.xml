@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:padding="16dp"
     tools:context="de.schildbach.wallet.ui.widget.ReceiveInfoView"
     tools:ignore="ContentDescription"
     tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
@@ -70,10 +71,8 @@
         style="@style/DashButton.Transparent"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
         android:background="@drawable/selectable_background_dark"
-        android:text="Specify Amount"
+        android:text="@string/receive_enter_amount_button"
         android:textColor="@color/dash_blue"
         app:layout_constraintTop_toBottomOf="@+id/address_preview_pane" />
 
@@ -82,10 +81,8 @@
         style="@style/DashButton.Transparent"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
         android:background="@drawable/selectable_background_dark"
-        android:text="Share"
+        android:text="@string/receive_share_button"
         android:textColor="@color/dash_blue"
         app:layout_constraintTop_toBottomOf="@+id/specify_amount_button" />
 

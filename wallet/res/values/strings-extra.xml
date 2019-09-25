@@ -30,6 +30,8 @@
 
 	<string name="receive_title">Receive</string>
 	<string name="receive_enter_amount_message">Specify the amount to be received</string>
+	<string name="receive_enter_amount_button">Specify Amount</string>
+	<string name="receive_share_button">Share</string>
 
 	<string name="history_title">History</string>
 
