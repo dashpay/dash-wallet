@@ -27,7 +27,7 @@
 
     <Space
         android:id="@+id/quick_actions_pane_space"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="32dp"
         app:layout_constraintBottom_toTopOf="@id/quick_actions_pane" />
 

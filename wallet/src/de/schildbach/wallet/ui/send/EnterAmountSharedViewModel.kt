@@ -44,7 +44,9 @@ class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(ap
 
     val buttonTextData = SingleLiveEvent<Int>()
 
-    val messageTextData = SingleLiveEvent<Int>()
+    val messageTextData = MutableLiveData<Int>()
+
+    val messageTextStringData = MutableLiveData<CharSequence>()
 
     val changeDashAmountEvent = SingleLiveEvent<Coin>()
 

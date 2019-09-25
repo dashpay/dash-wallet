@@ -2,13 +2,10 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:focusableInTouchMode="true"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:paddingLeft="16dp"
-    android:paddingTop="@dimen/space_medium"
-    android:paddingRight="16dp"
-    android:paddingBottom="@dimen/space_medium">
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp">
 
     <TextView
         android:id="@+id/send_coins_payee_name"
@@ -33,14 +30,9 @@
         style="@style/MontserratMedium.MG.14"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp" />
-
-    <TextView
-        android:id="@+id/send_coins_hint"
-        style="@style/MontserratRegular.DB.12"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="@dimen/font_size_small" />
+        android:layout_marginTop="6dp"
+        android:gravity="center_horizontal"
+        android:visibility="gone" />
 
     <LinearLayout
         android:id="@+id/is_direct_group"

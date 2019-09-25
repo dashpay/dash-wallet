@@ -16,12 +16,14 @@
 
 package de.schildbach.wallet.ui.send;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Typeface;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.nfc.NdefMessage;
@@ -30,6 +32,10 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -60,6 +66,7 @@ import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
+import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.InstantXCoinSelector;
 import org.bitcoinj.wallet.KeyChain.KeyPurpose;
@@ -71,6 +78,7 @@ import org.bitcoinj.wallet.Wallet.DustySendRequested;
 import org.bitcoinj.wallet.ZeroConfCoinSelector;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.util.GenericUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.params.KeyParameter;
@@ -121,7 +129,6 @@ public final class SendCoinsFragment extends Fragment {
     private TextView receivingStaticAddressView;
     private CheckBox directPaymentEnableView;
 
-    private TextView hintView;
     private TextView directPaymentMessageView;
     private FrameLayout sentTransactionView;
     private TransactionsAdapter sentTransactionAdapter;
@@ -315,7 +322,6 @@ public final class SendCoinsFragment extends Fragment {
             }
         });
 
-        hintView = view.findViewById(R.id.send_coins_hint);
         directPaymentMessageView = view.findViewById(R.id.send_coins_direct_payment_message);
         sentTransactionView = view.findViewById(R.id.send_coins_sent_transaction);
 
@@ -615,6 +621,10 @@ public final class SendCoinsFragment extends Fragment {
             final Wallet wallet = viewModel.wallet;
             final Address dummyAddress = wallet.currentReceiveAddress(); // won't be used, tx is never committed
 
+            if (Coin.ZERO.equals(amount)) {
+                return;
+            }
+
             final PaymentIntent finalPaymentIntent = viewModel.paymentIntent.mergeWithEditedValues(amount, dummyAddress);
 
             try {
@@ -659,6 +669,7 @@ public final class SendCoinsFragment extends Fragment {
         updateView();
     }
 
+    @SuppressLint("SetTextI18n")
     private void updateView() {
 
         if (viewModel.paymentIntent == null) {
@@ -671,8 +682,7 @@ public final class SendCoinsFragment extends Fragment {
             payeeNameView.setText(viewModel.paymentIntent.payeeName);
 
             payeeVerifiedByView.setVisibility(View.VISIBLE);
-            final String verifiedBy = viewModel.paymentIntent.payeeVerifiedBy != null ? viewModel.paymentIntent.payeeVerifiedBy
-                    : getString(R.string.send_coins_fragment_payee_verified_by_unknown);
+            final String verifiedBy = viewModel.paymentIntent.payeeVerifiedBy != null ? viewModel.paymentIntent.payeeVerifiedBy : getString(R.string.send_coins_fragment_payee_verified_by_unknown);
             payeeVerifiedByView.setText(CHAR_CHECKMARK + String.format(getString(R.string.send_coins_fragment_payee_verified_by), verifiedBy));
         } else {
             payeeNameView.setVisibility(View.GONE);
@@ -680,9 +690,6 @@ public final class SendCoinsFragment extends Fragment {
         }
 
         if (viewModel.paymentIntent.hasOutputs()) {
-            receivingStaticAddressView.setVisibility(
-                    !viewModel.paymentIntent.hasPayee() || viewModel.paymentIntent.payeeVerifiedBy == null ? View.VISIBLE : View.GONE);
-
             if (viewModel.paymentIntent.hasAddress())
                 receivingStaticAddressView.setText(viewModel.paymentIntent.getAddress().toBase58());
             else
@@ -706,28 +713,26 @@ public final class SendCoinsFragment extends Fragment {
 
         final BlockchainState blockchainState = viewModel.blockchainState.getValue();
         final MonetaryFormat dashFormat = config.getFormat();
-        hintView.setVisibility(View.GONE);
+        enterAmountSharedViewModel.getMessageTextStringData().setValue(null);
         if (viewModel.state == SendCoinsViewModel.State.INPUT) {
-            if (viewModel.dryrunException != null) {
-                hintView.setTextColor(getResources().getColor(R.color.fg_error));
-                hintView.setVisibility(View.VISIBLE);
+            CharSequence message = null;
+            if (Coin.ZERO.equals(enterAmountSharedViewModel.getDashAmount()))
+                message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
+            else if (viewModel.dryrunException != null) {
                 if (viewModel.dryrunException instanceof DustySendRequested)
-                    hintView.setText(getString(R.string.send_coins_fragment_hint_dusty_send));
+                    message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
                 else if (viewModel.dryrunException instanceof InsufficientMoneyException)
-                    hintView.setText(getString(R.string.send_coins_fragment_hint_insufficient_money,
-                            dashFormat.format(((InsufficientMoneyException) viewModel.dryrunException).missing)));
+                    message = coloredString(getString(R.string.send_coins_fragment_hint_insufficient_money), R.color.dash_red, true);
                 else if (viewModel.dryrunException instanceof CouldNotAdjustDownwards)
-                    hintView.setText(getString(R.string.send_coins_fragment_hint_empty_wallet_failed));
+                    message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
                 else
-                    hintView.setText(viewModel.dryrunException.toString());
+                    message = coloredString(viewModel.dryrunException.toString(), R.color.dash_red, true);
             } else if (blockchainState != null && blockchainState.replaying) {
-                hintView.setTextColor(getResources().getColor(R.color.fg_error));
-                hintView.setVisibility(View.VISIBLE);
-                hintView.setText(R.string.send_coins_fragment_hint_replaying);
+                message = coloredString(getString(R.string.send_coins_fragment_hint_replaying), R.color.dash_red, true);
             } else if (viewModel.dryrunSendRequest != null && viewModel.dryrunSendRequest.tx.getFee() != null) {
-                hintView.setTextColor(getResources().getColor(R.color.fg_insignificant));
-
+                message = coloredString(getString(R.string.send_coins_auto_lock_feasible), R.color.fg_insignificant, false);
             }
+            enterAmountSharedViewModel.getMessageTextStringData().setValue(message);
         }
 
         if (viewModel.sentTransaction != null) {
@@ -765,6 +770,17 @@ public final class SendCoinsFragment extends Fragment {
         } else if (viewModel.state == SendCoinsViewModel.State.FAILED) {
             enterAmountSharedViewModel.getButtonTextData().call(R.string.send_coins_failed_msg);
         }
+    }
+
+    private Spannable coloredString(String text, int color, Boolean bold) {
+        Spannable spannable = new SpannableString(text);
+        ForegroundColorSpan colorSpan = new ForegroundColorSpan(getResources().getColor(color));
+        spannable.setSpan(colorSpan, 0, spannable.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        if (bold) {
+            StyleSpan styleSpan = new StyleSpan(Typeface.BOLD);
+            spannable.setSpan(styleSpan, 0, spannable.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        return spannable;
     }
 
     private void initStateFromIntentExtras(final Bundle extras) {
@@ -963,12 +979,22 @@ public final class SendCoinsFragment extends Fragment {
     }
 
     private void showPaymentConfirmation() {
+        if (viewModel.dryrunSendRequest == null) {
+            return;
+        }
+
+        Coin amount = enterAmountSharedViewModel.getDashAmount();
         String address = viewModel.paymentIntent.getAddress().toBase58();
-        String amount = viewModel.paymentIntent.getAmount().toPlainString();
-        String amountFiat = "";//Constants.LOCAL_FORMAT.format(fiatValue).toString();
-        String fiatSymbol = "";//GenericUtils.currencySymbol(fiatValue.currencyCode);
-        String fee = "0.0001";
-        DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amount, amountFiat, fiatSymbol, fee);
+
+        Coin txFee = viewModel.dryrunSendRequest.tx.getFee();
+        Fiat fiatAmount = enterAmountSharedViewModel.getExchangeRate().coinToFiat(amount);
+
+        String amountFiat = Constants.LOCAL_FORMAT.format(fiatAmount).toString();
+        String fiatSymbol = GenericUtils.currencySymbol(fiatAmount.currencyCode);
+        String fee = txFee.toPlainString();
+        String total = amount.add(txFee).toPlainString();
+
+        DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amount.toPlainString(), amountFiat, fiatSymbol, fee, total);
         dialog.show(getFragmentManager(), "ConfirmTransactionDialog");
     }
 }

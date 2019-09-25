@@ -37,21 +37,23 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
 
     companion object {
 
-        private const val ARGUMENT_ADDRESS = "argument_address"
-        private const val ARGUMENT_AMOUNT = "argument_amount"
-        private const val ARGUMENT_AMOUNT_FIAT = "argument_amount_fiat"
-        private const val ARGUMENT_FIAT_SYMBOL = "argument_fiat_symbol"
-        private const val ARGUMENT_FEE = "argument_fee"
+        private const val ARG_ADDRESS = "arg_address"
+        private const val ARG_AMOUNT = "arg_amount"
+        private const val ARG_AMOUNT_FIAT = "arg_amount_fiat"
+        private const val ARG_FIAT_SYMBOL = "arg_fiat_symbol"
+        private const val ARG_FEE = "arg_fee"
+        private const val ARG_TOTAL = "arg_total"
 
         @JvmStatic
-        fun createDialog(address: String, amount: String, amountFiat: String, fiatSymbol: String, fee: String): DialogFragment {
+        fun createDialog(address: String, amount: String, amountFiat: String, fiatSymbol: String, fee: String, total: String): DialogFragment {
             val dialog = ConfirmTransactionDialog()
             val bundle = Bundle()
-            bundle.putString(ARGUMENT_ADDRESS, address)
-            bundle.putString(ARGUMENT_AMOUNT, amount)
-            bundle.putString(ARGUMENT_AMOUNT_FIAT, amountFiat)
-            bundle.putString(ARGUMENT_FIAT_SYMBOL, fiatSymbol)
-            bundle.putString(ARGUMENT_FEE, fee)
+            bundle.putString(ARG_ADDRESS, address)
+            bundle.putString(ARG_AMOUNT, amount)
+            bundle.putString(ARG_AMOUNT_FIAT, amountFiat)
+            bundle.putString(ARG_FIAT_SYMBOL, fiatSymbol)
+            bundle.putString(ARG_FEE, fee)
+            bundle.putString(ARG_TOTAL, total)
             dialog.arguments = bundle
             return dialog
         }
@@ -66,12 +68,12 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         arguments!!.apply {
-            input_value.text = getString(ARGUMENT_AMOUNT)
-            fiat_symbol.text = getString(ARGUMENT_FIAT_SYMBOL)
-            fiat_value.text = getString(ARGUMENT_AMOUNT_FIAT)
-            address.text = getString(ARGUMENT_ADDRESS)
-            transaction_fee.text = getString(ARGUMENT_FEE)
-            total_amount.text = input_value.text //amount + fee
+            input_value.text = getString(ARG_AMOUNT)
+            fiat_symbol.text = getString(ARG_FIAT_SYMBOL)
+            fiat_value.text = getString(ARG_AMOUNT_FIAT)
+            address.text = getString(ARG_ADDRESS)
+            transaction_fee.text = getString(ARG_FEE)
+            total_amount.text = getString(ARG_TOTAL)
         }
         collapse_button.setOnClickListener {
             dismiss()

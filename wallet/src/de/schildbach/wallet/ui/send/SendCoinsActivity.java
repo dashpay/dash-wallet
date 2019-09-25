@@ -68,7 +68,7 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity {
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setContentViewWithFooter(R.layout.send_coins_content);
+        setContentView(R.layout.send_coins_content);
 
         getWalletApplication().startBlockchainService(false);
     }
