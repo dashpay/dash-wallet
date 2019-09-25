@@ -38,6 +38,8 @@ import java.text.DecimalFormatSymbols
 class EnterAmountFragment : Fragment() {
 
     companion object {
+        private const val MAX_LENGTH = 10
+
         private const val ARGUMENT_INITIAL_AMOUNT = "argument_initial_amount"
 
         @JvmStatic
@@ -51,6 +53,7 @@ class EnterAmountFragment : Fragment() {
     }
 
     private val friendlyFormat = MonetaryFormat.BTC.minDecimals(2).repeatOptionalDecimals(1, 6).noCode()
+    private val editFieldFormat = MonetaryFormat.BTC.minDecimals(0).noCode()
 
     private lateinit var viewModel: EnterAmountViewModel
     private lateinit var sharedViewModel: EnterAmountSharedViewModel
@@ -74,10 +77,17 @@ class EnterAmountFragment : Fragment() {
 
             var value = StringBuilder()
 
+            fun refreshValue() {
+                value.clear()
+                value.append(input_amount.text)
+            }
+
             override fun onNumber(number: Int) {
                 refreshValue()
-                appendIfValidAfter(number)
-                applyNewValue()
+                if (value.length < MAX_LENGTH) {
+                    appendIfValidAfter(number.toString())
+                    applyNewValue(value.toString())
+                }
             }
 
             override fun onBack() {
@@ -85,24 +95,19 @@ class EnterAmountFragment : Fragment() {
                 if (value.isNotEmpty()) {
                     value.deleteCharAt(value.length - 1)
                 }
-                applyNewValue()
+                applyNewValue(value.toString())
             }
 
             override fun onFunction() {
                 refreshValue()
                 val decimalSeparator = DecimalFormatSymbols.getInstance().decimalSeparator.toString()
-                if (value.indexOf(decimalSeparator) == -1) {
+                if (value.indexOf(decimalSeparator) == -1 && value.length < MAX_LENGTH) {
                     value.append(decimalSeparator)
                 }
-                applyNewValue()
+                applyNewValue(value.toString())
             }
 
-            fun refreshValue() {
-                value.clear()
-                value.append(input_amount.text)
-            }
-
-            private fun appendIfValidAfter(number: Int) {
+            private fun appendIfValidAfter(number: String) {
                 try {
                     value.append(number)
                     Coin.parseCoin(value.toString())
@@ -110,69 +115,90 @@ class EnterAmountFragment : Fragment() {
                     value.deleteCharAt(value.length - 1)
                 }
             }
-
-            fun applyNewValue() {
-                displayEditedValue = false
-                val strValue = value.toString()
-                if (viewModel.dashToFiatDirectionValue) {
-                    val dashValue = Coin.parseCoin(strValue)
-                    viewModel.setDashAmount(dashValue)
-                } else {
-                    val fiatValue = Fiat.parseFiat(viewModel.fiatAmountData.value!!.currencyCode, strValue)
-                    viewModel.setFiatAmount(fiatValue)
-                }
-                viewModel.calculateDependent(sharedViewModel.exchangeRate)
-                input_amount.text = strValue
-                displayEditedValue = true
-            }
         }
+    }
+
+    fun applyNewValue(value: String) {
+        input_amount.text = value
+
+        if (viewModel.dashToFiatDirectionValue) {
+
+            val dashAmount = try {
+                Coin.parseCoin(value)
+            } catch (x: Exception) {
+                Coin.ZERO
+            }
+            viewModel.dashAmountData.value = dashAmount
+
+        } else {
+
+            val currencyCode = sharedViewModel.exchangeRateData.value?.currencyCode
+                    ?: viewModel.fiatAmountData.value!!.currencyCode
+
+            val fiatAmount = try {
+                Fiat.parseFiat(currencyCode, value)
+            } catch (x: Exception) {
+                Fiat.valueOf(currencyCode, 0)
+            }
+            viewModel.fiatAmountData.value = fiatAmount
+        }
+
+        viewModel.calculateDependent(sharedViewModel.exchangeRate)
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
 
-        initViewModels()
-
         calc_pane.visibility = View.GONE
         convert_direction.visibility = View.GONE
+
+        initViewModels()
 
         if (arguments != null) {
             val initialAmount = arguments!!.getSerializable(ARGUMENT_INITIAL_AMOUNT) as Monetary
             viewModel.dashToFiatDirectionData.value = initialAmount is Coin
             if (viewModel.dashToFiatDirectionValue) {
-                viewModel.setDashAmount(initialAmount as Coin)
+                viewModel.dashAmountData.value = initialAmount as Coin
             } else {
-                viewModel.setFiatAmount(initialAmount as Fiat)
+                viewModel.fiatAmountData.value = initialAmount as Fiat
             }
         } else {
             viewModel.dashToFiatDirectionData.value = true
-            viewModel.setDashAmount(Coin.ZERO)
+            viewModel.dashAmountData.value = Coin.ZERO
         }
     }
 
     private fun initViewModels() {
-        viewModel = ViewModelProviders.of(this)[de.schildbach.wallet.ui.EnterAmountViewModel::class.java]
+        viewModel = ViewModelProviders.of(this)[EnterAmountViewModel::class.java]
+
         viewModel.dashToFiatDirectionData.observe(viewLifecycleOwner, Observer {
-            input_symbol.visibility = if (it) View.GONE else View.VISIBLE
-            input_symbol_dash.visibility = if (it) View.VISIBLE else View.GONE
-            calc_amount_symbol.visibility = if (it) View.VISIBLE else View.GONE
-            calc_amount_symbol_dash.visibility = if (it) View.GONE else View.VISIBLE
-            viewModel.dashAmountData.value?.run {
-                displayDashValue(this)
+            val exchangeRate = sharedViewModel.exchangeRateData.value
+            if (it) {
+                val dashAmount = viewModel.dashAmountData.value!!
+                input_amount.text = if (dashAmount.isZero) "" else editFieldFormat.format(viewModel.dashAmountData.value)
+                exchangeRate?.run {
+                    calc_amount.text = Constants.LOCAL_FORMAT.format(viewModel.fiatAmountData.value)
+                }
+            } else {
+                val fiatAmount = viewModel.fiatAmountData.value!!
+                input_amount.text = if (fiatAmount.isZero) "" else editFieldFormat.format(fiatAmount)
+                exchangeRate?.run {
+                    calc_amount.text = friendlyFormat.format(viewModel.dashAmountData.value)
+                }
             }
-            viewModel.fiatAmountData.value?.run {
-                displayFiatValue(this)
-            }
+            setupSymbolsVisibility()
         })
         viewModel.dashAmountData.observe(viewLifecycleOwner, Observer {
-            displayDashValue(it)
+            if (!viewModel.dashToFiatDirectionValue) {
+                calc_amount.text = friendlyFormat.format(it)
+            }
             sharedViewModel.dashAmountData.value = it
         })
         viewModel.fiatAmountData.observe(viewLifecycleOwner, Observer {
-            displayFiatValue(it)
-            val currencySymbol = GenericUtils.currencySymbol(it.currencyCode)
-            input_symbol.text = currencySymbol
-            calc_amount_symbol.text = currencySymbol
+            if (viewModel.dashToFiatDirectionValue) {
+                calc_amount.text = Constants.LOCAL_FORMAT.format(it)
+            }
+            applyCurrencySymbol(GenericUtils.currencySymbol(it.currencyCode))
         })
         sharedViewModel = activity?.run {
             ViewModelProviders.of(this)[EnterAmountSharedViewModel::class.java]
@@ -208,8 +234,22 @@ class EnterAmountFragment : Fragment() {
             }
         })
         sharedViewModel.changeDashAmountEvent.observe(viewLifecycleOwner, Observer {
-            viewModel.setDashAmount(it)
+            viewModel.dashAmountData.value = it
+            viewModel.dashToFiatDirectionData.value = viewModel.dashToFiatDirectionData.value
         })
+    }
+
+    private fun applyCurrencySymbol(symbol: String) {
+        input_symbol.text = symbol
+        calc_amount_symbol.text = symbol
+        setupSymbolsVisibility()
+    }
+
+    private fun setupSymbolsVisibility() {
+        input_symbol.visibility = if (viewModel.dashToFiatDirectionValue) View.GONE else View.VISIBLE
+        input_symbol_dash.visibility = if (viewModel.dashToFiatDirectionValue) View.VISIBLE else View.GONE
+        calc_amount_symbol.visibility = if (viewModel.dashToFiatDirectionValue) View.VISIBLE else View.GONE
+        calc_amount_symbol_dash.visibility = if (viewModel.dashToFiatDirectionValue) View.GONE else View.VISIBLE
     }
 
     private fun displayDashValue(value: Coin) {

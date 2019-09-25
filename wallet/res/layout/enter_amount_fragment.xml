@@ -76,7 +76,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:text="0.00"
+                android:hint="0"
                 android:textColor="@color/dash_black"
                 android:textSize="34sp" />
 

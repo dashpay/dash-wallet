@@ -28,6 +28,7 @@ import kotlinx.android.synthetic.main.dialog_confirm_transaction.*
 import kotlinx.android.synthetic.main.dialog_receive_details.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
+import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.util.GenericUtils
 
 private const val ARG_DASH_AMOUNT = "arg_dash_amount"
@@ -59,7 +60,7 @@ class ReceiveDetailsDialog : BaseBottomSheetDialogFragment() {
             val fiatAmount = getSerializable(ARG_FIAT_AMOUNT) as Fiat
 
             receive_info.amount = dashAmount
-            input_value.text = dashAmount.toPlainString()
+            input_value.text = MonetaryFormat.BTC.noCode().format(dashAmount).toString()
             fiat_symbol.text = GenericUtils.currencySymbol(fiatAmount.currencyCode)
             fiat_value.text = fiatAmount.toPlainString()
         }

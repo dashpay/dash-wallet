@@ -30,16 +30,7 @@ class EnterAmountViewModel(application: Application) : AndroidViewModel(applicat
         get() = (dashToFiatDirectionData.value == true)
 
     val dashAmountData = MutableLiveData<Coin>()
-
     val fiatAmountData = MutableLiveData<Fiat>()
-
-    fun setDashAmount(amount: Coin) {
-        dashAmountData.value = amount
-    }
-
-    fun setFiatAmount(amount: Fiat) {
-        fiatAmountData.value = amount
-    }
 
     fun calculateDependent(exchangeRate: ExchangeRate) {
         exchangeRate.run {

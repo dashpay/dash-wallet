@@ -989,12 +989,13 @@ public final class SendCoinsFragment extends Fragment {
         Coin txFee = viewModel.dryrunSendRequest.tx.getFee();
         Fiat fiatAmount = enterAmountSharedViewModel.getExchangeRate().coinToFiat(amount);
 
+        String amountStr = MonetaryFormat.BTC.noCode().format(amount).toString();
         String amountFiat = Constants.LOCAL_FORMAT.format(fiatAmount).toString();
         String fiatSymbol = GenericUtils.currencySymbol(fiatAmount.currencyCode);
         String fee = txFee.toPlainString();
         String total = amount.add(txFee).toPlainString();
 
-        DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amount.toPlainString(), amountFiat, fiatSymbol, fee, total);
+        DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat, fiatSymbol, fee, total);
         dialog.show(getFragmentManager(), "ConfirmTransactionDialog");
     }
 }
