@@ -16,7 +16,6 @@
 
 package de.schildbach.wallet.ui
 
-import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -25,17 +24,14 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
 import de.schildbach.wallet.ui.widget.NumericKeyboardView
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.enter_amount_fragment.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Monetary
-import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.util.GenericUtils
 import java.text.DecimalFormatSymbols
 
@@ -59,8 +55,6 @@ class EnterAmountFragment : Fragment() {
     private lateinit var viewModel: EnterAmountViewModel
     private lateinit var sharedViewModel: EnterAmountSharedViewModel
 
-    private var config: Configuration? = null
-    var exchangeRate: ExchangeRate? = null
     var displayEditedValue: Boolean = true
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -189,17 +183,22 @@ class EnterAmountFragment : Fragment() {
         sharedViewModel.buttonEnabledData.observe(viewLifecycleOwner, Observer {
             confirm_button.isEnabled = it
         })
-        sharedViewModel.buttonTextData.observe(viewLifecycleOwner, Observer { it ->
+        sharedViewModel.buttonTextData.observe(viewLifecycleOwner, Observer {
             when {
                 it > 0 -> confirm_button.setText(it)
                 else -> confirm_button.text = null
             }
         })
-        sharedViewModel.messageTextData.observe(viewLifecycleOwner, Observer { it ->
+        sharedViewModel.messageTextStringData.observe(viewLifecycleOwner, Observer {
+            message.text = it
+            message.visibility = if (it != null) View.VISIBLE else View.GONE
+        })
+        sharedViewModel.messageTextData.observe(viewLifecycleOwner, Observer {
             when {
                 it > 0 -> message.setText(it)
                 else -> message.text = null
             }
+            message.visibility = if (it > 0) View.VISIBLE else View.GONE
         })
         sharedViewModel.exchangeRateData.observe(viewLifecycleOwner, Observer {
             it?.also {
@@ -231,10 +230,5 @@ class EnterAmountFragment : Fragment() {
                 input_amount.text = friendlyFormat.format(value)
             }
         }
-    }
-
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        this.config = (context.applicationContext as WalletApplication).configuration
     }
 }
