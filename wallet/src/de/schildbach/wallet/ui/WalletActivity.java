@@ -1105,6 +1105,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
     public void onEvent(SyncProgressEvent event) {
         ProgressBar syncProgressView = findViewById(R.id.sync_status_progress);
+        if (event.getFailed()) {
+            showSyncPane(R.id.sync_progress_pane,false);
+            showSyncPane(R.id.sync_error_pane,true);
+            return;
+        }
+        showSyncPane(R.id.sync_error_pane,false);
+        showSyncPane(R.id.sync_progress_pane,true);
         int percentage = (int) event.getPct();
         TextView syncStatusTitle = findViewById(R.id.sync_status_title);
         TextView syncStatusMessage = findViewById(R.id.sync_status_message);
@@ -1117,12 +1124,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
                 syncStatusTitle.setText("Sync");
                 syncStatusMessage.setText("Completed");
-                showSyncStatusPane(false);
+                showSyncPane(R.id.sync_status_pane,false);
             } else {
                 syncPercentageView.setTextColor(getResources().getColor(R.color.dash_gray));
                 syncStatusTitle.setText("Syncing");
                 syncStatusMessage.setText("with Dash Blockchain");
-                showSyncStatusPane(true);
+                showSyncPane(R.id.sync_status_pane, true);
             }
         }
     }
@@ -1265,13 +1272,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }
     };
 
-    private void showSyncStatusPane(boolean show) {
+    private void showSyncPane(int id, boolean show) {
         int visibility = show ? ConstraintSet.VISIBLE : ConstraintSet.GONE;
         MotionLayout motionLayout = findViewById(R.id.home_content);
         ConstraintSet constraintSet = motionLayout.getConstraintSet(R.id.expanded);
-        constraintSet.setVisibility(R.id.sync_status_pane, visibility);
+        constraintSet.setVisibility(id, visibility);
         constraintSet = motionLayout.getConstraintSet(R.id.collapsed);
-        constraintSet.setVisibility(R.id.sync_status_pane, visibility);
+        constraintSet.setVisibility(id, visibility);
         adjustHeaderLayout(show);
     }
 }
