@@ -243,7 +243,11 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             transactionHolder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(final View v) {
-                    setSelectedItemId(getItemId(transactionHolder.getAdapterPosition()));
+                    Transaction tx = transactions.get(transactionHolder.getAdapterPosition());
+                    if (onClickListener != null) {
+                        onClickListener.onTransactionRowClicked(tx);
+                    }
+                    //setSelectedItemId(getItemId(transactionHolder.getAdapterPosition()));
                 }
             });
 
@@ -266,6 +270,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     public interface OnClickListener {
         void onTransactionMenuClick(View view, Transaction tx);
+        void onTransactionRowClicked(Transaction tx);
     }
 
     private class TransactionViewHolder extends RecyclerView.ViewHolder {

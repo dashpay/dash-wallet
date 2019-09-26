@@ -156,6 +156,8 @@
 	<string name="transaction_result_sent_to">Sent to</string>
 	<string name="transaction_date_and_time">Date &amp; Time</string>
 	<string name="transaction_close">Close</string>
+	<string name="transaction_details_amount_received">Amount Received</string>
+	<string name="transaction_details_amount_sent">Amount Sent</string>
 
 	<string-array name="history_filter">
 		<item>All</item>

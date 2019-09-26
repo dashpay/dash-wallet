@@ -1230,7 +1230,8 @@ public final class SendCoinsFragment extends Fragment {
         String address = WalletUtils.getToAddressOfSent(transaction, wallet).toBase58();
         TransactionResult transactionResult = new TransactionResult(
                 transaction.getValue(wallet), transaction.getExchangeRate(), address,
-                transaction.getFee(), transaction.getHashAsString());
+                transaction.getFee(), transaction.getHashAsString(), transaction.getUpdateTime(),
+                transaction.getPurpose());
 
         Intent transactionResultIntent = new Intent(getContext(),
                 TransactionResultActivity.class);
