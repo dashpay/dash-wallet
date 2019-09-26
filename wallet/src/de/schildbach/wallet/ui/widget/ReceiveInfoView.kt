@@ -110,9 +110,13 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
     private fun handleCopyAddress() {
         try {
             val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboardManager.primaryClip = ClipData.newPlainText("Dash address", address.toBase58())
+            if (amount != null) {
+                clipboardManager.primaryClip = ClipData.newPlainText("Dash payment request", paymentRequestUri)
+            } else {
+                clipboardManager.primaryClip = ClipData.newPlainText("Dash address", address.toBase58())
+            }
+            Toast(context).toast(R.string.receive_copied)
             log.info("address copied to clipboard: {}", address)
-            Toast(context).toast(R.string.request_coins_clipboard_address_msg)
         } catch (ignore: BitcoinURIParseException) {
 
         }

@@ -113,6 +113,8 @@ import static org.dash.wallet.common.Constants.CHAR_CHECKMARK;
 
 public final class SendCoinsFragment extends Fragment implements UnlockWalletDialogFragment.OnUnlockWalletListener {
 
+    private static Coin ECONOMIC_FEE = Coin.valueOf(1000);
+
     private AbstractBindServiceActivity activity;
     private WalletApplication application;
     private Configuration config;
@@ -141,6 +143,8 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
 
     private SendCoinsViewModel viewModel;
     private EnterAmountSharedViewModel enterAmountSharedViewModel;
+
+    private boolean wasAmountChangedByTheUser = false;
 
     private final TransactionConfidence.Listener sentTransactionConfidenceListener = new TransactionConfidence.Listener() {
         @Override
@@ -229,6 +233,7 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
         enterAmountSharedViewModel.getDashAmountData().observe(getViewLifecycleOwner(), new Observer<Coin>() {
             @Override
             public void onChanged(Coin coin) {
+                wasAmountChangedByTheUser = true;
                 handler.post(dryrunRunnable);
             }
         });
@@ -646,11 +651,11 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
         final Wallet wallet = viewModel.wallet;
         boolean llmqInstantSendActive = wallet.getContext().sporkManager.isSporkActive(SporkManager.SPORK_20_INSTANTSEND_LLMQ_BASED);
 
-        paymentIntent.setInstantX(true); //to make sure the correct instance of Transaction class is used in toSendRequest() method
+        paymentIntent.setInstantX(false); //to make sure the correct instance of Transaction class is used in toSendRequest() method
         final SendRequest sendRequest = paymentIntent.toSendRequest();
         sendRequest.coinSelector = llmqInstantSendActive ? ZeroConfCoinSelector.get() : InstantXCoinSelector.get();
-        sendRequest.useInstantSend = true;
-        sendRequest.feePerKb = TransactionLockRequest.MIN_FEE;
+        sendRequest.useInstantSend = false;
+        sendRequest.feePerKb = ECONOMIC_FEE;
         sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee;
         sendRequest.signInputs = signInputs;
 
@@ -713,7 +718,7 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
         enterAmountSharedViewModel.getMessageTextStringData().setValue(null);
         if (viewModel.state == SendCoinsViewModel.State.INPUT) {
             CharSequence message = null;
-            if (Coin.ZERO.equals(enterAmountSharedViewModel.getDashAmount()))
+            if (Coin.ZERO.equals(enterAmountSharedViewModel.getDashAmount()) && wasAmountChangedByTheUser)
                 message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
             else if (viewModel.dryrunException != null) {
                 if (viewModel.dryrunException instanceof DustySendRequested)
