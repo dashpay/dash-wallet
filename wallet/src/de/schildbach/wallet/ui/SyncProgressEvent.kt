@@ -16,10 +16,15 @@
 
 package de.schildbach.wallet.ui
 
-class SyncProgressEvent(val pct: Double) {
-    override fun toString(): String = if (pct == 100.0) {
+class SyncProgressEvent @JvmOverloads constructor(val pct: Double, val failed: Boolean = false) {
+    override fun toString(): String {
+        if (failed) {
+            return "sync failed"
+        }
+        return if (pct == 100.0) {
             "sync progress: DONE"
         } else {
             String.format("sync progress: %.2f", pct);
         }
+    }
 }

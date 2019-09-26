@@ -371,7 +371,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
             super.progress(pct, blocksLeft, date);
             final SyncProgressEvent event = new SyncProgressEvent(pct);
             log.info(event.toString());
-            EventBus.getDefault().postSticky(new SyncProgressEvent(pct));
+            EventBus.getDefault().postSticky(event);
 
         }
 
@@ -983,6 +983,12 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
     private int percentageSync() {
         int chainHeadHeight = blockChain.getChainHead().getHeight();
         int mostCommonChainHeight;
+        if (peerGroup == null) {
+            final SyncProgressEvent event = new SyncProgressEvent(0, true);
+            log.info(event.toString());
+            EventBus.getDefault().postSticky(event);
+            return 0;
+        }
         if (peerGroup.getMostCommonChainHeight() > 0) {
             mostCommonChainHeight = peerGroup.getMostCommonChainHeight();
         } else {

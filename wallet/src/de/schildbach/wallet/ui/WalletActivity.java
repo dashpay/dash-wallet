@@ -30,9 +30,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.graphics.Point;
-import android.graphics.PorterDuff;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
@@ -1107,11 +1106,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
     public void onEvent(SyncProgressEvent event) {
         ProgressBar syncProgressView = findViewById(R.id.sync_status_progress);
         int percentage = (int) event.getPct();
+        TextView syncStatusTitle = findViewById(R.id.sync_status_title);
+        TextView syncStatusMessage = findViewById(R.id.sync_status_message);
         if (percentage != syncProgressView.getProgress()) {
             syncProgressView.setProgress(percentage);
             TextView syncPercentageView = findViewById(R.id.sync_status_percentage);
-            TextView syncStatusTitle = findViewById(R.id.sync_status_title);
-            TextView syncStatusMessage = findViewById(R.id.sync_status_message);
+
             syncPercentageView.setText(percentage + "%");
             if (percentage == 100) {
                 syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
