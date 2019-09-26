@@ -232,8 +232,10 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
         enterAmountSharedViewModel = ViewModelProviders.of(activity).get(EnterAmountSharedViewModel.class);
         enterAmountSharedViewModel.getDashAmountData().observe(getViewLifecycleOwner(), new Observer<Coin>() {
             @Override
-            public void onChanged(Coin coin) {
-                wasAmountChangedByTheUser = true;
+            public void onChanged(Coin amount) {
+                if (!wasAmountChangedByTheUser) {
+                    wasAmountChangedByTheUser = Coin.ZERO.isLessThan(amount);
+                }
                 handler.post(dryrunRunnable);
             }
         });
