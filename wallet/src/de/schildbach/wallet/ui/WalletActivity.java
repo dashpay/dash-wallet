@@ -1099,6 +1099,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @Override
     public void onStart() {
         super.onStart();
+        findViewById(R.id.restart_sync_icon).setOnClickListener(new View.OnClickListener() {
+            public void onClick(final View v) {
+                findViewById(R.id.sync_error_pane).setVisibility(View.GONE);
+                findViewById(R.id.sync_progress_pane).setVisibility(View.VISIBLE);
+            }
+        });
         EventBus.getDefault().register(this);
     }
 

@@ -137,19 +137,15 @@
                     android:text="Check your connection" />
             </LinearLayout>
 
-            <TextView
-                android:layout_width="64dp"
-                android:layout_height="wrap_content"
+            <ImageView
+                android:id="@+id/restart_sync_icon"
+                android:src="@drawable/reload_icon_white"
                 android:layout_alignParentEnd="true"
                 android:layout_alignParentRight="false"
                 android:layout_centerInParent="true"
-                android:layout_marginEnd="16dp"
-                android:layout_marginRight="16dp"
-                android:fontFamily="@font/montserrat_regular"
-                android:text="O"
-                android:gravity="right"
-                android:textColor="@color/dash_white"
-                android:textSize="24sp" />
+                android:foregroundGravity="right"
+                android:layout_width="@dimen/app_bar_logo_width"
+                android:layout_height="@dimen/app_bar_logo_height" />
         </RelativeLayout>
     </RelativeLayout>
 
