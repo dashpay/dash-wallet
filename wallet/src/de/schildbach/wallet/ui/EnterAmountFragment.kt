@@ -242,9 +242,13 @@ class EnterAmountFragment : Fragment() {
             }
         })
         sharedViewModel.changeDashAmountEvent.observe(viewLifecycleOwner, Observer {
-            //            viewModel.dashAmountData.value = it
-//            viewModel.calculateDependent(sharedViewModel.exchangeRate)
-//            viewModel.dashToFiatDirectionData.value = viewModel.dashToFiatDirectionData.value
+            applyNewValue(it.toPlainString())
+        })
+
+        sharedViewModel.applyMaxAmountEvent.observe(viewLifecycleOwner, Observer {
+            if (!viewModel.dashToFiatDirectionValue) {
+                viewModel.dashToFiatDirectionData.value = true
+            }
             applyNewValue(it.toPlainString())
         })
     }

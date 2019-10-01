@@ -52,6 +52,8 @@ class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(ap
 
     val changeDashAmountEvent = SingleLiveEvent<Coin>()
 
+    val applyMaxAmountEvent = SingleLiveEvent<Coin>()
+
     val buttonClickEvent = SingleLiveEvent<Coin>()
 
     val maxButtonClickEvent = SingleLiveEvent<Boolean>()

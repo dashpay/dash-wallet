@@ -600,7 +600,7 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
             });
         } else {
             final Coin available = wallet.getBalance(BalanceType.ESTIMATED);
-            enterAmountSharedViewModel.getChangeDashAmountEvent().setValue(available);
+            enterAmountSharedViewModel.getApplyMaxAmountEvent().setValue(available);
 
             updateView();
             handler.post(dryrunRunnable);
