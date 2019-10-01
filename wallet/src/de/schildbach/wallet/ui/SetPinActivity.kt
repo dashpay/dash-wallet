@@ -263,6 +263,8 @@ class SetPinActivity : AppCompatActivity() {
                 }
                 Status.SUCCESS -> {
                     if (state == State.DECRYPTING) {
+                        val walletApplication = application as WalletApplication
+                        seed = walletApplication.wallet.keyChainSeed.mnemonicCode!!
                         setState(State.SET_PIN)
                     } else {
                         viewModel.initWallet()
