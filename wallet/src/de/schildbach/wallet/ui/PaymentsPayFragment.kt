@@ -38,60 +38,65 @@ class PaymentsPayFragment : Fragment() {
             handleScan()
         })
         pay_to_address.setOnButtonClickListener(View.OnClickListener {
-            handlePaste(false)
+            handlePaste(true)
         })
     }
 
     override fun onResume() {
         super.onResume()
-        handlePaste(true)
+        handlePaste(false)
     }
 
-    fun handleScan() {
+    private fun handleScan() {
         startActivityForResult(Intent(context, ScanActivity::class.java), REQUEST_CODE_SCAN)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
         if (requestCode == REQUEST_CODE_SCAN && resultCode == Activity.RESULT_OK) {
             val input = intent!!.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)
-            handleString(input, false, R.string.button_scan)
+            handleString(input, true, R.string.button_scan)
         } else {
             super.onActivityResult(requestCode, resultCode, intent)
         }
     }
 
-    private fun handlePaste(activateButtonOnly: Boolean) {
-        var input: String? = null
-        val clipboardManager = context!!.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        if (clipboardManager.hasPrimaryClip()) {
-            val clip = clipboardManager.primaryClip ?: return
-            val clipDescription = clip.description
-            if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST)) {
-                val clipUri = clip.getItemAt(0).uri
-                if (clipUri != null) {
-                    input = clipUri.toString()
-                }
-            } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
-                val clipText = clip.getItemAt(0).text
-                if (clipText != null) {
-                    input = clipText.toString()
-                }
-            }
-        }
+    private fun handlePaste(fireAction: Boolean) {
+        val input = clipboardData()
         if (input != null) {
-            handleString(input, activateButtonOnly, R.string.payments_pay_to_clipboard_title)
-        } else {
-            InputParser.dialog(context, null, R.string.payments_pay_to_clipboard_title, R.string.scan_to_pay_error_dialog_message_no_data)
+            handleString(input, fireAction, R.string.payments_pay_to_clipboard_title)
         }
     }
 
-    private fun handleString(input: String, noAction: Boolean, errorDialogTitleResId: Int) {
+    private fun clipboardData(): String? {
+        val clipboardManager = context!!.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        if (clipboardManager.hasPrimaryClip()) {
+            clipboardManager.primaryClip?.run {
+                return when {
+                    description.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST) -> getItemAt(0).uri?.toString()
+                    description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) -> getItemAt(0).text?.toString()
+                    else -> null
+                }
+            }
+        }
+        return null
+    }
+
+    private fun handleString(input: String, fireAction: Boolean, errorDialogTitleResId: Int) {
         object : InputParser.StringInputParser(input) {
+
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
-                if (noAction) {
-                    activatePayToAddress(paymentIntent)
-                } else {
+                if (fireAction) {
                     SendCoinsActivity.start(context, paymentIntent)
+                } else {
+                    manageStateOfPayToAddressButton(paymentIntent)
+                }
+            }
+
+            override fun error(messageResId: Int, vararg messageArgs: Any) {
+                if (fireAction) {
+                    dialog(context, null, errorDialogTitleResId, messageResId, *messageArgs)
+                } else {
+                    manageStateOfPayToAddressButton(null)
                 }
             }
 
@@ -103,22 +108,10 @@ class PaymentsPayFragment : Fragment() {
             override fun handleDirectTransaction(tx: Transaction) {
 
             }
-
-            override fun error(messageResId: Int, vararg messageArgs: Any) {
-                if (noAction) {
-                    activatePayToAddress(null)
-                } else {
-                    dialog(context, null, errorDialogTitleResId, messageResId, *messageArgs)
-                }
-            }
-
-            override fun cannotClassify(input: String) {
-                error(R.string.input_parser_cannot_classify, input)
-            }
         }.parse()
     }
 
-    private fun activatePayToAddress(paymentIntent: PaymentIntent?) {
+    private fun manageStateOfPayToAddressButton(paymentIntent: PaymentIntent?) {
         pay_to_address.setActive(paymentIntent != null)
         if (paymentIntent == null) {
             pay_to_address.setSubTitle(R.string.payments_pay_to_clipboard_sub_title)
