@@ -50,6 +50,7 @@ import org.bitcoinj.core.SporkMessage;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.listeners.AbstractPeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDataEventListener;
@@ -949,11 +950,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             //Handle Ongoing notification state
-            if (blockchainState.bestChainHeight == config.getBestChainHeightEver()) {
+            boolean syncing = blockchainState.bestChainDate.getTime() < (Utils.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS); //1 hour
+            if (!syncing && blockchainState.bestChainHeight == config.getBestChainHeightEver()) {
                 //Remove ongoing notification if blockchain sync finished
                 stopForeground(true);
                 nm.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC);
-            } else if (blockchainState.replaying) {
+            } else if (blockchainState.replaying || syncing) {
                 //Shows ongoing notification when synchronizing the blockchain
                 Notification notification = createNetworkSyncNotification(blockchainState);
                 if (notification != null) {
