@@ -66,7 +66,7 @@ public final class Constants {
         switch (BuildConfig.FLAVOR) {
             case "prod":
             case "beta": {
-                DNS_SEED = new String[]{"dnsseed.dash.org"};
+                DNS_SEED = new String[]{"dnsseed.dash.org", "dnsseed.dashdot.io"};
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH;
                 NETWORK_PARAMETERS = MainNetParams.get();
                 IS_PROD_BUILD = true;
@@ -75,7 +75,7 @@ public final class Constants {
                 break;
             }
             case "_testNet3": {
-                DNS_SEED = new String[]{"95.183.51.146", "35.161.101.35", "54.91.130.170"};
+                DNS_SEED = new String[]{"testnet-seed.dashdot.io", "95.183.51.146", "35.161.101.35", "54.91.130.170"};
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
                 NETWORK_PARAMETERS = TestNet3Params.get();
                 IS_PROD_BUILD = false;
