@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="loading">Načítání...</string>
+    <string name="loading_error">Vyskytla se chyba. Zkuste to prosím později.</string>
+    <string name="dash_available">%1$sk dispozici</string>
+
+</resources>
