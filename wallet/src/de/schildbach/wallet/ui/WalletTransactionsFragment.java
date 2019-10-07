@@ -438,7 +438,12 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     @Override
     public void onTransactionRowClicked(Transaction tx) {
         Direction direction = tx.getValue(wallet).signum() < 0 ? Direction.SENT : Direction.RECEIVED;
-        String address = WalletUtils.getToAddressOfSent(tx, wallet).toBase58();
+        String address;
+        if (direction == Direction.SENT) {
+            address = WalletUtils.getToAddressOfSent(tx, wallet).toBase58();
+        } else {
+            address = WalletUtils.getWalletAddressOfReceived(tx, wallet).toBase58();
+        }
         TransactionResult transactionResult = new TransactionResult(tx.getValue(wallet),
                 tx.getExchangeRate(), address, tx.getFee(), tx.getHashAsString(), tx.getUpdateTime(),
                 tx.getPurpose());
