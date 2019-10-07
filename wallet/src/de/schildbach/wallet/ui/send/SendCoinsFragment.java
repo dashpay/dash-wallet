@@ -362,6 +362,8 @@ public final class SendCoinsFragment extends Fragment {
                                     @Override
                                     public void run() {
                                         activity.finish();
+                                        //Show transaction Result
+                                        showTransactionResult(sentTransaction);
                                     }
                                 }, 500);
                             }
@@ -1101,9 +1103,6 @@ public final class SendCoinsFragment extends Fragment {
                     directPay(payment);
 
                 application.broadcastTransaction(sentTransaction);
-
-                //Show transaction Result
-                showTransactionResult(transaction);
 
                 final ComponentName callingActivity = activity.getCallingActivity();
                 if (callingActivity != null) {
