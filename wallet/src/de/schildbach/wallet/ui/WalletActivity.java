@@ -1112,8 +1112,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
     public void onEvent(SyncProgressEvent event) {
         ProgressBar syncProgressView = findViewById(R.id.sync_status_progress);
         if (event.getFailed()) {
-            showSyncPane(R.id.sync_progress_pane,false);
-            showSyncPane(R.id.sync_error_pane,true);
+            findViewById(R.id.sync_progress_pane).setVisibility(View.GONE);
+            findViewById(R.id.sync_error_pane).setVisibility(View.VISIBLE);
             return;
         }
         showSyncPane(R.id.sync_error_pane,false);

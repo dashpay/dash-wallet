@@ -433,6 +433,12 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         private void check() {
             final Wallet wallet = application.getWallet();
 
+            if (impediments.contains(Impediment.NETWORK)) {
+                final SyncProgressEvent event = new SyncProgressEvent(0, true);
+                log.info(event.toString());
+                EventBus.getDefault().postSticky(event);
+            }
+
             if (impediments.isEmpty() && peerGroup == null) {
                 log.debug("acquiring wakelock");
                 wakeLock.acquire();
@@ -984,9 +990,6 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         int chainHeadHeight = blockChain.getChainHead().getHeight();
         int mostCommonChainHeight;
         if (peerGroup == null) {
-            final SyncProgressEvent event = new SyncProgressEvent(0, true);
-            log.info(event.toString());
-            EventBus.getDefault().postSticky(event);
             return 0;
         }
         if (peerGroup.getMostCommonChainHeight() > 0) {
