@@ -38,6 +38,7 @@ class EnterAmountFragment : Fragment() {
 
     companion object {
         private const val MAX_LENGTH = 10
+        private const val DECIMAL_SEPARATOR = '.'
 
         private const val ARGUMENT_INITIAL_AMOUNT = "argument_initial_amount"
 
@@ -88,15 +89,21 @@ class EnterAmountFragment : Fragment() {
 
             override fun onNumber(number: Int) {
                 refreshValue()
+                if (!viewModel.dashToFiatDirectionValue) {
+                    val numOfDecimals = if (value.indexOf(DECIMAL_SEPARATOR) > -1) value.length - value.indexOf(DECIMAL_SEPARATOR) else 0
+                    if (numOfDecimals > 2) {
+                        return
+                    }
+                }
                 if (value.length < MAX_LENGTH && !maxAmountSelected) {
                     appendIfValidAfter(number.toString())
                     applyNewValue(value.toString())
                 }
             }
 
-            override fun onBack() {
+            override fun onBack(longClick: Boolean) {
                 refreshValue()
-                if (maxAmountSelected) {
+                if (longClick || maxAmountSelected) {
                     value.clear()
                 } else if (value.isNotEmpty()) {
                     value.deleteCharAt(value.length - 1)
@@ -110,9 +117,8 @@ class EnterAmountFragment : Fragment() {
                     return
                 }
                 refreshValue()
-                val decimalSeparator = '.'
-                if (value.indexOf(decimalSeparator) == -1 && value.length < MAX_LENGTH) {
-                    value.append(decimalSeparator)
+                if (value.indexOf(DECIMAL_SEPARATOR) == -1 && value.length < MAX_LENGTH) {
+                    value.append(DECIMAL_SEPARATOR)
                 }
                 applyNewValue(value.toString())
             }
@@ -193,7 +199,7 @@ class EnterAmountFragment : Fragment() {
                 }
             } else {
                 val fiatAmount = viewModel.fiatAmountData.value!!
-                input_amount.text = if (fiatAmount.isZero) "" else editFieldFormat.format(fiatAmount)
+                input_amount.text = if (fiatAmount.isZero) "" else Constants.LOCAL_FORMAT.format(fiatAmount)
                 exchangeRate?.run {
                     calc_amount.text = friendlyFormat.format(viewModel.dashAmountData.value)
                 }
@@ -271,25 +277,5 @@ class EnterAmountFragment : Fragment() {
         input_symbol_dash.visibility = if (viewModel.dashToFiatDirectionValue) View.VISIBLE else View.GONE
         calc_amount_symbol.visibility = if (viewModel.dashToFiatDirectionValue) View.VISIBLE else View.GONE
         calc_amount_symbol_dash.visibility = if (viewModel.dashToFiatDirectionValue) View.GONE else View.VISIBLE
-    }
-
-    private fun displayDashValue(value: Coin) {
-        if (viewModel.dashToFiatDirectionValue) {
-            if (displayEditedValue) {
-                input_amount.text = friendlyFormat.format(value)
-            }
-        } else {
-            calc_amount.text = friendlyFormat.format(value)
-        }
-    }
-
-    private fun displayFiatValue(value: Fiat) {
-        if (viewModel.dashToFiatDirectionValue) {
-            calc_amount.text = Constants.LOCAL_FORMAT.format(value)
-        } else {
-            if (displayEditedValue) {
-                input_amount.text = friendlyFormat.format(value)
-            }
-        }
     }
 }

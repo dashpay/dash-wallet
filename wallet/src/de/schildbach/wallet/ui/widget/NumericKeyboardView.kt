@@ -46,6 +46,10 @@ class NumericKeyboardView(context: Context, attrs: AttributeSet) : TableLayout(c
         for (btnResId in ALL_BUTTONS_RES_ID) {
             findViewById<View>(btnResId).setOnClickListener(this)
         }
+        findViewById<View>(R.id.btn_back).setOnLongClickListener {
+            onBackClick(true)
+            true
+        }
     }
 
     var onKeyboardActionListener: OnKeyboardActionListener? = null
@@ -53,7 +57,7 @@ class NumericKeyboardView(context: Context, attrs: AttributeSet) : TableLayout(c
     override fun onClick(v: View?) {
         when (v!!.id) {
             R.id.btn_function -> onFunctionClick()
-            R.id.btn_back -> onBackClick()
+            R.id.btn_back -> onBackClick(false)
             else -> onNumberClick((v.tag as String).toInt())
         }
     }
@@ -77,8 +81,8 @@ class NumericKeyboardView(context: Context, attrs: AttributeSet) : TableLayout(c
         onKeyboardActionListener?.onFunction()
     }
 
-    private fun onBackClick() {
-        onKeyboardActionListener?.onBack()
+    private fun onBackClick(longClick: Boolean) {
+        onKeyboardActionListener?.onBack(longClick)
     }
 
     private fun onNumberClick(number: Int) {
@@ -87,7 +91,7 @@ class NumericKeyboardView(context: Context, attrs: AttributeSet) : TableLayout(c
 
     interface OnKeyboardActionListener {
         fun onNumber(number: Int)
-        fun onBack()
+        fun onBack(longClick: Boolean)
         fun onFunction()
     }
 }
