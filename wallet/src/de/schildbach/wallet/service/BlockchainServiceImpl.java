@@ -111,6 +111,7 @@ import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import androidx.core.app.NotificationCompat;
+import androidx.lifecycle.LifecycleService;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.text.format.DateUtils;
 
@@ -119,7 +120,8 @@ import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 /**
  * @author Andreas Schildbach
  */
-public class BlockchainServiceImpl extends android.app.Service implements BlockchainService {
+public class BlockchainServiceImpl extends LifecycleService implements BlockchainService {
+
     private WalletApplication application;
     private Configuration config;
 
@@ -160,8 +162,6 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
     private static final long TX_EXCHANGE_RATE_TIME_THRESHOLD_MS = TimeUnit.MINUTES.toMillis(180);
 
     private static final Logger log = LoggerFactory.getLogger(BlockchainServiceImpl.class);
-
-    public static final String START_AS_FOREGROUND_EXTRA = "start_as_foreground";
 
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
@@ -317,9 +317,9 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                     final boolean connectivityNotificationEnabled = config.getConnectivityNotificationEnabled();
 
                     if (!connectivityNotificationEnabled || numPeers == 0) {
-                        nm.cancel(Constants.NOTIFICATION_ID_CONNECTED);
+                        stopForeground(true);
                     } else {
-                        final Notification.Builder notification = new Notification.Builder(BlockchainServiceImpl.this);
+                        final NotificationCompat.Builder notification = new NotificationCompat.Builder(BlockchainServiceImpl.this, Constants.NOTIFICATION_CHANNEL_ID_ONGOING);
                         notification.setSmallIcon(R.drawable.stat_sys_peers, numPeers > 4 ? 4 : numPeers);
                         notification.setContentTitle(getString(R.string.app_name));
                         notification.setContentText(getString(R.string.notification_peers_connected_msg, numPeers));
@@ -327,7 +327,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                                 new Intent(BlockchainServiceImpl.this, WalletActivity.class), 0));
                         notification.setWhen(System.currentTimeMillis());
                         notification.setOngoing(true);
-                        nm.notify(Constants.NOTIFICATION_ID_CONNECTED, notification.getNotification());
+                        startForeground(Constants.NOTIFICATION_ID_CONNECTED, notification.build());
                     }
 
                     // send broadcast
@@ -616,6 +616,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
     @Override
     public IBinder onBind(final Intent intent) {
+        super.onBind(intent);
         log.debug(".onBind()");
 
         return mBinder;
@@ -726,13 +727,9 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
     @Override
     public int onStartCommand(final Intent intent, final int flags, final int startId) {
-        if (intent != null) {
-            //Restart service as a Foreground Service if it's synchronizing the blockchain
-            Bundle extras = intent.getExtras();
-            if (extras != null && extras.containsKey(START_AS_FOREGROUND_EXTRA)) {
-                startForeground();
-            }
+        super.onStartCommand(intent, flags, startId);
 
+        if (intent != null) {
             log.info("service start command: " + intent + (intent.hasExtra(Intent.EXTRA_ALARM_COUNT)
                     ? " (alarm count: " + intent.getIntExtra(Intent.EXTRA_ALARM_COUNT, 0) + ")" : ""));
 

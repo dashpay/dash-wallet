@@ -28,13 +28,29 @@
 	<string name="scan_to_pay_error_dialog_message">Not a valid Dash Address or URL request in clipboard:\n\n%s</string>
 	<string name="scan_to_pay_error_dialog_message_no_data">Not a valid Dash Address or URL request in clipboard.</string>
 
+	<string name="receive_title">Receive</string>
+	<string name="receive_enter_amount_message">Specify the amount to be received</string>
+	<string name="receive_enter_amount_button">Specify Amount</string>
+	<string name="receive_share_button">Share</string>
+	<string name="receive_copied">Copied</string>
+
+	<string name="pay_title">Pay</string>
+
 	<string name="history_title">History</string>
 
 	<string name="more_title">More</string>
 
 	<string name="payments_title">Payments</string>
+	<string name="payments_tab_pay_label">Pay</string>
+	<string name="payments_tab_receive_label">Receive</string>
+	<string name="payments_pay_by_qr_title">Pay by</string>
+    <string name="payments_pay_by_qr_sub_title">Scanning QR Code</string>
+    <string name="payments_pay_by_qr_button">Scan</string>
+    <string name="payments_pay_to_clipboard_title">Pay to copied address</string>
+    <string name="payments_pay_to_clipboard_sub_title">No address copied</string>
+    <string name="payments_pay_to_clipboard_button">Pay</string>
 
-    <string name="send_coins_auto_lock_feasible">This transaction will settle instantly at no extra fee.</string>
+    <string name="send_coins_auto_lock_feasible">This transaction will settle instantly at no extra fee</string>
 	<string name="send_coins_auto_lock_not_feasible">This transaction may take several minutes to settle. Complete instantly for %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">This transaction may take several minutes to settle.</string>
 

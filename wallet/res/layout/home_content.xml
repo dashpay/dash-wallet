@@ -10,7 +10,7 @@
     tools:ignore="ContentDescription">
 
     <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/center_guideline"
+        android:id="@+id/h_center_guideline"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -27,7 +27,7 @@
 
     <Space
         android:id="@+id/quick_actions_pane_space"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="32dp"
         app:layout_constraintBottom_toTopOf="@id/quick_actions_pane" />
 
@@ -57,16 +57,16 @@
         android:layout_marginBottom="116dp"
         android:text="@string/home_available_balance"
         app:layout_constraintBottom_toTopOf="@+id/header_pane_bottom"
-        app:layout_constraintEnd_toEndOf="@+id/center_guideline"
-        app:layout_constraintStart_toStartOf="@+id/center_guideline" />
+        app:layout_constraintEnd_toEndOf="@+id/h_center_guideline"
+        app:layout_constraintStart_toStartOf="@+id/h_center_guideline" />
 
     <fragment
         android:id="@+id/wallet_balance_fragment"
         android:name="de.schildbach.wallet.ui.HeaderBalanceFragment"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="@+id/center_guideline"
-        app:layout_constraintStart_toStartOf="@+id/center_guideline"
+        app:layout_constraintEnd_toEndOf="@+id/h_center_guideline"
+        app:layout_constraintStart_toStartOf="@+id/h_center_guideline"
         app:layout_constraintTop_toBottomOf="@+id/available_balance"
         tools:layout="@layout/header_balance_fragment" />
 
@@ -101,7 +101,7 @@
         android:layout_marginRight="4dp"
         app:layout_constraintBottom_toTopOf="@+id/header_pane_bottom"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toLeftOf="@+id/center_guideline"
+        app:layout_constraintRight_toLeftOf="@+id/h_center_guideline"
         app:layout_constraintTop_toTopOf="@+id/header_pane_bottom"
         tools:ignore="UseCompoundDrawables">
 
@@ -127,7 +127,7 @@
         android:layout_marginEnd="16dp"
         android:layout_marginRight="16dp"
         app:layout_constraintBottom_toTopOf="@+id/header_pane_bottom"
-        app:layout_constraintLeft_toRightOf="@+id/center_guideline"
+        app:layout_constraintLeft_toRightOf="@+id/h_center_guideline"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="@+id/header_pane_bottom">
 

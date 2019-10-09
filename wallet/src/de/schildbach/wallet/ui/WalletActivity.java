@@ -222,13 +222,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
         findViewById(R.id.pay_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                handleSendCoins();
+                startActivity(PaymentsActivity.createIntent(WalletActivity.this, PaymentsActivity.ACTIVE_TAB_PAY));
             }
         });
         findViewById(R.id.receive_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                handleRequestCoins();
+                startActivity(PaymentsActivity.createIntent(WalletActivity.this, PaymentsActivity.ACTIVE_TAB_RECEIVE));
             }
         });
     }

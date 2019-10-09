@@ -19,8 +19,10 @@ package de.schildbach.wallet.ui;
 
 import android.content.DialogInterface;
 import android.os.Build;
-import androidx.fragment.app.FragmentManager;
 import android.view.View;
+
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.WalletLock;
@@ -37,6 +39,12 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
     public static void show(FragmentManager fm, DialogInterface.OnDismissListener onDismissListener) {
         UnlockWalletDialogFragment dialogFragment = new UnlockWalletDialogFragment();
         dialogFragment.onDismissListener = onDismissListener;
+        dialogFragment.show(fm, FRAGMENT_TAG);
+    }
+
+    public static void show(FragmentManager fm, Fragment targetFragment) {
+        UnlockWalletDialogFragment dialogFragment = new UnlockWalletDialogFragment();
+        dialogFragment.setTargetFragment(targetFragment, 0);
         dialogFragment.show(fm, FRAGMENT_TAG);
     }
 
@@ -70,6 +78,10 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
                     pinRetryController.clearPinFailPrefs();
                     WalletLock.getInstance().setWalletLocked(false);
 
+                    if (getTargetFragment() instanceof OnUnlockWalletListener) {
+                        ((OnUnlockWalletListener) getTargetFragment()).onUnlockWallet(password);
+                    }
+
                     dismissAllowingStateLoss();
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && fingerprintHelper != null) {
@@ -97,4 +109,8 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
         }.checkPassword(walletProvider.getWallet(), password);
     }
 
+    public interface OnUnlockWalletListener {
+
+        void onUnlockWallet(String password);
+    }
 }
