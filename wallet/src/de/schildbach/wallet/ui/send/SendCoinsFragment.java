@@ -174,7 +174,6 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
                                 handler.postDelayed(new Runnable() {
                                     @Override
                                     public void run() {
-//                                        activity.finish();
                                         activity.onHomeClick();
                                     }
                                 }, 500);
@@ -411,7 +410,7 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
     }
 
     private boolean everythingPlausible() {
-        return viewModel.state == SendCoinsViewModel.State.INPUT && isPayeePlausible() && isAmountPlausible();// && isPasswordPlausible();
+        return viewModel.state == SendCoinsViewModel.State.INPUT && isPayeePlausible() && isAmountPlausible();
     }
 
     private void handleGo(final String pin) {
@@ -655,7 +654,7 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
 
         paymentIntent.setInstantX(false); //to make sure the correct instance of Transaction class is used in toSendRequest() method
         final SendRequest sendRequest = paymentIntent.toSendRequest();
-        sendRequest.coinSelector = llmqInstantSendActive ? ZeroConfCoinSelector.get() : InstantXCoinSelector.get();
+        sendRequest.coinSelector = ZeroConfCoinSelector.get();
         sendRequest.useInstantSend = false;
         sendRequest.feePerKb = ECONOMIC_FEE;
         sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee;
