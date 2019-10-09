@@ -103,7 +103,7 @@ class EnterAmountFragment : Fragment() {
 
             override fun onFunction() {
                 refreshValue()
-                val decimalSeparator = DecimalFormatSymbols.getInstance().decimalSeparator.toString()
+                val decimalSeparator = '.'
                 if (value.indexOf(decimalSeparator) == -1 && value.length < MAX_LENGTH) {
                     value.append(decimalSeparator)
                 }
