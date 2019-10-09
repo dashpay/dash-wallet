@@ -33,7 +33,6 @@ import org.bitcoinj.core.Monetary
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.util.GenericUtils
-import java.text.DecimalFormatSymbols
 
 class EnterAmountFragment : Fragment() {
 
@@ -59,6 +58,7 @@ class EnterAmountFragment : Fragment() {
     private lateinit var sharedViewModel: EnterAmountSharedViewModel
 
     var displayEditedValue: Boolean = true
+    var maxAmountSelected: Boolean = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.enter_amount_fragment, container, false)
@@ -74,6 +74,7 @@ class EnterAmountFragment : Fragment() {
         }
         max_button.setOnClickListener {
             sharedViewModel.maxButtonClickEvent.call(true)
+            maxAmountSelected = true
         }
         numeric_keyboard.enableDecSeparator(true);
         numeric_keyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
@@ -87,7 +88,7 @@ class EnterAmountFragment : Fragment() {
 
             override fun onNumber(number: Int) {
                 refreshValue()
-                if (value.length < MAX_LENGTH) {
+                if (value.length < MAX_LENGTH && !maxAmountSelected) {
                     appendIfValidAfter(number.toString())
                     applyNewValue(value.toString())
                 }
@@ -95,13 +96,19 @@ class EnterAmountFragment : Fragment() {
 
             override fun onBack() {
                 refreshValue()
-                if (value.isNotEmpty()) {
+                if (maxAmountSelected) {
+                    value.clear()
+                } else if (value.isNotEmpty()) {
                     value.deleteCharAt(value.length - 1)
                 }
                 applyNewValue(value.toString())
+                maxAmountSelected = false
             }
 
             override fun onFunction() {
+                if (maxAmountSelected) {
+                    return
+                }
                 refreshValue()
                 val decimalSeparator = '.'
                 if (value.indexOf(decimalSeparator) == -1 && value.length < MAX_LENGTH) {
