@@ -50,7 +50,11 @@ class TransactionResultActivity : AppCompatActivity() {
         setContentView(R.layout.activity_successful_transaction)
 
         view_on_explorer.setOnClickListener { viewOnExplorer(transactionResult.transactionHash) }
-        transaction_close_btn.setOnClickListener { finish() }
+        transaction_close_btn.setOnClickListener {
+            val intent = Intent(this, WalletActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            startActivity(intent)
+        }
 
         val noCodeFormat = WalletApplication.getInstance().configuration.format.noCode()
 

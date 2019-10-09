@@ -170,18 +170,7 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
                                 ixType == TransactionConfidence.IXType.IX_LOCKED ||
                                 (confidence.getPeerCount() == 1 && confidence.isSent())) {
                             setState(SendCoinsViewModel.State.SENT);
-
-                            // Auto-close the dialog after a short delay
-                            if (config.getSendCoinsAutoclose()) {
-                                handler.postDelayed(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        activity.onHomeClick();
-                                        //Show transaction Result
-                                        showTransactionResult(sentTransaction);
-                                    }
-                                }, 500);
-                            }
+                            showTransactionResult(viewModel.sentTransaction);
                         }
                     }
 
@@ -590,27 +579,15 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
     }
 
     private void showTransactionResult(Transaction transaction) {
-        String address = WalletUtils.getToAddressOfSent(transaction, wallet).toBase58();
+        String address = viewModel.paymentIntent.getAddress().toBase58();
         TransactionResult transactionResult = new TransactionResult(
-                transaction.getValue(wallet), transaction.getExchangeRate(), address,
+                transaction.getValue(viewModel.wallet), transaction.getExchangeRate(), address,
                 transaction.getFee(), transaction.getHashAsString());
 
-        Intent transactionResultIntent = new Intent(getContext(),
-                TransactionResultActivity.class);
+        Intent transactionResultIntent = new Intent(getContext(), TransactionResultActivity.class);
         transactionResultIntent.putExtra(TransactionResultActivity.TRANSACTION_RESULT_EXTRA, transactionResult);
 
         startActivity(transactionResultIntent);
-    }
-
-    private void handleScan() {
-        startActivityForResult(new Intent(activity, ScanActivity.class), REQUEST_CODE_SCAN);
-    }
-
-    private void handleFeeCategory(final FeeCategory feeCategory) {
-        this.feeCategory = feeCategory;
-
-        updateView();
-        handler.post(dryrunRunnable);
     }
 
     private void handleEmpty() {
