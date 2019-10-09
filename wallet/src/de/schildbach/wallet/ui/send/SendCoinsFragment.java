@@ -987,17 +987,24 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
             return;
         }
 
-        Coin amount = enterAmountSharedViewModel.getDashAmount();
-        String address = viewModel.paymentIntent.getAddress().toBase58();
-
         Coin txFee = viewModel.dryrunSendRequest.tx.getFee();
+        Coin amount;
+        String total;
+        if(viewModel.dryrunSendRequest.emptyWallet) {
+            amount = enterAmountSharedViewModel.getDashAmount().minus(txFee);
+            total = enterAmountSharedViewModel.getDashAmount().toPlainString();
+        } else {
+            amount = enterAmountSharedViewModel.getDashAmount();
+            total = amount.add(txFee).toPlainString();
+        }
+
+        String address = viewModel.paymentIntent.getAddress().toBase58();
         Fiat fiatAmount = enterAmountSharedViewModel.getExchangeRate().coinToFiat(amount);
 
         String amountStr = MonetaryFormat.BTC.noCode().format(amount).toString();
         String amountFiat = Constants.LOCAL_FORMAT.format(fiatAmount).toString();
         String fiatSymbol = GenericUtils.currencySymbol(fiatAmount.currencyCode);
         String fee = txFee.toPlainString();
-        String total = amount.add(txFee).toPlainString();
 
         DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat, fiatSymbol, fee, total);
         dialog.show(getFragmentManager(), "ConfirmTransactionDialog");
