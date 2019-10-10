@@ -29,6 +29,7 @@ import de.schildbach.wallet.data.TransactionResult
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_successful_transaction.*
+import org.bitcoinj.utils.MonetaryFormat
 
 /**
  * @author Samuel Barbosa
@@ -50,11 +51,7 @@ class TransactionResultActivity : AppCompatActivity() {
         setContentView(R.layout.activity_successful_transaction)
 
         view_on_explorer.setOnClickListener { viewOnExplorer(transactionResult.transactionHash) }
-        transaction_close_btn.setOnClickListener {
-            val intent = Intent(this, WalletActivity::class.java)
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            startActivity(intent)
-        }
+        transaction_close_btn.setOnClickListener { finish() }
 
         val noCodeFormat = WalletApplication.getInstance().configuration.format.noCode()
 
@@ -66,7 +63,7 @@ class TransactionResultActivity : AppCompatActivity() {
             dash_amount.setAmount(transactionResult.dashAmount)
         }
 
-        transaction_fee.setFormat(noCodeFormat)
+        transaction_fee.setFormat(MonetaryFormat.BTC.noCode())
         transaction_fee.setAmount(transactionResult.feeAmount)
 
         transaction_address.text = WalletUtils.buildShortAddress(transactionResult.address)
