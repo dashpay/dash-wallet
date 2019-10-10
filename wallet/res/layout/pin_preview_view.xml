@@ -9,29 +9,37 @@
     tools:parentTag="android.widget.LinearLayout">
 
     <FrameLayout
-        android:layout_width="50dp"
-        android:layout_height="50dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_marginEnd="16dp"
         android:layout_marginRight="16dp"
-        android:background="@drawable/pin_item" />
+        android:background="@drawable/pin_item"
+        android:minWidth="50dp"
+        android:minHeight="50dp" />
 
     <FrameLayout
-        android:layout_width="50dp"
-        android:layout_height="50dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_marginEnd="16dp"
         android:layout_marginRight="16dp"
-        android:background="@drawable/pin_item" />
+        android:background="@drawable/pin_item"
+        android:minWidth="50dp"
+        android:minHeight="50dp" />
 
     <FrameLayout
-        android:layout_width="50dp"
-        android:layout_height="50dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_marginEnd="16dp"
         android:layout_marginRight="16dp"
-        android:background="@drawable/pin_item" />
+        android:background="@drawable/pin_item"
+        android:minWidth="50dp"
+        android:minHeight="50dp" />
 
     <FrameLayout
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:background="@drawable/pin_item" />
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/pin_item"
+        android:minWidth="50dp"
+        android:minHeight="50dp" />
 
 </merge>

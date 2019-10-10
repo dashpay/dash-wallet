@@ -375,7 +375,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                                         && fingerprintHelper.init() && !fingerprintHelper.isFingerprintEnabled()
                                         && oldPassword == null && state == State.DONE) {
                                     //noinspection ConstantConditions
-                                    EnableFingerprintDialog.show(newPassword, onboarding, activity.getFragmentManager());
+                                    EnableFingerprintDialog.show(newPassword, onboarding, activity.getSupportFragmentManager());
                                 } else {
                                     if (onboarding && activity instanceof OnOnboardingCompleteListener) {
                                         ((OnOnboardingCompleteListener) activity).onOnboardingComplete();

@@ -18,13 +18,14 @@ package de.schildbach.wallet.ui;
 
 import android.app.Activity;
 import android.app.Dialog;
-import android.app.DialogFragment;
-import android.app.FragmentManager;
 import android.content.DialogInterface;
 import android.os.Build;
 import android.os.Bundle;
 
 import androidx.core.os.CancellationSignal;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.FragmentManager;
+
 import android.view.LayoutInflater;
 import android.view.View;
 
@@ -89,7 +90,6 @@ public class EnableFingerprintDialog extends DialogFragment {
 
         fingerprintView = view.findViewById(R.id.fingerprint_view);
         fingerprintView.setVisibility(View.VISIBLE);
-        fingerprintView.hideSeparator();
         fingerprintView.setText(R.string.touch_fingerprint_to_enable);
 
         FingerprintHelper fingerprintHelper = new FingerprintHelper(getActivity());

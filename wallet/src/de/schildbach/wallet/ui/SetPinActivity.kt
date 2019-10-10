@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.view.MenuItem
@@ -32,9 +33,10 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.widget.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
+import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 
-class SetPinActivity : AppCompatActivity() {
+class SetPinActivity : AppCompatActivity(), EnableFingerprintDialog.OnFingerprintEnabledListener {
 
     private lateinit var numericKeyboardView: NumericKeyboardView
     private lateinit var confirmButtonView: View
@@ -275,9 +277,20 @@ class SetPinActivity : AppCompatActivity() {
             startActivityNewTask(intent)
         })
         viewModel.startWalletActivity.observe(this, Observer {
-            val intent = Intent(this, WalletActivity::class.java)
-            startActivityNewTask(intent)
+            val fingerprintHelper = FingerprintHelper(this)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                    && fingerprintHelper.init() && !fingerprintHelper.isFingerprintEnabled) {
+
+                EnableFingerprintDialog.show(viewModel.pin.joinToString(""), true, supportFragmentManager)
+            } else {
+                startWalletActivity()
+            }
         })
+    }
+
+    private fun startWalletActivity() {
+        val intent = Intent(this, WalletActivity::class.java)
+        startActivityNewTask(intent)
     }
 
     private fun startActivityNewTask(intent: Intent) {
@@ -309,5 +322,9 @@ class SetPinActivity : AppCompatActivity() {
                 finish()
             }
         }
+    }
+
+    override fun onFingerprintEnabled() {
+        startWalletActivity()
     }
 }

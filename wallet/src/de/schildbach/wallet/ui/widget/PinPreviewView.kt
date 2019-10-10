@@ -46,9 +46,22 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
 
     init {
         inflate(context, R.layout.pin_preview_view, this)
+        val itemSize: Int
+        val attrsArray = context.obtainStyledAttributes(attrs, R.styleable.PinPreviewView)
+        try {
+            itemSize = attrsArray.getDimensionPixelSize(R.styleable.PinPreviewView_pp_item_size, 0)
+        } finally {
+            attrsArray.recycle()
+        }
+
         lastIndex = childCount - 1
         for (i in 0..lastIndex) {
-            pinItems.add(getChildAt(i))
+            val item = getChildAt(i)
+            pinItems.add(item)
+            if (itemSize > 0) {
+                item.minimumWidth = itemSize
+                item.minimumHeight = itemSize
+            }
         }
     }
 
