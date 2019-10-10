@@ -95,7 +95,6 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
         }
     }
 
-
     private fun blinkLastItem() {
         val pinItemViewBackground = pinItems[lastIndex].background as TransitionDrawable
         pinItemViewBackground.resetTransition()
