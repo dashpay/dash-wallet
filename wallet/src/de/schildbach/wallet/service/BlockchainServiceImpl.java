@@ -163,6 +163,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private static final Logger log = LoggerFactory.getLogger(BlockchainServiceImpl.class);
 
+    public static final String START_AS_FOREGROUND_EXTRA = "start_as_foreground";
+
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
         @Override
@@ -317,9 +319,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     final boolean connectivityNotificationEnabled = config.getConnectivityNotificationEnabled();
 
                     if (!connectivityNotificationEnabled || numPeers == 0) {
-                        stopForeground(true);
+                        nm.cancel(Constants.NOTIFICATION_ID_CONNECTED);
                     } else {
-                        final NotificationCompat.Builder notification = new NotificationCompat.Builder(BlockchainServiceImpl.this, Constants.NOTIFICATION_CHANNEL_ID_ONGOING);
+                        final Notification.Builder notification = new Notification.Builder(BlockchainServiceImpl.this);
                         notification.setSmallIcon(R.drawable.stat_sys_peers, numPeers > 4 ? 4 : numPeers);
                         notification.setContentTitle(getString(R.string.app_name));
                         notification.setContentText(getString(R.string.notification_peers_connected_msg, numPeers));
@@ -327,7 +329,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                                 new Intent(BlockchainServiceImpl.this, WalletActivity.class), 0));
                         notification.setWhen(System.currentTimeMillis());
                         notification.setOngoing(true);
-                        startForeground(Constants.NOTIFICATION_ID_CONNECTED, notification.build());
+                        nm.notify(Constants.NOTIFICATION_ID_CONNECTED, notification.getNotification());
                     }
 
                     // send broadcast
@@ -730,6 +732,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         super.onStartCommand(intent, flags, startId);
 
         if (intent != null) {
+            //Restart service as a Foreground Service if it's synchronizing the blockchain
+            Bundle extras = intent.getExtras();
+            if (extras != null && extras.containsKey(START_AS_FOREGROUND_EXTRA)) {
+                startForeground();
+            }
+
             log.info("service start command: " + intent + (intent.hasExtra(Intent.EXTRA_ALARM_COUNT)
                     ? " (alarm count: " + intent.getIntExtra(Intent.EXTRA_ALARM_COUNT, 0) + ")" : ""));
 
