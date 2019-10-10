@@ -58,7 +58,6 @@ class EnterAmountFragment : Fragment() {
     private lateinit var viewModel: EnterAmountViewModel
     private lateinit var sharedViewModel: EnterAmountSharedViewModel
 
-    var displayEditedValue: Boolean = true
     var maxAmountSelected: Boolean = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -89,11 +88,10 @@ class EnterAmountFragment : Fragment() {
 
             override fun onNumber(number: Int) {
                 refreshValue()
-                if (!viewModel.dashToFiatDirectionValue) {
-                    val numOfDecimals = if (value.indexOf(DECIMAL_SEPARATOR) > -1) value.length - value.indexOf(DECIMAL_SEPARATOR) else 0
-                    if (numOfDecimals > 2) {
-                        return
-                    }
+                val numOfDecimals = if (value.indexOf(DECIMAL_SEPARATOR) > -1) value.length - value.indexOf(DECIMAL_SEPARATOR) else 0
+                val decimalsThreshold = if (viewModel.dashToFiatDirectionValue) 6 else 2
+                if (numOfDecimals > decimalsThreshold) {
+                    return
                 }
                 if (value.length < MAX_LENGTH && !maxAmountSelected) {
                     appendIfValidAfter(number.toString())
@@ -160,7 +158,7 @@ class EnterAmountFragment : Fragment() {
         }
 
         sharedViewModel.exchangeRateData.value?.run {
-            viewModel.calculateDependent(sharedViewModel.exchangeRate)
+            viewModel.calculateDependent(sharedViewModel.exchangeRate!!)
         }
     }
 
@@ -190,20 +188,15 @@ class EnterAmountFragment : Fragment() {
         viewModel = ViewModelProviders.of(this)[EnterAmountViewModel::class.java]
 
         viewModel.dashToFiatDirectionData.observe(viewLifecycleOwner, Observer {
-            val exchangeRate = sharedViewModel.exchangeRateData.value
             if (it) {
                 val dashAmount = viewModel.dashAmountData.value!!
                 input_amount.text = if (dashAmount.isZero) "" else editFieldFormat.format(viewModel.dashAmountData.value)
-                exchangeRate?.run {
-                    calc_amount.text = Constants.LOCAL_FORMAT.format(viewModel.fiatAmountData.value)
-                }
             } else {
-                val fiatAmount = viewModel.fiatAmountData.value!!
-                input_amount.text = if (fiatAmount.isZero) "" else Constants.LOCAL_FORMAT.format(fiatAmount)
-                exchangeRate?.run {
-                    calc_amount.text = friendlyFormat.format(viewModel.dashAmountData.value)
-                }
+                val currencyCode = sharedViewModel.exchangeRateData.value?.currencyCode ?: viewModel.fiatAmountData.value!!.currencyCode
+                viewModel.fiatAmountData.value = Fiat.parseFiat(currencyCode, calc_amount.text.toString())
+                input_amount.text = if (viewModel.fiatAmountData.value!!.isZero) "" else Constants.LOCAL_FORMAT.format(viewModel.fiatAmountData.value)
             }
+            viewModel.calculateDependent(sharedViewModel.exchangeRate)
             setupSymbolsVisibility()
         })
         viewModel.dashAmountData.observe(viewLifecycleOwner, Observer {

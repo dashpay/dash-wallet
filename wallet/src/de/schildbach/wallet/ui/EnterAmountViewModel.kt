@@ -32,8 +32,8 @@ class EnterAmountViewModel(application: Application) : AndroidViewModel(applicat
     val dashAmountData = MutableLiveData<Coin>()
     val fiatAmountData = MutableLiveData<Fiat>()
 
-    fun calculateDependent(exchangeRate: ExchangeRate) {
-        exchangeRate.run {
+    fun calculateDependent(exchangeRate: ExchangeRate?) {
+        exchangeRate?.run {
             if (dashToFiatDirectionValue) {
                 fiatAmountData.value = coinToFiat(dashAmountData.value)
             } else {

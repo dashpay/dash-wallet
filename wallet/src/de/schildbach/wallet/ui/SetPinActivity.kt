@@ -135,7 +135,7 @@ class SetPinActivity : AppCompatActivity() {
                 }
             }
 
-            override fun onBack() {
+            override fun onBack(longClick: Boolean) {
                 if (pin.size > 0) {
                     pin.removeAt(pin.lastIndex)
                     pinPreviewView.prev()
