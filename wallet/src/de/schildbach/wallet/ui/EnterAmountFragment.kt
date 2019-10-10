@@ -52,8 +52,8 @@ class EnterAmountFragment : Fragment() {
         }
     }
 
-    private val friendlyFormat = MonetaryFormat.BTC.minDecimals(2).repeatOptionalDecimals(1, 6).noCode()
-    private val editFieldFormat = MonetaryFormat.BTC.minDecimals(0).noCode()
+    private val dashFormat = MonetaryFormat().noCode().minDecimals(6).optionalDecimals()
+    private val fiatFormat = Constants.LOCAL_FORMAT
 
     private lateinit var viewModel: EnterAmountViewModel
     private lateinit var sharedViewModel: EnterAmountSharedViewModel
@@ -190,24 +190,24 @@ class EnterAmountFragment : Fragment() {
         viewModel.dashToFiatDirectionData.observe(viewLifecycleOwner, Observer {
             if (it) {
                 val dashAmount = viewModel.dashAmountData.value!!
-                input_amount.text = if (dashAmount.isZero) "" else editFieldFormat.format(viewModel.dashAmountData.value)
+                input_amount.text = if (dashAmount.isZero) "" else dashFormat.format(viewModel.dashAmountData.value)
             } else {
                 val currencyCode = sharedViewModel.exchangeRateData.value?.currencyCode ?: viewModel.fiatAmountData.value!!.currencyCode
                 viewModel.fiatAmountData.value = Fiat.parseFiat(currencyCode, calc_amount.text.toString())
-                input_amount.text = if (viewModel.fiatAmountData.value!!.isZero) "" else Constants.LOCAL_FORMAT.format(viewModel.fiatAmountData.value)
+                input_amount.text = if (viewModel.fiatAmountData.value!!.isZero) "" else fiatFormat.format(viewModel.fiatAmountData.value)
             }
             viewModel.calculateDependent(sharedViewModel.exchangeRate)
             setupSymbolsVisibility()
         })
         viewModel.dashAmountData.observe(viewLifecycleOwner, Observer {
             if (!viewModel.dashToFiatDirectionValue) {
-                calc_amount.text = friendlyFormat.format(it)
+                calc_amount.text = dashFormat.format(it)
             }
             sharedViewModel.dashAmountData.value = it
         })
         viewModel.fiatAmountData.observe(viewLifecycleOwner, Observer {
             if (viewModel.dashToFiatDirectionValue) {
-                calc_amount.text = Constants.LOCAL_FORMAT.format(it)
+                calc_amount.text = fiatFormat.format(it)
             }
             applyCurrencySymbol(GenericUtils.currencySymbol(it.currencyCode))
         })
