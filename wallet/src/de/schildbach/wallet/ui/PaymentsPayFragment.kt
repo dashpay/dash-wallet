@@ -49,7 +49,7 @@ class PaymentsPayFragment : Fragment() {
     }
 
     private fun handleScan(clickView: View) {
-        ScanActivity.startForResult(activity, clickView, REQUEST_CODE_SCAN)
+        ScanActivity.startForResult(this, activity, REQUEST_CODE_SCAN)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
