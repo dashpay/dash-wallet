@@ -57,18 +57,15 @@ import org.bitcoin.protocols.payments.Protos.Payment;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.InsufficientMoneyException;
-import org.bitcoinj.core.SporkManager;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
-import org.bitcoinj.core.TransactionLockRequest;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
-import org.bitcoinj.wallet.InstantXCoinSelector;
 import org.bitcoinj.wallet.KeyChain.KeyPurpose;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
@@ -654,9 +651,6 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
 
     private SendRequest createSendRequest(PaymentIntent paymentIntent, boolean signInputs, boolean forceEnsureMinRequiredFee) {
 
-        final Wallet wallet = viewModel.wallet;
-        boolean llmqInstantSendActive = wallet.getContext().sporkManager.isSporkActive(SporkManager.SPORK_20_INSTANTSEND_LLMQ_BASED);
-
         paymentIntent.setInstantX(false); //to make sure the correct instance of Transaction class is used in toSendRequest() method
         final SendRequest sendRequest = paymentIntent.toSendRequest();
         sendRequest.coinSelector = ZeroConfCoinSelector.get();
@@ -665,7 +659,7 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
         sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee;
         sendRequest.signInputs = signInputs;
 
-        Coin walletBalance = wallet.getBalance(BalanceType.ESTIMATED);
+        Coin walletBalance = viewModel.wallet.getBalance(BalanceType.ESTIMATED);
         sendRequest.emptyWallet = viewModel.paymentIntent.mayEditAmount() && walletBalance.equals(paymentIntent.getAmount());
 
         return sendRequest;
@@ -994,7 +988,7 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
         Coin txFee = viewModel.dryrunSendRequest.tx.getFee();
         Coin amount;
         String total;
-        if(viewModel.dryrunSendRequest.emptyWallet) {
+        if (viewModel.dryrunSendRequest.emptyWallet) {
             amount = enterAmountSharedViewModel.getDashAmount().minus(txFee);
             total = enterAmountSharedViewModel.getDashAmount().toPlainString();
         } else {
