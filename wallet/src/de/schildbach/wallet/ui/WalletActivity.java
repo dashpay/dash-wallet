@@ -103,7 +103,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
         EnableFingerprintDialog.OnFingerprintEnabledListener,
-        EncryptKeysDialogFragment.OnOnboardingCompleteListener,
         WalletTransactionsFragment.MotionLayoutProvider {
 
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
@@ -1167,11 +1166,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (walletTransactionsFragment != null) {
             walletTransactionsFragment.onLockChanged(WalletLock.getInstance().isWalletLocked(wallet));
         }
-    }
-
-    @Override
-    public void onOnboardingComplete() {
-
     }
 
     @Override

@@ -23,9 +23,8 @@ import android.os.Process
 import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.CheckWalletPasswordTask
-import org.bitcoinj.wallet.Wallet
 
-class CheckPinLiveData(application: Application) : MutableLiveData<Resource<Wallet>>() {
+class CheckPinLiveData(application: Application) : MutableLiveData<Resource<String>>() {
 
     val backgroundHandler: Handler
 
@@ -44,12 +43,12 @@ class CheckPinLiveData(application: Application) : MutableLiveData<Resource<Wall
             checkPinTask = object : CheckWalletPasswordTask(backgroundHandler) {
 
                 override fun onBadPassword() {
-                    value = Resource.error("", null)
+                    value = Resource.error("", pin)
                     checkPinTask = null
                 }
 
                 override fun onSuccess() {
-                    value = Resource.success(walletApplication.wallet)
+                    value = Resource.success(pin)
                     checkPinTask = null
                 }
             }

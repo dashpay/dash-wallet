@@ -24,6 +24,7 @@ import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.LinearLayout
 import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.pin_preview_view.view.*
 
 
 class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs) {
@@ -46,6 +47,7 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
 
     init {
         inflate(context, R.layout.pin_preview_view, this)
+        orientation = VERTICAL
         val itemSize: Int
         val attrsArray = context.obtainStyledAttributes(attrs, R.styleable.PinPreviewView)
         try {
@@ -54,9 +56,9 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
             attrsArray.recycle()
         }
 
-        lastIndex = childCount - 1
+        lastIndex = items.childCount - 1
         for (i in 0..lastIndex) {
-            val item = getChildAt(i)
+            val item = items.getChildAt(i)
             pinItems.add(item)
             if (itemSize > 0) {
                 item.minimumWidth = itemSize
@@ -118,5 +120,14 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
     fun shake() {
         val shakeAnimation = AnimationUtils.loadAnimation(context, R.anim.shake_pin)
         startAnimation(shakeAnimation)
+    }
+
+    fun badPin(remainingAttemptsMessage: String) {
+        bad_pin.text = resources.getString(R.string.wallet_lock_wrong_pin, remainingAttemptsMessage)
+        bad_pin.visibility = View.VISIBLE
+    }
+
+    fun clearBadPin() {
+        bad_pin.visibility = View.GONE
     }
 }
