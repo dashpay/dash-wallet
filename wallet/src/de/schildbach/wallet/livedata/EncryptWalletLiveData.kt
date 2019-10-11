@@ -22,6 +22,7 @@ import android.os.AsyncTask
 import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.util.FingerprintHelper
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
 import org.bitcoinj.wallet.Wallet
@@ -62,14 +63,17 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
         override fun doInBackground(vararg args: String): Resource<Wallet> {
             val password = args[0]
             val wallet = walletApplication.wallet
+            val config = walletApplication.configuration
             try {
                 // For the new key, we create a new key crypter according to the desired parameters.
                 val keyCrypter = KeyCrypterScrypt(scryptIterationsTarget)
                 val newKey = keyCrypter.deriveKey(password)
                 wallet.encrypt(keyCrypter, newKey)
 
-                org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
-                walletApplication.saveWalletAndFinalizeInitialization()
+                if (config.lastVersionCode == 0) {
+                    org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
+                    walletApplication.saveWalletAndFinalizeInitialization()
+                }
 
                 log.info("wallet successfully encrypted, using key derived by new spending password (${keyCrypter.scryptParameters.n} scrypt iterations)")
 

@@ -174,8 +174,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }
 
         //TODO: REMOVE
-        Intent cpaIntent = new Intent(this, ChangePinActivity.class);
-        startActivity(cpaIntent);
+        startActivity(SetPinActivity.Companion.createIntent(this,
+                R.string.wallet_options_encrypt_keys_change, true));
     }
 
     private void adjustHeaderLayout() {

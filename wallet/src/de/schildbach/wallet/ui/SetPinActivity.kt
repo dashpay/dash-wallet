@@ -62,18 +62,19 @@ class SetPinActivity : AppCompatActivity() {
 
         private const val EXTRA_TITLE_RES_ID = "extra_title_res_id"
         private const val EXTRA_PASSWORD = "extra_password"
+        private const val CHANGE_PIN = "change_pin"
 
-        fun createIntent(context: Context, titleResId: Int): Intent {
+        @JvmOverloads
+        fun createIntent(context: Context, titleResId: Int,
+                         changePin: Boolean = false, password: String? = null): Intent {
             val intent = Intent(context, SetPinActivity::class.java)
             intent.putExtra(EXTRA_TITLE_RES_ID, titleResId)
+            intent.putExtra(CHANGE_PIN, changePin)
+
+            password.let { intent.putExtra(EXTRA_PASSWORD, password) }
             return intent
         }
 
-        fun createIntent(context: Context, titleResId: Int, password: String?): Intent {
-            val intent = createIntent(context, titleResId)
-            intent.putExtra(EXTRA_PASSWORD, password)
-            return intent
-        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -265,7 +266,11 @@ class SetPinActivity : AppCompatActivity() {
                     if (state == State.DECRYPTING) {
                         setState(State.SET_PIN)
                     } else {
-                        viewModel.initWallet()
+                        if (intent.getBooleanExtra(CHANGE_PIN, false)) {
+                            finish()
+                        } else {
+                            viewModel.initWallet()
+                        }
                     }
                 }
             }
