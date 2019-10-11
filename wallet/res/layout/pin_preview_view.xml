@@ -4,34 +4,63 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="center_horizontal"
-    android:orientation="horizontal"
+    android:orientation="vertical"
     tools:context="de.schildbach.wallet.ui.widget.PinPreviewView"
     tools:parentTag="android.widget.LinearLayout">
 
-    <FrameLayout
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginRight="16dp"
-        android:background="@drawable/pin_item" />
+    <LinearLayout
+        android:id="@+id/items"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="horizontal">
 
-    <FrameLayout
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginRight="16dp"
-        android:background="@drawable/pin_item" />
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:layout_marginRight="16dp"
+            android:background="@drawable/pin_item"
+            android:minWidth="50dp"
+            android:minHeight="50dp" />
 
-    <FrameLayout
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginRight="16dp"
-        android:background="@drawable/pin_item" />
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:layout_marginRight="16dp"
+            android:background="@drawable/pin_item"
+            android:minWidth="50dp"
+            android:minHeight="50dp" />
 
-    <FrameLayout
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:background="@drawable/pin_item" />
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:layout_marginRight="16dp"
+            android:background="@drawable/pin_item"
+            android:minWidth="50dp"
+            android:minHeight="50dp" />
+
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/pin_item"
+            android:minWidth="50dp"
+            android:minHeight="50dp" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/bad_pin"
+        style="@style/MontserratSemiBold"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/private_key_bad_password"
+        android:textColor="@color/fg_error"
+        android:textSize="12sp"
+        android:visibility="gone"
+        tools:visibility="visible" />
 
 </merge>

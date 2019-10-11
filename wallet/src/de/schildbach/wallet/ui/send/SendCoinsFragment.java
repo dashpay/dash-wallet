@@ -93,20 +93,22 @@ import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.offline.DirectPaymentTask;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
+import de.schildbach.wallet.ui.CheckPinDialog;
+import de.schildbach.wallet.ui.CheckPinSharedModel;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StreamInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
 import de.schildbach.wallet.ui.SingleActionSharedViewModel;
 import de.schildbach.wallet.ui.TransactionResultActivity;
-import de.schildbach.wallet.ui.UnlockWalletDialogFragment;
 import de.schildbach.wallet.util.Bluetooth;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
+import kotlin.Pair;
 
 import static org.dash.wallet.common.Constants.CHAR_CHECKMARK;
 
-public final class SendCoinsFragment extends Fragment implements UnlockWalletDialogFragment.OnUnlockWalletListener {
+public final class SendCoinsFragment extends Fragment {
 
     private static Coin ECONOMIC_FEE = Coin.valueOf(1000);
 
@@ -130,6 +132,9 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
 
     private static final int REQUEST_CODE_ENABLE_BLUETOOTH_FOR_PAYMENT_REQUEST = 0;
     private static final int REQUEST_CODE_ENABLE_BLUETOOTH_FOR_DIRECT_PAYMENT = 1;
+
+    private static final int AUTH_REQUEST_CODE_MAX = 1;
+    private static final int AUTH_REQUEST_CODE_SEND = 2;
 
     private static final Logger log = LoggerFactory.getLogger(SendCoinsFragment.class);
 
@@ -166,6 +171,24 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
                 updateView();
             }
         });
+        CheckPinSharedModel checkPinSharedModel = ViewModelProviders.of(activity).get(CheckPinSharedModel.class);
+        checkPinSharedModel.getOnCorrectPinCallback().observe(activity, new Observer<Pair<Integer, String>>() {
+            @Override
+            public void onChanged(Pair<Integer, String> data) {
+                switch (data.getFirst()) {
+                    case AUTH_REQUEST_CODE_MAX:
+                        handleEmpty();
+                        break;
+                    case AUTH_REQUEST_CODE_SEND:
+                        String password = data.getSecond();
+                        if (password != null) {
+                            handleGo(password);
+                        }
+                        break;
+                }
+            }
+        });
+
         enterAmountSharedViewModel = ViewModelProviders.of(activity).get(EnterAmountSharedViewModel.class);
         enterAmountSharedViewModel.getDashAmountData().observe(getViewLifecycleOwner(), new Observer<Coin>() {
             @Override
@@ -188,14 +211,19 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
         enterAmountSharedViewModel.getMaxButtonClickEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean unused) {
-                handleEmpty();
+                final WalletLock walletLock = WalletLock.getInstance();
+                if (walletLock.isWalletLocked(viewModel.wallet)) {
+                    CheckPinDialog.show(getFragmentManager(), AUTH_REQUEST_CODE_MAX);
+                } else {
+                    handleEmpty();
+                }
             }
         });
         SingleActionSharedViewModel confirmTransactionSharedViewModel = ViewModelProviders.of(activity).get(SingleActionSharedViewModel.class);
         confirmTransactionSharedViewModel.getClickConfirmButtonEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean aBoolean) {
-                UnlockWalletDialogFragment.show(getFragmentManager(), SendCoinsFragment.this);
+                CheckPinDialog.show(fragmentManager, AUTH_REQUEST_CODE_SEND);
             }
         });
 
@@ -526,24 +554,11 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
     }
 
     private void handleEmpty() {
-        final WalletLock walletLock = WalletLock.getInstance();
-        final Wallet wallet = viewModel.wallet;
-        if (walletLock.isWalletLocked(wallet)) {
-            UnlockWalletDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
-                @Override
-                public void onDismiss(DialogInterface dialog) {
-                    if (!walletLock.isWalletLocked(wallet)) {
-                        handleEmpty();
-                    }
-                }
-            });
-        } else {
-            final Coin available = wallet.getBalance(BalanceType.ESTIMATED);
-            enterAmountSharedViewModel.getApplyMaxAmountEvent().setValue(available);
+        final Coin available = viewModel.wallet.getBalance(BalanceType.ESTIMATED);
+        enterAmountSharedViewModel.getApplyMaxAmountEvent().setValue(available);
 
-            updateView();
-            handler.post(dryrunRunnable);
-        }
+        updateView();
+        handler.post(dryrunRunnable);
     }
 
     private Runnable dryrunRunnable = new Runnable() {
@@ -935,13 +950,6 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
 
         DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat, fiatSymbol, fee, total);
         dialog.show(getFragmentManager(), "ConfirmTransactionDialog");
-    }
-
-    @Override
-    public void onUnlockWallet(String password) {
-        if (password != null) {
-            handleGo(password);
-        }
     }
 
     private void playSentSound() {

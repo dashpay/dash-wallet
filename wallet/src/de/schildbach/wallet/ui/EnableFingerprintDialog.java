@@ -18,15 +18,16 @@ package de.schildbach.wallet.ui;
 
 import android.app.Activity;
 import android.app.Dialog;
-import android.app.DialogFragment;
-import android.app.FragmentManager;
 import android.content.DialogInterface;
 import android.os.Build;
 import android.os.Bundle;
-
-import androidx.core.os.CancellationSignal;
 import android.view.LayoutInflater;
 import android.view.View;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.core.os.CancellationSignal;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.FragmentManager;
 
 import org.dash.wallet.common.ui.DialogBuilder;
 
@@ -44,25 +45,24 @@ public class EnableFingerprintDialog extends DialogFragment {
     private CancellationSignal fingerprintCancellationSignal;
 
     private static final String PASSWORD_ARG = "fingerprint_password";
-    private static final String ONBOARDING_ARG = "onboarding";
+    private static final String ARG_REQUEST_CODE = "arg_request_code";
 
-    public static EnableFingerprintDialog show(String password, boolean onboarding, FragmentManager fragmentManager) {
-        EnableFingerprintDialog enableFingerprintDialog = new EnableFingerprintDialog();
-
-        Bundle args = new Bundle();
-        args.putString(PASSWORD_ARG, password);
-        args.putBoolean(ONBOARDING_ARG, onboarding);
-
-        enableFingerprintDialog.setArguments(args);
-        enableFingerprintDialog.show(fragmentManager, EnableFingerprintDialog.class.getSimpleName());
-        return enableFingerprintDialog;
+    public static boolean shouldBeShown(Activity activity) {
+        FingerprintHelper fingerprintHelper = new FingerprintHelper(activity);
+        boolean remindEnableFingerprint = WalletApplication.getInstance().getConfiguration().getRemindEnableFingerprint();
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && fingerprintHelper.init() && !fingerprintHelper.isFingerprintEnabled() && remindEnableFingerprint;
     }
 
     public static EnableFingerprintDialog show(String password, FragmentManager fragmentManager) {
+        return show(password, 0, fragmentManager);
+    }
+
+    public static EnableFingerprintDialog show(String password, int requestCode, FragmentManager fragmentManager) {
         EnableFingerprintDialog enableFingerprintDialog = new EnableFingerprintDialog();
 
         Bundle args = new Bundle();
         args.putString(PASSWORD_ARG, password);
+        args.putInt(ARG_REQUEST_CODE, requestCode);
 
         enableFingerprintDialog.setArguments(args);
         enableFingerprintDialog.show(fragmentManager, EnableFingerprintDialog.class.getSimpleName());
@@ -89,7 +89,6 @@ public class EnableFingerprintDialog extends DialogFragment {
 
         fingerprintView = view.findViewById(R.id.fingerprint_view);
         fingerprintView.setVisibility(View.VISIBLE);
-        fingerprintView.hideSeparator();
         fingerprintView.setText(R.string.touch_fingerprint_to_enable);
 
         FingerprintHelper fingerprintHelper = new FingerprintHelper(getActivity());
@@ -101,8 +100,10 @@ public class EnableFingerprintDialog extends DialogFragment {
                         public void onSuccess(String savedPass) {
                             fingerprintCancellationSignal = null;
 
-                            if (activity != null && activity instanceof OnFingerprintEnabledListener) {
+                            if (activity instanceof OnFingerprintEnabledListener) {
                                 ((OnFingerprintEnabledListener) activity).onFingerprintEnabled();
+                            } else if (getTargetFragment() instanceof OnFingerprintEnabledListener) {
+                                ((OnFingerprintEnabledListener) getTargetFragment()).onFingerprintEnabled();
                             }
 
                             dismiss();
@@ -124,7 +125,9 @@ public class EnableFingerprintDialog extends DialogFragment {
             dismiss();
         }
 
-        return builder.create();
+        AlertDialog dialog = builder.create();
+        dialog.setCanceledOnTouchOutside(false);
+        return dialog;
     }
 
     @Override
@@ -134,11 +137,12 @@ public class EnableFingerprintDialog extends DialogFragment {
         }
 
         Activity activity = getActivity();
-        Bundle args = getArguments();
-        boolean onboarding = args != null && args.getBoolean(ONBOARDING_ARG);
-        if (onboarding && activity instanceof EncryptKeysDialogFragment.OnOnboardingCompleteListener) {
-            ((EncryptKeysDialogFragment.OnOnboardingCompleteListener) activity).onOnboardingComplete();
+        if (activity instanceof OnDismissListener) {
+            Bundle args = getArguments();
+            int requestCode = args != null ? args.getInt(ARG_REQUEST_CODE) : 0;
+            ((OnDismissListener) activity).onDismiss(dialog, requestCode);
         }
+
         super.onDismiss(dialog);
     }
 
@@ -146,4 +150,7 @@ public class EnableFingerprintDialog extends DialogFragment {
         void onFingerprintEnabled();
     }
 
+    interface OnDismissListener {
+        void onDismiss(DialogInterface dialog, int requestCode);
+    }
 }

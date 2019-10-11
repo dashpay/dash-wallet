@@ -66,6 +66,12 @@ class NumericKeyboardView(context: Context, attrs: AttributeSet) : TableLayout(c
         findViewById<View>(R.id.btn_function).isEnabled = enabled
     }
 
+    override fun setEnabled(enabled: Boolean) {
+        for (btnResId in ALL_BUTTONS_RES_ID) {
+            findViewById<View>(btnResId).isClickable = enabled
+        }
+    }
+
     fun enableDecSeparator(enabled: Boolean) {
         val functionButton = findViewById<TextView>(R.id.btn_function)
         if (enabled) {

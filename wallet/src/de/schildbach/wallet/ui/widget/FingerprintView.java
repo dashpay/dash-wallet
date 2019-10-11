@@ -17,9 +17,6 @@
 package de.schildbach.wallet.ui.widget;
 
 import android.content.Context;
-import androidx.annotation.Nullable;
-import androidx.annotation.StringRes;
-import androidx.core.content.ContextCompat;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -28,6 +25,9 @@ import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
 
 import de.schildbach.wallet_test.R;
 
@@ -38,7 +38,6 @@ public class FingerprintView extends LinearLayout {
 
     private TextView fingerprintText;
     private ImageView fingerprintIcon;
-    private View separator;
     private String initialText;
 
     public FingerprintView(Context context) {
@@ -59,13 +58,13 @@ public class FingerprintView extends LinearLayout {
 
     private void init() {
         LayoutInflater.from(getContext()).inflate(R.layout.fingerprint_view, this, true);
-        separator = findViewById(R.id.separator);
         fingerprintText = findViewById(R.id.fingerprint_text);
         fingerprintIcon = findViewById(R.id.fingerprint_icon);
         initialText = fingerprintText.getText().toString();
     }
 
     public void setText(String text) {
+        fingerprintText.setVisibility(View.VISIBLE);
         fingerprintText.setText(text);
         initialText = text;
     }
@@ -80,22 +79,15 @@ public class FingerprintView extends LinearLayout {
         initialText = fingerprintText.getText().toString();
 
         fingerprintIcon.startAnimation(shakeAnimation);
-        fingerprintIcon.setColorFilter(ContextCompat.getColor(context, R.color.fg_error));
         if (exceededMaxAttempts) {
             fingerprintText.setText(R.string.unlock_with_fingerprint_error_max_attempts);
         } else {
             fingerprintText.setText(R.string.unlock_with_fingerprint_error);
         }
+        fingerprintText.setVisibility(View.VISIBLE);
     }
 
     public void hideError() {
-        fingerprintIcon.setColorFilter(ContextCompat.getColor(getContext(),
-                android.R.color.transparent));
         fingerprintText.setText(initialText);
     }
-
-    public void hideSeparator() {
-        separator.setVisibility(View.GONE);
-    }
-
 }
