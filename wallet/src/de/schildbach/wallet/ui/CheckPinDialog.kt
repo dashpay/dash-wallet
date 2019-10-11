@@ -43,7 +43,7 @@ class CheckPinDialog : DialogFragment() {
         }
     }
 
-    private var state = State.ENTER_PIN
+    private lateinit var state: State
 
     private lateinit var viewModel: CheckPinViewModel
     private lateinit var sharedModel: CheckPinSharedModel
@@ -54,6 +54,7 @@ class CheckPinDialog : DialogFragment() {
 
     private enum class State {
         ENTER_PIN,
+        INVALID_PIN,
         DECRYPTING
     }
 
@@ -70,23 +71,23 @@ class CheckPinDialog : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel = ViewModelProviders.of(this).get(CheckPinViewModel::class.java)
-        initFingerprint()
-
-        viewModel.encryptWalletLiveData.observe(viewLifecycleOwner, Observer {
+        viewModel.checkPinLiveData.observe(viewLifecycleOwner, Observer {
             when (it.status) {
                 Status.ERROR -> {
-                    setState(State.ENTER_PIN)
-                    pin_preview.shake()
+                    pinRetryController.failedAttempt(it.data)
+                    setState(State.INVALID_PIN)
                 }
                 Status.LOADING -> {
                     setState(State.DECRYPTING)
                 }
                 Status.SUCCESS -> {
-                    dismiss(viewModel.pin.toString())
+                    dismiss(it.data!!)
+                    if (EnableFingerprintDialog.shouldBeShown(activity!!)) {
+                        EnableFingerprintDialog.show(it.data, activity!!.supportFragmentManager)
+                    }
                 }
             }
         })
-
         cancel_button.setOnClickListener {
             sharedModel.onCancelCallback.call()
             dismiss()
@@ -124,11 +125,17 @@ class CheckPinDialog : DialogFragment() {
 
             }
         }
+        initFingerprint()
+        setState(State.ENTER_PIN)
     }
 
     private fun dismiss(pin: String) {
+        if (pinRetryController.isLocked) {
+            return
+        }
         val requestCode = arguments!!.getInt(ARG_REQUEST_CODE)
         sharedModel.onCorrectPinCallback.value = Pair(requestCode, pin)
+        pinRetryController.clearPinFailPrefs()
         dismiss()
     }
 
@@ -155,14 +162,27 @@ class CheckPinDialog : DialogFragment() {
                     pin_progress_switcher.showPrevious()
                 }
                 viewModel.pin.clear()
+                pin_preview.clear()
+                pin_preview.clearBadPin()
+                numeric_keyboard.isEnabled = true
+            }
+            State.INVALID_PIN -> {
+                if (pin_progress_switcher.currentView.id == R.id.progress) {
+                    pin_progress_switcher.showPrevious()
+                }
+                viewModel.pin.clear()
+                pin_preview.shake()
                 Handler().postDelayed({
                     pin_preview.clear()
                 }, 200)
+                pin_preview.badPin(pinRetryController.remainingAttemptsMessage)
+                numeric_keyboard.isEnabled = true
             }
             State.DECRYPTING -> {
                 if (pin_progress_switcher.currentView.id != R.id.progress) {
                     pin_progress_switcher.showNext()
                 }
+                numeric_keyboard.isEnabled = false
             }
         }
         state = newState
@@ -184,7 +204,7 @@ class CheckPinDialog : DialogFragment() {
                         fingerprintFlow(true)
                         startFingerprintListener()
                     } else {
-                        fingerprint_view.setText(R.string.touch_fingerprint_to_enable)
+                        pin_or_fingerprint_button.visibility = View.GONE
                     }
                 } else {
                     fingerprintHelper = null

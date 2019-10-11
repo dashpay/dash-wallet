@@ -46,6 +46,7 @@ import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.ui.AbstractWalletActivity;
+import de.schildbach.wallet.ui.GlobalFooterActivity;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
@@ -703,7 +704,7 @@ public class WalletApplication extends MultiDexApplication {
     }
 
     public void killAllActivities() {
-        AbstractWalletActivity.finishAll(this);
+        GlobalFooterActivity.finishAll(this);
     }
 
 }

@@ -64,6 +64,7 @@ public class FingerprintView extends LinearLayout {
     }
 
     public void setText(String text) {
+        fingerprintText.setVisibility(View.VISIBLE);
         fingerprintText.setText(text);
         initialText = text;
     }

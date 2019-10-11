@@ -26,15 +26,15 @@ class CheckPinViewModel(application: Application) : AndroidViewModel(application
 
     private val log = LoggerFactory.getLogger(CheckPinViewModel::class.java)
 
-    private val walletApplication = application as WalletApplication
+    val walletApplication = application as WalletApplication
 
     val pin = StringBuilder()
 
-    internal val encryptWalletLiveData = CheckPinLiveData(application)
+    internal val checkPinLiveData = CheckPinLiveData(application)
 
     fun checkPin(password: CharSequence) {
         if (walletApplication.wallet.isEncrypted) {
-            encryptWalletLiveData.checkPin(password.toString())
+            checkPinLiveData.checkPin(password.toString())
         } else {
             log.warn("Trying to decrypt unencrypted wallet")
         }

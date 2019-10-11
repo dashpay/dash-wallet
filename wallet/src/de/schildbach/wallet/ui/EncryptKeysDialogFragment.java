@@ -42,7 +42,6 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnShowListener;
 import android.graphics.Typeface;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -69,7 +68,6 @@ public class EncryptKeysDialogFragment extends DialogFragment {
 
     private static final String FRAGMENT_TAG = EncryptKeysDialogFragment.class.getName();
 
-    private static final String ONBOARDING_ARG = "onboarding_arg";
     private static final String CANCELABLE_ARG = "cancelable_arg";
 
     protected DialogInterface.OnDismissListener onDismissListener;
@@ -78,7 +76,6 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         final DialogFragment newFragment = new EncryptKeysDialogFragment();
 
         final Bundle args = new Bundle();
-        args.putBoolean(ONBOARDING_ARG, true);
         args.putBoolean(CANCELABLE_ARG, cancelable);
         newFragment.setArguments(args);
 
@@ -366,20 +363,11 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                             public void run() {
                                 dismiss();
 
-                                Bundle args = getArguments();
-                                boolean onboarding = args != null && args.getBoolean(ONBOARDING_ARG);
-
                                 FragmentActivity activity = getActivity();
 
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-                                        && fingerprintHelper.init() && !fingerprintHelper.isFingerprintEnabled()
-                                        && oldPassword == null && state == State.DONE) {
+                                if (EnableFingerprintDialog.shouldBeShown(activity) && oldPassword == null && state == State.DONE) {
                                     //noinspection ConstantConditions
-                                    EnableFingerprintDialog.show(newPassword, onboarding, activity.getSupportFragmentManager());
-                                } else {
-                                    if (onboarding && activity instanceof OnOnboardingCompleteListener) {
-                                        ((OnOnboardingCompleteListener) activity).onOnboardingComplete();
-                                    }
+                                    EnableFingerprintDialog.show(newPassword, activity.getSupportFragmentManager());
                                 }
                             }
                         }, 2000);
@@ -444,10 +432,5 @@ public class EncryptKeysDialogFragment extends DialogFragment {
             positiveButton.setEnabled(false);
             negativeButton.setEnabled(false);
         }
-    }
-
-    public interface OnOnboardingCompleteListener {
-
-        void onOnboardingComplete();
     }
 }

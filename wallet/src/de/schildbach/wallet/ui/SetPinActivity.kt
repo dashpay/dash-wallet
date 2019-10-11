@@ -17,8 +17,8 @@
 package de.schildbach.wallet.ui
 
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.view.MenuItem
@@ -33,10 +33,12 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.widget.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
-import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 
-class SetPinActivity : AppCompatActivity(), EnableFingerprintDialog.OnFingerprintEnabledListener {
+private const val FINGERPRINT_REQUEST_SEED = 1
+private const val FINGERPRINT_REQUEST_WALLET = 2
+
+class SetPinActivity : AppCompatActivity(), EnableFingerprintDialog.OnDismissListener {
 
     private lateinit var numericKeyboardView: NumericKeyboardView
     private lateinit var confirmButtonView: View
@@ -272,25 +274,15 @@ class SetPinActivity : AppCompatActivity(), EnableFingerprintDialog.OnFingerprin
                 }
             }
         })
-        viewModel.startVerifySeedActivity.observe(this, Observer {
-            val intent = VerifySeedActivity.createIntent(this, seed.toTypedArray())
-            startActivityNewTask(intent)
-        })
-        viewModel.startWalletActivity.observe(this, Observer {
-            val fingerprintHelper = FingerprintHelper(this)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-                    && fingerprintHelper.init() && !fingerprintHelper.isFingerprintEnabled) {
+        viewModel.startNextActivity.observe(this, Observer {
 
-                EnableFingerprintDialog.show(viewModel.pin.joinToString(""), true, supportFragmentManager)
+            val requestCode = if (it) FINGERPRINT_REQUEST_SEED else FINGERPRINT_REQUEST_WALLET
+            if (EnableFingerprintDialog.shouldBeShown(this@SetPinActivity)) {
+                EnableFingerprintDialog.show(viewModel.pin.joinToString(""), requestCode, supportFragmentManager)
             } else {
-                startWalletActivity()
+                onDismiss(null, requestCode)
             }
         })
-    }
-
-    private fun startWalletActivity() {
-        val intent = Intent(this, WalletActivity::class.java)
-        startActivityNewTask(intent)
     }
 
     private fun startActivityNewTask(intent: Intent) {
@@ -324,7 +316,20 @@ class SetPinActivity : AppCompatActivity(), EnableFingerprintDialog.OnFingerprin
         }
     }
 
-    override fun onFingerprintEnabled() {
-        startWalletActivity()
+    override fun onDismiss(dialog: DialogInterface?, requestCode: Int) {
+        when (requestCode) {
+            FINGERPRINT_REQUEST_SEED -> startVerifySeedActivity()
+            FINGERPRINT_REQUEST_WALLET -> startWalletActivity()
+        }
+    }
+
+    private fun startVerifySeedActivity() {
+        val intent = VerifySeedActivity.createIntent(this, seed.toTypedArray())
+        startActivityNewTask(intent)
+    }
+
+    private fun startWalletActivity() {
+        val intent = Intent(this, WalletActivity::class.java)
+        startActivityNewTask(intent)
     }
 }
