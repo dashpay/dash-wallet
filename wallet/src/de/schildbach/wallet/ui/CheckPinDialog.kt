@@ -28,11 +28,13 @@ import kotlinx.android.synthetic.main.fragment_enter_pin.*
 class CheckPinDialog : DialogFragment() {
 
     companion object {
+
         private val FRAGMENT_TAG = CheckPinDialog::class.java.canonicalName
+
         private const val ARG_REQUEST_CODE = "arg_request_code"
 
         @JvmStatic
-        fun show(manager: FragmentManager, requestCode: Int) {
+        fun show(manager: FragmentManager, requestCode: Int = 0) {
             val checkPinDialog = CheckPinDialog()
             val args = Bundle()
             args.putInt(ARG_REQUEST_CODE, requestCode)
@@ -80,9 +82,7 @@ class CheckPinDialog : DialogFragment() {
                     setState(State.DECRYPTING)
                 }
                 Status.SUCCESS -> {
-                    val requestCode = arguments!!.getInt(ARG_REQUEST_CODE)
-                    sharedModel.onCorrectPinCallback.value = Pair(requestCode, viewModel.pin.toString())
-                    dismiss()
+                    dismiss(viewModel.pin.toString())
                 }
             }
         })
@@ -124,6 +124,12 @@ class CheckPinDialog : DialogFragment() {
 
             }
         }
+    }
+
+    private fun dismiss(pin: String) {
+        val requestCode = arguments!!.getInt(ARG_REQUEST_CODE)
+        sharedModel.onCorrectPinCallback.value = Pair(requestCode, pin)
+        dismiss()
     }
 
     override fun onStart() {
@@ -201,7 +207,7 @@ class CheckPinDialog : DialogFragment() {
         fingerprintCancellationSignal = CancellationSignal()
         fingerprintHelper!!.getPassword(fingerprintCancellationSignal, object : FingerprintHelper.Callback {
             override fun onSuccess(savedPass: String) {
-                viewModel.checkPin(savedPass)
+                dismiss(savedPass)
             }
 
             override fun onFailure(message: String, canceled: Boolean, exceededMaxAttempts: Boolean) {
