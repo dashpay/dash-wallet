@@ -67,27 +67,22 @@ Download the [Android SDK Tools](https://developer.android.com/studio/index.html
 and unpack to your workspace directory. Point your `ANDROID_HOME` variable to the unpacked Android SDK directory
 and switch to it.
 
-<<<<<<< HEAD
-    tools/android update sdk --no-ui --force --all --filter tool,platform-tool,build-tools-25.0.2,android-15,android-25,extra-android-m2repository
-=======
-Download and install the required Android dependencies:
->>>>>>> 6cef7815... Improve wallet README files (words & punctuation).
 
-    tools/android update sdk --no-ui --force --all --filter tool,platform-tool,build-tools-26,android-15,android-25
+Download and install the required Android dependencies:
+    tools/android update sdk --no-ui --force --all --filter tool,platform-tool,build-tools-28,android-15,android-28
 
 Download the [Android NDK](https://developer.android.com/ndk/downloads/), then unpack it to your workspace directory. Point your `ANDROID_NDK_HOME` variable to the unpacked Android NDK directory.
 
-<<<<<<< HEAD
 Finally, you can build Dash Wallet and sign it with your development key. Again in your workspace,
 use
-=======
-Finally, you can build Bitcoin Wallet and sign it with your development key. Again in your workspace,
-use:
->>>>>>> 6cef7815... Improve wallet README files (words & punctuation).
 
 	# first time only
 	git clone -b master https://github.com/HashEngineering/dash-wallet.git dash-wallet
-
+	cd dash-wallet
+	git pull
+	git submodule init
+    git submodule update
+    
 	# each time
 	cd dash-wallet
 	git pull
