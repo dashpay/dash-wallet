@@ -172,10 +172,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (config.remindBackupSeed() && config.lastDismissedReminderMoreThan24hAgo()) {
             BackupWalletToSeedDialogFragment.show(getSupportFragmentManager());
         }
-
-        //TODO: REMOVE
-        startActivity(SetPinActivity.Companion.createIntent(this,
-                R.string.wallet_options_encrypt_keys_change, true));
     }
 
     private void adjustHeaderLayout() {
