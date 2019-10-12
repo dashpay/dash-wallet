@@ -246,6 +246,10 @@ class SetPinActivity : AppCompatActivity() {
         state = newState
     }
 
+    private fun isChangingPin(): Boolean {
+        return intent.getBooleanExtra(CHANGE_PIN, false)
+    }
+
     private fun initViewModel() {
         viewModel = ViewModelProviders.of(this).get(SetPinViewModel::class.java)
         viewModel.encryptWalletLiveData.observe(this, Observer {
@@ -266,7 +270,7 @@ class SetPinActivity : AppCompatActivity() {
                     if (state == State.DECRYPTING) {
                         setState(State.SET_PIN)
                     } else {
-                        if (intent.getBooleanExtra(CHANGE_PIN, false)) {
+                        if (isChangingPin()) {
                             finish()
                         } else {
                             viewModel.initWallet()
