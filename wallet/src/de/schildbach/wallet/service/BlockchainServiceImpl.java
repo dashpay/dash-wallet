@@ -369,6 +369,9 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         @Override
         protected void progress(double pct, int blocksLeft, Date date) {
             super.progress(pct, blocksLeft, date);
+            if (pct < 0) {
+                pct = 0;
+            }
             final SyncProgressEvent event = new SyncProgressEvent(pct);
             log.info(event.toString());
             EventBus.getDefault().postSticky(event);
