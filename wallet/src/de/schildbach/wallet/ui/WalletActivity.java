@@ -56,6 +56,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.navigation.NavigationView;
@@ -94,6 +96,7 @@ import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
+import kotlin.Pair;
 
 /**
  * @author Andreas Schildbach
@@ -103,7 +106,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         NavigationView.OnNavigationItemSelectedListener,
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
-        EnableFingerprintDialog.OnFingerprintEnabledListener,
         WalletTransactionsFragment.MotionLayoutProvider {
 
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
@@ -133,6 +135,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private boolean showBackupWalletDialog = false;
 
+    private CheckPinSharedModel checkPinSharedModel;
+
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -158,6 +162,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         initUphold();
         initView();
+        initViewModel();
 
         //Prevent showing dialog twice or more when activity is recreated (e.g: rotating device, etc)
         if (savedInstanceState == null) {
@@ -172,6 +177,20 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (config.remindBackupSeed() && config.lastDismissedReminderMoreThan24hAgo()) {
             BackupWalletToSeedDialogFragment.show(getSupportFragmentManager());
         }
+    }
+
+    private void initViewModel() {
+        checkPinSharedModel = ViewModelProviders.of(this).get(CheckPinSharedModel.class);
+        checkPinSharedModel.getOnCorrectPinCallback().observe(this, new Observer<Pair<Integer, String>>() {
+            @Override
+            public void onChanged(Pair<Integer, String> integerStringPair) {
+                WalletTransactionsFragment walletTransactionsFragment = (WalletTransactionsFragment)
+                        getSupportFragmentManager().findFragmentById(R.id.wallet_transactions_fragment);
+                if (walletTransactionsFragment != null) {
+                    walletTransactionsFragment.onLockChanged(WalletLock.getInstance().isWalletLocked(wallet));
+                }
+            }
+        });
     }
 
     private void adjustHeaderLayout() {
@@ -319,6 +338,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     @Override
     protected void onNewIntent(final Intent intent) {
+        super.onNewIntent(intent);
         handleIntent(intent);
     }
 
@@ -694,7 +714,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             @Override
             public void onClick(final DialogInterface dialog, final int id) {
                 startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
-                finish();
                 finish();
             }
         });
@@ -1157,16 +1176,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
         });
         dialogBuilder.show();
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.M)
-    @Override
-    public void onFingerprintEnabled() {
-        WalletTransactionsFragment walletTransactionsFragment = (WalletTransactionsFragment)
-                getSupportFragmentManager().findFragmentById(R.id.wallet_transactions_fragment);
-        if (walletTransactionsFragment != null) {
-            walletTransactionsFragment.onLockChanged(WalletLock.getInstance().isWalletLocked(wallet));
-        }
     }
 
     @Override

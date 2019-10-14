@@ -24,10 +24,13 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.os.CancellationSignal;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
+import androidx.lifecycle.ViewModelProviders;
 
 import org.dash.wallet.common.ui.DialogBuilder;
 
@@ -35,6 +38,7 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.widget.FingerprintView;
 import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet_test.R;
+import kotlin.Pair;
 
 /**
  * @author Samuel Barbosa
@@ -43,6 +47,8 @@ public class EnableFingerprintDialog extends DialogFragment {
 
     private FingerprintView fingerprintView;
     private CancellationSignal fingerprintCancellationSignal;
+
+    private CheckPinSharedModel sharedModel;
 
     private static final String PASSWORD_ARG = "fingerprint_password";
     private static final String ARG_REQUEST_CODE = "arg_request_code";
@@ -69,6 +75,7 @@ public class EnableFingerprintDialog extends DialogFragment {
         return enableFingerprintDialog;
     }
 
+    @NonNull
     @Override
     public Dialog onCreateDialog(final Bundle savedInstanceState) {
         final Activity activity = getActivity();
@@ -100,12 +107,6 @@ public class EnableFingerprintDialog extends DialogFragment {
                         public void onSuccess(String savedPass) {
                             fingerprintCancellationSignal = null;
 
-                            if (activity instanceof OnFingerprintEnabledListener) {
-                                ((OnFingerprintEnabledListener) activity).onFingerprintEnabled();
-                            } else if (getTargetFragment() instanceof OnFingerprintEnabledListener) {
-                                ((OnFingerprintEnabledListener) getTargetFragment()).onFingerprintEnabled();
-                            }
-
                             dismiss();
                         }
 
@@ -131,26 +132,25 @@ public class EnableFingerprintDialog extends DialogFragment {
     }
 
     @Override
-    public void onDismiss(DialogInterface dialog) {
+    public void onDismiss(@NonNull DialogInterface dialog) {
         if (fingerprintCancellationSignal != null) {
             fingerprintCancellationSignal.cancel();
         }
 
-        Activity activity = getActivity();
-        if (activity instanceof OnDismissListener) {
-            Bundle args = getArguments();
-            int requestCode = args != null ? args.getInt(ARG_REQUEST_CODE) : 0;
-            ((OnDismissListener) activity).onDismiss(dialog, requestCode);
-        }
+        Bundle args = getArguments();
+        int requestCode = args != null ? args.getInt(ARG_REQUEST_CODE) : 0;
+        sharedModel.getOnCorrectPinCallback().setValue(new Pair<>(requestCode, getArguments().getString(PASSWORD_ARG)));
 
         super.onDismiss(dialog);
     }
 
-    public interface OnFingerprintEnabledListener {
-        void onFingerprintEnabled();
-    }
-
-    interface OnDismissListener {
-        void onDismiss(DialogInterface dialog, int requestCode);
+    @Override
+    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        if (getActivity() != null) {
+            sharedModel = ViewModelProviders.of(getActivity()).get(CheckPinSharedModel.class);
+        } else {
+            throw new IllegalStateException("Invalid Activity");
+        }
     }
 }

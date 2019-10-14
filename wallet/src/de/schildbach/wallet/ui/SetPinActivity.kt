@@ -17,7 +17,6 @@
 package de.schildbach.wallet.ui
 
 import android.content.Context
-import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -38,12 +37,13 @@ import de.schildbach.wallet_test.R
 private const val FINGERPRINT_REQUEST_SEED = 1
 private const val FINGERPRINT_REQUEST_WALLET = 2
 
-class SetPinActivity : AppCompatActivity(), EnableFingerprintDialog.OnDismissListener {
+class SetPinActivity : AppCompatActivity() {
 
     private lateinit var numericKeyboardView: NumericKeyboardView
     private lateinit var confirmButtonView: View
     private lateinit var messageView: View
     private lateinit var viewModel: SetPinViewModel
+    private lateinit var checkPinSharedModel: CheckPinSharedModel
     private lateinit var pinProgressSwitcherView: ViewSwitcher
     private lateinit var pinPreviewView: PinPreviewView
     private lateinit var pageTitleView: TextView
@@ -280,8 +280,12 @@ class SetPinActivity : AppCompatActivity(), EnableFingerprintDialog.OnDismissLis
             if (EnableFingerprintDialog.shouldBeShown(this@SetPinActivity)) {
                 EnableFingerprintDialog.show(viewModel.pin.joinToString(""), requestCode, supportFragmentManager)
             } else {
-                onDismiss(null, requestCode)
+                performNextStep(requestCode)
             }
+        })
+        checkPinSharedModel = ViewModelProviders.of(this).get(CheckPinSharedModel::class.java)
+        checkPinSharedModel.onCorrectPinCallback.observe(this, Observer {
+            performNextStep(it.first)
         })
     }
 
@@ -316,7 +320,7 @@ class SetPinActivity : AppCompatActivity(), EnableFingerprintDialog.OnDismissLis
         }
     }
 
-    override fun onDismiss(dialog: DialogInterface?, requestCode: Int) {
+    private fun performNextStep(requestCode: Int) {
         when (requestCode) {
             FINGERPRINT_REQUEST_SEED -> startVerifySeedActivity()
             FINGERPRINT_REQUEST_WALLET -> startWalletActivity()

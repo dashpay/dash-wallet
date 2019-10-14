@@ -29,7 +29,7 @@ class CheckPinDialog : DialogFragment() {
 
     companion object {
 
-        private val FRAGMENT_TAG = CheckPinDialog::class.java.canonicalName
+        private val FRAGMENT_TAG = CheckPinDialog::class.java.simpleName
 
         private const val ARG_REQUEST_CODE = "arg_request_code"
 
@@ -81,9 +81,12 @@ class CheckPinDialog : DialogFragment() {
                     setState(State.DECRYPTING)
                 }
                 Status.SUCCESS -> {
-                    dismiss(it.data!!)
                     if (EnableFingerprintDialog.shouldBeShown(activity!!)) {
-                        EnableFingerprintDialog.show(it.data, activity!!.supportFragmentManager)
+                        val requestCode = arguments!!.getInt(ARG_REQUEST_CODE)
+                        EnableFingerprintDialog.show(it.data, requestCode, activity!!.supportFragmentManager)
+                        dismiss()
+                    } else {
+                        dismiss(it.data!!)
                     }
                 }
             }
