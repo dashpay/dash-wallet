@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2015 the original author or authors.
+ * Copyright the original author or authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,18 +12,16 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui;
+package de.schildbach.wallet.ui.scan;
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
 import com.google.zxing.ResultPoint;
-
-import de.schildbach.wallet_test.R;
 
 import android.content.Context;
 import android.content.res.Resources;
@@ -36,6 +34,8 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.View;
+
+import de.schildbach.wallet_test.R;
 
 /**
  * @author Andreas Schildbach
