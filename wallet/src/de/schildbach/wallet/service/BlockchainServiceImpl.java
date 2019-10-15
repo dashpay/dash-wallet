@@ -117,12 +117,39 @@ import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
+import android.annotation.SuppressLint;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.ComponentCallbacks2;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.Uri;
+import android.os.Binder;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.PowerManager;
+import android.os.PowerManager.WakeLock;
+import androidx.core.app.NotificationCompat;
+import androidx.lifecycle.LifecycleService;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import android.text.format.DateUtils;
+
 import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 
 /**
  * @author Andreas Schildbach
  */
-public class BlockchainServiceImpl extends android.app.Service implements BlockchainService {
+public class BlockchainServiceImpl extends LifecycleService implements BlockchainService {
+
     private WalletApplication application;
     private Configuration config;
 
@@ -647,6 +674,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
     @Override
     public IBinder onBind(final Intent intent) {
+        super.onBind(intent);
         log.debug(".onBind()");
 
         return mBinder;
@@ -757,6 +785,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
     @Override
     public int onStartCommand(final Intent intent, final int flags, final int startId) {
+        super.onStartCommand(intent, flags, startId);
+
         if (intent != null) {
             //Restart service as a Foreground Service if it's synchronizing the blockchain
             Bundle extras = intent.getExtras();

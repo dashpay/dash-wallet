@@ -243,7 +243,7 @@ public class SweepWalletFragment extends Fragment {
 		sweepTransactionView.addView(sweepTransactionViewHolder.itemView,
 				new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-		viewGo = (Button) view.findViewById(R.id.send_coins_go);
+		viewGo = (Button) view.findViewById(R.id.confirm_button);
 		viewGo.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(final View v) {

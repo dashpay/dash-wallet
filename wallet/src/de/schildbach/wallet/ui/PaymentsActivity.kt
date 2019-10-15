@@ -30,7 +30,22 @@ class PaymentsActivity : GlobalFooterActivity() {
 
     companion object {
         private const val PREFS_RECENT_TAB = "recent_tab"
+
+        private const val EXTRA_ACTIVE_TAB = "extra_active_tab"
+
+        const val ACTIVE_TAB_RECENT = -1
+        const val ACTIVE_TAB_PAY = 0
+        const val ACTIVE_TAB_RECEIVE = 1
+
+        @JvmStatic
+        fun createIntent(context: Context, activeTab: Int): Intent {
+            val intent = Intent(context, PaymentsActivity::class.java)
+            intent.putExtra(EXTRA_ACTIVE_TAB, activeTab)
+            return intent
+        }
     }
+
+    private var saveRecentTab = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,24 +74,33 @@ class PaymentsActivity : GlobalFooterActivity() {
             override fun onTabSelected(tab: TabLayout.Tab) {
                 initialReselection = false
                 val fragment = when {
-                    tab.position == 0 -> PaymentsPayFragment.newInstance("", "")
+                    tab.position == 0 -> PaymentsPayFragment.newInstance()
                     else -> PaymentsReceiveFragment.newInstance()
                 }
                 supportFragmentManager.beginTransaction()
                         .replace(R.id.fragment_container, fragment)
                         .commitNow()
-                val preferences = getPreferences(Context.MODE_PRIVATE)
-                preferences.edit().putInt(PREFS_RECENT_TAB, tab.position).apply()
+
+                if (saveRecentTab) {
+                    val preferences = getPreferences(Context.MODE_PRIVATE)
+                    preferences.edit().putInt(PREFS_RECENT_TAB, tab.position).apply()
+                }
             }
 
         })
-        activateRecentTab()
+        activateTab()
     }
 
-    private fun activateRecentTab() {
-        val preferences = getPreferences(Context.MODE_PRIVATE)
-        val recentTab = preferences.getInt(PREFS_RECENT_TAB, 0)
-        tabs.getTabAt(recentTab)!!.select()
+    private fun activateTab() {
+        val activeTab = intent.getIntExtra(EXTRA_ACTIVE_TAB, ACTIVE_TAB_RECENT)
+        if (activeTab < 0) {
+            val preferences = getPreferences(Context.MODE_PRIVATE)
+            val recentTab = preferences.getInt(PREFS_RECENT_TAB, 0)
+            tabs.getTabAt(recentTab)!!.select()
+            saveRecentTab = true
+        } else {
+            tabs.getTabAt(activeTab)!!.select()
+        }
     }
 
     override fun onGotoClick() {
@@ -96,15 +120,5 @@ class PaymentsActivity : GlobalFooterActivity() {
             }
         }
         return super.onOptionsItemSelected(item)
-    }
-
-    override fun startActivity(intent: Intent?) {
-        super.startActivity(intent)
-        overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
-    }
-
-    override fun finish() {
-        super.finish()
-        overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
     }
 }

@@ -137,11 +137,6 @@ open class RestoreFromFileActivity : AppCompatActivity(), AbstractPINDialogFragm
         }
     }
 
-    override fun startActivity(intent: Intent?) {
-        overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
-        super.startActivity(intent)
-    }
-
     override fun getWallet(): Wallet {
         return walletBuffer
     }

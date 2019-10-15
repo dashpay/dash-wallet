@@ -58,7 +58,7 @@ class PaymentsButtonView(context: Context, attrs: AttributeSet?) : ConstraintLay
         }
     }
 
-    private fun setActive(active: Boolean) {
+    fun setActive(active: Boolean) {
         if (active) {
             val subTitleColor = ResourcesCompat.getColor(resources, R.color.dash_black, null)
             sub_title_view.setTextColor(subTitleColor)
@@ -69,6 +69,22 @@ class PaymentsButtonView(context: Context, attrs: AttributeSet?) : ConstraintLay
             sub_title_view.textSize = convertPixelsToDp(defaultSybTitleSize) * 0.8f
         }
         button_view.isEnabled = active
+    }
+
+    fun setTitle(textResId: Int) {
+        title_view.setText(textResId)
+    }
+
+    fun setTitle(text: String) {
+        title_view.text = text
+    }
+
+    fun setSubTitle(textResId: Int) {
+        sub_title_view.setText(textResId)
+    }
+
+    fun setSubTitle(text: String) {
+        sub_title_view.text = text
     }
 
     fun setOnButtonClickListener(l: OnClickListener?) {

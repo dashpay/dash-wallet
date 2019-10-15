@@ -68,7 +68,7 @@ public final class PreferenceActivity extends AppCompatPreferenceActivity {
     @Override
     public void onBuildHeaders(final List<Header> target) {
         loadHeadersFromResource(R.xml.preference_headers, target);
-        hidePersonalSettingsIfLocked(target);
+//        hidePersonalSettingsIfLocked(target);
     }
 
     private void hidePersonalSettingsIfLocked(final List<Header> target) {
