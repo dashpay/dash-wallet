@@ -1,4 +1,12 @@
 Dash Wallet
+v6.6.3
+* Use DashJ 0.16.4
+    * Reduces memory usage
+    * Fixes several crashes
+* Fix several Fingerprint issues
+* Large numbers have separators (e.g. 1,999.00 instead of 1999.00)
+* Update Translations
+
 v6.6.2
 * Use DashJ 0.16.2
     * Improves processing of ChainLocks and InstantSendLocks
