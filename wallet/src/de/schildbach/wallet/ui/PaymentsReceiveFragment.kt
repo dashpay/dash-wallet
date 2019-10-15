@@ -51,9 +51,9 @@ class PaymentsReceiveFragment : Fragment() {
         }
     }
 
-    override fun onAttach(context: Context?) {
+    override fun onAttach(context: Context) {
         super.onAttach(context)
-        val walletApplication = context!!.applicationContext as WalletApplication
+        val walletApplication = context.applicationContext as WalletApplication
         config = walletApplication.configuration
         clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         address = walletApplication.wallet.freshReceiveAddress()
