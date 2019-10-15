@@ -30,8 +30,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
-import android.graphics.Point;
 import android.net.Uri;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
@@ -41,29 +39,26 @@ import android.os.Environment;
 import android.os.Handler;
 import android.telephony.TelephonyManager;
 import android.view.ContextMenu;
-import android.view.Display;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.Toolbar;
-import androidx.constraintlayout.motion.widget.MotionLayout;
-import androidx.constraintlayout.widget.ConstraintSet;
+import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
-import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.navigation.NavigationView;
 import com.google.common.collect.ImmutableList;
 import com.squareup.okhttp.HttpUrl;
@@ -114,8 +109,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
         EnableFingerprintDialog.OnFingerprintEnabledListener,
-        EncryptKeysDialogFragment.OnOnboardingCompleteListener,
-        WalletTransactionsFragment.MotionLayoutProvider {
+        EncryptKeysDialogFragment.OnOnboardingCompleteListener {
+
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
     private static final int DIALOG_RESTORE_WALLET = 2;
@@ -158,7 +153,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         setContentViewFooter(R.layout.home_activity);
         setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
-        adjustHeaderLayout(true);
         activateHomeButton();
 
         if (savedInstanceState == null) {
@@ -188,27 +182,21 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (config.remindBackupSeed() && config.lastDismissedReminderMoreThan24hAgo()) {
             BackupWalletToSeedDialogFragment.show(getSupportFragmentManager());
         }
-    }
 
-    private void adjustHeaderLayout(boolean syncStatusPaneVisible) {
-        Display display = getWindowManager().getDefaultDisplay();
-        Point size = new Point();
-        display.getSize(size);
-        float screenHeight = size.y;
-        int headerHeight;
-        if (syncStatusPaneVisible) {
-            headerHeight = (int) (screenHeight * 0.5);
-        } else {
-            headerHeight = (int) (screenHeight * 0.3);
+        View appBar = findViewById(R.id.app_bar);
+        CoordinatorLayout.LayoutParams params = (CoordinatorLayout.LayoutParams) appBar.getLayoutParams();
+        if (params.getBehavior() == null) {
+            params.setBehavior(new AppBarLayout.Behavior());
         }
-        ViewGroup.LayoutParams headerPaneParams = findViewById(R.id.header_pane).getLayoutParams();
-        headerPaneParams.height = headerHeight;
-        MotionLayout motionLayout = findViewById(R.id.home_content);
-        ConstraintSet constraintSetExpanded = motionLayout.getConstraintSet(R.id.expanded);
-        constraintSetExpanded.constrainHeight(R.id.header_pane, headerHeight);
-        View availableBalanceView = findViewById(R.id.available_balance);
-        MotionLayout.LayoutParams availableBalanceParams = (MotionLayout.LayoutParams) availableBalanceView.getLayoutParams();
-        availableBalanceParams.bottomMargin = (int) ((float) headerHeight * 0.35f);
+        AppBarLayout.Behavior behaviour = (AppBarLayout.Behavior) params.getBehavior();
+        behaviour.setDragCallback(new AppBarLayout.Behavior.DragCallback() {
+            @Override
+            public boolean canDrag(@NonNull AppBarLayout appBarLayout) {
+                WalletTransactionsFragment walletTransactionsFragment = (WalletTransactionsFragment)
+                        getSupportFragmentManager().findFragmentById(R.id.wallet_transactions_fragment);
+                return walletTransactionsFragment != null && !walletTransactionsFragment.isHistoryEmpty();
+            }
+        });
     }
 
     private void initFingerprintHelper() {
@@ -1240,28 +1228,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     public void onFingerprintEnabled() {
-        WalletTransactionsFragment walletTransactionsFragment = (WalletTransactionsFragment)
-                getSupportFragmentManager().findFragmentById(R.id.wallet_transactions_fragment);
-        if (walletTransactionsFragment != null) {
-            walletTransactionsFragment.onLockChanged(WalletLock.getInstance().isWalletLocked(wallet));
-        }
+
     }
 
     @Override
     public void onOnboardingComplete() {
 
     }
-
-    @Override
-    public MotionLayout getMotionLayout() {
-        return findViewById(R.id.home_content);
-    }
-
-    @Override
-    public RecyclerView getRecyclerView() {
-        return findViewById(R.id.home_recycler);
-    }
-
 
     private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>() {
         @Override
@@ -1279,12 +1252,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     };
 
     private void showSyncPane(int id, boolean show) {
-        int visibility = show ? ConstraintSet.VISIBLE : ConstraintSet.GONE;
-        MotionLayout motionLayout = findViewById(R.id.home_content);
-        ConstraintSet constraintSet = motionLayout.getConstraintSet(R.id.expanded);
-        constraintSet.setVisibility(id, visibility);
-        constraintSet = motionLayout.getConstraintSet(R.id.collapsed);
-        constraintSet.setVisibility(id, visibility);
-        adjustHeaderLayout(show);
+        findViewById(id).setVisibility(show ? View.VISIBLE : View.GONE);
     }
 }
