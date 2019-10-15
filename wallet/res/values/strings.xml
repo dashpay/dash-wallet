@@ -294,7 +294,7 @@
     <string name="notification_coins_received_msg">Received %s</string>
     <string name="notification_peers_connected_msg">%d peers connected</string>
     <string name="notification_inactivity_title">You\'ve still got Dash on this device!</string>
-        <string name="notification_inactivity_message">You still have Dash on this device! Please be sure to write down your recovery phrase before you uninstall the Dash Wallet or you will lose your balance of %s.</string>
+    <string name="notification_inactivity_message">You still have Dash on this device! Please be sure to write down your recovery phrase before you uninstall the Dash Wallet or you will lose your balance of %s.</string>
     <string name="notification_inactivity_action_dismiss">Remind me later</string>
     <string name="notification_inactivity_action_dismiss_forever">Don\'t remind me</string>
     <string name="appwidget_wallet_balance_title">Dash balance</string>
@@ -338,5 +338,8 @@
 
     <string name="dash_slogan">Instant - Private - Secure</string>
     <string name="dash_wallet">Wallet</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 
 </resources>
