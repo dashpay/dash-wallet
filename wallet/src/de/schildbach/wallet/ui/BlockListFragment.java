@@ -47,15 +47,15 @@ import android.content.ServiceConnection;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.LoaderManager;
-import android.support.v4.content.AsyncTaskLoader;
-import android.support.v4.content.Loader;
-import android.support.v4.content.LocalBroadcastManager;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.AsyncTaskLoader;
+import androidx.loader.content.Loader;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -263,7 +263,7 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 		}
 
 		@Override
-		public void onLoadFinished(@NonNull android.support.v4.content.Loader<List<StoredBlock>> loader, List<StoredBlock> blocks) {
+		public void onLoadFinished(@NonNull Loader<List<StoredBlock>> loader, List<StoredBlock> blocks) {
 			adapter.replace(blocks);
 			viewGroup.setDisplayedChild(1);
 
@@ -273,7 +273,7 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 		}
 
 		@Override
-		public void onLoaderReset(@NonNull android.support.v4.content.Loader<List<StoredBlock>> loader) {
+		public void onLoaderReset(@NonNull Loader<List<StoredBlock>> loader) {
 			adapter.clear();
 		}
 	};
@@ -308,17 +308,17 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 
 		@NonNull
 		@Override
-		public android.support.v4.content.Loader<Set<Transaction>> onCreateLoader(int id, @Nullable Bundle args) {
+		public Loader<Set<Transaction>> onCreateLoader(int id, @Nullable Bundle args) {
 			return new TransactionsLoader(activity, wallet);
 		}
 
 		@Override
-		public void onLoadFinished(@NonNull android.support.v4.content.Loader<Set<Transaction>> loader, Set<Transaction> transactions) {
+		public void onLoadFinished(@NonNull Loader<Set<Transaction>> loader, Set<Transaction> transactions) {
 			adapter.replaceTransactions(transactions);
 		}
 
 		@Override
-		public void onLoaderReset(@NonNull android.support.v4.content.Loader<Set<Transaction>> loader) {
+		public void onLoaderReset(@NonNull Loader<Set<Transaction>> loader) {
 			adapter.clearTransactions();
 		}
 	};

@@ -109,7 +109,7 @@
         android:layout_margin="16dp"
         android:visibility="gone"/>
 
-    <android.support.design.widget.FloatingActionButton
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_scan_qr"
         android:layout_alignParentBottom="true"
         android:layout_alignParentEnd="true"
