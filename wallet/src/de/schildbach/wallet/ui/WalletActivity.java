@@ -1023,14 +1023,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void startUpholdActivity() {
-        Intent intent;
-        if (UpholdClient.getInstance().isAuthenticated()) {
-            intent = new Intent(this, UpholdAccountActivity.class);
-        } else {
-            intent = new Intent(this, UpholdSplashActivity.class);
-        }
-        intent.putExtra(UpholdAccountActivity.WALLET_RECEIVING_ADDRESS_EXTRA, wallet.currentReceiveAddress().toString());
-        startActivity(intent);
+        startActivity(UpholdAccountActivity.createIntent(this, wallet));
     }
 
     //Dash Specific

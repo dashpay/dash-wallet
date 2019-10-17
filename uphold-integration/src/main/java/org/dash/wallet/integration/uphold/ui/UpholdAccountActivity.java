@@ -38,6 +38,7 @@ import android.view.View;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
+import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
 import org.dash.wallet.common.ui.CurrencyTextView;
@@ -58,6 +59,18 @@ public class UpholdAccountActivity extends AppCompatActivity {
     private BigDecimal balance;
     private String receivingAddress;
     private final MonetaryFormat monetaryFormat = new MonetaryFormat().noCode().minDecimals(8);
+
+    public static Intent createIntent(Context context, Wallet wallet) {
+        Intent intent;
+        if (UpholdClient.getInstance().isAuthenticated()) {
+            intent = new Intent(context, UpholdAccountActivity.class);
+        } else {
+            intent = new Intent(context, UpholdSplashActivity.class);
+        }
+        intent.putExtra(UpholdAccountActivity.WALLET_RECEIVING_ADDRESS_EXTRA,
+                wallet.currentReceiveAddress().toString());
+        return intent;
+    }
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {

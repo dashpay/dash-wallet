@@ -179,6 +179,16 @@
     <string name="authenticate_switch_to_fingerprint">Use Fingerprint</string>
     <string name="authenticate_switch_to_pin">Use Password</string>
 
+    <string name="menu_buy_and_sell_title">Buy &amp; Sell Dash"</string>
+    <string name="menu_buy_and_sell_subtitle">Connect with third party exchanges</string>
+    <string name="menu_security_title">Security</string>
+    <string name="menu_security_subtitle">View passphrase, backup wallet…</string>
+    <string name="menu_settings_title">Settings</string>
+    <string name="menu_settings_subtitle">Default currency, shortcuts, about…</string>
+    <string name="menu_tools_title">Tools</string>
+    <string name="menu_tools_subtitle">Import private key…</string>
+
+
     <string-array name="history_filter">
         <item>All</item>
         <item>Received</item>
