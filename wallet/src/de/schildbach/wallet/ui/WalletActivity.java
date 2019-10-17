@@ -676,6 +676,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             @Override
             public void onRestoreWallet(Wallet wallet) {
                 restoreWallet(wallet);
+                application.getConfiguration().setRestoringBackup(true);
             }
 
             @Override

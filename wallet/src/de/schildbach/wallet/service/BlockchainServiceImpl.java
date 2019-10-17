@@ -206,12 +206,13 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             final Address address = WalletUtils.getWalletAddressOfReceived(tx, wallet);
             final Coin amount = tx.getValue(wallet);
             final ConfidenceType confidenceType = tx.getConfidence().getConfidenceType();
+            final boolean isRestoringBackup = application.getConfiguration().isRestoringBackup();
 
             handler.post(new Runnable() {
                 @Override
                 public void run() {
                     final boolean isReceived = amount.signum() > 0;
-                    final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && replaying;
+                    final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && (replaying || isRestoringBackup);
 
                     if (isReceived && !isReplayedTx)
                         notifyCoinsReceived(address, amount, tx.getExchangeRate());
@@ -364,6 +365,13 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 lastMessageTime.set(System.currentTimeMillis());
 
                 config.maybeIncrementBestChainHeightEver(blockChain.getChainHead().getHeight());
+                if(config.isRestoringBackup()) {
+                    long timeAgo = System.currentTimeMillis() - blockChain.getChainHead().getHeader().getTimeSeconds() * 1000;
+                    //if the app was restoring a backup from a file or seed and block chain is nearly synced
+                    //then turn off the restoring indicator
+                    if(timeAgo < DateUtils.DAY_IN_MILLIS)
+                        config.setRestoringBackup(false);
+                }
                 broadcastBlockchainState();
             }
         };
