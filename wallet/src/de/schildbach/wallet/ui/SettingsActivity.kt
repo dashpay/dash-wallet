@@ -19,18 +19,17 @@ package de.schildbach.wallet.ui
 import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_more.*
-import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
+import kotlinx.android.synthetic.main.activity_settings.*
 
-class MoreActivity : GlobalFooterActivity() {
+class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentViewWithFooter(R.layout.activity_more)
-        activateMoreButton()
+        setContentView(R.layout.activity_settings)
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
@@ -40,30 +39,21 @@ class MoreActivity : GlobalFooterActivity() {
             setDisplayShowHomeEnabled(true)
         }
 
-        setTitle(R.string.more_title)
+        setTitle(R.string.settings_title)
 
-        buy_and_sell.setOnClickListener { startBuyAndSellActivity() }
-        security.setOnClickListener { startSecurityActivity() }
-        settings.setOnClickListener { startSettingsActivity() }
-        tools.setOnClickListener { startToolsActivity() }
+        about.setOnClickListener { startAboutActivity() }
+        local_currency.setOnClickListener { startExchangeRatesActivity() }
     }
 
-    private fun startBuyAndSellActivity() {
-        val wallet = WalletApplication.getInstance().wallet
-        startActivity(UpholdAccountActivity.createIntent(this, wallet))
+    override fun onStart() {
+        super.onStart()
+        local_currency_symbol.text = WalletApplication.getInstance()
+                .configuration.exchangeCurrencyCode
     }
 
-    private fun startSecurityActivity() {
-
-    }
-
-    private fun startSettingsActivity() {
-        startActivity(Intent(this, SettingsActivity::class.java))
-        overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
-    }
-
-    private fun startToolsActivity() {
-
+    override fun finish() {
+        super.finish()
+        overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_left)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -75,4 +65,15 @@ class MoreActivity : GlobalFooterActivity() {
         }
         return super.onOptionsItemSelected(item)
     }
+
+    private fun startAboutActivity() {
+        startActivity(Intent(this, AboutActivity::class.java))
+        overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
+    }
+
+    private fun startExchangeRatesActivity() {
+        startActivity(Intent(this, ExchangeRatesActivity::class.java))
+        overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
+    }
+
 }

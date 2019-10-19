@@ -125,4 +125,21 @@
         <item name="android:layout_marginLeft">20dp</item>
     </style>
 
+    <style name="MontserratMedium.MenuRowTitle.Internal">
+        <item name="android:layout_marginStart">20dp</item>
+        <item name="android:layout_marginLeft">20dp</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <style name="MenuRowArrow">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginEnd">20dp</item>
+        <item name="android:layout_marginRight">20dp</item>
+    </style>
+
+    <style name="MenuRow.Internal">
+        <item name="android:layout_marginTop">0dp</item>
+    </style>
+
 </resources>
