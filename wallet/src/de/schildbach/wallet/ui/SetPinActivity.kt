@@ -48,10 +48,13 @@ class SetPinActivity : AppCompatActivity() {
     val pin = arrayListOf<Int>()
     var seed = listOf<String>()
 
+    private var changePin = false
+
     private enum class State {
         DECRYPT,
         DECRYPTING,
         SET_PIN,
+        CHANGE_PIN,
         CONFIRM_PIN,
         ENCRYPTING
     }
@@ -65,13 +68,13 @@ class SetPinActivity : AppCompatActivity() {
         private const val CHANGE_PIN = "change_pin"
 
         @JvmOverloads
+        @JvmStatic
         fun createIntent(context: Context, titleResId: Int,
                          changePin: Boolean = false, password: String? = null): Intent {
             val intent = Intent(context, SetPinActivity::class.java)
             intent.putExtra(EXTRA_TITLE_RES_ID, titleResId)
             intent.putExtra(CHANGE_PIN, changePin)
-
-            password.let { intent.putExtra(EXTRA_PASSWORD, password) }
+            intent.putExtra(EXTRA_PASSWORD, password)
             return intent
         }
 
@@ -97,10 +100,11 @@ class SetPinActivity : AppCompatActivity() {
         val walletApplication = application as WalletApplication
         if (walletApplication.wallet.isEncrypted) {
             val password = intent.getStringExtra(EXTRA_PASSWORD)
+            changePin = intent.getBooleanExtra(CHANGE_PIN, false)
             if (password != null) {
-                viewModel.checkPin(password)
+                viewModel.decryptKeys(password)
             } else {
-                setState(State.DECRYPT)
+                setState(if (changePin) State.CHANGE_PIN else State.DECRYPT)
             }
         } else {
             seed = walletApplication.wallet.keyChainSeed.mnemonicCode!!
@@ -160,7 +164,7 @@ class SetPinActivity : AppCompatActivity() {
         if (state == State.CONFIRM_PIN) {
             if (pin == viewModel.pin) {
                 Handler().postDelayed({
-                    viewModel.encryptKeys()
+                    viewModel.encryptKeys(changePin)
                 }, 200)
             } else {
                 pinPreviewView.shake()
@@ -168,8 +172,8 @@ class SetPinActivity : AppCompatActivity() {
             }
         } else {
             viewModel.setPin(pin)
-            if (state == State.DECRYPT) {
-                viewModel.checkPin()
+            if (state == State.DECRYPT || state == State.CHANGE_PIN) {
+                viewModel.decryptKeys()
             } else {
                 setState(State.CONFIRM_PIN)
             }
@@ -189,6 +193,20 @@ class SetPinActivity : AppCompatActivity() {
                 supportActionBar!!.setDisplayHomeAsUpEnabled(true)
                 messageView.visibility = View.GONE
                 confirmButtonView.visibility = View.VISIBLE
+                viewModel.pin.clear()
+                pin.clear()
+            }
+            State.CHANGE_PIN -> {
+                pinPreviewView.mode = PinPreviewView.PinType.STANDARD
+                pageTitleView.setText(R.string.set_pin_enter_pin)
+                if (pinProgressSwitcherView.currentView.id == R.id.progress) {
+                    pinProgressSwitcherView.showPrevious()
+                }
+                pageMessageView.visibility = View.VISIBLE
+                numericKeyboardView.visibility = View.VISIBLE
+                supportActionBar!!.setDisplayHomeAsUpEnabled(true)
+                messageView.visibility = View.GONE
+                confirmButtonView.visibility = View.GONE
                 viewModel.pin.clear()
                 pin.clear()
             }
@@ -252,7 +270,7 @@ class SetPinActivity : AppCompatActivity() {
             when (it.status) {
                 Status.ERROR -> {
                     if (state == State.DECRYPTING) {
-                        setState(State.DECRYPT)
+                        setState(if (changePin) State.CHANGE_PIN else State.DECRYPT)
                         pinPreviewView.shake()
                     } else {
                         android.widget.Toast.makeText(this, "Encrypting error", android.widget.Toast.LENGTH_LONG).show()
@@ -266,7 +284,7 @@ class SetPinActivity : AppCompatActivity() {
                     if (state == State.DECRYPTING) {
                         setState(State.SET_PIN)
                     } else {
-                        if (intent.getBooleanExtra(CHANGE_PIN, false)) {
+                        if (changePin) {
                             finish()
                         } else {
                             viewModel.initWallet()

@@ -22,7 +22,6 @@ import android.os.AsyncTask
 import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.util.FingerprintHelper
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
 import org.bitcoinj.wallet.Wallet
@@ -33,53 +32,53 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
     private val log = LoggerFactory.getLogger(EncryptWalletLiveData::class.java)
 
     private var encryptWalletTask: EncryptWalletTask? = null
-    private var checkPinTask: CheckPinTask? = null
+    private var decryptWalletTask: DecryptWalletTask? = null
 
     private var scryptIterationsTarget: Int = Constants.SCRYPT_ITERATIONS_TARGET
     private var walletApplication = application as WalletApplication
 
-    fun encrypt(password: String, scryptIterationsTarget: Int) {
+    fun encrypt(password: String, changingPin: Boolean, scryptIterationsTarget: Int) {
         if (encryptWalletTask == null) {
             this.scryptIterationsTarget = scryptIterationsTarget
             encryptWalletTask = EncryptWalletTask()
-            encryptWalletTask!!.execute(password)
+            encryptWalletTask!!.execute(password, changingPin)
         }
     }
 
-    fun checkPin(pin: String) {
-        if (checkPinTask == null) {
-            checkPinTask = CheckPinTask()
-            checkPinTask!!.execute(pin)
+    fun decrypt(password: String) {
+        if (decryptWalletTask == null) {
+            decryptWalletTask = DecryptWalletTask()
+            decryptWalletTask!!.execute(password)
         }
     }
 
     @SuppressLint("StaticFieldLeak")
-    internal inner class EncryptWalletTask : AsyncTask<String, Void, Resource<Wallet>>() {
+    internal inner class EncryptWalletTask : AsyncTask<Any, Void, Resource<Wallet>>() {
 
         override fun onPreExecute() {
             value = Resource.loading(null)
         }
 
-        override fun doInBackground(vararg args: String): Resource<Wallet> {
-            val password = args[0]
+        override fun doInBackground(vararg args: Any): Resource<Wallet> {
+            val password = args[0] as String
+            val changingPin = args[1] as Boolean
             val wallet = walletApplication.wallet
-            val config = walletApplication.configuration
-            try {
+            return try {
+                org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
                 // For the new key, we create a new key crypter according to the desired parameters.
                 val keyCrypter = KeyCrypterScrypt(scryptIterationsTarget)
                 val newKey = keyCrypter.deriveKey(password)
                 wallet.encrypt(keyCrypter, newKey)
 
-                if (config.lastVersionCode == 0) {
-                    org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
+                if (!changingPin) {
                     walletApplication.saveWalletAndFinalizeInitialization()
                 }
 
                 log.info("wallet successfully encrypted, using key derived by new spending password (${keyCrypter.scryptParameters.n} scrypt iterations)")
 
-                return Resource.success(wallet)
+                Resource.success(wallet)
             } catch (x: KeyCrypterException) {
-                return Resource.error(x.message!!, null)
+                Resource.error(x.message!!, null)
             }
         }
 
@@ -90,7 +89,7 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
     }
 
     @SuppressLint("StaticFieldLeak")
-    internal inner class CheckPinTask : AsyncTask<String, Void, Resource<Wallet>>() {
+    internal inner class DecryptWalletTask : AsyncTask<String, Void, Resource<Wallet>>() {
 
         override fun onPreExecute() {
             value = Resource.loading(null)
@@ -100,6 +99,7 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
             val password = args[0]
             val wallet = walletApplication.wallet
             return try {
+                org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
                 val key = wallet.keyCrypter!!.deriveKey(password)
                 wallet.decrypt(key)
                 Resource.success(wallet)
@@ -110,7 +110,7 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
 
         override fun onPostExecute(result: Resource<Wallet>) {
             value = result
-            checkPinTask = null
+            decryptWalletTask = null
         }
     }
 }
