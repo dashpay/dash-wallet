@@ -2,7 +2,7 @@
 <resources>
     <declare-styleable name="QuickActionButton">
         <attr name="action_icon" format="integer" />
-        <attr name="action_icon_size" format="dimension" />
+        <attr name="action_icon_size_percent" format="float" />
         <attr name="action_text" format="string" />
         <attr name="action_active" format="boolean" />
         <attr name="action_dark_mode" format="boolean" />
