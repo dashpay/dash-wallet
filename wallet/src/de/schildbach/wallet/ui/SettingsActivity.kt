@@ -24,8 +24,12 @@ import androidx.appcompat.widget.Toolbar
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_settings.*
+import org.dash.wallet.common.ui.DialogBuilder
+import org.slf4j.LoggerFactory
 
 class SettingsActivity : AppCompatActivity() {
+
+    private val log = LoggerFactory.getLogger(SettingsActivity::class.java)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,6 +47,7 @@ class SettingsActivity : AppCompatActivity() {
 
         about.setOnClickListener { startAboutActivity() }
         local_currency.setOnClickListener { startExchangeRatesActivity() }
+        rescan_blockchain.setOnClickListener { resetBlockchain() }
     }
 
     override fun onStart() {
@@ -74,6 +79,20 @@ class SettingsActivity : AppCompatActivity() {
     private fun startExchangeRatesActivity() {
         startActivity(Intent(this, ExchangeRatesActivity::class.java))
         overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
+    }
+
+    private fun resetBlockchain() {
+        val dialog = DialogBuilder(this)
+        dialog.setTitle(R.string.preferences_initiate_reset_title)
+        dialog.setMessage(R.string.preferences_initiate_reset_dialog_message)
+        dialog.setPositiveButton(R.string.preferences_initiate_reset_dialog_positive) { dialog, which ->
+            log.info("manually initiated blockchain reset")
+
+            WalletApplication.getInstance().resetBlockchain()
+            finish()
+        }
+        dialog.setNegativeButton(R.string.button_dismiss, null)
+        dialog.show()
     }
 
 }
