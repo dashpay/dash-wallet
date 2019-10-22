@@ -159,6 +159,8 @@
 	<string name="transaction_details_amount_received">Amount Received</string>
 	<string name="transaction_details_amount_sent">Amount Sent</string>
 
+	<string name="confirm">Confirm</string>
+
 	<string-array name="history_filter">
 		<item>All</item>
 		<item>Received</item>
