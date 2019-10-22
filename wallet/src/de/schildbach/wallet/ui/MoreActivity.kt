@@ -48,6 +48,11 @@ class MoreActivity : GlobalFooterActivity() {
         tools.setOnClickListener { startToolsActivity() }
     }
 
+    override fun startActivity(intent: Intent?) {
+        super.startActivity(intent)
+        overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
+    }
+
     private fun startBuyAndSellActivity() {
         val wallet = WalletApplication.getInstance().wallet
         startActivity(UpholdAccountActivity.createIntent(this, wallet))
@@ -59,7 +64,6 @@ class MoreActivity : GlobalFooterActivity() {
 
     private fun startSettingsActivity() {
         startActivity(Intent(this, SettingsActivity::class.java))
-        overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
     }
 
     private fun startToolsActivity() {

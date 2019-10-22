@@ -27,4 +27,9 @@ class AboutActivity : AppCompatActivity() {
         setContentView(R.layout.activity_about)
     }
 
+    override fun finish() {
+        super.finish()
+        overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_left)
+    }
+
 }

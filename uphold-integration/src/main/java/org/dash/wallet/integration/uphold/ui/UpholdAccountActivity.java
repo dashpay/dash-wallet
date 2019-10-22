@@ -143,6 +143,12 @@ public class UpholdAccountActivity extends AppCompatActivity {
         loadUserBalance();
     }
 
+    @Override
+    public void finish() {
+        super.finish();
+        overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_left);
+    }
+
     private void loadUserBalance() {
         final ProgressDialog loadingDialog = new ProgressDialog(this);
         loadingDialog.setIndeterminate(true);
