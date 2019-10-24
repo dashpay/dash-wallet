@@ -38,6 +38,7 @@
     <string name="history_title">History</string>
     <string name="more_title">More</string>
     <string name="settings_title">Settings</string>
+    <string name="tools_title">Tools</string>
 
     <string name="payments_title">Payments</string>
     <string name="payments_tab_pay_label">Pay</string>
@@ -188,6 +189,10 @@
     <string name="menu_tools_subtitle">Import private key…</string>
     <string name="menu_local_currency">Local Currency</string>
     <string name="menu_rescan_blockchain">Rescan Blockchain</string>
+
+    <string name="tools_address_book">Address Book</string>
+    <string name="tools_import_private_key">Import Private Key</string>
+    <string name="tools_network_monitor">Network Monitor</string>
 
     <string-array name="history_filter">
         <item>All</item>

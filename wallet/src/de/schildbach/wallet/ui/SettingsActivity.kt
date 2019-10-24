@@ -18,16 +18,15 @@ package de.schildbach.wallet.ui
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.MenuItem
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.activity_more.*
 import kotlinx.android.synthetic.main.activity_settings.*
 import org.dash.wallet.common.ui.DialogBuilder
 import org.slf4j.LoggerFactory
 
-class SettingsActivity : AppCompatActivity() {
+class SettingsActivity : BaseMenuActivity() {
 
     private val log = LoggerFactory.getLogger(SettingsActivity::class.java)
 
@@ -45,8 +44,12 @@ class SettingsActivity : AppCompatActivity() {
 
         setTitle(R.string.settings_title)
 
-        about.setOnClickListener { startAboutActivity() }
-        local_currency.setOnClickListener { startExchangeRatesActivity() }
+        about.setOnClickListener {
+            startActivity(Intent(this, AboutActivity::class.java))
+        }
+        local_currency.setOnClickListener {
+            startActivity(Intent(this, ExchangeRatesActivity::class.java))
+        }
         rescan_blockchain.setOnClickListener { resetBlockchain() }
     }
 
@@ -54,31 +57,6 @@ class SettingsActivity : AppCompatActivity() {
         super.onStart()
         local_currency_symbol.text = WalletApplication.getInstance()
                 .configuration.exchangeCurrencyCode
-    }
-
-    override fun finish() {
-        super.finish()
-        overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_left)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            android.R.id.home -> {
-                onBackPressed()
-                return true
-            }
-        }
-        return super.onOptionsItemSelected(item)
-    }
-
-    private fun startAboutActivity() {
-        startActivity(Intent(this, AboutActivity::class.java))
-        overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
-    }
-
-    private fun startExchangeRatesActivity() {
-        startActivity(Intent(this, ExchangeRatesActivity::class.java))
-        overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
     }
 
     private fun resetBlockchain() {

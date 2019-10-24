@@ -43,9 +43,13 @@ class MoreActivity : GlobalFooterActivity() {
         setTitle(R.string.more_title)
 
         buy_and_sell.setOnClickListener { startBuyAndSellActivity() }
-        security.setOnClickListener { startSecurityActivity() }
-        settings.setOnClickListener { startSettingsActivity() }
-        tools.setOnClickListener { startToolsActivity() }
+        security.setOnClickListener { }
+        settings.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+        tools.setOnClickListener {
+            startActivity(Intent(this, ToolsActivity::class.java))
+        }
     }
 
     override fun startActivity(intent: Intent?) {
@@ -56,18 +60,6 @@ class MoreActivity : GlobalFooterActivity() {
     private fun startBuyAndSellActivity() {
         val wallet = WalletApplication.getInstance().wallet
         startActivity(UpholdAccountActivity.createIntent(this, wallet))
-    }
-
-    private fun startSecurityActivity() {
-
-    }
-
-    private fun startSettingsActivity() {
-        startActivity(Intent(this, SettingsActivity::class.java))
-    }
-
-    private fun startToolsActivity() {
-
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
