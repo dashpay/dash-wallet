@@ -1,12 +1,16 @@
 package de.schildbach.wallet.rates;
 
-import androidx.room.Entity;
-import androidx.room.PrimaryKey;
+import android.os.Build;
+
 import androidx.annotation.NonNull;
+import androidx.room.Entity;
+import androidx.room.Ignore;
+import androidx.room.PrimaryKey;
 
 import org.bitcoinj.utils.Fiat;
 
 import java.math.BigDecimal;
+import java.util.Currency;
 
 /**
  * @author Samuel Barbosa
@@ -18,6 +22,11 @@ public class ExchangeRate {
     @NonNull
     private String currencyCode;
     private String rate;
+
+    @Ignore
+    private String currencyName;
+    @Ignore
+    private Currency currency;
 
     public ExchangeRate(@NonNull String currencyCode, String rate) {
         this.currencyCode = currencyCode;
@@ -46,4 +55,23 @@ public class ExchangeRate {
     public String toString() {
         return "{" + currencyCode + ":" + rate + "}";
     }
+
+    private Currency getCurrency() {
+        if (currency == null) {
+            currency = Currency.getInstance(currencyCode.toUpperCase());
+        }
+        return currency;
+    }
+
+    public String getCurrencyName() {
+        if (currencyName == null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                currencyName = getCurrency().getDisplayName();
+            } else {
+                currencyName = "";
+            }
+        }
+        return currencyName;
+    }
+
 }
