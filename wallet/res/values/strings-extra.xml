@@ -189,7 +189,6 @@
     <string name="menu_local_currency">Local Currency</string>
     <string name="menu_rescan_blockchain">Rescan Blockchain</string>
 
-
     <string-array name="history_filter">
         <item>All</item>
         <item>Received</item>

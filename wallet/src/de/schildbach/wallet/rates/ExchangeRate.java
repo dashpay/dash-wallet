@@ -64,6 +64,11 @@ public class ExchangeRate {
     }
 
     public String getCurrencyName() {
+        //VES special case
+        if (currencyCode.equalsIgnoreCase("VES")) {
+            return "Venezuelan Bolívar";
+        }
+
         if (currencyName == null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 currencyName = getCurrency().getDisplayName();
