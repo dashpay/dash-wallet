@@ -45,7 +45,7 @@ open class GlobalFooterActivity : AppCompatActivity(), GlobalFooterView.OnFooter
     }
 
     override fun onGotoClick() {
-        val intent = Intent(this, PaymentsActivity::class.java)
+        val intent = PaymentsActivity.createIntent(this, PaymentsActivity.ACTIVE_TAB_RECENT)
         startActivity(intent)
     }
 

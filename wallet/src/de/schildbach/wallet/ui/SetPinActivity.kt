@@ -115,7 +115,7 @@ class SetPinActivity : AppCompatActivity() {
         confirmButtonView = findViewById(R.id.btn_confirm)
         numericKeyboardView = findViewById(R.id.numeric_keyboard)
 
-        numericKeyboardView.setCancelEnabled(false)
+        numericKeyboardView.setFunctionEnabled(false)
         numericKeyboardView.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
             override fun onNumber(number: Int) {
@@ -135,14 +135,14 @@ class SetPinActivity : AppCompatActivity() {
                 }
             }
 
-            override fun onBack() {
+            override fun onBack(longClick: Boolean) {
                 if (pin.size > 0) {
                     pin.removeAt(pin.lastIndex)
                     pinPreviewView.prev()
                 }
             }
 
-            override fun onCancel() {
+            override fun onFunction() {
 
             }
         }
@@ -309,15 +309,5 @@ class SetPinActivity : AppCompatActivity() {
                 finish()
             }
         }
-    }
-
-    override fun startActivity(intent: Intent?) {
-        super.startActivity(intent)
-        overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
-    }
-
-    override fun finish() {
-        super.finish()
-        overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
     }
 }

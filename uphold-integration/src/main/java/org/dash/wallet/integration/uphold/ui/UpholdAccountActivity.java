@@ -301,16 +301,4 @@ public class UpholdAccountActivity extends AppCompatActivity {
         startActivity(intent);
         finish();
     }
-
-    @Override
-    public void startActivity(Intent intent) {
-        super.startActivity(intent);
-        overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
-    }
-
-    @Override
-    public void finish() {
-        super.finish();
-        overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
-    }
 }
