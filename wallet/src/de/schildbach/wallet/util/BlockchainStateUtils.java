@@ -37,7 +37,7 @@ public class BlockchainStateUtils {
         final boolean blockchainUptodate = blockchainLag < BLOCKCHAIN_UPTODATE_THRESHOLD_MS;
         final boolean noImpediments = blockchainState.impediments.isEmpty();
 
-        if (!(blockchainUptodate || !blockchainState.replaying)) {
+        if (!blockchainUptodate || blockchainState.replaying) {
             String progressMessage;
             final String downloading = context.getString(noImpediments ? R.string.blockchain_state_progress_downloading
                     : R.string.blockchain_state_progress_stalled);

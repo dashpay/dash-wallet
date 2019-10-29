@@ -105,9 +105,9 @@
         <activity
             android:name="de.schildbach.wallet.ui.send.SendCoinsActivity"
             android:configChanges="keyboard|keyboardHidden"
-            android:label="@string/send_coins_activity_title"
-            android:theme="@style/My.Theme.ChildActivity"
-            android:windowSoftInputMode="adjustResize" >
+            android:label="@string/pay_title"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity">
             <intent-filter android:label="@string/send_coins_activity_title" >
                 <action android:name="android.intent.action.VIEW" />
 
@@ -143,6 +143,7 @@
         <activity
             android:name="de.schildbach.wallet.ui.SendCoinsQrActivity"
             android:configChanges="keyboard|keyboardHidden"
+            android:screenOrientation="portrait"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" >
         </activity>
         <activity
@@ -184,9 +185,8 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="de.schildbach.wallet.ui.ScanActivity"
-            android:configChanges="orientation|keyboard|keyboardHidden"
-            android:screenOrientation="landscape"
+            android:name="de.schildbach.wallet.ui.scan.ScanActivity"
+            android:configChanges="keyboard|keyboardHidden"
             android:stateNotNeeded="true"
             android:theme="@style/My.Theme.Fullscreen"
             android:windowSoftInputMode="stateAlwaysHidden" />
@@ -226,6 +226,10 @@
             android:theme="@style/My.Theme.ChildActivity" />
 
         <activity android:name="de.schildbach.wallet.ui.PaymentsActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity" />
+
+        <activity android:name="de.schildbach.wallet.ui.ReceiveActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 

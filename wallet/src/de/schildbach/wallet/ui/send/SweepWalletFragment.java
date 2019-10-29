@@ -66,7 +66,7 @@ import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
-import de.schildbach.wallet.ui.ScanActivity;
+import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.TransactionsAdapter;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -243,7 +243,7 @@ public class SweepWalletFragment extends Fragment {
 		sweepTransactionView.addView(sweepTransactionViewHolder.itemView,
 				new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-		viewGo = (Button) view.findViewById(R.id.send_coins_go);
+		viewGo = (Button) view.findViewById(R.id.confirm_button);
 		viewGo.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(final View v) {
