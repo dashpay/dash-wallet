@@ -18,30 +18,20 @@ package de.schildbach.wallet.ui
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.MenuItem
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
 import de.schildbach.wallet.ui.send.SweepWalletActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_tools.*
-import org.slf4j.LoggerFactory
 
 class ToolsActivity : BaseMenuActivity() {
 
+    override fun getLayoutId(): Int {
+        return R.layout.activity_tools
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_tools)
-
-        val toolbar = findViewById<Toolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
-        val actionBar = supportActionBar
-        actionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)
-            setDisplayShowHomeEnabled(true)
-        }
 
         setTitle(R.string.tools_title)
-
         address_book.setOnClickListener {
             startActivity(Intent(this, AddressBookActivity::class.java))
         }

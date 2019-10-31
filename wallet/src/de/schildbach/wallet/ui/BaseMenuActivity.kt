@@ -18,15 +18,36 @@ package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.os.Bundle
+import android.os.PersistableBundle
+import android.util.Log
 import android.view.MenuItem
+import androidx.annotation.LayoutRes
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import de.schildbach.wallet_test.R
 
 /**
  * @author Samuel Barbosa
  */
 @SuppressLint("Registered")
-open class BaseMenuActivity : AppCompatActivity() {
+abstract class BaseMenuActivity : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(getLayoutId())
+
+        val toolbar = findViewById<Toolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
+        val actionBar = supportActionBar
+        actionBar?.apply {
+            setDisplayHomeAsUpEnabled(true)
+            setDisplayShowHomeEnabled(true)
+        }
+    }
+
+    @LayoutRes
+    abstract fun getLayoutId(): Int
 
     override fun startActivity(intent: Intent?) {
         super.startActivity(intent)

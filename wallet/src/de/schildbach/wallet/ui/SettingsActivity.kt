@@ -30,20 +30,14 @@ class SettingsActivity : BaseMenuActivity() {
 
     private val log = LoggerFactory.getLogger(SettingsActivity::class.java)
 
+    override fun getLayoutId(): Int {
+        return R.layout.activity_settings
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_settings)
-
-        val toolbar = findViewById<Toolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
-        val actionBar = supportActionBar
-        actionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)
-            setDisplayShowHomeEnabled(true)
-        }
 
         setTitle(R.string.settings_title)
-
         about.setOnClickListener {
             startActivity(Intent(this, AboutActivity::class.java))
         }

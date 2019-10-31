@@ -16,15 +16,34 @@
 
 package de.schildbach.wallet.ui
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.activity_about.*
+import android.content.Intent.ACTION_VIEW
+import android.net.Uri
+import androidx.core.content.ContextCompat.getSystemService
 
-class AboutActivity : AppCompatActivity() {
+
+class AboutActivity : BaseMenuActivity() {
+
+    override fun getLayoutId(): Int {
+        return R.layout.activity_about
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_about)
+
+        setTitle(R.string.about_title)
+        version_name.text = getString(R.string.about_version_name, BuildConfig.VERSION_NAME)
+
+        github_link.setOnClickListener {
+            val i = Intent(ACTION_VIEW)
+            i.data = Uri.parse(github_link.text.toString())
+            startActivity(i)
+        }
     }
 
     override fun finish() {
