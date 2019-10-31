@@ -30,6 +30,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.graphics.Point;
 import android.net.Uri;
 import android.nfc.NdefMessage;
@@ -45,8 +46,11 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.view.ViewGroup;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.Toolbar;
@@ -56,6 +60,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.Loader;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.navigation.NavigationView;
@@ -73,6 +79,9 @@ import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
 import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.IOException;
 import java.util.Currency;
@@ -83,6 +92,8 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.data.WalletLock;
+import de.schildbach.wallet.service.BlockchainState;
+import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.preference.PreferenceActivity;
@@ -106,13 +117,14 @@ public final class WalletActivity extends AbstractBindServiceActivity
         EnableFingerprintDialog.OnFingerprintEnabledListener,
         EncryptKeysDialogFragment.OnOnboardingCompleteListener,
         WalletTransactionsFragment.MotionLayoutProvider {
-
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
     private static final int DIALOG_RESTORE_WALLET = 2;
     private static final int DIALOG_TIMESKEW_ALERT = 3;
     private static final int DIALOG_VERSION_ALERT = 4;
     private static final int DIALOG_LOW_STORAGE_ALERT = 5;
+
+    private static final int ID_BLOCKCHAIN_STATE_LOADER = 1;
 
     private WalletApplication application;
     private Configuration config;
@@ -134,6 +146,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private boolean showBackupWalletDialog = false;
 
+    private boolean initComplete = false;
+    private LoaderManager loaderManager;
+
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -144,13 +159,14 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         setContentViewFooter(R.layout.home_activity);
         setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
-        adjustHeaderLayout();
+        adjustHeaderLayout(true);
         activateHomeButton();
 
         if (savedInstanceState == null) {
             checkAlerts();
         }
 
+        this.loaderManager = LoaderManager.getInstance(this);
         config.touchLastUsed();
 
         handleIntent(getIntent());
@@ -175,12 +191,17 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }
     }
 
-    private void adjustHeaderLayout() {
+    private void adjustHeaderLayout(boolean syncStatusPaneVisible) {
         Display display = getWindowManager().getDefaultDisplay();
         Point size = new Point();
         display.getSize(size);
         float screenHeight = size.y;
-        int headerHeight = (int) (screenHeight * 0.5);
+        int headerHeight;
+        if (syncStatusPaneVisible) {
+            headerHeight = (int) (screenHeight * 0.5);
+        } else {
+            headerHeight = (int) (screenHeight * 0.3);
+        }
         ViewGroup.LayoutParams headerPaneParams = findViewById(R.id.header_pane).getLayoutParams();
         headerPaneParams.height = headerHeight;
         MotionLayout motionLayout = findViewById(R.id.home_content);
@@ -289,6 +310,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @Override
     protected void onResume() {
         super.onResume();
+
+        if (!initComplete) {
+            loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
+            initComplete = true;
+        } else {
+            loaderManager.restartLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
+        }
 
         handler.postDelayed(new Runnable() {
             @Override
@@ -1069,6 +1097,56 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     }
 
+    @Override
+    public void onStart() {
+        super.onStart();
+        findViewById(R.id.restart_sync_icon).setOnClickListener(new View.OnClickListener() {
+            public void onClick(final View v) {
+                findViewById(R.id.sync_error_pane).setVisibility(View.GONE);
+                findViewById(R.id.sync_progress_pane).setVisibility(View.VISIBLE);
+            }
+        });
+        EventBus.getDefault().register(this);
+    }
+
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    public void onEvent(SyncProgressEvent event) {
+        ProgressBar syncProgressView = findViewById(R.id.sync_status_progress);
+        if (event.getFailed()) {
+            findViewById(R.id.sync_progress_pane).setVisibility(View.GONE);
+            findViewById(R.id.sync_error_pane).setVisibility(View.VISIBLE);
+            return;
+        }
+        showSyncPane(R.id.sync_error_pane,false);
+        showSyncPane(R.id.sync_progress_pane,true);
+        int percentage = (int) event.getPct();
+        TextView syncStatusTitle = findViewById(R.id.sync_status_title);
+        TextView syncStatusMessage = findViewById(R.id.sync_status_message);
+        if (percentage != syncProgressView.getProgress()) {
+            syncProgressView.setProgress(percentage);
+            TextView syncPercentageView = findViewById(R.id.sync_status_percentage);
+
+            syncPercentageView.setText(percentage + "%");
+            if (percentage == 100) {
+                syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
+                syncStatusTitle.setText("Sync");
+                syncStatusMessage.setText("Completed");
+                showSyncPane(R.id.sync_status_pane,false);
+            } else {
+                syncPercentageView.setTextColor(getResources().getColor(R.color.dash_gray));
+                syncStatusTitle.setText("Syncing");
+                syncStatusMessage.setText("with Dash Blockchain");
+                showSyncPane(R.id.sync_status_pane, true);
+            }
+        }
+    }
+
+    @Override
+    public void onStop() {
+        EventBus.getDefault().unregister(this);
+        super.onStop();
+    }
+
     /**
      * Get ISO 3166-1 alpha-2 country code for this device (or null if not available)
      * If available, call {@link #showFiatCurrencyChangeDetectedDialog(String, String)}
@@ -1183,5 +1261,31 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @Override
     public RecyclerView getRecyclerView() {
         return findViewById(R.id.home_recycler);
+    }
+
+
+    private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>() {
+        @Override
+        public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args) {
+            return new BlockchainStateLoader(WalletActivity.this);
+        }
+
+        @Override
+        public void onLoadFinished(@NonNull final Loader<BlockchainState> loader, final BlockchainState blockchainState) {
+        }
+
+        @Override
+        public void onLoaderReset(@NonNull final Loader<BlockchainState> loader) {
+        }
+    };
+
+    private void showSyncPane(int id, boolean show) {
+        int visibility = show ? ConstraintSet.VISIBLE : ConstraintSet.GONE;
+        MotionLayout motionLayout = findViewById(R.id.home_content);
+        ConstraintSet constraintSet = motionLayout.getConstraintSet(R.id.expanded);
+        constraintSet.setVisibility(id, visibility);
+        constraintSet = motionLayout.getConstraintSet(R.id.collapsed);
+        constraintSet.setVisibility(id, visibility);
+        adjustHeaderLayout(show);
     }
 }

@@ -33,6 +33,7 @@ public class BlockchainState {
     private static final String EXTRA_IMPEDIMENTS = "impediment";
     private static final String EXTRA_CHAINLOCK_HEIGHT = "chainlock_height";
     private static final String EXTRA_MASTERNODE_LIST_HEIGHT = "mn_list_height";
+    private static final String EXTRA_PERCENTAGE_SYNC = "percentage_sync";
 
     public enum Impediment {
         STORAGE, NETWORK
@@ -44,15 +45,17 @@ public class BlockchainState {
     public final EnumSet<Impediment> impediments;
     public final int chainlockHeight;
     public final int mnlistHeight;
+    public final int percentageSync;
 
     public BlockchainState(final Date bestChainDate, final int bestChainHeight, final boolean replaying,
-            final Set<Impediment> impediments, int chainlockHeight, int mnlistHeight) {
+            final Set<Impediment> impediments, int chainlockHeight, int mnlistHeight, int percentageSync) {
         this.bestChainDate = bestChainDate;
         this.bestChainHeight = bestChainHeight;
         this.replaying = replaying;
         this.impediments = EnumSet.copyOf(impediments);
         this.chainlockHeight = chainlockHeight;
         this.mnlistHeight = mnlistHeight;
+        this.percentageSync = percentageSync;
     }
 
     public static BlockchainState fromIntent(final Intent intent) {
@@ -63,8 +66,9 @@ public class BlockchainState {
         final Set<Impediment> impediments = (Set<Impediment>) intent.getSerializableExtra(EXTRA_IMPEDIMENTS);
         final int chainlockHeight = intent.getIntExtra(EXTRA_CHAINLOCK_HEIGHT, 0);
         final int mnListHeight = intent.getIntExtra(EXTRA_MASTERNODE_LIST_HEIGHT, 0);
+        final int percentageSync = intent.getIntExtra(EXTRA_PERCENTAGE_SYNC, 0);
 
-        return new BlockchainState(bestChainDate, bestChainHeight, replaying, impediments, chainlockHeight, mnListHeight);
+        return new BlockchainState(bestChainDate, bestChainHeight, replaying, impediments, chainlockHeight, mnListHeight, percentageSync);
     }
 
     public void putExtras(final Intent intent) {
@@ -74,5 +78,6 @@ public class BlockchainState {
         intent.putExtra(EXTRA_IMPEDIMENTS, impediments);
         intent.putExtra(EXTRA_CHAINLOCK_HEIGHT, chainlockHeight);
         intent.putExtra(EXTRA_MASTERNODE_LIST_HEIGHT, mnlistHeight);
+        intent.putExtra(EXTRA_PERCENTAGE_SYNC, percentageSync);
     }
 }
