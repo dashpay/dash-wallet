@@ -61,6 +61,6 @@
             app:fontFamily="@font/montserrat_regular"
             app:prefixColor="@color/dash_light_gray" />
 
-    </LinearLayout>
+</LinearLayout>
 
 </FrameLayout>

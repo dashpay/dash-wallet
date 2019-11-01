@@ -45,6 +45,8 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -93,6 +95,7 @@ import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.preference.PreferenceActivity;
+import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
@@ -110,7 +113,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         NavigationView.OnNavigationItemSelectedListener,
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
-
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
     private static final int DIALOG_RESTORE_WALLET = 2;
@@ -270,7 +272,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         findViewById(R.id.scan_to_pay_action).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                handleScan();
+                handleScan(v);
             }
         });
         findViewById(R.id.buy_sell_action).setOnClickListener(new View.OnClickListener() {
@@ -533,8 +535,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         startActivity(new Intent(this, SendCoinsActivity.class));
     }
 
-    public void handleScan() {
-        startActivityForResult(new Intent(this, ScanActivity.class), REQUEST_CODE_SCAN);
+    public void handleScan(View clickView) {
+        ScanActivity.startForResult(this, clickView, REQUEST_CODE_SCAN);
     }
 
     public void handleBackupWallet() {

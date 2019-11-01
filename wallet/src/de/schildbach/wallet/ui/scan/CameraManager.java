@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2015 the original author or authors.
+ * Copyright the original author or authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,10 +12,10 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.camera;
+package de.schildbach.wallet.ui.scan;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -71,8 +71,7 @@ public final class CameraManager {
         return cameraInfo.orientation;
     }
 
-    public Camera open(final TextureView textureView, final int displayOrientation, final boolean continuousAutoFocus)
-            throws IOException {
+    public Camera open(final TextureView textureView, final int displayOrientation) throws IOException {
         final int cameraId = determineCameraId();
         Camera.getCameraInfo(cameraId, cameraInfo);
 
@@ -103,21 +102,27 @@ public final class CameraManager {
         final int leftOffset = (width - frameSize) / 2;
         final int topOffset = (height - frameSize) / 2;
         frame = new Rect(leftOffset, topOffset, leftOffset + frameSize, topOffset + frameSize);
-        framePreview = new RectF(frame.left * cameraResolution.width / width,
-                frame.top * cameraResolution.height / height, frame.right * cameraResolution.width / width,
-                frame.bottom * cameraResolution.height / height);
+        if (width > height) { // landscape
+            framePreview = new RectF(frame.left * cameraResolution.width / width,
+                    frame.top * cameraResolution.height / height, frame.right * cameraResolution.width / width,
+                    frame.bottom * cameraResolution.height / height);
+        } else { // portrait
+            framePreview = new RectF(frame.top * cameraResolution.width / height,
+                    frame.left * cameraResolution.height / width, frame.bottom * cameraResolution.width / height,
+                    frame.right * cameraResolution.height / width);
+        }
 
         final String savedParameters = parameters == null ? null : parameters.flatten();
 
         try {
-            setDesiredCameraParameters(camera, cameraResolution, continuousAutoFocus);
+            setDesiredCameraParameters(camera, cameraResolution);
         } catch (final RuntimeException x) {
             if (savedParameters != null) {
                 final Camera.Parameters parameters2 = camera.getParameters();
                 parameters2.unflatten(savedParameters);
                 try {
                     camera.setParameters(parameters2);
-                    setDesiredCameraParameters(camera, cameraResolution, continuousAutoFocus);
+                    setDesiredCameraParameters(camera, cameraResolution);
                 } catch (final RuntimeException x2) {
                     log.info("problem setting camera parameters", x2);
                 }
@@ -230,18 +235,15 @@ public final class CameraManager {
     }
 
     @SuppressLint("InlinedApi")
-    private static void setDesiredCameraParameters(final Camera camera, final Camera.Size cameraResolution,
-            final boolean continuousAutoFocus) {
+    private static void setDesiredCameraParameters(final Camera camera, final Camera.Size cameraResolution) {
         final Camera.Parameters parameters = camera.getParameters();
         if (parameters == null)
             return;
 
         final List<String> supportedFocusModes = parameters.getSupportedFocusModes();
-        final String focusMode = continuousAutoFocus
-                ? findValue(supportedFocusModes, Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE,
-                        Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO, Camera.Parameters.FOCUS_MODE_AUTO,
-                        Camera.Parameters.FOCUS_MODE_MACRO)
-                : findValue(supportedFocusModes, Camera.Parameters.FOCUS_MODE_AUTO, Camera.Parameters.FOCUS_MODE_MACRO);
+        final String focusMode = findValue(supportedFocusModes, Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE,
+                Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO, Camera.Parameters.FOCUS_MODE_AUTO,
+                Camera.Parameters.FOCUS_MODE_MACRO);
         if (focusMode != null)
             parameters.setFocusMode(focusMode);
 

@@ -191,7 +191,7 @@ public final class HeaderBalanceFragment extends Fragment {
         View balances = viewBalance.findViewById(R.id.balances);
         TextView walletBalanceSyncMessage = viewBalance.findViewById(R.id.wallet_balance_sync_message);
         if (!isSynced) {
-            balances.setVisibility(View.INVISIBLE);
+            balances.setVisibility(View.GONE);
             walletBalanceSyncMessage.setVisibility(View.VISIBLE);
             return;
         } else {
