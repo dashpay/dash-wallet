@@ -542,6 +542,9 @@ public final class SendCoinsFragment extends Fragment {
     }
 
     private void showTransactionResult(Transaction transaction) {
+        if (!isAdded()) {
+            return;
+        }
         String address = viewModel.paymentIntent.getAddress().toBase58();
         TransactionResult transactionResult = new TransactionResult(
                 transaction.getValue(viewModel.wallet), transaction.getExchangeRate(), address,

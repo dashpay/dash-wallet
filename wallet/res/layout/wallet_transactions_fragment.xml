@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/wallet_transactions_group"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -12,53 +11,15 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center" />
 
-    <LinearLayout
-        android:id="@+id/empty_locked_group"
+    <TextView
+        android:id="@+id/wallet_transactions_empty"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_margin="16dp"
-        android:clipToPadding="false"
-        android:gravity="center"
-        android:orientation="vertical">
-
-        <TextView
-            android:id="@+id/wallet_transactions_empty"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:text="@string/wallet_transactions_fragment_empty_text"
-            android:textSize="@dimen/font_size_small"
-            app:fontFamily="@font/montserrat" />
-
-        <LinearLayout
-            android:id="@+id/fingerprint_group"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:visibility="gone"
-            tools:visibility="visible">
-
-            <ImageView
-                android:id="@+id/fingerprint_icon"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="@dimen/list_entry_padding"
-                android:src="@drawable/ic_fingerprint_black_24dp" />
-
-            <TextView
-                android:id="@+id/fingerprint_text"
-                style="@style/MontserratMedium.DB.14"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:text="@string/or_unlock_with_fingerprint" />
-
-        </LinearLayout>
-
-    </LinearLayout>
+        android:layout_marginTop="64dp"
+        android:gravity="center_horizontal"
+        android:text="@string/wallet_transactions_fragment_empty_text"
+        android:textSize="@dimen/font_size_small"
+        app:fontFamily="@font/montserrat" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -69,9 +30,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingStart="8dp"
-            android:paddingLeft="8dp"
+            android:paddingTop="8dp"
             android:paddingEnd="8dp"
-            android:paddingRight="8dp">
+            android:paddingBottom="8dp">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -87,28 +48,19 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="end"
-                android:textAlignment="textEnd"
+                android:background="@android:color/transparent"
                 android:gravity="end"
-                android:background="@android:color/transparent" />
+                android:textAlignment="textEnd" />
 
         </FrameLayout>
 
-        <LinearLayout
-            android:id="@+id/transaction_list_container"
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/wallet_transactions_list"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical">
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/wallet_transactions_list"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:animateLayoutChanges="false"
-                android:clipToPadding="false"
-                android:paddingBottom="80dp"
-                android:scrollbars="vertical" />
-
-        </LinearLayout>
+            android:animateLayoutChanges="false"
+            android:clipToPadding="false"
+            android:scrollbars="vertical" />
 
     </LinearLayout>
 

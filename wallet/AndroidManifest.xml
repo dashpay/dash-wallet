@@ -233,6 +233,10 @@
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
+        <activity android:name="de.schildbach.wallet.ui.ReceiveActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity" />
+
         <activity
             android:name="de.schildbach.wallet.ui.TransactionResultActivity"
             android:screenOrientation="portrait"
