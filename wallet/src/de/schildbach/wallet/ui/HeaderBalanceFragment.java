@@ -24,6 +24,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -38,6 +39,9 @@ import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.util.GenericUtils;
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import javax.annotation.Nullable;
 
@@ -61,6 +65,7 @@ public final class HeaderBalanceFragment extends Fragment {
     private CurrencyTextView viewBalanceDash;
     private CurrencyTextView viewBalanceLocal;
 
+    private boolean isSynced;
     private boolean showLocalBalance;
 
     private ExchangeRatesViewModel exchangeRatesViewModel;
@@ -76,6 +81,18 @@ public final class HeaderBalanceFragment extends Fragment {
     private boolean initComplete = false;
 
     private Handler autoLockHandler = new Handler();
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        EventBus.getDefault().register(this);
+    }
+
+    @Override
+    public void onStop() {
+        EventBus.getDefault().unregister(this);
+        super.onStop();
+    }
 
     @Override
     public void onAttach(final Activity activity) {
@@ -159,12 +176,28 @@ public final class HeaderBalanceFragment extends Fragment {
         super.onPause();
     }
 
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    public void onEvent(SyncProgressEvent event) {
+        int percentage = (int) event.getPct();
+        isSynced = percentage == 100;
+        updateView();
+    }
+
     private void updateView() {
         if (!isAdded()) {
             return;
         }
 
-        viewBalance.setVisibility(View.VISIBLE);
+        View balances = viewBalance.findViewById(R.id.balances);
+        TextView walletBalanceSyncMessage = viewBalance.findViewById(R.id.wallet_balance_sync_message);
+        if (!isSynced) {
+            balances.setVisibility(View.GONE);
+            walletBalanceSyncMessage.setVisibility(View.VISIBLE);
+            return;
+        } else {
+            balances.setVisibility(View.VISIBLE);
+            walletBalanceSyncMessage.setVisibility(View.GONE);
+        }
 
         if (!showLocalBalance)
             viewBalanceLocal.setVisibility(View.GONE);

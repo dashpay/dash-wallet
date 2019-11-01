@@ -185,9 +185,8 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="de.schildbach.wallet.ui.ScanActivity"
-            android:configChanges="orientation|keyboard|keyboardHidden"
-            android:screenOrientation="portrait"
+            android:name="de.schildbach.wallet.ui.scan.ScanActivity"
+            android:configChanges="keyboard|keyboardHidden"
             android:stateNotNeeded="true"
             android:theme="@style/My.Theme.Fullscreen"
             android:windowSoftInputMode="stateAlwaysHidden" />
@@ -227,6 +226,10 @@
             android:theme="@style/My.Theme.ChildActivity" />
 
         <activity android:name="de.schildbach.wallet.ui.PaymentsActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity" />
+
+        <activity android:name="de.schildbach.wallet.ui.ReceiveActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 

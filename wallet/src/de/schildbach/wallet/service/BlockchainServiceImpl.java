@@ -17,23 +17,33 @@
 
 package de.schildbach.wallet.service;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.EnumSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
+import android.annotation.SuppressLint;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.ComponentCallbacks2;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.Uri;
+import android.os.Binder;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.PowerManager;
+import android.os.PowerManager.WakeLock;
+import android.text.format.DateUtils;
 
-import javax.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
+import com.google.common.base.Stopwatch;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
@@ -50,6 +60,8 @@ import org.bitcoinj.core.SporkMessage;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
+import org.bitcoinj.core.listeners.DownloadProgressTracker;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.listeners.AbstractPeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDataEventListener;
@@ -70,25 +82,42 @@ import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.Configuration;
+import org.greenrobot.eventbus.EventBus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Stopwatch;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.EnumSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
-import org.dash.wallet.common.Configuration;
+import javax.annotation.Nullable;
+
+import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.AddressBookProvider;
-import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.service.BlockchainState.Impediment;
+import de.schildbach.wallet.ui.SyncProgressEvent;
 import de.schildbach.wallet.ui.WalletActivity;
 import de.schildbach.wallet.util.BlockchainStateUtils;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
-
 import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -114,7 +143,6 @@ import androidx.core.app.NotificationCompat;
 import androidx.lifecycle.LifecycleService;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.text.format.DateUtils;
-
 import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 
 /**
@@ -339,12 +367,13 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         }
     }
 
-    private final PeerDataEventListener blockchainDownloadListener = new AbstractPeerDataEventListener() {
+    private final PeerDataEventListener blockchainDownloadListener = new DownloadProgressTracker() {
         private final AtomicLong lastMessageTime = new AtomicLong(0);
 
         @Override
         public void onBlocksDownloaded(final Peer peer, final Block block, final FilteredBlock filteredBlock,
                 final int blocksLeft) {
+            super.onBlocksDownloaded(peer, block, filteredBlock, blocksLeft);
             delayHandler.removeCallbacksAndMessages(null);
 
             final long now = System.currentTimeMillis();
@@ -363,6 +392,27 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 broadcastBlockchainState();
             }
         };
+
+        @Override
+        protected void progress(double pct, int blocksLeft, Date date) {
+            super.progress(pct, blocksLeft, date);
+            if (pct < 0) {
+                pct = 0;
+            }
+            final SyncProgressEvent event = new SyncProgressEvent(pct);
+            log.info(event.toString());
+            EventBus.getDefault().postSticky(event);
+
+        }
+
+        @Override
+        protected void doneDownload() {
+            super.doneDownload();
+            final SyncProgressEvent event = new SyncProgressEvent(100);
+            log.info(event.toString());
+            EventBus.getDefault().postSticky(event);
+
+        }
     };
 
     private final BroadcastReceiver connectivityReceiver = new BroadcastReceiver() {
@@ -412,6 +462,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         @SuppressLint("Wakelock")
         private void check() {
             final Wallet wallet = application.getWallet();
+
+            if (impediments.contains(Impediment.NETWORK)) {
+                final SyncProgressEvent event = new SyncProgressEvent(0, true);
+                log.info(event.toString());
+                EventBus.getDefault().postSticky(event);
+            }
 
             if (impediments.isEmpty() && peerGroup == null) {
                 log.debug("acquiring wakelock");
@@ -899,7 +955,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         final int chainLockHeight = block != null ? block.getHeight() : 0;
         final int mnListHeight = (int)application.getWallet().getContext().masternodeListManager.getListAtChainTip().getHeight();
 
-        return new BlockchainState(bestChainDate, bestChainHeight, replaying, impediments, chainLockHeight, mnListHeight);
+        return new BlockchainState(bestChainDate, bestChainHeight, replaying, impediments, chainLockHeight, mnListHeight, percentageSync());
     }
 
     @Override
@@ -949,11 +1005,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             //Handle Ongoing notification state
-            if (blockchainState.bestChainHeight == config.getBestChainHeightEver()) {
+            boolean syncing = blockchainState.bestChainDate.getTime() < (Utils.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS); //1 hour
+            if (!syncing && blockchainState.bestChainHeight == config.getBestChainHeightEver()) {
                 //Remove ongoing notification if blockchain sync finished
                 stopForeground(true);
                 nm.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC);
-            } else if (blockchainState.replaying) {
+            } else if (blockchainState.replaying || syncing) {
                 //Shows ongoing notification when synchronizing the blockchain
                 Notification notification = createNetworkSyncNotification(blockchainState);
                 if (notification != null) {
@@ -961,6 +1018,22 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 }
             }
         }
+    }
+
+    private int percentageSync() {
+        int chainHeadHeight = blockChain.getChainHead().getHeight();
+        int mostCommonChainHeight;
+        if (peerGroup == null) {
+            return 0;
+        }
+        if (peerGroup.getMostCommonChainHeight() > 0) {
+            mostCommonChainHeight = peerGroup.getMostCommonChainHeight();
+        } else {
+            mostCommonChainHeight = chainHeadHeight;
+        }
+        float percentage = ((float) chainHeadHeight / (float) mostCommonChainHeight) * 100;
+        log.info("mostCommonChainHeight: " + mostCommonChainHeight + "\tchainHeadHeight: " + chainHeadHeight + "\t" + percentage + "%\t" + config.getBestChainHeightEver());
+        return (int) percentage;
     }
 
     private SporkUpdatedEventListener sporkUpdatedEventListener = new SporkUpdatedEventListener() {

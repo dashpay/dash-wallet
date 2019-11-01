@@ -18,12 +18,10 @@
 		<item>µtDASH, no decimal places</item>
 	</string-array>
 	<string-array name="preferences_block_explorer_values">
-		<item>https://test.insight.dash.siampm.com/</item>
-		<item>http://test.explorer.dash.org/</item>
+		<item>https://testnet-insight.dashevo.org/insight/</item>
 	</string-array>
 	<string-array name="preferences_block_explorer_labels">
 		<item>Insight TestNet Block Explorer</item>
-		<item>Dash Block Explorer (Official Testnet)</item>
 	</string-array>
 
 </resources>

@@ -11,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_payments_pay.*
@@ -35,7 +36,7 @@ class PaymentsPayFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         pay_by_qr_button.setOnButtonClickListener(View.OnClickListener {
-            handleScan()
+            handleScan(it)
         })
         pay_to_address.setOnButtonClickListener(View.OnClickListener {
             handlePaste(true)
@@ -47,8 +48,8 @@ class PaymentsPayFragment : Fragment() {
         handlePaste(false)
     }
 
-    private fun handleScan() {
-        startActivityForResult(Intent(context, ScanActivity::class.java), REQUEST_CODE_SCAN)
+    private fun handleScan(clickView: View) {
+        ScanActivity.startForResult(this, activity, REQUEST_CODE_SCAN)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {

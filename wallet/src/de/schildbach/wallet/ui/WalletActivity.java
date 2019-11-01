@@ -45,9 +45,10 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.view.ViewGroup;
 
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.Toolbar;
 import androidx.constraintlayout.motion.widget.MotionLayout;
@@ -75,6 +76,9 @@ import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
 import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.IOException;
 import java.util.Currency;
@@ -88,6 +92,7 @@ import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.preference.PreferenceActivity;
+import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
@@ -106,7 +111,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
         WalletTransactionsFragment.MotionLayoutProvider {
-
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
     private static final int DIALOG_RESTORE_WALLET = 2;
@@ -146,7 +150,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         setContentViewFooter(R.layout.home_activity);
         setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
-        adjustHeaderLayout();
+        adjustHeaderLayout(true);
         activateHomeButton();
 
         if (savedInstanceState == null) {
@@ -192,12 +196,17 @@ public final class WalletActivity extends AbstractBindServiceActivity
         });
     }
 
-    private void adjustHeaderLayout() {
+    private void adjustHeaderLayout(boolean syncStatusPaneVisible) {
         Display display = getWindowManager().getDefaultDisplay();
         Point size = new Point();
         display.getSize(size);
         float screenHeight = size.y;
-        int headerHeight = (int) (screenHeight * 0.5);
+        int headerHeight;
+        if (syncStatusPaneVisible) {
+            headerHeight = (int) (screenHeight * 0.5);
+        } else {
+            headerHeight = (int) (screenHeight * 0.3);
+        }
         ViewGroup.LayoutParams headerPaneParams = findViewById(R.id.header_pane).getLayoutParams();
         headerPaneParams.height = headerHeight;
         MotionLayout motionLayout = findViewById(R.id.home_content);
@@ -266,7 +275,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         findViewById(R.id.scan_to_pay_action).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                handleScan();
+                handleScan(v);
             }
         });
         findViewById(R.id.buy_sell_action).setOnClickListener(new View.OnClickListener() {
@@ -522,8 +531,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         startActivity(new Intent(this, SendCoinsActivity.class));
     }
 
-    public void handleScan() {
-        startActivityForResult(new Intent(this, ScanActivity.class), REQUEST_CODE_SCAN);
+    public void handleScan(View clickView) {
+        ScanActivity.startForResult(this, clickView, REQUEST_CODE_SCAN);
     }
 
     public void handleBackupWallet() {
@@ -1086,6 +1095,56 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     }
 
+    @Override
+    public void onStart() {
+        super.onStart();
+        findViewById(R.id.restart_sync_icon).setOnClickListener(new View.OnClickListener() {
+            public void onClick(final View v) {
+                findViewById(R.id.sync_error_pane).setVisibility(View.GONE);
+                findViewById(R.id.sync_progress_pane).setVisibility(View.VISIBLE);
+            }
+        });
+        EventBus.getDefault().register(this);
+    }
+
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    public void onEvent(SyncProgressEvent event) {
+        ProgressBar syncProgressView = findViewById(R.id.sync_status_progress);
+        if (event.getFailed()) {
+            findViewById(R.id.sync_progress_pane).setVisibility(View.GONE);
+            findViewById(R.id.sync_error_pane).setVisibility(View.VISIBLE);
+            return;
+        }
+        showSyncPane(R.id.sync_error_pane,false);
+        showSyncPane(R.id.sync_progress_pane,true);
+        int percentage = (int) event.getPct();
+        TextView syncStatusTitle = findViewById(R.id.sync_status_title);
+        TextView syncStatusMessage = findViewById(R.id.sync_status_message);
+        if (percentage != syncProgressView.getProgress()) {
+            syncProgressView.setProgress(percentage);
+            TextView syncPercentageView = findViewById(R.id.sync_status_percentage);
+
+            syncPercentageView.setText(percentage + "%");
+            if (percentage == 100) {
+                syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
+                syncStatusTitle.setText("Sync");
+                syncStatusMessage.setText("Completed");
+                showSyncPane(R.id.sync_status_pane,false);
+            } else {
+                syncPercentageView.setTextColor(getResources().getColor(R.color.dash_gray));
+                syncStatusTitle.setText("Syncing");
+                syncStatusMessage.setText("with Dash Blockchain");
+                showSyncPane(R.id.sync_status_pane, true);
+            }
+        }
+    }
+
+    @Override
+    public void onStop() {
+        EventBus.getDefault().unregister(this);
+        super.onStop();
+    }
+
     /**
      * Get ISO 3166-1 alpha-2 country code for this device (or null if not available)
      * If available, call {@link #showFiatCurrencyChangeDetectedDialog(String, String)}
@@ -1185,5 +1244,15 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @Override
     public RecyclerView getRecyclerView() {
         return findViewById(R.id.home_recycler);
+    }
+
+    private void showSyncPane(int id, boolean show) {
+        int visibility = show ? ConstraintSet.VISIBLE : ConstraintSet.GONE;
+        MotionLayout motionLayout = findViewById(R.id.home_content);
+        ConstraintSet constraintSet = motionLayout.getConstraintSet(R.id.expanded);
+        constraintSet.setVisibility(id, visibility);
+        constraintSet = motionLayout.getConstraintSet(R.id.collapsed);
+        constraintSet.setVisibility(id, visibility);
+        adjustHeaderLayout(show);
     }
 }

@@ -29,7 +29,7 @@
         android:id="@+id/quick_actions_pane_space"
         android:layout_width="match_parent"
         android:layout_height="32dp"
-        app:layout_constraintBottom_toTopOf="@id/quick_actions_pane" />
+        app:layout_constraintBottom_toTopOf="@id/sync_status_pane" />
 
     <FrameLayout
         android:id="@+id/header_pane_bottom"
@@ -41,13 +41,121 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@id/quick_actions_pane_space" />
 
+    <RelativeLayout
+        android:id="@+id/sync_status_pane"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="@+id/header_pane_bottom">
+        <RelativeLayout
+            android:id="@+id/sync_progress_pane"
+            style="@style/DashButton.White"
+            android:layout_width="match_parent"
+            android:layout_height="80dp"
+            android:layout_margin="16dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_centerVertical="true"
+                android:layout_marginStart="16dp"
+                android:layout_marginLeft="16dp"
+                android:gravity="center_vertical"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/sync_status_title"
+                    style="@style/TitleTextView.Primary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Syncing" />
+
+                <TextView
+                    android:id="@+id/sync_status_message"
+                    style="@style/TitleTextView.Secondary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="with Dash Blockchain"
+                    android:textColor="@color/dash_gray" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/sync_status_percentage"
+                android:layout_width="64dp"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentRight="false"
+                android:layout_centerInParent="true"
+                android:layout_marginEnd="16dp"
+                android:layout_marginRight="16dp"
+                android:fontFamily="@font/montserrat_regular"
+                android:text="0%"
+                android:gravity="right"
+                android:textColor="@color/dash_blue"
+                android:textSize="24sp" />
+
+            <ProgressBar
+                android:id="@+id/sync_status_progress"
+                style="@style/ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:indeterminate="false"
+                android:progress="0"
+                android:visibility="visible" />
+
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/sync_error_pane"
+            android:visibility="gone"
+            style="@style/Panel.Red"
+            android:layout_width="match_parent"
+            android:layout_height="80dp"
+            android:layout_margin="16dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_centerVertical="true"
+                android:layout_marginStart="16dp"
+                android:layout_marginLeft="16dp"
+                android:gravity="center_vertical"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/dash_white"
+                    android:fontFamily="@font/montserrat_semibold"
+                    android:text="Unable to connect" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/dash_white"
+                    android:fontFamily="@font/montserrat_regular"
+                    android:text="Check your connection" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/restart_sync_icon"
+                android:src="@drawable/reload_icon_white"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentRight="false"
+                android:layout_centerInParent="true"
+                android:foregroundGravity="right"
+                android:layout_width="@dimen/app_bar_logo_width"
+                android:layout_height="@dimen/app_bar_logo_height" />
+        </RelativeLayout>
+    </RelativeLayout>
+
     <include
         android:id="@+id/quick_actions_pane"
         layout="@layout/quick_actions_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="14dp"
-        app:layout_constraintBottom_toBottomOf="@+id/header_pane" />
+        app:layout_constraintTop_toBottomOf="@+id/sync_status_pane" />
 
     <TextView
         android:id="@+id/available_balance"

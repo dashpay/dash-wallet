@@ -10,6 +10,8 @@
     android:padding="8dp">
 
     <LinearLayout
+        android:id="@+id/balances"
+        android:visibility="gone"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_vertical|end"
@@ -44,5 +46,15 @@
         android:textSize="14sp"
         app:fontFamily="@font/montserrat_regular"
         app:prefixColor="@color/dash_light_gray" />
+
+    <TextView
+        android:id="@+id/wallet_balance_sync_message"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:textColor="@color/dash_light_gray"
+        android:textSize="18sp"
+        app:fontFamily="@font/montserrat_regular"
+        android:text="Please wait for the sync to complete"/>
 
 </LinearLayout>
