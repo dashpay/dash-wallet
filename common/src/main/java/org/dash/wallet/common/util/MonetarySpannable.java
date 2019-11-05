@@ -50,7 +50,7 @@ public final class MonetarySpannable extends SpannableString {
         if (monetary == null)
             return "";
 
-        checkArgument(monetary.signum() >= 0 || signed);
+        //checkArgument(monetary.signum() >= 0 || signed);
 
         if (signed)
             return format.negativeSign(Constants.CURRENCY_MINUS_SIGN).positiveSign(Constants.CURRENCY_PLUS_SIGN)

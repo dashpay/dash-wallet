@@ -353,4 +353,14 @@ public class WalletUtils {
     public static boolean isPayToManyTransaction(final Transaction transaction) {
         return transaction.getOutputs().size() > 20;
     }
+
+    public static String buildShortAddress(String longAddress) {
+        StringBuilder addressBuilder = new StringBuilder(longAddress.substring(0,
+                Constants.ADDRESS_FORMAT_FIRST_SECTION_SIZE));
+        addressBuilder.append(Constants.ADDRESS_FORMAT_SECTION_SEPARATOR);
+        int lastSectionStart = longAddress.length() - Constants.ADDRESS_FORMAT_LAST_SECTION_SIZE;
+        addressBuilder.append(longAddress.substring(lastSectionStart));
+        return addressBuilder.toString();
+    }
+
 }

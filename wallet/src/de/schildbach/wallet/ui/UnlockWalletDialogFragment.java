@@ -88,7 +88,7 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
                         if (!fingerprintHelper.isFingerprintEnabled() && WalletApplication
                                 .getInstance().getConfiguration().getRemindEnableFingerprint()) {
                             EnableFingerprintDialog.show(password,
-                                    getActivity().getFragmentManager());
+                                    getActivity().getSupportFragmentManager());
                         }
                     }
                 }

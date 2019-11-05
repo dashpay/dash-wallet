@@ -98,7 +98,7 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
                         if (!fingerprintHelper.isFingerprintEnabled() && WalletApplication
                                 .getInstance().getConfiguration().getRemindEnableFingerprint()) {
                             EnableFingerprintDialog.show(password,
-                                    getActivity().getFragmentManager());
+                                    getActivity().getSupportFragmentManager());
                         }
                     }
                 }

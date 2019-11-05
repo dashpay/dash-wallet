@@ -42,24 +42,21 @@ import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
-import android.widget.FrameLayout;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
-import androidx.recyclerview.widget.RecyclerView;
 
 import org.bitcoin.protocols.payments.Protos.Payment;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionConfidence;
-import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
@@ -90,25 +87,28 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.data.PaymentIntent.Standard;
+import de.schildbach.wallet.data.TransactionResult;
 import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.offline.DirectPaymentTask;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
+import de.schildbach.wallet.ui.CheckPinDialog;
+import de.schildbach.wallet.ui.CheckPinSharedModel;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StreamInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
 import de.schildbach.wallet.ui.SingleActionSharedViewModel;
-import de.schildbach.wallet.ui.TransactionsAdapter;
-import de.schildbach.wallet.ui.UnlockWalletDialogFragment;
+import de.schildbach.wallet.ui.TransactionResultActivity;
 import de.schildbach.wallet.util.Bluetooth;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
+import kotlin.Pair;
 
 import static org.dash.wallet.common.Constants.CHAR_CHECKMARK;
 
-public final class SendCoinsFragment extends Fragment implements UnlockWalletDialogFragment.OnUnlockWalletListener {
+public final class SendCoinsFragment extends Fragment {
 
     private static Coin ECONOMIC_FEE = Coin.valueOf(1000);
 
@@ -129,12 +129,12 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
     private CheckBox directPaymentEnableView;
 
     private TextView directPaymentMessageView;
-    private FrameLayout sentTransactionView;
-    private TransactionsAdapter sentTransactionAdapter;
-    private RecyclerView.ViewHolder sentTransactionViewHolder;
 
     private static final int REQUEST_CODE_ENABLE_BLUETOOTH_FOR_PAYMENT_REQUEST = 0;
     private static final int REQUEST_CODE_ENABLE_BLUETOOTH_FOR_DIRECT_PAYMENT = 1;
+
+    private static final int AUTH_REQUEST_CODE_MAX = 1;
+    private static final int AUTH_REQUEST_CODE_SEND = 2;
 
     private static final Logger log = LoggerFactory.getLogger(SendCoinsFragment.class);
 
@@ -142,60 +142,6 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
     private EnterAmountSharedViewModel enterAmountSharedViewModel;
 
     private boolean wasAmountChangedByTheUser = false;
-
-    private final TransactionConfidence.Listener sentTransactionConfidenceListener = new TransactionConfidence.Listener() {
-        @Override
-        public void onConfidenceChanged(final TransactionConfidence confidence,
-                                        final TransactionConfidence.Listener.ChangeReason reason) {
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (!isResumed())
-                        return;
-
-                    final TransactionConfidence confidence = viewModel.sentTransaction.getConfidence();
-                    final ConfidenceType confidenceType = confidence.getConfidenceType();
-                    final TransactionConfidence.IXType ixType = confidence.getIXType();
-                    final int numBroadcastPeers = confidence.numBroadcastPeers();
-
-                    if (viewModel.state == SendCoinsViewModel.State.SENDING) {
-                        if (confidenceType == ConfidenceType.DEAD) {
-                            setState(SendCoinsViewModel.State.FAILED);
-                        } else if (numBroadcastPeers >= 1 || confidenceType == ConfidenceType.BUILDING ||
-                                ixType == TransactionConfidence.IXType.IX_LOCKED ||
-                                (confidence.getPeerCount() == 1 && confidence.isSent())) {
-                            setState(SendCoinsViewModel.State.SENT);
-
-                            // Auto-close the dialog after a short delay
-                            if (config.getSendCoinsAutoclose()) {
-                                handler.postDelayed(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        activity.onHomeClick();
-                                    }
-                                }, 500);
-                            }
-                        }
-                    }
-
-                    if (reason == ChangeReason.SEEN_PEERS && confidenceType == ConfidenceType.PENDING ||
-                            reason == ChangeReason.IX_TYPE && ixType == TransactionConfidence.IXType.IX_LOCKED ||
-                            (confidence.getPeerCount() == 1 && confidence.isSent())) {
-                        // play sound effect
-                        final int soundResId = getResources().getIdentifier("send_coins_broadcast_" + numBroadcastPeers,
-                                "raw", activity.getPackageName());
-                        if (soundResId > 0)
-                            RingtoneManager
-                                    .getRingtone(activity, Uri.parse(
-                                            "android.resource://" + activity.getPackageName() + "/" + soundResId))
-                                    .play();
-                    }
-
-                    updateView();
-                }
-            });
-        }
-    };
 
     private final DialogInterface.OnClickListener activityDismissListener = new DialogInterface.OnClickListener() {
         @Override
@@ -225,6 +171,24 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
                 updateView();
             }
         });
+        CheckPinSharedModel checkPinSharedModel = ViewModelProviders.of(activity).get(CheckPinSharedModel.class);
+        checkPinSharedModel.getOnCorrectPinCallback().observe(activity, new Observer<Pair<Integer, String>>() {
+            @Override
+            public void onChanged(Pair<Integer, String> data) {
+                switch (data.getFirst()) {
+                    case AUTH_REQUEST_CODE_MAX:
+                        handleEmpty();
+                        break;
+                    case AUTH_REQUEST_CODE_SEND:
+                        String password = data.getSecond();
+                        if (password != null) {
+                            handleGo(password);
+                        }
+                        break;
+                }
+            }
+        });
+
         enterAmountSharedViewModel = ViewModelProviders.of(activity).get(EnterAmountSharedViewModel.class);
         enterAmountSharedViewModel.getDashAmountData().observe(getViewLifecycleOwner(), new Observer<Coin>() {
             @Override
@@ -247,14 +211,19 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
         enterAmountSharedViewModel.getMaxButtonClickEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean unused) {
-                handleEmpty();
+                final WalletLock walletLock = WalletLock.getInstance();
+                if (walletLock.isWalletLocked(viewModel.wallet)) {
+                    CheckPinDialog.show(getFragmentManager(), AUTH_REQUEST_CODE_MAX);
+                } else {
+                    handleEmpty();
+                }
             }
         });
         SingleActionSharedViewModel confirmTransactionSharedViewModel = ViewModelProviders.of(activity).get(SingleActionSharedViewModel.class);
         confirmTransactionSharedViewModel.getClickConfirmButtonEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean aBoolean) {
-                UnlockWalletDialogFragment.show(getFragmentManager(), SendCoinsFragment.this);
+                CheckPinDialog.show(fragmentManager, AUTH_REQUEST_CODE_SEND);
             }
         });
 
@@ -291,11 +260,6 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
                 updateStateFrom(PaymentIntent.blank());
             }
         }
-
-        sentTransactionAdapter = new TransactionsAdapter(activity, viewModel.wallet, application.maxConnectedPeers(), null);
-        sentTransactionViewHolder = sentTransactionAdapter.createTransactionViewHolder(sentTransactionView);
-        sentTransactionView.addView(sentTransactionViewHolder.itemView,
-                new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
     }
 
     @Override
@@ -333,7 +297,6 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
         });
 
         directPaymentMessageView = view.findViewById(R.id.send_coins_direct_payment_message);
-        sentTransactionView = view.findViewById(R.id.send_coins_sent_transaction);
 
         return view;
     }
@@ -356,11 +319,6 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
     @Override
     public void onDestroy() {
         backgroundThread.getLooper().quit();
-
-        if (viewModel.sentTransaction != null) {
-            viewModel.sentTransaction.getConfidence().removeEventListener(sentTransactionConfidenceListener);
-        }
-
         super.onDestroy();
     }
 
@@ -449,13 +407,11 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
         final Wallet wallet = viewModel.wallet;
         new SendCoinsOfflineTask(wallet, backgroundHandler) {
             @Override
-            protected void onSuccess(final Transaction transaction) {
+            protected void onSuccess(@NonNull final Transaction transaction) {
 
                 viewModel.sentTransaction = transaction;
 
                 setState(SendCoinsViewModel.State.SENDING);
-
-                viewModel.sentTransaction.getConfidence().addEventListener(sentTransactionConfidenceListener);
 
                 final Address refundAddress = viewModel.paymentIntent.standard == Standard.BIP70
                         ? wallet.freshAddress(KeyPurpose.REFUND) : null;
@@ -478,6 +434,9 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
                         BitcoinIntegration.paymentToResult(result, payment.toByteArray());
                     activity.setResult(Activity.RESULT_OK, result);
                 }
+                showTransactionResult(viewModel.sentTransaction);
+                playSentSound();
+                activity.finish();
             }
 
             private void directPay(final Payment payment) {
@@ -582,25 +541,24 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
         }.sendCoinsOffline(sendRequest); // send asynchronously
     }
 
-    private void handleEmpty() {
-        final WalletLock walletLock = WalletLock.getInstance();
-        final Wallet wallet = viewModel.wallet;
-        if (walletLock.isWalletLocked(wallet)) {
-            UnlockWalletDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
-                @Override
-                public void onDismiss(DialogInterface dialog) {
-                    if (!walletLock.isWalletLocked(wallet)) {
-                        handleEmpty();
-                    }
-                }
-            });
-        } else {
-            final Coin available = wallet.getBalance(BalanceType.ESTIMATED);
-            enterAmountSharedViewModel.getApplyMaxAmountEvent().setValue(available);
+    private void showTransactionResult(Transaction transaction) {
+        String address = viewModel.paymentIntent.getAddress().toBase58();
+        TransactionResult transactionResult = new TransactionResult(
+                transaction.getValue(viewModel.wallet), transaction.getExchangeRate(), address,
+                transaction.getFee(), transaction.getHashAsString());
 
-            updateView();
-            handler.post(dryrunRunnable);
-        }
+        Intent transactionResultIntent = new Intent(getContext(), TransactionResultActivity.class);
+        transactionResultIntent.putExtra(TransactionResultActivity.TRANSACTION_RESULT_EXTRA, transactionResult);
+
+        startActivity(transactionResultIntent);
+    }
+
+    private void handleEmpty() {
+        final Coin available = viewModel.wallet.getBalance(BalanceType.ESTIMATED);
+        enterAmountSharedViewModel.getApplyMaxAmountEvent().setValue(available);
+
+        updateView();
+        handler.post(dryrunRunnable);
     }
 
     private Runnable dryrunRunnable = new Runnable() {
@@ -730,15 +688,6 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
                 message = coloredString(getString(R.string.send_coins_auto_lock_feasible), R.color.fg_insignificant, false);
             }
             enterAmountSharedViewModel.getMessageTextStringData().setValue(message);
-        }
-
-        if (viewModel.sentTransaction != null) {
-            sentTransactionView.setVisibility(View.VISIBLE);
-            sentTransactionAdapter.setFormat(dashFormat);
-            sentTransactionAdapter.replace(viewModel.sentTransaction);
-            sentTransactionAdapter.bindViewHolder(sentTransactionViewHolder, 0);
-        } else {
-            sentTransactionView.setVisibility(View.GONE);
         }
 
         if (viewModel.directPaymentAck != null) {
@@ -1003,10 +952,15 @@ public final class SendCoinsFragment extends Fragment implements UnlockWalletDia
         dialog.show(getFragmentManager(), "ConfirmTransactionDialog");
     }
 
-    @Override
-    public void onUnlockWallet(String password) {
-        if (password != null) {
-            handleGo(password);
-        }
+
+    private void playSentSound() {
+        // play sound effect
+        final int soundResId = getResources().getIdentifier("send_coins_broadcast_1",
+                "raw", activity.getPackageName());
+        if (soundResId > 0)
+            RingtoneManager
+                    .getRingtone(activity, Uri.parse(
+                            "android.resource://" + activity.getPackageName() + "/" + soundResId))
+                    .play();
     }
 }

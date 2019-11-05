@@ -432,13 +432,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             } else if (txCache.address != null) {
                 addressView.setTypeface(defaultTypeface);
                 if (!itemView.isActivated()) {
-                    String address = txCache.address.toBase58();
-                    StringBuilder addressBuilder = new StringBuilder(address.substring(0,
-                            Constants.ADDRESS_FORMAT_FIRST_SECTION_SIZE));
-                    addressBuilder.append(Constants.ADDRESS_FORMAT_SECTION_SEPARATOR);
-                    int lastSectionStart = address.length() - Constants.ADDRESS_FORMAT_LAST_SECTION_SIZE;
-                    addressBuilder.append(address.substring(lastSectionStart, address.length()));
-                    addressView.setText(addressBuilder.toString());
+                    addressView.setText(WalletUtils.buildShortAddress(txCache.address.toBase58()));
                 } else {
                     addressView.setText(WalletUtils.formatAddress(txCache.address, Constants.ADDRESS_FORMAT_GROUP_SIZE,
                             Constants.ADDRESS_ROW_FORMAT_LINE_SIZE));
@@ -478,15 +472,10 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
             // fiat value
             final ExchangeRate exchangeRate = tx.getExchangeRate();
-            fiatView.setAmount(null);  //clear the exchange rate first
-            if (exchangeRate != null) {
-                fiatView.setFormat(Constants.LOCAL_FORMAT.code(0,
-                        PREFIX_ALMOST_EQUAL_TO + exchangeRate.fiat.getCurrencyCode() + " "));
-                Coin absCoin = Coin.valueOf(Math.abs(txCache.value.value));
-                fiatView.setAmount(exchangeRate.coinToFiat(absCoin));
-            } else {
-                fiatView.setText(PREFIX_ALMOST_EQUAL_TO + WalletApplication.getInstance().getConfiguration().getExchangeCurrencyCode() + " ----");
-            }
+            String exchangeCurrencyCode = WalletApplication.getInstance().getConfiguration()
+                    .getExchangeCurrencyCode();
+            fiatView.setFiatAmount(txCache.value, exchangeRate, Constants.LOCAL_FORMAT,
+                    exchangeCurrencyCode);
 
             // message
             extendMessageView.setVisibility(View.GONE);

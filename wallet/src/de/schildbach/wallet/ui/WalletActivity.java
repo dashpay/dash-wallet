@@ -30,7 +30,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.graphics.Point;
 import android.net.Uri;
 import android.nfc.NdefMessage;
@@ -50,8 +49,6 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.view.ViewGroup;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.Toolbar;
 import androidx.constraintlayout.motion.widget.MotionLayout;
@@ -60,8 +57,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.loader.app.LoaderManager;
-import androidx.loader.content.Loader;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.navigation.NavigationView;
@@ -92,8 +89,6 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.data.WalletLock;
-import de.schildbach.wallet.service.BlockchainState;
-import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.preference.PreferenceActivity;
@@ -105,6 +100,7 @@ import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
+import kotlin.Pair;
 
 /**
  * @author Andreas Schildbach
@@ -114,8 +110,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         NavigationView.OnNavigationItemSelectedListener,
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
-        EnableFingerprintDialog.OnFingerprintEnabledListener,
-        EncryptKeysDialogFragment.OnOnboardingCompleteListener,
         WalletTransactionsFragment.MotionLayoutProvider {
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
@@ -123,8 +117,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private static final int DIALOG_TIMESKEW_ALERT = 3;
     private static final int DIALOG_VERSION_ALERT = 4;
     private static final int DIALOG_LOW_STORAGE_ALERT = 5;
-
-    private static final int ID_BLOCKCHAIN_STATE_LOADER = 1;
 
     private WalletApplication application;
     private Configuration config;
@@ -146,8 +138,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private boolean showBackupWalletDialog = false;
 
-    private boolean initComplete = false;
-    private LoaderManager loaderManager;
+    private CheckPinSharedModel checkPinSharedModel;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -166,7 +157,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             checkAlerts();
         }
 
-        this.loaderManager = LoaderManager.getInstance(this);
         config.touchLastUsed();
 
         handleIntent(getIntent());
@@ -175,6 +165,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         initUphold();
         initView();
+        initViewModel();
 
         //Prevent showing dialog twice or more when activity is recreated (e.g: rotating device, etc)
         if (savedInstanceState == null) {
@@ -189,6 +180,20 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (config.remindBackupSeed() && config.lastDismissedReminderMoreThan24hAgo()) {
             BackupWalletToSeedDialogFragment.show(getSupportFragmentManager());
         }
+    }
+
+    private void initViewModel() {
+        checkPinSharedModel = ViewModelProviders.of(this).get(CheckPinSharedModel.class);
+        checkPinSharedModel.getOnCorrectPinCallback().observe(this, new Observer<Pair<Integer, String>>() {
+            @Override
+            public void onChanged(Pair<Integer, String> integerStringPair) {
+                WalletTransactionsFragment walletTransactionsFragment = (WalletTransactionsFragment)
+                        getSupportFragmentManager().findFragmentById(R.id.wallet_transactions_fragment);
+                if (walletTransactionsFragment != null) {
+                    walletTransactionsFragment.onLockChanged(WalletLock.getInstance().isWalletLocked(wallet));
+                }
+            }
+        });
     }
 
     private void adjustHeaderLayout(boolean syncStatusPaneVisible) {
@@ -311,13 +316,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     protected void onResume() {
         super.onResume();
 
-        if (!initComplete) {
-            loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
-            initComplete = true;
-        } else {
-            loaderManager.restartLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
-        }
-
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -348,6 +346,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     @Override
     protected void onNewIntent(final Intent intent) {
+        super.onNewIntent(intent);
         handleIntent(intent);
     }
 
@@ -723,7 +722,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             @Override
             public void onClick(final DialogInterface dialog, final int id) {
                 startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
-                finish();
                 finish();
             }
         });
@@ -1238,21 +1236,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         dialogBuilder.show();
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
-    @Override
-    public void onFingerprintEnabled() {
-        WalletTransactionsFragment walletTransactionsFragment = (WalletTransactionsFragment)
-                getSupportFragmentManager().findFragmentById(R.id.wallet_transactions_fragment);
-        if (walletTransactionsFragment != null) {
-            walletTransactionsFragment.onLockChanged(WalletLock.getInstance().isWalletLocked(wallet));
-        }
-    }
-
-    @Override
-    public void onOnboardingComplete() {
-
-    }
-
     @Override
     public MotionLayout getMotionLayout() {
         return findViewById(R.id.home_content);
@@ -1262,22 +1245,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     public RecyclerView getRecyclerView() {
         return findViewById(R.id.home_recycler);
     }
-
-
-    private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>() {
-        @Override
-        public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args) {
-            return new BlockchainStateLoader(WalletActivity.this);
-        }
-
-        @Override
-        public void onLoadFinished(@NonNull final Loader<BlockchainState> loader, final BlockchainState blockchainState) {
-        }
-
-        @Override
-        public void onLoaderReset(@NonNull final Loader<BlockchainState> loader) {
-        }
-    };
 
     private void showSyncPane(int id, boolean show) {
         int visibility = show ? ConstraintSet.VISIBLE : ConstraintSet.GONE;

@@ -17,12 +17,7 @@
 
 package de.schildbach.wallet.ui;
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import androidx.annotation.LayoutRes;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.widget.Toolbar;
 
@@ -31,11 +26,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet_test.R;
 
-import androidx.appcompat.app.AppCompatActivity;
 import android.app.ActivityManager.TaskDescription;
 import android.os.Build;
 import android.os.Bundle;
@@ -51,8 +44,6 @@ public abstract class AbstractWalletActivity extends GlobalFooterActivity implem
 
     protected static final Logger log = LoggerFactory.getLogger(AbstractWalletActivity.class);
 
-    private static final String FINISH_ALL_ACTIVITIES_ACTION = "dash.wallet.action.CLOSE_ALL_ACTIVITIES_ACTION";
-
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         application = (WalletApplication) getApplication();
@@ -61,14 +52,7 @@ public abstract class AbstractWalletActivity extends GlobalFooterActivity implem
             setTaskDescription(new TaskDescription(null, null, getResources().getColor(R.color.bg_action_bar)));
         PinRetryController.handleLockedForever(this);
 
-        registerFinishAllReceiver();
         super.onCreate(savedInstanceState);
-    }
-
-    @Override
-    protected void onDestroy() {
-        unregisterFinishAllReceiver();
-        super.onDestroy();
     }
 
     @Override
@@ -114,28 +98,6 @@ public abstract class AbstractWalletActivity extends GlobalFooterActivity implem
 
     protected WalletApplication getWalletApplication() {
         return application;
-    }
-
-    private BroadcastReceiver finishAllReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            LocalBroadcastManager.getInstance(application).unregisterReceiver(this);
-            AbstractWalletActivity.this.finish();
-        }
-    };
-
-    private void registerFinishAllReceiver() {
-        IntentFilter finishAllFilter = new IntentFilter(FINISH_ALL_ACTIVITIES_ACTION);
-        LocalBroadcastManager.getInstance(application).registerReceiver(finishAllReceiver, finishAllFilter);
-    }
-
-    private void unregisterFinishAllReceiver() {
-        LocalBroadcastManager.getInstance(application).unregisterReceiver(finishAllReceiver);
-    }
-
-    public static void finishAll(Context context) {
-        Intent localIntent = new Intent(FINISH_ALL_ACTIVITIES_ACTION);
-        LocalBroadcastManager.getInstance(context).sendBroadcast(localIntent);
     }
 
     @Override

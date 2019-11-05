@@ -88,6 +88,10 @@ class EnterAmountFragment : Fragment() {
 
             override fun onNumber(number: Int) {
                 refreshValue()
+                if(value.toString() == "0") {
+                    // avoid entering leading zeros without decimal separator
+                    return
+                }
                 val numOfDecimals = if (value.indexOf(DECIMAL_SEPARATOR) > -1) value.length - value.indexOf(DECIMAL_SEPARATOR) else 0
                 val decimalsThreshold = if (viewModel.dashToFiatDirectionValue) 6 else 2
                 if (numOfDecimals > decimalsThreshold) {
