@@ -23,7 +23,7 @@
         app:srcCompat="@drawable/ic_dash_logo_blue" />
 
     <TextView
-        android:id="@+id/version_name"
+        android:id="@+id/app_version_name"
         style="@style/MontserratMedium"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -36,17 +36,29 @@
         tools:text="Dash Wallet v7.0.0-redesign" />
 
     <TextView
+        android:id="@+id/library_version_name"
+        style="@style/MontserratRegular"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:textColor="@android:color/black"
+        android:textSize="12sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/app_version_name"
+        tools:text="DashJ 17.0.0" />
+
+    <TextView
         android:id="@+id/fork_disclaimer"
         style="@style/MontserratRegular.MG"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="28dp"
-        android:gravity="center"
         android:text="@string/about_fork_disclaimer"
         android:textSize="16sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/version_name" />
+        app:layout_constraintTop_toBottomOf="@+id/library_version_name" />
 
     <TextView
         android:id="@+id/github_link"
@@ -65,12 +77,22 @@
         app:layout_constraintTop_toBottomOf="@+id/fork_disclaimer" />
 
     <TextView
-        android:id="@+id/copyright"
+        android:id="@+id/license"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="20dp"
-        android:text="@string/about_copyright"
+        android:text="@string/about_license"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/copyright"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="7dp"
+        android:text="@string/about_copyright"
+        app:layout_constraintBottom_toTopOf="@id/license"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 

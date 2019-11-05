@@ -18,13 +18,12 @@ package de.schildbach.wallet.ui
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_about.*
 import android.content.Intent.ACTION_VIEW
 import android.net.Uri
-import androidx.core.content.ContextCompat.getSystemService
+import org.bitcoinj.core.VersionMessage
 
 
 class AboutActivity : BaseMenuActivity() {
@@ -37,8 +36,9 @@ class AboutActivity : BaseMenuActivity() {
         super.onCreate(savedInstanceState)
 
         setTitle(R.string.about_title)
-        version_name.text = getString(R.string.about_version_name, BuildConfig.VERSION_NAME)
-
+        app_version_name.text = getString(R.string.about_version_name, BuildConfig.VERSION_NAME)
+        library_version_name.text = getString(R.string.about_credits_bitcoinj_title,
+                VersionMessage.BITCOINJ_VERSION)
         github_link.setOnClickListener {
             val i = Intent(ACTION_VIEW)
             i.data = Uri.parse(github_link.text.toString())
