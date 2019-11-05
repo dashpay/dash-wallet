@@ -1,288 +1,171 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.motion.widget.MotionLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/home_content"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/dash_lighter_gray"
-    app:layoutDescription="@xml/collapsing_toolbar"
     tools:ignore="ContentDescription">
-
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/h_center_guideline"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.50" />
-
-    <FrameLayout
-        android:id="@+id/header_pane"
-        android:layout_width="0dp"
-        android:layout_height="340dp"
-        android:background="@color/dash_blue"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <Space
-        android:id="@+id/quick_actions_pane_space"
-        android:layout_width="match_parent"
-        android:layout_height="32dp"
-        app:layout_constraintBottom_toTopOf="@id/sync_status_pane" />
-
-    <FrameLayout
-        android:id="@+id/header_pane_bottom"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="@color/dash_lighter_gray"
-        app:layout_constraintBottom_toBottomOf="@id/header_pane"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/quick_actions_pane_space" />
-
-    <RelativeLayout
-        android:id="@+id/sync_status_pane"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintBottom_toBottomOf="@+id/header_pane_bottom">
-        <RelativeLayout
-            android:id="@+id/sync_progress_pane"
-            style="@style/DashButton.White"
-            android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:layout_margin="16dp">
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:layout_centerVertical="true"
-                android:layout_marginStart="16dp"
-                android:layout_marginLeft="16dp"
-                android:gravity="center_vertical"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/sync_status_title"
-                    style="@style/TitleTextView.Primary"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Syncing" />
-
-                <TextView
-                    android:id="@+id/sync_status_message"
-                    style="@style/TitleTextView.Secondary"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="with Dash Blockchain"
-                    android:textColor="@color/dash_gray" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/sync_status_percentage"
-                android:layout_width="64dp"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_alignParentRight="false"
-                android:layout_centerInParent="true"
-                android:layout_marginEnd="16dp"
-                android:layout_marginRight="16dp"
-                android:fontFamily="@font/montserrat_regular"
-                android:text="0%"
-                android:gravity="right"
-                android:textColor="@color/dash_blue"
-                android:textSize="24sp" />
-
-            <ProgressBar
-                android:id="@+id/sync_status_progress"
-                style="@style/ProgressBar.Horizontal"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_alignParentBottom="true"
-                android:indeterminate="false"
-                android:progress="0"
-                android:visibility="visible" />
-
-        </RelativeLayout>
-
-        <RelativeLayout
-            android:id="@+id/sync_error_pane"
-            android:visibility="gone"
-            style="@style/Panel.Red"
-            android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:layout_margin="16dp">
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:layout_centerVertical="true"
-                android:layout_marginStart="16dp"
-                android:layout_marginLeft="16dp"
-                android:gravity="center_vertical"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/dash_white"
-                    android:fontFamily="@font/montserrat_semibold"
-                    android:text="Unable to connect" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/dash_white"
-                    android:fontFamily="@font/montserrat_regular"
-                    android:text="Check your connection" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/restart_sync_icon"
-                android:src="@drawable/reload_icon_white"
-                android:layout_alignParentEnd="true"
-                android:layout_alignParentRight="false"
-                android:layout_centerInParent="true"
-                android:foregroundGravity="right"
-                android:layout_width="@dimen/app_bar_logo_width"
-                android:layout_height="@dimen/app_bar_logo_height" />
-        </RelativeLayout>
-    </RelativeLayout>
-
-    <include
-        android:id="@+id/quick_actions_pane"
-        layout="@layout/quick_actions_layout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="14dp"
-        app:layout_constraintTop_toBottomOf="@+id/sync_status_pane" />
-
-    <TextView
-        android:id="@+id/available_balance"
-        style="@style/TextViewStyle.Body"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="116dp"
-        android:text="@string/home_available_balance"
-        app:layout_constraintBottom_toTopOf="@+id/header_pane_bottom"
-        app:layout_constraintEnd_toEndOf="@+id/h_center_guideline"
-        app:layout_constraintStart_toStartOf="@+id/h_center_guideline" />
-
-    <fragment
-        android:id="@+id/wallet_balance_fragment"
-        android:name="de.schildbach.wallet.ui.HeaderBalanceFragment"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="@+id/h_center_guideline"
-        app:layout_constraintStart_toStartOf="@+id/h_center_guideline"
-        app:layout_constraintTop_toBottomOf="@+id/available_balance"
-        tools:layout="@layout/header_balance_fragment" />
-
-    <ImageView
-        android:id="@+id/dash_logo"
-        android:layout_width="0dp"
-        android:layout_height="?attr/actionBarSize"
-        android:background="@color/colorPrimary"
-        android:clickable="true"
-        android:focusable="true"
-        android:padding="16dp"
-        android:src="@drawable/ic_dash_logo_white"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <FrameLayout
-        android:id="@+id/body_pane"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/header_pane" />
-
-    <FrameLayout
-        android:id="@+id/pay_btn"
-        style="@style/DashButton.White"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginLeft="16dp"
-        android:layout_marginEnd="4dp"
-        android:layout_marginRight="4dp"
-        app:layout_constraintBottom_toTopOf="@+id/header_pane_bottom"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toLeftOf="@+id/h_center_guideline"
-        app:layout_constraintTop_toTopOf="@+id/header_pane_bottom"
-        tools:ignore="UseCompoundDrawables">
-
-        <TextView
-            style="@style/TextViewStyle.Body"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:drawableStart="@drawable/ic_arrow_upward_blue_24dp"
-            android:drawableLeft="@drawable/ic_arrow_upward_blue_24dp"
-            android:drawablePadding="5dp"
-            android:text="@string/home_pay" />
-
-    </FrameLayout>
-
-    <FrameLayout
-        android:id="@+id/receive_btn"
-        style="@style/DashButton.White"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="4dp"
-        android:layout_marginLeft="4dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginRight="16dp"
-        app:layout_constraintBottom_toTopOf="@+id/header_pane_bottom"
-        app:layout_constraintLeft_toRightOf="@+id/h_center_guideline"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/header_pane_bottom">
-
-        <TextView
-            style="@style/TextViewStyle.Body"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:drawableStart="@drawable/ic_arrow_downward_blue_24dp"
-            android:drawableLeft="@drawable/ic_arrow_downward_blue_24dp"
-            android:drawablePadding="5dp"
-            android:text="@string/home_receive" />
-
-    </FrameLayout>
 
     <fragment
         android:id="@+id/wallet_transactions_fragment"
         android:name="de.schildbach.wallet.ui.WalletTransactionsFragment"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="24dp"
-        android:background="@color/dash_white"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/quick_actions_pane"
+        android:layout_height="wrap_content"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
         tools:layout="@layout/wallet_transactions_fragment" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/home_recycler"
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="55dp"
-        android:clipToPadding="false"
-        android:scrollbars="vertical"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/quick_actions_pane" />
+        android:layout_height="wrap_content">
 
-    <TextView
-        android:id="@+id/message_panel"
+        <com.google.android.material.appbar.CollapsingToolbarLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:expandedTitleGravity="top"
+            app:layout_scrollFlags="scroll|exitUntilCollapsed|snap">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:paddingBottom="32dp">
+
+                    <TextView
+                        android:id="@+id/available_balance"
+                        style="@style/TextViewStyle.Body"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="?attr/actionBarSize"
+                        android:text="@string/home_available_balance" />
+
+                    <fragment
+                        android:id="@+id/wallet_balance_fragment"
+                        android:name="de.schildbach.wallet.ui.HeaderBalanceFragment"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        tools:layout="@layout/header_balance_fragment" />
+
+                </LinearLayout>
+
+                <FrameLayout
+                    android:id="@+id/buttons_anchor"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@color/dash_lighter_gray"
+                    android:orientation="vertical"
+                    android:paddingStart="16dp"
+                    android:paddingTop="32dp"
+                    android:paddingEnd="16dp"
+                    android:paddingBottom="16dp">
+
+                    <include
+                        android:id="@+id/sync_status_pane"
+                        layout="@layout/sync_status_pane"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp" />
+
+                    <include
+                        android:id="@+id/quick_actions_pane"
+                        layout="@layout/quick_actions_layout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <androidx.appcompat.widget.Toolbar
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:background="@color/colorPrimary"
+                app:layout_collapseMode="pin">
+
+                <ImageView
+                    android:id="@+id/dash_logo"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:padding="16dp"
+                    android:src="@drawable/ic_dash_logo_white" />
+
+            </androidx.appcompat.widget.Toolbar>
+
+        </com.google.android.material.appbar.CollapsingToolbarLayout>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/vivid_red"
-        android:padding="16dp"
-        android:text="Test message"
-        android:textColor="@color/white"
-        android:textSize="14sp"
-        android:visibility="gone"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:visibility="visible" />
+        android:baselineAligned="false"
+        android:orientation="horizontal"
+        app:layout_anchor="@id/buttons_anchor"
+        app:layout_behavior="de.schildbach.wallet.ui.CollapsingImageBehavior">
 
-</androidx.constraintlayout.motion.widget.MotionLayout>
+        <FrameLayout
+            android:id="@+id/pay_btn"
+            style="@style/DashButton.White"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginLeft="16dp"
+            android:layout_marginEnd="4dp"
+            android:layout_marginRight="4dp"
+            android:layout_weight="1">
+
+            <TextView
+                style="@style/TextViewStyle.Body"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:drawableStart="@drawable/ic_arrow_upward_blue_24dp"
+                android:drawableLeft="@drawable/ic_arrow_upward_blue_24dp"
+                android:drawablePadding="5dp"
+                android:text="@string/home_pay" />
+
+        </FrameLayout>
+
+        <FrameLayout
+            android:id="@+id/receive_btn"
+            style="@style/DashButton.White"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginLeft="4dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginRight="16dp"
+            android:layout_weight="1">
+
+            <TextView
+                style="@style/TextViewStyle.Body"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:drawableStart="@drawable/ic_arrow_downward_blue_24dp"
+                android:drawableLeft="@drawable/ic_arrow_downward_blue_24dp"
+                android:drawablePadding="5dp"
+                android:text="@string/home_receive" />
+
+        </FrameLayout>
+
+    </LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
