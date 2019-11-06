@@ -18,7 +18,6 @@
 package de.schildbach.wallet;
 
 import java.io.File;
-import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 import org.bitcoinj.core.CoinDefinition;
@@ -210,8 +209,7 @@ public final class Constants {
     public static final int ADDRESS_FORMAT_LAST_SECTION_SIZE = 3;
     public static final String ADDRESS_FORMAT_SECTION_SEPARATOR = "…";
 
-    public static final MonetaryFormat LOCAL_FORMAT = new MonetaryFormat()
-            .noCode().withLocale(Locale.getDefault()).minDecimals(2).optionalDecimals().withGroupingSeparator();
+    public static final MonetaryFormat LOCAL_FORMAT = new MonetaryFormat().noCode().minDecimals(2).optionalDecimals();
 
     public static final BaseEncoding HEX = BaseEncoding.base16().lowerCase();
 
