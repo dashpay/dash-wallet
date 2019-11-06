@@ -212,6 +212,8 @@ public final class Constants {
 
     public static final MonetaryFormat LOCAL_FORMAT = new MonetaryFormat()
             .noCode().withLocale(Locale.getDefault()).minDecimals(2).optionalDecimals().withGroupingSeparator();
+    public static final MonetaryFormat LOCAL_FORMAT_NO_SEP = new MonetaryFormat()
+            .noCode().minDecimals(2).optionalDecimals();
 
     public static final BaseEncoding HEX = BaseEncoding.base16().lowerCase();
 

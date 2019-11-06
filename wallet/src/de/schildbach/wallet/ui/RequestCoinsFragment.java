@@ -161,8 +161,8 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
 
         final CurrencyAmountView localAmountView = (CurrencyAmountView) view
                 .findViewById(R.id.request_coins_amount_local);
-        localAmountView.setInputFormat(Constants.LOCAL_FORMAT);
-        localAmountView.setHintFormat(Constants.LOCAL_FORMAT);
+        localAmountView.setInputFormat(Constants.LOCAL_FORMAT_NO_SEP);
+        localAmountView.setHintFormat(Constants.LOCAL_FORMAT_NO_SEP);
         amountCalculatorLink = new CurrencyCalculatorLink(btcAmountView, localAmountView);
 
         acceptBluetoothPaymentView = (CheckBox) view.findViewById(R.id.request_coins_accept_bluetooth_payment);

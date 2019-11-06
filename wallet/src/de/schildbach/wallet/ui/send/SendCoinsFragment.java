@@ -625,8 +625,8 @@ public final class SendCoinsFragment extends Fragment {
         btcAmountView.setHintFormat(config.getFormat());
 
         final CurrencyAmountView localAmountView = (CurrencyAmountView) view.findViewById(R.id.send_coins_amount_local);
-        localAmountView.setInputFormat(Constants.LOCAL_FORMAT);
-        localAmountView.setHintFormat(Constants.LOCAL_FORMAT);
+        localAmountView.setInputFormat(Constants.LOCAL_FORMAT_NO_SEP);
+        localAmountView.setHintFormat(Constants.LOCAL_FORMAT_NO_SEP);
         amountCalculatorLink = new CurrencyCalculatorLink(btcAmountView, localAmountView);
         amountCalculatorLink.setExchangeDirection(config.getLastExchangeDirection());
 
