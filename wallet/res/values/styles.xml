@@ -5,6 +5,12 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+    </style>
+
+    <style name="LockScreenActivity.Theme" parent="SplashActivity.Theme">
+        <item name="android:windowBackground">@drawable/splash_activity_background</item>
     </style>
 
     <style name="My.Theme.ChildActivity" parent="@style/My.Theme.NoActionBar">

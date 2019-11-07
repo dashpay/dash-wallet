@@ -24,6 +24,13 @@
     <string name="quick_action_buy_sell">Buy / Sell\nDash</string>
     <string name="quick_action_add_shortcut">Add\nShortcut</string>
 
+    <string name="lock_action_quick_receive">Quick\nReceive</string>
+    <string name="lock_action_login_with_pin">Login\nwith PIN</string>
+    <string name="lock_action_login_with_fingerprint">Login\nwith Touch ID</string>
+    <string name="lock_action_scan_to_pay">Scan to\nPay</string>
+    <string name="lock_enter_pin">Enter PIN</string>
+    <string name="lock_unlock_with_fingerprint">Use your fingerprint to unlock</string>
+
     <string name="scan_to_pay_error_dialog_title">Scan to Pay</string>
     <string name="scan_to_pay_error_dialog_message">Not a valid Dash Address or URL request in clipboard:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Not a valid Dash Address or URL request in clipboard.</string>
@@ -167,11 +174,11 @@
     <string name="verify_seed_success_title">Verified Successfully</string>
     <string name="verify_seed_success_message">Your wallet is secured now. You can use your recovery phrase anytime to recover your account on another device.</string>
 
-	<string name="transaction_result_view_on_explorer">View on Explorer</string>
-	<string name="transaction_result_paid_successfully">Paid successfully</string>
-	<string name="transaction_result_sent_to">Sent to</string>
-	<string name="transaction_date_and_time">Date &amp; Time</string>
-	<string name="transaction_close">Close</string>
+    <string name="transaction_result_view_on_explorer">View on Explorer</string>
+    <string name="transaction_result_paid_successfully">Paid successfully</string>
+    <string name="transaction_result_sent_to">Sent to</string>
+    <string name="transaction_date_and_time">Date &amp; Time</string>
+    <string name="transaction_close">Close</string>
 
     <string name="authenticate_fingerprint_title">Authenticate</string>
     <string name="authenticate_fingerprint_message">Confirm fingerprint to continue</string>
