@@ -30,6 +30,10 @@
         android:title="@string/enable_fingerprint"
         app:showAsAction="never" />
     <item
+        android:id="@+id/wallet_options_advanced_settings"
+        android:title="@string/security_advanced_settings"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/wallet_options_reset_wallet"
         android:title="@string/wallet_lock_reset_wallet_title"
         app:showAsAction="never" />
