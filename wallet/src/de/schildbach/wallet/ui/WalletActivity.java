@@ -30,6 +30,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
@@ -543,6 +544,46 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     REQUEST_CODE_BACKUP_WALLET);
     }
 
+    private void handleResetWallet() {
+        android.app.AlertDialog.Builder dialogBuilder = new android.app.AlertDialog.Builder(this);
+        dialogBuilder.setTitle(R.string.wallet_lock_reset_wallet_title);
+        dialogBuilder.setMessage(R.string.wallet_lock_reset_wallet_message);
+        //Inverting dialog answers to prevent accidental wallet reset
+        dialogBuilder.setNegativeButton(R.string.wallet_lock_reset_wallet_title, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                resetWallet();
+            }
+        });
+        dialogBuilder.setPositiveButton(android.R.string.no, null);
+        dialogBuilder.setCancelable(false);
+        Dialog dialog = dialogBuilder.create();
+        dialog.setCanceledOnTouchOutside(false);
+        dialog.show();
+    }
+
+    private void resetWallet() {
+        final WalletLock walletLock = WalletLock.getInstance();
+        if (WalletLock.getInstance().isWalletLocked(wallet)) {
+            UnlockWalletDialogFragment.show(getSupportFragmentManager(), new DialogInterface.OnDismissListener() {
+                @Override
+                public void onDismiss(DialogInterface dialog) {
+                    if (!walletLock.isWalletLocked(wallet)) {
+                        resetWallet();
+                    }
+                }
+            });
+            return;
+        }
+
+        log.info("Clearing all app data and exiting.");
+        try {
+            Runtime.getRuntime().exec("pm clear "+ getApplicationContext().getPackageName());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public void handleRestoreWallet() {
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
@@ -978,6 +1019,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
             case R.id.wallet_options_enable_fingerprint:
                 enableFingerprint();
+                return true;
+            case R.id.wallet_options_reset_wallet:
+                handleResetWallet();
                 return true;
         }
 
