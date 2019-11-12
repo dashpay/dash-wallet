@@ -2,6 +2,7 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/transaction_result_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/white">
@@ -49,13 +50,27 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
-        <ImageView
+        <TextView
+            android:id="@+id/transaction_amount_signal"
+            style="@style/MontserratMedium.MG"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="2dp"
+            android:layout_marginRight="2dp"
+            android:textSize="17sp"
+            android:visibility="gone"
+            tools:text="+"
+            tools:visibility="visible" />
+
+        <ImageView
+            android:id="@+id/dash_amount_symbol"
+            android:layout_width="18.62dp"
+            android:layout_height="14.63dp"
             android:layout_marginTop="1dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginRight="8dp"
-            android:src="@drawable/ic_dash_symbol_gray" />
+            android:layout_marginEnd="4dp"
+            android:layout_marginRight="4dp"
+            android:scaleType="centerInside"
+            app:srcCompat="@drawable/ic_dash_symbol_gray" />
 
         <org.dash.wallet.common.ui.CurrencyTextView
             android:id="@+id/dash_amount"
@@ -68,7 +83,7 @@
     </LinearLayout>
 
     <TextView
-        android:id="@+id/paid_successfully"
+        android:id="@+id/transaction_title"
         style="@style/MontserratRegular.MG"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -80,18 +95,18 @@
         app:layout_constraintStart_toStartOf="parent" />
 
     <ImageView
-        android:visibility="invisible"
         android:id="@+id/check_icon"
         android:layout_width="62dp"
         android:layout_height="62dp"
         android:layout_marginBottom="28dp"
-        app:layout_constraintBottom_toTopOf="@+id/paid_successfully"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toTopOf="@+id/transaction_title"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:srcCompat="@drawable/check_animated" />
 
     <TextView
-        android:id="@+id/textView2"
+        android:id="@+id/address_label"
         style="@style/MontserratRegular.G"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -111,7 +126,7 @@
         android:text="@string/transaction_result_sent_to"
         android:textSize="16sp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/textView2"
+        app:layout_constraintTop_toTopOf="@+id/address_label"
         tools:text="XkDnBY4…RfzLRJH6Ex" />
 
     <View
@@ -119,10 +134,10 @@
         style="@style/SuccessfulTransactionSeparator"
         android:layout_marginTop="16dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView2" />
+        app:layout_constraintTop_toBottomOf="@+id/address_label" />
 
     <TextView
-        android:id="@+id/textView4"
+        android:id="@+id/network_fee_label"
         style="@style/MontserratRegular.G"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -142,7 +157,7 @@
         android:text="@string/transaction_result_sent_to"
         android:textSize="16sp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/textView4"
+        app:layout_constraintTop_toTopOf="@+id/network_fee_label"
         tools:text="-0.00000239 Dash" />
 
     <ImageView
@@ -151,17 +166,49 @@
         android:layout_marginTop="1dp"
         android:layout_marginEnd="8dp"
         android:layout_marginRight="8dp"
-        android:src="@drawable/ic_dash_symbol_gray"
+        android:id="@+id/fee_dash_icon"
         app:layout_constraintBottom_toBottomOf="@+id/transaction_fee"
         app:layout_constraintEnd_toStartOf="@+id/transaction_fee"
-        app:layout_constraintTop_toTopOf="@+id/transaction_fee" />
+        app:layout_constraintTop_toTopOf="@+id/transaction_fee"
+        app:srcCompat="@drawable/ic_dash_symbol_gray" />
 
     <View
         android:id="@+id/separator3"
         style="@style/SuccessfulTransactionSeparator"
         android:layout_marginTop="16dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView4" />
+        app:layout_constraintTop_toBottomOf="@+id/network_fee_label" />
+
+    <TextView
+        android:id="@+id/transaction_date_and_time_label"
+        style="@style/MontserratRegular.G"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/transaction_date_and_time"
+        android:textSize="16sp"
+        app:layout_constraintStart_toStartOf="@+id/separator2"
+        app:layout_constraintTop_toBottomOf="@+id/separator3" />
+
+    <TextView
+        android:id="@+id/transaction_date_and_time"
+        style="@style/MontserratRegular.MG"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginRight="16dp"
+        android:text="@string/transaction_result_sent_to"
+        android:textSize="16sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/transaction_date_and_time_label"
+        tools:text="2014-01-19 01:40" />
+
+    <View
+        android:id="@+id/separator4"
+        style="@style/SuccessfulTransactionSeparator"
+        android:layout_marginTop="16dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/transaction_date_and_time_label" />
 
     <Button
         android:id="@+id/transaction_close_btn"
@@ -172,6 +219,6 @@
         android:text="@string/transaction_close"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/separator3" />
+        app:layout_constraintTop_toBottomOf="@+id/separator4" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
