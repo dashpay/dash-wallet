@@ -223,7 +223,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(final ViewGroup parent, final int viewType) {
         if (viewType == VIEW_TYPE_TRANSACTION) {
-            return new TransactionViewHolder(inflater.inflate(R.layout.transaction_row, parent, false));
+            return new TransactionViewHolder(inflater.inflate(R.layout.transaction_row_redesign, parent, false));
         } else {
             throw new IllegalStateException("unknown type: " + viewType);
         }
@@ -252,15 +252,15 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             });
 
             if (onClickListener != null) {
-                transactionHolder.menuView.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(final View v) {
-                        onClickListener.onTransactionMenuClick(v, tx);
-                    }
-                });
+           //     transactionHolder.menuView.setOnClickListener(new View.OnClickListener() {
+           //         @Override
+           //         public void onClick(final View v) {
+           //             onClickListener.onTransactionMenuClick(v, tx);
+           //         }
+           //     });
             }
 
-            transactionHolder.menuView.setVisibility(showTransactionRowMenu ? View.VISIBLE : View.INVISIBLE);
+            //transactionHolder.menuView.setVisibility(showTransactionRowMenu ? View.VISIBLE : View.INVISIBLE);
         }
     }
 
@@ -274,37 +274,42 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     }
 
     private class TransactionViewHolder extends RecyclerView.ViewHolder {
-        private final CircularProgressView confidenceCircularView;
-        private final TextView confidenceTextualView;
+        //private final CircularProgressView confidenceCircularView;
+        //private final TextView confidenceTextualView;
+        private final TextView primaryStatusView;
+        private final TextView secondaryStatusView;
         private final TextView timeView;
-        private final TextView addressView;
+        //private final TextView addressView;
         private final CurrencyTextView valueView;
-        private final View extendedFeeView;
-        private final CurrencyTextView feeView;
+        //private final View extendedFeeView;
+        //private final CurrencyTextView feeView;
         private final CurrencyTextView fiatView;
-        private final View extendMessageView;
-        private final TextView messageView;
-        private final ImageButton menuView;
-        private final ImageView ixInfoButtonView;
+        //private final View extendMessageView;
+        //private final TextView messageView;
+        //private final ImageButton menuView;
+        //private final ImageView ixInfoButtonView;
 
 
         private TransactionViewHolder(final View itemView) {
             super(itemView);
-            confidenceCircularView = (CircularProgressView) itemView
-                    .findViewById(R.id.transaction_row_confidence_circular);
-            confidenceTextualView = (TextView) itemView.findViewById(R.id.transaction_row_confidence_textual);
+            //confidenceCircularView = (CircularProgressView) itemView
+            //        .findViewById(R.id.transaction_row_confidence_circular);
+            //confidenceTextualView = (TextView) itemView.findViewById(R.id.transaction_row_confidence_textual);
+            primaryStatusView = (TextView) itemView.findViewById(R.id.transaction_row_primary_status);
+            secondaryStatusView = (TextView) itemView.findViewById(R.id.transaction_row_secondary_status);
+
             timeView = (TextView) itemView.findViewById(R.id.transaction_row_time);
-            addressView = (TextView) itemView.findViewById(R.id.transaction_row_address);
+            //addressView = (TextView) itemView.findViewById(R.id.transaction_row_address);
             valueView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_value);
-            extendedFeeView = itemView.findViewById(R.id.transaction_row_extend_fee);
-            feeView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_fee);
+            //extendedFeeView = itemView.findViewById(R.id.transaction_row_extend_fee);
+            //feeView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_fee);
             fiatView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_fiat);
             fiatView.setApplyMarkup(false);
-            extendMessageView = itemView.findViewById(R.id.transaction_row_extend_message);
-            messageView = (TextView) itemView.findViewById(R.id.transaction_row_message);
-            menuView = (ImageButton) itemView.findViewById(R.id.transaction_row_menu);
+            //extendMessageView = itemView.findViewById(R.id.transaction_row_extend_message);
+            //messageView = (TextView) itemView.findViewById(R.id.transaction_row_message);
+            //menuView = (ImageButton) itemView.findViewById(R.id.transaction_row_menu);
             //Dash
-            ixInfoButtonView = itemView.findViewById(R.id.transaction_row_info_button);
+            //ixInfoButtonView = itemView.findViewById(R.id.transaction_row_info_button);
         }
 
         private void bind(final Transaction tx) {
@@ -322,6 +327,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
             final boolean isIX = confidence.isIX();
             final boolean isLocked = confidence.isTransactionLocked();
+            final boolean isChainLocked = false; //confidence.isTransactionChainLocked();
             final boolean sentToSinglePeer = confidence.getPeerCount() == 1;
             final boolean sentToSinglePeerSuccessful = sentToSinglePeer ? confidence.isSent() : false;
 
@@ -358,120 +364,137 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 valueColor = colorInsignificant;
             }
 
+
+
             // confidence
             if (confidenceType == ConfidenceType.PENDING) {
-                confidenceCircularView.setVisibility(View.VISIBLE);
-                confidenceTextualView.setVisibility(View.GONE);
+                //confidenceCircularView.setVisibility(View.VISIBLE);
+                //confidenceTextualView.setVisibility(View.GONE);
 
-                confidenceCircularView.setProgress(1);
-                confidenceCircularView.setMaxProgress(1);
+                //confidenceCircularView.setProgress(1);
+                //confidenceCircularView.setMaxProgress(1);
                 if (isLocked) {
-                    confidenceCircularView.setProgress(5);
-                    confidenceCircularView.setMaxProgress(Constants.MAX_NUM_CONFIRMATIONS);
-                    confidenceCircularView.setColors(valueColor, Color.TRANSPARENT);
+                //    confidenceCircularView.setProgress(5);
+                //    confidenceCircularView.setMaxProgress(Constants.MAX_NUM_CONFIRMATIONS);
+                //    confidenceCircularView.setColors(valueColor, Color.TRANSPARENT);
                 } else {
-                    confidenceCircularView.setSize(confidence.numBroadcastPeers());
-                    confidenceCircularView.setMaxSize(maxConnectedPeers / 2); // magic value
-                    confidenceCircularView.setColors(colorInsignificant, Color.TRANSPARENT);
+                    secondaryStatusView.setText(R.string.transaction_row_status_processing);
+                //    confidenceCircularView.setSize(confidence.numBroadcastPeers());
+                //    confidenceCircularView.setMaxSize(maxConnectedPeers / 2); // magic value
+                //    confidenceCircularView.setColors(colorInsignificant, Color.TRANSPARENT);
                 }
             } else if (confidenceType == ConfidenceType.IN_CONFLICT) {
-                confidenceCircularView.setVisibility(View.GONE);
-                confidenceTextualView.setVisibility(View.VISIBLE);
+                //confidenceCircularView.setVisibility(View.GONE);
+                //confidenceTextualView.setVisibility(View.VISIBLE);
 
-                confidenceTextualView.setText(CONFIDENCE_SYMBOL_IN_CONFLICT);
-                confidenceTextualView.setTextColor(colorError);
-                confidenceTextualView.setTextSize(TypedValue.COMPLEX_UNIT_PX, textSizeNormal * 0.85f);
+                //confidenceTextualView.setText(CONFIDENCE_SYMBOL_IN_CONFLICT);
+                //confidenceTextualView.setTextColor(colorError);
+                //confidenceTextualView.setTextSize(TypedValue.COMPLEX_UNIT_PX, textSizeNormal * 0.85f);
+                primaryStatusView.setTextColor(colorError);
+                secondaryStatusView.setTextColor(colorError);
             } else if (confidenceType == ConfidenceType.BUILDING) {
-                confidenceCircularView.setVisibility(View.VISIBLE);
-                confidenceTextualView.setVisibility(View.GONE);
 
-                confidenceCircularView.setProgress(isLocked ? confidence.getDepthInBlocks() + 5 : confidence.getDepthInBlocks());
-                confidenceCircularView.setMaxProgress(isCoinBase ? Constants.NETWORK_PARAMETERS.getSpendableCoinbaseDepth()
-                        : Constants.MAX_NUM_CONFIRMATIONS);
-                confidenceCircularView.setSize(1);
-                confidenceCircularView.setMaxSize(1);
-                confidenceCircularView.setColors(valueColor, Color.TRANSPARENT);
+                //confidenceCircularView.setVisibility(View.VISIBLE);
+                //confidenceTextualView.setVisibility(View.GONE);
+
+                //confidenceCircularView.setProgress(isLocked ? confidence.getDepthInBlocks() + 5 : confidence.getDepthInBlocks());
+                //confidenceCircularView.setMaxProgress(isCoinBase ? Constants.NETWORK_PARAMETERS.getSpendableCoinbaseDepth()
+                //        : Constants.MAX_NUM_CONFIRMATIONS);
+                //confidenceCircularView.setSize(1);
+                //confidenceCircularView.setMaxSize(1);
+                //confidenceCircularView.setColors(valueColor, Color.TRANSPARENT);
             } else if (confidenceType == ConfidenceType.DEAD) {
-                confidenceCircularView.setVisibility(View.GONE);
-                confidenceTextualView.setVisibility(View.VISIBLE);
+                //confidenceCircularView.setVisibility(View.GONE);
+                //confidenceTextualView.setVisibility(View.VISIBLE);
 
-                confidenceTextualView.setText(CONFIDENCE_SYMBOL_DEAD);
-                confidenceTextualView.setTextColor(colorError);
-                confidenceTextualView.setTextSize(TypedValue.COMPLEX_UNIT_PX, textSizeNormal);
+                //confidenceTextualView.setText(CONFIDENCE_SYMBOL_DEAD);
+                //confidenceTextualView.setTextColor(colorError);
+                //confidenceTextualView.setTextSize(TypedValue.COMPLEX_UNIT_PX, textSizeNormal);
+                primaryStatusView.setTextColor(colorError);
+                secondaryStatusView.setTextColor(colorError);
             } else {
-                confidenceCircularView.setVisibility(View.GONE);
-                confidenceTextualView.setVisibility(View.VISIBLE);
+                //confidenceCircularView.setVisibility(View.GONE);
+                //confidenceTextualView.setVisibility(View.VISIBLE);
 
-                confidenceTextualView.setText(CONFIDENCE_SYMBOL_UNKNOWN);
-                confidenceTextualView.setTextColor(colorInsignificant);
-                confidenceTextualView.setTextSize(TypedValue.COMPLEX_UNIT_PX, textSizeNormal);
+                //confidenceTextualView.setText(CONFIDENCE_SYMBOL_UNKNOWN);
+                //confidenceTextualView.setTextColor(colorInsignificant);
+                //confidenceTextualView.setTextSize(TypedValue.COMPLEX_UNIT_PX, textSizeNormal);
+                secondaryStatusView.setText(R.string.transaction_row_status_unknown);
             }
 
             // time
             final Date time = tx.getUpdateTime();
-            if (!itemView.isActivated()) {
-                timeView.setText(DateUtils.getRelativeTimeSpanString(context, time.getTime()));
-            } else {
-                timeView.setText(DateUtils.formatDateTime(context, time.getTime(),
-                        DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_SHOW_TIME));
-            }
+            //if (!itemView.isActivated()) {
+            //    timeView.setText(DateUtils.getRelativeTimeSpanString(context, time.getTime()));
+            //} else {
+                String onTimeText = context.getString(R.string.transaction_row_time_text);
+
+                timeView.setText(String.format(onTimeText, DateUtils.formatDateTime(context, time.getTime(),
+                        DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_SHOW_TIME)));
+            //}
 
             Typeface defaultTypeface = ResourcesCompat.getFont(context, R.font.montserrat_medium);
             Typeface boldTypeface = ResourcesCompat.getFont(context, R.font.montserrat_semibold);
 
+            primaryStatusView.setTypeface(boldTypeface);
+            secondaryStatusView.setTypeface(boldTypeface);
+
+            // primary status
+            if(!txCache.sent) {
+                primaryStatusView.setText(R.string.transaction_row_status_received);
+            } else {
+                primaryStatusView.setText(R.string.transaction_row_status_sent);
+            }
+
             // address
             if (isCoinBase) {
-                addressView.setTypeface(boldTypeface);
-                addressView.setText(textCoinBase);
+                if(confidence.getDepthInBlocks() < Constants.NETWORK_PARAMETERS.getSpendableCoinbaseDepth())
+                    secondaryStatusView.setText(R.string.transaction_row_status_locked);
+                //addressView.setTypeface(boldTypeface);
+                //addressView.setText(textCoinBase);
             } else if (purpose == Purpose.KEY_ROTATION || txCache.self) {
-                addressView.setTypeface(boldTypeface);
-                addressView.setText(textInternal);
-            } else if (purpose == Purpose.RAISE_FEE) {
-                addressView.setText(null);
+                //addressView.setTypeface(boldTypeface);
+                //addressView.setText(textInternal);
             } else if (txCache.addressLabel != null) {
-                addressView.setTypeface(boldTypeface);
-                addressView.setText(txCache.addressLabel);
+                //addressView.setTypeface(boldTypeface);
+                //addressView.setText(txCache.addressLabel);
             } else if (memo != null && memo.length >= 2) {
-                addressView.setTypeface(boldTypeface);
-                addressView.setText(memo[1]);
+                //addressView.setTypeface(boldTypeface);
+                //addressView.setText(memo[1]);
             } else if (txCache.address != null) {
-                addressView.setTypeface(defaultTypeface);
-                if (!itemView.isActivated()) {
-                    addressView.setText(WalletUtils.buildShortAddress(txCache.address.toBase58()));
-                } else {
-                    addressView.setText(WalletUtils.formatAddress(txCache.address, Constants.ADDRESS_FORMAT_GROUP_SIZE,
-                            Constants.ADDRESS_ROW_FORMAT_LINE_SIZE));
-                }
+                //addressView.setTypeface(defaultTypeface);
+                //if (!itemView.isActivated()) {
+                //    addressView.setText(WalletUtils.buildShortAddress(txCache.address.toBase58()));
+                //} else {
+                //    addressView.setText(WalletUtils.formatAddress(txCache.address, Constants.ADDRESS_FORMAT_GROUP_SIZE,
+                //            Constants.ADDRESS_ROW_FORMAT_LINE_SIZE));
+                //}
             } else {
-                addressView.setTextColor(lessSignificantColor);
-                addressView.setTypeface(Typeface.DEFAULT);
-                addressView.setText("?");
+                //addressView.setTextColor(lessSignificantColor);
+                //addressView.setTypeface(Typeface.DEFAULT);
+                //addressView.setText("?");
             }
-            addressView.setSingleLine(!itemView.isActivated());
+            //addressView.setSingleLine(!itemView.isActivated());
 
             // fee
             if (txCache.showFee) {
-                extendedFeeView.setVisibility(itemView.isActivated()
-                        || (confidenceType == ConfidenceType.PENDING && purpose != Purpose.RAISE_FEE) ? View.VISIBLE
-                        : View.GONE);
-                feeView.setAlwaysSigned(true);
-                feeView.setFormat(format);
-                feeView.setAmount(fee.negate());
+            //    extendedFeeView.setVisibility(itemView.isActivated()
+            //            || (confidenceType == ConfidenceType.PENDING && purpose != Purpose.RAISE_FEE) ? View.VISIBLE
+            //            : View.GONE);
+            //    feeView.setAlwaysSigned(true);
+            //    feeView.setFormat(format);
+            //    feeView.setAmount(fee.negate());
             } else {
-                extendedFeeView.setVisibility(View.GONE);
+            //    extendedFeeView.setVisibility(View.GONE);
             }
 
             // value
             valueView.setAlwaysSigned(true);
             valueView.setFormat(format);
             final Coin value;
-            if (purpose == Purpose.RAISE_FEE) {
-                valueView.setTextColor(colorInsignificant);
-                value = fee.negate();
-            } else {
-                valueView.setTextColor(valueColor);
-                value = txCache.showFee ? txCache.value.add(fee) : txCache.value;
-            }
+            valueView.setTextColor(valueColor);
+            value = txCache.showFee ? txCache.value.add(fee) : txCache.value;
+
             valueView.setAmount(value);
             valueView.setVisibility(!value.isZero() ? View.VISIBLE : View.GONE);
 
@@ -483,76 +506,87 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                     exchangeCurrencyCode);
 
             // message
-            extendMessageView.setVisibility(View.GONE);
-            messageView.setSingleLine(false);
+            //extendMessageView.setVisibility(View.GONE);
+            //messageView.setSingleLine(false);
 
             if(exchangeRate == null && itemView.isActivated()) {
-                extendMessageView.setVisibility(View.VISIBLE);
-                messageView.setSingleLine(false);
-                messageView.setText(R.string.exchange_rate_missing);
+            //    extendMessageView.setVisibility(View.VISIBLE);
+            //    messageView.setSingleLine(false);
+                //    messageView.setText(R.string.exchange_rate_missing);
             }
 
             if (purpose == Purpose.KEY_ROTATION) {
-                extendMessageView.setVisibility(View.VISIBLE);
-                messageView.setText(
-                        Html.fromHtml(context.getString(R.string.transaction_row_message_purpose_key_rotation)));
-                messageView.setTextColor(colorSignificant);
-            } else if (purpose == Purpose.RAISE_FEE) {
-                extendMessageView.setVisibility(View.VISIBLE);
-                messageView.setText(R.string.transaction_row_message_purpose_raise_fee);
-                messageView.setTextColor(colorInsignificant);
-            }  else if (isOwn && confidenceType == ConfidenceType.PENDING && sentToSinglePeer && txCache.isLocked == false && confidence.numBroadcastPeers() == 0) {
-                extendMessageView.setVisibility(View.VISIBLE);
-                if(sentToSinglePeerSuccessful)
-                    messageView.setText(R.string.transaction_row_message_sent_to_single_peer);
-                else messageView.setText(R.string.transaction_row_message_own_unbroadcasted);
-                messageView.setTextColor(colorInsignificant);
+            //    extendMessageView.setVisibility(View.VISIBLE);
+             //   messageView.setText(
+            //            Html.fromHtml(context.getString(R.string.transaction_row_message_purpose_key_rotation)));
+            //    messageView.setTextColor(colorSignificant);
+            } else if (isOwn && confidenceType == ConfidenceType.PENDING && sentToSinglePeer && txCache.isLocked == false && confidence.numBroadcastPeers() == 0) {
+                secondaryStatusView.setText(R.string.transaction_row_status_sending);
+                //    extendMessageView.setVisibility(View.VISIBLE);
+            //    if(sentToSinglePeerSuccessful)
+            //        messageView.setText(R.string.transaction_row_message_sent_to_single_peer);
+            //    else messageView.setText(R.string.transaction_row_message_own_unbroadcasted);
+            //    messageView.setTextColor(colorInsignificant);
             } else if (isOwn && confidenceType == ConfidenceType.PENDING && confidence.numBroadcastPeers() == 0) {
-                extendMessageView.setVisibility(View.VISIBLE);
-                messageView.setText(R.string.transaction_row_message_own_unbroadcasted);
-                messageView.setTextColor(colorInsignificant);
-                if (txCache.isIX) {
-                    messageView.setText(R.string.transaction_row_message_own_instantx_lock_request_notsent);
-                }
+                secondaryStatusView.setText(R.string.transaction_row_status_sending);
+                //    extendMessageView.setVisibility(View.VISIBLE);
+            //    messageView.setText(R.string.transaction_row_message_own_unbroadcasted);
+            //    messageView.setTextColor(colorInsignificant);
+            //    if (txCache.isIX) {
+            //        messageView.setText(R.string.transaction_row_message_own_instantx_lock_request_notsent);
+            //    }
             } else if (!isOwn && confidenceType == ConfidenceType.PENDING && confidence.numBroadcastPeers() == 0) {
-                extendMessageView.setVisibility(View.VISIBLE);
-                messageView.setText(R.string.transaction_row_message_received_direct);
-                messageView.setTextColor(colorInsignificant);
+                secondaryStatusView.setText(R.string.transaction_row_status_processing);
+                //    extendMessageView.setVisibility(View.VISIBLE);
+            //    messageView.setText(R.string.transaction_row_message_received_direct);
+            //    messageView.setTextColor(colorInsignificant);
             } else if (!txCache.sent && txCache.value.compareTo(Transaction.MIN_NONDUST_OUTPUT) < 0) {
-                extendMessageView.setVisibility(View.VISIBLE);
-                messageView.setText(R.string.transaction_row_message_received_dust);
-                messageView.setTextColor(colorInsignificant);
+            //    extendMessageView.setVisibility(View.VISIBLE);
+            //    messageView.setText(R.string.transaction_row_message_received_dust);
+            //    messageView.setTextColor(colorInsignificant);
             } else if (!txCache.sent && confidenceType == ConfidenceType.PENDING
-                    && (tx.getUpdateTime() == null || wallet.getLastBlockSeenTimeSecs() * 1000
-                    - tx.getUpdateTime().getTime() > Constants.DELAYED_TRANSACTION_THRESHOLD_MS)) {
-                extendMessageView.setVisibility(View.VISIBLE);
-                messageView.setText(R.string.transaction_row_message_received_unconfirmed_delayed);
-                messageView.setTextColor(colorInsignificant);
+                    && (tx.getUpdateTime() == null || wallet.getLastBlockSeenTimeSecs() * 1000/
+                           - tx.getUpdateTime().getTime() > Constants.DELAYED_TRANSACTION_THRESHOLD_MS)) {
+                secondaryStatusView.setText(R.string.transaction_row_status_confirming);
+
+                //    extendMessageView.setVisibility(View.VISIBLE);
+            //    messageView.setText(R.string.transaction_row_message_received_unconfirmed_delayed);
+            //    messageView.setTextColor(colorInsignificant);
             } else if (!txCache.sent && confidenceType == ConfidenceType.PENDING) {
-                extendMessageView.setVisibility(View.VISIBLE);
-                messageView.setText(R.string.transaction_row_message_received_unconfirmed_unlocked);
-                messageView.setTextColor(colorInsignificant);
+                secondaryStatusView.setText(R.string.transaction_row_status_confirming);
+                //    extendMessageView.setVisibility(View.VISIBLE);
+            //    messageView.setText(R.string.transaction_row_message_received_unconfirmed_unlocked);
+            //    messageView.setTextColor(colorInsignificant);
+            } else if (!txCache.sent && confidenceType == ConfidenceType.BUILDING) {
+                int confirmations = confidence.getDepthInBlocks();
+                if(confirmations < 6 && !isChainLocked && !isLocked)
+                    secondaryStatusView.setText(R.string.transaction_row_status_confirming);
+                //    extendMessageView.setVisibility(View.VISIBLE);
+                //    messageView.setText(R.string.transaction_row_message_received_unconfirmed_unlocked);
+                //    messageView.setTextColor(colorInsignificant);
             } else if (!txCache.sent && confidenceType == ConfidenceType.IN_CONFLICT) {
-                extendMessageView.setVisibility(View.VISIBLE);
-                messageView.setText(R.string.transaction_row_message_received_in_conflict);
-                messageView.setTextColor(colorInsignificant);
+                secondaryStatusView.setText(R.string.transaction_row_status_error_conflicting);
+                //    extendMessageView.setVisibility(View.VISIBLE);
+            //    messageView.setText(R.string.transaction_row_message_received_in_conflict);
+            //    messageView.setTextColor(colorInsignificant);
             } else if (!txCache.sent && confidenceType == ConfidenceType.DEAD) {
-                extendMessageView.setVisibility(View.VISIBLE);
-                messageView.setText(R.string.transaction_row_message_received_dead);
-                messageView.setTextColor(colorError);
+                secondaryStatusView.setText(R.string.transaction_row_status_error_dead);
+                //    extendMessageView.setVisibility(View.VISIBLE);
+            //    messageView.setText(R.string.transaction_row_message_received_dead);
+            //    messageView.setTextColor(colorError);
             } else if (!txCache.sent && WalletUtils.isPayToManyTransaction(tx)) {
-                extendMessageView.setVisibility(View.VISIBLE);
-                messageView.setText(R.string.transaction_row_message_received_pay_to_many);
-                messageView.setTextColor(colorInsignificant);
+            //    extendMessageView.setVisibility(View.VISIBLE);
+            //    messageView.setText(R.string.transaction_row_message_received_pay_to_many);
+            //    messageView.setTextColor(colorInsignificant);
             } else if (memo != null) {
-                extendMessageView.setVisibility(View.VISIBLE);
-                messageView.setText(memo[0]);
-                messageView.setTextColor(colorInsignificant);
-                messageView.setSingleLine(!itemView.isActivated());
+            //    extendMessageView.setVisibility(View.VISIBLE);
+            //    messageView.setText(memo[0]);
+            //    messageView.setTextColor(colorInsignificant);
+            //    messageView.setSingleLine(!itemView.isActivated());
             }
 
-            ixInfoButtonView.setVisibility(View.GONE);
-            boolean isSimple = tx.isSimple();
+            //ixInfoButtonView.setVisibility(View.GONE);
+            /*boolean isSimple = tx.isSimple();
             TransactionConfidence.IXType ixType = confidence.getIXType();
             boolean ixLockFailed = ixType == TransactionConfidence.IXType.IX_LOCK_FAILED;
             if (isOwn && isSimple && ixLockFailed) {
@@ -566,7 +600,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                                 .show();
                     }
                 });
-            }
+            }*/
         }
     }
 }

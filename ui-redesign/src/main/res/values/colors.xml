@@ -14,5 +14,6 @@
     <color name="ripple_dark">#80012060</color>
     <color name="success_green">#92D048</color>
     <color name="error_red">#BF2827</color>
+    <color name="yellow">#bbbb00</color>
 
 </resources>

@@ -156,6 +156,24 @@
     <string name="transaction_row_message_received_dust">This small amount can probably never be spent economically.</string>
     <string name="transaction_row_message_received_pay_to_many">This payment pays to many wallets besides yours, which makes the app slow down over time. If you can, try receiving payments which pay only to you.</string>
     <string name="transaction_row_message_received_rbf">This payment was delayed because the sender used an insecure transaction type.</string>
+    <string name="transaction_row_status_received">Received</string>
+    <string name="transaction_row_status_sent">Sent</string>
+    <string name="transaction_row_status_sending">Sending</string>
+    <string name="transaction_row_status_processing">Processing</string>
+    <string name="transaction_row_status_confirming">Confirming</string>
+    <string name="transaction_row_status_locked">Locked</string>
+    <string name="transaction_row_status_error_sending">Error Sending</string>
+    <string name="transaction_row_status_error_dead">Dead</string>
+    <string name="transaction_row_status_error_conflicting">In Conflict</string>
+    <string name="transaction_row_status_unknown">Unknown</string>
+    <string name="transaction_row_time_text">On %s</string>
+
+
+    <string name="transaction_row_status_masternode_registration">Masternode Registration</string>
+    <string name="transaction_row_status_masternode_revoke">Masternode Revoke</string>
+    <string name="transaction_row_status_masternode_reward">Masternode Reward</string>
+
+
     <string name="network_monitor_activity_title">Network monitor</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Blocks</string>
