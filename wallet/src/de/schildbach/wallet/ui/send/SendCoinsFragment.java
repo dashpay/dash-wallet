@@ -59,7 +59,7 @@ import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
@@ -75,7 +75,7 @@ import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.common.util.GenericUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spongycastle.crypto.params.KeyParameter;
+import org.bouncycastle.crypto.params.KeyParameter;
 
 import java.io.FileNotFoundException;
 import java.io.InputStream;
@@ -748,7 +748,7 @@ public final class SendCoinsFragment extends Fragment {
             }
 
             @Override
-            protected void handlePrivateKey(final VersionedChecksummedBytes key) {
+            protected void handlePrivateKey(final PrefixedChecksummedBytes key) {
                 throw new UnsupportedOperationException();
             }
 

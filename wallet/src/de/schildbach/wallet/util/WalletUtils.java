@@ -41,7 +41,7 @@ import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.DumpedPrivateKey;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.ScriptException;
+import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
@@ -74,12 +74,12 @@ import static org.dash.wallet.common.Constants.CHAR_THIN_SPACE;
  */
 public class WalletUtils {
     public static Editable formatAddress(final Address address, final int groupSize, final int lineSize) {
-        return formatHash(address.toBase58(), groupSize, lineSize);
+        return formatHash(address.toString(), groupSize, lineSize);
     }
 
     public static Editable formatAddress(@Nullable final String prefix, final Address address, final int groupSize,
             final int lineSize) {
-        return formatHash(prefix, address.toBase58(), groupSize, lineSize, CHAR_THIN_SPACE);
+        return formatHash(prefix, address.toString(), groupSize, lineSize, CHAR_THIN_SPACE);
     }
 
     public static Editable formatHash(final String address, final int groupSize, final int lineSize) {
@@ -200,9 +200,13 @@ public class WalletUtils {
                                                    final NetworkParameters expectedNetworkParameters) throws IOException {
         try {
             DeterministicSeed seed =  new DeterministicSeed(words, null,"", Constants.EARLIEST_HD_SEED_CREATION_TIME);
-            KeyChainGroup group = new KeyChainGroup(Constants.NETWORK_PARAMETERS, seed);
-
-            group.addAndActivateHDChain(new DeterministicKeyChain(seed, Constants.BIP44_PATH));
+            KeyChainGroup group = KeyChainGroup.builder(Constants.NETWORK_PARAMETERS)
+                    .fromSeed(seed, Script.ScriptType.P2PKH)
+                    .addChain(DeterministicKeyChain.builder()
+                            .seed(seed)
+                            .accountPath(Constants.BIP44_PATH)
+                            .build())
+                    .build();
 
             final Wallet wallet = new Wallet(Constants.NETWORK_PARAMETERS, group);
 
@@ -224,7 +228,7 @@ public class WalletUtils {
         final BufferedReader keyReader = new BufferedReader(new InputStreamReader(is, Charsets.UTF_8));
 
         // create non-HD wallet
-        final KeyChainGroup group = new KeyChainGroup(expectedNetworkParameters);
+        final KeyChainGroup group = KeyChainGroup.builder(expectedNetworkParameters).build();
 
         group.importKeys(WalletUtils.readKeys(keyReader, expectedNetworkParameters));
         return new Wallet(expectedNetworkParameters, group);
@@ -236,7 +240,7 @@ public class WalletUtils {
         out.write("# KEEP YOUR PRIVATE KEYS SAFE! Anyone who can read this can spend your "+ CoinDefinition.coinName+"s.\n");
 
         for (final ECKey key : keys) {
-            out.write(key.getPrivateKeyEncoded(Constants.NETWORK_PARAMETERS).toBase58());
+            out.write(key.getPrivateKeyEncoded(Constants.NETWORK_PARAMETERS).toString());
             if (key.getCreationTimeSeconds() != 0) {
                 out.write(' ');
                 out.write(format.format(new Date(key.getCreationTimeSeconds() * DateUtils.SECOND_IN_MILLIS)));

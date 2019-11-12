@@ -65,7 +65,7 @@ import com.squareup.okhttp.HttpUrl;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
@@ -392,7 +392,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
 
             @Override
-            protected void handlePrivateKey(final VersionedChecksummedBytes key) {
+            protected void handlePrivateKey(final PrefixedChecksummedBytes key) {
                 SweepWalletActivity.start(WalletActivity.this, key);
             }
 
