@@ -243,6 +243,15 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 startActivity(PaymentsActivity.createIntent(WalletActivity.this, PaymentsActivity.ACTIVE_TAB_RECEIVE));
             }
         });
+        showHideBalance();
+    }
+
+    private void showHideBalance() {
+        if (config.getHideBalance()) {
+            findViewById(R.id.wallet_balance_panel).setVisibility(View.INVISIBLE);
+        } else {
+            findViewById(R.id.wallet_balance_panel).setVisibility(View.VISIBLE);
+        }
     }
 
     private void initQuickActions() {
@@ -313,6 +322,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         detectUserCountry();
         showBackupWalletDialogIfNeeded();
         showHideSecureAction();
+        showHideBalance();
     }
 
     private void showBackupWalletDialogIfNeeded() {
