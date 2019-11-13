@@ -26,10 +26,14 @@
 
     <string name="lock_action_quick_receive">Quick\nReceive</string>
     <string name="lock_action_login_with_pin">Login\nwith PIN</string>
-    <string name="lock_action_login_with_fingerprint">Login\nwith Touch ID</string>
+    <string name="lock_action_login_with_fingerprint">Login with\nFingerprint</string>
     <string name="lock_action_scan_to_pay">Scan to\nPay</string>
     <string name="lock_enter_pin">Enter PIN</string>
     <string name="lock_unlock_with_fingerprint">Use your fingerprint to unlock</string>
+
+    <string name="perm_lock_info">Wallet permanently locked</string>
+    <string name="perm_lock_wipe_wallet">Wipe wallet</string>
+    <string name="perm_lock_close_app">Close</string>
 
     <string name="scan_to_pay_error_dialog_title">Scan to Pay</string>
     <string name="scan_to_pay_error_dialog_message">Not a valid Dash Address or URL request in clipboard:\n\n%s</string>

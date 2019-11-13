@@ -101,6 +101,7 @@ import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
 import de.schildbach.wallet.ui.SingleActionSharedViewModel;
 import de.schildbach.wallet.ui.TransactionResultActivity;
+import de.schildbach.wallet.ui.WalletActivity;
 import de.schildbach.wallet.util.Bluetooth;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
@@ -223,7 +224,12 @@ public final class SendCoinsFragment extends Fragment {
         confirmTransactionSharedViewModel.getClickConfirmButtonEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean aBoolean) {
-                CheckPinDialog.show(fragmentManager, AUTH_REQUEST_CODE_SEND);
+                String sessionPin = activity.getIntent().getStringExtra(WalletActivity.EXTRA_SESSION_PIN);
+                if (sessionPin == null) {
+                    CheckPinDialog.show(fragmentManager, AUTH_REQUEST_CODE_SEND);
+                } else {
+                    handleGo(sessionPin);
+                }
             }
         });
 

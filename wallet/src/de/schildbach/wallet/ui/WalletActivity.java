@@ -107,12 +107,25 @@ public final class WalletActivity extends AbstractBindServiceActivity
         NavigationView.OnNavigationItemSelectedListener,
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
+
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
     private static final int DIALOG_RESTORE_WALLET = 2;
     private static final int DIALOG_TIMESKEW_ALERT = 3;
     private static final int DIALOG_VERSION_ALERT = 4;
     private static final int DIALOG_LOW_STORAGE_ALERT = 5;
+
+    public static final String EXTRA_SESSION_PIN = "extra_pin";
+
+    public static Intent createIntent(Context context) {
+        return createIntent(context, null);
+    }
+
+    public static Intent createIntent(Context context, String pin) {
+        Intent intent = new Intent(context, WalletActivity.class);
+        intent.putExtra(EXTRA_SESSION_PIN, pin);
+        return intent;
+    }
 
     private WalletApplication application;
     private Configuration config;
@@ -190,6 +203,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 return walletTransactionsFragment != null && !walletTransactionsFragment.isHistoryEmpty();
             }
         });
+
+        startActivity(LockScreenActivity.createIntent(this));
     }
 
     private void initViewModel() {
@@ -1100,8 +1115,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
             findViewById(R.id.sync_error_pane).setVisibility(View.VISIBLE);
             return;
         }
-        showSyncPane(R.id.sync_error_pane,false);
-        showSyncPane(R.id.sync_progress_pane,true);
+        showSyncPane(R.id.sync_error_pane, false);
+        showSyncPane(R.id.sync_progress_pane, true);
         int percentage = (int) event.getPct();
         TextView syncStatusTitle = findViewById(R.id.sync_status_title);
         TextView syncStatusMessage = findViewById(R.id.sync_status_message);
@@ -1114,7 +1129,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
                 syncStatusTitle.setText("Sync");
                 syncStatusMessage.setText("Completed");
-                showSyncPane(R.id.sync_status_pane,false);
+                showSyncPane(R.id.sync_status_pane, false);
             } else {
                 syncPercentageView.setTextColor(getResources().getColor(R.color.dash_gray));
                 syncStatusTitle.setText("Syncing");

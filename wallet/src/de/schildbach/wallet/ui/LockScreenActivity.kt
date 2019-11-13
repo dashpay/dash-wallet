@@ -20,34 +20,55 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
 import android.view.View
+import android.view.animation.AnimationUtils
 import androidx.annotation.RequiresApi
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.os.CancellationSignal
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
+import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.preference.PinRetryController
+import de.schildbach.wallet.ui.widget.NumericKeyboardView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_lock_screen.*
+import java.util.concurrent.TimeUnit
 
-class LockScreenActivity : AppCompatActivity() {
+class LockScreenActivity : SendCoinsQrActivity() {
 
     companion object {
-
-        private const val EXTRA_TITLE_RES_ID = "extra_title_res_id"
-
         @JvmStatic
-        @JvmOverloads
-        fun createIntent(context: Context, titleResId: Int = 0): Intent {
+        fun createIntent(context: Context): Intent {
             val intent = Intent(context, LockScreenActivity::class.java)
-            intent.putExtra(EXTRA_TITLE_RES_ID, titleResId)
+            intent.apply {
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
             return intent
         }
     }
 
     private lateinit var viewModel: LockScreenViewModel
+    private lateinit var checkPinViewModel: CheckPinViewModel
+
+    private val temporaryLockCheckHandler = Handler()
+    private val temporaryLockCheckInterval = TimeUnit.SECONDS.toMillis(10)
+    private val temporaryLockCheckRunnable = Runnable {
+        if (pinRetryController.isLocked) {
+            setState(State.LOCKED)
+        } else {
+            setupInitState()
+        }
+    }
 
     private enum class State {
         ENTER_PIN,
+        DECRYPTING,
+        INVALID_PIN,
+        LOCKED,
         USE_FINGERPRINT,
     }
 
@@ -55,52 +76,189 @@ class LockScreenActivity : AppCompatActivity() {
 
     private var fingerprintHelper: FingerprintHelper? = null
     private lateinit var fingerprintCancellationSignal: CancellationSignal
+    private lateinit var pinRetryController: PinRetryController
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_lock_screen)
 
+        pinRetryController = PinRetryController(this)
         initView()
         initViewModel()
     }
 
     private fun initView() {
-//        CheckPinDialog.show(supportFragmentManager, 1)
-        initFingerprint()
+        setupInitState()
         action_login_with_pin.setOnClickListener {
             setState(State.ENTER_PIN)
         }
         action_login_with_fingerprint.setOnClickListener {
             setState(State.USE_FINGERPRINT)
         }
-    }
+        action_receive.setOnClickListener {
+            startActivity(QuickReceiveActivity.createIntent(this))
+        }
+        action_scan_to_pay.setOnClickListener {
+            performScanning();
+        }
+        numeric_keyboard.setFunctionEnabled(false)
+        numeric_keyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
-    private fun initViewModel() {
-        viewModel = ViewModelProviders.of(this).get(LockScreenViewModel::class.java)
-    }
-
-    private fun setState(state: State) {
-        when (state) {
-            State.ENTER_PIN -> {
-                numeric_keyboard.visibility = View.VISIBLE
-                action_login_with_pin.visibility = View.GONE
-                action_login_with_fingerprint.visibility = View.VISIBLE
-                pin_preview.visibility = View.VISIBLE
-                fingerprint_view.visibility = View.GONE
-                action_title.setText(R.string.lock_enter_pin)
+            override fun onNumber(number: Int) {
+                if (pinRetryController.isLocked) {
+                    return
+                }
+                if (checkPinViewModel.pin.length < 4) {
+                    checkPinViewModel.pin.append(number)
+                    pin_preview.next()
+                }
+                if (checkPinViewModel.pin.length == 4) {
+                    Handler().postDelayed({
+                        checkPinViewModel.checkPin(checkPinViewModel.pin)
+                    }, 200)
+                }
             }
-            State.USE_FINGERPRINT -> {
-                numeric_keyboard.visibility = View.GONE
-                action_login_with_pin.visibility = View.VISIBLE
-                action_login_with_fingerprint.visibility = View.GONE
-                pin_preview.visibility = View.GONE
-                fingerprint_view.visibility = View.VISIBLE
-                action_title.setText(R.string.lock_unlock_with_fingerprint)
+
+            override fun onBack(longClick: Boolean) {
+                if (checkPinViewModel.pin.isNotEmpty()) {
+                    checkPinViewModel.pin.deleteCharAt(checkPinViewModel.pin.length - 1)
+                    pin_preview.prev()
+                }
+            }
+
+            override fun onFunction() {
+
+            }
+        }
+        view_flipper.inAnimation = AnimationUtils.loadAnimation(this, android.R.anim.fade_in)
+
+        view_flipper.addOnLayoutChangeListener { _: View, _: Int, _: Int, _: Int, _: Int, _: Int, _: Int, _: Int, _: Int ->
+
+            if (previousDisplayedChild == view_flipper.displayedChild) {
+                return@addOnLayoutChangeListener
+            }
+            previousDisplayedChild = view_flipper.displayedChild
+
+
+            action_scan_to_pay.isEnabled = true
+
+            when (view_flipper.displayedChild) {
+                0 -> {
+                    action_title.setText(R.string.lock_enter_pin)
+
+                    action_login_with_pin.visibility = View.GONE
+                    action_login_with_fingerprint.visibility = View.VISIBLE
+
+                    numeric_keyboard.visibility = View.VISIBLE
+                    numeric_keyboard.isEnabled = true
+                }
+                1 -> {
+                    action_title.setText(R.string.lock_unlock_with_fingerprint)
+
+                    action_login_with_pin.visibility = View.VISIBLE
+                    action_login_with_fingerprint.visibility = View.GONE
+
+                    numeric_keyboard.visibility = View.GONE
+                }
+                2 -> {
+                    numeric_keyboard.isEnabled = false
+                }
+                3 -> {
+                    action_title.setText(R.string.wallet_lock_wallet_disabled)
+                    action_subtitle.text = pinRetryController.walletTemporaryLockedMessage
+
+                    action_login_with_pin.visibility = View.GONE
+                    action_login_with_fingerprint.visibility = View.GONE
+
+                    action_scan_to_pay.isEnabled = false
+                    numeric_keyboard.visibility = View.GONE
+                }
             }
         }
     }
 
-    private fun initFingerprint() {
+    private var previousDisplayedChild = -1
+
+    private fun initViewModel() {
+        checkPinViewModel = ViewModelProviders.of(this).get(CheckPinViewModel::class.java)
+        viewModel = ViewModelProviders.of(this).get(LockScreenViewModel::class.java)
+        checkPinViewModel.checkPinLiveData.observe(this, Observer {
+            when (it.status) {
+                Status.ERROR -> {
+                    pinRetryController.failedAttempt(it.data!!, false)
+                    if (pinRetryController.isLocked) {
+                        setState(State.LOCKED)
+                        return@Observer
+                    }
+                    if (pinRetryController.isLockedForever) {
+                        WalletApplication.getInstance().killAllActivities();
+                        finish()
+                        startActivity(Intent(this, OnboardingActivity::class.java))
+                        return@Observer
+                    }
+                    setState(State.INVALID_PIN)
+                }
+                Status.LOADING -> {
+                    setState(State.DECRYPTING)
+                }
+                Status.SUCCESS -> {
+                    pinRetryController.clearPinFailPrefs()
+                    startWalletActivity(it.data)
+                }
+            }
+        })
+    }
+
+    private fun startWalletActivity(pin: String?) {
+        val intent = WalletActivity.createIntent(this, pin)
+        startActivityNewTask(intent)
+    }
+
+    private fun startActivityNewTask(intent: Intent) {
+        intent.apply {
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(intent)
+        finish()
+    }
+
+    private fun setState(state: State) {
+
+        action_scan_to_pay.isEnabled = false
+
+        when (state) {
+            State.ENTER_PIN -> {
+                view_flipper.displayedChild = 0
+            }
+            State.INVALID_PIN -> {
+                view_flipper.displayedChild = 0
+                checkPinViewModel.pin.clear()
+                pin_preview.shake()
+                Handler().postDelayed({
+                    pin_preview.clear()
+                }, 200)
+                pin_preview.badPin(pinRetryController.remainingAttemptsMessage)
+            }
+            State.USE_FINGERPRINT -> {
+                view_flipper.displayedChild = 1
+            }
+            State.DECRYPTING -> {
+                view_flipper.displayedChild = 2
+            }
+            State.LOCKED -> {
+                view_flipper.displayedChild = 3
+                temporaryLockCheckHandler.postDelayed(temporaryLockCheckRunnable, temporaryLockCheckInterval)
+            }
+        }
+    }
+
+    private fun setupInitState() {
+        if (pinRetryController.isLocked) {
+            setState(State.LOCKED)
+            return
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             fingerprintHelper = FingerprintHelper(this)
             fingerprintHelper?.run {
@@ -108,15 +266,15 @@ class LockScreenActivity : AppCompatActivity() {
                     if (isFingerprintEnabled) {
                         setState(State.USE_FINGERPRINT)
                         startFingerprintListener()
+                        return
                     }
                 } else {
                     fingerprintHelper = null
-                    setState(State.ENTER_PIN)
+                    action_login_with_fingerprint.isEnabled = false
                 }
             }
-        } else {
-            setState(State.ENTER_PIN)
         }
+        setState(State.ENTER_PIN)
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
@@ -140,7 +298,7 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
-        super.onBackPressed()
+//        super.onBackPressed()
     }
 
 
@@ -150,5 +308,6 @@ class LockScreenActivity : AppCompatActivity() {
         if (::fingerprintCancellationSignal.isInitialized) {
             fingerprintCancellationSignal.cancel()
         }
+        temporaryLockCheckHandler.removeCallbacks(temporaryLockCheckRunnable)
     }
 }

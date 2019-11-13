@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:animateLayoutChanges="true"
+    android:animateLayoutChanges="false"
     android:fitsSystemWindows="false"
     tools:background="@color/dash_deep_blue">
 
@@ -55,6 +55,7 @@
         tools:ignore="ContentDescription" />
 
     <LinearLayout
+        android:id="@+id/content"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:gravity="center"
@@ -72,30 +73,59 @@
             android:text="@string/lock_unlock_with_fingerprint"
             android:textColor="@color/dash_white" />
 
-        <de.schildbach.wallet.ui.widget.PinPreviewView
-            android:id="@+id/pin_preview"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:paddingTop="16dp"
-            android:visibility="gone"
-            app:layout_constraintEnd_toEndOf="@id/v_center_guideline"
-            app:layout_constraintStart_toStartOf="@id/v_center_guideline" />
-
-        <de.schildbach.wallet.ui.widget.FingerprintView
-            android:id="@+id/fingerprint_view"
+        <ViewFlipper
+            android:id="@+id/view_flipper"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            app:custom_layout="@layout/lock_fingerprint_view"
-            app:layout_constraintBottom_toTopOf="@id/action_receive"
-            app:layout_constraintEnd_toEndOf="@id/v_center_guideline"
-            app:layout_constraintStart_toStartOf="@id/v_center_guideline"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:visibility="visible" />
+            android:layout_height="wrap_content">
+
+            <de.schildbach.wallet.ui.widget.PinPreviewView
+                android:id="@+id/pin_preview"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:paddingTop="16dp"
+                app:layout_constraintEnd_toEndOf="@id/v_center_guideline"
+                app:layout_constraintStart_toStartOf="@id/v_center_guideline"
+                app:pp_custom_drawable="@drawable/pin_item_white" />
+
+            <de.schildbach.wallet.ui.widget.FingerprintView
+                android:id="@+id/fingerprint_view"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                app:custom_layout="@layout/lock_fingerprint_view"
+                app:layout_constraintBottom_toTopOf="@id/action_receive"
+                app:layout_constraintEnd_toEndOf="@id/v_center_guideline"
+                app:layout_constraintStart_toStartOf="@id/v_center_guideline"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:visibility="visible" />
+
+            <ProgressBar
+                android:id="@+id/progress"
+                style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:indeterminate="true"
+                android:indeterminateTint="@color/dash_white"
+                android:paddingStart="32dp"
+                android:paddingEnd="32dp"
+                tools:targetApi="lollipop" />
+
+            <TextView
+                android:id="@+id/action_subtitle"
+                style="@style/MontserratMedium.BodyText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="@string/wallet_lock_try_again"
+                android:textColor="@color/dash_white" />
+
+        </ViewFlipper>
 
     </LinearLayout>
+
 
     <org.dash.wallet.ui.widget.LockScreenButton
         android:id="@+id/action_receive"
@@ -132,7 +162,6 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginBottom="16dp"
-        android:visibility="gone"
         app:action_icon="@drawable/ic_lock_login_with_fingerprint"
         app:action_icon_size_percent="0.5"
         app:layout_constraintBottom_toTopOf="@id/numeric_keyboard"

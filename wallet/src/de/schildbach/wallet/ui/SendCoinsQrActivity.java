@@ -17,6 +17,15 @@
 
 package de.schildbach.wallet.ui;
 
+import android.app.Activity;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnClickListener;
+import android.content.Intent;
+import android.os.Bundle;
+
+import androidx.appcompat.app.AppCompatActivity;
+
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
@@ -28,28 +37,36 @@ import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
 
-import android.app.Activity;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnClickListener;
-import android.content.Intent;
-import android.os.Bundle;
-
 /**
  * @author Andreas Schildbach
  */
-public final class SendCoinsQrActivity extends Activity {
-    private static final int REQUEST_CODE_SCAN = 0;
+public class SendCoinsQrActivity extends AppCompatActivity {
+
+    private static final String EXTRA_IMMEDIATE_SCAN = "extra_immediate_scan";
+
+    protected static final int REQUEST_CODE_SCAN = 0;
+
+    public static Intent createIntent(Context context, boolean immediateScan) {
+        Intent intent = new Intent(context, SendCoinsQrActivity.class);
+        intent.putExtra(EXTRA_IMMEDIATE_SCAN, immediateScan);
+        return intent;
+    }
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        if (savedInstanceState == null)
-            startActivityForResult(new Intent(this, ScanActivity.class), REQUEST_CODE_SCAN);
+        if (savedInstanceState == null && getIntent().getBooleanExtra(EXTRA_IMMEDIATE_SCAN, false))
+            performScanning();
+    }
+
+    protected void performScanning() {
+        startActivityForResult(new Intent(this, ScanActivity.class), REQUEST_CODE_SCAN);
     }
 
     @Override
     public void onActivityResult(final int requestCode, final int resultCode, final Intent intent) {
+        super.onActivityResult(requestCode, resultCode, intent);
         if (requestCode == REQUEST_CODE_SCAN && resultCode == Activity.RESULT_OK) {
             final String input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT);
 

@@ -169,7 +169,7 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
                 views.setOnClickPendingIntent(R.id.widget_button_send,
                         PendingIntent.getActivity(context, 0, new Intent(context, SendCoinsActivity.class), 0));
                 views.setOnClickPendingIntent(R.id.widget_button_send_qr,
-                        PendingIntent.getActivity(context, 0, new Intent(context, SendCoinsQrActivity.class), 0));
+                        PendingIntent.getActivity(context, 0, SendCoinsQrActivity.createIntent(context, true), 0));
 
                 appWidgetManager.updateAppWidget(appWidgetId, views);
             }

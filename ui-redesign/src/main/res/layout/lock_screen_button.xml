@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/selectable_background_light"
+    android:background="@drawable/transparent_button_background"
     android:maxWidth="200dp"
     android:maxHeight="200dp"
     tools:context="org.dash.wallet.ui.widget.LockScreenButton"

@@ -16,7 +16,7 @@ class LockScreenButton(context: Context, attrs: AttributeSet) : ConstraintLayout
         maxWidth = 300
         maxHeight = 300
 
-        setBackgroundResource(R.drawable.selectable_background_light)
+        setBackgroundResource(R.drawable.transparent_button_background)
 
         val attrsArray = context.obtainStyledAttributes(attrs, R.styleable.LockScreenButton)
         try {
@@ -38,5 +38,12 @@ class LockScreenButton(context: Context, attrs: AttributeSet) : ConstraintLayout
         } finally {
             attrsArray.recycle()
         }
+    }
+
+    override fun setEnabled(enabled: Boolean) {
+        super.setEnabled(enabled)
+        val alpha = if (enabled) 1.0f else 0.5f
+        action_icon.alpha = alpha
+        action_text.alpha = alpha
     }
 }

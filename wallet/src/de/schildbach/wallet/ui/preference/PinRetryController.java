@@ -39,6 +39,10 @@ public class PinRetryController {
     }
 
     public boolean isLocked() {
+        return getLockTimeMinutes() != null;
+    }
+
+    public Long getLockTimeMinutes() {
         int failCount = prefs.getStringSet(PREFS_FAILED_PINS, new HashSet<String>()).size();
         long secureTime = prefs.getLong(PREFS_SECURE_TIME, 0);
         long failHeight = prefs.getLong(PREFS_FAIL_HEIGHT, 0);
@@ -51,11 +55,7 @@ public class PinRetryController {
                 * ONE_MINUTE_MILLIS - secureTime - now);
         long lockTimeMinutes = TimeUnit.MILLISECONDS.toMinutes(lockTimeMillis);
 
-        if (locked) {
-            showLockedAlert(lockTimeMinutes);
-        }
-
-        return locked;
+        return locked ? lockTimeMinutes : null;
     }
 
 
@@ -68,10 +68,14 @@ public class PinRetryController {
         SharedPreferences.Editor prefsEditor = prefs.edit();
         prefsEditor.remove(PREFS_FAIL_HEIGHT);
         prefsEditor.remove(PREFS_FAILED_PINS);
-        prefsEditor.commit();
+        prefsEditor.apply();
     }
 
     public void failedAttempt(String pin) {
+        failedAttempt(pin, true);
+    }
+
+    public void failedAttempt(String pin, boolean showWipeDialog) {
         long secureTime = prefs.getLong(PREFS_SECURE_TIME, 0);
         Set<String> storedFailedPins = prefs.getStringSet(PREFS_FAILED_PINS, new HashSet<String>());
         Set<String> failedPins = new HashSet<>(storedFailedPins);
@@ -85,44 +89,30 @@ public class PinRetryController {
             log.info("PIN entered incorrectly " + failCount + "times");
 
             if (failCount >= FAIL_LIMIT) {
-                wipeWallet();
+                if (showWipeDialog) {
+                    wipeWallet();
+                }
             } else {
                 prefsEditor.putLong(PREFS_FAIL_HEIGHT, secureTime + System.currentTimeMillis());
             }
 
-            prefsEditor.commit();
+            prefsEditor.apply();
         }
     }
 
-    /**
-     * Prepare alert with corresponding wait message and shows it.
-     * @param lockTime in minutes.
-     */
-    private void showLockedAlert(long lockTime) {
+    public String getWalletTemporaryLockedMessage() {
         String unit;
+        Long lockTime = getLockTimeMinutes();
         lockTime = (lockTime < 2) ? 1 : lockTime;
 
         if (lockTime < 60) {
-            unit = context.getResources().getQuantityString(R.plurals.minute, (int) lockTime);
+            unit = context.getResources().getQuantityString(R.plurals.minute, lockTime.intValue());
         } else {
             lockTime /= 60;
-            unit = context.getResources().getQuantityString(R.plurals.hour, (int) lockTime);
+            unit = context.getResources().getQuantityString(R.plurals.hour, lockTime.intValue());
         }
 
-        String message = context.getString(R.string.wallet_lock_try_again, lockTime, unit);
-
-        AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(context);
-        dialogBuilder.setTitle(R.string.wallet_lock_wallet_disabled);
-        dialogBuilder.setMessage(message);
-        dialogBuilder.setNegativeButton(R.string.wallet_lock_reset, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                showResetWalletDialog(false);
-            }
-        });
-        dialogBuilder.setPositiveButton(android.R.string.ok, null);
-        dialogBuilder.show();
-
+        return context.getString(R.string.wallet_lock_try_again, lockTime, unit);
     }
 
     private void showResetWalletDialog(boolean forceClose) {
@@ -163,17 +153,22 @@ public class PinRetryController {
     }
 
     // returns true if the wallet is wiped
-    public static boolean handleLockedForever(Context context) {
+    public static boolean handleLockedForever(Context context, boolean showDialog) {
         PinRetryController pinRetryController = new PinRetryController(context);
-        if(pinRetryController.isLockedForever()) {
-            pinRetryController.wipeWallet();
+        if (pinRetryController.isLockedForever()) {
+            if (showDialog) {
+                pinRetryController.wipeWallet();
+            }
             return true;
         }
         return false;
     }
 
+    public static boolean handleLockedForever(Context context) {
+        return handleLockedForever(context, true);
+    }
+
     public void storeSecureTime(Date date) {
         prefs.edit().putLong(PREFS_SECURE_TIME, date.getTime()).apply();
     }
-
 }
