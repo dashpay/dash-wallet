@@ -47,6 +47,7 @@ public class Configuration {
 
     public static final String PREFS_KEY_BTC_PRECISION = "btc_precision";
     public static final String PREFS_KEY_OWN_NAME = "own_name";
+    public static final String PREFS_KEY_HIDE_BALANCE = "hide_balance";
     public static final String PREFS_KEY_SEND_COINS_AUTOCLOSE = "send_coins_autoclose";
     public static final String PREFS_KEY_CONNECTIVITY_NOTIFICATION = "connectivity_notification";
     public static final String PREFS_KEY_EXCHANGE_CURRENCY = "exchange_currency";
@@ -134,6 +135,10 @@ public class Configuration {
 
     public String getOwnName() {
         return Strings.emptyToNull(prefs.getString(PREFS_KEY_OWN_NAME, "").trim());
+    }
+
+    public boolean getHideBalance() {
+        return prefs.getBoolean(PREFS_KEY_HIDE_BALANCE, false);
     }
 
     public boolean getSendCoinsAutoclose() {
