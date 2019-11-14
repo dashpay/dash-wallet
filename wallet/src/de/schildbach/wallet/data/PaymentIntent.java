@@ -28,7 +28,6 @@ import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionLockRequest;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.protocols.payments.PaymentProtocolException;
 import org.bitcoinj.script.Script;
@@ -268,7 +267,7 @@ public final class PaymentIntent implements Parcelable {
     }
 
     public SendRequest toSendRequest() {
-        final Transaction transaction = useInstantX ? new TransactionLockRequest(Constants.NETWORK_PARAMETERS) : new Transaction(Constants.NETWORK_PARAMETERS);
+        final Transaction transaction = new Transaction(Constants.NETWORK_PARAMETERS);
         for (final PaymentIntent.Output output : outputs)
             transaction.addOutput(output.amount, output.script);
         return SendRequest.forTx(transaction);
