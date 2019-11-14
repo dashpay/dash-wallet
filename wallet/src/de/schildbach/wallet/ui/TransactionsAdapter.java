@@ -236,6 +236,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
             final long itemId = getItemId(position);
             transactionHolder.itemView.setActivated(itemId == selectedItemId);
+            //transactionHolder.itemView.setBackgroundColor(itemId == selectedItemId ? R.color.dash_gray : R.color.dash_white);
 
             final Transaction tx = transactions.get(position);
             transactionHolder.bind(tx);
@@ -436,8 +437,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             Typeface defaultTypeface = ResourcesCompat.getFont(context, R.font.montserrat_medium);
             Typeface boldTypeface = ResourcesCompat.getFont(context, R.font.montserrat_semibold);
 
-            primaryStatusView.setTypeface(boldTypeface);
-            secondaryStatusView.setTypeface(boldTypeface);
+            //primaryStatusView.setTypeface(boldTypeface);
+            //secondaryStatusView.setTypeface(boldTypeface);
 
             // primary status
             if(!txCache.sent) {
@@ -496,7 +497,10 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             value = txCache.showFee ? txCache.value.add(fee) : txCache.value;
 
             valueView.setAmount(value);
-            valueView.setVisibility(!value.isZero() ? View.VISIBLE : View.GONE);
+            //valueView.setVisibility(!value.isZero() ? View.VISIBLE : View.GONE);
+            if(value.signum() < 0)
+                valueView.setTextColor(R.color.amount_received);
+            else valueView.setTextColor(R.color.amount_sent);
 
             // fiat value
             final ExchangeRate exchangeRate = tx.getExchangeRate();

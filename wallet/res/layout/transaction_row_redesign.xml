@@ -2,66 +2,90 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="40dp"
+    android:layout_height="70dp"
     android:layout_marginLeft="15dp"
     android:layout_marginRight="15dp"
     android:layout_marginBottom="10dp"
-    android:background="@drawable/round_corners_white_bg">
-
+    android:background="@drawable/selectable_round_corner"
+    android:gravity="center">
 
     <TextView
         android:id="@+id/transaction_row_primary_status"
-        style="@style/MontserratSemiBold.DB.14"
+        style="@style/MontserratMedium"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:paddingLeft="10dp"
         android:paddingRight="6dp"
-        android:paddingLeft="6dp"
+        android:textSize="15sp"
+        android:textColor="@color/primary_status"
         tools:text="Receiving" />
 
     <TextView
         android:id="@+id/transaction_row_secondary_status"
-        style="@style/MontserratSemiBold.DB.12"
+        style="@style/MontserratMedium.B.12"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_toRightOf="@id/transaction_row_primary_status"
+        android:layout_alignBottom="@id/transaction_row_primary_status"
         android:layout_toEndOf="@id/transaction_row_primary_status"
-        android:textColor="@color/yellow"
+        android:layout_toRightOf="@id/transaction_row_primary_status"
+        android:textColor="@color/secondary_status"
         tools:text="Processing" />
 
     <TextView
         android:id="@+id/transaction_row_time"
-        style="@style/MontserratMedium.DB.12"
+        style="@style/MontserratRegular.MG.12"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/transaction_row_primary_status"
         android:layout_marginBottom="5dp"
+        android:paddingLeft="10dp"
         android:paddingRight="6dp"
-        android:paddingLeft="6dp"
+        android:textColor="@color/dash_gray"
         tools:text="August 30, 11:28 AM" />
 
-    <org.dash.wallet.common.ui.CurrencyTextView
-        android:id="@+id/transaction_row_value"
-        style="@style/MontserratSemiBold.B.14"
+    <LinearLayout
+        android:id="@+id/dash_amount_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignTop="@id/transaction_row_primary_status"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true"
+        android:layout_alignBottom="@id/transaction_row_primary_status"
         android:layout_alignParentTop="true"
-        android:paddingRight="6dp"
-        android:paddingLeft="6dp"
-        tools:text="4.3939" />
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="1dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginRight="8dp"
+            android:src="@drawable/ic_dash_symbol_gray" />
+
+        <org.dash.wallet.common.ui.CurrencyTextView
+            android:id="@+id/transaction_row_value"
+            style="@style/MontserratMedium"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingLeft="0dp"
+            android:paddingRight="11dp"
+            android:textSize="15sp"
+            tools:text="4.3939" />
+
+    </LinearLayout>
+
 
     <org.dash.wallet.common.ui.CurrencyTextView
         android:id="@+id/transaction_row_fiat"
         style="@style/MontserratMedium.MG.12"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/transaction_row_value"
-        android:layout_alignParentRight="true"
+        android:layout_below="@id/dash_amount_container"
         android:layout_alignParentEnd="true"
-        android:paddingRight="6dp"
-        android:paddingLeft="6dp"
+        android:layout_alignParentRight="true"
+        android:paddingLeft="0dp"
+        android:paddingRight="15dp"
+        android:textColor="@color/dash_gray"
         tools:text="350.98" />
 
 </RelativeLayout>
