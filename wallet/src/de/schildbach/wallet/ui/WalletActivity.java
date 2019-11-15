@@ -576,9 +576,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
             return;
         }
 
-        log.info("Clearing all app data and exiting.");
         try {
-            Runtime.getRuntime().exec("pm clear "+ getApplicationContext().getPackageName());
+            WalletApplication.eraseAndCreateNewWallet();
         } catch (IOException e) {
             e.printStackTrace();
         }
