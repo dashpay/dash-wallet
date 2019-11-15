@@ -51,7 +51,6 @@ import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.CheckpointManager;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.FilteredBlock;
-import org.bitcoinj.core.InstantSend;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
@@ -1015,18 +1014,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         @Override
         public void onSporkUpdated(final SporkMessage sporkMessage) {
-            if (sporkMessage.getSporkID() == SporkManager.SPORK_16_INSTANTSEND_AUTOLOCKS) {
-                boolean autoLockStatusChanged = InstantSend.canAutoLock() != config.getCanAutoLock();
-                if (autoLockStatusChanged) {
-                    config.setCanAutoLock(InstantSend.canAutoLock());
-                }
-            } else if (sporkMessage.getSporkID() == SporkManager.SPORK_20_INSTANTSEND_LLMQ_BASED) {
-                boolean autoLockStatusChanged = InstantSend.canAutoLock() != config.getCanAutoLock();
-                if (autoLockStatusChanged) {
-                    //activate InstantSendAutoLock if LLMQ InstantSend is ON
-                    config.setCanAutoLock(sporkMessage.getValue() != 0);
-                }
-            }
+            //do nothing
         }
     };
 }
