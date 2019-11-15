@@ -31,6 +31,7 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.crypto.LinuxSecureRandom;
 import org.bitcoinj.crypto.MnemonicCode;
+import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
@@ -673,7 +674,8 @@ public class WalletApplication extends MultiDexApplication {
       Replace the wallet with an new wallet as part of a wallet wipe
      */
     public void eraseAndCreateNewWallet() {
-        Wallet newWallet = new Wallet(Constants.NETWORK_PARAMETERS);
+        Wallet newWallet = Wallet.createDeterministic(Constants.NETWORK_PARAMETERS, Script.ScriptType.P2PKH);
+
         newWallet.addKeyChain(Constants.BIP44_PATH);
 
         log.info("creating new wallet after wallet wipe");

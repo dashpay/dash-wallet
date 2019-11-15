@@ -261,7 +261,7 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
     }
 
     private void restoreInstanceState(final Bundle savedInstanceState) {
-        address = new Address(Constants.NETWORK_PARAMETERS, savedInstanceState.getByteArray("receive_address"));
+        address = Address.fromPubKeyHash(Constants.NETWORK_PARAMETERS, savedInstanceState.getByteArray("receive_address"));
     }
 
     @Override

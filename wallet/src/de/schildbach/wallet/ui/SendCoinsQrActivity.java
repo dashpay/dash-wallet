@@ -19,7 +19,7 @@ package de.schildbach.wallet.ui;
 
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.core.PrefixedChecksummedBytes;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
@@ -62,7 +62,7 @@ public final class SendCoinsQrActivity extends Activity {
                 }
 
                 @Override
-                protected void handlePrivateKey(final VersionedChecksummedBytes key) {
+                protected void handlePrivateKey(final PrefixedChecksummedBytes key) {
                     SweepWalletActivity.start(SendCoinsQrActivity.this, key);
 
                     SendCoinsQrActivity.this.finish();

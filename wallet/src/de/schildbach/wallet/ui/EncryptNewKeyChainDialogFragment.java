@@ -17,7 +17,7 @@ import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.Wallet;
-import org.spongycastle.crypto.params.KeyParameter;
+import org.bouncycastle.crypto.params.KeyParameter;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.send.DecryptSeedTask;
@@ -161,7 +161,10 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
         }
     }
     protected void handleAddKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, final KeyParameter encryptionKey) {
-        DeterministicKeyChain keyChain = new DeterministicKeyChain(seed, path);
+        DeterministicKeyChain keyChain = DeterministicKeyChain.builder()
+                .seed(seed)
+                .accountPath(path)
+                .build();
         DeterministicKeyChain encryptedKeyChain = keyChain.toEncrypted(walletProvider.getWallet().getKeyCrypter(), encryptionKey);
         walletProvider.getWallet().addAndActivateHDChain(encryptedKeyChain);
     }

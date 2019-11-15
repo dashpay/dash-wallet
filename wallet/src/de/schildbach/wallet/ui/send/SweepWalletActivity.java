@@ -17,7 +17,7 @@
 
 package de.schildbach.wallet.ui.send;
 
-import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.core.PrefixedChecksummedBytes;
 
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet_test.R;
@@ -37,7 +37,7 @@ public final class SweepWalletActivity extends AbstractBindServiceActivity {
         context.startActivity(new Intent(context, SweepWalletActivity.class));
     }
 
-    public static void start(final Context context, final VersionedChecksummedBytes key) {
+    public static void start(final Context context, final PrefixedChecksummedBytes key) {
         final Intent intent = new Intent(context, SweepWalletActivity.class);
         intent.putExtra(INTENT_EXTRA_KEY, key);
         context.startActivity(intent);

@@ -133,7 +133,7 @@ public class WalletAddressesAdapter extends BaseAdapter {
 
     private View rowKey(final int position, View row) {
         final ECKey key = (ECKey) getItem(position);
-        final Address address = key.toAddress(Constants.NETWORK_PARAMETERS);
+        final Address address = Address.fromKey(Constants.NETWORK_PARAMETERS, key);
         final boolean isRotateKey = wallet.isKeyRotating(key);
 
         if (row == null)
@@ -141,11 +141,11 @@ public class WalletAddressesAdapter extends BaseAdapter {
 
         final TextView addressView = (TextView) row.findViewById(R.id.address_book_row_address);
         addressView.setText(WalletUtils.formatAddress(address, Constants.ADDRESS_FORMAT_GROUP_SIZE,
-                address.toBase58().length()));
+                address.toString().length()));
         addressView.setTextColor(isRotateKey ? colorInsignificant : colorSignificant);
 
         final TextView labelView = (TextView) row.findViewById(R.id.address_book_row_label);
-        final String label = AddressBookProvider.resolveLabel(context, address.toBase58());
+        final String label = AddressBookProvider.resolveLabel(context, address.toString());
         if (label != null) {
             labelView.setText(label);
             labelView.setTextColor(isRotateKey ? colorInsignificant : colorLessSignificant);
