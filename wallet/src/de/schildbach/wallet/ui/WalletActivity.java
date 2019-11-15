@@ -577,8 +577,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }
 
         try {
-            WalletApplication.eraseAndCreateNewWallet();
-        } catch (IOException e) {
+            getWalletApplication().eraseAndCreateNewWallet();
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
