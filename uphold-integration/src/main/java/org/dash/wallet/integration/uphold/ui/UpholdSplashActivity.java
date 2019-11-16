@@ -89,6 +89,12 @@ public class UpholdSplashActivity extends AppCompatActivity {
     }
 
     @Override
+    public void finish() {
+        super.finish();
+        overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_left);
+    }
+
+    @Override
     protected void onDestroy() {
         loadingDialog.dismiss();
         super.onDestroy();

@@ -127,6 +127,12 @@ public final class AddressBookActivity extends AbstractBindServiceActivity {
 		return super.onOptionsItemSelected(item);
 	}
 
+	@Override
+	public void finish() {
+		super.finish();
+		overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_left);
+	}
+
     /* private */void updateFragments() {
 		final Wallet wallet = getWalletApplication().getWallet();
 		final List<ECKey> derivedKeys = wallet.getIssuedReceiveKeys();

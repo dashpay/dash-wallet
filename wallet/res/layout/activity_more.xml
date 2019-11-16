@@ -1,13 +1,128 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
+    android:background="@color/bg_less_bright"
     android:orientation="vertical">
 
     <include
         layout="@layout/app_bar_general"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/buy_and_sell"
+        style="@style/MenuRow"
+        android:layout_marginTop="25dp">
+
+        <ImageView
+            android:id="@+id/buy_dash_icon"
+            style="@style/MenuRowIcon"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/ic_menu_buy_sell_dash" />
+
+        <TextView
+            android:id="@+id/buy_dash_title"
+            style="@style/MontserratMedium.MenuRowTitle"
+            android:text="@string/menu_buy_and_sell_title"
+            app:layout_constraintStart_toEndOf="@+id/buy_dash_icon"
+            app:layout_constraintTop_toTopOf="@+id/buy_dash_icon" />
+
+        <TextView
+            android:id="@+id/buy_dash_subtitle"
+            style="@style/MontserratRegular.MenuRowSubTitle"
+            android:text="@string/menu_buy_and_sell_subtitle"
+            app:layout_constraintStart_toStartOf="@+id/buy_dash_title"
+            app:layout_constraintTop_toBottomOf="@+id/buy_dash_title" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/security"
+        style="@style/MenuRow">
+
+        <ImageView
+            android:id="@+id/security_icon"
+            style="@style/MenuRowIcon"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/ic_menu_security" />
+
+        <TextView
+            android:id="@+id/security_title"
+            style="@style/MontserratMedium.MenuRowTitle"
+            android:text="@string/menu_security_title"
+            app:layout_constraintStart_toEndOf="@+id/security_icon"
+            app:layout_constraintTop_toTopOf="@+id/security_icon" />
+
+        <TextView
+            android:id="@+id/security_subtitle"
+            style="@style/MontserratRegular.MenuRowSubTitle"
+            android:text="@string/menu_security_subtitle"
+            app:layout_constraintStart_toStartOf="@+id/security_title"
+            app:layout_constraintTop_toBottomOf="@+id/security_title" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/settings"
+        style="@style/MenuRow">
+
+        <ImageView
+            android:id="@+id/setting_icon"
+            style="@style/MenuRowIcon"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/ic_menu_settings" />
+
+        <TextView
+            android:id="@+id/settings_title"
+            style="@style/MontserratMedium.MenuRowTitle"
+            android:text="@string/menu_settings_title"
+            app:layout_constraintStart_toEndOf="@+id/setting_icon"
+            app:layout_constraintTop_toTopOf="@+id/setting_icon" />
+
+        <TextView
+            android:id="@+id/settings_subtitle"
+            style="@style/MontserratRegular.MenuRowSubTitle"
+            android:text="@string/menu_settings_subtitle"
+            app:layout_constraintStart_toStartOf="@+id/settings_title"
+            app:layout_constraintTop_toBottomOf="@+id/settings_title" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/tools"
+        style="@style/MenuRow">
+
+        <ImageView
+            android:id="@+id/tools_icon"
+            style="@style/MenuRowIcon"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/ic_menu_tools" />
+
+        <TextView
+            android:id="@+id/tools_title"
+            style="@style/MontserratMedium.MenuRowTitle"
+            android:text="@string/menu_tools_title"
+            app:layout_constraintStart_toEndOf="@+id/tools_icon"
+            app:layout_constraintTop_toTopOf="@+id/tools_icon" />
+
+        <TextView
+            android:id="@+id/tools_subtitle"
+            style="@style/MontserratRegular.MenuRowSubTitle"
+            android:text="@string/menu_tools_subtitle"
+            app:layout_constraintStart_toStartOf="@+id/tools_title"
+            app:layout_constraintTop_toBottomOf="@+id/tools_title" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </LinearLayout>

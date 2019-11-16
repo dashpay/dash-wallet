@@ -15,6 +15,7 @@
     <color name="gray">#FF979797</color>
     <color name="medium_gray">#ff4a4a4a</color>
     <color name="ripple_light">#40ffffff</color>
+    <color name="black_text">#ff171717</color>
 
     <!-- foreground -->
     <color name="fg_significant">#66000000</color>
