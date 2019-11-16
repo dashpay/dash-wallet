@@ -54,12 +54,25 @@
         android:gravity="center"
         android:orientation="horizontal">
 
-        <ImageView
+        <TextView
+            android:id="@+id/transaction_amount_signal"
+            style="@style/MontserratMedium.MG"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="2dp"
+            android:layout_marginRight="2dp"
+            android:textSize="17sp"
+            android:visibility="gone"
+            tools:text="+"
+            tools:visibility="visible" />
+
+        <ImageView
+            android:id="@+id/dash_amount_symbol"
+            android:layout_width="18.62dp"
+            android:layout_height="14.63dp"
             android:layout_marginTop="1dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginRight="8dp"
+            android:layout_marginEnd="4dp"
+            android:layout_marginRight="4dp"
             android:src="@drawable/ic_dash_symbol_gray" />
 
         <org.dash.wallet.common.ui.CurrencyTextView

@@ -143,8 +143,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         colorSignificant = res.getColor(R.color.fg_significant);
         colorLessSignificant = res.getColor(R.color.fg_less_significant);
         colorInsignificant = res.getColor(R.color.fg_insignificant);
-        colorValuePositve = res.getColor(R.color.fg_value_positive);
-        colorValueNegative = res.getColor(R.color.fg_value_negative);
+        colorValuePositve = res.getColor(R.color.colorPrimary);
+        colorValueNegative = res.getColor(android.R.color.black);
         colorError = res.getColor(R.color.fg_error);
         textCoinBase = context.getString(R.string.wallet_transactions_fragment_coinbase);
         textInternal = context.getString(R.string.symbol_internal) + " "
@@ -281,7 +281,9 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         private final TextView secondaryStatusView;
         private final TextView timeView;
         //private final TextView addressView;
+        private final ImageView dashSymbolView;
         private final CurrencyTextView valueView;
+        private final TextView signalView;
         //private final View extendedFeeView;
         //private final CurrencyTextView feeView;
         private final CurrencyTextView fiatView;
@@ -289,7 +291,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         //private final TextView messageView;
         //private final ImageButton menuView;
         //private final ImageView ixInfoButtonView;
-
 
         private TransactionViewHolder(final View itemView) {
             super(itemView);
@@ -301,7 +302,9 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
             timeView = (TextView) itemView.findViewById(R.id.transaction_row_time);
             //addressView = (TextView) itemView.findViewById(R.id.transaction_row_address);
+            dashSymbolView = (ImageView) itemView.findViewById(R.id.dash_amount_symbol);
             valueView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_value);
+            signalView = itemView.findViewById(R.id.transaction_amount_signal);
             //extendedFeeView = itemView.findViewById(R.id.transaction_row_extend_fee);
             //feeView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_fee);
             fiatView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_fiat);
@@ -490,34 +493,49 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             }
 
             // value
-            valueView.setAlwaysSigned(true);
+            //valueView.setAlwaysSigned(true);
             valueView.setFormat(format);
             final Coin value;
             valueView.setTextColor(valueColor);
+            signalView.setTextColor(valueColor);
+            dashSymbolView.setColorFilter(valueColor);
             value = txCache.showFee ? txCache.value.add(fee) : txCache.value;
 
-            valueView.setAmount(value);
-            //valueView.setVisibility(!value.isZero() ? View.VISIBLE : View.GONE);
-            if(value.signum() < 0)
-                valueView.setTextColor(R.color.amount_received);
-            else valueView.setTextColor(R.color.amount_sent);
+
+            valueView.setVisibility(!value.isZero() ? View.VISIBLE : View.GONE);
+            signalView.setVisibility(!value.isZero() ? View.VISIBLE : View.GONE);
+            dashSymbolView.setVisibility(!value.isZero() ? View.VISIBLE : View.GONE);
+
+            if(value.isPositive()) {
+                signalView.setText("+");
+                valueView.setAmount(value);
+            } else if(value.isNegative()) {
+                signalView.setText("-");
+                valueView.setAmount(value.negate());
+            } else {
+                //internal
+            }
 
             // fiat value
-            final ExchangeRate exchangeRate = tx.getExchangeRate();
-            String exchangeCurrencyCode = WalletApplication.getInstance().getConfiguration()
-                    .getExchangeCurrencyCode();
-            fiatView.setFiatAmount(txCache.value, exchangeRate, Constants.LOCAL_FORMAT,
-                    exchangeCurrencyCode);
+            if(!value.isZero()) {
+                final ExchangeRate exchangeRate = tx.getExchangeRate();
+                String exchangeCurrencyCode = WalletApplication.getInstance().getConfiguration()
+                        .getExchangeCurrencyCode();
+                fiatView.setFiatAmount(txCache.value, exchangeRate, Constants.LOCAL_FORMAT,
+                        exchangeCurrencyCode);
+                fiatView.setVisibility(View.VISIBLE);
+                if(exchangeRate == null && itemView.isActivated()) {
+                    //    extendMessageView.setVisibility(View.VISIBLE);
+                    //    messageView.setSingleLine(false);
+                    //    messageView.setText(R.string.exchange_rate_missing);
+                }
+            } else fiatView.setVisibility(View.GONE);
 
             // message
             //extendMessageView.setVisibility(View.GONE);
             //messageView.setSingleLine(false);
 
-            if(exchangeRate == null && itemView.isActivated()) {
-            //    extendMessageView.setVisibility(View.VISIBLE);
-            //    messageView.setSingleLine(false);
-                //    messageView.setText(R.string.exchange_rate_missing);
-            }
+
 
             if (purpose == Purpose.KEY_ROTATION) {
             //    extendMessageView.setVisibility(View.VISIBLE);
