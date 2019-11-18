@@ -61,8 +61,6 @@ public class SendCoinsQrActivity extends SessionActivity {
 
     protected void performScanning(View clickView) {
         ScanActivity.startForResult(this, clickView, REQUEST_CODE_SCAN);
-//        startActivityForResult(new Intent(this, ScanActivity.startForResult), REQUEST_CODE_SCAN);
-//        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
     }
 
     private boolean isQuickScan() {

@@ -63,7 +63,6 @@ class QuickReceiveActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.option_close -> {
-//                startActivity(LockScreenActivity.createIntent(this))
                 finish()
                 return true
             }
