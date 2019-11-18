@@ -62,4 +62,11 @@ public final class SweepWalletActivity extends AbstractBindServiceActivity {
 
         return super.onOptionsItemSelected(item);
     }
+
+    @Override
+    public void finish() {
+        super.finish();
+        overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_left);
+    }
+
 }

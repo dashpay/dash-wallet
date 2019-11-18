@@ -4,12 +4,12 @@
 
     <translate
         android:duration="@android:integer/config_shortAnimTime"
-        android:fromXDelta="-100%"
-        android:toXDelta="0%" />
+        android:fromXDelta="0%"
+        android:toXDelta="100%" />
 
     <alpha
         android:duration="@android:integer/config_shortAnimTime"
-        android:fromAlpha="0.0"
-        android:toAlpha="1.0" />
+        android:fromAlpha="1.0"
+        android:toAlpha="0.0" />
 
 </set>
