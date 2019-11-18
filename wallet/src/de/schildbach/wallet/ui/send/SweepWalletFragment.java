@@ -41,7 +41,7 @@ import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.UTXO;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.crypto.BIP38PrivateKey;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.KeyChainGroup;
@@ -115,7 +115,7 @@ public class SweepWalletFragment extends Fragment {
 	private Handler backgroundHandler;
 
 	private State state = State.DECODE_KEY;
-	private VersionedChecksummedBytes privateKeyToSweep = null;
+	private PrefixedChecksummedBytes privateKeyToSweep = null;
 	@Nullable
 	private Map<FeeCategory, Coin> fees = null;
 	private Wallet walletToSweep = null;
@@ -216,7 +216,7 @@ public class SweepWalletFragment extends Fragment {
 			final Intent intent = activity.getIntent();
 
 			if (intent.hasExtra(SweepWalletActivity.INTENT_EXTRA_KEY)) {
-				privateKeyToSweep = (VersionedChecksummedBytes) intent
+				privateKeyToSweep = (PrefixedChecksummedBytes) intent
 						.getSerializableExtra(SweepWalletActivity.INTENT_EXTRA_KEY);
 
 				// delay until fragment is resumed
@@ -329,7 +329,7 @@ public class SweepWalletFragment extends Fragment {
 
 				new StringInputParser(input) {
 					@Override
-					protected void handlePrivateKey(final VersionedChecksummedBytes key) {
+					protected void handlePrivateKey(final PrefixedChecksummedBytes key) {
 						privateKeyToSweep = key;
 						setState(State.DECODE_KEY);
 						maybeDecodeKey();
@@ -470,7 +470,7 @@ public class SweepWalletFragment extends Fragment {
 
 	private void askConfirmSweep(final ECKey key) {
 		// create non-HD wallet
-		final KeyChainGroup group = new KeyChainGroup(Constants.NETWORK_PARAMETERS);
+		final KeyChainGroup group = KeyChainGroup.builder(Constants.NETWORK_PARAMETERS).build();
 		group.importKeys(key);
 		walletToSweep = new Wallet(Constants.NETWORK_PARAMETERS, group);
 
@@ -567,8 +567,7 @@ public class SweepWalletFragment extends Fragment {
 			}
 		};
 
-		final Address address = walletToSweep.getImportedKeys().iterator().next()
-				.toAddress(Constants.NETWORK_PARAMETERS);
+		final Address address = Address.fromKey(Constants.NETWORK_PARAMETERS, walletToSweep.getImportedKeys().iterator().next());
 		new RequestWalletBalanceTask(backgroundHandler, callback).requestWalletBalance(activity.getAssets(), address);
 	}
 

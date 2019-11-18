@@ -27,7 +27,7 @@ import android.view.View;
 
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.core.PrefixedChecksummedBytes;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
@@ -86,7 +86,7 @@ public class SendCoinsQrActivity extends SessionActivity {
                 }
 
                 @Override
-                protected void handlePrivateKey(final VersionedChecksummedBytes key) {
+                protected void handlePrivateKey(final PrefixedChecksummedBytes key) {
                     SweepWalletActivity.start(SendCoinsQrActivity.this, key);
 
                     if (isQuickScan()) {

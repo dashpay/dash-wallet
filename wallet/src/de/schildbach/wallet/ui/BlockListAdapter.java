@@ -238,10 +238,10 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
         else if (isInternal || self)
             label = textInternal;
         else if (address != null)
-            label = AddressBookProvider.resolveLabel(context, address.toBase58());
+            label = AddressBookProvider.resolveLabel(context, address.toString());
         else
             label = "?";
-        rowAddress.setText(label != null ? label : address.toBase58());
+        rowAddress.setText(label != null ? label : address.toString());
         rowAddress.setTypeface(label != null ? Typeface.DEFAULT : Typeface.MONOSPACE);
 
         // value

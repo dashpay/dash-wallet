@@ -73,6 +73,7 @@ public class Configuration {
     public final static String PREFS_LAST_UNLOCK_TIME = "last_unlock_time";
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
     public static final String PREFS_KEY_CAN_AUTO_LOCK = "can_auto_lock";
+    public static final String PREFS_RESTORING_BACKUP = "restoring_backup";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 4;
@@ -290,7 +291,14 @@ public class Configuration {
             prefs.edit().putInt(PREFS_KEY_BEST_CHAIN_HEIGHT_EVER, bestChainHeightEver).apply();
     }
 
-        public boolean getLastExchangeDirection() {
+    public boolean isRestoringBackup() {
+        return prefs.getBoolean(PREFS_RESTORING_BACKUP, false);
+    }
+
+    public void setRestoringBackup(final boolean isRestoringBackup) {
+        prefs.edit().putBoolean(PREFS_RESTORING_BACKUP, isRestoringBackup).apply();
+    }
+    public boolean getLastExchangeDirection() {
         return prefs.getBoolean(PREFS_KEY_LAST_EXCHANGE_DIRECTION, true);
     }
 

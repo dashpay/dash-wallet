@@ -168,7 +168,7 @@ public final class RequestWalletBalanceTask {
 					final Moshi moshi = new Moshi.Builder().build();
 					final JsonAdapter<JsonRpcRequest> requestAdapter = moshi.adapter(JsonRpcRequest.class);
 					final JsonRpcRequest request = new JsonRpcRequest("blockchain.address.listunspent",
-							new String[] { address.toBase58() });
+							new String[] { address.toString() });
 					requestAdapter.toJson(sink, request);
 					sink.writeUtf8("\n").flush();
 					final JsonAdapter<JsonRpcResponse> responseAdapter = moshi.adapter(JsonRpcResponse.class);

@@ -70,7 +70,7 @@ public class WalletUri {
             String rawAddress = input.getQueryParameter(FIELD_PAY);
             Address address;
             try {
-                address = AddressUtil.fromBase58(null, rawAddress);
+                address = AddressUtil.fromString(null, rawAddress);
             } catch (Exception e) {
                 throw new BitcoinURIParseException(e.getMessage());
             }
@@ -120,7 +120,7 @@ public class WalletUri {
 
     public Address getPayAddress() {
         String pay = sourceUri.getQueryParameter(FIELD_PAY);
-        return (pay != null) ? AddressUtil.fromBase58(null, pay) : null;
+        return (pay != null) ? AddressUtil.fromString(null, pay) : null;
     }
 
     public Coin getAmount() {
@@ -167,7 +167,7 @@ public class WalletUri {
                     .authority("")
                     .scheme(walletUri.getSender())
                     .appendQueryParameter(FIELD_CALLBACK, CALLBACK_PAYACK)
-                    .appendQueryParameter(FIELD_ADDRESS, walletUri.getPayAddress().toBase58())
+                    .appendQueryParameter(FIELD_ADDRESS, walletUri.getPayAddress().toString())
                     .appendQueryParameter(FIELD_TXID, hash)
                     .build();
             resultIntent.setData(data);

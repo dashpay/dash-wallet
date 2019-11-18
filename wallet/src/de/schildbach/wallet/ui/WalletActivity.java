@@ -65,7 +65,7 @@ import com.squareup.okhttp.HttpUrl;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
@@ -397,7 +397,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
 
             @Override
-            protected void handlePrivateKey(final VersionedChecksummedBytes key) {
+            protected void handlePrivateKey(final PrefixedChecksummedBytes key) {
                 SweepWalletActivity.start(WalletActivity.this, key);
             }
 
@@ -579,33 +579,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void handleReportIssue() {
-        final ReportIssueDialogBuilder dialog = new ReportIssueDialogBuilder(this,
-                R.string.report_issue_dialog_title_issue, R.string.report_issue_dialog_message_issue) {
-            @Override
-            protected CharSequence subject() {
-                return Constants.REPORT_SUBJECT_BEGIN + application.packageInfo().versionName + " " + Constants.REPORT_SUBJECT_ISSUE;
-            }
-
-            @Override
-            protected CharSequence collectApplicationInfo() throws IOException {
-                final StringBuilder applicationInfo = new StringBuilder();
-                CrashReporter.appendApplicationInfo(applicationInfo, application);
-                return applicationInfo;
-            }
-
-            @Override
-            protected CharSequence collectDeviceInfo() throws IOException {
-                final StringBuilder deviceInfo = new StringBuilder();
-                CrashReporter.appendDeviceInfo(deviceInfo, WalletActivity.this);
-                return deviceInfo;
-            }
-
-            @Override
-            protected CharSequence collectWalletDump() {
-                return application.getWallet().toString(false, true, true, null);
-            }
-        };
-        dialog.show();
+        ReportIssueDialogBuilder.createReportIssueDialog(this, application).show();
     }
 
     private void handlePaste() {
@@ -681,6 +655,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             @Override
             public void onRestoreWallet(Wallet wallet) {
                 restoreWallet(wallet);
+                application.getConfiguration().setRestoringBackup(true);
             }
 
             @Override
@@ -1028,14 +1003,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void startUpholdActivity() {
-        Intent intent;
-        if (UpholdClient.getInstance().isAuthenticated()) {
-            intent = new Intent(this, UpholdAccountActivity.class);
-        } else {
-            intent = new Intent(this, UpholdSplashActivity.class);
-        }
-        intent.putExtra(UpholdAccountActivity.WALLET_RECEIVING_ADDRESS_EXTRA, wallet.currentReceiveAddress().toString());
-        startActivity(intent);
+        startActivity(UpholdAccountActivity.createIntent(this, wallet));
     }
 
     //Dash Specific

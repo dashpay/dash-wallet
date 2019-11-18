@@ -81,7 +81,7 @@ public class WalletAddressDialogFragment extends DialogFragment {
     public Dialog onCreateDialog(final Bundle savedInstanceState) {
         final Bundle args = getArguments();
         final Address address = (Address) args.getSerializable(KEY_ADDRESS);
-        final String addressStr = address.toBase58();
+        final String addressStr = address.toString();
         final String addressLabel = args.getString(KEY_ADDRESS_LABEL);
 
         final Dialog dialog = new Dialog(activity);
