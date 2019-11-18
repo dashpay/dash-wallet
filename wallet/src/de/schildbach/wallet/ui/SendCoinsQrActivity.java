@@ -23,8 +23,7 @@ import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.os.Bundle;
-
-import androidx.appcompat.app.AppCompatActivity;
+import android.view.View;
 
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
@@ -40,15 +39,15 @@ import de.schildbach.wallet.ui.send.SweepWalletActivity;
 /**
  * @author Andreas Schildbach
  */
-public class SendCoinsQrActivity extends AppCompatActivity {
+public class SendCoinsQrActivity extends SessionActivity {
 
-    private static final String EXTRA_IMMEDIATE_SCAN = "extra_immediate_scan";
+    private static final String EXTRA_QUICK_SCAN = "extra_quick_scan";
 
     protected static final int REQUEST_CODE_SCAN = 0;
 
     public static Intent createIntent(Context context, boolean immediateScan) {
         Intent intent = new Intent(context, SendCoinsQrActivity.class);
-        intent.putExtra(EXTRA_IMMEDIATE_SCAN, immediateScan);
+        intent.putExtra(EXTRA_QUICK_SCAN, immediateScan);
         return intent;
     }
 
@@ -56,12 +55,18 @@ public class SendCoinsQrActivity extends AppCompatActivity {
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        if (savedInstanceState == null && getIntent().getBooleanExtra(EXTRA_IMMEDIATE_SCAN, false))
-            performScanning();
+        if (savedInstanceState == null && isQuickScan())
+            performScanning(null);
     }
 
-    protected void performScanning() {
-        startActivityForResult(new Intent(this, ScanActivity.class), REQUEST_CODE_SCAN);
+    protected void performScanning(View clickView) {
+        ScanActivity.startForResult(this, clickView, REQUEST_CODE_SCAN);
+//        startActivityForResult(new Intent(this, ScanActivity.startForResult), REQUEST_CODE_SCAN);
+//        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+    }
+
+    private boolean isQuickScan() {
+        return getIntent().getBooleanExtra(EXTRA_QUICK_SCAN, false);
     }
 
     @Override
@@ -75,14 +80,18 @@ public class SendCoinsQrActivity extends AppCompatActivity {
                 protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
                     SendCoinsActivity.start(SendCoinsQrActivity.this, paymentIntent);
 
-                    SendCoinsQrActivity.this.finish();
+                    if (isQuickScan()) {
+                        SendCoinsQrActivity.this.finish();
+                    }
                 }
 
                 @Override
                 protected void handlePrivateKey(final VersionedChecksummedBytes key) {
                     SweepWalletActivity.start(SendCoinsQrActivity.this, key);
 
-                    SendCoinsQrActivity.this.finish();
+                    if (isQuickScan()) {
+                        SendCoinsQrActivity.this.finish();
+                    }
                 }
 
                 @Override
@@ -90,7 +99,9 @@ public class SendCoinsQrActivity extends AppCompatActivity {
                     final WalletApplication application = (WalletApplication) getApplication();
                     application.processDirectTransaction(transaction);
 
-                    SendCoinsQrActivity.this.finish();
+                    if (isQuickScan()) {
+                        SendCoinsQrActivity.this.finish();
+                    }
                 }
 
                 @Override
@@ -101,12 +112,16 @@ public class SendCoinsQrActivity extends AppCompatActivity {
                 private final OnClickListener dismissListener = new OnClickListener() {
                     @Override
                     public void onClick(final DialogInterface dialog, final int which) {
-                        SendCoinsQrActivity.this.finish();
+                        if (isQuickScan()) {
+                            SendCoinsQrActivity.this.finish();
+                        }
                     }
                 };
             }.parse();
         } else {
-            finish();
+            if (isQuickScan()) {
+                finish();
+            }
         }
     }
 }

@@ -24,6 +24,7 @@ import android.content.pm.ApplicationInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.wallet.Wallet;
@@ -43,7 +44,7 @@ import de.schildbach.wallet_test.R;
  * It could not be handled directly by WalletActivity, since it is configured
  * as a singleTask and doesn't support startActivityForResult(...) pattern.
  */
-public final class WalletUriHandlerActivity extends Activity {
+public final class WalletUriHandlerActivity extends AppCompatActivity {
 
     private static final int REQUEST_CODE_SEND_FROM_WALLET_URI = 1;
 
@@ -61,6 +62,7 @@ public final class WalletUriHandlerActivity extends Activity {
 
     @Override
     protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
         handleIntent(getIntent());
     }
 

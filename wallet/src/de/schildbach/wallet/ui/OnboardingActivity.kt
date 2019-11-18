@@ -17,7 +17,6 @@
 package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.graphics.drawable.LayerDrawable
 import android.os.Bundle
 import android.os.Handler
@@ -81,8 +80,9 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     private fun regularFlow() {
         try {
-            startActivity(Intent(this, WalletActivity::class.java))
+            startActivity(LockScreenActivity.createIntent(this))
             finish()
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         } catch (x: Exception) {
             fatal_error_message.visibility = View.VISIBLE
         }

@@ -154,7 +154,9 @@
     <string name="enable_fingerprint">Enable fingerprint</string>
     <string name="touch_fingerprint_sensor">Touch the fingerprint sensor.</string>
     <string name="touch_fingerprint_to_enable">Touch the fingerprint sensor to enable unlocking with fingerprint.</string>
-    <string name="exchange_rate_missing">This payment is too old to get the fiat value.</string>
+    <string name="fingerprint_changed_title">Fingerprint data changed</string>
+	<string name="fingerprint_changed_message">We detected a change in your fingerprint authentication data. You need to use PIN this time.</string>
+	<string name="exchange_rate_missing">This payment is too old to get the fiat value.</string>
 
     <string name="preferences_enable_payment_request_summary">Use payment protocol for QR-code initiated payments</string>
     <string name="preferences_enable_payment_request_title">BIP70 for scan-to-pay</string>

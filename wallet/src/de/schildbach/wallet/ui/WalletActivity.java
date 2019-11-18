@@ -115,16 +115,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private static final int DIALOG_VERSION_ALERT = 4;
     private static final int DIALOG_LOW_STORAGE_ALERT = 5;
 
-    public static final String EXTRA_SESSION_PIN = "extra_pin";
-
     public static Intent createIntent(Context context) {
-        return createIntent(context, null);
-    }
-
-    public static Intent createIntent(Context context, String pin) {
-        Intent intent = new Intent(context, WalletActivity.class);
-        intent.putExtra(EXTRA_SESSION_PIN, pin);
-        return intent;
+        return new Intent(context, WalletActivity.class);
     }
 
     private WalletApplication application;
@@ -203,8 +195,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 return walletTransactionsFragment != null && !walletTransactionsFragment.isHistoryEmpty();
             }
         });
-
-        startActivity(LockScreenActivity.createIntent(this));
     }
 
     private void initViewModel() {
