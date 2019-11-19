@@ -59,9 +59,7 @@
         android:padding="12dp"
         android:text="@string/forgot_pin_title"
         android:textColor="@color/dash_white"
-        android:textSize="12sp"
-        android:visibility="gone"
-        tools:visibility="visible" />
+        android:textSize="12sp" />
 
     <TextView
         android:id="@+id/bad_pin"
