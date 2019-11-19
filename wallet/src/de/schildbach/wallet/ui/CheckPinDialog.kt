@@ -128,8 +128,8 @@ class CheckPinDialog : DialogFragment() {
 
             }
         }
-        pin_preview.setTextColor(R.color.dash_gray)
-        pin_preview.showForgotPinButton = false
+        pin_preview.setTextColor(R.color.dash_light_gray)
+        pin_preview.hideForgotPinAction()
         initFingerprint()
         setState(State.ENTER_PIN)
     }

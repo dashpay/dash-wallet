@@ -33,7 +33,6 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
 
     private var lastIndex = 0
     private var activeIndex = 0
-    var showForgotPinButton = true
 
     private var drawableResId: Int
 
@@ -137,16 +136,18 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
     fun badPin(remainingAttemptsMessage: String) {
         bad_pin.text = resources.getString(R.string.wallet_lock_wrong_pin, remainingAttemptsMessage)
         bad_pin.visibility = View.VISIBLE
-        forgot_pin.visibility = if (showForgotPinButton) View.VISIBLE else View.GONE
     }
 
     fun clearBadPin() {
         bad_pin.visibility = View.GONE
-        forgot_pin.visibility = View.GONE
     }
 
     fun setTextColor(colorResId: Int) {
         bad_pin.setTextColor(colorResId)
         forgot_pin.setTextColor(colorResId)
+    }
+
+    fun hideForgotPinAction() {
+        forgot_pin.visibility = View.GONE
     }
 }
