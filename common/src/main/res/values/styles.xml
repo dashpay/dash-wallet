@@ -187,6 +187,11 @@
         <item name="android:textSize">20sp</item>
     </style>
 
+    <style name="MontserratMedium.BodyTitle" parent="MontserratMedium">
+        <item name="android:textColor">#000000</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
     <style name="MontserratMedium.BodyText" parent="MontserratMedium">
         <item name="android:textColor">#000000</item>
         <item name="android:textSize">14sp</item>

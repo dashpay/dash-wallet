@@ -23,6 +23,8 @@ import android.util.AttributeSet
 import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.LinearLayout
+import androidx.appcompat.app.AppCompatActivity
+import de.schildbach.wallet.ui.RestoreWalletFromSeedDialogFragment
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.pin_preview_view.view.*
 
@@ -31,6 +33,7 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
 
     private var lastIndex = 0
     private var activeIndex = 0
+    var showForgotPinButton = true
 
     private var drawableResId: Int
 
@@ -67,6 +70,11 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
             if (itemSize > 0) {
                 item.minimumWidth = itemSize
                 item.minimumHeight = itemSize
+            }
+        }
+        forgot_pin.setOnClickListener {
+            if (context is AppCompatActivity) {
+                RestoreWalletFromSeedDialogFragment.show(context.supportFragmentManager)
             }
         }
     }
@@ -129,9 +137,16 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
     fun badPin(remainingAttemptsMessage: String) {
         bad_pin.text = resources.getString(R.string.wallet_lock_wrong_pin, remainingAttemptsMessage)
         bad_pin.visibility = View.VISIBLE
+        forgot_pin.visibility = if (showForgotPinButton) View.VISIBLE else View.GONE
     }
 
     fun clearBadPin() {
         bad_pin.visibility = View.GONE
+        forgot_pin.visibility = View.GONE
+    }
+
+    fun setTextColor(colorResId: Int) {
+        bad_pin.setTextColor(colorResId)
+        forgot_pin.setTextColor(colorResId)
     }
 }
