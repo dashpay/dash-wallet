@@ -72,7 +72,6 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
-import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
@@ -243,15 +242,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 startActivity(PaymentsActivity.createIntent(WalletActivity.this, PaymentsActivity.ACTIVE_TAB_RECEIVE));
             }
         });
-        showHideBalance();
-    }
-
-    private void showHideBalance() {
-        if (config.getHideBalance()) {
-            findViewById(R.id.wallet_balance_panel).setVisibility(View.INVISIBLE);
-        } else {
-            findViewById(R.id.wallet_balance_panel).setVisibility(View.VISIBLE);
-        }
     }
 
     private void initQuickActions() {
@@ -322,7 +312,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         detectUserCountry();
         showBackupWalletDialogIfNeeded();
         showHideSecureAction();
-        showHideBalance();
     }
 
     private void showBackupWalletDialogIfNeeded() {

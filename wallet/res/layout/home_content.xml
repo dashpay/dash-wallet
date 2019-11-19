@@ -32,33 +32,14 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <LinearLayout
-                    android:id="@+id/wallet_balance_panel"
-                    android:layout_width="match_parent"
+                <fragment
+                    android:id="@+id/wallet_balance_fragment"
+                    android:name="de.schildbach.wallet.ui.HeaderBalanceFragment"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingStart="14dp"
-                    android:paddingEnd="14dp"
-                    android:paddingBottom="32dp">
+                    android:layout_gravity="center_horizontal"
+                    tools:layout="@layout/header_balance_fragment" />
 
-                    <TextView
-                        android:id="@+id/available_balance"
-                        style="@style/TextViewStyle.Body"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_horizontal"
-                        android:layout_marginTop="?attr/actionBarSize"
-                        android:text="@string/home_available_balance" />
-
-                    <fragment
-                        android:id="@+id/wallet_balance_fragment"
-                        android:name="de.schildbach.wallet.ui.HeaderBalanceFragment"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_horizontal"
-                        tools:layout="@layout/header_balance_fragment" />
-
-                </LinearLayout>
 
                 <FrameLayout
                     android:id="@+id/buttons_anchor"

@@ -17,6 +17,10 @@
     <string name="home_pay">Pay</string>
     <string name="home_receive">Receive</string>
     <string name="home_available_balance">Available balance</string>
+    <string name="home_balance_hidden">Balance hidden</string>
+    <string name="home_balance_show_hint">Tap to unhide balance</string>
+    <string name="home_balance_hide_hint">Tap to hide balance</string>
+
 
     <string name="quick_action_secure_now">Secure\nWallet Now</string>
     <string name="quick_action_scan_to_pay">Scan to\nPay</string>
