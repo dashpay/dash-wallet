@@ -51,7 +51,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 finish()
             }
             wipe_wallet.setOnClickListener {
-                finish()
+                PinRetryController.showResetWalletDialog(this, false)
             }
             return
         }

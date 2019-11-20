@@ -27,6 +27,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.os.CancellationSignal
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
+import com.jakewharton.processphoenix.ProcessPhoenix
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
@@ -140,14 +141,12 @@ class LockScreenActivity : SendCoinsQrActivity() {
             when (it.status) {
                 Status.ERROR -> {
                     pinRetryController.failedAttempt(it.data!!, false)
-                    if (pinRetryController.isLocked) {
-                        setState(State.LOCKED)
+                    if (pinRetryController.isLockedForever) {
+                        ProcessPhoenix.triggerRebirth(this)
                         return@Observer
                     }
-                    if (pinRetryController.isLockedForever) {
-                        WalletApplication.getInstance().killAllActivities();
-                        finish()
-                        startActivity(Intent(this, OnboardingActivity::class.java))
+                    if (pinRetryController.isLocked) {
+                        setState(State.LOCKED)
                         return@Observer
                     }
                     setState(State.INVALID_PIN)
