@@ -687,7 +687,7 @@ public class WalletApplication extends MultiDexApplication {
         walletFile.delete();
         cleanupFiles();
         config.clear(true);
-        PinRetryController.clearPrefs();
+        PinRetryController.getInstance().clearPinFailPrefs();
 
         ProcessPhoenix.triggerRebirth(context);
     }

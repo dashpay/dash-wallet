@@ -147,7 +147,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         this.activity = (AbstractWalletActivity) activity;
         this.application = (WalletApplication) activity.getApplication();
         this.wallet = application.getWallet();
-        this.pinRetryController = new PinRetryController(getActivity());
+        this.pinRetryController = PinRetryController.getInstance();
     }
 
     @Override
@@ -327,7 +327,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                                     pinRetryController.failedAttempt(oldPassword);
                                     badPasswordView.setVisibility(View.VISIBLE);
                                     attemptsRemainingTextView.setVisibility(View.VISIBLE);
-                                    attemptsRemainingTextView.setText(pinRetryController.getRemainingAttemptsMessage());
+                                    attemptsRemainingTextView.setText(pinRetryController.getRemainingAttemptsMessage(getContext()));
 
                                     state = State.INPUT;
                                     oldPasswordView.requestFocus();

@@ -27,7 +27,6 @@ import androidx.annotation.RequiresApi
 import androidx.core.os.CancellationSignal
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
-import com.jakewharton.processphoenix.ProcessPhoenix
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
@@ -77,7 +76,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_lock_screen)
 
-        pinRetryController = PinRetryController(this)
+        pinRetryController = PinRetryController.getInstance()
         resetSessionPin()
         initView()
         initViewModel()
@@ -140,15 +139,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
         checkPinViewModel.checkPinLiveData.observe(this, Observer {
             when (it.status) {
                 Status.ERROR -> {
-                    pinRetryController.failedAttempt(it.data!!, false)
-                    if (pinRetryController.isLockedForever) {
-                        ProcessPhoenix.triggerRebirth(this)
-                        return@Observer
-                    }
-                    if (pinRetryController.isLocked) {
-                        setState(State.LOCKED)
-                        return@Observer
-                    }
+                    pinRetryController.failedAttempt(it.data!!)
                     setState(State.INVALID_PIN)
                 }
                 Status.LOADING -> {
@@ -200,7 +191,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
                     Handler().postDelayed({
                         pin_preview.clear()
                     }, 200)
-                    pin_preview.badPin(pinRetryController.remainingAttemptsMessage)
+                    pin_preview.badPin(pinRetryController.getRemainingAttemptsMessage(this))
                 }
             }
             State.USE_FINGERPRINT -> {
@@ -225,7 +216,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
                 temporaryLockCheckHandler.postDelayed(temporaryLockCheckRunnable, temporaryLockCheckInterval)
 
                 action_title.setText(R.string.wallet_lock_wallet_disabled)
-                action_subtitle.text = pinRetryController.walletTemporaryLockedMessage
+                action_subtitle.text = pinRetryController.getWalletTemporaryLockedMessage(this)
 
                 action_login_with_pin.visibility = View.GONE
                 action_login_with_fingerprint.visibility = View.GONE

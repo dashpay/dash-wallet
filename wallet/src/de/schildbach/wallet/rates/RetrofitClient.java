@@ -44,7 +44,7 @@ public abstract class RetrofitClient {
     protected RetrofitClient(String baseUrl) {
         OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
 
-        PinRetryController pinRetryController = new PinRetryController(WalletApplication.getInstance());
+        PinRetryController pinRetryController = PinRetryController.getInstance();
         clientBuilder.addInterceptor(new SecureTimeInterceptor(pinRetryController));
 
         OkHttpClient okClient = clientBuilder.build();
