@@ -27,8 +27,11 @@ import java.util.Map;
 import javax.annotation.Nullable;
 
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Block;
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.RejectedTransactionException;
 import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Transaction.Purpose;
 import org.bitcoinj.core.TransactionConfidence;
@@ -112,19 +115,17 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         private final Address address;
         @Nullable
         private final String addressLabel;
-        private final boolean isIX;
-        private final boolean isLocked;
+        private final Transaction.Type type;
 
         private TransactionCacheEntry(final Coin value, final boolean sent, final boolean self, final boolean showFee, final @Nullable Address address,
-                                      final @Nullable String addressLabel, final boolean isIX, final boolean isLocked) {
+                                      final @Nullable String addressLabel, final Transaction.Type type) {
             this.value = value;
             this.sent = sent;
             this.self = self;
             this.showFee = showFee;
             this.address = address;
             this.addressLabel = addressLabel;
-            this.isIX = isIX;
-            this.isLocked = isLocked;
+            this.type = type;
         }
     }
 
@@ -284,9 +285,11 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         private final ImageView dashSymbolView;
         private final CurrencyTextView valueView;
         private final TextView signalView;
+        //private final TextView valueInternalView;
         //private final View extendedFeeView;
         //private final CurrencyTextView feeView;
         private final CurrencyTextView fiatView;
+        private final TextView rateNotAvailableView;
         //private final View extendMessageView;
         //private final TextView messageView;
         //private final ImageButton menuView;
@@ -304,11 +307,14 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             //addressView = (TextView) itemView.findViewById(R.id.transaction_row_address);
             dashSymbolView = (ImageView) itemView.findViewById(R.id.dash_amount_symbol);
             valueView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_value);
-            signalView = itemView.findViewById(R.id.transaction_amount_signal);
+            signalView = (TextView) itemView.findViewById(R.id.transaction_amount_signal);
+            //valueInternalView = (TextView) itemView.findViewById(R.id.transaction_amount_signal);
+
             //extendedFeeView = itemView.findViewById(R.id.transaction_row_extend_fee);
             //feeView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_fee);
             fiatView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_fiat);
             fiatView.setApplyMarkup(false);
+            rateNotAvailableView = (TextView) itemView.findViewById(R.id.transaction_row_rate_not_available);
             //extendMessageView = itemView.findViewById(R.id.transaction_row_extend_message);
             //messageView = (TextView) itemView.findViewById(R.id.transaction_row_message);
             //menuView = (ImageButton) itemView.findViewById(R.id.transaction_row_menu);
@@ -329,9 +335,10 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             final Coin fee = tx.getFee();
             final String[] memo = Formats.sanitizeMemo(tx.getMemo());
 
-            final boolean isIX = confidence.isIX();
-            final boolean isLocked = confidence.isTransactionLocked();
-            final boolean isChainLocked = false; //confidence.isTransactionChainLocked();
+            final TransactionConfidence.IXType ixStatus = confidence.getIXType();
+            final StoredBlock chainLockBlock = org.bitcoinj.core.Context.get().chainLockHandler.getBestChainLockBlock();
+            final int chainLockHeight = chainLockBlock != null && confidence.getConfidenceType() == ConfidenceType.BUILDING ? chainLockBlock.getHeight() : -1;
+            final boolean isChainLocked = chainLockHeight != -1 ? confidence.getAppearedAtChainHeight() <= chainLockHeight : false;
             final boolean sentToSinglePeer = confidence.getPeerCount() == 1;
             final boolean sentToSinglePeerSuccessful = sentToSinglePeer ? confidence.isSent() : false;
 
@@ -349,7 +356,9 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 final String addressLabel = address != null
                         ? AddressBookProvider.resolveLabel(context, address.toBase58()) : null;
 
-                txCache = new TransactionCacheEntry(value, sent, self, showFee, address, addressLabel, isIX, isLocked);
+                final Transaction.Type txType = tx.getType();
+
+                txCache = new TransactionCacheEntry(value, sent, self, showFee, address, addressLabel, txType);
                 transactionCache.put(tx.getHash(), txCache);
             }
 
@@ -377,12 +386,12 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
                 //confidenceCircularView.setProgress(1);
                 //confidenceCircularView.setMaxProgress(1);
-                if (isLocked) {
+                if (ixStatus == TransactionConfidence.IXType.IX_LOCKED) {
                 //    confidenceCircularView.setProgress(5);
                 //    confidenceCircularView.setMaxProgress(Constants.MAX_NUM_CONFIRMATIONS);
                 //    confidenceCircularView.setColors(valueColor, Color.TRANSPARENT);
                 } else {
-                    secondaryStatusView.setText(R.string.transaction_row_status_processing);
+                    //secondaryStatusView.setText(R.string.transaction_row_status_processing);
                 //    confidenceCircularView.setSize(confidence.numBroadcastPeers());
                 //    confidenceCircularView.setMaxSize(maxConnectedPeers / 2); // magic value
                 //    confidenceCircularView.setColors(colorInsignificant, Color.TRANSPARENT);
@@ -434,7 +443,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 String onTimeText = context.getString(R.string.transaction_row_time_text);
 
                 timeView.setText(String.format(onTimeText, DateUtils.formatDateTime(context, time.getTime(),
-                        DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_SHOW_TIME)));
+                        DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_SHOW_YEAR), DateUtils.formatDateTime(context, time.getTime(),
+                        DateUtils.FORMAT_SHOW_TIME)));
             //}
 
             Typeface defaultTypeface = ResourcesCompat.getFont(context, R.font.montserrat_medium);
@@ -443,12 +453,31 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             //primaryStatusView.setTypeface(boldTypeface);
             //secondaryStatusView.setTypeface(boldTypeface);
 
-            // primary status
-            if(!txCache.sent) {
-                primaryStatusView.setText(R.string.transaction_row_status_received);
+            // primary status - Sent:  Sent, Masternode Special Tx's, Internal
+            //                  Received:  Received, Mining Rewards, Masternode Rewards
+            int idPrimaryStatus;
+            if(txCache.sent) {
+                idPrimaryStatus = R.string.transaction_row_status_sent;
+                if(txCache.type == Transaction.Type.TRANSACTION_PROVIDER_REGISTER)
+                    idPrimaryStatus = R.string.transaction_row_status_masternode_registration;
+                else if (txCache.type == Transaction.Type.TRANSACTION_PROVIDER_UPDATE_REGISTRAR)
+                    idPrimaryStatus = R.string.transaction_row_status_masternode_update_registrar;
+                else if (txCache.type == Transaction.Type.TRANSACTION_PROVIDER_UPDATE_REVOKE)
+                    idPrimaryStatus = R.string.transaction_row_status_masternode_revoke;
+                else if (txCache.type == Transaction.Type.TRANSACTION_PROVIDER_UPDATE_SERVICE)
+                    idPrimaryStatus = R.string.transaction_row_status_masternode_update_service;
+                else if(txCache.self)
+                    idPrimaryStatus = R.string.transaction_row_status_sent_interally;
             } else {
-                primaryStatusView.setText(R.string.transaction_row_status_sent);
+                // Not all coinbase transactions are v3 transactions with type 5 (coinbase)
+                if (txCache.type == Transaction.Type.TRANSACTION_COINBASE || isCoinBase) {
+                    //currently, we cannot tell if a coinbase transaction is a masternode mining reward
+                    idPrimaryStatus = R.string.transaction_row_status_mining_reward;
+                }
+                else idPrimaryStatus = R.string.transaction_row_status_received;
             }
+            primaryStatusView.setText(idPrimaryStatus);
+            secondaryStatusView.setText(null);
 
             // address
             if (isCoinBase) {
@@ -502,18 +531,20 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             value = txCache.showFee ? txCache.value.add(fee) : txCache.value;
 
 
-            valueView.setVisibility(!value.isZero() ? View.VISIBLE : View.GONE);
+            valueView.setVisibility(/*!value.isZero() ? */View.VISIBLE /*: View.GONE*/);
             signalView.setVisibility(!value.isZero() ? View.VISIBLE : View.GONE);
-            dashSymbolView.setVisibility(!value.isZero() ? View.VISIBLE : View.GONE);
-
+            dashSymbolView.setVisibility(/*!value.isZero() ?*/ View.VISIBLE /*: View.GONE*/);
+            //valueInternalView.setVisibility(/*value.isZero() ? View.VISIBLE : */View.GONE);
             if(value.isPositive()) {
-                signalView.setText("+");
+                signalView.setText(String.format("%c", org.dash.wallet.common.Constants.CURRENCY_PLUS_SIGN)/*"+"*/);
                 valueView.setAmount(value);
             } else if(value.isNegative()) {
-                signalView.setText("-");
+                signalView.setText(String.format("%c", org.dash.wallet.common.Constants.CURRENCY_MINUS_SIGN) /*"-"*/);
                 valueView.setAmount(value.negate());
             } else {
                 //internal
+                valueView.setAmount(Coin.ZERO);
+                //valueInternalView.setText(textInternal);
             }
 
             // fiat value
@@ -521,15 +552,22 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 final ExchangeRate exchangeRate = tx.getExchangeRate();
                 String exchangeCurrencyCode = WalletApplication.getInstance().getConfiguration()
                         .getExchangeCurrencyCode();
-                fiatView.setFiatAmount(txCache.value, exchangeRate, Constants.LOCAL_FORMAT,
-                        exchangeCurrencyCode);
-                fiatView.setVisibility(View.VISIBLE);
-                if(exchangeRate == null && itemView.isActivated()) {
+                if(exchangeRate != null) {
+                    fiatView.setFiatAmount(txCache.value, exchangeRate, Constants.LOCAL_FORMAT,
+                            exchangeCurrencyCode);
+                    fiatView.setVisibility(View.VISIBLE);
+                    rateNotAvailableView.setVisibility(View.GONE);
+                } else {
                     //    extendMessageView.setVisibility(View.VISIBLE);
                     //    messageView.setSingleLine(false);
                     //    messageView.setText(R.string.exchange_rate_missing);
+                    fiatView.setVisibility(View.GONE);
+                    rateNotAvailableView.setVisibility(View.VISIBLE);
                 }
-            } else fiatView.setVisibility(View.GONE);
+            } else {
+                fiatView.setVisibility(View.GONE);
+                rateNotAvailableView.setVisibility(View.GONE);
+            }
 
             // message
             //extendMessageView.setVisibility(View.GONE);
@@ -542,7 +580,32 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
              //   messageView.setText(
             //            Html.fromHtml(context.getString(R.string.transaction_row_message_purpose_key_rotation)));
             //    messageView.setTextColor(colorSignificant);
-            } else if (isOwn && confidenceType == ConfidenceType.PENDING && sentToSinglePeer && txCache.isLocked == false && confidence.numBroadcastPeers() == 0) {
+            } else if(isOwn && confidenceType == ConfidenceType.UNKNOWN) {
+                //In this case, check for rejections from the network
+                RejectedTransactionException exception = confidence.getRejectedTransactionException();
+                if(exception != null) {
+                    primaryStatusView.setText(R.string.transaction_row_status_error_sending);
+                    int idSecondaryStatus;
+                    switch(exception.getRejectMessage().getReasonCode()) {
+                        case NONSTANDARD:
+                            idSecondaryStatus = R.string.transaction_row_status_error_non_standard;
+                        case DUST:
+                            idSecondaryStatus = R.string.transaction_row_status_error_dust;
+                        case INSUFFICIENTFEE:
+                            idSecondaryStatus = R.string.transaction_row_status_error_insufficient_fee;
+                        case DUPLICATE:
+                        case INVALID:
+                        case MALFORMED:
+                        case OBSOLETE:
+                        case CHECKPOINT:
+                        case OTHER:
+                        default:
+                            idSecondaryStatus = R.string.transaction_row_status_error_other;
+                            break;
+                    }
+                    secondaryStatusView.setText(idSecondaryStatus);
+                }
+            } else if (isOwn && confidenceType == ConfidenceType.PENDING && sentToSinglePeer && ixStatus != TransactionConfidence.IXType.IX_LOCKED && confidence.numBroadcastPeers() == 0) {
                 secondaryStatusView.setText(R.string.transaction_row_status_sending);
                 //    extendMessageView.setVisibility(View.VISIBLE);
             //    if(sentToSinglePeerSuccessful)
@@ -550,13 +613,17 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             //    else messageView.setText(R.string.transaction_row_message_own_unbroadcasted);
             //    messageView.setTextColor(colorInsignificant);
             } else if (isOwn && confidenceType == ConfidenceType.PENDING && confidence.numBroadcastPeers() == 0) {
-                secondaryStatusView.setText(R.string.transaction_row_status_sending);
+                primaryStatusView.setText(R.string.transaction_row_status_sending);
                 //    extendMessageView.setVisibility(View.VISIBLE);
             //    messageView.setText(R.string.transaction_row_message_own_unbroadcasted);
             //    messageView.setTextColor(colorInsignificant);
             //    if (txCache.isIX) {
             //        messageView.setText(R.string.transaction_row_message_own_instantx_lock_request_notsent);
             //    }
+            } else if (isOwn && confidenceType == ConfidenceType.PENDING &&
+                    (confidence.numBroadcastPeers() > 0 || ixStatus == TransactionConfidence.IXType.IX_LOCKED)) {
+                primaryStatusView.setText(R.string.transaction_row_status_sent);
+
             } else if (!isOwn && confidenceType == ConfidenceType.PENDING && confidence.numBroadcastPeers() == 0) {
                 secondaryStatusView.setText(R.string.transaction_row_status_processing);
                 //    extendMessageView.setVisibility(View.VISIBLE);
@@ -569,19 +636,46 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             } else if (!txCache.sent && confidenceType == ConfidenceType.PENDING
                     && (tx.getUpdateTime() == null || wallet.getLastBlockSeenTimeSecs() * 1000/
                            - tx.getUpdateTime().getTime() > Constants.DELAYED_TRANSACTION_THRESHOLD_MS)) {
-                secondaryStatusView.setText(R.string.transaction_row_status_confirming);
+
+                switch(confidence.getIXType()) {
+                    case IX_LOCKED:
+                        secondaryStatusView.setText(null);
+                        break;
+                    case IX_REQUEST:
+                    case IX_NONE:
+                        secondaryStatusView.setText(R.string.transaction_row_status_processing);
+                        break;
+                    case IX_LOCK_FAILED:
+                        secondaryStatusView.setText(null);
+                        break;
+                }
 
                 //    extendMessageView.setVisibility(View.VISIBLE);
             //    messageView.setText(R.string.transaction_row_message_received_unconfirmed_delayed);
             //    messageView.setTextColor(colorInsignificant);
             } else if (!txCache.sent && confidenceType == ConfidenceType.PENDING) {
-                secondaryStatusView.setText(R.string.transaction_row_status_confirming);
+                switch(confidence.getIXType()) {
+                    case IX_LOCKED:
+                        secondaryStatusView.setText(null);
+                        break;
+                    case IX_REQUEST:
+                    case IX_NONE:
+                        secondaryStatusView.setText(R.string.transaction_row_status_processing);
+                        break;
+                    case IX_LOCK_FAILED:
+                        secondaryStatusView.setText(null);
+                        break;
+                }
                 //    extendMessageView.setVisibility(View.VISIBLE);
             //    messageView.setText(R.string.transaction_row_message_received_unconfirmed_unlocked);
             //    messageView.setTextColor(colorInsignificant);
             } else if (!txCache.sent && confidenceType == ConfidenceType.BUILDING) {
                 int confirmations = confidence.getDepthInBlocks();
-                if(confirmations < 6 && !isChainLocked && !isLocked)
+                if(tx.isCoinBase()) {
+                    // for a coinbase transaction, InstantSend does not apply, Chainlocks don't affect Locked state
+                    if(Constants.NETWORK_PARAMETERS.getSpendableCoinbaseDepth() > confidence.getDepthInBlocks())
+                        secondaryStatusView.setText(R.string.transaction_row_status_locked);
+                } else if(confirmations < 6 && !isChainLocked && ixStatus != TransactionConfidence.IXType.IX_LOCKED)
                     secondaryStatusView.setText(R.string.transaction_row_status_confirming);
                 //    extendMessageView.setVisibility(View.VISIBLE);
                 //    messageView.setText(R.string.transaction_row_message_received_unconfirmed_unlocked);
