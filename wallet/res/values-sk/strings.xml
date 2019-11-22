@@ -35,7 +35,7 @@
     <string name="wallet_transactions_options_filter_all">Všetky</string>
     <string name="wallet_transactions_options_filter_received">Prijaté</string>
     <string name="wallet_transactions_options_filter_sent">Odoslané</string>
-        <string name="wallet_options_encrypt_keys_set">Nastaviť PIN pre míňanie</string>
+    <string name="wallet_options_encrypt_keys_set">Nastaviť PIN pre míňanie</string>
     <string name="wallet_options_encrypt_keys_change">Zmeniť PIN pre míňanie</string>
     <string name="wallet_options_safety">Bezpečnosť</string>
     <string name="wallet_low_storage_dialog_title">Málo vnútornej pamäte!</string>
@@ -295,7 +295,7 @@
     <string name="notification_coins_received_msg">Prijaté %s</string>
     <string name="notification_peers_connected_msg">%d pripojených uzlov</string>
     <string name="notification_inactivity_title">Na tomto zariadení máte ešte Dash!</string>
-        <string name="notification_inactivity_action_dismiss">Pripomenúť neskôr </string>
+    <string name="notification_inactivity_action_dismiss">Pripomenúť neskôr </string>
     <string name="notification_inactivity_action_dismiss_forever">Nepripomínať</string>
     <string name="appwidget_wallet_balance_title">Bilancia Dash</string>
 

@@ -35,7 +35,7 @@
     <string name="wallet_transactions_options_filter_all">Wszystkie</string>
     <string name="wallet_transactions_options_filter_received">Otrzymane</string>
     <string name="wallet_transactions_options_filter_sent">Wysłane</string>
-        <string name="wallet_options_encrypt_keys_set">Ustaw PIN</string>
+    <string name="wallet_options_encrypt_keys_set">Ustaw PIN</string>
     <string name="wallet_options_encrypt_keys_change">Zmień PIN do wydawania</string>
     <string name="wallet_options_safety">Wskazówki bezpieczeństwa</string>
     <string name="wallet_low_storage_dialog_title">Mało przestrzeni w pamięci wewnętrznej!</string>
@@ -295,7 +295,7 @@
     <string name="notification_coins_received_msg">Otrzymano %s </string>
     <string name="notification_peers_connected_msg">%d połączonych partnerów</string>
     <string name="notification_inactivity_title">W twoim portfelu nadal są niewykorzystane Dash!</string>
-        <string name="notification_inactivity_message">Wciąż posiadasz Dash na tym urządzeniu! Upewnij się że masz zapisane hasła odzyskiwania portfela zanim odinstalujesz Dash Wallet w innym wypadku stracisz swój balans %s</string>
+    <string name="notification_inactivity_message">Wciąż posiadasz Dash na tym urządzeniu! Upewnij się że masz zapisane hasła odzyskiwania portfela zanim odinstalujesz Dash Wallet w innym wypadku stracisz swój balans %s</string>
     <string name="notification_inactivity_action_dismiss">Przypomnij później</string>
     <string name="notification_inactivity_action_dismiss_forever">Nie przypominaj więcej</string>
     <string name="appwidget_wallet_balance_title">Saldo Dash</string>

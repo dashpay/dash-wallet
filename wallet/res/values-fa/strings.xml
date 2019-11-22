@@ -35,7 +35,7 @@
     <string name="wallet_transactions_options_filter_all">همه تراکنش‌ها</string>
     <string name="wallet_transactions_options_filter_received">تراکنش‌های دریافتی</string>
     <string name="wallet_transactions_options_filter_sent">تراکنش‌های ارسالی</string>
-        <string name="wallet_options_encrypt_keys_set">ایجاد رمز پرداخت</string>
+    <string name="wallet_options_encrypt_keys_set">ایجاد رمز پرداخت</string>
     <string name="wallet_options_encrypt_keys_change">تغییر رمز پرداخت</string>
     <string name="wallet_options_safety">توصیه‌های امنیتی</string>
     <string name="wallet_low_storage_dialog_title">فضای ذخیره داخلی دستگاه‌تان کم است!</string>

@@ -35,7 +35,7 @@
     <string name="wallet_transactions_options_filter_all">全ての支払い</string>
     <string name="wallet_transactions_options_filter_received">受け取った支払い</string>
     <string name="wallet_transactions_options_filter_sent">送った支払い</string>
-        <string name="wallet_options_encrypt_keys_set">送金用PINコードを設定</string>
+    <string name="wallet_options_encrypt_keys_set">送金用PINコードを設定</string>
     <string name="wallet_options_encrypt_keys_change">送金用PINコードを変更</string>
     <string name="wallet_options_safety">安全上の注意事項</string>
     <string name="wallet_low_storage_dialog_title">内部デバイスのストレージ容量が残りわずかです！</string>
@@ -295,7 +295,7 @@
     <string name="notification_coins_received_msg">%sを受け取りました</string>
     <string name="notification_peers_connected_msg">%dピアが接続済</string>
     <string name="notification_inactivity_title">あなたはまだこのデバイスにDashを保有しています！</string>
-        <string name="notification_inactivity_message">あなたはこのデバイスにまだDashを保有しています！Dashウォレットをアンイストールする前に必ず復元フレーズを書き留めて下さい。そうしないと、あなたの残高 %sが失われます。</string>
+    <string name="notification_inactivity_message">あなたはこのデバイスにまだDashを保有しています！Dashウォレットをアンイストールする前に必ず復元フレーズを書き留めて下さい。そうしないと、あなたの残高 %sが失われます。</string>
     <string name="notification_inactivity_action_dismiss">後で通知する</string>
     <string name="notification_inactivity_action_dismiss_forever">今後通知しない</string>
     <string name="appwidget_wallet_balance_title">Dash残高</string>

@@ -35,7 +35,7 @@
     <string name="wallet_transactions_options_filter_all">Keduanya</string>
     <string name="wallet_transactions_options_filter_received">Diterima</string>
     <string name="wallet_transactions_options_filter_sent">Dikirim</string>
-        <string name="wallet_options_encrypt_keys_set">Setel PIN pengiriman</string>
+    <string name="wallet_options_encrypt_keys_set">Setel PIN pengiriman</string>
     <string name="wallet_options_encrypt_keys_change">Ganti PIN pengiriman</string>
     <string name="wallet_options_safety">Nota keamanan</string>
     <string name="wallet_low_storage_dialog_title">Penyimpanan Internal tdk cukup!</string>
@@ -295,7 +295,7 @@
     <string name="notification_coins_received_msg">Diterima %s</string>
     <string name="notification_peers_connected_msg">%d peer terhubung</string>
     <string name="notification_inactivity_title">Anda masih memiliki Dash di perangkat ini!</string>
-        <string name="notification_inactivity_action_dismiss">Ingatkan saya nanti</string>
+    <string name="notification_inactivity_action_dismiss">Ingatkan saya nanti</string>
     <string name="notification_inactivity_action_dismiss_forever">Jangan ingatkan saya</string>
     <string name="appwidget_wallet_balance_title">Saldo Dash</string>
 
