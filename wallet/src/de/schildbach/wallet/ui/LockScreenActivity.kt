@@ -269,6 +269,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
                 if (!canceled) {
                     if (fingerprintHelper!!.hasFingerprintKeyChanged()) {
                         showFingerprintKeyChangedDialog()
+                        action_login_with_fingerprint.isEnabled = false
                     } else {
                         fingerprint_view.showError(exceededMaxAttempts)
                     }
