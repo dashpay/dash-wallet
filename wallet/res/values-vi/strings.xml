@@ -35,8 +35,7 @@
     <string name="wallet_transactions_options_filter_all">Cả hai</string>
     <string name="wallet_transactions_options_filter_received">Đã nhận</string>
     <string name="wallet_transactions_options_filter_sent">Đã gửi</string>
-    <string name="wallet_options_safety_menu">An toàn</string>
-    <string name="wallet_options_encrypt_keys_set">Thiết lập mã PIN gửi tiền</string>
+        <string name="wallet_options_encrypt_keys_set">Thiết lập mã PIN gửi tiền</string>
     <string name="wallet_options_encrypt_keys_change">Đổi mã PIN gửi tiền</string>
     <string name="wallet_options_safety">Ghi chú an toàn</string>
     <string name="wallet_low_storage_dialog_title">Khoảng không gian lưu trữ ở thiết bị hiện rất thấp!</string>

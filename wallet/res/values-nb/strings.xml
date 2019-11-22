@@ -35,8 +35,7 @@
 	<string name="wallet_transactions_options_filter_all">Alle betalinger</string>
 	<string name="wallet_transactions_options_filter_received">Mottatte betalinger</string>
 	<string name="wallet_transactions_options_filter_sent">Sendte betalinger</string>
-	<string name="wallet_options_safety_menu">Sikkerhet</string>
-	<string name="wallet_options_encrypt_keys_set">Sett PIN for betaling</string>
+		<string name="wallet_options_encrypt_keys_set">Sett PIN for betaling</string>
 	<string name="wallet_options_encrypt_keys_change">Endre PIN for betaling</string>
 	<string name="wallet_options_safety">Sikkerhetsnotater</string>
 	<string name="wallet_low_storage_dialog_title">Enhetens interne lagringsplass er lav!</string>

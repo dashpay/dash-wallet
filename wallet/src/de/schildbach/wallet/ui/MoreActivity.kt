@@ -43,7 +43,9 @@ class MoreActivity : GlobalFooterActivity() {
         setTitle(R.string.more_title)
 
         buy_and_sell.setOnClickListener { startBuyAndSellActivity() }
-        security.setOnClickListener { }
+        security.setOnClickListener {
+            startActivity(Intent(this, SecurityActivity::class.java))
+        }
         settings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
@@ -71,4 +73,5 @@ class MoreActivity : GlobalFooterActivity() {
         }
         return super.onOptionsItemSelected(item)
     }
+
 }

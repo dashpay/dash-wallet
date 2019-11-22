@@ -35,8 +35,7 @@
     <string name="wallet_transactions_options_filter_all">Όλες οι συναλλαγές</string>
     <string name="wallet_transactions_options_filter_received">Ληφθείσες πληρωμές</string>
     <string name="wallet_transactions_options_filter_sent">Απεσταλμένες πληρωμές</string>
-    <string name="wallet_options_safety_menu">Ασφάλεια</string>
-    <string name="wallet_options_encrypt_keys_set">Ορίστε το PIN ξοδέματος</string>
+        <string name="wallet_options_encrypt_keys_set">Ορίστε το PIN ξοδέματος</string>
     <string name="wallet_options_encrypt_keys_change">Αλλάξτε το PIN ξοδέματος</string>
     <string name="wallet_options_safety">Οδηγίες ασφαλείας</string>
     <string name="wallet_low_storage_dialog_title">Ο εσωτερικός χώρος αποθήκευσης της συσκευής είναι πολύ χαμηλός!</string>

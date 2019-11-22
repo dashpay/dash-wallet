@@ -69,7 +69,6 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
-import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
@@ -907,8 +906,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             SweepWalletActivity.start(this);
         } else if (id == R.id.nav_network_monitor) {
             startActivity(new Intent(this, NetworkMonitorActivity.class));
-        } else if (id == R.id.nav_safety) {
-            startActivity(new Intent(this, SecurityActivity.class));
         } else if (id == R.id.nav_settings) {
             startActivity(new Intent(this, PreferenceActivity.class));
         } else if (id == R.id.nav_disconnect) {

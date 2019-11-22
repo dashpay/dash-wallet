@@ -35,8 +35,7 @@
     <string name="wallet_transactions_options_filter_all">全部</string>
     <string name="wallet_transactions_options_filter_received">收到的</string>
     <string name="wallet_transactions_options_filter_sent">发送的</string>
-    <string name="wallet_options_safety_menu">安全</string>
-    <string name="wallet_options_encrypt_keys_set">设置支付 PIN 码</string>
+        <string name="wallet_options_encrypt_keys_set">设置支付 PIN 码</string>
     <string name="wallet_options_encrypt_keys_change">更改支付 PIN 码</string>
     <string name="wallet_options_safety">安全及风险提示</string>
     <string name="wallet_low_storage_dialog_title">内部设备存储空间不足！</string>

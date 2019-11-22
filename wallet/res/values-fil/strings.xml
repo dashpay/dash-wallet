@@ -35,8 +35,7 @@
     <string name="wallet_transactions_options_filter_all">Lahat ng bayad</string>
     <string name="wallet_transactions_options_filter_received">Natanggap na bayad</string>
     <string name="wallet_transactions_options_filter_sent">Naipadalang bayad</string>
-    <string name="wallet_options_safety_menu">Panseguridad</string>
-    <string name="wallet_options_encrypt_keys_set">Magtalaga ng spending PIN</string>
+        <string name="wallet_options_encrypt_keys_set">Magtalaga ng spending PIN</string>
     <string name="wallet_options_encrypt_keys_change">Palitan ang spending PIN</string>
     <string name="wallet_options_safety">Talaang pangkaligtasan</string>
     <string name="wallet_low_storage_dialog_title">Ang internal device storage ay mababa na!</string>

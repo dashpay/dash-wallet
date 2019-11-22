@@ -35,8 +35,7 @@
     <string name="wallet_transactions_options_filter_all">Tous les paiements</string>
     <string name="wallet_transactions_options_filter_received">Paiements reçus</string>
     <string name="wallet_transactions_options_filter_sent">Paiements envoyés</string>
-    <string name="wallet_options_safety_menu">Sécurité</string>
-    <string name="wallet_options_encrypt_keys_set">Définir le code PIN de paiement</string>
+        <string name="wallet_options_encrypt_keys_set">Définir le code PIN de paiement</string>
     <string name="wallet_options_encrypt_keys_change">Modifier le code PIN de paiement</string>
     <string name="wallet_options_safety">Notes de sécurité</string>
     <string name="wallet_low_storage_dialog_title">Espace de stockage interne faible  !</string>
