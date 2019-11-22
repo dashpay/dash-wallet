@@ -140,7 +140,11 @@ class LockScreenActivity : SendCoinsQrActivity() {
             when (it.status) {
                 Status.ERROR -> {
                     pinRetryController.failedAttempt(it.data!!)
-                    setState(State.INVALID_PIN)
+                    if (pinRetryController.isLocked) {
+                        setState(State.LOCKED)
+                    } else {
+                        setState(State.INVALID_PIN)
+                    }
                 }
                 Status.LOADING -> {
                     setState(State.DECRYPTING)
@@ -191,6 +195,8 @@ class LockScreenActivity : SendCoinsQrActivity() {
                     Handler().postDelayed({
                         pin_preview.clear()
                     }, 200)
+                }
+                if (pinRetryController.failCount() > 0) {
                     pin_preview.badPin(pinRetryController.getRemainingAttemptsMessage(this))
                 }
             }

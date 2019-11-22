@@ -48,25 +48,23 @@ public class PinRetryController {
     }
 
     private Long getLockTimeMinutes() {
-        int failCount = prefs.getStringSet(PREFS_FAILED_PINS, new HashSet<String>()).size();
+        int failCount = failCount();
         long secureTime = prefs.getLong(PREFS_SECURE_TIME, 0);
         long failHeight = prefs.getLong(PREFS_FAIL_HEIGHT, 0);
         long now = System.currentTimeMillis();
 
-        boolean locked = secureTime + now < failHeight + pow(POW_LOCK_TIME_BASE, failCount - RETRY_FAIL_TOLERANCE) * ONE_MINUTE_MILLIS
-                && failCount >= RETRY_FAIL_TOLERANCE;
+        double base = failHeight + pow(POW_LOCK_TIME_BASE, failCount - RETRY_FAIL_TOLERANCE) * ONE_MINUTE_MILLIS;
+        boolean locked = secureTime + now < base && failCount >= RETRY_FAIL_TOLERANCE;
         //TODO: Null secureTime Edge Case
-        long lockTimeMillis = (long) (failHeight + pow(POW_LOCK_TIME_BASE, failCount - RETRY_FAIL_TOLERANCE)
-                * ONE_MINUTE_MILLIS - secureTime - now);
-        long lockTimeMinutes = TimeUnit.MILLISECONDS.toMinutes(lockTimeMillis);
+        double lockTimeMillis = (base - secureTime - now);
+        long lockTimeMinutes = Math.round(lockTimeMillis / 1000 / 60);
 
         return locked ? lockTimeMinutes : null;
     }
 
 
     public boolean isLockedForever() {
-        int failCount = prefs.getStringSet(PREFS_FAILED_PINS, new HashSet<String>()).size();
-        return failCount >= FAIL_LIMIT;
+        return failCount() >= FAIL_LIMIT;
     }
 
     @SuppressLint("ApplySharedPref")
@@ -77,6 +75,7 @@ public class PinRetryController {
         prefsEditor.commit();
     }
 
+    @SuppressLint("ApplySharedPref")
     public void failedAttempt(String pin) {
         long secureTime = prefs.getLong(PREFS_SECURE_TIME, 0);
         Set<String> storedFailedPins = prefs.getStringSet(PREFS_FAILED_PINS, new HashSet<String>());
@@ -91,13 +90,15 @@ public class PinRetryController {
             log.info("PIN entered incorrectly " + failCount + "times");
 
             if (failCount >= FAIL_LIMIT) {
+                prefsEditor.commit();
                 // wallet permanently locked, restart the app and show wallet disabled screen
                 ProcessPhoenix.triggerRebirth(WalletApplication.getInstance());
+                return;
             } else {
                 prefsEditor.putLong(PREFS_FAIL_HEIGHT, secureTime + System.currentTimeMillis());
             }
 
-            prefsEditor.apply();
+            prefsEditor.commit();
         }
     }
 
@@ -119,9 +120,12 @@ public class PinRetryController {
         return context.getString(R.string.wallet_lock_try_again, lockTime, unit);
     }
 
+    public int failCount() {
+        return prefs.getStringSet(PREFS_FAILED_PINS, new HashSet<String>()).size();
+    }
+
     public String getRemainingAttemptsMessage(Context context) {
-        int failCount = prefs.getStringSet(PREFS_FAILED_PINS, new HashSet<String>()).size();
-        int attemptsRemaining = FAIL_LIMIT - failCount;
+        int attemptsRemaining = FAIL_LIMIT - failCount();
         return context.getResources().getQuantityString(R.plurals.wallet_lock_attempts_remaining,
                 attemptsRemaining, attemptsRemaining);
     }

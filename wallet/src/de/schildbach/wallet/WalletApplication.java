@@ -132,6 +132,11 @@ public class WalletApplication extends MultiDexApplication {
                 //noinspection ResultOfMethodCallIgnored
                 walletFile.delete();
                 config.clear(false);
+                File blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
+                if (blockChainFile.exists()) {
+                    //noinspection ResultOfMethodCallIgnored
+                    blockChainFile.delete();
+                }
             }
             fullInitialization();
         }
@@ -676,18 +681,21 @@ public class WalletApplication extends MultiDexApplication {
     /**
      * Removes all the data and restarts the app showing onboarding screen.
      */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public void wipe(Context context) {
         log.info("Removing all the data and restarting the app.");
 
         resetBlockchain();
         wallet.shutdownAutosaveAndWait();
-        stopBlockchainService();
+        resetBlockchain();
 
-        //noinspection ResultOfMethodCallIgnored
         walletFile.delete();
         cleanupFiles();
         config.clear(true);
         PinRetryController.getInstance().clearPinFailPrefs();
+
+//        File blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
+//        blockChainFile.delete();
 
         ProcessPhoenix.triggerRebirth(context);
     }
