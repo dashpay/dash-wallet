@@ -35,8 +35,7 @@
 	<string name="wallet_transactions_options_filter_all">كلاهما</string>
 	<string name="wallet_transactions_options_filter_received">تم الاستلام</string>
 	<string name="wallet_transactions_options_filter_sent">تم الارسال</string>
-	<string name="wallet_options_safety_menu">السلامة</string>
-	<string name="wallet_options_encrypt_keys_set">تعيين الرقم السري الشخصي للإنفاق</string>
+		<string name="wallet_options_encrypt_keys_set">تعيين الرقم السري الشخصي للإنفاق</string>
 	<string name="wallet_options_encrypt_keys_change">تغيير الرقم السري الشخصي للإنفاق</string>
 		<string name="wallet_low_storage_dialog_title">انتبه! مساحة الذاكرة الداخلية منخفضة</string>
 	<string name="wallet_low_storage_dialog_msg">تستخدم محفظة الداش وحدة التخزين الداخلية لتذكر المعاملات والكتل. إذا نفدت مساحة التخزين تلك، فإنها سوف تتوقف عن العمل، وسوف يكون داش الخاصة بك في خطر!\n\nهل تريد فتح برنامج مدير التطبيقات لحذف التطبيقات غير الضرورية؟</string>

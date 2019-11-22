@@ -31,8 +31,7 @@
   <string name="wallet_transactions_row_warning_backup">Pongezi budha! Wewe kupokea pesa yako ya kwanza! Lazima kubamba backup, Huna wanataka kupata kuiba.</string>
   <string name="wallet_transactions_fragment_coinbase">kupatikana</string>
   <string name="wallet_transactions_fragment_internal">ndani</string>
-  <string name="wallet_options_safety_menu">Usalama</string>
-  <string name="wallet_options_encrypt_keys_set">Chagua PIN za malipo</string>
+    <string name="wallet_options_encrypt_keys_set">Chagua PIN za malipo</string>
   <string name="wallet_options_encrypt_keys_change">Chenji PIN za malipo</string>
   <string name="wallet_options_safety">Maelezo usalama</string>
   <string name="wallet_low_storage_dialog_title">Disc yako ni chini</string>

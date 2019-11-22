@@ -35,8 +35,7 @@
     <string name="wallet_transactions_options_filter_all">Sva plaćanja</string>
     <string name="wallet_transactions_options_filter_received">Primljene uplate</string>
     <string name="wallet_transactions_options_filter_sent">Poslate uplate</string>
-    <string name="wallet_options_safety_menu">Sigurnost</string>
-    <string name="wallet_options_encrypt_keys_set">Postavi PIN za potrošnju</string>
+        <string name="wallet_options_encrypt_keys_set">Postavi PIN za potrošnju</string>
     <string name="wallet_options_encrypt_keys_change">Promeni PIN za potrošnju</string>
     <string name="wallet_options_safety">Sigurnosne preporuke</string>
     <string name="wallet_low_storage_dialog_title">Unutrašnja memorija uređaja je na izmaku!</string>

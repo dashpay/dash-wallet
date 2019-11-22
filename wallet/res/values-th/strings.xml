@@ -35,8 +35,7 @@
     <string name="wallet_transactions_options_filter_all">การชำระเงินทั้งหมด</string>
     <string name="wallet_transactions_options_filter_received">การชำระเงินที่ได้รับ</string>
     <string name="wallet_transactions_options_filter_sent">การชำระเงินที่ส่ง</string>
-    <string name="wallet_options_safety_menu">ปลอดภัย</string>
-    <string name="wallet_options_encrypt_keys_set">ตั้งค่า PIN การใช้จ่าย</string>
+        <string name="wallet_options_encrypt_keys_set">ตั้งค่า PIN การใช้จ่าย</string>
     <string name="wallet_options_encrypt_keys_change">เปลี่ยน PIN การใช้จ่าย</string>
     <string name="wallet_options_safety">บันทึกความปลอดภัย</string>
     <string name="wallet_low_storage_dialog_title">พื้นที่จัดเก็บข้อมูลภายในอุปกรณ์ต่ำ!</string>
