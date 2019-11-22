@@ -35,7 +35,7 @@
     <string name="wallet_transactions_options_filter_all">全部</string>
     <string name="wallet_transactions_options_filter_received">收到</string>
     <string name="wallet_transactions_options_filter_sent">付出</string>
-        <string name="wallet_options_encrypt_keys_set">設置支付 PIN 碼</string>
+    <string name="wallet_options_encrypt_keys_set">設置支付 PIN 碼</string>
     <string name="wallet_options_encrypt_keys_change">修改支付 PIN 碼</string>
     <string name="wallet_options_safety">安全提示</string>
     <string name="wallet_low_storage_dialog_title">儲存空間不足!</string>
@@ -295,7 +295,7 @@
     <string name="notification_coins_received_msg">收到 %s</string>
     <string name="notification_peers_connected_msg">%d 節點連線</string>
     <string name="notification_inactivity_title">你在這個裝置上還存放有達世幣!</string>
-        <string name="notification_inactivity_message">你仍然有達世幣在此設備上! 在卸載達世幣錢包之前，請務必記下您的恢復詞組，否則您將失去 %s的結餘。</string>
+    <string name="notification_inactivity_message">你仍然有達世幣在此設備上! 在卸載達世幣錢包之前，請務必記下您的恢復詞組，否則您將失去 %s的結餘。</string>
     <string name="notification_inactivity_action_dismiss">稍後提醒我</string>
     <string name="notification_inactivity_action_dismiss_forever">不要提醒我</string>
     <string name="appwidget_wallet_balance_title">達世幣結餘</string>

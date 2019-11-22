@@ -35,7 +35,7 @@
     <string name="wallet_transactions_options_filter_all">Tüm ödemeler</string>
     <string name="wallet_transactions_options_filter_received">Gelen ödemeler</string>
     <string name="wallet_transactions_options_filter_sent">Gönderilen ödemeler</string>
-        <string name="wallet_options_encrypt_keys_set">Harcama PİN\'i ayarla</string>
+    <string name="wallet_options_encrypt_keys_set">Harcama PİN\'i ayarla</string>
     <string name="wallet_options_encrypt_keys_change">Harcama PİN\'ini değiştir</string>
     <string name="wallet_options_safety">Güvenlik notları</string>
     <string name="wallet_low_storage_dialog_title">Cihazın dahili depolama alanı düşük!</string>
@@ -295,7 +295,7 @@
     <string name="notification_coins_received_msg">%s alındı</string>
     <string name="notification_peers_connected_msg">%d eş bağlı</string>
     <string name="notification_inactivity_title">Bu cihazda hâlâ Dash var!</string>
-        <string name="notification_inactivity_message">Bu cihazda Dash bakiyeniz bulunmaktadır! Dash Cüzdanı\'nı kaldırmadan önce lütfen kurtarma sözcük grubunu bir yere yazdığınızdan emin olun aksi takdirde bakiyenizi kaybedebilirsiniz. Kalan bakiyeniz %s.</string>
+    <string name="notification_inactivity_message">Bu cihazda Dash bakiyeniz bulunmaktadır! Dash Cüzdanı\'nı kaldırmadan önce lütfen kurtarma sözcük grubunu bir yere yazdığınızdan emin olun aksi takdirde bakiyenizi kaybedebilirsiniz. Kalan bakiyeniz %s.</string>
     <string name="notification_inactivity_action_dismiss">Daha sonra hatırlat</string>
     <string name="notification_inactivity_action_dismiss_forever">Hatırlatma</string>
     <string name="appwidget_wallet_balance_title">Dash bakiyesi</string>
