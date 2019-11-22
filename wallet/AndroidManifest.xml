@@ -225,6 +225,10 @@
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
+        <activity android:name="de.schildbach.wallet.ui.SecurityActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity" />
+
         <activity android:name="de.schildbach.wallet.ui.SettingsActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
