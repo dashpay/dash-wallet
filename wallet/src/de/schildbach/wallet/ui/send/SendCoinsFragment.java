@@ -88,7 +88,6 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.data.PaymentIntent.Standard;
 import de.schildbach.wallet.data.TransactionResult;
-import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.offline.DirectPaymentTask;
 import de.schildbach.wallet.service.BlockchainState;
@@ -211,9 +210,9 @@ public final class SendCoinsFragment extends Fragment {
         enterAmountSharedViewModel.getMaxButtonClickEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean unused) {
-                final WalletLock walletLock = WalletLock.getInstance();
-                if (walletLock.isWalletLocked(viewModel.wallet)) {
-                    CheckPinDialog.show(getFragmentManager(), AUTH_REQUEST_CODE_MAX);
+                String sessionPin = activity.getSessionPin();
+                if (sessionPin == null) {
+                    CheckPinDialog.show(fragmentManager, AUTH_REQUEST_CODE_MAX);
                 } else {
                     handleEmpty();
                 }
@@ -223,7 +222,12 @@ public final class SendCoinsFragment extends Fragment {
         confirmTransactionSharedViewModel.getClickConfirmButtonEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean aBoolean) {
-                CheckPinDialog.show(fragmentManager, AUTH_REQUEST_CODE_SEND);
+                String sessionPin = activity.getSessionPin();
+                if (sessionPin == null) {
+                    CheckPinDialog.show(fragmentManager, AUTH_REQUEST_CODE_SEND);
+                } else {
+                    handleGo(sessionPin);
+                }
             }
         });
 

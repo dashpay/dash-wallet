@@ -43,6 +43,7 @@ class NumericKeyboardView(context: Context, attrs: AttributeSet) : TableLayout(c
 
     init {
         inflate(context, R.layout.numeric_keyboard_view, this)
+        isStretchAllColumns = true
         for (btnResId in ALL_BUTTONS_RES_ID) {
             findViewById<View>(btnResId).setOnClickListener(this)
         }
