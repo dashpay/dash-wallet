@@ -225,7 +225,7 @@
     <string name="import_export_keys_dialog_show">Show password</string>
     <string name="import_export_keys_dialog_failure_title">Error</string>
     <string name="import_keys_intent_filter_action">Restore wallet</string>
-    <string name="encrypt_keys_dialog_title">Spending PIN</string>
+    <string name="encrypt_keys_dialog_title">Change PIN</string>
     <string name="encrypt_keys_dialog_message">Spending from your wallet will be protected with the chosen PIN.</string>
     <string name="encrypt_keys_dialog_warning">Important: You need to remember your PIN! Do not use common numbers (like birthdates).</string>
     <string name="encrypt_keys_dialog_password_old">Old PIN</string>
@@ -368,5 +368,10 @@
 
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <string name="activity_security_view_recovery_phrase">View Recovery Phrase</string>
+    <string name="activity_security_advanced">Advanced Security</string>
+    <string name="activity_security_biometric_auth">Biometric Authentication</string>
+    <string name="activity_security_hide_balance">Hide Balance on Launch</string>
 
 </resources>
