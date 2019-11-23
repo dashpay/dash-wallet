@@ -16,8 +16,6 @@
     <color name="error_red">#BF2827</color>
     <!-- added for transaction status -->
     <color name="secondary_status">#E78010</color>
-    <color name="amount_received">#008DE4</color>
-    <color name="amount_sent">#171717</color>
     <color name="primary_status">#4A4A4A</color>
 
 
