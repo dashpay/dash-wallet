@@ -19,7 +19,7 @@ public class TransactionUtil {
      */
     public static int getTransactionTypeName(Transaction tx, Wallet wallet) {
         int typeId;
-        if(tx.getValue(wallet).signum() < 0) {
+        if(tx.getValue(wallet).signum() <= 0) {
             switch(tx.getType()) {
                 case TRANSACTION_PROVIDER_REGISTER:
                     typeId = R.string.transaction_row_status_masternode_registration;
@@ -34,7 +34,9 @@ public class TransactionUtil {
                     typeId = R.string.transaction_row_status_masternode_update_service;
                     break;
                 default:
-                    if (WalletUtils.isEntirelySelf(tx, wallet))
+                    if (tx.getConfidence().hasErrors())
+                        typeId = R.string.transaction_row_status_error_sending;
+                    else if (WalletUtils.isEntirelySelf(tx, wallet))
                         typeId = R.string.transaction_row_status_sent_interally;
                     else
                         typeId = R.string.transaction_row_status_sent;
@@ -110,7 +112,7 @@ public class TransactionUtil {
      * @param wallet
      * @return the secondary status or -1 if there is none
      */
-    public static int getSecondaryStatusString(Transaction tx, Wallet wallet) {
+    public static int getReceivedStatusString(Transaction tx, Wallet wallet) {
         TransactionConfidence confidence = tx.getConfidence();
         int statusId = -1;
         if (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING) {
@@ -139,12 +141,11 @@ public class TransactionUtil {
                 case IX_NONE:
                     //did not receive the InstantSendLock
                 case IX_LOCK_FAILED:
-                    //received the InstantSendLock, but it wasn't verified
+                    //received the InstantSendLock, but verification failed
                     statusId = R.string.transaction_row_status_processing;
                     break;
             }
         }
         return statusId;
     }
-
 }
