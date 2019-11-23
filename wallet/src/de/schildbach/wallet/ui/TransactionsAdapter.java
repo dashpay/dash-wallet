@@ -227,7 +227,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
             final long itemId = getItemId(position);
             transactionHolder.itemView.setActivated(itemId == selectedItemId);
-            //transactionHolder.itemView.setBackgroundColor(itemId == selectedItemId ? R.color.dash_gray : R.color.dash_white);
 
             final Transaction tx = transactions.get(position);
             transactionHolder.bind(tx);
@@ -242,6 +241,10 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                     //setSelectedItemId(getItemId(transactionHolder.getAdapterPosition()));
                 }
             });
+
+            //
+            // TODO:  Fix merge conflicts with Transaction Details Screen
+            //
 
             if (onClickListener != null) {
            //     transactionHolder.menuView.setOnClickListener(new View.OnClickListener() {
