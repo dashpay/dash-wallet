@@ -55,15 +55,6 @@
         android:layout_marginRight="11dp"
         android:orientation="horizontal">
 
-        <!--TextView
-            android:id="@+id/transaction_row_value_internal"
-            style="@style/MontserratMedium"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="13sp"
-            android:visibility="gone"
-            tools:text="⇄ internal" /-->
-
         <TextView
             android:id="@+id/transaction_amount_signal"
             style="@style/MontserratMedium.MG"

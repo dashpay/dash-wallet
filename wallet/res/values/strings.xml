@@ -160,7 +160,6 @@
     <string name="transaction_row_status_sent">Sent</string>
     <string name="transaction_row_status_sending">Sending</string>
     <string name="transaction_row_status_sent_interally">Internal</string>
-    <string name="transaction_row_status_sending_internally">Sending Internal</string>
     <string name="transaction_row_status_processing">Processing</string>
     <string name="transaction_row_status_confirming">Confirming</string>
     <string name="transaction_row_status_locked">Locked</string>
@@ -174,23 +173,15 @@
     <string name="transaction_row_status_error_duplicate">Duplicate</string>
     <string name="transaction_row_status_error_obsolete">Obsolete</string>
     <string name="transaction_row_status_error_invalid">Invalid</string>
-
     <string name="transaction_row_status_error_other">Unknown</string>
-
-
-    <string name="transaction_row_status_unknown">Unknown</string>
     <string name="transaction_row_time_text">On %s at %s</string>
     <string name="transaction_row_rate_not_available">Not available</string>
-
-
     <string name="transaction_row_status_masternode_registration">Masternode Registration</string>
     <string name="transaction_row_status_masternode_update_registrar">Masternode Update Registrar</string>
     <string name="transaction_row_status_masternode_update_service">Masternode Update Service</string>
     <string name="transaction_row_status_masternode_revoke">Masternode Revoke</string>
     <string name="transaction_row_status_masternode_reward">Masternode Reward</string>
     <string name="transaction_row_status_mining_reward">Mining Reward</string>
-
-
     <string name="network_monitor_activity_title">Network monitor</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Blocks</string>
