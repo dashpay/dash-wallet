@@ -299,19 +299,9 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                         .setCardBackgroundColor(itemView.isActivated() ? colorBackgroundSelected : colorBackground);
 
             final TransactionConfidence confidence = tx.getConfidence();
-            final ConfidenceType confidenceType = confidence.getConfidenceType();
-            final boolean isOwn = confidence.getSource().equals(TransactionConfidence.Source.SELF);
-            final boolean isCoinBase = tx.isCoinBase();
-            final Transaction.Purpose purpose = tx.getPurpose();
             final Coin fee = tx.getFee();
-            final String[] memo = Formats.sanitizeMemo(tx.getMemo());
 
             final TransactionConfidence.IXType ixStatus = confidence.getIXType();
-            final StoredBlock chainLockBlock = org.bitcoinj.core.Context.get().chainLockHandler.getBestChainLockBlock();
-            final int chainLockHeight = chainLockBlock != null && confidence.getConfidenceType() == ConfidenceType.BUILDING ? chainLockBlock.getHeight() : -1;
-            final boolean isChainLocked = chainLockHeight != -1 ? confidence.getAppearedAtChainHeight() <= chainLockHeight : false;
-            final boolean sentToSinglePeer = confidence.getPeerCount() == 1;
-            final boolean sentToSinglePeerSuccessful = sentToSinglePeer ? confidence.isSent() : false;
 
             TransactionCacheEntry txCache = transactionCache.get(tx.getHash());
             if (txCache == null) {
@@ -404,9 +394,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                     fiatView.setVisibility(View.VISIBLE);
                     rateNotAvailableView.setVisibility(View.GONE);
                 } else {
-                    //    extendMessageView.setVisibility(View.VISIBLE);
-                    //    messageView.setSingleLine(false);
-                    //    messageView.setText(R.string.exchange_rate_missing);
                     fiatView.setVisibility(View.GONE);
                     rateNotAvailableView.setVisibility(View.VISIBLE);
                 }
