@@ -34,12 +34,17 @@ public class TransactionUtil {
                     typeId = R.string.transaction_row_status_masternode_update_service;
                     break;
                 default:
-                    if (tx.getConfidence().hasErrors())
+                    TransactionConfidence confidence = tx.getConfidence();
+                    if (confidence.hasErrors())
                         typeId = R.string.transaction_row_status_error_sending;
                     else if (WalletUtils.isEntirelySelf(tx, wallet))
                         typeId = R.string.transaction_row_status_sent_interally;
-                    else
+                    else if (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING ||
+                            (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING &&
+                                (confidence.numBroadcastPeers() >= 1 || confidence.getIXType() == TransactionConfidence.IXType.IX_LOCKED ||
+                                        (confidence.getPeerCount() == 1 && confidence.isSent()))))
                         typeId = R.string.transaction_row_status_sent;
+                    else typeId = R.string.transaction_row_status_sending;
             }
         } else {
             // Not all coinbase transactions are v3 transactions with type 5 (coinbase)
