@@ -165,11 +165,16 @@
     <string name="transaction_row_status_confirming">Confirming</string>
     <string name="transaction_row_status_locked">Locked</string>
     <string name="transaction_row_status_error_sending">Error Sending</string>
-    <string name="transaction_row_status_error_dead">Dead</string>
+    <string name="transaction_row_status_error_dead">Double spend</string>
     <string name="transaction_row_status_error_conflicting">In conflict</string>
     <string name="transaction_row_status_error_insufficient_fee">Insufficient fee</string>
     <string name="transaction_row_status_error_dust">Dust</string>
     <string name="transaction_row_status_error_non_standard">Nonstandard</string>
+    <string name="transaction_row_status_error_malformed">Malformed</string>
+    <string name="transaction_row_status_error_duplicate">Duplicate</string>
+    <string name="transaction_row_status_error_obsolete">Obsolete</string>
+    <string name="transaction_row_status_error_invalid">Invalid</string>
+
     <string name="transaction_row_status_error_other">Unknown</string>
 
 
