@@ -31,7 +31,7 @@ import de.schildbach.wallet_test.R
  * @author Samuel Barbosa
  */
 @SuppressLint("Registered")
-abstract class BaseMenuActivity : AppCompatActivity() {
+abstract class BaseMenuActivity : AbstractWalletActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
