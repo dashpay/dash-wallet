@@ -130,7 +130,6 @@ public class SweepWalletFragment extends Fragment {
 	private TransactionsAdapter sweepTransactionAdapter;
 	private RecyclerView.ViewHolder sweepTransactionViewHolder;
 	private Button viewGo;
-	private FloatingActionButton viewFabScanQr;
 	private ExchangeRate currentExchangeRate;
 
 	private MenuItem reloadAction;
@@ -179,28 +178,7 @@ public class SweepWalletFragment extends Fragment {
 	}
 
 	@Override
-	public void onActivityCreated(@androidx.annotation.Nullable Bundle savedInstanceState) {
-		super.onActivityCreated(savedInstanceState);
-		initFloatingButton();
-	}
-
-	private void initFloatingButton()
-	{
-		viewFabScanQr = (FloatingActionButton) this.activity.findViewById(R.id.fab_scan_qr);
-		final PackageManager pm = this.activity.getPackageManager();
-		boolean hasCamera = pm.hasSystemFeature(PackageManager.FEATURE_CAMERA) || pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT);
-		viewFabScanQr.setVisibility(hasCamera ? View.VISIBLE : View.GONE);
-		viewFabScanQr.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View view) {
-				handleScan();
-			}
-		});
-	}
-
-	@Override
-	public void onCreate(final Bundle savedInstanceState)
-	{
+	public void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
 		setRetainInstance(true);
@@ -265,6 +243,13 @@ public class SweepWalletFragment extends Fragment {
 						}
 					}
 				});
+
+		view.findViewById(R.id.scan_private_key).setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				handleScan();
+			}
+		});
 
 		return view;
 	}
@@ -582,14 +567,12 @@ public class SweepWalletFragment extends Fragment {
 
 		if (walletToSweep != null) {
 		    introductionGroup.setVisibility(View.GONE);
-		    viewFabScanQr.setVisibility(View.GONE);
 		    viewGo.setVisibility(View.VISIBLE);
 			balanceGroup.setVisibility(View.VISIBLE);
 			balanceView.setFormat(btcFormat.noCode());
 			balanceView.setAmount(walletToSweep.getBalance(BalanceType.ESTIMATED));
 		} else {
 		    introductionGroup.setVisibility(View.VISIBLE);
-		    viewFabScanQr.setVisibility(View.VISIBLE);
 			viewGo.setVisibility(View.GONE);
 			balanceGroup.setVisibility(View.GONE);
 		}
