@@ -38,8 +38,8 @@ class SecurityActivity : BaseMenuActivity() {
     }
 
     fun backupWallet(view: View) {
-        //Only allow to backup when wallet is unlocked
         val wallet = WalletApplication.getInstance().wallet
+        //Only allow to backup when wallet is unlocked
         val walletLock = WalletLock.getInstance()
         if (WalletLock.getInstance().isWalletLocked(wallet)) {
             UnlockWalletDialogFragment.show(supportFragmentManager) {
