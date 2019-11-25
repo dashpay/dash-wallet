@@ -16,12 +16,10 @@
 
 package de.schildbach.wallet.ui
 
-import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_security.*
 import org.dash.wallet.common.ui.DialogBuilder
 import org.slf4j.LoggerFactory
 
@@ -39,15 +37,11 @@ class SecurityActivity : BaseMenuActivity() {
         setTitle(R.string.security_title)
     }
 
-    override fun onStart() {
-        super.onStart()
-    }
-
     private fun resetBlockchain() {
         val dialog = DialogBuilder(this)
         dialog.setTitle(R.string.preferences_initiate_reset_title)
         dialog.setMessage(R.string.preferences_initiate_reset_dialog_message)
-        dialog.setPositiveButton(R.string.preferences_initiate_reset_dialog_positive) { dialog, which ->
+        dialog.setPositiveButton(R.string.preferences_initiate_reset_dialog_positive) { _, _ ->
             log.info("manually initiated blockchain reset")
 
             WalletApplication.getInstance().resetBlockchain()
@@ -58,7 +52,7 @@ class SecurityActivity : BaseMenuActivity() {
     }
 
     fun viewRecoveryPhrase(view: View) {
-        throw NotImplementedError()
+        BackupWalletToSeedDialogFragment.show(supportFragmentManager)
     }
     fun changePin(view: View) {
         throw NotImplementedError()
