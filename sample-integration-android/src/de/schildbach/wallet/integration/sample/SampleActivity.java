@@ -126,12 +126,12 @@ public class SampleActivity extends Activity {
             final Protos.Output.Builder output1 = Protos.Output.newBuilder();
             output1.setAmount(AMOUNT);
             output1.setScript(ByteString
-                    .copyFrom(ScriptBuilder.createOutputScript(new Address(params, addresses[0])).getProgram()));
+                    .copyFrom(ScriptBuilder.createOutputScript(Address.fromString(params, addresses[0])).getProgram()));
 
             final Protos.Output.Builder output2 = Protos.Output.newBuilder();
             output2.setAmount(AMOUNT);
             output2.setScript(ByteString
-                    .copyFrom(ScriptBuilder.createOutputScript(new Address(params, addresses[1])).getProgram()));
+                    .copyFrom(ScriptBuilder.createOutputScript(Address.fromString(params, addresses[1])).getProgram()));
 
             final Protos.PaymentDetails.Builder paymentDetails = Protos.PaymentDetails.newBuilder();
             paymentDetails.setNetwork(params.getPaymentProtocolId());

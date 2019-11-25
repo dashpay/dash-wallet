@@ -98,7 +98,7 @@ public class EnableFingerprintDialog extends DialogFragment {
         fingerprintView.setVisibility(View.VISIBLE);
         fingerprintView.setText(R.string.touch_fingerprint_to_enable);
 
-        FingerprintHelper fingerprintHelper = new FingerprintHelper(getActivity());
+        final FingerprintHelper fingerprintHelper = new FingerprintHelper(getActivity());
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && fingerprintHelper.init()) {
             fingerprintCancellationSignal = new CancellationSignal();
             fingerprintHelper.savePassword(getArguments().getString(PASSWORD_ARG),
@@ -106,6 +106,7 @@ public class EnableFingerprintDialog extends DialogFragment {
                         @Override
                         public void onSuccess(String savedPass) {
                             fingerprintCancellationSignal = null;
+                            fingerprintHelper.resetFingerprintKeyChanged();
 
                             dismiss();
                         }

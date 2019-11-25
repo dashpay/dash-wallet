@@ -17,9 +17,17 @@
 
 package de.schildbach.wallet.ui;
 
+import android.app.Activity;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnClickListener;
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.View;
+
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.core.PrefixedChecksummedBytes;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
@@ -28,28 +36,40 @@ import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
 
-import android.app.Activity;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnClickListener;
-import android.content.Intent;
-import android.os.Bundle;
-
 /**
  * @author Andreas Schildbach
  */
-public final class SendCoinsQrActivity extends Activity {
-    private static final int REQUEST_CODE_SCAN = 0;
+public class SendCoinsQrActivity extends SessionActivity {
+
+    private static final String EXTRA_QUICK_SCAN = "extra_quick_scan";
+
+    protected static final int REQUEST_CODE_SCAN = 0;
+
+    public static Intent createIntent(Context context, boolean immediateScan) {
+        Intent intent = new Intent(context, SendCoinsQrActivity.class);
+        intent.putExtra(EXTRA_QUICK_SCAN, immediateScan);
+        return intent;
+    }
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        if (savedInstanceState == null)
-            startActivityForResult(new Intent(this, ScanActivity.class), REQUEST_CODE_SCAN);
+        if (savedInstanceState == null && isQuickScan())
+            performScanning(null);
+    }
+
+    protected void performScanning(View clickView) {
+        ScanActivity.startForResult(this, clickView, REQUEST_CODE_SCAN);
+    }
+
+    private boolean isQuickScan() {
+        return getIntent().getBooleanExtra(EXTRA_QUICK_SCAN, false);
     }
 
     @Override
     public void onActivityResult(final int requestCode, final int resultCode, final Intent intent) {
+        super.onActivityResult(requestCode, resultCode, intent);
         if (requestCode == REQUEST_CODE_SCAN && resultCode == Activity.RESULT_OK) {
             final String input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT);
 
@@ -58,14 +78,18 @@ public final class SendCoinsQrActivity extends Activity {
                 protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
                     SendCoinsActivity.start(SendCoinsQrActivity.this, paymentIntent);
 
-                    SendCoinsQrActivity.this.finish();
+                    if (isQuickScan()) {
+                        SendCoinsQrActivity.this.finish();
+                    }
                 }
 
                 @Override
-                protected void handlePrivateKey(final VersionedChecksummedBytes key) {
+                protected void handlePrivateKey(final PrefixedChecksummedBytes key) {
                     SweepWalletActivity.start(SendCoinsQrActivity.this, key);
 
-                    SendCoinsQrActivity.this.finish();
+                    if (isQuickScan()) {
+                        SendCoinsQrActivity.this.finish();
+                    }
                 }
 
                 @Override
@@ -73,7 +97,9 @@ public final class SendCoinsQrActivity extends Activity {
                     final WalletApplication application = (WalletApplication) getApplication();
                     application.processDirectTransaction(transaction);
 
-                    SendCoinsQrActivity.this.finish();
+                    if (isQuickScan()) {
+                        SendCoinsQrActivity.this.finish();
+                    }
                 }
 
                 @Override
@@ -84,12 +110,16 @@ public final class SendCoinsQrActivity extends Activity {
                 private final OnClickListener dismissListener = new OnClickListener() {
                     @Override
                     public void onClick(final DialogInterface dialog, final int which) {
-                        SendCoinsQrActivity.this.finish();
+                        if (isQuickScan()) {
+                            SendCoinsQrActivity.this.finish();
+                        }
                     }
                 };
             }.parse();
         } else {
-            finish();
+            if (isQuickScan()) {
+                finish();
+            }
         }
     }
 }

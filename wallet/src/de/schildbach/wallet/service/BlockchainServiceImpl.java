@@ -51,7 +51,6 @@ import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.CheckpointManager;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.FilteredBlock;
-import org.bitcoinj.core.InstantSend;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
@@ -206,12 +205,13 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             final Address address = WalletUtils.getWalletAddressOfReceived(tx, wallet);
             final Coin amount = tx.getValue(wallet);
             final ConfidenceType confidenceType = tx.getConfidence().getConfidenceType();
+            final boolean isRestoringBackup = application.getConfiguration().isRestoringBackup();
 
             handler.post(new Runnable() {
                 @Override
                 public void run() {
                     final boolean isReceived = amount.signum() > 0;
-                    final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && replaying;
+                    final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && (replaying || isRestoringBackup);
 
                     if (isReceived && !isReplayedTx)
                         notifyCoinsReceived(address, amount, tx.getExchangeRate());
@@ -258,7 +258,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             if (text.length() > 0)
                 text.append(", ");
 
-            final String addressStr = notificationAddress.toBase58();
+            final String addressStr = notificationAddress.toString();
             final String label = AddressBookProvider.resolveLabel(getApplicationContext(), addressStr);
             text.append(label != null ? label : addressStr);
         }
@@ -364,6 +364,13 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 lastMessageTime.set(System.currentTimeMillis());
 
                 config.maybeIncrementBestChainHeightEver(blockChain.getChainHead().getHeight());
+                if(config.isRestoringBackup()) {
+                    long timeAgo = System.currentTimeMillis() - blockChain.getChainHead().getHeader().getTimeSeconds() * 1000;
+                    //if the app was restoring a backup from a file or seed and block chain is nearly synced
+                    //then turn off the restoring indicator
+                    if(timeAgo < DateUtils.DAY_IN_MILLIS)
+                        config.setRestoringBackup(false);
+                }
                 broadcastBlockchainState();
             }
         };
@@ -1015,18 +1022,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         @Override
         public void onSporkUpdated(final SporkMessage sporkMessage) {
-            if (sporkMessage.getSporkID() == SporkManager.SPORK_16_INSTANTSEND_AUTOLOCKS) {
-                boolean autoLockStatusChanged = InstantSend.canAutoLock() != config.getCanAutoLock();
-                if (autoLockStatusChanged) {
-                    config.setCanAutoLock(InstantSend.canAutoLock());
-                }
-            } else if (sporkMessage.getSporkID() == SporkManager.SPORK_20_INSTANTSEND_LLMQ_BASED) {
-                boolean autoLockStatusChanged = InstantSend.canAutoLock() != config.getCanAutoLock();
-                if (autoLockStatusChanged) {
-                    //activate InstantSendAutoLock if LLMQ InstantSend is ON
-                    config.setCanAutoLock(sporkMessage.getValue() != 0);
-                }
-            }
+            //do nothing
         }
     };
 }

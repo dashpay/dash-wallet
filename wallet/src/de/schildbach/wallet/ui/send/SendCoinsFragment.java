@@ -59,7 +59,7 @@ import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
@@ -75,7 +75,7 @@ import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.common.util.GenericUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spongycastle.crypto.params.KeyParameter;
+import org.bouncycastle.crypto.params.KeyParameter;
 
 import java.io.FileNotFoundException;
 import java.io.InputStream;
@@ -88,7 +88,6 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.data.PaymentIntent.Standard;
 import de.schildbach.wallet.data.TransactionResult;
-import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.offline.DirectPaymentTask;
 import de.schildbach.wallet.service.BlockchainState;
@@ -211,9 +210,9 @@ public final class SendCoinsFragment extends Fragment {
         enterAmountSharedViewModel.getMaxButtonClickEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean unused) {
-                final WalletLock walletLock = WalletLock.getInstance();
-                if (walletLock.isWalletLocked(viewModel.wallet)) {
-                    CheckPinDialog.show(getFragmentManager(), AUTH_REQUEST_CODE_MAX);
+                String sessionPin = activity.getSessionPin();
+                if (sessionPin == null) {
+                    CheckPinDialog.show(fragmentManager, AUTH_REQUEST_CODE_MAX);
                 } else {
                     handleEmpty();
                 }
@@ -223,7 +222,12 @@ public final class SendCoinsFragment extends Fragment {
         confirmTransactionSharedViewModel.getClickConfirmButtonEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean aBoolean) {
-                CheckPinDialog.show(fragmentManager, AUTH_REQUEST_CODE_SEND);
+                String sessionPin = activity.getSessionPin();
+                if (sessionPin == null) {
+                    CheckPinDialog.show(fragmentManager, AUTH_REQUEST_CODE_SEND);
+                } else {
+                    handleGo(sessionPin);
+                }
             }
         });
 
@@ -749,7 +753,7 @@ public final class SendCoinsFragment extends Fragment {
             }
 
             @Override
-            protected void handlePrivateKey(final VersionedChecksummedBytes key) {
+            protected void handlePrivateKey(final PrefixedChecksummedBytes key) {
                 throw new UnsupportedOperationException();
             }
 

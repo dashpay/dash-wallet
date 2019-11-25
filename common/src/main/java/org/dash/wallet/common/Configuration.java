@@ -17,15 +17,13 @@
 
 package org.dash.wallet.common;
 
-import java.util.concurrent.TimeUnit ;
-
+import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.content.res.Resources;
 import android.net.Uri;
 import android.text.format.DateUtils;
-
 
 import com.google.common.base.Strings;
 
@@ -34,7 +32,7 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Andreas Schildbach
@@ -73,6 +71,8 @@ public class Configuration {
     public final static String PREFS_LAST_UNLOCK_TIME = "last_unlock_time";
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
     public static final String PREFS_KEY_CAN_AUTO_LOCK = "can_auto_lock";
+    public static final String PREFS_RESTORING_BACKUP = "restoring_backup";
+    public static final String PREFS_KEY_ENSURE_WIPE = "ensure_wipe";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 4;
@@ -84,6 +84,23 @@ public class Configuration {
         this.res = res;
 
         this.lastVersionCode = prefs.getInt(PREFS_KEY_LAST_VERSION, 0);
+    }
+
+    @SuppressLint("ApplySharedPref")
+    public void clear(boolean ensureWipe) {
+        Editor edit = prefs.edit();
+        try {
+            edit.clear();
+            if (ensureWipe) {
+                edit.putBoolean(PREFS_KEY_ENSURE_WIPE, true);
+            }
+        } finally {
+            edit.commit();
+        }
+    }
+
+    public boolean getEnsureWipe() {
+        return prefs.getBoolean(PREFS_KEY_ENSURE_WIPE, false);
     }
 
     private int getBtcPrecision() {
@@ -168,14 +185,17 @@ public class Configuration {
     public boolean remindBackup() {
         return prefs.getBoolean(PREFS_KEY_REMIND_BACKUP, true);
     }
+
     public boolean remindBackupSeed() {
         return prefs.getBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true);
     }
+
     public boolean lastDismissedReminderMoreThan24hAgo() {
         long now = System.currentTimeMillis();
         long lastReminder = prefs.getLong(PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER, now);
         return now - lastReminder > TimeUnit.HOURS.toMillis(24);
     }
+
     public long getLastBackupTime() {
         return prefs.getLong(PREFS_KEY_LAST_BACKUP, 0);
     }
@@ -290,7 +310,15 @@ public class Configuration {
             prefs.edit().putInt(PREFS_KEY_BEST_CHAIN_HEIGHT_EVER, bestChainHeightEver).apply();
     }
 
-        public boolean getLastExchangeDirection() {
+    public boolean isRestoringBackup() {
+        return prefs.getBoolean(PREFS_RESTORING_BACKUP, false);
+    }
+
+    public void setRestoringBackup(final boolean isRestoringBackup) {
+        prefs.edit().putBoolean(PREFS_RESTORING_BACKUP, isRestoringBackup).apply();
+    }
+
+    public boolean getLastExchangeDirection() {
         return prefs.getBoolean(PREFS_KEY_LAST_EXCHANGE_DIRECTION, true);
     }
 

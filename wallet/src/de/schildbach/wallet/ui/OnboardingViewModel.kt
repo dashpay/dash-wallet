@@ -58,6 +58,7 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
         walletApplication.wallet = wallet
         log.info("successfully restored wallet from seed")
         walletApplication.configuration.disarmBackupSeedReminder()
+        walletApplication.configuration.setRestoringBackup(true)
         startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_restore_wallet))
     }
 }

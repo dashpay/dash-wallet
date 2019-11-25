@@ -63,14 +63,20 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation 'androidx.core:core-ktx:1.1.0'
 
-    implementation ('com.google.firebase:firebase-inappmessaging-display:17.2.0') {
+    implementation 'com.google.firebase:firebase-analytics:17.2.0'
+
+    implementation ('com.google.firebase:firebase-inappmessaging:19.0.1') {
         exclude group: 'com.google.protobuf', module: 'protobuf-lite'
         exclude group: 'com.google.firebase', module: 'protolite-well-known-types'
     }
-    implementation 'com.google.firebase:firebase-core:17.2.0'
+    implementation ('com.google.firebase:firebase-inappmessaging-display:19.0.1') {
+        exclude group: 'com.google.protobuf', module: 'protobuf-lite'
+        exclude group: 'com.google.firebase', module: 'protolite-well-known-types'
+    }
 
     implementation "androidx.lifecycle:lifecycle-extensions:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
+    implementation 'com.jakewharton:process-phoenix:2.0.0'
 
     testImplementation 'junit:junit:4.12'
     //Espresso
@@ -100,7 +106,7 @@ android {
         disable 'MissingTranslation'
     }
     defaultConfig {
-        minSdkVersion 16
+        minSdkVersion 19
         targetSdkVersion 28
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']

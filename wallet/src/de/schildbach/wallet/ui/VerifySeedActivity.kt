@@ -69,8 +69,7 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
     override fun skipSeedVerification() {
         WalletApplication.getInstance().configuration.armBackupSeedReminder()
         WalletApplication.getInstance().configuration.setBackupSeedLastDismissedReminder()
-        startActivity(Intent(this, WalletActivity::class.java))
-        finish()
+        goHome()
     }
 
     override fun showRecoveryPhrase() {
@@ -85,11 +84,15 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
 
     override fun onSeedVerified() {
         WalletApplication.getInstance().configuration.disarmBackupSeedReminder()
-        startActivity(Intent(this, WalletActivity::class.java))
-        finish()
+        goHome()
     }
 
     override fun onBackPressed() {
         skipSeedVerification()
+    }
+
+    private fun goHome() {
+        startActivity(Intent(this, WalletActivity::class.java))
+        finish()
     }
 }

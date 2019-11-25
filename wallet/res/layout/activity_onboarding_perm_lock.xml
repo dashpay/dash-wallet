@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:animateLayoutChanges="true"
+    android:background="@android:color/transparent"
+    tools:background="@color/dash_deep_blue"
+    tools:context="de.schildbach.wallet.ui.OnboardingActivity">
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginTop="64dp"
+        android:src="@drawable/splash_activity_slogan" />
+
+    <LinearLayout
+        android:id="@+id/buttons"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/action_title"
+            style="@style/MontserratMedium.PageTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginBottom="128dp"
+            android:text="@string/perm_lock_info"
+            android:textColor="@color/dash_white" />
+
+        <Button
+            android:id="@+id/wipe_wallet"
+            style="@style/DashButton.Blue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/perm_lock_wipe_wallet" />
+
+        <Button
+            android:id="@+id/close_app"
+            style="@style/DashButton.Transparent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/perm_lock_close_app" />
+
+    </LinearLayout>
+
+</FrameLayout>
