@@ -37,20 +37,6 @@ class SecurityActivity : BaseMenuActivity() {
         setTitle(R.string.security_title)
     }
 
-    private fun resetBlockchain() {
-        val dialog = DialogBuilder(this)
-        dialog.setTitle(R.string.preferences_initiate_reset_title)
-        dialog.setMessage(R.string.preferences_initiate_reset_dialog_message)
-        dialog.setPositiveButton(R.string.preferences_initiate_reset_dialog_positive) { _, _ ->
-            log.info("manually initiated blockchain reset")
-
-            WalletApplication.getInstance().resetBlockchain()
-            finish()
-        }
-        dialog.setNegativeButton(R.string.button_dismiss, null)
-        dialog.show()
-    }
-
     fun viewRecoveryPhrase(view: View) {
         BackupWalletToSeedDialogFragment.show(supportFragmentManager)
     }
