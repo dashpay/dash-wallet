@@ -16,17 +16,17 @@
 
 package de.schildbach.wallet.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.WalletLock
 import de.schildbach.wallet_test.R
-import org.dash.wallet.common.ui.DialogBuilder
-import org.slf4j.LoggerFactory
 
 class SecurityActivity : BaseMenuActivity() {
-
-    private val log = LoggerFactory.getLogger(SecurityActivity::class.java)
-
     override fun getLayoutId(): Int {
         return R.layout.activity_security
     }
@@ -37,15 +37,40 @@ class SecurityActivity : BaseMenuActivity() {
         setTitle(R.string.security_title)
     }
 
+    fun backupWallet(view: View) {
+        //Only allow to backup when wallet is unlocked
+        val wallet = WalletApplication.getInstance().wallet
+        val walletLock = WalletLock.getInstance()
+        if (WalletLock.getInstance().isWalletLocked(wallet)) {
+            UnlockWalletDialogFragment.show(supportFragmentManager) {
+                if (!walletLock.isWalletLocked(wallet)) {
+                    backupWallet(view)
+                }
+            }
+            return
+        }
+
+        val permission = Manifest.permission.WRITE_EXTERNAL_STORAGE
+        if (ContextCompat.checkSelfPermission(this, permission)
+                == PackageManager.PERMISSION_GRANTED) {
+            BackupWalletDialogFragment.show(supportFragmentManager)
+        } else {
+            ActivityCompat.requestPermissions(this, arrayOf(permission), 1)
+        }
+    }
+
     fun viewRecoveryPhrase(view: View) {
         BackupWalletToSeedDialogFragment.show(supportFragmentManager)
     }
+
     fun changePin(view: View) {
         throw NotImplementedError()
     }
+
     fun openAdvancedSecurity(view: View) {
         throw NotImplementedError()
     }
+
     fun resetWallet(view: View) {
         throw NotImplementedError()
     }
