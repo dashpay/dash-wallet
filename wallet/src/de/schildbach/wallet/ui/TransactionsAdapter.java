@@ -238,24 +238,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                     if (onClickListener != null) {
                         onClickListener.onTransactionRowClicked(tx);
                     }
-                    //setSelectedItemId(getItemId(transactionHolder.getAdapterPosition()));
                 }
             });
-
-            //
-            // TODO:  Fix merge conflicts with Transaction Details Screen
-            //
-
-            if (onClickListener != null) {
-           //     transactionHolder.menuView.setOnClickListener(new View.OnClickListener() {
-           //         @Override
-           //         public void onClick(final View v) {
-           //             onClickListener.onTransactionMenuClick(v, tx);
-           //         }
-           //     });
-            }
-
-            //transactionHolder.menuView.setVisibility(showTransactionRowMenu ? View.VISIBLE : View.INVISIBLE);
         }
     }
 
