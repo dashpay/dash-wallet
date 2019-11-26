@@ -187,11 +187,13 @@
     <string name="verify_seed_success_title">Verified Successfully</string>
     <string name="verify_seed_success_message">Your wallet is secured now. You can use your recovery phrase anytime to recover your account on another device.</string>
 
-    <string name="transaction_result_view_on_explorer">View on Explorer</string>
-    <string name="transaction_result_paid_successfully">Paid successfully</string>
-    <string name="transaction_result_sent_to">Sent to</string>
-    <string name="transaction_date_and_time">Date &amp; Time</string>
-    <string name="transaction_close">Close</string>
+	<string name="transaction_result_view_on_explorer">View on Explorer</string>
+	<string name="transaction_result_paid_successfully">Paid successfully</string>
+	<string name="transaction_result_sent_to">Sent to</string>
+	<string name="transaction_date_and_time">Date &amp; Time</string>
+	<string name="transaction_close">Close</string>
+	<string name="transaction_details_amount_received">Amount Received</string>
+	<string name="transaction_details_amount_sent">Amount Sent</string>
 
     <string name="authenticate_fingerprint_title">Authenticate</string>
     <string name="authenticate_fingerprint_message">Confirm fingerprint to continue</string>
