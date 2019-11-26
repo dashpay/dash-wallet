@@ -325,7 +325,7 @@ class SetPinActivity : AppCompatActivity() {
     private fun performNextStep(requestCode: Int) {
         when (requestCode) {
             FINGERPRINT_REQUEST_SEED -> startVerifySeedActivity()
-            FINGERPRINT_REQUEST_WALLET -> startWalletActivity()
+            FINGERPRINT_REQUEST_WALLET -> goHome()
         }
     }
 
@@ -334,7 +334,7 @@ class SetPinActivity : AppCompatActivity() {
         startActivityNewTask(intent)
     }
 
-    private fun startWalletActivity() {
+    private fun goHome() {
         val intent = Intent(this, WalletActivity::class.java)
         startActivityNewTask(intent)
     }

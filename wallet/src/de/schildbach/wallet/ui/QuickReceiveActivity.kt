@@ -16,21 +16,33 @@
 
 package de.schildbach.wallet.ui
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.Menu
 import android.view.MenuItem
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_more.*
-import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
-class MoreActivity : GlobalFooterActivity() {
+class QuickReceiveActivity : AppCompatActivity() {
+
+    companion object {
+        @JvmStatic
+        fun createIntent(context: Context): Intent {
+            return Intent(context, QuickReceiveActivity::class.java)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentViewWithFooter(R.layout.activity_more)
-        activateMoreButton()
+        setContentView(R.layout.activity_quick_receive)
+
+        if (savedInstanceState == null) {
+            supportFragmentManager.beginTransaction()
+                    .replace(R.id.container, PaymentsReceiveFragment.newInstance())
+                    .commitNow()
+        }
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
@@ -40,32 +52,22 @@ class MoreActivity : GlobalFooterActivity() {
             setDisplayShowHomeEnabled(true)
         }
 
-        setTitle(R.string.more_title)
-
-        buy_and_sell.setOnClickListener { startBuyAndSellActivity() }
-        security.setOnClickListener { }
-        settings.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
-        }
-        tools.setOnClickListener {
-            startActivity(Intent(this, ToolsActivity::class.java))
-        }
+        setTitle(R.string.receive_title)
     }
 
-    override fun startActivity(intent: Intent) {
-        super.startActivity(intent)
-        overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
-    }
-
-    private fun startBuyAndSellActivity() {
-        val wallet = WalletApplication.getInstance().wallet
-        startActivity(UpholdAccountActivity.createIntent(this, wallet))
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.payment_options, menu)
+        return super.onCreateOptionsMenu(menu)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
+            R.id.option_close -> {
+                finish()
+                return true
+            }
             android.R.id.home -> {
-                onBackPressed()
+                finish()
                 return true
             }
         }

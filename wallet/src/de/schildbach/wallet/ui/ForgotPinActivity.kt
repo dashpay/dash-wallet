@@ -16,23 +16,28 @@
 
 package de.schildbach.wallet.ui
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
-import androidx.appcompat.widget.Toolbar
-import de.schildbach.wallet.WalletApplication
+import androidx.appcompat.app.AppCompatActivity
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_more.*
-import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
+import kotlinx.android.synthetic.main.activity_forgot_pin.*
 
-class MoreActivity : GlobalFooterActivity() {
+class ForgotPinActivity : AppCompatActivity() {
+
+    companion object {
+
+        @JvmStatic
+        fun createIntent(context: Context): Intent {
+            return Intent(context, ForgotPinActivity::class.java)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentViewWithFooter(R.layout.activity_more)
-        activateMoreButton()
+        setContentView(R.layout.activity_forgot_pin)
 
-        val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         val actionBar = supportActionBar
         actionBar?.apply {
@@ -40,26 +45,7 @@ class MoreActivity : GlobalFooterActivity() {
             setDisplayShowHomeEnabled(true)
         }
 
-        setTitle(R.string.more_title)
-
-        buy_and_sell.setOnClickListener { startBuyAndSellActivity() }
-        security.setOnClickListener { }
-        settings.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
-        }
-        tools.setOnClickListener {
-            startActivity(Intent(this, ToolsActivity::class.java))
-        }
-    }
-
-    override fun startActivity(intent: Intent) {
-        super.startActivity(intent)
-        overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
-    }
-
-    private fun startBuyAndSellActivity() {
-        val wallet = WalletApplication.getInstance().wallet
-        startActivity(UpholdAccountActivity.createIntent(this, wallet))
+        setTitle(R.string.forgot_pin_title)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

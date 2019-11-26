@@ -76,6 +76,7 @@ dependencies {
 
     implementation "androidx.lifecycle:lifecycle-extensions:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
+    implementation 'com.jakewharton:process-phoenix:2.0.0'
 
     testImplementation 'junit:junit:4.12'
     //Espresso
@@ -105,7 +106,7 @@ android {
         disable 'MissingTranslation'
     }
     defaultConfig {
-        minSdkVersion 16
+        minSdkVersion 19
         targetSdkVersion 28
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']

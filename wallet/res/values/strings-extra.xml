@@ -24,6 +24,17 @@
     <string name="quick_action_buy_sell">Buy / Sell\nDash</string>
     <string name="quick_action_add_shortcut">Add\nShortcut</string>
 
+    <string name="lock_action_quick_receive">Quick\nReceive</string>
+    <string name="lock_action_login_with_pin">Login\nwith PIN</string>
+    <string name="lock_action_login_with_fingerprint">Login with\nFingerprint</string>
+    <string name="lock_action_scan_to_pay">Scan to\nPay</string>
+    <string name="lock_enter_pin">Enter PIN</string>
+    <string name="lock_unlock_with_fingerprint">Use your fingerprint to unlock</string>
+
+    <string name="perm_lock_info">Wallet permanently locked</string>
+    <string name="perm_lock_wipe_wallet">Wipe wallet</string>
+    <string name="perm_lock_close_app">Close</string>
+
     <string name="scan_to_pay_error_dialog_title">Scan to Pay</string>
     <string name="scan_to_pay_error_dialog_message">Not a valid Dash Address or URL request in clipboard:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Not a valid Dash Address or URL request in clipboard.</string>
@@ -49,6 +60,13 @@
     <string name="payments_pay_to_clipboard_title">Pay to copied address</string>
     <string name="payments_pay_to_clipboard_sub_title">No address copied</string>
     <string name="payments_pay_to_clipboard_button">Pay</string>
+
+    <string name="forgot_pin_title">Forgot PIN?</string>
+    <string name="forgot_pin_message">You can set a new PIN with the help of your recovery phrase?</string>
+    <string name="forgot_pin_instruction_1">Enter recovery phrase to recover wallet</string>
+    <string name="forgot_pin_instruction_2">Setup a new PIN</string>
+    <string name="forgot_pin_instruction_3">Login with your new PIN to access your wallet</string>
+    <string name="forgot_pin_warning">If you have forgot your PIN and lost your recover phrase, you cannot get back access to your wallet and funds.</string>
 
     <string name="send_coins_auto_lock_feasible">This transaction will settle instantly at no extra fee</string>
     <string name="send_coins_auto_lock_not_feasible">This transaction may take several minutes to settle. Complete instantly for %1$s%2$s?</string>
@@ -143,7 +161,9 @@
     <string name="enable_fingerprint">Enable fingerprint</string>
     <string name="touch_fingerprint_sensor">Touch the fingerprint sensor.</string>
     <string name="touch_fingerprint_to_enable">Touch the fingerprint sensor to enable unlocking with fingerprint.</string>
-    <string name="exchange_rate_missing">This payment is too old to get the fiat value.</string>
+    <string name="fingerprint_changed_title">Fingerprint data changed</string>
+	<string name="fingerprint_changed_message">We detected a change in your fingerprint authentication data. You need to use PIN this time.</string>
+	<string name="exchange_rate_missing">This payment is too old to get the fiat value.</string>
 
     <string name="preferences_enable_payment_request_summary">Use payment protocol for QR-code initiated payments</string>
     <string name="preferences_enable_payment_request_title">BIP70 for scan-to-pay</string>
