@@ -17,21 +17,40 @@
 
 package de.schildbach.wallet.ui.send;
 
-import static com.google.common.base.Preconditions.checkState;
+import android.app.Activity;
+import android.app.Dialog;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.media.RingtoneManager;
+import android.net.Uri;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Process;
+import android.view.LayoutInflater;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.TextView;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProviders;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.Loader;
+import androidx.recyclerview.widget.RecyclerView;
 
-import javax.annotation.Nullable;
+import com.google.common.collect.ComparisonChain;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.DumpedPrivateKey;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
@@ -41,7 +60,6 @@ import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.UTXO;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.crypto.BIP38PrivateKey;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.KeyChainGroup;
@@ -49,14 +67,20 @@ import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.WalletTransaction;
+import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ComparisonChain;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
-import org.dash.wallet.common.Configuration;
+import javax.annotation.Nullable;
+
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.DynamicFeeLoader;
@@ -66,39 +90,12 @@ import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
-import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.TransactionsAdapter;
+import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
-import android.app.Activity;
-import android.app.Dialog;
-import androidx.lifecycle.Observer;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.media.RingtoneManager;
-import android.net.Uri;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.Process;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.loader.app.LoaderManager;
-import androidx.loader.content.Loader;
-import androidx.recyclerview.widget.RecyclerView;
-import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.TextView;
-import androidx.lifecycle.ViewModelProviders;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * @author Andreas Schildbach
@@ -131,9 +128,6 @@ public class SweepWalletFragment extends Fragment {
 	private RecyclerView.ViewHolder sweepTransactionViewHolder;
 	private Button viewGo;
 	private ExchangeRate currentExchangeRate;
-
-	private MenuItem reloadAction;
-	private MenuItem scanAction;
 
 	private String password = "";
 
@@ -337,33 +331,6 @@ public class SweepWalletFragment extends Fragment {
 				}.parse();
 			}
 		}
-	}
-
-	@Override
-	public void onCreateOptionsMenu(final Menu menu, final MenuInflater inflater) {
-		inflater.inflate(R.menu.sweep_wallet_fragment_options, menu);
-
-		reloadAction = menu.findItem(R.id.sweep_wallet_options_reload);
-
-		super.onCreateOptionsMenu(menu, inflater);
-	}
-
-	@Override
-	public boolean onOptionsItemSelected(final MenuItem item) {
-		switch (item.getItemId()) {
-			case R.id.sweep_wallet_options_reload:
-				handleReload();
-				return true;
-		}
-
-		return super.onOptionsItemSelected(item);
-	}
-
-	private void handleReload() {
-		if (walletToSweep == null)
-			return;
-
-		requestWalletBalance();
 	}
 
 	private void handleScan() {
@@ -616,12 +583,6 @@ public class SweepWalletFragment extends Fragment {
 			viewGo.setText(R.string.send_coins_failed_msg);
 			viewGo.setEnabled(false);
 		}
-
-		// enable actions
-		if (reloadAction != null)
-			reloadAction.setEnabled(state == State.CONFIRM_SWEEP && walletToSweep != null);
-		if (scanAction != null)
-			scanAction.setEnabled(state == State.DECODE_KEY || state == State.CONFIRM_SWEEP);
 	}
 
 	private void showDecryptDialog() {
