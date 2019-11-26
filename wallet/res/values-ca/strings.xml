@@ -34,6 +34,7 @@
 	<string name="wallet_transactions_options_filter_all">Ambdós</string>
 	<string name="wallet_transactions_options_filter_received">Rebut</string>
 	<string name="wallet_transactions_options_filter_sent">Enviats</string>
+	<string name="wallet_options_safety_menu">Seguretat</string>
 	<string name="wallet_options_encrypt_keys_set">Posa un PIN de despesa</string>
 	<string name="wallet_options_encrypt_keys_change">Modifica el PIN de despesa</string>
 	<string name="wallet_options_safety">Avisos de seguretat</string>

@@ -35,6 +35,7 @@
 	<string name="wallet_transactions_options_filter_all">Të gjitha pagesat</string>
 	<string name="wallet_transactions_options_filter_received">Pagesat e pranuara</string>
 	<string name="wallet_transactions_options_filter_sent">Pagesat e dërguata</string>
+	<string name="wallet_options_safety_menu">Siguria</string>
 	<string name="wallet_options_encrypt_keys_set">Caktoni PIN-in</string>
 	<string name="wallet_options_encrypt_keys_change">Ndryshoni PIN-in</string>
 	<string name="wallet_options_safety">Shënime të sigurisë</string>

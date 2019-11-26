@@ -910,61 +910,59 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }
     }
 
-//    TODO: remove when Security screen is done
-//    @Override
-//    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
-//        super.onCreateContextMenu(menu, v, menuInfo);
-//        MenuInflater inflater = getMenuInflater();
-//        if (v == viewFakeForSafetySubmenu) {
-//            inflater.inflate(R.menu.wallet_safety_options, menu);
-//
-//            final String externalStorageState = Environment.getExternalStorageState();
-//
-//            menu.findItem(R.id.wallet_options_restore_wallet).setEnabled(
-//                    Environment.MEDIA_MOUNTED.equals(externalStorageState) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(externalStorageState));
-//            menu.findItem(R.id.wallet_options_backup_wallet).setEnabled(Environment.MEDIA_MOUNTED.equals(externalStorageState));
-//            menu.findItem(R.id.wallet_options_encrypt_keys).setTitle(
-//                    wallet.isEncrypted() ? R.string.wallet_options_encrypt_keys_change : R.string.wallet_options_encrypt_keys_set);
-//
-//            boolean showFingerprintOption = fingerprintHelper != null && !fingerprintHelper.isFingerprintEnabled();
-//            menu.findItem(R.id.wallet_options_enable_fingerprint).setVisible(showFingerprintOption);
-//        }
-//    }
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+        super.onCreateContextMenu(menu, v, menuInfo);
+        MenuInflater inflater = getMenuInflater();
+        if (v == viewFakeForSafetySubmenu) {
+            inflater.inflate(R.menu.wallet_safety_options, menu);
 
-//    TODO: remove when Security screen is done
-//    @Override
-//    public boolean onContextItemSelected(MenuItem item) {
-//        switch (item.getItemId()) {
-//            case R.id.wallet_options_safety:
-//                HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_safety);
-//                return true;
-//
-//            case R.id.wallet_options_backup_wallet:
-//                handleBackupWallet();
-//                return true;
-//
-//            case R.id.wallet_options_restore_wallet:
-//                handleRestoreWallet();
-//                return true;
-//
-//            case R.id.wallet_options_encrypt_keys:
-//                handleEncryptKeys();
-//                return true;
-//            case R.id.wallet_options_backup_wallet_to_seed:
-//                handleBackupWalletToSeed();
-//                return true;
-//
-//            case R.id.wallet_options_restore_wallet_from_seed:
-//                handleRestoreWalletFromSeed();
-//                return true;
-//
-//            case R.id.wallet_options_enable_fingerprint:
-//                enableFingerprint();
-//                return true;
-//        }
-//
-//        return super.onContextItemSelected(item);
-//    }
+            final String externalStorageState = Environment.getExternalStorageState();
+
+            menu.findItem(R.id.wallet_options_restore_wallet).setEnabled(
+                    Environment.MEDIA_MOUNTED.equals(externalStorageState) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(externalStorageState));
+            menu.findItem(R.id.wallet_options_backup_wallet).setEnabled(Environment.MEDIA_MOUNTED.equals(externalStorageState));
+            menu.findItem(R.id.wallet_options_encrypt_keys).setTitle(
+                    wallet.isEncrypted() ? R.string.wallet_options_encrypt_keys_change : R.string.wallet_options_encrypt_keys_set);
+
+            boolean showFingerprintOption = fingerprintHelper != null && !fingerprintHelper.isFingerprintEnabled();
+            menu.findItem(R.id.wallet_options_enable_fingerprint).setVisible(showFingerprintOption);
+        }
+    }
+
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.wallet_options_safety:
+                HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_safety);
+                return true;
+
+            case R.id.wallet_options_backup_wallet:
+                handleBackupWallet();
+                return true;
+
+            case R.id.wallet_options_restore_wallet:
+                handleRestoreWallet();
+                return true;
+
+            case R.id.wallet_options_encrypt_keys:
+                handleEncryptKeys();
+                return true;
+            case R.id.wallet_options_backup_wallet_to_seed:
+                handleBackupWalletToSeed();
+                return true;
+
+            case R.id.wallet_options_restore_wallet_from_seed:
+                handleRestoreWalletFromSeed();
+                return true;
+
+            case R.id.wallet_options_enable_fingerprint:
+                enableFingerprint();
+                return true;
+        }
+
+        return super.onContextItemSelected(item);
+    }
 
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
@@ -981,9 +979,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
             SweepWalletActivity.start(this);
         } else if (id == R.id.nav_network_monitor) {
             startActivity(new Intent(this, NetworkMonitorActivity.class));
-//        TODO: remove when Security screen is done
-//        } else if (id == R.id.nav_safety) {
-//            openContextMenu(viewFakeForSafetySubmenu);
+        } else if (id == R.id.nav_safety) {
+            openContextMenu(viewFakeForSafetySubmenu);
         } else if (id == R.id.nav_settings) {
             startActivity(new Intent(this, PreferenceActivity.class));
         } else if (id == R.id.nav_disconnect) {

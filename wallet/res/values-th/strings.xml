@@ -35,6 +35,7 @@
     <string name="wallet_transactions_options_filter_all">การชำระเงินทั้งหมด</string>
     <string name="wallet_transactions_options_filter_received">การชำระเงินที่ได้รับ</string>
     <string name="wallet_transactions_options_filter_sent">การชำระเงินที่ส่ง</string>
+    <string name="wallet_options_safety_menu">ปลอดภัย</string>
     <string name="wallet_options_encrypt_keys_set">ตั้งค่า PIN การใช้จ่าย</string>
     <string name="wallet_options_encrypt_keys_change">เปลี่ยน PIN การใช้จ่าย</string>
     <string name="wallet_options_safety">บันทึกความปลอดภัย</string>
@@ -295,7 +296,7 @@
     <string name="notification_coins_received_msg">ได้รับ %s</string>
     <string name="notification_peers_connected_msg">%d peers ที่เชื่อมต่อ</string>
     <string name="notification_inactivity_title">คุณยังคงมี Dash อยู่บนอุปกรณ์นี้!</string>
-    <string name="notification_inactivity_message">คุณยังคงมี Dash อยู่บนอุปกรณ์นี้   โปรดจดวลีการกู้คืนของคุณก่อนทำการถอนติดตั้ง Dash wallet มิฉะนั้นคุณจะเสียยอดเงินทั้งหมดที่คุณมี %s</string>
+        <string name="notification_inactivity_message">คุณยังคงมี Dash อยู่บนอุปกรณ์นี้   โปรดจดวลีการกู้คืนของคุณก่อนทำการถอนติดตั้ง Dash wallet มิฉะนั้นคุณจะเสียยอดเงินทั้งหมดที่คุณมี %s</string>
     <string name="notification_inactivity_action_dismiss">เตือนฉันภายหลัง</string>
     <string name="notification_inactivity_action_dismiss_forever">ไม่ต้องเตือนฉัน</string>
     <string name="appwidget_wallet_balance_title">ยอดคงเหลือ Dash</string>

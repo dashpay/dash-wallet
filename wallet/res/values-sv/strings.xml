@@ -35,6 +35,7 @@
 	<string name="wallet_transactions_options_filter_all">Alla betalningar</string>
 	<string name="wallet_transactions_options_filter_received">Mottagna betalningar</string>
 	<string name="wallet_transactions_options_filter_sent">Skickade betalningar</string>
+	<string name="wallet_options_safety_menu">Säkerhet</string>
 	<string name="wallet_options_encrypt_keys_set">Ställ in PIN-kod</string>
 	<string name="wallet_options_encrypt_keys_change">Ändra PIN-kod</string>
 	<string name="wallet_options_safety">Säkerhetsinfo</string>

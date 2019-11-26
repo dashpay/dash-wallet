@@ -35,6 +35,7 @@
     <string name="wallet_transactions_options_filter_all">Όλες οι συναλλαγές</string>
     <string name="wallet_transactions_options_filter_received">Ληφθείσες πληρωμές</string>
     <string name="wallet_transactions_options_filter_sent">Απεσταλμένες πληρωμές</string>
+    <string name="wallet_options_safety_menu">Ασφάλεια</string>
     <string name="wallet_options_encrypt_keys_set">Ορίστε το PIN ξοδέματος</string>
     <string name="wallet_options_encrypt_keys_change">Αλλάξτε το PIN ξοδέματος</string>
     <string name="wallet_options_safety">Οδηγίες ασφαλείας</string>
@@ -295,7 +296,7 @@
     <string name="notification_coins_received_msg">Ληφθέντα %s</string>
     <string name="notification_peers_connected_msg">%d χρήστες συνδεμένοι</string>
     <string name="notification_inactivity_title">Έχετε ακόμα Dash σε αυτή την συσκευή!</string>
-    <string name="notification_inactivity_message">Εξακολουθείτε να έχετε Dash σε αυτή τη συσκευή! Βεβαιωθείτε ότι έχετε γράψει κάπου τη φράση ανάκτησης προτού απεγκαταστήσετε το Πορτοφόλι Dash αλλιώς θα χάσετε το υπόλοιπο %s.</string>
+        <string name="notification_inactivity_message">Εξακολουθείτε να έχετε Dash σε αυτή τη συσκευή! Βεβαιωθείτε ότι έχετε γράψει κάπου τη φράση ανάκτησης προτού απεγκαταστήσετε το Πορτοφόλι Dash αλλιώς θα χάσετε το υπόλοιπο %s.</string>
     <string name="notification_inactivity_action_dismiss">Υπενθυμίστε το μου αργότερα</string>
     <string name="notification_inactivity_action_dismiss_forever">Μήν μου το υπενθυμίσετε</string>
     <string name="appwidget_wallet_balance_title">Υπόλοιπο Dash</string>

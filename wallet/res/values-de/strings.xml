@@ -35,6 +35,7 @@
     <string name="wallet_transactions_options_filter_all">Alle Zahlungen</string>
     <string name="wallet_transactions_options_filter_received">Empfangene Zahlungen</string>
     <string name="wallet_transactions_options_filter_sent">Gesendete Zahlungen</string>
+    <string name="wallet_options_safety_menu">Sicherheit</string>
     <string name="wallet_options_encrypt_keys_set">Ausgabe-PIN setzen</string>
     <string name="wallet_options_encrypt_keys_change">Ausgabe-PIN ändern</string>
     <string name="wallet_options_safety">Sicherheitshinweise</string>
@@ -296,7 +297,7 @@
     <string name="notification_coins_received_msg">%s empfangen</string>
     <string name="notification_peers_connected_msg">%d Peers verbunden</string>
     <string name="notification_inactivity_title">Es befinden sich immer noch Dash auf Ihrem Gerät.</string>
-    <string name="notification_inactivity_message">Auf dem Gerät befinden sich noch immer Dash! Versichere dich, dass du deine Wiederherstellungsphrase aufgeschrieben hast, bevor du die Dash Wallet deinstallierst, oder du wirst den Zugang zu deinem Guthaben in Höhe von %s verlieren.</string>
+        <string name="notification_inactivity_message">Auf dem Gerät befinden sich noch immer Dash! Versichere dich, dass du deine Wiederherstellungsphrase aufgeschrieben hast, bevor du die Dash Wallet deinstallierst, oder du wirst den Zugang zu deinem Guthaben in Höhe von %s verlieren.</string>
     <string name="notification_inactivity_action_dismiss">Später erinnern</string>
     <string name="notification_inactivity_action_dismiss_forever">Nicht weiter erinnern</string>
     <string name="appwidget_wallet_balance_title">Dash-Guthaben</string>

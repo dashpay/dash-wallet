@@ -35,6 +35,7 @@
     <string name="wallet_transactions_options_filter_all">Tutti i pagamenti</string>
     <string name="wallet_transactions_options_filter_received">Pagamenti ricevuti</string>
     <string name="wallet_transactions_options_filter_sent">Pagamenti inviati</string>
+    <string name="wallet_options_safety_menu">Sicurezza</string>
     <string name="wallet_options_encrypt_keys_set">Imposta il PIN per spendere.</string>
     <string name="wallet_options_encrypt_keys_change">Cambia il PIN di spesa.</string>
     <string name="wallet_options_safety">Note di sicurezza</string>
@@ -295,7 +296,7 @@
     <string name="notification_coins_received_msg">Ricevuti %s</string>
     <string name="notification_peers_connected_msg">Connesso a %d peers</string>
     <string name="notification_inactivity_title">Hai ancora Dash su questo dispositivo!</string>
-    <string name="notification_inactivity_message">Hai ancora Dash su questo dispositivo! Assicurati di annotare la tua frase di recupero prima di disinstallare il Dash Wallet o perderai il tuo saldo di %s.</string>
+        <string name="notification_inactivity_message">Hai ancora Dash su questo dispositivo! Assicurati di annotare la tua frase di recupero prima di disinstallare il Dash Wallet o perderai il tuo saldo di %s.</string>
     <string name="notification_inactivity_action_dismiss">Ricordamelo in seguito</string>
     <string name="notification_inactivity_action_dismiss_forever">Non ricordarmelo</string>
     <string name="appwidget_wallet_balance_title">Bilancio Dash</string>
