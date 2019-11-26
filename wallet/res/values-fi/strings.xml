@@ -35,6 +35,7 @@
     <string name="wallet_transactions_options_filter_all">Kaikki maksut</string>
     <string name="wallet_transactions_options_filter_received">Vastaanotetut maksut</string>
     <string name="wallet_transactions_options_filter_sent">Lähetetyt maksut</string>
+    <string name="wallet_options_safety_menu">Turvallisuus</string>
     <string name="wallet_options_encrypt_keys_set">Aseta PIN maksamista varten</string>
     <string name="wallet_options_encrypt_keys_change">Vaihda maksamiseen käytettävä PIN</string>
     <string name="wallet_options_safety">Turvallisuustiedot</string>

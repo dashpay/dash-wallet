@@ -35,6 +35,7 @@
     <string name="wallet_transactions_options_filter_all">Lahat ng bayad</string>
     <string name="wallet_transactions_options_filter_received">Natanggap na bayad</string>
     <string name="wallet_transactions_options_filter_sent">Naipadalang bayad</string>
+    <string name="wallet_options_safety_menu">Panseguridad</string>
     <string name="wallet_options_encrypt_keys_set">Magtalaga ng spending PIN</string>
     <string name="wallet_options_encrypt_keys_change">Palitan ang spending PIN</string>
     <string name="wallet_options_safety">Talaang pangkaligtasan</string>
@@ -295,7 +296,7 @@
     <string name="notification_coins_received_msg">Natanggap %s</string>
     <string name="notification_peers_connected_msg">%d peers connected</string>
     <string name="notification_inactivity_title">Mayroon ka pang Dash sa device na ito!</string>
-    <string name="notification_inactivity_message">Mayroon ka pang dash sa device na ito! Siguraduhing na naisulat ang iyong recovery phrase bago i-uninstall ang Dash Walet o mawawala lahat ng iyong balanse na %s.</string>
+        <string name="notification_inactivity_message">Mayroon ka pang dash sa device na ito! Siguraduhing na naisulat ang iyong recovery phrase bago i-uninstall ang Dash Walet o mawawala lahat ng iyong balanse na %s.</string>
     <string name="notification_inactivity_action_dismiss">Paalalahanan mo ako mamaya</string>
     <string name="notification_inactivity_action_dismiss_forever">Wag mo akong paalalahanan</string>
     <string name="appwidget_wallet_balance_title">Balanse ng Dash</string>

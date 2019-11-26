@@ -35,6 +35,7 @@
     <string name="wallet_transactions_options_filter_all">Cả hai</string>
     <string name="wallet_transactions_options_filter_received">Đã nhận</string>
     <string name="wallet_transactions_options_filter_sent">Đã gửi</string>
+    <string name="wallet_options_safety_menu">An toàn</string>
     <string name="wallet_options_encrypt_keys_set">Thiết lập mã PIN gửi tiền</string>
     <string name="wallet_options_encrypt_keys_change">Đổi mã PIN gửi tiền</string>
     <string name="wallet_options_safety">Ghi chú an toàn</string>
@@ -295,7 +296,7 @@
     <string name="notification_coins_received_msg">đã nhận %s</string>
     <string name="notification_peers_connected_msg">%d mạng ngang hàng đã kết nối</string>
     <string name="notification_inactivity_title">Bạn vẫn còn Dash trong thiết bị này!</string>
-    <string name="notification_inactivity_message">Bạn vẫn có Dash trên thiết bị này! Hãy chắc chắn rằng bạn viết xuống dòng chữ dùng để phục hồi trước khi gỡ bỏ ví Dash Wallet nếu không bạn sẽ mất hết số dư này %s.</string>
+        <string name="notification_inactivity_message">Bạn vẫn có Dash trên thiết bị này! Hãy chắc chắn rằng bạn viết xuống dòng chữ dùng để phục hồi trước khi gỡ bỏ ví Dash Wallet nếu không bạn sẽ mất hết số dư này %s.</string>
     <string name="notification_inactivity_action_dismiss">Hãy nhắc tôi sau</string>
     <string name="notification_inactivity_action_dismiss_forever">Đừng nhắc tôi nữa</string>
     <string name="appwidget_wallet_balance_title">Số dư Dash</string>

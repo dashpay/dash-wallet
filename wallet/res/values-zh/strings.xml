@@ -35,6 +35,7 @@
     <string name="wallet_transactions_options_filter_all">全部</string>
     <string name="wallet_transactions_options_filter_received">收到的</string>
     <string name="wallet_transactions_options_filter_sent">发送的</string>
+    <string name="wallet_options_safety_menu">安全</string>
     <string name="wallet_options_encrypt_keys_set">设置支付 PIN 码</string>
     <string name="wallet_options_encrypt_keys_change">更改支付 PIN 码</string>
     <string name="wallet_options_safety">安全及风险提示</string>
@@ -295,7 +296,7 @@
     <string name="notification_coins_received_msg">收到了 %s</string>
     <string name="notification_peers_connected_msg">%d 个已连接的网络节点</string>
     <string name="notification_inactivity_title">您的设备中依然存有达世币！</string>
-    <string name="notification_inactivity_message">你的设备上还存有达世币! 在卸载达世币钱包前, 请确保你已经记下了恢复词组, 否则你将丢失%s.</string>
+        <string name="notification_inactivity_message">你的设备上还存有达世币! 在卸载达世币钱包前, 请确保你已经记下了恢复词组, 否则你将丢失%s.</string>
     <string name="notification_inactivity_action_dismiss">以后提醒我</string>
     <string name="notification_inactivity_action_dismiss_forever">不需要提醒</string>
     <string name="appwidget_wallet_balance_title">达世币余额</string>

@@ -35,6 +35,7 @@
     <string name="wallet_transactions_options_filter_all">Tous les paiements</string>
     <string name="wallet_transactions_options_filter_received">Paiements reçus</string>
     <string name="wallet_transactions_options_filter_sent">Paiements envoyés</string>
+    <string name="wallet_options_safety_menu">Sécurité</string>
     <string name="wallet_options_encrypt_keys_set">Définir le code PIN de paiement</string>
     <string name="wallet_options_encrypt_keys_change">Modifier le code PIN de paiement</string>
     <string name="wallet_options_safety">Notes de sécurité</string>
@@ -295,7 +296,7 @@
     <string name="notification_coins_received_msg">%s reçus</string>
     <string name="notification_peers_connected_msg">%d pairs connectés</string>
     <string name="notification_inactivity_title">Il vous reste des dashs sur cet appareil !</string>
-    <string name="notification_inactivity_message">Il vous reste des dashs sur cet appareil ! Assurez-vous d\'avoir noté votre phrase de récupération avant de désinstaller Dash Wallet, sinon vous perdrez votre solde de %s.</string>
+        <string name="notification_inactivity_message">Il vous reste des dashs sur cet appareil ! Assurez-vous d\'avoir noté votre phrase de récupération avant de désinstaller Dash Wallet, sinon vous perdrez votre solde de %s.</string>
     <string name="notification_inactivity_action_dismiss">Me le rappeler plus tard</string>
     <string name="notification_inactivity_action_dismiss_forever">Ne plus me le rappeler</string>
     <string name="appwidget_wallet_balance_title">Solde Dash</string>

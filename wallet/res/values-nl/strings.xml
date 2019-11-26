@@ -35,6 +35,7 @@
     <string name="wallet_transactions_options_filter_all">Alle betalingen</string>
     <string name="wallet_transactions_options_filter_received">Ontvangen betalingen</string>
     <string name="wallet_transactions_options_filter_sent">Verstuurde betalingen</string>
+    <string name="wallet_options_safety_menu">Veiligheid</string>
     <string name="wallet_options_encrypt_keys_set">Pincode instellen voor betalingen</string>
     <string name="wallet_options_encrypt_keys_change">Pincode voor betalingen wijzigen</string>
     <string name="wallet_options_safety">Veiligheidsvoorschriften</string>
@@ -295,7 +296,7 @@
     <string name="notification_coins_received_msg">Ontvangen %s</string>
     <string name="notification_peers_connected_msg">%d actieve verbindingen</string>
     <string name="notification_inactivity_title">U heeft nog Dash op dit apparaat!</string>
-    <string name="notification_inactivity_message">Je hebt nog steeds Dash op dit apparaat! Vergeet niet om uw herstelzin te noteren voordat u de Dash portemonnee app verwijdert, anders verliest u uw saldo van %s.</string>
+        <string name="notification_inactivity_message">Je hebt nog steeds Dash op dit apparaat! Vergeet niet om uw herstelzin te noteren voordat u de Dash portemonnee app verwijdert, anders verliest u uw saldo van %s.</string>
     <string name="notification_inactivity_action_dismiss">Herinner me later</string>
     <string name="notification_inactivity_action_dismiss_forever">Herinner me niet</string>
     <string name="appwidget_wallet_balance_title">Dash-saldo</string>
