@@ -106,28 +106,32 @@
         app:srcCompat="@drawable/check_animated" />
 
     <TextView
-        android:id="@+id/address_label"
-        style="@style/MontserratRegular.G"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="@string/transaction_result_sent_to"
-        android:textSize="16sp"
-        app:layout_constraintStart_toStartOf="@+id/center_divider"
-        app:layout_constraintTop_toBottomOf="@+id/center_divider" />
-
-    <TextView
         android:id="@+id/transaction_address"
         style="@style/MontserratRegular.MG"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
         android:layout_marginEnd="16dp"
         android:layout_marginRight="16dp"
         android:text="@string/transaction_result_sent_to"
         android:textSize="16sp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/address_label"
+        app:layout_constraintTop_toBottomOf="@id/center_divider"
         tools:text="XkDnBY4…RfzLRJH6Ex" />
+
+    <TextView
+        android:id="@+id/address_label"
+        style="@style/MontserratRegular.G"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginRight="4dp"
+        android:ellipsize="end"
+        android:lines="1"
+        android:text="@string/transaction_result_sent_to"
+        android:textSize="16sp"
+        app:layout_constraintEnd_toStartOf="@id/transaction_address"
+        app:layout_constraintStart_toStartOf="@+id/center_divider"
+        app:layout_constraintTop_toTopOf="@id/transaction_address" />
 
     <View
         android:id="@+id/separator2"
@@ -136,71 +140,78 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/address_label" />
 
-    <TextView
-        android:id="@+id/network_fee_label"
-        style="@style/MontserratRegular.G"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="@string/transaction_row_fee"
-        android:textSize="16sp"
-        app:layout_constraintStart_toStartOf="@+id/separator2"
-        app:layout_constraintTop_toBottomOf="@+id/separator2" />
-
     <org.dash.wallet.common.ui.CurrencyTextView
         android:id="@+id/transaction_fee"
         style="@style/MontserratRegular.MG"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
         android:layout_marginEnd="16dp"
         android:layout_marginRight="16dp"
         android:text="@string/transaction_result_sent_to"
         android:textSize="16sp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/network_fee_label"
+        app:layout_constraintTop_toBottomOf="@id/separator2"
         tools:text="-0.00000239 Dash" />
 
     <ImageView
+        android:id="@+id/fee_dash_icon"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="1dp"
         android:layout_marginEnd="8dp"
         android:layout_marginRight="8dp"
-        android:id="@+id/fee_dash_icon"
         app:layout_constraintBottom_toBottomOf="@+id/transaction_fee"
         app:layout_constraintEnd_toStartOf="@+id/transaction_fee"
         app:layout_constraintTop_toTopOf="@+id/transaction_fee"
         app:srcCompat="@drawable/ic_dash_symbol_gray" />
+
+    <TextView
+        android:id="@+id/network_fee_label"
+        style="@style/MontserratRegular.G"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginRight="4dp"
+        android:ellipsize="end"
+        android:lines="1"
+        android:text="@string/transaction_row_fee"
+        android:textSize="16sp"
+        app:layout_constraintEnd_toStartOf="@id/fee_dash_icon"
+        app:layout_constraintStart_toStartOf="@id/separator2"
+        app:layout_constraintTop_toTopOf="@id/transaction_fee" />
 
     <View
         android:id="@+id/separator3"
         style="@style/SuccessfulTransactionSeparator"
         android:layout_marginTop="16dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/network_fee_label" />
+        app:layout_constraintTop_toBottomOf="@+id/transaction_fee" />
 
     <TextView
         android:id="@+id/transaction_date_and_time_label"
         style="@style/MontserratRegular.G"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginEnd="4dp"
+        android:layout_marginRight="4dp"
+        android:lines="1"
+        android:ellipsize="end"
         android:text="@string/transaction_date_and_time"
         android:textSize="16sp"
-        app:layout_constraintStart_toStartOf="@+id/separator2"
-        app:layout_constraintTop_toBottomOf="@+id/separator3" />
+        app:layout_constraintEnd_toStartOf="@id/transaction_date_and_time"
+        app:layout_constraintStart_toStartOf="@+id/separator3"
+        app:layout_constraintTop_toTopOf="@id/transaction_date_and_time" />
 
     <TextView
         android:id="@+id/transaction_date_and_time"
         style="@style/MontserratRegular.MG"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
-        android:layout_marginRight="16dp"
+        android:layout_marginTop="12dp"
         android:text="@string/transaction_result_sent_to"
         android:textSize="16sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/transaction_date_and_time_label"
+        app:layout_constraintEnd_toEndOf="@id/separator3"
+        app:layout_constraintTop_toBottomOf="@id/separator3"
         tools:text="2014-01-19 01:40" />
 
     <View

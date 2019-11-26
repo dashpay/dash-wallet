@@ -406,10 +406,8 @@
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowContentOverlay">@null</item>
-        <item name="android:colorBackground">@null</item>
-        <item name="android:colorBackgroundCacheHint">@null</item>
+        <item name="android:colorBackground">@color/bg_dialog</item>
         <item name="android:windowFrame">@null</item>
-        <item name="android:windowBackground">@null</item>
         <item name="android:windowIsFloating">false</item>
     </style>
     <!--

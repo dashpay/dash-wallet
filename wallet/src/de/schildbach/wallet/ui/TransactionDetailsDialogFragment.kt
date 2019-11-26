@@ -9,14 +9,12 @@ import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import androidx.core.content.ContextCompat
-import androidx.core.view.children
 import androidx.fragment.app.DialogFragment
 import de.schildbach.wallet.data.TransactionResult
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_successful_transaction.*
 import kotlinx.android.synthetic.main.transaction_details_dialog.*
-import org.dash.wallet.common.Constants
 
 /**
  * @author Samuel Barbosa
