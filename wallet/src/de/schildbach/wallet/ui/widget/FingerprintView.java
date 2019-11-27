@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui.widget;
 
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -42,22 +43,34 @@ public class FingerprintView extends LinearLayout {
 
     public FingerprintView(Context context) {
         super(context);
-        init();
+        init(null);
 
     }
 
     public FingerprintView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
-        init();
+        init(attrs);
     }
 
     public FingerprintView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        init();
+        init(attrs);
     }
 
-    private void init() {
-        LayoutInflater.from(getContext()).inflate(R.layout.fingerprint_view, this, true);
+    private void init(@Nullable AttributeSet attrs) {
+        int layoutResId = R.layout.fingerprint_view;
+        if (attrs != null) {
+            TypedArray attrsArray = getContext().obtainStyledAttributes(attrs, R.styleable.FingerprintView);
+            try {
+                int customLayoutResId = attrsArray.getResourceId(R.styleable.FingerprintView_custom_layout, 0);
+                if (customLayoutResId > 0) {
+                    layoutResId = customLayoutResId;
+                }
+            } finally {
+                attrsArray.recycle();
+            }
+        }
+        LayoutInflater.from(getContext()).inflate(layoutResId, this, true);
         fingerprintText = findViewById(R.id.fingerprint_text);
         fingerprintIcon = findViewById(R.id.fingerprint_icon);
         initialText = fingerprintText.getText().toString();

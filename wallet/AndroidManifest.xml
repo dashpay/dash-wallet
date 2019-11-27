@@ -69,6 +69,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
         </activity>
@@ -217,6 +218,10 @@
         <activity android:name="org.dash.wallet.integration.uphold.ui.UpholdAccountActivity"
             android:theme="@style/My.Theme.ChildActivity"/>
 
+        <activity android:name="de.schildbach.wallet.ui.LockScreenActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/LockScreenActivity.Theme" />
+
         <activity android:name="de.schildbach.wallet.ui.SetPinActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
@@ -245,7 +250,20 @@
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
+        <activity android:name="de.schildbach.wallet.ui.QuickReceiveActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity" />
+
         <activity android:name="de.schildbach.wallet.ui.ReceiveActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity" />
+
+        <activity
+            android:name="de.schildbach.wallet.ui.TransactionResultActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.Fullscreen" />
+
+        <activity android:name="de.schildbach.wallet.ui.ForgotPinActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 

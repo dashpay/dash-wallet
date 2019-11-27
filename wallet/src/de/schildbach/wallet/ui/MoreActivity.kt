@@ -54,7 +54,7 @@ class MoreActivity : GlobalFooterActivity() {
         }
     }
 
-    override fun startActivity(intent: Intent?) {
+    override fun startActivity(intent: Intent) {
         super.startActivity(intent)
         overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
     }

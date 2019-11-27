@@ -31,7 +31,7 @@ import de.schildbach.wallet_test.R
 private const val FINISH_ALL_ACTIVITIES_ACTION = "dash.wallet.action.CLOSE_ALL_ACTIVITIES_ACTION"
 
 @SuppressLint("Registered")
-open class GlobalFooterActivity : AppCompatActivity(), GlobalFooterView.OnFooterActionListener {
+open class GlobalFooterActivity : SessionActivity(), GlobalFooterView.OnFooterActionListener {
 
     companion object {
         @JvmStatic
