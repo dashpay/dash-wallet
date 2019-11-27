@@ -64,7 +64,7 @@ class SecurityActivity : BaseMenuActivity() {
     }
 
     fun changePin(view: View) {
-        throw NotImplementedError()
+        startActivity(SetPinActivity.createIntent(this, R.string.wallet_options_encrypt_keys_change, true));
     }
 
     fun openAdvancedSecurity(view: View) {
