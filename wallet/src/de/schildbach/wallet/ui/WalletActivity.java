@@ -566,7 +566,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     public void handleEncryptKeys() {
-        EncryptKeysDialogFragment.show(true, getSupportFragmentManager());
+        startActivity(SetPinActivity.createIntent(this, R.string.wallet_options_encrypt_keys_change, true));
     }
 
     public void handleEncryptKeysRestoredWallet() {

@@ -225,6 +225,8 @@
     <string name="about_github_link">https://github.com/dashevo/dash-wallet</string>
     <string name="about_version_name">Dash Wallet %s</string>
 
+    <string name="confirm">Confirm</string>
+
     <string-array name="history_filter">
         <item>All</item>
         <item>Received</item>
