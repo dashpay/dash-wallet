@@ -61,7 +61,11 @@ public final class HeaderBalanceFragment extends Fragment {
     private Wallet wallet;
     private LoaderManager loaderManager;
 
-    private View viewBalance;
+    private Boolean hideBalance;
+    private View showBalanceButton;
+    private TextView hideShowBalanceHint;
+    private TextView caption;
+    private View view;
     private CurrencyTextView viewBalanceDash;
     private CurrencyTextView viewBalanceLocal;
 
@@ -101,6 +105,7 @@ public final class HeaderBalanceFragment extends Fragment {
         this.activity = (AbstractBindServiceActivity) activity;
         this.application = (WalletApplication) activity.getApplication();
         this.config = application.getConfiguration();
+        hideBalance = config.getHideBalance();
         this.wallet = application.getWallet();
         this.loaderManager = LoaderManager.getInstance(this);
 
@@ -122,7 +127,10 @@ public final class HeaderBalanceFragment extends Fragment {
     public void onViewCreated(@NonNull final View view, final Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        viewBalance = view.findViewById(R.id.wallet_balance);
+        caption = view.findViewById(R.id.caption);
+        hideShowBalanceHint = view.findViewById(R.id.hide_show_balance_hint);
+        this.view = view;
+        showBalanceButton = view.findViewById(R.id.show_balance_button);
 
         viewBalanceDash = view.findViewById(R.id.wallet_balance_dash);
         viewBalanceDash.setApplyMarkup(false);
@@ -131,12 +139,11 @@ public final class HeaderBalanceFragment extends Fragment {
         viewBalanceLocal.setInsignificantRelativeSize(1);
         viewBalanceLocal.setStrikeThru(!Constants.IS_PROD_BUILD);
 
-        viewBalance.setOnClickListener(new OnClickListener() {
+        view.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (!(getActivity() instanceof ExchangeRatesActivity)) {
-                    showExchangeRatesActivity();
-                }
+                hideBalance = !hideBalance;
+                updateView();
             }
         });
     }
@@ -184,12 +191,28 @@ public final class HeaderBalanceFragment extends Fragment {
     }
 
     private void updateView() {
+        View balances = view.findViewById(R.id.balances);
+        TextView walletBalanceSyncMessage = view.findViewById(R.id.wallet_balance_sync_message);
+        View balancesLayout = view.findViewById(R.id.balances_layout);
+
+        if (hideBalance) {
+            balancesLayout.setVisibility(View.GONE);
+            caption.setText(R.string.home_balance_hidden);
+            hideShowBalanceHint.setText(R.string.home_balance_show_hint);
+            balances.setVisibility(View.GONE);
+            walletBalanceSyncMessage.setVisibility(View.GONE);
+            showBalanceButton.setVisibility(View.VISIBLE);
+            return;
+        }
+        balancesLayout.setVisibility(View.VISIBLE);
+        caption.setText(R.string.home_available_balance);
+        hideShowBalanceHint.setText(R.string.home_balance_hide_hint);
+        showBalanceButton.setVisibility(View.GONE);
+
         if (!isAdded()) {
             return;
         }
 
-        View balances = viewBalance.findViewById(R.id.balances);
-        TextView walletBalanceSyncMessage = viewBalance.findViewById(R.id.wallet_balance_sync_message);
         if (!isSynced) {
             balances.setVisibility(View.GONE);
             walletBalanceSyncMessage.setVisibility(View.VISIBLE);
@@ -223,7 +246,6 @@ public final class HeaderBalanceFragment extends Fragment {
         } else {
             viewBalanceDash.setVisibility(View.INVISIBLE);
         }
-        viewBalance.setVisibility(View.VISIBLE);
 
         activity.invalidateOptionsMenu();
     }
