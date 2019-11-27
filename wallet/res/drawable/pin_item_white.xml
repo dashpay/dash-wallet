@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<transition xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/ic_pin_item_inactive_white" />
+    <item android:drawable="@drawable/ic_pin_item_gray" />
+</transition>

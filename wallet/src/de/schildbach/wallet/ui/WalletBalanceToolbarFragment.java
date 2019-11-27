@@ -401,27 +401,4 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 			scheduleAutoLock();
 		}
 	}
-
-	/*private final LoaderManager.LoaderCallbacks<Integer> masternodeSyncLoaderCallbacks = new LoaderManager.LoaderCallbacks<Integer>()
-	{
-		@Override
-		public Loader<Integer> onCreateLoader(final int id, final Bundle args)
-		{
-			return new MasternodeSyncLoader(activity, wallet);
-		}
-
-		@Override
-		public void onLoadFinished(final Loader<Integer> loader, final Integer newStatus)
-		{
-			WalletBalanceToolbarFragment.this.masternodeSyncStatus = newStatus;
-
-			updateView();
-
-		}
-
-		@Override
-		public void onLoaderReset(final Loader<Integer> loader)
-		{
-		}
-	};*/
 }

@@ -20,7 +20,10 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
 import androidx.appcompat.widget.Toolbar
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.activity_more.*
+import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
 class MoreActivity : GlobalFooterActivity() {
 
@@ -38,6 +41,25 @@ class MoreActivity : GlobalFooterActivity() {
         }
 
         setTitle(R.string.more_title)
+
+        buy_and_sell.setOnClickListener { startBuyAndSellActivity() }
+        security.setOnClickListener { }
+        settings.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+        tools.setOnClickListener {
+            startActivity(Intent(this, ToolsActivity::class.java))
+        }
+    }
+
+    override fun startActivity(intent: Intent) {
+        super.startActivity(intent)
+        overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
+    }
+
+    private fun startBuyAndSellActivity() {
+        val wallet = WalletApplication.getInstance().wallet
+        startActivity(UpholdAccountActivity.createIntent(this, wallet))
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -48,15 +70,5 @@ class MoreActivity : GlobalFooterActivity() {
             }
         }
         return super.onOptionsItemSelected(item)
-    }
-
-    override fun startActivity(intent: Intent?) {
-        super.startActivity(intent)
-        overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
-    }
-
-    override fun finish() {
-        super.finish()
-        overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
     }
 }

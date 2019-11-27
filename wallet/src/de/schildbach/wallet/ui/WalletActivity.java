@@ -30,7 +30,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.graphics.Point;
 import android.net.Uri;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
@@ -40,24 +39,25 @@ import android.os.Environment;
 import android.os.Handler;
 import android.telephony.TelephonyManager;
 import android.view.ContextMenu;
-import android.view.Display;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
-import androidx.annotation.RequiresApi;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.Toolbar;
-import androidx.constraintlayout.motion.widget.MotionLayout;
-import androidx.constraintlayout.widget.ConstraintSet;
+import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.recyclerview.widget.RecyclerView;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProviders;
 
+import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.navigation.NavigationView;
 import com.google.common.collect.ImmutableList;
 import com.squareup.okhttp.HttpUrl;
@@ -65,7 +65,7 @@ import com.squareup.okhttp.HttpUrl;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
@@ -73,6 +73,9 @@ import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
 import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.IOException;
 import java.util.Currency;
@@ -86,6 +89,7 @@ import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.preference.PreferenceActivity;
+import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
@@ -93,6 +97,7 @@ import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
+import kotlin.Pair;
 
 /**
  * @author Andreas Schildbach
@@ -101,10 +106,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback,
         NavigationView.OnNavigationItemSelectedListener,
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
-        EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
-        EnableFingerprintDialog.OnFingerprintEnabledListener,
-        EncryptKeysDialogFragment.OnOnboardingCompleteListener,
-        WalletTransactionsFragment.MotionLayoutProvider {
+        EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
 
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
@@ -112,6 +114,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private static final int DIALOG_TIMESKEW_ALERT = 3;
     private static final int DIALOG_VERSION_ALERT = 4;
     private static final int DIALOG_LOW_STORAGE_ALERT = 5;
+
+    public static Intent createIntent(Context context) {
+        return new Intent(context, WalletActivity.class);
+    }
 
     private WalletApplication application;
     private Configuration config;
@@ -133,6 +139,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private boolean showBackupWalletDialog = false;
 
+    private CheckPinSharedModel checkPinSharedModel;
+
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -143,7 +151,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         setContentViewFooter(R.layout.home_activity);
         setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
-        adjustHeaderLayout();
         activateHomeButton();
 
         if (savedInstanceState == null) {
@@ -158,6 +165,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         initUphold();
         initView();
+        initViewModel();
 
         //Prevent showing dialog twice or more when activity is recreated (e.g: rotating device, etc)
         if (savedInstanceState == null) {
@@ -172,22 +180,31 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (config.remindBackupSeed() && config.lastDismissedReminderMoreThan24hAgo()) {
             BackupWalletToSeedDialogFragment.show(getSupportFragmentManager());
         }
+
+        View appBar = findViewById(R.id.app_bar);
+        CoordinatorLayout.LayoutParams params = (CoordinatorLayout.LayoutParams) appBar.getLayoutParams();
+        if (params.getBehavior() == null) {
+            params.setBehavior(new AppBarLayout.Behavior());
+        }
+        AppBarLayout.Behavior behaviour = (AppBarLayout.Behavior) params.getBehavior();
+        behaviour.setDragCallback(new AppBarLayout.Behavior.DragCallback() {
+            @Override
+            public boolean canDrag(@NonNull AppBarLayout appBarLayout) {
+                WalletTransactionsFragment walletTransactionsFragment = (WalletTransactionsFragment)
+                        getSupportFragmentManager().findFragmentById(R.id.wallet_transactions_fragment);
+                return walletTransactionsFragment != null && !walletTransactionsFragment.isHistoryEmpty();
+            }
+        });
     }
 
-    private void adjustHeaderLayout() {
-        Display display = getWindowManager().getDefaultDisplay();
-        Point size = new Point();
-        display.getSize(size);
-        float screenHeight = size.y;
-        int headerHeight = (int) (screenHeight * 0.5);
-        ViewGroup.LayoutParams headerPaneParams = findViewById(R.id.header_pane).getLayoutParams();
-        headerPaneParams.height = headerHeight;
-        MotionLayout motionLayout = findViewById(R.id.home_content);
-        ConstraintSet constraintSetExpanded = motionLayout.getConstraintSet(R.id.expanded);
-        constraintSetExpanded.constrainHeight(R.id.header_pane, headerHeight);
-        View availableBalanceView = findViewById(R.id.available_balance);
-        MotionLayout.LayoutParams availableBalanceParams = (MotionLayout.LayoutParams) availableBalanceView.getLayoutParams();
-        availableBalanceParams.bottomMargin = (int) ((float) headerHeight * 0.35f);
+    private void initViewModel() {
+        checkPinSharedModel = ViewModelProviders.of(this).get(CheckPinSharedModel.class);
+        checkPinSharedModel.getOnCorrectPinCallback().observe(this, new Observer<Pair<Integer, String>>() {
+            @Override
+            public void onChanged(Pair<Integer, String> integerStringPair) {
+
+            }
+        });
     }
 
     private void initFingerprintHelper() {
@@ -222,13 +239,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
         findViewById(R.id.pay_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                handleSendCoins();
+                startActivity(PaymentsActivity.createIntent(WalletActivity.this, PaymentsActivity.ACTIVE_TAB_PAY));
             }
         });
         findViewById(R.id.receive_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                handleRequestCoins();
+                startActivity(PaymentsActivity.createIntent(WalletActivity.this, PaymentsActivity.ACTIVE_TAB_RECEIVE));
             }
         });
     }
@@ -248,7 +265,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         findViewById(R.id.scan_to_pay_action).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                handleScan();
+                handleScan(v);
             }
         });
         findViewById(R.id.buy_sell_action).setOnClickListener(new View.OnClickListener() {
@@ -319,6 +336,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     @Override
     protected void onNewIntent(final Intent intent) {
+        super.onNewIntent(intent);
         handleIntent(intent);
     }
 
@@ -379,7 +397,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
 
             @Override
-            protected void handlePrivateKey(final VersionedChecksummedBytes key) {
+            protected void handlePrivateKey(final PrefixedChecksummedBytes key) {
                 SweepWalletActivity.start(WalletActivity.this, key);
             }
 
@@ -503,8 +521,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         startActivity(new Intent(this, SendCoinsActivity.class));
     }
 
-    public void handleScan() {
-        startActivityForResult(new Intent(this, ScanActivity.class), REQUEST_CODE_SCAN);
+    public void handleScan(View clickView) {
+        ScanActivity.startForResult(this, clickView, REQUEST_CODE_SCAN);
     }
 
     public void handleBackupWallet() {
@@ -561,33 +579,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void handleReportIssue() {
-        final ReportIssueDialogBuilder dialog = new ReportIssueDialogBuilder(this,
-                R.string.report_issue_dialog_title_issue, R.string.report_issue_dialog_message_issue) {
-            @Override
-            protected CharSequence subject() {
-                return Constants.REPORT_SUBJECT_BEGIN + application.packageInfo().versionName + " " + Constants.REPORT_SUBJECT_ISSUE;
-            }
-
-            @Override
-            protected CharSequence collectApplicationInfo() throws IOException {
-                final StringBuilder applicationInfo = new StringBuilder();
-                CrashReporter.appendApplicationInfo(applicationInfo, application);
-                return applicationInfo;
-            }
-
-            @Override
-            protected CharSequence collectDeviceInfo() throws IOException {
-                final StringBuilder deviceInfo = new StringBuilder();
-                CrashReporter.appendDeviceInfo(deviceInfo, WalletActivity.this);
-                return deviceInfo;
-            }
-
-            @Override
-            protected CharSequence collectWalletDump() {
-                return application.getWallet().toString(false, true, true, null);
-            }
-        };
-        dialog.show();
+        ReportIssueDialogBuilder.createReportIssueDialog(this, application).show();
     }
 
     private void handlePaste() {
@@ -663,6 +655,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             @Override
             public void onRestoreWallet(Wallet wallet) {
                 restoreWallet(wallet);
+                application.getConfiguration().setRestoringBackup(true);
             }
 
             @Override
@@ -694,7 +687,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             @Override
             public void onClick(final DialogInterface dialog, final int id) {
                 startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
-                finish();
                 finish();
             }
         });
@@ -1011,14 +1003,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void startUpholdActivity() {
-        Intent intent;
-        if (UpholdClient.getInstance().isAuthenticated()) {
-            intent = new Intent(this, UpholdAccountActivity.class);
-        } else {
-            intent = new Intent(this, UpholdSplashActivity.class);
-        }
-        intent.putExtra(UpholdAccountActivity.WALLET_RECEIVING_ADDRESS_EXTRA, wallet.currentReceiveAddress().toString());
-        startActivity(intent);
+        startActivity(UpholdAccountActivity.createIntent(this, wallet));
     }
 
     //Dash Specific
@@ -1066,6 +1051,56 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @Override
     public void onNewKeyChainEncrypted() {
 
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        findViewById(R.id.restart_sync_icon).setOnClickListener(new View.OnClickListener() {
+            public void onClick(final View v) {
+                findViewById(R.id.sync_error_pane).setVisibility(View.GONE);
+                findViewById(R.id.sync_progress_pane).setVisibility(View.VISIBLE);
+            }
+        });
+        EventBus.getDefault().register(this);
+    }
+
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    public void onEvent(SyncProgressEvent event) {
+        ProgressBar syncProgressView = findViewById(R.id.sync_status_progress);
+        if (event.getFailed()) {
+            findViewById(R.id.sync_progress_pane).setVisibility(View.GONE);
+            findViewById(R.id.sync_error_pane).setVisibility(View.VISIBLE);
+            return;
+        }
+        showSyncPane(R.id.sync_error_pane, false);
+        showSyncPane(R.id.sync_progress_pane, true);
+        int percentage = (int) event.getPct();
+        TextView syncStatusTitle = findViewById(R.id.sync_status_title);
+        TextView syncStatusMessage = findViewById(R.id.sync_status_message);
+        if (percentage != syncProgressView.getProgress()) {
+            syncProgressView.setProgress(percentage);
+            TextView syncPercentageView = findViewById(R.id.sync_status_percentage);
+
+            syncPercentageView.setText(percentage + "%");
+            if (percentage == 100) {
+                syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
+                syncStatusTitle.setText("Sync");
+                syncStatusMessage.setText("Completed");
+                showSyncPane(R.id.sync_status_pane, false);
+            } else {
+                syncPercentageView.setTextColor(getResources().getColor(R.color.dash_gray));
+                syncStatusTitle.setText("Syncing");
+                syncStatusMessage.setText("with Dash Blockchain");
+                showSyncPane(R.id.sync_status_pane, true);
+            }
+        }
+    }
+
+    @Override
+    public void onStop() {
+        EventBus.getDefault().unregister(this);
+        super.onStop();
     }
 
     /**
@@ -1159,28 +1194,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         dialogBuilder.show();
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
-    @Override
-    public void onFingerprintEnabled() {
-        WalletTransactionsFragment walletTransactionsFragment = (WalletTransactionsFragment)
-                getSupportFragmentManager().findFragmentById(R.id.wallet_transactions_fragment);
-        if (walletTransactionsFragment != null) {
-            walletTransactionsFragment.onLockChanged(WalletLock.getInstance().isWalletLocked(wallet));
-        }
-    }
-
-    @Override
-    public void onOnboardingComplete() {
-
-    }
-
-    @Override
-    public MotionLayout getMotionLayout() {
-        return findViewById(R.id.home_content);
-    }
-
-    @Override
-    public RecyclerView getRecyclerView() {
-        return findViewById(R.id.home_recycler);
+    private void showSyncPane(int id, boolean show) {
+        findViewById(id).setVisibility(show ? View.VISIBLE : View.GONE);
     }
 }

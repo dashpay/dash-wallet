@@ -17,43 +17,6 @@
 
 package de.schildbach.wallet.ui;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.annotation.Nullable;
-
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.ScriptException;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.Transaction.Purpose;
-import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.Configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.AddressBookProvider;
-import de.schildbach.wallet.data.TransactionResult;
-import de.schildbach.wallet.data.WalletLock;
-import de.schildbach.wallet.util.BitmapFragment;
-import de.schildbach.wallet.util.CrashReporter;
-import de.schildbach.wallet.util.FingerprintHelper;
-import de.schildbach.wallet.util.Qr;
-import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
-import de.schildbach.wallet.util.WalletUtils;
-import de.schildbach.wallet_test.R;
-
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
@@ -65,56 +28,73 @@ import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.database.ContentObserver;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
-import android.graphics.Typeface;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
-import androidx.constraintlayout.motion.widget.MotionLayout;
-import androidx.core.content.ContextCompat;
-import androidx.fragment.app.Fragment;
-import androidx.loader.app.LoaderManager;
-import androidx.loader.content.AsyncTaskLoader;
-import androidx.loader.content.Loader;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import androidx.core.os.CancellationSignal;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-import android.text.Spannable;
-import android.text.SpannableStringBuilder;
-import android.text.Spanned;
 import android.text.format.DateUtils;
-import android.text.style.AbsoluteSizeSpan;
-import android.text.style.ForegroundColorSpan;
-import android.text.style.StyleSpan;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.PopupMenu.OnMenuItemClickListener;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import androidx.fragment.app.Fragment;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.AsyncTaskLoader;
+import androidx.loader.content.Loader;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import org.bitcoinj.core.Address;
+import org.bitcoinj.script.ScriptException;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.Transaction.Purpose;
+import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
+import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.RejectedExecutionException;
+
+import javax.annotation.Nullable;
+
+import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.AddressBookProvider;
+import de.schildbach.wallet.data.TransactionResult;
+import de.schildbach.wallet.util.BitmapFragment;
+import de.schildbach.wallet.util.CrashReporter;
+import de.schildbach.wallet.util.Qr;
+import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
+import de.schildbach.wallet.util.WalletUtils;
+import de.schildbach.wallet_test.R;
+
 /**
  * @author Andreas Schildbach
  */
 public class WalletTransactionsFragment extends Fragment implements LoaderManager.LoaderCallbacks<List<Transaction>>,
-        TransactionsAdapter.OnClickListener, OnSharedPreferenceChangeListener, WalletLock.OnLockChangeListener {
+        TransactionsAdapter.OnClickListener, OnSharedPreferenceChangeListener {
 
 
     public enum Direction {
         RECEIVED, SENT;
     }
+
     private AbstractWalletActivity activity;
 
     private WalletApplication application;
@@ -125,22 +105,12 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
     private TextView emptyView;
     private View loading;
-    private View transactionListContainer;
-    private View fingerprintGroup;
-    private ImageView fingerprintIcon;
-    private TextView fingerprintText;
     private RecyclerView recyclerView;
     private TransactionsAdapter adapter;
     private Spinner filterSpinner;
 
-    private MotionLayout motionLayout;
-    private boolean motionLayoutDeactivated;
-
     @Nullable
     private Direction direction;
-
-    private FingerprintHelper fingerprintHelper;
-    private CancellationSignal fingerprintCancellationSignal;
 
     private final Handler handler = new Handler();
 
@@ -190,36 +160,15 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     }
 
     @Override
-    public View onCreateView(@NonNull final LayoutInflater inflater, final ViewGroup container,
+    public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
                              final Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.wallet_transactions_fragment, container, false);
+        final View view = inflater.inflate(R.layout.wallet_transactions_fragment, container, false);
 
         emptyView = view.findViewById(R.id.wallet_transactions_empty);
-        fingerprintGroup = view.findViewById(R.id.fingerprint_group);
-        fingerprintIcon = fingerprintGroup.findViewById(R.id.fingerprint_icon);
-        fingerprintText = fingerprintGroup.findViewById(R.id.fingerprint_text);
         loading = view.findViewById(R.id.loading);
-        transactionListContainer = view.findViewById(R.id.transaction_list_container);
         filterSpinner = view.findViewById(R.id.history_filter);
 
-        return view;
-    }
-
-    @Override
-    public void onActivityCreated(@androidx.annotation.Nullable Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-
-        if (activity instanceof MotionLayoutProvider) {
-            MotionLayoutProvider motionLayoutProvider = (MotionLayoutProvider) this.activity;
-            motionLayout = motionLayoutProvider.getMotionLayout();
-            initRecyclerView(motionLayoutProvider.getRecyclerView());
-        } else {
-            initRecyclerView((RecyclerView) activity.findViewById(R.id.wallet_transactions_list));
-        }
-    }
-
-    private void initRecyclerView(RecyclerView recycler) {
-        recyclerView = recycler;
+        recyclerView = view.findViewById(R.id.wallet_transactions_list);
         recyclerView.setHasFixedSize(true);
         recyclerView.setLayoutManager(new LinearLayoutManager(activity));
         recyclerView.setAdapter(adapter);
@@ -229,7 +178,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
             @Override
             public void getItemOffsets(final Rect outRect, final View view, final RecyclerView parent,
-                    final RecyclerView.State state) {
+                                       final RecyclerView.State state) {
                 super.getItemOffsets(outRect, view, parent, state);
 
                 final int position = parent.getChildAdapterPosition(view);
@@ -246,7 +195,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         filterSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                switch(position) {
+                switch (position) {
                     case 0:
                         direction = null;
                         break;
@@ -265,6 +214,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
             }
         });
+
+        return view;
     }
 
     @Override
@@ -286,11 +237,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         wallet.addTransactionConfidenceEventListener(Threading.SAME_THREAD, transactionChangeListener);
 
         updateView();
-
-        WalletLock.getInstance().addListener(this);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            initFingerprintHelper();
-        }
     }
 
     @Override
@@ -307,11 +253,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
         resolver.unregisterContentObserver(addressBookObserver);
 
-        WalletLock.getInstance().removeListener(this);
-
-        if (fingerprintCancellationSignal != null) {
-            fingerprintCancellationSignal.cancel();
-        }
         super.onPause();
     }
 
@@ -355,24 +296,24 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
             @Override
             public boolean onMenuItemClick(final MenuItem item) {
                 switch (item.getItemId()) {
-                case R.id.wallet_transactions_context_edit_address:
-                    handleEditAddress(tx);
-                    return true;
+                    case R.id.wallet_transactions_context_edit_address:
+                        handleEditAddress(tx);
+                        return true;
 
-                case R.id.wallet_transactions_context_show_qr:
-                    handleShowQr();
-                    return true;
+                    case R.id.wallet_transactions_context_show_qr:
+                        handleShowQr();
+                        return true;
 
-                case R.id.wallet_transactions_context_report_issue:
-                    handleReportIssue(tx);
-                    return true;
+                    case R.id.wallet_transactions_context_report_issue:
+                        handleReportIssue(tx);
+                        return true;
 
-                case R.id.wallet_transactions_context_browse:
-                    if (activity instanceof WalletActivity) {
-                        WalletUtils.viewOnBlockExplorer(getActivity(), tx.getPurpose(),
-                                tx.getHashAsString());
-                    }
-                    return true;
+                    case R.id.wallet_transactions_context_browse:
+                        if (activity instanceof WalletActivity) {
+                            WalletUtils.viewOnBlockExplorer(getActivity(), tx.getPurpose(),
+                                    tx.getHashAsString());
+                        }
+                        return true;
                 }
 
                 return false;
@@ -465,9 +406,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         adapter.replace(transactions);
         updateView();
 
-        if (false && WalletLock.getInstance().isWalletLocked(wallet)) {
-            showLockedView();
-        } else if (transactions.isEmpty()) {
+        if (transactions.isEmpty()) {
             showEmptyView();
         } else {
             showTransactionList();
@@ -475,48 +414,13 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     }
 
     private void showTransactionList() {
-        fingerprintGroup.setVisibility(View.GONE);
         emptyView.setVisibility(View.GONE);
-        transactionListContainer.setVisibility(View.VISIBLE);
-        if (motionLayoutDeactivated) {
-            motionLayout.setTransition(R.id.expanded, R.id.collapsed);
-            motionLayoutDeactivated = false;
-        }
+        recyclerView.setVisibility(View.VISIBLE);
     }
 
     private void showEmptyView() {
         emptyView.setVisibility(View.VISIBLE);
-        fingerprintGroup.setVisibility(View.GONE);
-        transactionListContainer.setVisibility(View.GONE);
-        motionLayout.setTransition(R.id.expanded, R.id.expanded);
-        motionLayoutDeactivated = true;
-    }
-
-    private void showLockedView() {
-        showEmptyView();
-
-        final SpannableStringBuilder lockedWalletText = new SpannableStringBuilder(
-                getString(R.string.wallet_lock_unlock_to_see_txs_title));
-        int titleLength = lockedWalletText.length();
-
-        lockedWalletText.setSpan(new StyleSpan(Typeface.BOLD), 0, titleLength,
-                SpannableStringBuilder.SPAN_POINT_MARK);
-        lockedWalletText.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.darkest_blue)),
-                0, titleLength, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        String unlockToSeeTxt = getString(R.string.wallet_lock_unlock_to_see_txs_txt);
-        lockedWalletText.append("\n\n").append(unlockToSeeTxt);
-        lockedWalletText.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.medium_gray)),
-                titleLength, lockedWalletText.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-
-        Matcher matcher = Pattern.compile("\n\n").matcher(lockedWalletText);
-        while (matcher.find()) {
-            lockedWalletText.setSpan(new AbsoluteSizeSpan(10, true),
-                    matcher.start() + 1, matcher.end(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-        }
-
-        emptyView.setText(lockedWalletText);
-        fingerprintGroup.setVisibility(fingerprintHelper != null &&
-                fingerprintHelper.isFingerprintEnabled() ? View.VISIBLE : View.GONE);
+        recyclerView.setVisibility(View.INVISIBLE);
     }
 
     @Override
@@ -538,6 +442,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         private final Wallet wallet;
         @Nullable
         private final Direction direction;
+
         private TransactionsLoader(final Context context, final Wallet wallet, @Nullable final Direction direction) {
             super(context);
 
@@ -546,7 +451,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
             this.direction = direction;
         }
 
-        public @Nullable Direction getDirection() {
+        public @Nullable
+        Direction getDirection() {
             return direction;
         }
 
@@ -652,6 +558,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         };
 
     }
+
     @Override
     public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences, final String key) {
         if (Configuration.PREFS_KEY_BTC_PRECISION.equals(key) || Configuration.PREFS_KEY_REMIND_BACKUP.equals(key) ||
@@ -663,71 +570,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         adapter.setFormat(config.getFormat());
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
-    public void initFingerprintHelper() {
-        if (fingerprintHelper == null) {
-            fingerprintHelper = new FingerprintHelper(getActivity());
-        }
-        if (fingerprintHelper.init() && fingerprintHelper.isFingerprintEnabled()) {
-            fingerprintGroup.setVisibility(View.VISIBLE);
-            hideFingerprintError();
-            fingerprintCancellationSignal = new CancellationSignal();
-            fingerprintHelper.getPassword(fingerprintCancellationSignal, new FingerprintHelper.Callback() {
-                @Override
-                public void onSuccess(String savedPass) {
-                    hideFingerprintError();
-                    WalletLock.getInstance().setWalletLocked(false);
-                }
-
-                @Override
-                public void onFailure(String message, boolean canceled, boolean exceededMaxAttempts) {
-                    if (!canceled) {
-                        showFingerprintError(exceededMaxAttempts);
-                    }
-                }
-
-                @Override
-                public void onHelp(int helpCode, String helpString) {
-                    showFingerprintError(false);
-                }
-            });
-        }
+    public boolean isHistoryEmpty() {
+        return adapter.getItemCount() == 0;
     }
-
-    public void hideFingerprintError() {
-        fingerprintIcon.setColorFilter(ContextCompat.getColor(getContext(),
-                android.R.color.transparent));
-        fingerprintText.setText(R.string.or_unlock_with_fingerprint);
-    }
-
-    public void showFingerprintError(boolean exceededMaxAttempts) {
-        Animation shakeAnimation = AnimationUtils.loadAnimation(getActivity(), R.anim.shake);
-        fingerprintIcon.startAnimation(shakeAnimation);
-        fingerprintIcon.setColorFilter(ContextCompat.getColor(getActivity(), R.color.fg_error));
-        if (exceededMaxAttempts) {
-            fingerprintText.setText(R.string.unlock_with_fingerprint_error_max_attempts);
-        } else {
-            fingerprintText.setText(R.string.unlock_with_fingerprint_error);
-        }
-    }
-
-    @Override
-    public void onLockChanged(boolean locked) {
-//        if (locked) {
-//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-//                initFingerprintHelper();
-//            }
-//            showLockedView();
-//        } else {
-//            reloadTransactions();
-//        }
-    }
-
-    public interface MotionLayoutProvider {
-
-        MotionLayout getMotionLayout();
-
-        RecyclerView getRecyclerView();
-    }
-
 }

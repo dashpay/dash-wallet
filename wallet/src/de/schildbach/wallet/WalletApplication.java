@@ -17,39 +17,6 @@
 
 package de.schildbach.wallet;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.concurrent.TimeUnit;
-
-import org.bitcoinj.core.CoinDefinition;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.VersionMessage;
-import org.bitcoinj.crypto.LinuxSecureRandom;
-import org.bitcoinj.crypto.MnemonicCode;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.Protos;
-import org.bitcoinj.wallet.UnreadableWalletException;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.WalletProtobufSerializer;
-import org.dash.wallet.common.Configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Stopwatch;
-
-import de.schildbach.wallet.data.WalletLock;
-import de.schildbach.wallet.service.BlockchainService;
-import de.schildbach.wallet.service.BlockchainServiceImpl;
-import de.schildbach.wallet.ui.AbstractWalletActivity;
-import de.schildbach.wallet.util.CrashReporter;
-import de.schildbach.wallet_test.BuildConfig;
-import de.schildbach.wallet_test.R;
-
 import android.annotation.TargetApi;
 import android.app.ActivityManager;
 import android.app.AlarmManager;
@@ -68,11 +35,39 @@ import android.os.Build;
 import android.os.StrictMode;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
-import androidx.annotation.StringRes;
-import androidx.multidex.MultiDexApplication;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.text.format.DateUtils;
 import android.widget.Toast;
+
+import androidx.annotation.StringRes;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.multidex.MultiDexApplication;
+
+import com.google.common.base.Stopwatch;
+import com.jakewharton.processphoenix.ProcessPhoenix;
+
+import org.bitcoinj.core.CoinDefinition;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.core.VersionMessage;
+import org.bitcoinj.crypto.LinuxSecureRandom;
+import org.bitcoinj.crypto.MnemonicCode;
+import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.Protos;
+import org.bitcoinj.wallet.UnreadableWalletException;
+import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletProtobufSerializer;
+import org.dash.wallet.common.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.concurrent.TimeUnit;
+
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.android.LogcatAppender;
@@ -80,6 +75,14 @@ import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
+import de.schildbach.wallet.data.WalletLock;
+import de.schildbach.wallet.service.BlockchainService;
+import de.schildbach.wallet.service.BlockchainServiceImpl;
+import de.schildbach.wallet.ui.GlobalFooterActivity;
+import de.schildbach.wallet.ui.preference.PinRetryController;
+import de.schildbach.wallet.util.CrashReporter;
+import de.schildbach.wallet_test.BuildConfig;
+import de.schildbach.wallet_test.R;
 
 /**
  * @author Andreas Schildbach
@@ -92,8 +95,6 @@ public class WalletApplication extends MultiDexApplication {
     private boolean basicWalletInitalizationFinished = false;
 
     private Intent blockchainServiceIntent;
-    private Intent blockchainServiceCancelCoinsReceivedIntent;
-    private Intent blockchainServiceResetBlockchainIntent;
 
     private File walletFile;
     private Wallet wallet;
@@ -123,9 +124,15 @@ public class WalletApplication extends MultiDexApplication {
     @Override
     public void onCreate() {
         super.onCreate();
+        log.info("WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
         if (walletFileExists()) {
+            if (config.getEnsureWipe()) {
+                //noinspection ResultOfMethodCallIgnored
+                walletFile.delete();
+                config.clear(false);
+            }
             fullInitialization();
         }
     }
@@ -147,7 +154,7 @@ public class WalletApplication extends MultiDexApplication {
         new LinuxSecureRandom(); // init proper random number generator
         initLogging();
 
-        if(!Constants.IS_PROD_BUILD) {
+        if (!Constants.IS_PROD_BUILD) {
             StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectAll().permitDiskReads()
                     .permitDiskWrites().penaltyLog().build());
         }
@@ -176,10 +183,6 @@ public class WalletApplication extends MultiDexApplication {
         activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
 
         blockchainServiceIntent = new Intent(this, BlockchainServiceImpl.class);
-        blockchainServiceCancelCoinsReceivedIntent = new Intent(BlockchainService.ACTION_CANCEL_COINS_RECEIVED, null,
-                this, BlockchainServiceImpl.class);
-        blockchainServiceResetBlockchainIntent = new Intent(BlockchainService.ACTION_RESET_BLOCKCHAIN, null, this,
-                BlockchainServiceImpl.class);
     }
 
     public void setWallet(Wallet newWallet) {
@@ -199,7 +202,7 @@ public class WalletApplication extends MultiDexApplication {
     }
 
     public void finalizeInitialization() {
-		wallet.getContext().initDash(true, true);
+        wallet.getContext().initDash(true, true);
 
         if (config.versionCodeCrossed(packageInfo.versionCode, VERSION_CODE_SHOW_BACKUP_REMINDER)
                 && !wallet.getImportedKeys().isEmpty()) {
@@ -295,17 +298,14 @@ public class WalletApplication extends MultiDexApplication {
         // clean up spam
         try {
             wallet.cleanup();
-        }
-        catch(IllegalStateException x) {
+        } catch (IllegalStateException x) {
             //Catch an inconsistent exception here and reset the blockchain.  This is for loading older wallets that had
             //txes with fees that were too low or dust that were stuck and could not be sent.  In a later version
             //the fees were fixed, then those stuck transactions became inconsistant and the exception is thrown.
-        	if(x.getMessage().contains("Inconsistent spent tx:"))
-            {
-             	File blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
-            	blockChainFile.delete();
-            }
-            else throw x;
+            if (x.getMessage().contains("Inconsistent spent tx:")) {
+                File blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
+                blockChainFile.delete();
+            } else throw x;
         }
 
         // make sure there is at least one recent backup
@@ -348,7 +348,7 @@ public class WalletApplication extends MultiDexApplication {
         rollingPolicy.start();
 
 
-		PreferenceManager.setDefaultValues(this, R.xml.preference_settings, false);
+        PreferenceManager.setDefaultValues(this, R.xml.preference_settings, false);
         fileAppender.setEncoder(filePattern);
         fileAppender.setRollingPolicy(rollingPolicy);
         fileAppender.start();
@@ -533,10 +533,13 @@ public class WalletApplication extends MultiDexApplication {
     }
 
     public void startBlockchainService(final boolean cancelCoinsReceived) {
-        if (cancelCoinsReceived)
+        if (cancelCoinsReceived) {
+            Intent blockchainServiceCancelCoinsReceivedIntent = new Intent(BlockchainService.ACTION_CANCEL_COINS_RECEIVED, null,
+                    this, BlockchainServiceImpl.class);
             startService(blockchainServiceCancelCoinsReceivedIntent);
-        else
+        } else {
             startService(blockchainServiceIntent);
+        }
     }
 
     public void stopBlockchainService() {
@@ -545,6 +548,8 @@ public class WalletApplication extends MultiDexApplication {
 
     public void resetBlockchain() {
         // implicitly stops blockchain service
+        Intent blockchainServiceResetBlockchainIntent = new Intent(BlockchainService.ACTION_RESET_BLOCKCHAIN, null, this,
+                BlockchainServiceImpl.class);
         startService(blockchainServiceResetBlockchainIntent);
     }
 
@@ -669,25 +674,23 @@ public class WalletApplication extends MultiDexApplication {
     }
 
     /**
-      Replace the wallet with an new wallet as part of a wallet wipe
+     * Removes all the data and restarts the app showing onboarding screen.
      */
-    public void eraseAndCreateNewWallet() {
-        Wallet newWallet = new Wallet(Constants.NETWORK_PARAMETERS);
-        newWallet.addKeyChain(Constants.BIP44_PATH);
+    public void wipe(Context context) {
+        log.info("Removing all the data and restarting the app.");
 
-        log.info("creating new wallet after wallet wipe");
+        resetBlockchain();
+        wallet.shutdownAutosaveAndWait();
+        stopBlockchainService();
 
-        File walletBackupFile = getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
-        if(walletBackupFile.exists())
-            walletBackupFile.delete();
+        //noinspection ResultOfMethodCallIgnored
+        walletFile.delete();
+        cleanupFiles();
+        config.clear(true);
+        PinRetryController.clearPrefs();
 
-        replaceWallet(newWallet);
-        saveWallet();
-        config.armBackupReminder();
-        config.armBackupSeedReminder();
-        log.info("New wallet created to replace the wiped locked wallet");
+        ProcessPhoenix.triggerRebirth(context);
     }
-
 
 
     public boolean isBackupDisclaimerDismissed() {
@@ -703,7 +706,7 @@ public class WalletApplication extends MultiDexApplication {
     }
 
     public void killAllActivities() {
-        AbstractWalletActivity.finishAll(this);
+        GlobalFooterActivity.finishAll(this);
     }
 
 }

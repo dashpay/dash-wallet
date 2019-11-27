@@ -127,6 +127,12 @@ public final class AddressBookActivity extends AbstractBindServiceActivity {
 		return super.onOptionsItemSelected(item);
 	}
 
+	@Override
+	public void finish() {
+		super.finish();
+		overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_left);
+	}
+
     /* private */void updateFragments() {
 		final Wallet wallet = getWalletApplication().getWallet();
 		final List<ECKey> derivedKeys = wallet.getIssuedReceiveKeys();
@@ -135,7 +141,7 @@ public final class AddressBookActivity extends AbstractBindServiceActivity {
 		final ArrayList<Address> addresses = new ArrayList<Address>(derivedKeys.size() + randomKeys.size());
 
         for (final ECKey key : Iterables.concat(derivedKeys, randomKeys)) {
-			final Address address = key.toAddress(Constants.NETWORK_PARAMETERS);
+			final Address address = Address.fromKey(Constants.NETWORK_PARAMETERS, key);
 			addresses.add(address);
 		}
 

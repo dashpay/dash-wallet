@@ -2,31 +2,34 @@ package org.dash.wallet.ui.widget
 
 import android.content.Context
 import android.util.AttributeSet
-import android.view.Gravity
-import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.res.ResourcesCompat
+import kotlinx.android.synthetic.main.quick_action_button.view.*
 
-class QuickActionButton(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs, R.style.DashButton_White) {
 
-    private val actionIconView: ImageView
+class QuickActionButton(context: Context, attrs: AttributeSet) : ConstraintLayout(context, attrs, R.style.DashButton_White) {
 
     init {
         inflate(context, R.layout.quick_action_button, this)
-        orientation = VERTICAL
-        gravity = Gravity.BOTTOM
 
-        actionIconView = findViewById(R.id.action_icon)
+
+        maxWidth = 300
+        maxHeight = 300
+
         val attrsArray = context.obtainStyledAttributes(attrs, R.styleable.QuickActionButton)
         try {
             val actionIconDrawable = attrsArray.getDrawable(R.styleable.QuickActionButton_action_icon)
             if (actionIconDrawable != null) {
-                actionIconView.setImageDrawable(actionIconDrawable)
+                action_icon.setImageDrawable(actionIconDrawable)
             }
-            val actionIconSize = attrsArray.getDimensionPixelSize(R.styleable.QuickActionButton_action_icon_size, 0)
+            val actionIconSize = attrsArray.getFloat(R.styleable.QuickActionButton_action_icon_size_percent, 0.4f)
             if (actionIconSize > 0) {
-                actionIconView.layoutParams.height = actionIconSize
+                val constraintSet = ConstraintSet()
+                constraintSet.clone(this)
+                constraintSet.constrainPercentWidth(action_icon.id, actionIconSize)
+                constraintSet.applyTo(this)
             }
             val actionText = attrsArray.getString(R.styleable.QuickActionButton_action_text)
             if (actionText != null) {
@@ -47,13 +50,13 @@ class QuickActionButton(context: Context, attrs: AttributeSet) : LinearLayout(co
 
     private fun setActive(active: Boolean) {
         if (active) {
-            actionIconView.colorFilter = null
-            actionIconView.alpha = 1.0f
+            action_icon.colorFilter = null
+            action_icon.alpha = 1.0f
             alpha = 1.0f
         } else {
             val tintColor = ResourcesCompat.getColor(resources, R.color.dash_gray, null)
-            actionIconView.setColorFilter(tintColor)
-            actionIconView.alpha = 0.7f
+            action_icon.setColorFilter(tintColor)
+            action_icon.alpha = 0.7f
             alpha = 0.5f
         }
     }

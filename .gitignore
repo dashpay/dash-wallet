@@ -19,5 +19,7 @@ out/
 *.so
 .DS_Store
 .externalNativeBuild/
+.cxx/
 gradle-wrapper.jar
 wallet/prod
+wallet/.cxx

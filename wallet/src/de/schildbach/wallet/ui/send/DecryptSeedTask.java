@@ -25,7 +25,7 @@ import org.bitcoinj.crypto.BIP38PrivateKey;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.Wallet;
-import org.spongycastle.crypto.params.KeyParameter;
+import org.bouncycastle.crypto.params.KeyParameter;
 
 /**
  * @author Andreas Schildbach

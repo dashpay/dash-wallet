@@ -34,12 +34,16 @@ import de.schildbach.wallet.ui.widget.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 
+private const val FINGERPRINT_REQUEST_SEED = 1
+private const val FINGERPRINT_REQUEST_WALLET = 2
+
 class SetPinActivity : AppCompatActivity() {
 
     private lateinit var numericKeyboardView: NumericKeyboardView
     private lateinit var confirmButtonView: View
     private lateinit var messageView: View
     private lateinit var viewModel: SetPinViewModel
+    private lateinit var checkPinSharedModel: CheckPinSharedModel
     private lateinit var pinProgressSwitcherView: ViewSwitcher
     private lateinit var pinPreviewView: PinPreviewView
     private lateinit var pageTitleView: TextView
@@ -120,7 +124,7 @@ class SetPinActivity : AppCompatActivity() {
         confirmButtonView = findViewById(R.id.btn_confirm)
         numericKeyboardView = findViewById(R.id.numeric_keyboard)
 
-        numericKeyboardView.setCancelEnabled(false)
+        numericKeyboardView.setFunctionEnabled(false)
         numericKeyboardView.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
             override fun onNumber(number: Int) {
@@ -140,14 +144,14 @@ class SetPinActivity : AppCompatActivity() {
                 }
             }
 
-            override fun onBack() {
+            override fun onBack(longClick: Boolean) {
                 if (pin.size > 0) {
                     pin.removeAt(pin.lastIndex)
                     pinPreviewView.prev()
                 }
             }
 
-            override fun onCancel() {
+            override fun onFunction() {
 
             }
         }
@@ -282,6 +286,8 @@ class SetPinActivity : AppCompatActivity() {
                 }
                 Status.SUCCESS -> {
                     if (state == State.DECRYPTING) {
+                        val walletApplication = application as WalletApplication
+                        seed = walletApplication.wallet.keyChainSeed.mnemonicCode!!
                         setState(State.SET_PIN)
                     } else {
                         if (changePin) {
@@ -293,13 +299,18 @@ class SetPinActivity : AppCompatActivity() {
                 }
             }
         })
-        viewModel.startVerifySeedActivity.observe(this, Observer {
-            val intent = VerifySeedActivity.createIntent(this, seed.toTypedArray())
-            startActivityNewTask(intent)
+        viewModel.startNextActivity.observe(this, Observer {
+
+            val requestCode = if (it) FINGERPRINT_REQUEST_SEED else FINGERPRINT_REQUEST_WALLET
+            if (EnableFingerprintDialog.shouldBeShown(this@SetPinActivity)) {
+                EnableFingerprintDialog.show(viewModel.pin.joinToString(""), requestCode, supportFragmentManager)
+            } else {
+                performNextStep(requestCode)
+            }
         })
-        viewModel.startWalletActivity.observe(this, Observer {
-            val intent = Intent(this, WalletActivity::class.java)
-            startActivityNewTask(intent)
+        checkPinSharedModel = ViewModelProviders.of(this).get(CheckPinSharedModel::class.java)
+        checkPinSharedModel.onCorrectPinCallback.observe(this, Observer {
+            performNextStep(it.first)
         })
     }
 
@@ -334,13 +345,20 @@ class SetPinActivity : AppCompatActivity() {
         }
     }
 
-    override fun startActivity(intent: Intent?) {
-        super.startActivity(intent)
-        overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+    private fun performNextStep(requestCode: Int) {
+        when (requestCode) {
+            FINGERPRINT_REQUEST_SEED -> startVerifySeedActivity()
+            FINGERPRINT_REQUEST_WALLET -> goHome()
+        }
     }
 
-    override fun finish() {
-        super.finish()
-        overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+    private fun startVerifySeedActivity() {
+        val intent = VerifySeedActivity.createIntent(this, seed.toTypedArray())
+        startActivityNewTask(intent)
+    }
+
+    private fun goHome() {
+        val intent = Intent(this, WalletActivity::class.java)
+        startActivityNewTask(intent)
     }
 }
