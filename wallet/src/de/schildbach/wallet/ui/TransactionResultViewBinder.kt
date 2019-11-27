@@ -24,6 +24,8 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.TransactionResult
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
+import org.bitcoinj.core.Address
+import org.bitcoinj.core.AddressFormatException
 import org.dash.wallet.common.ui.CurrencyTextView
 
 /**
@@ -51,7 +53,14 @@ class TransactionResultViewBinder(private val containerView: View) {
         transactionFee.setFormat(noCodeFormat)
         transactionFee.setAmount(transactionResult.feeAmount)
 
-        transactionAddress.text = WalletUtils.buildShortAddress(transactionResult.address)
+        try {
+            // Determine if address is valid
+            Address.fromString(Constants.NETWORK_PARAMETERS, transactionResult.address)
+            transactionAddress.text = WalletUtils.buildShortAddress(transactionResult.address)
+        } catch (x : AddressFormatException) {
+            // Display the address as regular text
+            transactionAddress.text = transactionResult.address
+        }
         date.text = DateUtils.formatDateTime(containerView.context, transactionResult.date.time,
                 DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME)
 
