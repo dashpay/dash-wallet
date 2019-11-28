@@ -105,6 +105,7 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <Switch
+            android:id="@+id/hide_balance_switch"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:layout_constraintBottom_toBottomOf="parent"

@@ -14,11 +14,6 @@
         android:summary="@string/preferences_own_name_summary"
         android:title="@string/preferences_own_name_title" />
 
-	<CheckBoxPreference
-		android:defaultValue="false"
-		android:key="hide_balance"
-		android:title="@string/preferences_hide_balance" />
-
     <CheckBoxPreference
         android:defaultValue="true"
         android:key="send_coins_autoclose"

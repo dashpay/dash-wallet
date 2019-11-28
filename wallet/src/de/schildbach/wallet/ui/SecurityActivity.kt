@@ -19,12 +19,15 @@ package de.schildbach.wallet.ui
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.preference.PreferenceManager
 import android.view.View
+import android.widget.Switch
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.WalletLock
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.Configuration
 
 class SecurityActivity : BaseMenuActivity() {
     override fun getLayoutId(): Int {
@@ -35,6 +38,12 @@ class SecurityActivity : BaseMenuActivity() {
         super.onCreate(savedInstanceState)
 
         setTitle(R.string.security_title)
+        val configuration = Configuration(PreferenceManager.getDefaultSharedPreferences(this), resources)
+        val hideBalanceOnLaunch = findViewById<Switch>(R.id.hide_balance_switch)
+        hideBalanceOnLaunch.isChecked = configuration.hideBalanceOnLaunch
+        hideBalanceOnLaunch.setOnCheckedChangeListener {_, hideBalanceOnLaunch ->
+            configuration.hideBalanceOnLaunch = hideBalanceOnLaunch
+        }
     }
 
     fun backupWallet(view: View) {
