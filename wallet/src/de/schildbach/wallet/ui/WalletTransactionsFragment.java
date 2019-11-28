@@ -381,7 +381,11 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         Direction direction = tx.getValue(wallet).signum() < 0 ? Direction.SENT : Direction.RECEIVED;
         String address;
         if (direction == Direction.SENT) {
-            address = WalletUtils.getToAddressOfSent(tx, wallet).toBase58();
+            // Check for internal transactions to prevent NPE from getToAddressOfSent
+            if(WalletUtils.isEntirelySelf(tx, wallet))
+                address = getString(R.string.transaction_row_status_sent_interally);
+            else
+                address = WalletUtils.getToAddressOfSent(tx, wallet).toBase58();
         } else {
             address = WalletUtils.getWalletAddressOfReceived(tx, wallet).toBase58();
         }

@@ -27,9 +27,10 @@ import androidx.core.content.ContextCompat
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.WalletLock
 import de.schildbach.wallet_test.R
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 
-class SecurityActivity : BaseMenuActivity() {
+class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletProvider {
     override fun getLayoutId(): Int {
         return R.layout.activity_security
     }
@@ -73,14 +74,23 @@ class SecurityActivity : BaseMenuActivity() {
     }
 
     fun changePin(view: View) {
-        startActivity(SetPinActivity.createIntent(this, R.string.wallet_options_encrypt_keys_change, true));
+        startActivity(SetPinActivity.createIntent(this, R.string.wallet_options_encrypt_keys_change, true))
     }
 
     fun openAdvancedSecurity(view: View) {
-        throw NotImplementedError()
+
     }
 
     fun resetWallet(view: View) {
-        throw NotImplementedError()
+
+    }
+
+    // required by UnlockWalletDialogFragment
+    override fun onWalletUpgradeComplete(password: String?) {
+
+    }
+
+    override fun getWallet(): Wallet {
+        return WalletApplication.getInstance().wallet
     }
 }
