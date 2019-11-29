@@ -17,18 +17,21 @@
 package de.schildbach.wallet.ui
 
 import android.Manifest
+import android.app.AlertDialog
+import android.app.Dialog
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.preference.PreferenceManager
 import android.view.View
 import android.widget.Switch
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.WalletLock
+import de.schildbach.wallet.ui.AbstractWalletActivity.log
 import de.schildbach.wallet_test.R
 import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.Configuration
+
 
 class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletProvider {
     override fun getLayoutId(): Int {
@@ -39,7 +42,6 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         super.onCreate(savedInstanceState)
 
         setTitle(R.string.security_title)
-        val configuration = Configuration(PreferenceManager.getDefaultSharedPreferences(this), resources)
         val hideBalanceOnLaunch = findViewById<Switch>(R.id.hide_balance_switch)
         hideBalanceOnLaunch.isChecked = configuration.hideBalanceOnLaunch
         hideBalanceOnLaunch.setOnCheckedChangeListener {_, hideBalanceOnLaunch ->
@@ -81,8 +83,46 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
 
     }
 
-    fun resetWallet(view: View) {
+    private fun executeResetWallet() {
+        val walletLock = WalletLock.getInstance()
+        if (WalletLock.getInstance().isWalletLocked(wallet)) {
+            UnlockWalletDialogFragment.show(supportFragmentManager) {
+                if (!walletLock.isWalletLocked(wallet)) {
+                    executeResetWallet()
+                }
+            }
+            return
+        }
 
+        try {
+            val newWallet = Wallet(Constants.NETWORK_PARAMETERS)
+            newWallet.addKeyChain(Constants.BIP44_PATH)
+
+            log.info("creating new wallet after wallet wipe")
+
+            val walletBackupFile = getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF)
+            if (walletBackupFile.exists()) walletBackupFile.delete()
+
+            walletApplication.replaceWallet(newWallet)
+            walletApplication.saveWallet()
+            configuration.armBackupReminder()
+            configuration.armBackupSeedReminder()
+            log.info("New wallet created to replace the wiped locked wallet")
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun resetWallet(view: View) {
+        val dialogBuilder = AlertDialog.Builder(this)
+        dialogBuilder.setTitle(R.string.wallet_lock_reset_wallet_title)
+        dialogBuilder.setMessage(R.string.wallet_lock_reset_wallet_message)
+        dialogBuilder.setNegativeButton(R.string.wallet_lock_reset_wallet_title) { _, _ -> executeResetWallet() }
+        dialogBuilder.setPositiveButton(android.R.string.no, null)
+        dialogBuilder.setCancelable(false)
+        val dialog: Dialog = dialogBuilder.create()
+        dialog.setCanceledOnTouchOutside(false)
+        dialog.show()
     }
 
     // required by UnlockWalletDialogFragment
