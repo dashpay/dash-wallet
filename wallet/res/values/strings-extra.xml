@@ -49,6 +49,7 @@
     <string name="history_title">History</string>
     <string name="more_title">More</string>
     <string name="settings_title">Settings</string>
+    <string name="security_title">Security</string>
     <string name="tools_title">Tools</string>
 
     <string name="payments_title">Payments</string>
@@ -82,7 +83,7 @@
     <string name="wallet_options_disconnect">Disconnect</string>
 
     <string name="network_monitor_masternodes_title">Masternodes</string>
-    <string name="export_keys_dialog_title_to_seed">View recovery phrase</string>
+    <string name="export_keys_dialog_title_to_seed">View Recovery Phrase</string>
     <string name="import_keys_dialog_title_from_seed">Restore from recovery phrase</string>
     <string name="backup_to_seed_wallet_dialog_message">This is your recovery phrase.  Please write it down.</string>
     <string name="backup_wallet_to_seed_dialog_warning">DO NOT let anyone see your recovery phrase or they can spend your Dash.</string>
@@ -108,7 +109,7 @@
     <string name="wallet_lock_unlock_to_see_txs_txt">Tap the lock icon above to unlock your wallet and see the transaction history.</string>
     <string name="wallet_lock_unlock_dialog_title">Unlock your wallet</string>
     <string name="wallet_lock_unlock_dialog_message">Your wallet is protected by a spending PIN. Enter your PIN and press Unlock to continue.</string>
-    <string name="wallet_lock_reset_wallet_title">Reset wallet</string>
+    <string name="wallet_lock_reset_wallet_title">Reset Wallet</string>
     <string name="wallet_lock_reset_wallet_message">Are you sure? Your wallet will be deleted and all your Dash will be lost.\n\nThe only way to recover your Dash is with a backup file or recovery phrase.</string>
 
     <string name="wallet_lock_wallet_disabled">Wallet disabled</string>
@@ -187,11 +188,13 @@
     <string name="verify_seed_success_title">Verified Successfully</string>
     <string name="verify_seed_success_message">Your wallet is secured now. You can use your recovery phrase anytime to recover your account on another device.</string>
 
-    <string name="transaction_result_view_on_explorer">View on Explorer</string>
-    <string name="transaction_result_paid_successfully">Paid successfully</string>
-    <string name="transaction_result_sent_to">Sent to</string>
-    <string name="transaction_date_and_time">Date &amp; Time</string>
-    <string name="transaction_close">Close</string>
+	<string name="transaction_result_view_on_explorer">View on Explorer</string>
+	<string name="transaction_result_paid_successfully">Paid successfully</string>
+	<string name="transaction_result_sent_to">Sent to</string>
+	<string name="transaction_date_and_time">Date &amp; Time</string>
+	<string name="transaction_close">Close</string>
+	<string name="transaction_details_amount_received">Amount Received</string>
+	<string name="transaction_details_amount_sent">Amount Sent</string>
 
     <string name="authenticate_fingerprint_title">Authenticate</string>
     <string name="authenticate_fingerprint_message">Confirm fingerprint to continue</string>
@@ -226,12 +229,13 @@
     <string name="block">Block</string>
     <string name="time">Time</string>
     <string name="hash">Hash</string>
-
     <string name="block_info">Block Info</string>
+
     <string name="scan_private_key">Scan Private Key</string>
     <string name="scan_private_key_intro_1">You are about to sweep funds from another Dash wallet.</string>
     <string name="scan_private_key_intro_2">This will move all coins from that wallet to your wallet on this device.</string>
     <string name="scan_private_key_intro_3">When the transaction is confirmed, the other wallet will be worthless and should not be re-used for safety reasons.</string>
+    <string name="confirm">Confirm</string>
 
     <string-array name="history_filter">
         <item>All</item>

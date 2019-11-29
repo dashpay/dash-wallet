@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Charsets;
 
+import androidx.appcompat.app.AppCompatActivity;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.util.Crypto;
@@ -76,7 +77,7 @@ public class BackupWalletDialogFragment extends DialogFragment {
         newFragment.show(fm, FRAGMENT_TAG);
     }
 
-    private AbstractWalletActivity activity;
+    private AppCompatActivity activity;
     private WalletApplication application;
     private Wallet wallet;
 
@@ -111,7 +112,7 @@ public class BackupWalletDialogFragment extends DialogFragment {
     public void onAttach(final Activity activity) {
         super.onAttach(activity);
 
-        this.activity = (AbstractWalletActivity) activity;
+        this.activity = (AppCompatActivity) activity;
         this.application = (WalletApplication) activity.getApplication();
         this.wallet = application.getWallet();
     }
