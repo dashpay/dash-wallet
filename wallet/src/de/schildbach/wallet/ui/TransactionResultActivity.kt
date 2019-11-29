@@ -17,19 +17,14 @@
 package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.graphics.drawable.Animatable
-import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.TransactionResult
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_successful_transaction.*
-import org.bitcoinj.utils.MonetaryFormat
 
 /**
  * @author Samuel Barbosa
@@ -53,26 +48,8 @@ class TransactionResultActivity : AppCompatActivity() {
         view_on_explorer.setOnClickListener { viewOnExplorer(transactionResult.transactionHash) }
         transaction_close_btn.setOnClickListener { finish() }
 
-        val noCodeFormat = WalletApplication.getInstance().configuration.format.noCode()
-
-        dash_amount.setFormat(noCodeFormat)
-        //For displaying purposes only
-        if (transactionResult.dashAmount.isNegative) {
-            dash_amount.setAmount(transactionResult.dashAmount.negate())
-        } else {
-            dash_amount.setAmount(transactionResult.dashAmount)
-        }
-
-        transaction_fee.setFormat(MonetaryFormat.BTC.noCode())
-        transaction_fee.setAmount(transactionResult.feeAmount)
-
-        transaction_address.text = WalletUtils.buildShortAddress(transactionResult.address)
-
-        val exchangeRate = transactionResult.exchangeRate
-        val exchangeCurrencyCode = WalletApplication.getInstance().configuration
-                .exchangeCurrencyCode
-        fiat_value.setFiatAmount(transactionResult.dashAmount, exchangeRate, Constants.LOCAL_FORMAT,
-                exchangeCurrencyCode)
+        val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container)
+        transactionResultViewBinder.bind(transactionResult)
 
         check_icon.postDelayed({
             check_icon.visibility = View.VISIBLE
@@ -81,9 +58,7 @@ class TransactionResultActivity : AppCompatActivity() {
     }
 
     private fun viewOnExplorer(txHash: String) {
-        val config = WalletApplication.getInstance().configuration
-        startActivity(Intent(Intent.ACTION_VIEW,
-                Uri.withAppendedPath(config.blockExplorer, "tx/$txHash")))
+        WalletUtils.viewOnBlockExplorer(this, transactionResult.purpose, txHash)
     }
 
 }

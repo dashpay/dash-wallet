@@ -28,7 +28,6 @@ import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.database.ContentObserver;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.format.DateUtils;
@@ -77,6 +76,7 @@ import javax.annotation.Nullable;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
+import de.schildbach.wallet.data.TransactionResult;
 import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Qr;
@@ -119,7 +119,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     private static final String ARG_DIRECTION = "direction";
     private static final long THROTTLE_MS = DateUtils.SECOND_IN_MILLIS;
 
-    private static final Uri KEY_ROTATION_URI = Uri.parse("https://bitcoin.org/en/alert/2013-08-11-android");
     private static final int SHOW_QR_THRESHOLD_BYTES = 2500;
     private static final Logger log = LoggerFactory.getLogger(WalletTransactionsFragment.class);
 
@@ -310,11 +309,10 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
                         return true;
 
                     case R.id.wallet_transactions_context_browse:
-                        if (!txRotation)
-                            startActivity(new Intent(Intent.ACTION_VIEW,
-                                    Uri.withAppendedPath(config.getBlockExplorer(), "tx/" + tx.getHashAsString())));
-                        else
-                            startActivity(new Intent(Intent.ACTION_VIEW, KEY_ROTATION_URI));
+                        if (activity instanceof WalletActivity) {
+                            WalletUtils.viewOnBlockExplorer(getActivity(), tx.getPurpose(),
+                                    tx.getHashAsString());
+                        }
                         return true;
                 }
 
@@ -376,6 +374,27 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
             }
         });
         popupMenu.show();
+    }
+
+    @Override
+    public void onTransactionRowClicked(Transaction tx) {
+        Direction direction = tx.getValue(wallet).signum() < 0 ? Direction.SENT : Direction.RECEIVED;
+        String address;
+        if (direction == Direction.SENT) {
+            // Check for internal transactions to prevent NPE from getToAddressOfSent
+            if(WalletUtils.isEntirelySelf(tx, wallet))
+                address = getString(R.string.transaction_row_status_sent_interally);
+            else
+                address = WalletUtils.getToAddressOfSent(tx, wallet).toBase58();
+        } else {
+            address = WalletUtils.getWalletAddressOfReceived(tx, wallet).toBase58();
+        }
+        TransactionResult transactionResult = new TransactionResult(tx.getValue(wallet),
+                tx.getExchangeRate(), address, tx.getFee(), tx.getHashAsString(), tx.getUpdateTime(),
+                tx.getPurpose());
+        TransactionDetailsDialogFragment transactionDetailsDialogFragment =
+                TransactionDetailsDialogFragment.newInstance(transactionResult, direction);
+        transactionDetailsDialogFragment.show(getChildFragmentManager(), null);
     }
 
     @Override

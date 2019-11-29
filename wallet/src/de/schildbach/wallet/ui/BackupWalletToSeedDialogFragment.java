@@ -39,6 +39,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.os.CancellationSignal;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
@@ -95,7 +96,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
         newFragment.show(fm, FRAGMENT_TAG);
     }
 
-    private AbstractWalletActivity activity;
+    private AppCompatActivity activity;
     private WalletApplication application;
     private Wallet wallet;
     private PinRetryController pinRetryController;
@@ -120,7 +121,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
     public void onAttach(final Activity activity) {
         super.onAttach(activity);
 
-        this.activity = (AbstractWalletActivity) activity;
+        this.activity = (AppCompatActivity) activity;
         this.application = (WalletApplication) activity.getApplication();
         this.wallet = application.getWallet();
         this.pinRetryController = new PinRetryController(activity);

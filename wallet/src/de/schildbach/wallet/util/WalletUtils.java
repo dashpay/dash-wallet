@@ -46,9 +46,6 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.crypto.ChildNumber;
-import org.bitcoinj.crypto.MnemonicCode;
-import org.bitcoinj.crypto.MnemonicException;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
@@ -60,12 +57,15 @@ import org.bitcoinj.wallet.WalletProtobufSerializer;
 import com.google.common.base.Charsets;
 
 import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.ui.TransactionResultActivity;
 
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.text.Editable;
-import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.format.DateUtils;
-import android.text.style.TypefaceSpan;
 
 import static org.dash.wallet.common.Constants.CHAR_THIN_SPACE;
 
@@ -365,6 +365,19 @@ public class WalletUtils {
         int lastSectionStart = longAddress.length() - Constants.ADDRESS_FORMAT_LAST_SECTION_SIZE;
         addressBuilder.append(longAddress.substring(lastSectionStart));
         return addressBuilder.toString();
+    }
+
+    public static void viewOnBlockExplorer(Context context, Transaction.Purpose txPurpose,
+                                           String txHash) {
+        Uri blockExplorer = WalletApplication.getInstance().getConfiguration().getBlockExplorer();
+        Uri keyRotationUri = Uri.parse("https://bitcoin.org/en/alert/2013-08-11-android");
+        boolean txRotation = txPurpose == Transaction.Purpose.KEY_ROTATION;
+        if (!txRotation) {
+            context.startActivity(new Intent(Intent.ACTION_VIEW,
+                    Uri.withAppendedPath(blockExplorer, "tx/" + txHash)));
+        } else {
+            context.startActivity(new Intent(Intent.ACTION_VIEW, keyRotationUri));
+        }
     }
 
 }
