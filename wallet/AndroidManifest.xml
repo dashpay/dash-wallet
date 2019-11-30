@@ -172,6 +172,9 @@
             android:name="de.schildbach.wallet.ui.preference.PreferenceActivity"
             android:label="@string/preferences_activity_title"
             android:theme="@style/My.Theme.ChildActivity" />
+        <activity android:name="de.schildbach.wallet.ui.BlockInfoActivity"
+            android:label="@string/block_info"
+            android:theme="@style/My.Theme.ChildActivity" />
         <activity
             android:name="de.schildbach.wallet.ui.RestoreWalletActivity"
             android:configChanges="orientation|keyboard|keyboardHidden"

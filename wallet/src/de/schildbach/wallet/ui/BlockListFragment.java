@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.BlockInfo;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet_test.R;
@@ -125,7 +126,6 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 		recyclerView = (RecyclerView) view.findViewById(R.id.block_list);
 		recyclerView.setLayoutManager(new LinearLayoutManager(activity));
 		recyclerView.setAdapter(adapter);
-        recyclerView.addItemDecoration(new DividerItemDecoration(getActivity(), DividerItemDecoration.VERTICAL_LIST));
 
 		return view;
 	}
@@ -188,7 +188,13 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 		popupMenu.show();
 	}
 
-    private final ServiceConnection serviceConnection = new ServiceConnection() {
+	@Override
+	public void onBlockClicked(BlockInfo blockInfo) {
+		startActivity(BlockInfoActivity.createIntent(getContext(), blockInfo));
+		getActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay);
+	}
+
+	private final ServiceConnection serviceConnection = new ServiceConnection() {
 		@Override
         public void onServiceConnected(final ComponentName name, final IBinder binder) {
 			service = ((BlockchainServiceImpl.LocalBinder) binder).getService();
