@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_less_bright"
+    android:orientation="vertical">
+
+    <include
+        layout="@layout/app_bar_general"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="15dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginRight="15dp"
+        android:layout_marginBottom="18dp"
+        android:background="@drawable/round_corners_white_bg"
+        android:orientation="vertical"
+        android:paddingLeft="20dp"
+        android:paddingTop="24dp"
+        android:paddingRight="20dp"
+        android:paddingBottom="12dp">
+
+        <TextView
+            style="@style/MontserratRegular"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:text="@string/block"
+            android:textColor="@color/black_text" />
+
+        <TextView
+            android:id="@+id/block_height"
+            style="@style/MontserratRegular"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="22dp"
+            android:textColor="@color/gray"
+            android:textSize="12sp"
+            tools:text="121639" />
+
+        <TextView
+            style="@style/MontserratRegular"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:text="@string/time"
+            android:textColor="@color/black_text" />
+
+        <TextView
+            android:id="@+id/block_time"
+            style="@style/MontserratRegular"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="22dp"
+            android:textColor="@color/gray"
+            android:textSize="12sp"
+            tools:text="6 minutes ago" />
+
+        <TextView
+            style="@style/MontserratRegular"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:text="@string/hash"
+            android:textColor="@color/black_text" />
+
+        <TextView
+            android:id="@+id/block_hash"
+            style="@style/MontserratRegular"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="22dp"
+            android:textColor="@color/gray"
+            android:textSize="12sp"
+            tools:text="96a8e83f9925719d912a22dffea73b21e0938667ecd912f2839d496e3511b2b715a67424abe78534eb0d6b804d049834" />
+
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/view_on_explorer"
+        style="@style/NewMontserratButton.Primary"
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:layout_marginLeft="15dp"
+        android:layout_marginRight="15dp"
+        android:text="@string/transaction_result_view_on_explorer" />
+
+</LinearLayout>
