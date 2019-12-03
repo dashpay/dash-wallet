@@ -687,7 +687,7 @@ public class WalletApplication extends MultiDexApplication {
 
         resetBlockchain();
         wallet.shutdownAutosaveAndWait();
-        resetBlockchain();
+        stopBlockchainService();
 
         walletFile.delete();
         cleanupFiles();
