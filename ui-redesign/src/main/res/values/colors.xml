@@ -14,5 +14,7 @@
     <color name="ripple_dark">#80012060</color>
     <color name="success_green">#92D048</color>
     <color name="error_red">#BF2827</color>
-
+    <!-- added for transaction status -->
+    <color name="secondary_status">#E78010</color>
+    <color name="primary_status">#4A4A4A</color>
 </resources>

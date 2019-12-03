@@ -38,23 +38,23 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
         this.pin.addAll(pin)
     }
 
-    fun encryptKeys() {
+    fun encryptKeys(changingPin: Boolean) {
         val password = pin.joinToString("")
         if (!walletApplication.wallet.isEncrypted) {
-            encryptWalletLiveData.encrypt(password, walletApplication.scryptIterationsTarget())
+            encryptWalletLiveData.encrypt(password, changingPin, walletApplication.scryptIterationsTarget())
         } else {
             log.warn("Trying to encrypt already encrypted wallet")
         }
     }
 
-    fun checkPin() {
+    fun decryptKeys() {
         val password = pin.joinToString("")
-        checkPin(password)
+        decryptKeys(password)
     }
 
-    fun checkPin(password: String) {
+    fun decryptKeys(password: String) {
         if (walletApplication.wallet.isEncrypted) {
-            encryptWalletLiveData.checkPin(password)
+            encryptWalletLiveData.decrypt(password)
         } else {
             log.warn("Trying to decrypt unencrypted wallet")
         }

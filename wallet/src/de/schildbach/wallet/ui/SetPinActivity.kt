@@ -52,10 +52,13 @@ class SetPinActivity : AppCompatActivity() {
     val pin = arrayListOf<Int>()
     var seed = listOf<String>()
 
+    private var changePin = false
+
     private enum class State {
         DECRYPT,
         DECRYPTING,
         SET_PIN,
+        CHANGE_PIN,
         CONFIRM_PIN,
         ENCRYPTING
     }
@@ -66,18 +69,19 @@ class SetPinActivity : AppCompatActivity() {
 
         private const val EXTRA_TITLE_RES_ID = "extra_title_res_id"
         private const val EXTRA_PASSWORD = "extra_password"
+        private const val CHANGE_PIN = "change_pin"
 
-        fun createIntent(context: Context, titleResId: Int): Intent {
+        @JvmOverloads
+        @JvmStatic
+        fun createIntent(context: Context, titleResId: Int,
+                         changePin: Boolean = false, password: String? = null): Intent {
             val intent = Intent(context, SetPinActivity::class.java)
             intent.putExtra(EXTRA_TITLE_RES_ID, titleResId)
-            return intent
-        }
-
-        fun createIntent(context: Context, titleResId: Int, password: String?): Intent {
-            val intent = createIntent(context, titleResId)
+            intent.putExtra(CHANGE_PIN, changePin)
             intent.putExtra(EXTRA_PASSWORD, password)
             return intent
         }
+
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -100,10 +104,11 @@ class SetPinActivity : AppCompatActivity() {
         val walletApplication = application as WalletApplication
         if (walletApplication.wallet.isEncrypted) {
             val password = intent.getStringExtra(EXTRA_PASSWORD)
+            changePin = intent.getBooleanExtra(CHANGE_PIN, false)
             if (password != null) {
-                viewModel.checkPin(password)
+                viewModel.decryptKeys(password)
             } else {
-                setState(State.DECRYPT)
+                setState(if (changePin) State.CHANGE_PIN else State.DECRYPT)
             }
         } else {
             seed = walletApplication.wallet.keyChainSeed.mnemonicCode!!
@@ -163,7 +168,7 @@ class SetPinActivity : AppCompatActivity() {
         if (state == State.CONFIRM_PIN) {
             if (pin == viewModel.pin) {
                 Handler().postDelayed({
-                    viewModel.encryptKeys()
+                    viewModel.encryptKeys(changePin)
                 }, 200)
             } else {
                 pinPreviewView.shake()
@@ -171,8 +176,8 @@ class SetPinActivity : AppCompatActivity() {
             }
         } else {
             viewModel.setPin(pin)
-            if (state == State.DECRYPT) {
-                viewModel.checkPin()
+            if (state == State.DECRYPT || state == State.CHANGE_PIN) {
+                viewModel.decryptKeys()
             } else {
                 setState(State.CONFIRM_PIN)
             }
@@ -192,6 +197,20 @@ class SetPinActivity : AppCompatActivity() {
                 supportActionBar!!.setDisplayHomeAsUpEnabled(true)
                 messageView.visibility = View.GONE
                 confirmButtonView.visibility = View.VISIBLE
+                viewModel.pin.clear()
+                pin.clear()
+            }
+            State.CHANGE_PIN -> {
+                pinPreviewView.mode = PinPreviewView.PinType.STANDARD
+                pageTitleView.setText(R.string.set_pin_enter_pin)
+                if (pinProgressSwitcherView.currentView.id == R.id.progress) {
+                    pinProgressSwitcherView.showPrevious()
+                }
+                pageMessageView.visibility = View.VISIBLE
+                numericKeyboardView.visibility = View.VISIBLE
+                supportActionBar!!.setDisplayHomeAsUpEnabled(true)
+                messageView.visibility = View.GONE
+                confirmButtonView.visibility = View.GONE
                 viewModel.pin.clear()
                 pin.clear()
             }
@@ -255,7 +274,7 @@ class SetPinActivity : AppCompatActivity() {
             when (it.status) {
                 Status.ERROR -> {
                     if (state == State.DECRYPTING) {
-                        setState(State.DECRYPT)
+                        setState(if (changePin) State.CHANGE_PIN else State.DECRYPT)
                         pinPreviewView.shake()
                     } else {
                         android.widget.Toast.makeText(this, "Encrypting error", android.widget.Toast.LENGTH_LONG).show()
@@ -271,7 +290,11 @@ class SetPinActivity : AppCompatActivity() {
                         seed = walletApplication.wallet.keyChainSeed.mnemonicCode!!
                         setState(State.SET_PIN)
                     } else {
-                        viewModel.initWallet()
+                        if (changePin) {
+                            finish()
+                        } else {
+                            viewModel.initWallet()
+                        }
                     }
                 }
             }

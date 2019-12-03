@@ -17,14 +17,18 @@
 package de.schildbach.wallet.data
 
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.ExchangeRate
 import java.io.Serializable
+import java.util.*
 
 /**
  * @author Samuel Barbosa
  */
 data class TransactionResult(val dashAmount: Coin,
-                             val exchangeRate: ExchangeRate,
+                             val exchangeRate: ExchangeRate?,
                              val address: String,
-                             val feeAmount: Coin,
-                             val transactionHash: String) : Serializable
+                             val feeAmount: Coin?,
+                             val transactionHash: String,
+                             val date: Date,
+                             val purpose: Transaction.Purpose) : Serializable
