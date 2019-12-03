@@ -150,11 +150,10 @@ class LockScreenActivity : SendCoinsQrActivity() {
                     setState(State.DECRYPTING)
                 }
                 Status.SUCCESS -> {
-                    pinRetryController.clearPinFailPrefs()
                     if (EnableFingerprintDialog.shouldBeShown(this)) {
                         EnableFingerprintDialog.show(it.data, supportFragmentManager)
                     } else {
-                        startWalletActivity(it.data)
+                        onCorrectPin(it.data)
                     }
                 }
             }
@@ -162,11 +161,12 @@ class LockScreenActivity : SendCoinsQrActivity() {
         enableFingerprintViewModel = ViewModelProviders.of(this)[CheckPinSharedModel::class.java]
         enableFingerprintViewModel.onCorrectPinCallback.observe(this, Observer {
             val pin = it.second
-            startWalletActivity(pin)
+            onCorrectPin(pin)
         })
     }
 
-    private fun startWalletActivity(pin: String?) {
+    private fun onCorrectPin(pin: String?) {
+        pinRetryController.clearPinFailPrefs()
         saveSessionPin(pin)
         startActivity(WalletActivity.createIntent(this))
         finish()
@@ -259,7 +259,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
         fingerprintCancellationSignal = CancellationSignal()
         fingerprintHelper!!.getPassword(fingerprintCancellationSignal, object : FingerprintHelper.Callback {
             override fun onSuccess(savedPass: String) {
-                startWalletActivity(savedPass)
+                onCorrectPin(savedPass)
             }
 
             override fun onFailure(message: String, canceled: Boolean, exceededMaxAttempts: Boolean) {

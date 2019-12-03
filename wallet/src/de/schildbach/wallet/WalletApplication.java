@@ -694,8 +694,13 @@ public class WalletApplication extends MultiDexApplication {
         config.clear(true);
         PinRetryController.getInstance().clearPinFailPrefs();
 
-//        File blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
-//        blockChainFile.delete();
+        File walletBackupFile = getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
+        if(walletBackupFile.exists())
+            walletBackupFile.delete();
+
+        File blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
+        if (blockChainFile.exists())
+            blockChainFile.delete();
 
         ProcessPhoenix.triggerRebirth(context);
     }
