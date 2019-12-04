@@ -17,8 +17,6 @@
 package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
-import android.app.AlertDialog
-import android.content.Context
 import android.graphics.drawable.LayerDrawable
 import android.os.Bundle
 import android.os.Handler
@@ -53,7 +51,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 finish()
             }
             wipe_wallet.setOnClickListener {
-                showResetWalletDialog(this)
+                ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
             }
             return
         }
@@ -156,20 +154,5 @@ class OnboardingActivity : RestoreFromFileActivity() {
             result = resources.getDimensionPixelSize(resourceId)
         }
         return result
-    }
-
-    private fun showResetWalletDialog(context: Context) {
-        val dialogBuilder = AlertDialog.Builder(context)
-        dialogBuilder.setTitle(R.string.wallet_lock_reset_wallet_title)
-        dialogBuilder.setMessage(R.string.wallet_lock_reset_wallet_message)
-        //Inverting dialog answers to prevent accidental wallet reset
-        dialogBuilder.setNegativeButton(R.string.wallet_lock_reset_wallet_title) { _, _ ->
-            WalletApplication.getInstance().wipe(context)
-        }
-        dialogBuilder.setPositiveButton(android.R.string.no, null)
-        dialogBuilder.setCancelable(false)
-        val dialog = dialogBuilder.create()
-        dialog.setCanceledOnTouchOutside(false)
-        dialog.show()
     }
 }
