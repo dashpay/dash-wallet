@@ -132,11 +132,6 @@ public class WalletApplication extends MultiDexApplication {
                 //noinspection ResultOfMethodCallIgnored
                 walletFile.delete();
                 config.clear(false);
-                File blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
-                if (blockChainFile.exists()) {
-                    //noinspection ResultOfMethodCallIgnored
-                    blockChainFile.delete();
-                }
             }
             fullInitialization();
         }
@@ -697,10 +692,6 @@ public class WalletApplication extends MultiDexApplication {
         File walletBackupFile = getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
         if(walletBackupFile.exists())
             walletBackupFile.delete();
-
-        File blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
-        if (blockChainFile.exists())
-            blockChainFile.delete();
 
         ProcessPhoenix.triggerRebirth(context);
     }
