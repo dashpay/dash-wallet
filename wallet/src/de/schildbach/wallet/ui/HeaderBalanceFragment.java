@@ -70,7 +70,6 @@ public final class HeaderBalanceFragment extends Fragment {
     private CurrencyTextView viewBalanceLocal;
 
     private boolean isSynced;
-    private boolean balanceVisible;
     private boolean showLocalBalance;
 
     private ExchangeRatesViewModel exchangeRatesViewModel;
@@ -106,9 +105,9 @@ public final class HeaderBalanceFragment extends Fragment {
         this.activity = (AbstractBindServiceActivity) activity;
         this.application = (WalletApplication) activity.getApplication();
         this.config = application.getConfiguration();
-        hideBalance = config.getHideBalanceOnLaunch();
         this.wallet = application.getWallet();
         this.loaderManager = LoaderManager.getInstance(this);
+        hideBalance = config.getHideBalance();
 
         showLocalBalance = getResources().getBoolean(R.bool.show_local_balance);
     }
@@ -171,6 +170,10 @@ public final class HeaderBalanceFragment extends Fragment {
                         }
                     }
                 });
+
+        if (config.getHideBalance()) {
+            hideBalance = true;
+        }
 
         updateView();
     }

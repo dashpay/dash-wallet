@@ -17,18 +17,14 @@
 package de.schildbach.wallet.ui
 
 import android.Manifest
-import android.app.AlertDialog
-import android.app.Dialog
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
 import android.widget.Switch
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.WalletLock
-import de.schildbach.wallet.ui.AbstractWalletActivity.log
 import de.schildbach.wallet_test.R
 import org.bitcoinj.wallet.Wallet
 
@@ -43,9 +39,9 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
 
         setTitle(R.string.security_title)
         val hideBalanceOnLaunch = findViewById<Switch>(R.id.hide_balance_switch)
-        hideBalanceOnLaunch.isChecked = configuration.hideBalanceOnLaunch
+        hideBalanceOnLaunch.isChecked = configuration.hideBalance
         hideBalanceOnLaunch.setOnCheckedChangeListener {_, hideBalanceOnLaunch ->
-            configuration.hideBalanceOnLaunch = hideBalanceOnLaunch
+            configuration.hideBalance = hideBalanceOnLaunch
         }
     }
 
