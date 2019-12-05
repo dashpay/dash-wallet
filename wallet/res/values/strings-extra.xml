@@ -230,6 +230,10 @@
     <string name="about_github_link">https://github.com/dashevo/dash-wallet</string>
     <string name="about_version_name">Dash Wallet %s</string>
 
+    <string name="block">Block</string>
+    <string name="time">Time</string>
+    <string name="hash">Hash</string>
+    <string name="block_info">Block Info</string>
     <string name="confirm">Confirm</string>
 
     <string-array name="history_filter">
