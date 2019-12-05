@@ -56,10 +56,10 @@ import org.bitcoin.protocols.payments.Protos.Payment;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.InsufficientMoneyException;
+import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
@@ -70,12 +70,12 @@ import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards;
 import org.bitcoinj.wallet.Wallet.DustySendRequested;
 import org.bitcoinj.wallet.ZeroConfCoinSelector;
+import org.bouncycastle.crypto.params.KeyParameter;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.common.util.GenericUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.bouncycastle.crypto.params.KeyParameter;
 
 import java.io.FileNotFoundException;
 import java.io.InputStream;
@@ -212,7 +212,7 @@ public final class SendCoinsFragment extends Fragment {
             public void onChanged(Boolean unused) {
                 String sessionPin = activity.getSessionPin();
                 if (sessionPin == null) {
-                    CheckPinDialog.show(fragmentManager, AUTH_REQUEST_CODE_MAX);
+                    CheckPinDialog.show(activity, AUTH_REQUEST_CODE_MAX);
                 } else {
                     handleEmpty();
                 }
@@ -224,7 +224,7 @@ public final class SendCoinsFragment extends Fragment {
             public void onChanged(Boolean aBoolean) {
                 String sessionPin = activity.getSessionPin();
                 if (sessionPin == null) {
-                    CheckPinDialog.show(fragmentManager, AUTH_REQUEST_CODE_SEND);
+                    CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND);
                 } else {
                     handleGo(sessionPin);
                 }

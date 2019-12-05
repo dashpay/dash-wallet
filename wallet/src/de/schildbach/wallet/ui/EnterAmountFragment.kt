@@ -74,7 +74,6 @@ class EnterAmountFragment : Fragment() {
         }
         max_button.setOnClickListener {
             sharedViewModel.maxButtonClickEvent.call(true)
-            maxAmountSelected = true
         }
         numeric_keyboard.enableDecSeparator(true);
         numeric_keyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
@@ -256,6 +255,7 @@ class EnterAmountFragment : Fragment() {
         })
 
         sharedViewModel.applyMaxAmountEvent.observe(viewLifecycleOwner, Observer {
+            maxAmountSelected = true
             if (!viewModel.dashToFiatDirectionValue) {
                 viewModel.dashToFiatDirectionData.value = true
             }
