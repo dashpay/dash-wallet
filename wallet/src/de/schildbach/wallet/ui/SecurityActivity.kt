@@ -83,46 +83,8 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
 
     }
 
-    private fun executeResetWallet() {
-        val walletLock = WalletLock.getInstance()
-        if (WalletLock.getInstance().isWalletLocked(wallet)) {
-            UnlockWalletDialogFragment.show(supportFragmentManager) {
-                if (!walletLock.isWalletLocked(wallet)) {
-                    executeResetWallet()
-                }
-            }
-            return
-        }
-
-        try {
-            val newWallet = Wallet(Constants.NETWORK_PARAMETERS)
-            newWallet.addKeyChain(Constants.BIP44_PATH)
-
-            log.info("creating new wallet after wallet wipe")
-
-            val walletBackupFile = getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF)
-            if (walletBackupFile.exists()) walletBackupFile.delete()
-
-            walletApplication.replaceWallet(newWallet)
-            walletApplication.saveWallet()
-            configuration.armBackupReminder()
-            configuration.armBackupSeedReminder()
-            log.info("New wallet created to replace the wiped locked wallet")
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
     fun resetWallet(view: View) {
-        val dialogBuilder = AlertDialog.Builder(this)
-        dialogBuilder.setTitle(R.string.wallet_lock_reset_wallet_title)
-        dialogBuilder.setMessage(R.string.wallet_lock_reset_wallet_message)
-        dialogBuilder.setNegativeButton(R.string.wallet_lock_reset_wallet_title) { _, _ -> executeResetWallet() }
-        dialogBuilder.setPositiveButton(android.R.string.no, null)
-        dialogBuilder.setCancelable(false)
-        val dialog: Dialog = dialogBuilder.create()
-        dialog.setCanceledOnTouchOutside(false)
-        dialog.show()
+        ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
     }
 
     // required by UnlockWalletDialogFragment
