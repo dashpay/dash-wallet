@@ -34,7 +34,7 @@
             android:padding="10dp"
             android:layout_height="150dp"
             android:layout_margin="10dp"
-            android:inputType="textMultiLine"
+            android:inputType="textMultiLine|textNoSuggestions|textVisiblePassword"
             android:background="@color/dash_white"
             app:layout_constraintTop_toBottomOf="@id/label" />
 
