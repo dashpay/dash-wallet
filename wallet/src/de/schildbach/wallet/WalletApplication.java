@@ -82,6 +82,7 @@ import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.ui.GlobalFooterActivity;
 import de.schildbach.wallet.ui.LockScreenActivity;
+import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet_test.BuildConfig;
@@ -235,7 +236,7 @@ public class WalletApplication extends MultiDexApplication {
             @Override
             public void onActivityStarted(Activity activity) {
                 super.onActivityStarted(activity);
-                if (deviceWasLocked && !(activity instanceof LockScreenActivity)) {
+                if (deviceWasLocked && !(activity instanceof LockScreenActivity) && !(activity instanceof OnboardingActivity)) {
                     Intent lockScreenIntent = LockScreenActivity.createIntent(getApplicationContext());
                     lockScreenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(lockScreenIntent);
