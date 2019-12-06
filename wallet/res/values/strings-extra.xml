@@ -65,7 +65,7 @@
 
     <string name="forgot_pin_title">Forgot PIN?</string>
     <string name="forgot_pin_message">You can set a new PIN with the help of your recovery phrase?</string>
-    <string name="forgot_pin_instruction_1">Enter Recovery Phrase to recover wallet</string>
+    <string name="forgot_pin_instruction_1">Enter Recovery Phrase to recover your wallet</string>
     <string name="forgot_pin_instruction_2">Setup a new PIN</string>
     <string name="forgot_pin_instruction_3">Login with your new PIN to access your wallet</string>
     <string name="forgot_pin_warning">If you have forgot your PIN and lost your recover phrase, you cannot get back access to your wallet and funds.</string>

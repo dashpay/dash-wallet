@@ -28,7 +28,7 @@
             app:layout_constraintEnd_toEndOf="parent" />
 
         <EditText
-            android:id="@+id/seed"
+            android:id="@+id/input"
             android:layout_width="match_parent"
             android:gravity="top"
             android:padding="10dp"
@@ -39,8 +39,10 @@
             app:layout_constraintTop_toBottomOf="@id/label" />
 
         <Button
-            android:onClick="onContinueClick"
             style="@style/DashButton.Blue"
+            android:id="@+id/submit"
+            android:enabled="false"
+            android:onClick="onContinueClick"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="10dp"

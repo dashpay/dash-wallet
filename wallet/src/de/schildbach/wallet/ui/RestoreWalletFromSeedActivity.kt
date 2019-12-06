@@ -17,22 +17,21 @@
 package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.View
-import android.widget.EditText
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.activity_recover_wallet_from_seed.*
 import org.bitcoinj.crypto.MnemonicCode
 import org.bitcoinj.crypto.MnemonicException
-import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.ui.DialogBuilder
 import org.slf4j.LoggerFactory
-import java.io.IOException
 import java.util.*
+
 
 class RestoreWalletFromSeedActivity : BaseMenuActivity() {
     private val log = LoggerFactory.getLogger(RestoreWalletFromSeedDialogFragment::class.java)
@@ -46,65 +45,50 @@ class RestoreWalletFromSeedActivity : BaseMenuActivity() {
         super.onCreate(savedInstanceState)
 
         setTitle(R.string.recover_wallet_title)
+        input.requestFocus()
+        input.addTextChangedListener(object : TextWatcher {
+            override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
+                submit.isEnabled = s.toString().trim().isNotEmpty()
+            }
+            override fun afterTextChanged(s: Editable?) { }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) { }
+        })
+
     }
 
     @SuppressLint("StringFormatInvalid")
     fun onContinueClick(view: View) {
-        val seed = findViewById<EditText>(R.id.seed).text.trim()
+        val seed = input.text.trim()
         if (seed.isEmpty()) {
             return
         }
 
         val words = ArrayList(mutableListOf(*seed.split(' ').toTypedArray()))
+
         try {
             MnemonicCode.INSTANCE.check(words)
-            restoreWallet(WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS))
-            log.info("successfully restored wallet from seed: {}", words.size)
-        } catch (x: IOException) {
-            val dialog = DialogBuilder.warn(this, R.string.import_export_keys_dialog_failure_title)
-            dialog.setMessage(getString(R.string.import_keys_dialog_failure, x.message))
-            dialog.setNeutralButton(R.string.button_dismiss, null)
-            dialog.show()
-            log.info("problem restoring wallet from seed: ", x)
         } catch (x: MnemonicException) {
+            log.info("problem restoring wallet from seed: ", x)
             val dialog = DialogBuilder.warn(this, R.string.import_export_keys_dialog_failure_title)
             dialog.setMessage(getString(R.string.import_keys_dialog_failure, x.message))
-            dialog.setNeutralButton(R.string.button_dismiss, null)
+            dialog.setPositiveButton(R.string.button_dismiss, null)
             dialog.show()
-            log.info("problem restoring wallet from seed: ", x)
+            return
         }
 
-    }
+        walletApplication.wallet = WalletUtils
+                .restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS)
+        log.info("successfully restored wallet from seed")
+        walletApplication.configuration.disarmBackupSeedReminder()
+        walletApplication.configuration.isRestoringBackup = true
 
-    private fun restoreWallet(wallet: Wallet) {
-        walletApplication.replaceWallet(wallet)
-        getSharedPreferences(Constants.WALLET_LOCK_PREFS_NAME, Context.MODE_PRIVATE).edit().clear().apply()
-        configuration.disarmBackupReminder()
-
-        if (!wallet.hasKeyChain(Constants.BIP44_PATH)) {
-            if (wallet.isEncrypted) {
-                EncryptNewKeyChainDialogFragment.show(supportFragmentManager, Constants.BIP44_PATH)
-            } else {
-                // Upgrade the wallet now
-                wallet.addKeyChain(Constants.BIP44_PATH)
-                walletApplication.saveWallet()
-                // Tell the user that the wallet is being upgraded (BIP44)
-                // and they will have to enter a PIN.
-                UpgradeWalletDisclaimerDialog.show(supportFragmentManager)
-            }
-        } else {
-            resetBlockchain()
-        }
-    }
-
-    private fun resetBlockchain() {
         val dialog = DialogBuilder(this)
         dialog.setTitle(R.string.restore_wallet_dialog_success)
         dialog.setMessage(getString(R.string.restore_wallet_dialog_success_replay))
         dialog.setPositiveButton(R.string.button_ok) { _, _ ->
-            walletApplication.resetBlockchain()
-            val intent = SetPinActivity.createIntent(walletApplication, R.string.set_pin_create_new_wallet)
-            SingleLiveEvent<Intent>().call(intent)
+            val intent = SetPinActivity
+                    .createIntent(walletApplication, R.string.set_pin_create_new_wallet)
+            startActivity(intent)
         }
         dialog.show()
     }
