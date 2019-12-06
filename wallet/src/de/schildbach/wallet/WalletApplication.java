@@ -18,8 +18,10 @@
 package de.schildbach.wallet;
 
 import android.annotation.TargetApi;
+import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlarmManager;
+import android.app.KeyguardManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -79,6 +81,7 @@ import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.ui.GlobalFooterActivity;
+import de.schildbach.wallet.ui.LockScreenActivity;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet_test.BuildConfig;
@@ -111,6 +114,8 @@ public class WalletApplication extends MultiDexApplication {
 
     private static final Logger log = LoggerFactory.getLogger(WalletApplication.class);
 
+    private boolean deviceWasLocked = false;
+
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
@@ -135,6 +140,7 @@ public class WalletApplication extends MultiDexApplication {
             }
             fullInitialization();
         }
+        registerDeviceInteractiveReceiver();
     }
 
     public void fullInitialization() {
@@ -225,6 +231,18 @@ public class WalletApplication extends MultiDexApplication {
         WalletLock.getInstance().setConfiguration(config);
 
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
+
+            @Override
+            public void onActivityStarted(Activity activity) {
+                super.onActivityStarted(activity);
+                if (deviceWasLocked && !(activity instanceof LockScreenActivity)) {
+                    Intent lockScreenIntent = LockScreenActivity.createIntent(getApplicationContext());
+                    lockScreenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(lockScreenIntent);
+                }
+                deviceWasLocked = false;
+            }
+
             @Override
             public void onStartedAny(boolean isTheFirstOne) {
                 if (isTheFirstOne) {
@@ -709,4 +727,18 @@ public class WalletApplication extends MultiDexApplication {
         GlobalFooterActivity.finishAll(this);
     }
 
+    private void registerDeviceInteractiveReceiver() {
+
+        final IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_SCREEN_ON);
+        filter.addAction(Intent.ACTION_SCREEN_OFF);
+
+        registerReceiver(new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                KeyguardManager myKM = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
+                deviceWasLocked |= Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1 ? myKM.isDeviceLocked() : myKM.inKeyguardRestrictedInputMode();
+            }
+        }, filter);
+    }
 }

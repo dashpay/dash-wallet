@@ -189,13 +189,11 @@
 
     <de.schildbach.wallet.ui.widget.NumericKeyboardView
         android:id="@+id/numeric_keyboard"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/dash_white"
         android:padding="16dp"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@id/bottom_guideline"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintBottom_toBottomOf="@id/bottom_guideline" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
