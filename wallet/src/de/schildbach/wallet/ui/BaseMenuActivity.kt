@@ -25,6 +25,7 @@ import android.view.MenuItem
 import androidx.annotation.LayoutRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
 
 /**
@@ -69,4 +70,9 @@ abstract class BaseMenuActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    protected val walletApplication
+    get() = application as WalletApplication
+
+    protected val configuration
+    get() = walletApplication.configuration
 }
