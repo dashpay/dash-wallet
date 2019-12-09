@@ -695,6 +695,7 @@ public class WalletApplication extends MultiDexApplication {
     /**
      * Removes all the data and restarts the app showing onboarding screen.
      */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public void wipe(Context context) {
         log.info("Removing all the data and restarting the app.");
 
@@ -702,11 +703,14 @@ public class WalletApplication extends MultiDexApplication {
         wallet.shutdownAutosaveAndWait();
         stopBlockchainService();
 
-        //noinspection ResultOfMethodCallIgnored
         walletFile.delete();
         cleanupFiles();
         config.clear(true);
-        PinRetryController.clearPrefs();
+        PinRetryController.getInstance().clearPinFailPrefs();
+
+        File walletBackupFile = getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
+        if(walletBackupFile.exists())
+            walletBackupFile.delete();
 
         ProcessPhoenix.triggerRebirth(context);
     }
