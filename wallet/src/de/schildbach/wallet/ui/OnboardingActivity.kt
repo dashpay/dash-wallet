@@ -43,7 +43,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (PinRetryController.handleLockedForever(this, false)) {
+        if (PinRetryController.getInstance().isLockedForever) {
             setContentView(R.layout.activity_onboarding_perm_lock)
             getStatusBarHeightPx()
             hideSlogan()
@@ -51,7 +51,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 finish()
             }
             wipe_wallet.setOnClickListener {
-                PinRetryController.showResetWalletDialog(this, false)
+                ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
             }
             return
         }
