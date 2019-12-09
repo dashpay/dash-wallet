@@ -72,7 +72,6 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
-import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
