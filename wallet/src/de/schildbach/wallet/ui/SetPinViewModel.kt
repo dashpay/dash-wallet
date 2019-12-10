@@ -38,8 +38,12 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
         this.pin.addAll(pin)
     }
 
+    fun getPinAsString(): String {
+        return pin.joinToString("")
+    }
+
     fun encryptKeys(changingPin: Boolean) {
-        val password = pin.joinToString("")
+        val password = getPinAsString()
         if (!walletApplication.wallet.isEncrypted) {
             encryptWalletLiveData.encrypt(password, changingPin, walletApplication.scryptIterationsTarget())
         } else {
@@ -48,8 +52,7 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun decryptKeys() {
-        val password = pin.joinToString("")
-        decryptKeys(password)
+        decryptKeys(getPinAsString())
     }
 
     fun decryptKeys(password: String) {
