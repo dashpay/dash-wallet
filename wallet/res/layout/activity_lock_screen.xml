@@ -126,14 +126,13 @@
 
     </LinearLayout>
 
-
     <org.dash.wallet.ui.widget.LockScreenButton
         android:id="@+id/action_receive"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginBottom="16dp"
         app:action_icon="@drawable/ic_lock_quick_receive"
-        app:action_icon_size_percent="0.5"
+        app:action_icon_padding="10dp"
         app:layout_constraintBottom_toTopOf="@id/numeric_keyboard"
         app:layout_constraintDimensionRatio="1:1.1"
         app:layout_constraintEnd_toEndOf="@id/left_guideline"
@@ -148,7 +147,7 @@
         android:layout_height="0dp"
         android:layout_marginBottom="16dp"
         app:action_icon="@drawable/ic_lock_login_with_pin"
-        app:action_icon_size_percent="0.5"
+        app:action_icon_padding="4dp"
         app:layout_constraintBottom_toTopOf="@id/numeric_keyboard"
         app:layout_constraintDimensionRatio="1:1.1"
         app:layout_constraintEnd_toEndOf="@id/v_center_guideline"
@@ -163,7 +162,7 @@
         android:layout_height="0dp"
         android:layout_marginBottom="16dp"
         app:action_icon="@drawable/ic_lock_login_with_fingerprint"
-        app:action_icon_size_percent="0.5"
+        app:action_icon_padding="4dp"
         app:layout_constraintBottom_toTopOf="@id/numeric_keyboard"
         app:layout_constraintDimensionRatio="1:1.1"
         app:layout_constraintEnd_toEndOf="@id/v_center_guideline"
@@ -178,7 +177,7 @@
         android:layout_height="0dp"
         android:layout_marginBottom="16dp"
         app:action_icon="@drawable/ic_lock_scan_to_pay"
-        app:action_icon_size_percent="0.4"
+        app:action_icon_padding="8dp"
         app:layout_constraintBottom_toTopOf="@id/numeric_keyboard"
         app:layout_constraintDimensionRatio="1:1.1"
         app:layout_constraintEnd_toEndOf="@id/right_guideline"
