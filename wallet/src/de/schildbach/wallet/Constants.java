@@ -245,7 +245,7 @@ public final class Constants {
 
     /** Desired number of scrypt iterations for deriving the spending PIN */
     public static final int SCRYPT_ITERATIONS_TARGET = 65536;
-    public static final int SCRYPT_ITERATIONS_TARGET_LOWRAM = 32768;
+    public static final int SCRYPT_ITERATIONS_TARGET_LOWRAM = 32768/2;
 
     /** Default ports for Electrum servers */
     public static final int ELECTRUM_SERVER_DEFAULT_PORT_TCP = NETWORK_PARAMETERS.getId()
