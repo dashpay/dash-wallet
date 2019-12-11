@@ -21,12 +21,14 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
+import android.widget.Switch
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.WalletLock
 import de.schildbach.wallet_test.R
 import org.bitcoinj.wallet.Wallet
+
 
 class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletProvider {
     override fun getLayoutId(): Int {
@@ -37,6 +39,11 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         super.onCreate(savedInstanceState)
 
         setTitle(R.string.security_title)
+        val hideBalanceOnLaunch = findViewById<Switch>(R.id.hide_balance_switch)
+        hideBalanceOnLaunch.isChecked = configuration.hideBalance
+        hideBalanceOnLaunch.setOnCheckedChangeListener {_, hideBalanceOnLaunch ->
+            configuration.hideBalance = hideBalanceOnLaunch
+        }
     }
 
     fun backupWallet(view: View) {
@@ -74,7 +81,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
     }
 
     fun resetWallet(view: View) {
-
+        ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
     }
 
     // required by UnlockWalletDialogFragment
