@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
@@ -69,7 +70,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
     }
 
     fun openAdvancedSecurity(view: View) {
-
+        startActivity(Intent(this, AdvancedSecurityActivity::class.java))
     }
 
     fun resetWallet(view: View) {

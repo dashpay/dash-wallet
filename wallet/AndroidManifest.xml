@@ -237,6 +237,10 @@
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
+        <activity android:name="de.schildbach.wallet.ui.AdvancedSecurityActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity" />
+
         <activity android:name="de.schildbach.wallet.ui.SettingsActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
@@ -269,11 +273,6 @@
         <activity android:name="de.schildbach.wallet.ui.ForgotPinActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
-
-        <activity
-            android:name="de.schildbach.wallet.ui.TransactionResultActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.Fullscreen" />
 
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"
