@@ -22,12 +22,17 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_advanced_security.*
 
 class AdvancedSecurityActivity : BaseMenuActivity() {
+    private var autoLogout = false
+    private var spendingConfirmation = false
+
     override fun getLayoutId(): Int {
         return R.layout.activity_advanced_security
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        securityIcon.setImageDrawable(resources.getDrawable(R.drawable.security_filled_blue))
 
         autoLogoutSwitch.setOnCheckedChangeListener {_, enabled ->
             autoLogoutPanel.visibility = if (enabled) View.VISIBLE  else View.GONE
@@ -41,6 +46,7 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
     }
 
     private fun updateView() {
+
 
     }
 }
