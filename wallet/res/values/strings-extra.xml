@@ -236,6 +236,14 @@
     <string name="block_info">Block Info</string>
     <string name="confirm">Confirm</string>
 
+    <string name="auto_logout">Auto Logout</string>
+    <string name="spending_confirmation">Spending Confirmation</string>
+    <string name="logout_after">Logout after</string>
+    <string name="immediately">Immediately</string>
+    <string name="twenty_four_hours">24 hours</string>
+    <string name="one_hour">1 hour</string>
+    <string name="biometric_limit">Biometric Limit</string>
+
     <string-array name="history_filter">
         <item>All</item>
         <item>Received</item>

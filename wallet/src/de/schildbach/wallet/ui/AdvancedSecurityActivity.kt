@@ -32,14 +32,14 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        securityIcon.setImageDrawable(resources.getDrawable(R.drawable.security_filled_blue))
+        security_icon.setImageDrawable(resources.getDrawable(R.drawable.security_filled_blue))
 
-        autoLogoutSwitch.setOnCheckedChangeListener {_, enabled ->
-            autoLogoutPanel.visibility = if (enabled) View.VISIBLE  else View.GONE
+        auto_logout_switch.setOnCheckedChangeListener { _, enabled ->
+            auto_logout_group.visibility = if (enabled) View.VISIBLE  else View.GONE
         }
 
-        spendingConfirmationSwitch.setOnCheckedChangeListener {_, enabled ->
-            spendingConfirmationPanel.visibility = if (enabled) View.VISIBLE  else View.GONE
+        spending_confirmation_switch.setOnCheckedChangeListener { _, enabled ->
+            spending_confirmation_group.visibility = if (enabled) View.VISIBLE  else View.GONE
         }
 
         setTitle(R.string.security_title)

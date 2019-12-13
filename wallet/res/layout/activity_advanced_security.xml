@@ -2,10 +2,10 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:background="@color/bg_less_bright"
-    android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="match_parent"
+    android:background="@color/bg_less_bright"
+    android:orientation="vertical">
 
     <include
         layout="@layout/app_bar_general"
@@ -15,262 +15,302 @@
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
+
         <LinearLayout
-            android:orientation="vertical"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-            <LinearLayout
-                android:layout_height="wrap_content"
-                android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/security_icon"
+                android:layout_width="match_parent"
+                android:layout_height="70dp"
                 android:layout_gravity="center"
-                android:orientation="vertical">
-                <ImageView
-                    android:id="@+id/securityIcon"
-                    android:layout_width="match_parent"
-                    android:layout_height="70dp"
-                    android:layout_marginTop="15dp"
-                    android:layout_gravity="center" />
+                android:layout_marginTop="36dp"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:src="@drawable/security_filled_blue" />
+
+            <TextView
+                android:id="@+id/security_level_label"
+                style="@style/MontserratRegular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="20dp"
+                android:text="Security level"
+                android:textColor="@color/dash_gray" />
+
+            <TextView
+                android:id="@+id/security_level"
+                style="@android:style/TextAppearance.Medium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="20dp"
+                android:text="High"
+                android:textColor="@color/dash_blue" />
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/spending_confirmation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="15dp"
+                android:layout_marginTop="30dp"
+                android:layout_marginRight="15dp"
+                android:layout_marginBottom="10dp"
+                android:animateLayoutChanges="true"
+                android:background="@drawable/round_corners_white_bg"
+                app:layout_constraintTop_toBottomOf="@id/security_level">
+
                 <TextView
-                    android:text="Security level"
-                    android:layout_marginBottom="5dp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-                <TextView
-                    style="@android:style/TextAppearance.Medium"
-                    android:text="High"
+                    android:id="@+id/auto_logout_label"
+                    style="@style/MontserratRegular.MenuRowTitle.Internal"
+                    android:layout_marginTop="20dp"
+                    android:layout_marginEnd="10dp"
+                    android:layout_marginRight="10dp"
                     android:layout_marginBottom="20dp"
-                    android:textColor="@color/dash_blue"
-                    android:layout_gravity="center"
+                    android:text="@string/auto_logout"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintVertical_bias="0" />
+
+                <Switch
+                    android:id="@+id/auto_logout_switch"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-            </LinearLayout>
-
-            <LinearLayout
-                style="@style/MenuRow.Internal"
-                android:orientation="vertical"
-                android:animateLayoutChanges="true"
-                android:layout_height="wrap_content">
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="10dp"
+                    android:layout_marginRight="10dp"
+                    app:layout_constraintBottom_toTopOf="@id/auto_logout_label"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/auto_logout_label" />
 
                 <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/auto_logout_group"
                     android:layout_width="match_parent"
-                    android:layout_height="70dp">
-                    <TextView
-                        style="@style/MontserratMedium.MenuRowTitle.Internal"
-                        android:text="Auto Logout"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginTop="18dp"
+                    android:visibility="gone"
+                    app:layout_constraintTop_toBottomOf="@id/auto_logout_switch"
+                    tools:visibility="visible">
+
+                    <View
+                        android:id="@+id/auto_logout_separator"
+                        style="@style/HorizontalLine"
+                        android:layout_width="match_parent"
+                        android:background="@color/bg_less_bright"
                         app:layout_constraintTop_toTopOf="parent" />
 
-                    <Switch
-                        android:id="@+id/autoLogoutSwitch"
-                        app:layout_constraintBottom_toBottomOf="parent"
+                    <TextView
+                        android:id="@+id/logout_after_label"
+                        style="@style/MontserratRegular.MenuRowTitle.Internal"
+                        android:layout_marginTop="28dp"
+                        android:text="@string/logout_after"
+                        android:textSize="14sp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/auto_logout_separator" />
+
+                    <TextView
+                        android:id="@+id/logout_after_time"
+                        style="@style/MontserratRegular.MenuRowTitle.Internal"
+                        android:layout_marginEnd="22dp"
+                        android:layout_marginRight="22dp"
+                        android:text="@string/one_hour"
+                        android:textSize="24sp"
+                        app:layout_constraintBottom_toBottomOf="@id/logout_after_label"
                         app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintTop_toTopOf="@id/logout_after_label" />
+
+                    <TextView
+                        android:id="@+id/immediately"
+                        style="@style/MontserratRegular.MenuRowTitle.Internal"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="40dp"
+                        android:text="@string/immediately"
+                        android:textColor="@color/gray"
+                        android:textSize="12sp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/logout_after_time" />
+
+                    <TextView
+                        android:id="@+id/auto_logout_max_time"
+                        style="@style/MontserratRegular.MenuRowTitle.Internal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="18dp"
+                        android:text="@string/twenty_four_hours"
+                        android:textColor="@color/gray"
+                        android:textSize="12sp"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="@id/immediately" />
+
+                    <SeekBar
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="20dp"
+                        android:layout_marginTop="16dp"
+                        android:layout_marginRight="20dp"
+                        android:layout_marginBottom="26dp"
+                        android:max="5"
+                        android:theme="@style/Widget.AppCompat.SeekBar.Discrete"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/auto_logout_max_time" />
+
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
-                <LinearLayout
-                    android:id="@+id/autoLogoutPanel"
-                    android:orientation="vertical"
-                    android:layout_width="match_parent"
-                    android:layout_height="160dp">
-                    <View style="@style/HorizontalLine"/>
-                    <LinearLayout
-                        android:orientation="vertical"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent">
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
-                        <androidx.constraintlayout.widget.ConstraintLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="70dp">
-                            <TextView
-                                style="@style/MontserratMedium.MenuRowTitle.Internal"
-                                android:text="Logout after"
-                                app:layout_constraintBottom_toBottomOf="parent"
-                                app:layout_constraintStart_toStartOf="parent"
-                                app:layout_constraintTop_toTopOf="parent" />
-
-                            <TextView
-                                style="@style/MontserratMedium.MenuRowTitle.Internal"
-                                android:layout_marginEnd="18dp"
-                                android:text="1 hour"
-                                android:textSize="22sp"
-                                app:layout_constraintBottom_toBottomOf="parent"
-                                app:layout_constraintEnd_toEndOf="parent"
-                                app:layout_constraintTop_toTopOf="parent"
-                                app:layout_constraintVertical_bias="0.512" />
-                        </androidx.constraintlayout.widget.ConstraintLayout>
-
-                        <androidx.constraintlayout.widget.ConstraintLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="40dp"
-                            app:layout_constraintBottom_toBottomOf="parent"
-                            app:layout_constraintTop_toTopOf="parent">
-                            <TextView
-                                style="@style/MontserratMedium.MenuRowTitle.Internal"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:textColor="@color/colorAccent"
-                                android:textSize="12sp"
-                                android:text="Immediately"
-                                app:layout_constraintBottom_toBottomOf="parent"
-                                app:layout_constraintStart_toStartOf="parent"
-                                app:layout_constraintTop_toTopOf="parent" />
-
-                            <TextView
-                                style="@style/MontserratMedium.MenuRowTitle.Internal"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:textColor="@color/colorAccent"
-                                android:textSize="12sp"
-                                android:text="24 hours"
-                                android:layout_marginEnd="18dp"
-                                app:layout_constraintBottom_toBottomOf="parent"
-                                app:layout_constraintEnd_toEndOf="parent"
-                                app:layout_constraintTop_toTopOf="parent" />
-                        </androidx.constraintlayout.widget.ConstraintLayout>
-
-                        <SeekBar
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:max="5"
-                            android:layout_marginStart="10dp"
-                            android:layout_marginEnd="10dp"
-                            android:theme="@style/Widget.AppCompat.SeekBar.Discrete" />
-                    </LinearLayout>
-                </LinearLayout>
-            </LinearLayout>
-
-            <LinearLayout
-                style="@style/MenuRow.Internal"
-                android:orientation="vertical"
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="15dp"
+                android:layout_marginRight="15dp"
                 android:animateLayoutChanges="true"
-                android:layout_height="wrap_content">
+                android:background="@drawable/round_corners_white_bg"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/spending_confirmation">
+
+                <TextView
+                    android:id="@+id/spending_confirmation_label"
+                    style="@style/MontserratRegular.MenuRowTitle.Internal"
+                    android:layout_marginTop="20dp"
+                    android:layout_marginBottom="20dp"
+                    android:text="@string/spending_confirmation"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintVertical_bias="0" />
+
+                <Switch
+                    android:id="@+id/spending_confirmation_switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="10dp"
+                    android:layout_marginRight="10dp"
+                    app:layout_constraintBottom_toBottomOf="@id/spending_confirmation_label"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/spending_confirmation_label" />
 
                 <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/spending_confirmation_group"
                     android:layout_width="match_parent"
-                    android:layout_height="70dp">
-                    <TextView
-                        style="@style/MontserratMedium.MenuRowTitle.Internal"
-                        android:text="Spending Confirmation"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:layout_marginBottom="30dp"
+                    android:visibility="gone"
+                    app:layout_constraintTop_toBottomOf="@id/spending_confirmation_switch"
+                    tools:visibility="visible">
+
+                    <View
+                        android:id="@+id/spending_confirmation_separator"
+                        style="@style/HorizontalLine"
+                        android:layout_width="match_parent"
+                        android:background="@color/bg_less_bright"
                         app:layout_constraintTop_toTopOf="parent" />
 
-                    <Switch
-                        android:id="@+id/spendingConfirmationSwitch"
-                        app:layout_constraintBottom_toBottomOf="parent"
+                    <TextView
+                        android:id="@+id/biometric_limit_label"
+                        style="@style/MontserratRegular.MenuRowTitle.Internal"
+                        android:layout_marginTop="28dp"
+                        android:text="@string/biometric_limit"
+                        android:textSize="14sp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/spending_confirmation_separator" />
+
+                    <TextView
+                        android:id="@+id/biometric_limit_value"
+                        style="@style/MontserratMedium.MenuRowTitle.Internal"
+                        android:layout_marginEnd="22dp"
+                        android:layout_marginRight="22dp"
+                        android:text="0.5"
+                        android:textSize="22sp"
+                        app:layout_constraintBottom_toBottomOf="@id/biometric_limit_label"
                         app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintTop_toTopOf="@id/biometric_limit_label"
+                        tools:ignore="HardcodedText" />
+
+                    <ImageView
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
+                        android:layout_height="16sp"
+                        android:layout_marginTop="3dp"
+                        android:layout_marginEnd="2dp"
+                        android:layout_marginRight="2dp"
+                        app:layout_constraintBottom_toBottomOf="@id/biometric_limit_value"
+                        app:layout_constraintEnd_toStartOf="@id/biometric_limit_value"
+                        app:layout_constraintTop_toTopOf="@id/biometric_limit_value"
+                        app:srcCompat="@drawable/ic_dash_d_black"
+                        tools:ignore="ContentDescription" />
+
+                    <ImageView
+                        android:id="@+id/biometric_limit_icon_min"
+                        android:layout_width="wrap_content"
+                        android:layout_height="8dp"
+                        android:layout_marginStart="18dp"
+                        android:layout_marginLeft="18dp"
+                        android:layout_marginTop="24dp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/biometric_limit_value"
+                        app:srcCompat="@drawable/ic_dash_d_gray"
+                        tools:ignore="ContentDescription" />
+
+                    <TextView
+                        android:id="@+id/biometric_limit_min"
+                        style="@style/MontserratRegular"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="@color/gray"
+                        android:textSize="12sp"
+                        app:layout_constraintBottom_toBottomOf="@id/biometric_limit_icon_min"
+                        app:layout_constraintStart_toEndOf="@id/biometric_limit_icon_min"
+                        app:layout_constraintTop_toTopOf="@id/biometric_limit_icon_min"
+                        tools:ignore="HardcodedText" />
+
+                    <TextView
+                        android:id="@+id/biometric_limit_max"
+                        style="@style/MontserratRegular"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="18dp"
+                        android:layout_marginRight="18dp"
+                        android:text="10"
+                        android:textColor="@color/gray"
+                        android:textSize="12sp"
+                        app:layout_constraintBottom_toBottomOf="@id/biometric_limit_min"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="@id/biometric_limit_min"
+                        tools:ignore="HardcodedText" />
+
+                    <ImageView
+                        android:id="@+id/biometric_limit_icon_max"
+                        android:layout_width="wrap_content"
+                        android:layout_height="8dp"
+                        app:layout_constraintBottom_toBottomOf="@id/biometric_limit_max"
+                        app:layout_constraintEnd_toStartOf="@id/biometric_limit_max"
+                        app:layout_constraintTop_toTopOf="@id/biometric_limit_max"
+                        app:srcCompat="@drawable/ic_dash_d_gray"
+                        tools:ignore="ContentDescription" />
+
+                    <SeekBar
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginTop="18dp"
+                        android:layout_marginEnd="10dp"
+                        android:layout_marginBottom="30dp"
+                        android:max="5"
+                        android:theme="@style/Widget.AppCompat.SeekBar.Discrete"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/biometric_limit_max" />
+
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
-                <LinearLayout
-                    android:id="@+id/spendingConfirmationPanel"
-                    android:orientation="vertical"
-                    android:layout_width="match_parent"
-                    android:layout_height="160dp">
-                    <View style="@style/HorizontalLine"/>
-                    <LinearLayout
-                        android:orientation="vertical"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent">
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
-                        <androidx.constraintlayout.widget.ConstraintLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="70dp">
-                            <TextView
-                                style="@style/MontserratMedium.MenuRowTitle.Internal"
-                                android:text="Touch ID Limit"
-                                app:layout_constraintBottom_toBottomOf="parent"
-                                app:layout_constraintStart_toStartOf="parent"
-                                app:layout_constraintTop_toTopOf="parent" />
-
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                app:layout_constraintBottom_toBottomOf="parent"
-                                app:layout_constraintEnd_toEndOf="parent"
-                                app:layout_constraintTop_toTopOf="parent">
-                                <ImageView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="match_parent"
-                                    app:srcCompat="@drawable/ic_dash_d_black"
-                                    tools:ignore="ContentDescription" />
-                                <TextView
-                                    style="@style/MontserratMedium.MenuRowTitle.Internal"
-                                    android:layout_marginEnd="18dp"
-                                    android:layout_marginLeft="5dp"
-                                    android:text="0.5"
-                                    android:textSize="22sp"
-                                    app:layout_constraintVertical_bias="0.512" />
-
-                            </LinearLayout>
-                        </androidx.constraintlayout.widget.ConstraintLayout>
-
-                        <androidx.constraintlayout.widget.ConstraintLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="40dp"
-                            app:layout_constraintBottom_toBottomOf="parent"
-                            app:layout_constraintTop_toTopOf="parent">
-
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="@dimen/app_bar_balance_font_size"
-                                app:layout_constraintBottom_toBottomOf="parent"
-                                app:layout_constraintStart_toStartOf="parent"
-                                app:layout_constraintTop_toTopOf="parent">
-
-                                <ImageView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="match_parent"
-                                    app:srcCompat="@drawable/ic_dash_d_gray"
-                                    tools:ignore="ContentDescription" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="0"
-                                    android:textColor="@color/colorAccent"
-                                    android:textSize="12sp" />
-                            </LinearLayout>
-
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginEnd="20dp"
-                                app:layout_constraintBottom_toBottomOf="parent"
-                                app:layout_constraintEnd_toEndOf="parent"
-                                app:layout_constraintTop_toTopOf="parent">
-                                <ImageView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="match_parent"
-                                    app:srcCompat="@drawable/ic_dash_d_gray"
-                                    tools:ignore="ContentDescription" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="10"
-                                    android:textColor="@color/colorAccent"
-                                    android:textSize="12sp" />
-                            </LinearLayout>
-                        </androidx.constraintlayout.widget.ConstraintLayout>
-
-                        <SeekBar
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:max="5"
-                            android:layout_marginStart="10dp"
-                            android:layout_marginEnd="10dp"
-                            android:theme="@style/Widget.AppCompat.SeekBar.Discrete" />
-                    </LinearLayout>
-                </LinearLayout>
-            </LinearLayout>
         </LinearLayout>
+
     </ScrollView>
 
 </LinearLayout>
