@@ -574,7 +574,9 @@ public class WalletApplication extends MultiDexApplication {
 
     public void replaceWallet(final Wallet newWallet) {
         resetBlockchain();
-        wallet.shutdownAutosaveAndWait();
+        if (wallet != null) {
+            wallet.shutdownAutosaveAndWait();
+        }
 
         wallet = newWallet;
         config.maybeIncrementBestChainHeightEver(newWallet.getLastBlockSeenHeight());

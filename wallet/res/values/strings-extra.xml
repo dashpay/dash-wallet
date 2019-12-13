@@ -55,6 +55,7 @@
     <string name="more_title">More</string>
     <string name="settings_title">Settings</string>
     <string name="security_title">Security</string>
+    <string name="recover_wallet_title">Recover Wallet</string>
     <string name="tools_title">Tools</string>
 
     <string name="payments_title">Payments</string>
@@ -69,7 +70,7 @@
 
     <string name="forgot_pin_title">Forgot PIN?</string>
     <string name="forgot_pin_message">You can set a new PIN with the help of your recovery phrase?</string>
-    <string name="forgot_pin_instruction_1">Enter recovery phrase to recover wallet</string>
+    <string name="forgot_pin_instruction_1">Enter Recovery Phrase to recover your wallet</string>
     <string name="forgot_pin_instruction_2">Setup a new PIN</string>
     <string name="forgot_pin_instruction_3">Login with your new PIN to access your wallet</string>
     <string name="forgot_pin_warning">If you have forgot your PIN and lost your recover phrase, you cannot get back access to your wallet and funds.</string>
