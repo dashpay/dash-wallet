@@ -102,6 +102,7 @@ import de.schildbach.wallet.ui.SingleActionSharedViewModel;
 import de.schildbach.wallet.ui.TransactionResultActivity;
 import de.schildbach.wallet.util.Bluetooth;
 import de.schildbach.wallet.util.Nfc;
+import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet_test.R;
 import kotlin.Pair;
 
@@ -550,10 +551,18 @@ public final class SendCoinsFragment extends Fragment {
             return;
         }
         String address = viewModel.paymentIntent.getAddress().toBase58();
+
+        int primaryStatus = TransactionUtil.getTransactionTypeName(transaction, viewModel.wallet);
+        int secondaryStatus = TransactionUtil.getReceivedStatusString(transaction, viewModel.wallet);
+        int errorStatus = TransactionUtil.getErrorName(transaction);
+        String primaryStatusStr = (transaction.getType() != Transaction.Type.TRANSACTION_NORMAL || transaction.isCoinBase()) ? getString(primaryStatus) : "";
+        String secondaryStatusStr = secondaryStatus != -1 ? getString(secondaryStatus) : "";
+        String errorStatusStr = errorStatus != -1 ? getString(errorStatus) : "";
+
         TransactionResult transactionResult = new TransactionResult(
                 transaction.getValue(viewModel.wallet), transaction.getExchangeRate(), address,
                 transaction.getFee(), transaction.getHashAsString(), transaction.getUpdateTime(),
-                transaction.getPurpose());
+                transaction.getPurpose(), primaryStatusStr, secondaryStatusStr, errorStatusStr);
 
         Intent transactionResultIntent = new Intent(getContext(), TransactionResultActivity.class);
         transactionResultIntent.putExtra(TransactionResultActivity.TRANSACTION_RESULT_EXTRA, transactionResult);

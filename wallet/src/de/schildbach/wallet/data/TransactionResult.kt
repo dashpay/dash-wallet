@@ -31,4 +31,7 @@ data class TransactionResult(val dashAmount: Coin,
                              val feeAmount: Coin?,
                              val transactionHash: String,
                              val date: Date,
-                             val purpose: Transaction.Purpose) : Serializable
+                             val purpose: Transaction.Purpose,
+                             val primaryStatus: String,
+                             val secondaryStatus: String,
+                             val errorStatus: String) : Serializable
