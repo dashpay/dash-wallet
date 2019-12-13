@@ -14,7 +14,7 @@
     <string name="set_pin_decrypting">Decrypting wallet</string>
     <string name="set_pin_message">This PIN will be required to unlock your app everytime when you use it.</string>
 
-    <string name="home_pay">Pay</string>
+    <string name="home_pay">Send</string>
     <string name="home_receive">Receive</string>
     <string name="home_available_balance">Available balance</string>
     <string name="home_balance_hidden">Balance hidden</string>
@@ -23,15 +23,15 @@
 
 
     <string name="quick_action_secure_now">Secure\nWallet Now</string>
-    <string name="quick_action_scan_to_pay">Scan to\nPay</string>
-    <string name="quick_action_pay_to_address">Pay to\nAddress</string>
+    <string name="quick_action_scan_to_pay">Scan to\nSend</string>
+    <string name="quick_action_pay_to_address">Send to\nAddress</string>
     <string name="quick_action_buy_sell">Buy / Sell\nDash</string>
     <string name="quick_action_add_shortcut">Add\nShortcut</string>
 
     <string name="lock_action_quick_receive">Quick\nReceive</string>
     <string name="lock_action_login_with_pin">Login\nwith PIN</string>
     <string name="lock_action_login_with_fingerprint">Login with\nFingerprint</string>
-    <string name="lock_action_scan_to_pay">Scan to\nPay</string>
+    <string name="lock_action_scan_to_pay">Scan to\nSend</string>
     <string name="lock_enter_pin">Enter PIN</string>
     <string name="lock_unlock_with_fingerprint">Use your fingerprint to unlock</string>
 
@@ -39,7 +39,7 @@
     <string name="perm_lock_wipe_wallet">Wipe wallet</string>
     <string name="perm_lock_close_app">Close</string>
 
-    <string name="scan_to_pay_error_dialog_title">Scan to Pay</string>
+    <string name="scan_to_pay_error_dialog_title">Scan to Send</string>
     <string name="scan_to_pay_error_dialog_message">Not a valid Dash Address or URL request in clipboard:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Not a valid Dash Address or URL request in clipboard.</string>
 
@@ -49,7 +49,7 @@
     <string name="receive_share_button">Share</string>
     <string name="receive_copied">Copied</string>
 
-    <string name="pay_title">Pay</string>
+    <string name="pay_title">Send</string>
     <string name="history_title">History</string>
     <string name="more_title">More</string>
     <string name="settings_title">Settings</string>
@@ -57,14 +57,14 @@
     <string name="tools_title">Tools</string>
 
     <string name="payments_title">Payments</string>
-    <string name="payments_tab_pay_label">Pay</string>
+    <string name="payments_tab_pay_label">Send</string>
     <string name="payments_tab_receive_label">Receive</string>
-    <string name="payments_pay_by_qr_title">Pay by</string>
+    <string name="payments_pay_by_qr_title">Send by</string>
     <string name="payments_pay_by_qr_sub_title">Scanning QR Code</string>
     <string name="payments_pay_by_qr_button">Scan</string>
-    <string name="payments_pay_to_clipboard_title">Pay to copied address</string>
+    <string name="payments_pay_to_clipboard_title">Send to copied address</string>
     <string name="payments_pay_to_clipboard_sub_title">No address copied</string>
-    <string name="payments_pay_to_clipboard_button">Pay</string>
+    <string name="payments_pay_to_clipboard_button">Send</string>
 
     <string name="forgot_pin_title">Forgot PIN?</string>
     <string name="forgot_pin_message">You can set a new PIN with the help of your recovery phrase?</string>
