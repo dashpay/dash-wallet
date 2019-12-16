@@ -66,11 +66,28 @@ class RestoreWalletFromSeedActivity : BaseMenuActivity() {
         val words = ArrayList(mutableListOf(*seed.split(' ').toTypedArray()))
 
         try {
+            if(words.size != 12)
+                throw MnemonicException.MnemonicLengthException("There are not 12 words")
             MnemonicCode.INSTANCE.check(words)
         } catch (x: MnemonicException) {
             log.info("problem restoring wallet from seed: ", x)
             val dialog = DialogBuilder.warn(this, R.string.import_export_keys_dialog_failure_title)
-            dialog.setMessage(getString(R.string.import_keys_dialog_failure, x.message))
+            var errorMessage = getString(R.string.import_keys_dialog_failure, x.message)
+            if(x is MnemonicException.MnemonicLengthException)
+                errorMessage = getString(R.string.restore_wallet_from_invalid_seed_not_twelve_words)
+            else if(x is MnemonicException.MnemonicChecksumException)
+                errorMessage = getString(R.string.restore_wallet_from_invalid_seed_bad_checksum)
+            else if(x is MnemonicException.MnemonicWordException) {
+                var firstInvalidWord = "unknown"
+                for(word in words) {
+                    if(MnemonicCode.INSTANCE.wordList.lastIndexOf(word) == -1) {
+                        firstInvalidWord = word
+                        break
+                    }
+                }
+                errorMessage = getString(R.string.restore_wallet_from_invalid_seed_warning_message, firstInvalidWord)
+            }
+            dialog.setMessage(errorMessage)
             dialog.setPositiveButton(R.string.button_dismiss, null)
             dialog.show()
             return

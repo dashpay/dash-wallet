@@ -101,7 +101,9 @@
     <string name="button_copy_address">Copy address</string>
     <string name="request_coins_clipboard_address_msg">Dash address copied to clipboard</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Show</string>
-    <string name="restore_wallet_from_invalid_seed_warning_message">%s is an invalid word.</string>
+    <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" is not a recovery phrase word</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Recovery phrase must have 12 words</string>
+    <string name="restore_wallet_from_invalid_seed_bad_checksum">Bad recovery phrase</string>
 
     <string name="send_coins_options_fee_category_zero">No Fee</string>
     <string name="send_coins_fragment_hint_fee_zero">No fee of will be paid. Use \'no fee\' only if you don\'t care about confirmation time.</string>
