@@ -20,6 +20,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
+import androidx.core.content.res.ResourcesCompat
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_advanced_security.*
 import java.util.concurrent.TimeUnit
@@ -164,13 +165,13 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
             SecurityLevel.HIGH -> R.string.security_high
             else -> R.string.security_very_high
         })
-        security_level.setTextColor(when(securityLevel) {
+        security_level.setTextColor(ResourcesCompat.getColor(resources, when(securityLevel) {
             SecurityLevel.NONE -> R.color.dash_red
             SecurityLevel.LOW -> R.color.dash_orange
             SecurityLevel.MEDIUM -> R.color.dash_orange
             SecurityLevel.HIGH -> R.color.dash_blue
             else -> R.color.dash_green
-        })
+        }, null))
         security_icon.setImageResource(when(securityLevel) {
             SecurityLevel.NONE -> R.drawable.security_filled_red
             SecurityLevel.LOW -> R.drawable.security_filled_orange
