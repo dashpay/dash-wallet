@@ -574,7 +574,9 @@ public class WalletApplication extends MultiDexApplication {
 
     public void replaceWallet(final Wallet newWallet) {
         resetBlockchain();
-        wallet.shutdownAutosaveAndWait();
+        if (wallet != null) {
+            wallet.shutdownAutosaveAndWait();
+        }
 
         wallet = newWallet;
         config.maybeIncrementBestChainHeightEver(newWallet.getLastBlockSeenHeight());
@@ -642,8 +644,15 @@ public class WalletApplication extends MultiDexApplication {
         return isLowRamDevice() ? 4 : 6;
     }
 
+    /**
+     * Low memory devices (currently 1GB or less) and 32 bit devices will require
+     * fewer scrypt hashes on the PIN+salt (handled by dashj)
+     *
+     * @return The number of scrypt interations
+     */
     public int scryptIterationsTarget() {
-        return isLowRamDevice() ? Constants.SCRYPT_ITERATIONS_TARGET_LOWRAM : Constants.SCRYPT_ITERATIONS_TARGET;
+        boolean is64bitABI = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP ? Build.SUPPORTED_64_BIT_ABIS.length != 0 : false;
+        return (isLowRamDevice() || !is64bitABI) ? Constants.SCRYPT_ITERATIONS_TARGET_LOWRAM : Constants.SCRYPT_ITERATIONS_TARGET;
     }
 
     public static void scheduleStartBlockchainService(final Context context) {
