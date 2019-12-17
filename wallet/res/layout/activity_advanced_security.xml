@@ -38,7 +38,8 @@
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="20dp"
                 android:text="Security level"
-                android:textColor="@color/dash_gray" />
+                android:textColor="@color/dash_gray"
+                tools:ignore="ContentDescription" />
 
             <TextView
                 android:id="@+id/security_level"
@@ -49,7 +50,8 @@
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="20dp"
                 android:text="High"
-                android:textColor="@color/dash_blue" />
+                android:textColor="@color/dash_blue"
+                tools:ignore="ContentDescription" />
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/spending_confirmation"
@@ -74,7 +76,8 @@
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintVertical_bias="0" />
+                    app:layout_constraintVertical_bias="0"
+                    tools:ignore="ContentDescription" />
 
                 <Switch
                     android:id="@+id/auto_logout_switch"
@@ -109,15 +112,16 @@
                         android:text="@string/logout_after"
                         android:textSize="14sp"
                         app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/auto_logout_separator" />
+                        app:layout_constraintTop_toBottomOf="@id/auto_logout_separator"
+                        tools:ignore="ContentDescription" />
 
                     <TextView
                         android:id="@+id/logout_after_time"
                         style="@style/MontserratRegular.MenuRowTitle.Internal"
                         android:layout_marginEnd="22dp"
                         android:layout_marginRight="22dp"
-                        android:text="@string/one_hour"
                         android:textSize="24sp"
+                        android:text="@string/immediately"
                         app:layout_constraintBottom_toBottomOf="@id/logout_after_label"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="@id/logout_after_label" />
@@ -132,7 +136,8 @@
                         android:textColor="@color/gray"
                         android:textSize="12sp"
                         app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/logout_after_time" />
+                        app:layout_constraintTop_toBottomOf="@id/logout_after_time"
+                        tools:ignore="HardcodedText" />
 
                     <TextView
                         android:id="@+id/auto_logout_max_time"
@@ -144,16 +149,18 @@
                         android:textColor="@color/gray"
                         android:textSize="12sp"
                         app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="@id/immediately" />
+                        app:layout_constraintTop_toTopOf="@id/immediately"
+                        tools:ignore="HardcodedText" />
 
                     <SeekBar
+                        android:id="@+id/auto_logout_seekbar"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="20dp"
                         android:layout_marginTop="16dp"
                         android:layout_marginRight="20dp"
                         android:layout_marginBottom="26dp"
-                        android:max="5"
+                        android:max="4"
                         android:theme="@style/Widget.AppCompat.SeekBar.Discrete"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/auto_logout_max_time" />
@@ -181,7 +188,8 @@
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintVertical_bias="0" />
+                    app:layout_constraintVertical_bias="0"
+                    tools:ignore="ContentDescription" />
 
                 <Switch
                     android:id="@+id/spending_confirmation_switch"
@@ -217,19 +225,18 @@
                         android:text="@string/biometric_limit"
                         android:textSize="14sp"
                         app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/spending_confirmation_separator" />
+                        app:layout_constraintTop_toBottomOf="@id/spending_confirmation_separator"
+                        tools:ignore="ContentDescription" />
 
                     <TextView
                         android:id="@+id/biometric_limit_value"
                         style="@style/MontserratMedium.MenuRowTitle.Internal"
                         android:layout_marginEnd="22dp"
                         android:layout_marginRight="22dp"
-                        android:text="0.5"
                         android:textSize="22sp"
                         app:layout_constraintBottom_toBottomOf="@id/biometric_limit_label"
                         app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="@id/biometric_limit_label"
-                        tools:ignore="HardcodedText" />
+                        app:layout_constraintTop_toTopOf="@id/biometric_limit_label" />
 
                     <ImageView
                         android:layout_width="wrap_content"
@@ -275,7 +282,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="18dp"
                         android:layout_marginRight="18dp"
-                        android:text="10"
+                        android:text="5"
                         android:textColor="@color/gray"
                         android:textSize="12sp"
                         app:layout_constraintBottom_toBottomOf="@id/biometric_limit_min"
@@ -294,20 +301,74 @@
                         tools:ignore="ContentDescription" />
 
                     <SeekBar
+                        android:id="@+id/biometric_limit_seekbar"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="10dp"
                         android:layout_marginTop="18dp"
                         android:layout_marginEnd="10dp"
                         android:layout_marginBottom="30dp"
-                        android:max="5"
+                        android:max="4"
                         android:theme="@style/Widget.AppCompat.SeekBar.Discrete"
-                        app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/biometric_limit_max" />
+
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="18dp"
+                        android:layout_marginBottom="30dp"
+                        android:paddingLeft="20dp"
+                        android:paddingRight="20dp"
+                        app:layout_constraintLeft_toLeftOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/biometric_limit_seekbar">
+
+                        <TextView
+                            android:id="@+id/spending_confirmation_hint"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintTop_toTopOf="parent"
+                            android:text="" />
+
+
+                        <ImageView
+                            android:id="@+id/spending_confirmation_hint_dash"
+                            android:layout_width="wrap_content"
+                            android:layout_height="16sp"
+                            app:layout_constraintBottom_toBottomOf="@+id/spending_confirmation_hint"
+                            app:layout_constraintLeft_toRightOf="@id/spending_confirmation_hint"
+                            app:layout_constraintStart_toStartOf="@+id/spending_confirmation_hint"
+                            android:layout_marginStart="125dp"
+                            app:srcCompat="@drawable/ic_dash_d_black"
+                            tools:ignore="ContentDescription" />
+
+                        <TextView
+                            android:id="@+id/spending_confirmation_hint_amount"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="5"
+                            android:layout_marginStart="5dp"
+                            app:layout_constraintLeft_toRightOf="@id/spending_confirmation_hint_dash"
+                            app:layout_constraintBottom_toBottomOf="@+id/spending_confirmation_hint" />
+                    </androidx.constraintlayout.widget.ConstraintLayout>
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
             </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <Button
+                android:onClick="resetToDefault"
+                android:text="@string/reset_to_default"
+                style="@style/DashButton.Transparent"
+                android:textColor="@color/dash_blue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="36dp"
+                android:layout_marginBottom="36dp"
+                android:layout_gravity="center" />
 
         </LinearLayout>
 
