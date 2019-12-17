@@ -97,6 +97,28 @@
         app:layout_constraintWidth_percent="0.013" />
 
     <org.dash.wallet.ui.widget.QuickActionButton
+        android:id="@+id/import_key_action"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:action_icon="@drawable/ic_quick_action_buy_sell_dash"
+        app:action_icon_size_percent="0.4"
+        app:action_text="@string/quick_action_import_key"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintStart_toEndOf="@+id/buy_sell_action_space"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_default="percent"
+        app:layout_constraintWidth_percent="0.24" />
+
+    <Space
+        android:id="@+id/import_key_action_space"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toEndOf="@+id/import_key_action"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_default="percent"
+        app:layout_constraintWidth_percent="0.013" />
+
+    <org.dash.wallet.ui.widget.QuickActionButton
         android:id="@+id/config_action"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -105,7 +127,7 @@
         app:action_icon_size_percent="0.3"
         app:action_text="@string/quick_action_add_shortcut"
         app:layout_constraintDimensionRatio="1:1"
-        app:layout_constraintStart_toEndOf="@+id/buy_sell_action_space"
+        app:layout_constraintStart_toEndOf="@+id/import_key_action_space"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintWidth_default="percent"
         app:layout_constraintWidth_percent="0.24" />

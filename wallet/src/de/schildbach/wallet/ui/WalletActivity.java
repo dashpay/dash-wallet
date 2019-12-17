@@ -279,6 +279,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 handlePaste();
             }
         });
+        findViewById(R.id.import_key_action).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                SweepWalletActivity.start(WalletActivity.this);
+            }
+        });
     }
 
     private void showHideSecureAction() {
