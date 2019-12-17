@@ -17,6 +17,8 @@
 package de.schildbach.wallet.ui
 
 import android.os.Bundle
+import android.text.SpannableStringBuilder
+import android.text.style.ImageSpan
 import android.view.View
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
@@ -25,11 +27,14 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_advanced_security.*
 import java.util.concurrent.TimeUnit
 
+
 enum class SecurityLevel {
     NONE, LOW, MEDIUM, HIGH, VERY_HIGH
 }
 
 class AdvancedSecurityActivity : BaseMenuActivity() {
+    private lateinit var dashSymbol: ImageSpan
+
     override fun getLayoutId(): Int {
         return R.layout.activity_advanced_security
     }
@@ -37,7 +42,10 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        security_icon.setImageDrawable(resources.getDrawable(R.drawable.security_filled_blue))
+        val drawableDash = ResourcesCompat.getDrawable(resources,
+                R.drawable.ic_dash_d_black, null)
+        drawableDash!!.setBounds(0, 0, 32, 32)
+        dashSymbol = ImageSpan(drawableDash, ImageSpan.ALIGN_BASELINE)
 
         auto_logout_switch.setOnCheckedChangeListener { _, enabled ->
             configuration.autoLogoutEnabled = enabled
@@ -144,13 +152,12 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
             }
             if (configuration.spendingConfirmationLimit == 0f) {
                 spending_confirmation_hint.text = getText(R.string.spending_confirmation_hint_zero)
-                spending_confirmation_hint_dash.visibility = View.GONE
-                spending_confirmation_hint_amount.visibility = View.GONE
             } else {
-                spending_confirmation_hint.text = getText(R.string.spending_confirmation_hint_above_zero)
-                spending_confirmation_hint_amount.text = biometric_limit_value.text
-                spending_confirmation_hint_dash.visibility = View.VISIBLE
-                spending_confirmation_hint_amount.visibility = View.VISIBLE
+                val builder = SpannableStringBuilder()
+                builder.append(getText(R.string.spending_confirmation_hint_above_zero)).append("  ")
+                builder.setSpan(dashSymbol, builder.length - 1, builder.length, 0)
+                builder.append(" ").append(biometric_limit_value.text)
+                spending_confirmation_hint.text = builder
             }
         } else {
             spending_confirmation_group.visibility = View.GONE

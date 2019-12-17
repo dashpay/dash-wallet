@@ -310,48 +310,17 @@
                         android:theme="@style/Widget.AppCompat.SeekBar.Discrete"
                         app:layout_constraintTop_toBottomOf="@id/biometric_limit_max" />
 
-                    <androidx.constraintlayout.widget.ConstraintLayout
+                    <TextView
+                        android:id="@+id/spending_confirmation_hint"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:layout_marginTop="18dp"
-                        android:layout_marginBottom="30dp"
                         android:paddingLeft="20dp"
                         android:paddingRight="20dp"
+                        android:layout_marginTop="18dp"
+                        android:layout_marginBottom="30dp"
                         app:layout_constraintLeft_toLeftOf="parent"
                         app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/biometric_limit_seekbar">
-
-                        <TextView
-                            android:id="@+id/spending_confirmation_hint"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintTop_toTopOf="parent"
-                            android:text="" />
-
-
-                        <ImageView
-                            android:id="@+id/spending_confirmation_hint_dash"
-                            android:layout_width="wrap_content"
-                            android:layout_height="16sp"
-                            app:layout_constraintBottom_toBottomOf="@+id/spending_confirmation_hint"
-                            app:layout_constraintLeft_toRightOf="@id/spending_confirmation_hint"
-                            app:layout_constraintStart_toStartOf="@+id/spending_confirmation_hint"
-                            android:layout_marginStart="125dp"
-                            app:srcCompat="@drawable/ic_dash_d_black"
-                            tools:ignore="ContentDescription" />
-
-                        <TextView
-                            android:id="@+id/spending_confirmation_hint_amount"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="5"
-                            android:layout_marginStart="5dp"
-                            app:layout_constraintLeft_toRightOf="@id/spending_confirmation_hint_dash"
-                            app:layout_constraintBottom_toBottomOf="@+id/spending_confirmation_hint" />
-                    </androidx.constraintlayout.widget.ConstraintLayout>
+                        app:layout_constraintTop_toBottomOf="@id/biometric_limit_seekbar" />
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
