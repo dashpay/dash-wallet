@@ -27,7 +27,6 @@ import androidx.annotation.RequiresApi
 import androidx.core.os.CancellationSignal
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
-import com.jakewharton.processphoenix.ProcessPhoenix
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
@@ -77,7 +76,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_lock_screen)
 
-        pinRetryController = PinRetryController(this)
+        pinRetryController = PinRetryController.getInstance()
         resetSessionPin()
         initView()
         initViewModel()
@@ -140,26 +139,21 @@ class LockScreenActivity : SendCoinsQrActivity() {
         checkPinViewModel.checkPinLiveData.observe(this, Observer {
             when (it.status) {
                 Status.ERROR -> {
-                    pinRetryController.failedAttempt(it.data!!, false)
-                    if (pinRetryController.isLockedForever) {
-                        ProcessPhoenix.triggerRebirth(this)
-                        return@Observer
-                    }
+                    pinRetryController.failedAttempt(it.data!!)
                     if (pinRetryController.isLocked) {
                         setState(State.LOCKED)
-                        return@Observer
+                    } else {
+                        setState(State.INVALID_PIN)
                     }
-                    setState(State.INVALID_PIN)
                 }
                 Status.LOADING -> {
                     setState(State.DECRYPTING)
                 }
                 Status.SUCCESS -> {
-                    pinRetryController.clearPinFailPrefs()
                     if (EnableFingerprintDialog.shouldBeShown(this)) {
                         EnableFingerprintDialog.show(it.data, supportFragmentManager)
                     } else {
-                        startWalletActivity(it.data)
+                        onCorrectPin(it.data)
                     }
                 }
             }
@@ -167,11 +161,12 @@ class LockScreenActivity : SendCoinsQrActivity() {
         enableFingerprintViewModel = ViewModelProviders.of(this)[CheckPinSharedModel::class.java]
         enableFingerprintViewModel.onCorrectPinCallback.observe(this, Observer {
             val pin = it.second
-            startWalletActivity(pin)
+            onCorrectPin(pin)
         })
     }
 
-    private fun startWalletActivity(pin: String?) {
+    private fun onCorrectPin(pin: String?) {
+        pinRetryController.clearPinFailPrefs()
         saveSessionPin(pin)
         startActivity(WalletActivity.createIntent(this))
         finish()
@@ -200,7 +195,9 @@ class LockScreenActivity : SendCoinsQrActivity() {
                     Handler().postDelayed({
                         pin_preview.clear()
                     }, 200)
-                    pin_preview.badPin(pinRetryController.remainingAttemptsMessage)
+                }
+                if (pinRetryController.failCount() > 0) {
+                    pin_preview.badPin(pinRetryController.getRemainingAttemptsMessage(this))
                 }
             }
             State.USE_FINGERPRINT -> {
@@ -225,7 +222,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
                 temporaryLockCheckHandler.postDelayed(temporaryLockCheckRunnable, temporaryLockCheckInterval)
 
                 action_title.setText(R.string.wallet_lock_wallet_disabled)
-                action_subtitle.text = pinRetryController.walletTemporaryLockedMessage
+                action_subtitle.text = pinRetryController.getWalletTemporaryLockedMessage(this)
 
                 action_login_with_pin.visibility = View.GONE
                 action_login_with_fingerprint.visibility = View.GONE
@@ -262,7 +259,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
         fingerprintCancellationSignal = CancellationSignal()
         fingerprintHelper!!.getPassword(fingerprintCancellationSignal, object : FingerprintHelper.Callback {
             override fun onSuccess(savedPass: String) {
-                startWalletActivity(savedPass)
+                onCorrectPin(savedPass)
             }
 
             override fun onFailure(message: String, canceled: Boolean, exceededMaxAttempts: Boolean) {
@@ -300,5 +297,9 @@ class LockScreenActivity : SendCoinsQrActivity() {
             setState(State.ENTER_PIN)
         }
         dialogBuilder.show()
+    }
+
+    override fun onBackPressed() {
+        // block closing activity by back button
     }
 }

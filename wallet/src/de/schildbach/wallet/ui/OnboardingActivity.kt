@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.graphics.drawable.LayerDrawable
 import android.os.Bundle
 import android.os.Handler
@@ -43,7 +44,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (PinRetryController.handleLockedForever(this, false)) {
+        if (PinRetryController.getInstance().isLockedForever) {
             setContentView(R.layout.activity_onboarding_perm_lock)
             getStatusBarHeightPx()
             hideSlogan()
@@ -51,7 +52,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 finish()
             }
             wipe_wallet.setOnClickListener {
-                PinRetryController.showResetWalletDialog(this, false)
+                ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
             }
             return
         }
@@ -100,7 +101,8 @@ class OnboardingActivity : RestoreFromFileActivity() {
         }
         recovery_wallet.setOnClickListener {
             walletApplication.initEnvironmentIfNeeded()
-            RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
+            startActivity(Intent(this, RestoreWalletFromSeedActivity::class.java))
+//            RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
         }
         restore_wallet.setOnClickListener {
             restoreWalletFromFile()

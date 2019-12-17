@@ -65,7 +65,7 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
 
         this.walletProvider = (WalletProvider) activity;
         this.application = (WalletApplication) activity.getApplication();
-        this.pinRetryController = new PinRetryController(activity);
+        this.pinRetryController = PinRetryController.getInstance();
     }
 
     @Override

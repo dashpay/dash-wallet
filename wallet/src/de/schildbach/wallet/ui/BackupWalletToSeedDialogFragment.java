@@ -124,7 +124,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
         this.activity = (AppCompatActivity) activity;
         this.application = (WalletApplication) activity.getApplication();
         this.wallet = application.getWallet();
-        this.pinRetryController = new PinRetryController(activity);
+        this.pinRetryController = PinRetryController.getInstance();
         this.config = application.getConfiguration();
     }
 
@@ -318,7 +318,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
                     pinRetryController.failedAttempt(pin);
                     privateKeyBadPasswordView.setVisibility(View.VISIBLE);
                     privateKeyBadPasswordView.setText(getString(R.string.wallet_lock_wrong_pin,
-                            pinRetryController.getRemainingAttemptsMessage()));
+                            pinRetryController.getRemainingAttemptsMessage(getContext())));
                     privateKeyPasswordView.setEnabled(true);
                     privateKeyPasswordView.requestFocus();
                     showMnemonicSeedButton.setText(getText(R.string.backup_wallet_to_seed_show_recovery_phrase));

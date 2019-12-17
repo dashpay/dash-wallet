@@ -19,13 +19,13 @@ package de.schildbach.wallet.ui
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
-import android.os.PersistableBundle
-import android.util.Log
 import android.view.MenuItem
 import androidx.annotation.LayoutRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.Configuration
 
 /**
  * @author Samuel Barbosa
@@ -69,4 +69,9 @@ abstract class BaseMenuActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    protected val walletApplication
+        get() = application as WalletApplication
+
+    protected val configuration: Configuration
+        get() = walletApplication.configuration
 }

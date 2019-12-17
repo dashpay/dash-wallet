@@ -17,6 +17,11 @@
 
 package de.schildbach.wallet.ui;
 
+import android.app.ActivityManager.TaskDescription;
+import android.os.Build;
+import android.os.Bundle;
+import android.view.View;
+
 import androidx.annotation.LayoutRes;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.widget.Toolbar;
@@ -26,14 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet_test.R;
-
-import android.app.ActivityManager.TaskDescription;
-import android.os.Build;
-import android.os.Bundle;
-import android.view.MenuItem;
-import android.view.View;
 
 /**
  * @author Andreas Schildbach
@@ -50,7 +48,6 @@ public abstract class AbstractWalletActivity extends GlobalFooterActivity implem
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
             setTaskDescription(new TaskDescription(null, null, getResources().getColor(R.color.bg_action_bar)));
-        PinRetryController.handleLockedForever(this);
 
         super.onCreate(savedInstanceState);
     }
@@ -79,21 +76,6 @@ public abstract class AbstractWalletActivity extends GlobalFooterActivity implem
                 actionBar.setDisplayShowHomeEnabled(true);
             }
         }
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.wallet_options_lock:
-                unlockWallet();
-                return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
-
-    private void unlockWallet() {
-        if(!PinRetryController.handleLockedForever(this))
-            UnlockWalletDialogFragment.show(getSupportFragmentManager());
     }
 
     protected WalletApplication getWalletApplication() {

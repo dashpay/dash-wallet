@@ -111,7 +111,7 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
                 pinView.setEnabled(true);
                 pinRetryController.failedAttempt(password);
                 badPinView.setText(getString(R.string.wallet_lock_wrong_pin,
-                        pinRetryController.getRemainingAttemptsMessage()));
+                        pinRetryController.getRemainingAttemptsMessage(getContext())));
                 badPinView.setVisibility(View.VISIBLE);
             }
         }.checkPassword(walletProvider.getWallet(), password);
