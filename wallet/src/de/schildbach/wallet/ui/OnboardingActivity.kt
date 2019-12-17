@@ -102,7 +102,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
         recovery_wallet.setOnClickListener {
             walletApplication.initEnvironmentIfNeeded()
             startActivity(Intent(this, RestoreWalletFromSeedActivity::class.java))
-//            RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
         }
         restore_wallet.setOnClickListener {
             restoreWalletFromFile()
