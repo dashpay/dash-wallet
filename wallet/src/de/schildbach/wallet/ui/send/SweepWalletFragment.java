@@ -21,18 +21,14 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.media.RingtoneManager;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
@@ -41,7 +37,6 @@ import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.common.collect.ComparisonChain;
 
@@ -53,7 +48,6 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
@@ -90,7 +84,7 @@ import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
-import de.schildbach.wallet.ui.TransactionsAdapter;
+import de.schildbach.wallet.ui.TransactionResultActivity;
 import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -122,10 +116,6 @@ public class SweepWalletFragment extends Fragment {
 	private View balanceGroup;
 	private CurrencyTextView balanceView;
 	private Dialog decryptDialog;
-	private FrameLayout sweepTransactionView;
-	private View sweepTransactionViewGroup;
-	private TransactionsAdapter sweepTransactionAdapter;
-	private RecyclerView.ViewHolder sweepTransactionViewHolder;
 	private Button viewGo;
 	private ExchangeRate currentExchangeRate;
 
@@ -207,14 +197,6 @@ public class SweepWalletFragment extends Fragment {
 
 		balanceView = (CurrencyTextView) view.findViewById(R.id.sweep_wallet_fragment_balance);
 
-		sweepTransactionView = (FrameLayout) view.findViewById(R.id.sweep_wallet_fragment_sent_transaction);
-		sweepTransactionViewGroup = view.findViewById(R.id.sweep_wallet_fragment_sent_transaction_group);
-		sweepTransactionAdapter = new TransactionsAdapter(activity, application.getWallet(),
-				application.maxConnectedPeers(), null);
-		sweepTransactionViewHolder = sweepTransactionAdapter.createTransactionViewHolder(sweepTransactionView);
-		sweepTransactionView.addView(sweepTransactionViewHolder.itemView,
-				new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
 		viewGo = (Button) view.findViewById(R.id.confirm_button);
 		viewGo.setOnClickListener(new View.OnClickListener() {
 			@Override
@@ -267,10 +249,6 @@ public class SweepWalletFragment extends Fragment {
 	@Override
 	public void onDestroy() {
 		backgroundThread.getLooper().quit();
-
-		if (sentTransaction != null)
-			sentTransaction.getConfidence().removeEventListener(sentTransactionConfidenceListener);
-
 		super.onDestroy();
 	}
 
@@ -296,7 +274,6 @@ public class SweepWalletFragment extends Fragment {
 		if (savedInstanceState.containsKey("sent_transaction_hash")) {
 			sentTransaction = application.getWallet()
 					.getTransaction((Sha256Hash) savedInstanceState.getSerializable("sent_transaction_hash"));
-			sentTransaction.getConfidence().addEventListener(sentTransactionConfidenceListener);
 		}
 	}
 
@@ -336,46 +313,6 @@ public class SweepWalletFragment extends Fragment {
 	private void handleScan() {
 		startActivityForResult(new Intent(activity, ScanActivity.class), REQUEST_CODE_SCAN);
 	}
-
-	private final TransactionConfidence.Listener sentTransactionConfidenceListener = new TransactionConfidence.Listener() {
-		@Override
-		public void onConfidenceChanged(final TransactionConfidence confidence,
-										final TransactionConfidence.Listener.ChangeReason reason) {
-			activity.runOnUiThread(new Runnable() {
-				@Override
-				public void run() {
-					if (!isResumed())
-						return;
-
-					final TransactionConfidence confidence = sentTransaction.getConfidence();
-					final TransactionConfidence.ConfidenceType confidenceType = confidence.getConfidenceType();
-					final int numBroadcastPeers = confidence.numBroadcastPeers();
-
-					if (state == State.SENDING) {
-						if (confidenceType == TransactionConfidence.ConfidenceType.DEAD)
-							setState(State.FAILED);
-						else if (numBroadcastPeers > 1
-								|| confidenceType == TransactionConfidence.ConfidenceType.BUILDING)
-							setState(State.SENT);
-					}
-
-					if (reason == ChangeReason.SEEN_PEERS
-							&& confidenceType == TransactionConfidence.ConfidenceType.PENDING) {
-						// play sound effect
-						final int soundResId = getResources().getIdentifier("send_coins_broadcast_" + numBroadcastPeers,
-								"raw", activity.getPackageName());
-						if (soundResId > 0)
-							RingtoneManager
-									.getRingtone(activity, Uri.parse(
-											"android.resource://" + activity.getPackageName() + "/" + soundResId))
-									.play();
-					}
-
-					updateView();
-				}
-			});
-		}
-	};
 
 	private final Runnable maybeDecodeKeyRunnable = new Runnable() {
 		@Override
@@ -470,7 +407,7 @@ public class SweepWalletFragment extends Fragment {
 					if (fakeTx == null) {
 						fakeTx = new FakeTransaction(Constants.NETWORK_PARAMETERS, utxo.getHash());
 						fakeTx.getConfidence().setConfidenceType(ConfidenceType.BUILDING);
-						fakeTxns.put(fakeTx.getHash(), fakeTx);
+						fakeTxns.put(fakeTx.getTxId(), fakeTx);
 					}
 					final TransactionOutput fakeOutput = new TransactionOutput(Constants.NETWORK_PARAMETERS, fakeTx,
 							utxo.getValue(), utxo.getScript().getProgram());
@@ -551,15 +488,6 @@ public class SweepWalletFragment extends Fragment {
 			decryptDialog = null;
 		}
 
-		if (sentTransaction != null) {
-			sweepTransactionViewGroup.setVisibility(View.VISIBLE);
-			sweepTransactionAdapter.setFormat(btcFormat);
-			sweepTransactionAdapter.replace(sentTransaction);
-			sweepTransactionAdapter.bindViewHolder(sweepTransactionViewHolder, 0);
-		} else {
-			sweepTransactionViewGroup.setVisibility(View.GONE);
-		}
-
 		if (state == State.DECODE_KEY) {
 			viewGo.setText(R.string.sweep_wallet_fragment_button_decrypt);
 			viewGo.setEnabled(privateKeyToSweep != null);
@@ -629,7 +557,9 @@ public class SweepWalletFragment extends Fragment {
 	private void handleSweep() {
 		setState(State.PREPARATION);
 
-		final SendRequest sendRequest = SendRequest.emptyWallet(application.getWallet().freshReceiveAddress());
+		final Address receivingAddress = application.getWallet().freshReceiveAddress();
+		final SendRequest sendRequest = SendRequest.emptyWallet(receivingAddress);
+
 		sendRequest.feePerKb = fees.get(FeeCategory.ECONOMIC);
 
 		if (currentExchangeRate != null) {
@@ -644,10 +574,8 @@ public class SweepWalletFragment extends Fragment {
 				sentTransaction = transaction;
 
 				setState(State.SENDING);
-
-				sentTransaction.getConfidence().addEventListener(sentTransactionConfidenceListener);
-
 				application.processDirectTransaction(sentTransaction);
+				showTransactionResult(sentTransaction, receivingAddress);
 			}
 
 			@Override
@@ -689,17 +617,28 @@ public class SweepWalletFragment extends Fragment {
 		}.sendCoinsOffline(sendRequest); // send asynchronously
 	}
 
-	private static class FakeTransaction extends Transaction {
-		private final Sha256Hash hash;
+	private void showTransactionResult(Transaction sentTransaction, Address receivingAddress) {
+		if (!isAdded()) {
+			return;
+		}
 
-		public FakeTransaction(final NetworkParameters params, final Sha256Hash hash) {
+		Intent transactionResultIntent = TransactionResultActivity.createIntent(activity, sentTransaction,
+				receivingAddress);
+		startActivity(transactionResultIntent);
+		activity.finish();
+	}
+
+	private static class FakeTransaction extends Transaction {
+		private final Sha256Hash txId;
+
+		public FakeTransaction(final NetworkParameters params, final Sha256Hash txId) {
 			super(params);
-			this.hash = hash;
+			this.txId = txId;
 		}
 
 		@Override
-		public Sha256Hash getHash() {
-			return hash;
+		public Sha256Hash getTxId() {
+			return txId;
 		}
 	}
 }

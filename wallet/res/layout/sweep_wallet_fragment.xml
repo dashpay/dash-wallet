@@ -129,7 +129,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:layout_marginTop="4dp"
-                    android:src="@drawable/ic_dash_d_white_bottom"
+                    app:srcCompat="@drawable/ic_dash_d_white_bottom"
                     android:tint="@color/darkest_blue" />
 
                 <org.dash.wallet.common.ui.CurrencyTextView
@@ -142,23 +142,6 @@
                     android:includeFontPadding="false"
                     android:textSize="26sp"
                     tools:text="0.00" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/sweep_wallet_fragment_sent_transaction_group"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone">
-
-                <View style="@style/ListSeparator" />
-
-                <FrameLayout
-                    android:id="@+id/sweep_wallet_fragment_sent_transaction"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layoutAnimation="@anim/transaction_layout_anim" />
 
             </LinearLayout>
 
