@@ -25,7 +25,6 @@ import android.widget.Switch
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.WalletLock
 import de.schildbach.wallet_test.R
 import org.bitcoinj.wallet.Wallet
 
@@ -47,18 +46,6 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
     }
 
     fun backupWallet(view: View) {
-        val wallet = WalletApplication.getInstance().wallet
-        //Only allow to backup when wallet is unlocked
-        val walletLock = WalletLock.getInstance()
-        if (WalletLock.getInstance().isWalletLocked(wallet)) {
-            UnlockWalletDialogFragment.show(supportFragmentManager) {
-                if (!walletLock.isWalletLocked(wallet)) {
-                    backupWallet(view)
-                }
-            }
-            return
-        }
-
         val permission = Manifest.permission.WRITE_EXTERNAL_STORAGE
         if (ContextCompat.checkSelfPermission(this, permission)
                 == PackageManager.PERMISSION_GRANTED) {

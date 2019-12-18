@@ -62,10 +62,10 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.common.collect.ImmutableList;
 import com.squareup.okhttp.HttpUrl;
 
+import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
@@ -84,7 +84,6 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.preference.PreferenceActivity;
@@ -428,26 +427,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     public boolean onCreateOptionsMenu(final Menu menu) {
         getMenuInflater().inflate(R.menu.wallet_options, menu);
         super.onCreateOptionsMenu(menu);
-        MenuItem walletLockMenuItem = menu.findItem(R.id.wallet_options_lock);
-        walletLockMenuItem.setVisible(WalletLock.getInstance().isWalletLocked(wallet));
-
-        hidePersonalSettingsIfLocked();
-
         return true;
-    }
-
-    private void hidePersonalSettingsIfLocked() {
-        final NavigationView navigationView = findViewById(R.id.nav_view);
-        Menu drawerMenu = navigationView.getMenu();
-        boolean walletLocked = WalletLock.getInstance().isWalletLocked(wallet);
-        MenuItem addressBookItem = drawerMenu.findItem(R.id.nav_address_book);
-        if (addressBookItem != null) {
-            addressBookItem.setVisible(!walletLocked);
-        }
-        View upholdAccountSection = findViewById(R.id.uphold_account_section);
-        if (upholdAccountSection != null) {
-            upholdAccountSection.setVisibility(walletLocked ? View.GONE : View.VISIBLE);
-        }
     }
 
     @Override
@@ -531,20 +511,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     public void handleBackupWallet() {
-        //Only allow to backup when wallet is unlocked
-        final WalletLock walletLock = WalletLock.getInstance();
-        if (WalletLock.getInstance().isWalletLocked(wallet)) {
-            UnlockWalletDialogFragment.show(getSupportFragmentManager(), new DialogInterface.OnDismissListener() {
-                @Override
-                public void onDismiss(DialogInterface dialog) {
-                    if (!walletLock.isWalletLocked(wallet)) {
-                        handleBackupWallet();
-                    }
-                }
-            });
-            return;
-        }
-
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
             BackupWalletDialogFragment.show(getSupportFragmentManager());

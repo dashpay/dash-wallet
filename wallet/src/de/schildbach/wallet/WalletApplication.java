@@ -35,7 +35,6 @@ import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
 import android.os.StrictMode;
-import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.text.format.DateUtils;
 import android.widget.Toast;
@@ -77,7 +76,6 @@ import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
-import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.ui.GlobalFooterActivity;
@@ -228,13 +226,9 @@ public class WalletApplication extends MultiDexApplication {
 
         cleanupFiles();
 
-        registerScreenOffReceiver();
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannels();
         }
-
-        WalletLock.getInstance().setConfiguration(config);
 
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
 
@@ -258,19 +252,6 @@ public class WalletApplication extends MultiDexApplication {
 
     public void resetAutoLogoutTimer() {
         autoLogoutTimer.reset();
-    }
-
-    private void registerScreenOffReceiver() {
-        IntentFilter screenStateFilter = new IntentFilter();
-        screenStateFilter.addAction(Intent.ACTION_SCREEN_OFF);
-        registerReceiver(new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                // immediately reset the lock timer in order to make the
-                // wallet after turning screen off.
-                config.setLastUnlockTime(0);
-            }
-        }, screenStateFilter);
     }
 
     @TargetApi(Build.VERSION_CODES.O)
@@ -692,15 +673,6 @@ public class WalletApplication extends MultiDexApplication {
         final long now = System.currentTimeMillis();
         alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, now + alarmInterval, AlarmManager.INTERVAL_DAY,
                 alarmIntent);
-    }
-
-    public void lockWalletIfNeeded() {
-        WalletLock walletLock = WalletLock.getInstance();
-        boolean recentReboot = SystemClock.elapsedRealtime() < WalletLock.DEFAULT_LOCK_TIMER_MILLIS &&
-                config.getLastUnlockTime() < (System.currentTimeMillis() - SystemClock.elapsedRealtime());
-        if (walletLock.isWalletLocked(wallet) || recentReboot) {
-            walletLock.setWalletLocked(true);
-        }
     }
 
     /**
