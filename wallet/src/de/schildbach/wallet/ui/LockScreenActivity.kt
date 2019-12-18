@@ -167,6 +167,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
 
     private fun onCorrectPin(pin: String?) {
         pinRetryController.clearPinFailPrefs()
+        (application as WalletApplication).resetAutoLogoutTimer()
         saveSessionPin(pin)
         startActivity(WalletActivity.createIntent(this))
         finish()

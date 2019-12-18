@@ -117,6 +117,8 @@ public class WalletApplication extends MultiDexApplication {
 
     private boolean deviceWasLocked = false;
 
+    private AutoLogoutTimer autoLogoutTimer;
+
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
@@ -142,6 +144,9 @@ public class WalletApplication extends MultiDexApplication {
             fullInitialization();
         }
         registerDeviceInteractiveReceiver();
+
+        autoLogoutTimer = new AutoLogoutTimer(config);
+        autoLogoutTimer.start();
     }
 
     public void fullInitialization() {
@@ -236,26 +241,23 @@ public class WalletApplication extends MultiDexApplication {
             @Override
             public void onActivityStarted(Activity activity) {
                 super.onActivityStarted(activity);
-                if (deviceWasLocked && !(activity instanceof LockScreenActivity) && !(activity instanceof OnboardingActivity)) {
-                    Intent lockScreenIntent = LockScreenActivity.createIntent(getApplicationContext());
-                    lockScreenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(lockScreenIntent);
+                if (deviceWasLocked) {
+                    lockTheApp(WalletApplication.this, activity);
                 }
                 deviceWasLocked = false;
             }
 
             @Override
-            public void onStartedAny(boolean isTheFirstOne) {
-                if (isTheFirstOne) {
-                    lockWalletIfNeeded();
-                } else {
-                    WalletLock walletLock = WalletLock.getInstance();
-                    if (!walletLock.isWalletLocked(wallet)) {
-                        config.setLastUnlockTime(System.currentTimeMillis());
-                    }
+            protected void onStartedFirst(Activity activity) {
+                if (autoLogoutTimer.shouldLogout()) {
+                    lockTheApp(WalletApplication.this, activity);
                 }
             }
         });
+    }
+
+    public void resetAutoLogoutTimer() {
+        autoLogoutTimer.reset();
     }
 
     private void registerScreenOffReceiver() {
@@ -718,7 +720,7 @@ public class WalletApplication extends MultiDexApplication {
         PinRetryController.getInstance().clearPinFailPrefs();
 
         File walletBackupFile = getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
-        if(walletBackupFile.exists())
+        if (walletBackupFile.exists())
             walletBackupFile.delete();
 
         ProcessPhoenix.triggerRebirth(context);
@@ -754,5 +756,14 @@ public class WalletApplication extends MultiDexApplication {
                 deviceWasLocked |= Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1 ? myKM.isDeviceLocked() : myKM.inKeyguardRestrictedInputMode();
             }
         }, filter);
+    }
+
+    public static void lockTheApp(Context context, Activity activity) {
+        if (!(activity instanceof LockScreenActivity) && !(activity instanceof OnboardingActivity)) {
+            context = context.getApplicationContext();
+            Intent lockScreenIntent = LockScreenActivity.createIntent(context);
+            lockScreenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(lockScreenIntent);
+        }
     }
 }
