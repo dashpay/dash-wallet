@@ -103,6 +103,7 @@ import de.schildbach.wallet.ui.SingleActionSharedViewModel;
 import de.schildbach.wallet.ui.TransactionResultActivity;
 import de.schildbach.wallet.util.Bluetooth;
 import de.schildbach.wallet.util.Nfc;
+import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet_test.R;
 import kotlin.Pair;
 

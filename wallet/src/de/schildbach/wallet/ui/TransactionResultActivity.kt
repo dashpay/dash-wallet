@@ -25,6 +25,7 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.TransactionResult
+import de.schildbach.wallet.util.TransactionUtil
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_successful_transaction.*
@@ -45,10 +46,19 @@ class TransactionResultActivity : AppCompatActivity() {
         @JvmStatic
         fun createIntent(context: Context, transaction: Transaction, address: Address): Intent {
             val wallet = WalletApplication.getInstance().wallet
+
+            // obtain the transaction status
+            val primaryStatus = TransactionUtil.getTransactionTypeName(transaction, wallet)
+            val secondaryStatus = TransactionUtil.getReceivedStatusString(transaction, wallet)
+            val errorStatus = TransactionUtil.getErrorName(transaction)
+            val primaryStatusStr = if (transaction.type != Transaction.Type.TRANSACTION_NORMAL || transaction.isCoinBase) context.getString(primaryStatus) else ""
+            val secondaryStatusStr = if (secondaryStatus != -1) context.getString(secondaryStatus) else ""
+            val errorStatusStr = if (errorStatus != -1) context.getString(errorStatus) else ""
+
             val transactionResult = TransactionResult(
                     transaction.getValue(wallet), transaction.exchangeRate, address.toString(),
                     transaction.fee, transaction.txId.toString(), transaction.updateTime,
-                    transaction.purpose)
+                    transaction.purpose, primaryStatusStr, secondaryStatusStr, errorStatusStr)
 
             val transactionResultIntent = Intent(context, TransactionResultActivity::class.java)
             transactionResultIntent.putExtra(TRANSACTION_RESULT_EXTRA, transactionResult)
