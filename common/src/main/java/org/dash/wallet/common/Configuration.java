@@ -74,7 +74,6 @@ public class Configuration {
     public static final String PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER = "backup_seed_last_dismissed_reminder";
     private static final String PREFS_KEY_LAST_BACKUP_SEED = "last_backup_seed";
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
-    public static final String PREFS_KEY_CAN_AUTO_LOCK = "can_auto_lock";
     public static final String PREFS_RESTORING_BACKUP = "restoring_backup";
     public static final String PREFS_KEY_ENSURE_WIPE = "ensure_wipe";
 
@@ -396,13 +395,5 @@ public class Configuration {
 
     public void setRemindEnableFingerprint(boolean remind) {
         prefs.edit().putBoolean(PREFS_REMIND_ENABLE_FINGERPRINT, remind).apply();
-    }
-
-    public boolean getCanAutoLock() {
-        return prefs.getBoolean(PREFS_KEY_CAN_AUTO_LOCK, false);
-    }
-
-    public void setCanAutoLock(boolean enabled) {
-        prefs.edit().putBoolean(PREFS_KEY_CAN_AUTO_LOCK, enabled).apply();
     }
 }
