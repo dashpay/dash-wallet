@@ -242,6 +242,10 @@
             android:theme="@style/My.Theme.ChildActivity"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity android:name="de.schildbach.wallet.ui.AdvancedSecurityActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity" />
+
         <activity android:name="de.schildbach.wallet.ui.SettingsActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
