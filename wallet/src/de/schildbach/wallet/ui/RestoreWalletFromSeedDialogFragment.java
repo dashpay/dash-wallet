@@ -58,6 +58,8 @@ import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
+import android.annotation.SuppressLint;
+
 
 public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
 
@@ -191,7 +193,6 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
         try {
             MnemonicCode.INSTANCE.check(words);
             activity.restoreWallet(WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS));
-            Intent intent = new Intent()
 
             log.info("successfully restored wallet from seed: {}", words.size());
         } catch (final IOException | MnemonicException x) {
