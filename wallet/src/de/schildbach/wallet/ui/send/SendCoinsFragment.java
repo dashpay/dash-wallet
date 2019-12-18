@@ -98,6 +98,7 @@ import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StreamInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
+import de.schildbach.wallet.ui.SetPinActivity;
 import de.schildbach.wallet.ui.SingleActionSharedViewModel;
 import de.schildbach.wallet.ui.TransactionResultActivity;
 import de.schildbach.wallet.util.Bluetooth;
@@ -439,7 +440,7 @@ public final class SendCoinsFragment extends Fragment {
                         BitcoinIntegration.paymentToResult(result, payment.toByteArray());
                     activity.setResult(Activity.RESULT_OK, result);
                 }
-                showTransactionResult(viewModel.sentTransaction);
+                showTransactionResult(viewModel.sentTransaction, wallet);
                 playSentSound();
                 activity.finish();
             }
@@ -546,7 +547,7 @@ public final class SendCoinsFragment extends Fragment {
         }.sendCoinsOffline(sendRequest); // send asynchronously
     }
 
-    private void showTransactionResult(Transaction transaction) {
+    private void showTransactionResult(Transaction transaction, Wallet wallet) {
         if (!isAdded()) {
             return;
         }
@@ -564,9 +565,9 @@ public final class SendCoinsFragment extends Fragment {
                 transaction.getFee(), transaction.getHashAsString(), transaction.getUpdateTime(),
                 transaction.getPurpose(), primaryStatusStr, secondaryStatusStr, errorStatusStr);
 
-        Intent transactionResultIntent = new Intent(getContext(), TransactionResultActivity.class);
-        transactionResultIntent.putExtra(TransactionResultActivity.TRANSACTION_RESULT_EXTRA, transactionResult);
-
+        Address address = viewModel.paymentIntent.getAddress();
+        Intent transactionResultIntent = TransactionResultActivity.createIntent(activity,
+                transaction, address);
         startActivity(transactionResultIntent);
     }
 
