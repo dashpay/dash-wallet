@@ -551,19 +551,6 @@ public final class SendCoinsFragment extends Fragment {
         if (!isAdded()) {
             return;
         }
-        String address = viewModel.paymentIntent.getAddress().toBase58();
-
-        int primaryStatus = TransactionUtil.getTransactionTypeName(transaction, viewModel.wallet);
-        int secondaryStatus = TransactionUtil.getReceivedStatusString(transaction, viewModel.wallet);
-        int errorStatus = TransactionUtil.getErrorName(transaction);
-        String primaryStatusStr = (transaction.getType() != Transaction.Type.TRANSACTION_NORMAL || transaction.isCoinBase()) ? getString(primaryStatus) : "";
-        String secondaryStatusStr = secondaryStatus != -1 ? getString(secondaryStatus) : "";
-        String errorStatusStr = errorStatus != -1 ? getString(errorStatus) : "";
-
-        TransactionResult transactionResult = new TransactionResult(
-                transaction.getValue(viewModel.wallet), transaction.getExchangeRate(), address,
-                transaction.getFee(), transaction.getHashAsString(), transaction.getUpdateTime(),
-                transaction.getPurpose(), primaryStatusStr, secondaryStatusStr, errorStatusStr);
 
         Address address = viewModel.paymentIntent.getAddress();
         Intent transactionResultIntent = TransactionResultActivity.createIntent(activity,

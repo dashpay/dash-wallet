@@ -398,7 +398,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         String errorStatusStr = errorStatus != -1 ? getString(errorStatus) : "";
 
         TransactionResult transactionResult = new TransactionResult(tx.getValue(wallet),
-                tx.getExchangeRate(), address, tx.getFee(), tx.getHashAsString(), tx.getUpdateTime(),
+                tx.getExchangeRate(), address, tx.getFee(), tx.getTxId().toString(), tx.getUpdateTime(),
                 tx.getPurpose(), primaryStatusStr, secondaryStatusStr, errorStatusStr);
         TransactionDetailsDialogFragment transactionDetailsDialogFragment =
                 TransactionDetailsDialogFragment.newInstance(transactionResult, direction);
