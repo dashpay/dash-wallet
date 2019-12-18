@@ -144,10 +144,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
         sloganDrawable.mutate().alpha = 0
     }
 
-    fun restoreWalletFromSeed(words: MutableList<String>) {
-        viewModel.restoreWalletFromSeed(words)
-    }
-
     private fun getStatusBarHeightPx(): Int {
         var result = 0
         val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
