@@ -17,19 +17,32 @@
 package de.schildbach.wallet.ui
 
 import android.Manifest
+import android.content.DialogInterface
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
+import android.view.View.GONE
+import android.view.View.VISIBLE
+import android.widget.CompoundButton
 import android.widget.Switch
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.WalletLock
+import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.activity_security.*
 import org.bitcoinj.wallet.Wallet
 
 
-class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletProvider {
+class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletProvider,
+        UnlockWalletDialogFragment.OnUnlockWalletListener {
+
+    private lateinit var fingerprintHelper: FingerprintHelper
+    private lateinit var checkPinSharedModel: CheckPinSharedModel
+
     override fun getLayoutId(): Int {
         return R.layout.activity_security
     }
@@ -40,9 +53,42 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         setTitle(R.string.security_title)
         val hideBalanceOnLaunch = findViewById<Switch>(R.id.hide_balance_switch)
         hideBalanceOnLaunch.isChecked = configuration.hideBalance
-        hideBalanceOnLaunch.setOnCheckedChangeListener {_, hideBalanceOnLaunch ->
+        hideBalanceOnLaunch.setOnCheckedChangeListener { _, hideBalanceOnLaunch ->
             configuration.hideBalance = hideBalanceOnLaunch
         }
+
+        //Fingerprint group and switch setup
+        fingerprintHelper = FingerprintHelper(this)
+        if (fingerprintHelper.init()) {
+            fingerprint_auth_group.visibility = VISIBLE
+            fingerprint_auth_switch.isChecked = fingerprintHelper.isFingerprintEnabled
+            fingerprint_auth_switch.setOnCheckedChangeListener(fingerprintSwitchListener)
+        } else {
+            fingerprint_auth_group.visibility = GONE
+        }
+    }
+
+    private val fingerprintSwitchListener= CompoundButton.OnCheckedChangeListener { _, isChecked ->
+        if (isChecked) {
+            UnlockWalletDialogFragment.show(supportFragmentManager)
+            unCheckFingerprintAuthSwitchSilently()
+        } else {
+            fingerprintHelper.clear()
+        }
+    }
+
+    private fun unCheckFingerprintAuthSwitchSilently() {
+        fingerprint_auth_switch.setOnCheckedChangeListener(null)
+        fingerprint_auth_switch.isChecked = false
+        fingerprint_auth_switch.setOnCheckedChangeListener(fingerprintSwitchListener)
+    }
+
+    override fun onUnlockWallet(password: String?) {
+        EnableFingerprintDialog().show(supportFragmentManager, password)
+        checkPinSharedModel = ViewModelProviders.of(this).get(CheckPinSharedModel::class.java)
+        checkPinSharedModel.onCorrectPinCallback.observe(this, Observer {
+            fingerprint_auth_switch.isChecked = fingerprintHelper.isFingerprintEnabled
+        })
     }
 
     fun backupWallet(view: View) {
