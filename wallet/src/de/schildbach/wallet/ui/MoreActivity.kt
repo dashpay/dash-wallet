@@ -27,6 +27,12 @@ import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
 class MoreActivity : GlobalFooterActivity() {
 
+    companion object {
+        const val REQUEST_CODE_FINISH = 1
+
+        const val RESULT_CODE_FINISH_YES = 1
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentViewWithFooter(R.layout.activity_more)
@@ -47,10 +53,10 @@ class MoreActivity : GlobalFooterActivity() {
             startActivity(Intent(this, SecurityActivity::class.java))
         }
         settings.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
+            startActivityForResult(Intent(this, SettingsActivity::class.java), REQUEST_CODE_FINISH)
         }
         tools.setOnClickListener {
-            startActivity(Intent(this, ToolsActivity::class.java))
+            startActivityForResult(Intent(this, ToolsActivity::class.java), REQUEST_CODE_FINISH)
         }
     }
 
@@ -74,4 +80,11 @@ class MoreActivity : GlobalFooterActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if(requestCode == REQUEST_CODE_FINISH && resultCode == RESULT_CODE_FINISH_YES) {
+            finish()
+            return
+        }
+        super.onActivityResult(requestCode, resultCode, data)
+    }
 }

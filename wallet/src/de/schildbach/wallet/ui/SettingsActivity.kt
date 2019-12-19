@@ -18,10 +18,8 @@ package de.schildbach.wallet.ui
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.appcompat.widget.Toolbar
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_more.*
 import kotlinx.android.synthetic.main.activity_settings.*
 import org.dash.wallet.common.ui.DialogBuilder
 import org.slf4j.LoggerFactory
@@ -29,6 +27,10 @@ import org.slf4j.LoggerFactory
 class SettingsActivity : BaseMenuActivity() {
 
     private val log = LoggerFactory.getLogger(SettingsActivity::class.java)
+
+    companion object {
+        const val CODE_RESET_BLOCKCHAIN = 1
+    }
 
     override fun getLayoutId(): Int {
         return R.layout.activity_settings
@@ -61,10 +63,10 @@ class SettingsActivity : BaseMenuActivity() {
             log.info("manually initiated blockchain reset")
 
             WalletApplication.getInstance().resetBlockchain()
+            setResult(MoreActivity.RESULT_CODE_FINISH_YES)
             finish()
         }
         dialog.setNegativeButton(R.string.button_dismiss, null)
         dialog.show()
     }
-
 }
