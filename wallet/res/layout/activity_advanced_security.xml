@@ -19,6 +19,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:clipChildren="false"
             android:orientation="vertical">
 
             <ImageView
@@ -44,12 +45,12 @@
             <TextView
                 android:id="@+id/security_level"
                 style="@style/MontserratRegular"
-                android:textSize="20sp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="26dp"
+                android:textSize="20sp"
                 tools:ignore="ContentDescription" />
 
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -118,8 +119,8 @@
                         style="@style/MontserratRegular.MenuRowTitle.Internal"
                         android:layout_marginEnd="22dp"
                         android:layout_marginRight="22dp"
-                        android:textSize="24sp"
                         android:text="@string/immediately"
+                        android:textSize="24sp"
                         app:layout_constraintBottom_toBottomOf="@id/logout_after_label"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="@id/logout_after_label" />
@@ -150,7 +151,7 @@
                         app:layout_constraintTop_toTopOf="@id/immediately"
                         tools:ignore="HardcodedText" />
 
-                    <SeekBar
+                    <de.schildbach.wallet.ui.widget.CustomSeekBar
                         android:id="@+id/auto_logout_seekbar"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -159,9 +160,15 @@
                         android:layout_marginRight="20dp"
                         android:layout_marginBottom="26dp"
                         android:max="4"
+                        android:maxHeight="1dp"
+                        android:minHeight="1dp"
+                        android:progressDrawable="@drawable/seekbar_line"
                         android:theme="@style/Widget.AppCompat.SeekBar.Discrete"
+                        android:thumb="@drawable/seekbar_thumb"
                         app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/auto_logout_max_time" />
+                        app:layout_constraintTop_toBottomOf="@id/auto_logout_max_time"
+                        app:tickMark="@null"
+                        app:tickMarkFixed="@drawable/seekbar_step" />
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -298,28 +305,35 @@
                         app:srcCompat="@drawable/ic_dash_d_gray"
                         tools:ignore="ContentDescription" />
 
-                    <SeekBar
+
+                    <de.schildbach.wallet.ui.widget.CustomSeekBar
                         android:id="@+id/biometric_limit_seekbar"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:layout_marginTop="18dp"
-                        android:layout_marginEnd="10dp"
-                        android:layout_marginBottom="30dp"
+                        android:layout_marginLeft="20dp"
+                        android:layout_marginTop="16dp"
+                        android:layout_marginRight="20dp"
+                        android:layout_marginBottom="26dp"
                         android:max="4"
+                        android:maxHeight="1dp"
+                        android:minHeight="1dp"
+                        android:progressDrawable="@drawable/seekbar_line"
                         android:theme="@style/Widget.AppCompat.SeekBar.Discrete"
-                        app:layout_constraintTop_toBottomOf="@id/biometric_limit_max" />
+                        android:thumb="@drawable/seekbar_thumb"
+                        app:layout_constraintTop_toBottomOf="@id/biometric_limit_max"
+                        app:tickMark="@null"
+                        app:tickMarkFixed="@drawable/seekbar_step" />
 
                     <TextView
                         android:id="@+id/spending_confirmation_hint"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:paddingLeft="20dp"
-                        android:paddingRight="20dp"
                         android:layout_marginTop="18dp"
                         android:layout_marginBottom="30dp"
-                        app:layout_constraintLeft_toLeftOf="parent"
+                        android:paddingLeft="20dp"
+                        android:paddingRight="20dp"
                         app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintLeft_toLeftOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/biometric_limit_seekbar" />
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
@@ -327,16 +341,16 @@
             </androidx.constraintlayout.widget.ConstraintLayout>
 
             <Button
-                android:onClick="resetToDefault"
-                android:text="@string/reset_to_default"
                 style="@style/DashButton.Transparent"
-                android:textColor="@color/dash_blue"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="15sp"
+                android:layout_gravity="center"
                 android:layout_marginTop="50dp"
                 android:layout_marginBottom="25dp"
-                android:layout_gravity="center" />
+                android:onClick="resetToDefault"
+                android:text="@string/reset_to_default"
+                android:textColor="@color/dash_blue"
+                android:textSize="15sp" />
 
         </LinearLayout>
 
