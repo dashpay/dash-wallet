@@ -83,6 +83,7 @@ import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
+import de.schildbach.wallet.ui.MoreActivity;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
 import de.schildbach.wallet.ui.TransactionResultActivity;
 import de.schildbach.wallet.ui.scan.ScanActivity;
@@ -625,6 +626,7 @@ public class SweepWalletFragment extends Fragment {
 		Intent transactionResultIntent = TransactionResultActivity.createIntent(activity, sentTransaction,
 				receivingAddress);
 		startActivity(transactionResultIntent);
+		activity.setResult(MoreActivity.RESULT_CODE_FINISH_YES);
 		activity.finish();
 	}
 

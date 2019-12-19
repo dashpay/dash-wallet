@@ -43,4 +43,13 @@ class ToolsActivity : BaseMenuActivity() {
         }
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if(requestCode == MoreActivity.REQUEST_CODE_FINISH && resultCode == MoreActivity.RESULT_CODE_FINISH_YES) {
+            setResult(MoreActivity.RESULT_CODE_FINISH_YES)
+            finish()
+            return
+        }
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
 }
