@@ -28,10 +28,6 @@ class SettingsActivity : BaseMenuActivity() {
 
     private val log = LoggerFactory.getLogger(SettingsActivity::class.java)
 
-    companion object {
-        const val CODE_RESET_BLOCKCHAIN = 1
-    }
-
     override fun getLayoutId(): Int {
         return R.layout.activity_settings
     }
