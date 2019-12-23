@@ -16,6 +16,7 @@
 
 package de.schildbach.wallet;
 
+import android.content.SharedPreferences;
 import android.os.Handler;
 
 import org.dash.wallet.common.Configuration;
@@ -31,26 +32,77 @@ public class AutoLogoutTimer {
 
     private Configuration config;
 
+    private boolean appInBackground = false;
+
+    private OnLogoutListener onLogoutListener;
+
+    private SharedPreferences.OnSharedPreferenceChangeListener configListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
+        @Override
+        public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+            System.out.println("AutoLogoutTimer\tonSharedPreferenceChanged: " + key);
+            if (Configuration.PREFS_KEY_AUTO_LOGOUT_ENABLED.equals(key)) {
+                setup();
+            }
+        }
+    };
+
     AutoLogoutTimer(Configuration config) {
         this.config = config;
+        this.config.registerOnSharedPreferenceChangeListener(configListener);
     }
 
-    boolean shouldLogout() {
-        long autoLogoutMillis = TimeUnit.MINUTES.toMillis(config.getAutoLogoutMinutes());
-        return config.getAutoLogoutEnabled() && tickCounter >= autoLogoutMillis;
+    public void setup() {
+        System.out.println("AutoLogoutTimer\tsetup: " + config.getAutoLogoutEnabled());
+        if (config.getAutoLogoutEnabled()) {
+            startTimer();
+        } else {
+            stopTimer();
+        }
     }
 
-    public void start() {
+    public void startTimer() {
         lockTimerClock.postDelayed(new Runnable() {
             @Override
             public void run() {
                 tickCounter += LOCK_TIMER_TICK_MS;
-                lockTimerClock.postDelayed(this, LOCK_TIMER_TICK_MS);
+                System.out.println("AutoLogoutTimer\ttickCounter:\t" + tickCounter + "\t\t / " + TimeUnit.MINUTES.toMillis(config.getAutoLogoutMinutes()) + "\t\t" + appInBackground);
+                if (shouldLogout()) {
+                    if (onLogoutListener != null) {
+                        System.out.println("AutoLogoutTimer\tonLogout(" + appInBackground + ")");
+                        onLogoutListener.onLogout(appInBackground);
+                    }
+                } else {
+                    lockTimerClock.postDelayed(this, LOCK_TIMER_TICK_MS);
+                }
             }
         }, LOCK_TIMER_TICK_MS);
     }
 
-    public void reset() {
+    private boolean shouldLogout() {
+        long autoLogoutMillis = TimeUnit.MINUTES.toMillis(config.getAutoLogoutMinutes());
+        return config.getAutoLogoutEnabled() && tickCounter >= autoLogoutMillis;
+    }
+
+    public void stopTimer() {
+        System.out.println("AutoLogoutTimer\tstopTimer()");
+        lockTimerClock.removeCallbacksAndMessages(null);
+        resetTimer();
+    }
+
+    public void setOnLogoutListener(OnLogoutListener onLogoutListener) {
+        this.onLogoutListener = onLogoutListener;
+    }
+
+    public void resetTimer() {
+        System.out.println("AutoLogoutTimer\tresetTimer()");
         tickCounter = 0;
+    }
+
+    public void setAppInBackground(boolean appInBackground) {
+        this.appInBackground = appInBackground;
+    }
+
+    interface OnLogoutListener {
+        void onLogout(boolean isAppInBackground);
     }
 }

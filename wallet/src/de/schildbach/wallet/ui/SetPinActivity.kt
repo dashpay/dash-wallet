@@ -38,7 +38,7 @@ import de.schildbach.wallet_test.R
 private const val FINGERPRINT_REQUEST_SEED = 1
 private const val FINGERPRINT_REQUEST_WALLET = 2
 
-class SetPinActivity : AppCompatActivity() {
+class SetPinActivity : SessionActivity() {
 
     private lateinit var numericKeyboardView: NumericKeyboardView
     private lateinit var confirmButtonView: View

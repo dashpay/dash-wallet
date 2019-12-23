@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui
 import android.annotation.SuppressLint
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
+import de.schildbach.wallet.WalletApplication
 
 @SuppressLint("Registered")
 open class SessionActivity : AppCompatActivity() {
@@ -47,5 +48,9 @@ open class SessionActivity : AppCompatActivity() {
 
     fun getSessionPin(): String? {
         return intent.getStringExtra(EXTRA_SESSION_PIN)
+    }
+
+    override fun onUserInteraction() {
+        (application as WalletApplication).resetAutoLogoutTimer()
     }
 }

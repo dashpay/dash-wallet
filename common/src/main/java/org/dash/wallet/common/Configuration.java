@@ -58,7 +58,7 @@ public class Configuration {
     public static final String PREFS_KEY_DISCLAIMER = "disclaimer";
     private static final String PREFS_KEY_LABS_QR_PAYMENT_REQUEST = "labs_qr_payment_request";
     private static final String PREFS_KEY_PREVIOUS_VERSION = "previous_version";
-    private static final String PREFS_KEY_AUTO_LOGOUT_ENABLED = "auto_logout_enabled";
+    public static final String PREFS_KEY_AUTO_LOGOUT_ENABLED = "auto_logout_enabled";
     private static final String PREFS_KEY_AUTO_LOGOUT_MINUTES = "auto_logout_minutes";
     private static final String PREFS_KEY_SPENDING_CONFIRMATION_ENABLED = "spending_confirmation_enabled";
     private static final String PREFS_KEY_SPENDING_CONFIRMATION_LIMIT = "spending_confirmation_limit";
