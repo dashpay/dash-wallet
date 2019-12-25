@@ -52,6 +52,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Transaction.Purpose;
@@ -396,6 +397,13 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         String primaryStatusStr = (tx.getType() != Transaction.Type.TRANSACTION_NORMAL || tx.isCoinBase()) ? getString(primaryStatus) : "";
         String secondaryStatusStr = secondaryStatus != -1 ? getString(secondaryStatus) : "";
         String errorStatusStr = errorStatus != -1 ? getString(errorStatus) : "";
+
+        // handle sending
+        Coin value = tx.getValue(wallet);
+        if((value.isNegative() || value.isZero()) && tx.getType() == Transaction.Type.TRANSACTION_NORMAL) {
+            primaryStatusStr = getString(R.string.transaction_row_status_sending);
+            secondaryStatusStr = "";
+        }
 
         TransactionResult transactionResult = new TransactionResult(tx.getValue(wallet),
                 tx.getExchangeRate(), address, tx.getFee(), tx.getTxId().toString(), tx.getUpdateTime(),
