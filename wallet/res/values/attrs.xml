@@ -19,4 +19,7 @@
         <attr name="pp_item_size" format="dimension" />
         <attr name="pp_custom_drawable" format="reference" />
     </declare-styleable>
+    <declare-styleable name="CustomSeekBar">
+        <attr name="tickMarkFixed" format="reference" />
+    </declare-styleable>
 </resources>
