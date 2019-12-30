@@ -58,8 +58,8 @@ public class Configuration {
     public static final String PREFS_KEY_DISCLAIMER = "disclaimer";
     private static final String PREFS_KEY_LABS_QR_PAYMENT_REQUEST = "labs_qr_payment_request";
     private static final String PREFS_KEY_PREVIOUS_VERSION = "previous_version";
-    private static final String PREFS_KEY_AUTO_LOGOUT_ENABLED = "auto_logout_enabled";
-    private static final String PREFS_KEY_AUTO_LOGOUT_MINUTES = "auto_logout_minutes";
+    public static final String PREFS_KEY_AUTO_LOGOUT_ENABLED = "auto_logout_enabled";
+    public static final String PREFS_KEY_AUTO_LOGOUT_MINUTES = "auto_logout_minutes";
     private static final String PREFS_KEY_SPENDING_CONFIRMATION_ENABLED = "spending_confirmation_enabled";
     private static final String PREFS_KEY_SPENDING_CONFIRMATION_LIMIT = "spending_confirmation_limit";
 
@@ -73,9 +73,7 @@ public class Configuration {
     public static final String PREFS_KEY_REMIND_BACKUP_SEED = "remind_backup_seed";
     public static final String PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER = "backup_seed_last_dismissed_reminder";
     private static final String PREFS_KEY_LAST_BACKUP_SEED = "last_backup_seed";
-    public final static String PREFS_LAST_UNLOCK_TIME = "last_unlock_time";
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
-    public static final String PREFS_KEY_CAN_AUTO_LOCK = "can_auto_lock";
     public static final String PREFS_RESTORING_BACKUP = "restoring_backup";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
@@ -383,27 +381,11 @@ public class Configuration {
         prefs.unregisterOnSharedPreferenceChangeListener(listener);
     }
 
-    public long getLastUnlockTime() {
-        return prefs.getLong(PREFS_LAST_UNLOCK_TIME, 0);
-    }
-
-    public void setLastUnlockTime(long unlockTime) {
-        prefs.edit().putLong(PREFS_LAST_UNLOCK_TIME, unlockTime).apply();
-    }
-
     public boolean getRemindEnableFingerprint() {
         return prefs.getBoolean(PREFS_REMIND_ENABLE_FINGERPRINT, true);
     }
 
     public void setRemindEnableFingerprint(boolean remind) {
         prefs.edit().putBoolean(PREFS_REMIND_ENABLE_FINGERPRINT, remind).apply();
-    }
-
-    public boolean getCanAutoLock() {
-        return prefs.getBoolean(PREFS_KEY_CAN_AUTO_LOCK, false);
-    }
-
-    public void setCanAutoLock(boolean enabled) {
-        prefs.edit().putBoolean(PREFS_KEY_CAN_AUTO_LOCK, enabled).apply();
     }
 }

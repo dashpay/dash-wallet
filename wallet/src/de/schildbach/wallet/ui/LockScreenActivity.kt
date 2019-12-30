@@ -150,11 +150,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
                     setState(State.DECRYPTING)
                 }
                 Status.SUCCESS -> {
-                    if (EnableFingerprintDialog.shouldBeShown(this)) {
-                        EnableFingerprintDialog.show(it.data, supportFragmentManager)
-                    } else {
-                        onCorrectPin(it.data)
-                    }
+                    onCorrectPin(it.data)
                 }
             }
         })
@@ -167,6 +163,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
 
     private fun onCorrectPin(pin: String?) {
         pinRetryController.clearPinFailPrefs()
+        (application as WalletApplication).maybeStartAutoLogoutTimer()
         saveSessionPin(pin)
         startActivity(WalletActivity.createIntent(this))
         finish()

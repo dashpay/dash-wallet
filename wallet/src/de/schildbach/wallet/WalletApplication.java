@@ -36,7 +36,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.StrictMode;
-import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.text.format.DateUtils;
 import android.widget.Toast;
@@ -78,13 +77,14 @@ import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
-import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.ui.GlobalFooterActivity;
 import de.schildbach.wallet.ui.LockScreenActivity;
 import de.schildbach.wallet.ui.OnboardingActivity;
+import de.schildbach.wallet.ui.WalletUriHandlerActivity;
 import de.schildbach.wallet.ui.preference.PinRetryController;
+import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
@@ -118,6 +118,8 @@ public class WalletApplication extends MultiDexApplication {
 
     private boolean deviceWasLocked = false;
 
+    private AutoLogout autoLogout;
+
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
@@ -128,11 +130,37 @@ public class WalletApplication extends MultiDexApplication {
         return walletFile.exists();
     }
 
+    private boolean isSpecialActivity(Activity activity) {
+        return (activity instanceof OnboardingActivity)
+                || (activity instanceof LockScreenActivity)
+                || (activity instanceof SendCoinsActivity)
+                || (activity instanceof WalletUriHandlerActivity);
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
         log.info("WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
+        autoLogout = new AutoLogout(config);
+        registerActivityLifecycleCallbacks(new ActivitiesTracker() {
+
+            @Override
+            protected void onStartedFirst(Activity activity) {
+                autoLogout.setAppInBackground(false);
+                if (deviceWasLocked || autoLogout.shouldLogout()) {
+                    lockTheApp(WalletApplication.this, activity);
+                    if (autoLogout.isTimerActive()) {
+                        autoLogout.stopTimer();
+                    }
+                }
+            }
+
+            @Override
+            protected void onStoppedLast() {
+                autoLogout.setAppInBackground(true);
+            }
+        });
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
         if (walletFileExists()) {
             fullInitialization();
@@ -219,52 +247,26 @@ public class WalletApplication extends MultiDexApplication {
 
         cleanupFiles();
 
-        registerScreenOffReceiver();
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannels();
         }
 
-        WalletLock.getInstance().setConfiguration(config);
-
-        registerActivityLifecycleCallbacks(new ActivitiesTracker() {
-
+        autoLogout.setOnLogoutListener(new AutoLogout.OnLogoutListener() {
             @Override
-            public void onActivityStarted(Activity activity) {
-                super.onActivityStarted(activity);
-                if (deviceWasLocked && !(activity instanceof LockScreenActivity) && !(activity instanceof OnboardingActivity)) {
-                    Intent lockScreenIntent = LockScreenActivity.createIntent(getApplicationContext());
-                    lockScreenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(lockScreenIntent);
-                }
-                deviceWasLocked = false;
-            }
-
-            @Override
-            public void onStartedAny(boolean isTheFirstOne) {
-                if (isTheFirstOne) {
-                    lockWalletIfNeeded();
-                } else {
-                    WalletLock walletLock = WalletLock.getInstance();
-                    if (!walletLock.isWalletLocked(wallet)) {
-                        config.setLastUnlockTime(System.currentTimeMillis());
-                    }
+            public void onLogout(boolean isAppInBackground) {
+                if (!isAppInBackground) {
+                    lockTheApp(WalletApplication.this, null);
                 }
             }
         });
     }
 
-    private void registerScreenOffReceiver() {
-        IntentFilter screenStateFilter = new IntentFilter();
-        screenStateFilter.addAction(Intent.ACTION_SCREEN_OFF);
-        registerReceiver(new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                // immediately reset the lock timer in order to make the
-                // wallet after turning screen off.
-                config.setLastUnlockTime(0);
-            }
-        }, screenStateFilter);
+    public void maybeStartAutoLogoutTimer() {
+        autoLogout.setup();
+    }
+
+    public void resetAutoLogoutTimer() {
+        autoLogout.resetTimerIfActive();
     }
 
     @TargetApi(Build.VERSION_CODES.O)
@@ -688,15 +690,6 @@ public class WalletApplication extends MultiDexApplication {
                 alarmIntent);
     }
 
-    public void lockWalletIfNeeded() {
-        WalletLock walletLock = WalletLock.getInstance();
-        boolean recentReboot = SystemClock.elapsedRealtime() < WalletLock.DEFAULT_LOCK_TIMER_MILLIS &&
-                config.getLastUnlockTime() < (System.currentTimeMillis() - SystemClock.elapsedRealtime());
-        if (walletLock.isWalletLocked(wallet) || recentReboot) {
-            walletLock.setWalletLocked(true);
-        }
-    }
-
     /**
      * Removes all the data and restarts the app showing onboarding screen.
      */
@@ -756,5 +749,15 @@ public class WalletApplication extends MultiDexApplication {
                 deviceWasLocked |= Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1 ? myKM.isDeviceLocked() : myKM.inKeyguardRestrictedInputMode();
             }
         }, filter);
+    }
+
+    private void lockTheApp(Context context, Activity activity) {
+        if (!isSpecialActivity(activity)) {
+            context = context.getApplicationContext();
+            Intent lockScreenIntent = LockScreenActivity.createIntent(context);
+            lockScreenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(lockScreenIntent);
+        }
+        deviceWasLocked = false;
     }
 }
