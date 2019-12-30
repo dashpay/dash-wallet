@@ -34,6 +34,7 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Handler;
 import android.os.StrictMode;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
@@ -134,11 +135,6 @@ public class WalletApplication extends MultiDexApplication {
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
         if (walletFileExists()) {
-            if (config.getEnsureWipe()) {
-                //noinspection ResultOfMethodCallIgnored
-                walletFile.delete();
-                config.clear(false);
-            }
             fullInitialization();
         }
         registerDeviceInteractiveReceiver();
@@ -705,23 +701,29 @@ public class WalletApplication extends MultiDexApplication {
      * Removes all the data and restarts the app showing onboarding screen.
      */
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    public void wipe(Context context) {
+    public void wipe(final Context context) {
         log.info("Removing all the data and restarting the app.");
 
         resetBlockchain();
         wallet.shutdownAutosaveAndWait();
         stopBlockchainService();
 
-        walletFile.delete();
         cleanupFiles();
-        config.clear(true);
+        config.clear();
         PinRetryController.getInstance().clearPinFailPrefs();
 
         File walletBackupFile = getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
-        if(walletBackupFile.exists())
+        if (walletBackupFile.exists()) {
             walletBackupFile.delete();
+        }
 
-        ProcessPhoenix.triggerRebirth(context);
+        new Handler().post(new Runnable() {
+            @Override
+            public void run() {
+                walletFile.delete();
+                ProcessPhoenix.triggerRebirth(context);
+            }
+        });
     }
 
 

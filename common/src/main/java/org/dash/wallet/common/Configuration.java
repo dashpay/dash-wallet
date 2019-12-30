@@ -77,7 +77,6 @@ public class Configuration {
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
     public static final String PREFS_KEY_CAN_AUTO_LOCK = "can_auto_lock";
     public static final String PREFS_RESTORING_BACKUP = "restoring_backup";
-    public static final String PREFS_KEY_ENSURE_WIPE = "ensure_wipe";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 4;
@@ -92,20 +91,13 @@ public class Configuration {
     }
 
     @SuppressLint("ApplySharedPref")
-    public void clear(boolean ensureWipe) {
+    public void clear() {
         Editor edit = prefs.edit();
         try {
             edit.clear();
-            if (ensureWipe) {
-                edit.putBoolean(PREFS_KEY_ENSURE_WIPE, true);
-            }
         } finally {
             edit.commit();
         }
-    }
-
-    public boolean getEnsureWipe() {
-        return prefs.getBoolean(PREFS_KEY_ENSURE_WIPE, false);
     }
 
     private int getBtcPrecision() {
