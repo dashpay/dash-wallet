@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.graphics.drawable.LayerDrawable
 import android.os.Bundle
 import android.os.Handler
@@ -100,7 +101,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
         }
         recovery_wallet.setOnClickListener {
             walletApplication.initEnvironmentIfNeeded()
-            RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
+            startActivity(Intent(this, RestoreWalletFromSeedActivity::class.java))
         }
         restore_wallet.setOnClickListener {
             restoreWalletFromFile()
@@ -141,10 +142,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
     private fun hideSlogan() {
         val sloganDrawable = (window.decorView.background as LayerDrawable).getDrawable(1)
         sloganDrawable.mutate().alpha = 0
-    }
-
-    fun restoreWalletFromSeed(words: MutableList<String>) {
-        viewModel.restoreWalletFromSeed(words)
     }
 
     private fun getStatusBarHeightPx(): Int {

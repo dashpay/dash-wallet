@@ -38,6 +38,8 @@ class TransactionResultViewBinder(private val containerView: View) {
     private val transactionAddress: TextView by lazy { containerView.findViewById<TextView>(R.id.transaction_address) }
     private val fiatValue: CurrencyTextView by lazy { containerView.findViewById<CurrencyTextView>(R.id.fiat_value) }
     private val date: TextView by lazy { containerView.findViewById<TextView>(R.id.transaction_date_and_time) }
+    private val primaryStatus: TextView by lazy { containerView.findViewById<TextView>(R.id.transaction_primary_status) }
+    private val secondaryStatus: TextView by lazy { containerView.findViewById<TextView>(R.id.transaction_secondary_status) }
 
     fun bind(transactionResult: TransactionResult) {
         val noCodeFormat = WalletApplication.getInstance().configuration.format.noCode()
@@ -69,6 +71,26 @@ class TransactionResultViewBinder(private val containerView: View) {
                 .exchangeCurrencyCode
         fiatValue.setFiatAmount(transactionResult.dashAmount, exchangeRate, Constants.LOCAL_FORMAT,
                 exchangeCurrencyCode)
+
+        // transaction status
+        if(transactionResult.errorStatus.isNotEmpty()) {
+            //set colors to red
+            val colorError = containerView.context.resources.getColor(R.color.fg_error)
+            primaryStatus.setTextColor(colorError)
+            secondaryStatus.setTextColor(colorError)
+            primaryStatus.text = containerView.context.getString(R.string.transaction_row_status_error_sending)
+            secondaryStatus.text = transactionResult.errorStatus
+
+        } else {
+            if(transactionResult.primaryStatus.isNotEmpty()) {
+                primaryStatus.text = transactionResult.primaryStatus
+            } else {
+                primaryStatus.visibility = View.GONE
+            }
+            if(transactionResult.secondaryStatus.isNotEmpty())
+                secondaryStatus.text = transactionResult.secondaryStatus
+            else secondaryStatus.visibility = View.GONE
+        }
     }
 
 }

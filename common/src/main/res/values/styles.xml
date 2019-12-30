@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <style name="My.Theme" parent="Theme.AppCompat.Light.DarkActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>
@@ -17,6 +17,7 @@
         <item name="actionModeBackground">@color/colorPrimary</item>
         <item name="android:actionBarStyle">@style/My.Widget.ActionBar</item>
         <item name="alertDialogTheme">@style/NewDialogTheme</item>
+        <item name="android:colorControlActivated" tools:targetApi="lollipop">@color/colorPrimary</item>
     </style>
 
     <style name="MontserratTextViewStyle" parent="android:Widget.TextView">

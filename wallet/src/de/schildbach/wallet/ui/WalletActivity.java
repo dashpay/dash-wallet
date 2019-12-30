@@ -72,7 +72,6 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
-import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
@@ -278,6 +277,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
             @Override
             public void onClick(View v) {
                 handlePaste();
+            }
+        });
+        findViewById(R.id.import_key_action).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                SweepWalletActivity.start(WalletActivity.this);
             }
         });
     }
@@ -1056,12 +1061,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @Override
     public void onStart() {
         super.onStart();
-        findViewById(R.id.restart_sync_icon).setOnClickListener(new View.OnClickListener() {
-            public void onClick(final View v) {
-                findViewById(R.id.sync_error_pane).setVisibility(View.GONE);
-                findViewById(R.id.sync_progress_pane).setVisibility(View.VISIBLE);
-            }
-        });
         EventBus.getDefault().register(this);
     }
 
