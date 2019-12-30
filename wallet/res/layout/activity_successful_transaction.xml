@@ -221,15 +221,44 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/transaction_date_and_time_label" />
 
+    <LinearLayout
+        android:id="@+id/status_layout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/separator4">
+
+        <TextView
+            android:id="@+id/transaction_primary_status"
+            style="@style/MontserratMedium"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingRight="6dp"
+            android:textColor="@color/primary_status"
+            android:textSize="15sp"
+            tools:text="Receiving" />
+
+        <TextView
+            android:id="@+id/transaction_secondary_status"
+            style="@style/MontserratMedium.B.12"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/secondary_status"
+            tools:text="Processing" />
+    </LinearLayout>
+
     <Button
         android:id="@+id/transaction_close_btn"
         style="@style/DashButton.Blue"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="30dp"
         android:text="@string/transaction_close"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/separator4" />
+        app:layout_constraintTop_toBottomOf="@id/status_layout" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

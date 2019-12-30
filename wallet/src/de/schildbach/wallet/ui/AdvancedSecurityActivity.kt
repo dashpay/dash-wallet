@@ -33,6 +33,34 @@ enum class SecurityLevel {
 }
 
 class AdvancedSecurityActivity : BaseMenuActivity() {
+    private val onAutoLogoutSeekBarListener = object : OnSeekBarChangeListener {
+        override fun onStopTrackingTouch(seekBar: SeekBar?) { }
+        override fun onStartTrackingTouch(seekBar: SeekBar?) { }
+        override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+            configuration.autoLogoutMinutes = when(auto_logout_seekbar.progress) {
+                0 -> 0
+                1 -> 1
+                2 -> 5
+                3 -> 60
+                else -> TimeUnit.HOURS.toMinutes(24).toInt()
+            }
+            updateView()
+        }
+    }
+    private val onBiometricLimitSeekBarChangeListener = object : OnSeekBarChangeListener {
+        override fun onStopTrackingTouch(seekBar: SeekBar?) { }
+        override fun onStartTrackingTouch(seekBar: SeekBar?) { }
+        override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+            configuration.spendingConfirmationLimit = when(biometric_limit_seekbar.progress) {
+                0 -> 0f
+                1 -> 0.1f
+                2 -> 0.5f
+                3 -> 1f
+                else -> 5f
+            }
+            updateView()
+        }
+    }
     private lateinit var dashSymbol: ImageSpan
 
     override fun getLayoutId(): Int {
@@ -57,34 +85,8 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
             updateView()
         }
 
-        auto_logout_seekbar.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
-            override fun onStopTrackingTouch(seekBar: SeekBar?) { }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) { }
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                configuration.autoLogoutMinutes = when(auto_logout_seekbar.progress) {
-                    0 -> 0
-                    1 -> 1
-                    2 -> 5
-                    3 -> 60
-                    else -> TimeUnit.HOURS.toMinutes(24).toInt()
-                }
-                updateView()
-            }
-        })
-        biometric_limit_seekbar.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
-            override fun onStopTrackingTouch(seekBar: SeekBar?) { }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) { }
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                configuration.spendingConfirmationLimit = when(biometric_limit_seekbar.progress) {
-                    0 -> 0f
-                    1 -> 0.1f
-                    2 -> 0.5f
-                    3 -> 1f
-                    else -> 5f
-                }
-                updateView()
-            }
-        })
+        auto_logout_seekbar.setOnSeekBarChangeListener(onAutoLogoutSeekBarListener)
+        biometric_limit_seekbar.setOnSeekBarChangeListener(onBiometricLimitSeekBarChangeListener)
 
         updateView()
         setTitle(R.string.security_title)

@@ -102,7 +102,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
         recovery_wallet.setOnClickListener {
             walletApplication.initEnvironmentIfNeeded()
             startActivity(Intent(this, RestoreWalletFromSeedActivity::class.java))
-//            RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
         }
         restore_wallet.setOnClickListener {
             restoreWalletFromFile()
@@ -143,10 +142,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
     private fun hideSlogan() {
         val sloganDrawable = (window.decorView.background as LayerDrawable).getDrawable(1)
         sloganDrawable.mutate().alpha = 0
-    }
-
-    fun restoreWalletFromSeed(words: MutableList<String>) {
-        viewModel.restoreWalletFromSeed(words)
     }
 
     private fun getStatusBarHeightPx(): Int {

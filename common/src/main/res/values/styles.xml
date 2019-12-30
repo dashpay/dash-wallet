@@ -18,7 +18,6 @@
         <item name="android:actionBarStyle">@style/My.Widget.ActionBar</item>
         <item name="alertDialogTheme">@style/NewDialogTheme</item>
         <item name="android:colorControlActivated" tools:targetApi="lollipop">@color/colorPrimary</item>
-
     </style>
 
     <style name="MontserratTextViewStyle" parent="android:Widget.TextView">
