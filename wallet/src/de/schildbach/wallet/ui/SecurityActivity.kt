@@ -24,12 +24,19 @@ import android.view.View
 import android.widget.Switch
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
 import org.bitcoinj.wallet.Wallet
 
 
 class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletProvider {
+
+    companion object {
+        private const val AUTH_REQUEST_CODE_BACKUP = 1
+    }
+
     override fun getLayoutId(): Int {
         return R.layout.activity_security
     }
@@ -40,21 +47,25 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         setTitle(R.string.security_title)
         val hideBalanceOnLaunch = findViewById<Switch>(R.id.hide_balance_switch)
         hideBalanceOnLaunch.isChecked = configuration.hideBalance
-        hideBalanceOnLaunch.setOnCheckedChangeListener {_, hideBalanceOnLaunch ->
+        hideBalanceOnLaunch.setOnCheckedChangeListener { _, hideBalanceOnLaunch ->
             configuration.hideBalance = hideBalanceOnLaunch
         }
+
+        val checkPinSharedModel: CheckPinSharedModel = ViewModelProviders.of(this).get(CheckPinSharedModel::class.java)
+        checkPinSharedModel.onCorrectPinCallback.observe(this, Observer<Pair<Int?, String?>> { (data, _) ->
+            if (data == AUTH_REQUEST_CODE_BACKUP) {
+                val permission = Manifest.permission.WRITE_EXTERNAL_STORAGE
+                if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
+                    BackupWalletDialogFragment.show(supportFragmentManager)
+                } else {
+                    ActivityCompat.requestPermissions(this, arrayOf(permission), 1)
+                }
+            }
+        })
     }
 
     fun backupWallet(view: View) {
-        UnlockWalletDialogFragment.show(supportFragmentManager) {
-            val permission = Manifest.permission.WRITE_EXTERNAL_STORAGE
-            if (ContextCompat.checkSelfPermission(this, permission)
-                    == PackageManager.PERMISSION_GRANTED) {
-                BackupWalletDialogFragment.show(supportFragmentManager)
-            } else {
-                ActivityCompat.requestPermissions(this, arrayOf(permission), 1)
-            }
-        }
+        CheckPinDialog.show(this, AUTH_REQUEST_CODE_BACKUP)
     }
 
     fun viewRecoveryPhrase(view: View) {
