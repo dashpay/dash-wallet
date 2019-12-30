@@ -32,7 +32,7 @@ class ResetWalletDialog : DialogFragment() {
         //Inverting dialog answers to prevent accidental wallet reset
         dialogBuilder.setNegativeButton(R.string.wallet_lock_reset_wallet_title) { _, _ ->
             (activity as? AbstractBindServiceActivity)?.unbindServiceServiceConnection()
-            WalletApplication.getInstance().wipe(context)
+            WalletApplication.getInstance().triggerWipe(context)
         }
         dialogBuilder.setPositiveButton(android.R.string.no, null)
         dialogBuilder.setCancelable(false)

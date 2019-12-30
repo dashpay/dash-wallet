@@ -700,14 +700,22 @@ public class WalletApplication extends MultiDexApplication {
     /**
      * Removes all the data and restarts the app showing onboarding screen.
      */
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    public void wipe(final Context context) {
+    public void triggerWipe(final Context context) {
         log.info("Removing all the data and restarting the app.");
 
-        resetBlockchain();
-        wallet.shutdownAutosaveAndWait();
-        stopBlockchainService();
+        startService(new Intent(BlockchainService.ACTION_WIPE_WALLET, null, this, BlockchainServiceImpl.class));
+    }
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    public void finalizeWipe() {
+        if (walletFile.exists()) {
+            wallet.shutdownAutosaveAndWait();
+            walletFile.delete();
+        }
+        System.out.println("walletFile.exists(): " + walletFile.exists());
+        if (walletFile.exists()) {
+            walletFile.delete();
+        }
         cleanupFiles();
         config.clear();
         PinRetryController.getInstance().clearPinFailPrefs();
@@ -716,16 +724,8 @@ public class WalletApplication extends MultiDexApplication {
         if (walletBackupFile.exists()) {
             walletBackupFile.delete();
         }
-
-        new Handler().post(new Runnable() {
-            @Override
-            public void run() {
-                walletFile.delete();
-                ProcessPhoenix.triggerRebirth(context);
-            }
-        });
+        ProcessPhoenix.triggerRebirth(this);
     }
-
 
     public boolean isBackupDisclaimerDismissed() {
         return backupDisclaimerDismissed;
