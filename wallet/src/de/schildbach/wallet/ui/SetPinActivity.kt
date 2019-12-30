@@ -251,7 +251,6 @@ class SetPinActivity : AppCompatActivity() {
                 pin.clear()
             }
             State.CONFIRM_PIN -> {
-                pageTitleView.setText(R.string.set_pin_confirm_pin)
                 if (pinProgressSwitcherView.currentView.id == R.id.progress) {
                     pinProgressSwitcherView.showPrevious()
                 }
@@ -261,6 +260,7 @@ class SetPinActivity : AppCompatActivity() {
                 confirmButtonView.visibility = View.GONE
                 Handler().postDelayed({
                     pinPreviewView.clear()
+                    pageTitleView.setText(R.string.set_pin_confirm_pin)
                 }, 200)
                 pin.clear()
             }
