@@ -399,8 +399,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         String errorStatusStr = errorStatus != -1 ? getString(errorStatus) : "";
 
         // handle sending
-        Coin value = tx.getValue(wallet);
-        if((value.isNegative() || value.isZero()) && tx.getType() == Transaction.Type.TRANSACTION_NORMAL) {
+        if(TransactionUtil.isSending(tx, wallet)) {
             primaryStatusStr = getString(R.string.transaction_row_status_sending);
             secondaryStatusStr = "";
         }

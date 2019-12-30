@@ -56,8 +56,7 @@ class TransactionResultActivity : AppCompatActivity() {
             val errorStatusStr = if (errorStatus != -1) context.getString(errorStatus) else ""
 
             // handle sending
-            val value = transaction.getValue(wallet)
-            if((value.isNegative || value.isZero) && transaction.type == Transaction.Type.TRANSACTION_NORMAL) {
+            if(TransactionUtil.isSending(transaction, wallet)) {
                 primaryStatusStr = context.getString(R.string.transaction_row_status_sending)
                 secondaryStatusStr = ""
             }
