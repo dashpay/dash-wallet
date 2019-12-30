@@ -46,12 +46,14 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
     }
 
     fun backupWallet(view: View) {
-        val permission = Manifest.permission.WRITE_EXTERNAL_STORAGE
-        if (ContextCompat.checkSelfPermission(this, permission)
-                == PackageManager.PERMISSION_GRANTED) {
-            BackupWalletDialogFragment.show(supportFragmentManager)
-        } else {
-            ActivityCompat.requestPermissions(this, arrayOf(permission), 1)
+        UnlockWalletDialogFragment.show(supportFragmentManager) {
+            val permission = Manifest.permission.WRITE_EXTERNAL_STORAGE
+            if (ContextCompat.checkSelfPermission(this, permission)
+                    == PackageManager.PERMISSION_GRANTED) {
+                BackupWalletDialogFragment.show(supportFragmentManager)
+            } else {
+                ActivityCompat.requestPermissions(this, arrayOf(permission), 1)
+            }
         }
     }
 
