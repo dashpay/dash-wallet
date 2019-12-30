@@ -95,4 +95,9 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
         startActivity(Intent(this, WalletActivity::class.java))
         finish()
     }
+
+    override fun finish() {
+        super.finish()
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+    }
 }
