@@ -385,6 +385,7 @@ class SetPinActivity : SessionActivity() {
             FINGERPRINT_REQUEST_SEED -> startVerifySeedActivity()
             FINGERPRINT_REQUEST_WALLET -> goHome()
         }
+        (application as WalletApplication).maybeStartAutoLogoutTimer()
     }
 
     private fun startVerifySeedActivity() {

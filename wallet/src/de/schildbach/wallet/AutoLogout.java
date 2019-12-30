@@ -23,12 +23,13 @@ import org.dash.wallet.common.Configuration;
 
 import java.util.concurrent.TimeUnit;
 
-public class AutoLogoutTimer {
+public class AutoLogout {
 
     private static final long LOCK_TIMER_TICK_MS = TimeUnit.SECONDS.toMillis(5);
 
     private Handler lockTimerClock = new Handler();
     private long tickCounter;
+    private boolean timerActive = false;
 
     private Configuration config;
 
@@ -36,56 +37,60 @@ public class AutoLogoutTimer {
 
     private OnLogoutListener onLogoutListener;
 
+    @SuppressWarnings("FieldCanBeLocal")
     private SharedPreferences.OnSharedPreferenceChangeListener configListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
         @Override
         public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-            System.out.println("AutoLogoutTimer\tonSharedPreferenceChanged: " + key);
-            if (Configuration.PREFS_KEY_AUTO_LOGOUT_ENABLED.equals(key)) {
+            if (Configuration.PREFS_KEY_AUTO_LOGOUT_ENABLED.equals(key) || Configuration.PREFS_KEY_AUTO_LOGOUT_MINUTES.equals(key)) {
                 setup();
             }
         }
     };
 
-    AutoLogoutTimer(Configuration config) {
+    AutoLogout(Configuration config) {
         this.config = config;
         this.config.registerOnSharedPreferenceChangeListener(configListener);
     }
 
     public void setup() {
-        System.out.println("AutoLogoutTimer\tsetup: " + config.getAutoLogoutEnabled());
-        if (config.getAutoLogoutEnabled()) {
-            startTimer();
+        if (config.getAutoLogoutEnabled() && config.getAutoLogoutMinutes() > 0) {
+            if (!timerActive) {
+                startTimer();
+            }
         } else {
             stopTimer();
         }
     }
 
     public void startTimer() {
-        lockTimerClock.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                tickCounter += LOCK_TIMER_TICK_MS;
-                System.out.println("AutoLogoutTimer\ttickCounter:\t" + tickCounter + "\t\t / " + TimeUnit.MINUTES.toMillis(config.getAutoLogoutMinutes()) + "\t\t" + appInBackground);
-                if (shouldLogout()) {
-                    if (onLogoutListener != null) {
-                        System.out.println("AutoLogoutTimer\tonLogout(" + appInBackground + ")");
-                        onLogoutListener.onLogout(appInBackground);
-                    }
-                } else {
-                    lockTimerClock.postDelayed(this, LOCK_TIMER_TICK_MS);
-                }
-            }
-        }, LOCK_TIMER_TICK_MS);
+        lockTimerClock.postDelayed(timerTask, LOCK_TIMER_TICK_MS);
+        timerActive = true;
     }
 
-    private boolean shouldLogout() {
+    private Runnable timerTask = new Runnable() {
+        @Override
+        public void run() {
+            tickCounter += LOCK_TIMER_TICK_MS;
+            if (shouldLogout()) {
+                if (onLogoutListener != null) {
+                    onLogoutListener.onLogout(appInBackground);
+                }
+                timerActive = false;
+            } else {
+                lockTimerClock.postDelayed(timerTask, LOCK_TIMER_TICK_MS);
+            }
+        }
+    };
+
+    public boolean shouldLogout() {
         long autoLogoutMillis = TimeUnit.MINUTES.toMillis(config.getAutoLogoutMinutes());
-        return config.getAutoLogoutEnabled() && tickCounter >= autoLogoutMillis;
+        boolean logoutTimeExceeded = (config.getAutoLogoutMinutes() == 0) || tickCounter >= autoLogoutMillis;
+        return config.getAutoLogoutEnabled() && logoutTimeExceeded;
     }
 
     public void stopTimer() {
-        System.out.println("AutoLogoutTimer\tstopTimer()");
         lockTimerClock.removeCallbacksAndMessages(null);
+        timerActive = false;
         resetTimer();
     }
 
@@ -94,12 +99,21 @@ public class AutoLogoutTimer {
     }
 
     public void resetTimer() {
-        System.out.println("AutoLogoutTimer\tresetTimer()");
         tickCounter = 0;
+    }
+
+    public void resetTimerIfActive() {
+        if (isTimerActive()) {
+            resetTimer();
+        }
     }
 
     public void setAppInBackground(boolean appInBackground) {
         this.appInBackground = appInBackground;
+    }
+
+    public boolean isTimerActive() {
+        return timerActive;
     }
 
     interface OnLogoutListener {

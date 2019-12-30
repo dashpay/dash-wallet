@@ -29,7 +29,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.media.AudioAttributes;
@@ -82,7 +81,9 @@ import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.ui.GlobalFooterActivity;
 import de.schildbach.wallet.ui.LockScreenActivity;
 import de.schildbach.wallet.ui.OnboardingActivity;
+import de.schildbach.wallet.ui.WalletUriHandlerActivity;
 import de.schildbach.wallet.ui.preference.PinRetryController;
+import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
@@ -114,9 +115,9 @@ public class WalletApplication extends MultiDexApplication {
 
     private static final Logger log = LoggerFactory.getLogger(WalletApplication.class);
 
-    private boolean shouldLockOnAnyActivityStart = false;
+    private boolean deviceWasLocked = false;
 
-    private AutoLogoutTimer autoLogoutTimer;
+    private AutoLogout autoLogout;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -128,32 +129,35 @@ public class WalletApplication extends MultiDexApplication {
         return walletFile.exists();
     }
 
+    private boolean isSpecialActivity(Activity activity) {
+        return (activity instanceof OnboardingActivity)
+                || (activity instanceof LockScreenActivity)
+                || (activity instanceof SendCoinsActivity)
+                || (activity instanceof WalletUriHandlerActivity);
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
         log.info("WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
-        autoLogoutTimer = new AutoLogoutTimer(config);
+        autoLogout = new AutoLogout(config);
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
 
             @Override
-            public void onActivityStarted(Activity activity) {
-                super.onActivityStarted(activity);
-                if (activity instanceof LockScreenActivity) {
-                    autoLogoutTimer.stopTimer();
-                } else if (shouldLockOnAnyActivityStart) {
+            protected void onStartedFirst(Activity activity) {
+                autoLogout.setAppInBackground(false);
+                if (deviceWasLocked || autoLogout.shouldLogout()) {
                     lockTheApp(WalletApplication.this, activity);
+                    if (autoLogout.isTimerActive()) {
+                        autoLogout.stopTimer();
+                    }
                 }
             }
 
             @Override
-            protected void onStartedFirst(Activity activity) {
-                autoLogoutTimer.setAppInBackground(false);
-            }
-
-            @Override
             protected void onStoppedLast() {
-                autoLogoutTimer.setAppInBackground(true);
+                autoLogout.setAppInBackground(true);
             }
         });
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
@@ -251,25 +255,22 @@ public class WalletApplication extends MultiDexApplication {
             createNotificationChannels();
         }
 
-        autoLogoutTimer.setOnLogoutListener(new AutoLogoutTimer.OnLogoutListener() {
+        autoLogout.setOnLogoutListener(new AutoLogout.OnLogoutListener() {
             @Override
             public void onLogout(boolean isAppInBackground) {
-                if (isAppInBackground) {
-                    shouldLockOnAnyActivityStart = true;
-                } else {
+                if (!isAppInBackground) {
                     lockTheApp(WalletApplication.this, null);
                 }
             }
         });
-        autoLogoutTimer.setup();
     }
 
     public void maybeStartAutoLogoutTimer() {
-        autoLogoutTimer.setup();
+        autoLogout.setup();
     }
 
     public void resetAutoLogoutTimer() {
-        autoLogoutTimer.resetTimer();
+        autoLogout.resetTimerIfActive();
     }
 
     @TargetApi(Build.VERSION_CODES.O)
@@ -743,18 +744,18 @@ public class WalletApplication extends MultiDexApplication {
             @Override
             public void onReceive(Context context, Intent intent) {
                 KeyguardManager myKM = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
-                shouldLockOnAnyActivityStart |= Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1 ? myKM.isDeviceLocked() : myKM.inKeyguardRestrictedInputMode();
+                deviceWasLocked |= Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1 ? myKM.isDeviceLocked() : myKM.inKeyguardRestrictedInputMode();
             }
         }, filter);
     }
 
     private void lockTheApp(Context context, Activity activity) {
-        if (!(activity instanceof OnboardingActivity)) {
+        if (!isSpecialActivity(activity)) {
             context = context.getApplicationContext();
             Intent lockScreenIntent = LockScreenActivity.createIntent(context);
             lockScreenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(lockScreenIntent);
         }
-        shouldLockOnAnyActivityStart = false;
+        deviceWasLocked = false;
     }
 }
