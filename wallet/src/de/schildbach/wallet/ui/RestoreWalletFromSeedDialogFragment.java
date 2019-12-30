@@ -58,6 +58,8 @@ import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
+import android.annotation.SuppressLint;
+
 
 public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
 
@@ -120,7 +122,6 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
         final TextView messageView = (TextView) view.findViewById(R.id.restore_wallet_dialog_message);
         messageView.setText(getString(R.string.import_keys_from_seed_dialog_message));
         replaceWarningView = view.findViewById(R.id.restore_wallet_from_storage_dialog_replace_warning);
-        //final Spinner fileView = (Spinner) view.findViewById(R.id.import_keys_from_storage_file);
         passwordView = (EditText) view.findViewById(R.id.import_seed_recovery_phrase);
         setupPasswordView();
         invalidWordView = (TextView)view.findViewById(R.id.restore_wallet_from_invalid_seed_warning);
@@ -128,23 +129,12 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
         builder.setPositiveButton(R.string.import_keys_dialog_button_import, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(final DialogInterface dialog, final int which) {
-                //final File file = (File) fileView.getSelectedItem();
                 final String password = passwordView.getText().toString().trim();
                 clearPasswordView();
 
                 List<String> words = new ArrayList<>(Arrays.asList(password.split(" ")));
 
-                //if (WalletUtils.BACKUP_FILE_FILTER.accept(file))
-                //    restoreWalletFromProtobuf(file);
-                //else if (WalletUtils.KEYS_FILE_FILTER.accept(file))
-                //    restorePrivateKeysFromBase58(file);
-                //else if (Crypto.OPENSSL_FILE_FILTER.accept(file))
-                //    restoreWalletFromEncrypted(file, password);
-                if (activity instanceof OnboardingActivity) {
-                    ((OnboardingActivity) activity).restoreWalletFromSeed(words);
-                } else {
-                    restoreWalletFromSeed(words);
-                }
+                restoreWalletFromSeed(words);
             }
         });
         builder.setNegativeButton(R.string.button_cancel, new DialogInterface.OnClickListener() {
@@ -154,16 +144,6 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
             }
         });
 
-        /*final String path;
-        final String backupPath = Constants.Files.EXTERNAL_WALLET_BACKUP_DIR.getAbsolutePath();
-        final String storagePath = Constants.Files.EXTERNAL_STORAGE_DIR.getAbsolutePath();
-        if (backupPath.startsWith(storagePath))
-            path = backupPath.substring(storagePath.length());
-        else
-            path = backupPath;
-            */
-
-        //fileView.setAdapter(adapter);
         return builder.create();
     }
 
@@ -207,6 +187,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
         });
     }
 
+    @SuppressLint("StringFormatInvalid")
     private void restoreWalletFromSeed(final List<String> words) {
         final WalletActivity activity = (WalletActivity) this.activity;
         try {
@@ -257,10 +238,6 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
 
         clearPasswordView();
         setupRestoreButtonState();
-        //fileView.setOnItemSelectedListener(dialogButtonEnabler);
-
-        //final CheckBox showView = (CheckBox) alertDialog.findViewById(R.id.import_keys_from_storage_show);
-        //showView.setOnCheckedChangeListener(new ShowPasswordCheckListener(passwordView));
     }
 
     private void setupRestoreButtonState() {
