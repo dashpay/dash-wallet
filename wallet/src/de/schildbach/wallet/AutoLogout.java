@@ -57,6 +57,7 @@ public class AutoLogout {
             if (!timerActive) {
                 startTimer();
             }
+            resetTimer();
         } else {
             stopTimer();
         }
