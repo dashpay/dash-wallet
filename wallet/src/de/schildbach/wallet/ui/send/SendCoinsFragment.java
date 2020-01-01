@@ -225,7 +225,7 @@ public final class SendCoinsFragment extends Fragment {
             @Override
             public void onChanged(Boolean aBoolean) {
                 String sessionPin = activity.getSessionPin();
-                if (sessionPin == null) {
+                if (sessionPin == null || config.getSpendingConfirmationEnabled()) {
                     CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND);
                 } else {
                     handleGo(sessionPin);
