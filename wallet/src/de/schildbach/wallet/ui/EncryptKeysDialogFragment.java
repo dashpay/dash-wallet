@@ -30,7 +30,6 @@ import org.bouncycastle.crypto.params.KeyParameter;
 import com.google.common.base.Strings;
 
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 
 import de.schildbach.wallet.util.FingerprintHelper;
@@ -351,7 +350,6 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                             fingerprintHelper.clear();
                             delayedDismiss();
 
-                            WalletLock.getInstance().setWalletLocked(wallet.isEncrypted());
                         } else {
                             updateView();
                         }

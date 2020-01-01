@@ -95,4 +95,8 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
         startActivity(Intent(this, WalletActivity::class.java))
         finish()
     }
+
+    override fun onUserInteraction() {
+        (application as WalletApplication).resetAutoLogoutTimer()
+    }
 }
