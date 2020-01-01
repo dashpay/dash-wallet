@@ -153,4 +153,21 @@ public class TransactionUtil {
         }
         return statusId;
     }
+
+    /**
+     * The Sending status is a transaction that has not been sent or has been sent
+     * but there haven't been any peers announcing it nor does it have a verified
+     * InstantSendLock.
+     *
+     * @param tx the transaction from which to get the isSending status
+     * @param wallet the wallet to which the transaction belongs
+     * @return true if the transaction is in a Sending status
+     */
+    public static boolean isSending(Transaction tx, Wallet wallet) {
+        Coin value = tx.getValue(wallet);
+        TransactionConfidence confidence = tx.getConfidence();
+        return (value.isNegative() || value.isZero()) && tx.getType() == Transaction.Type.TRANSACTION_NORMAL &&
+                (confidence.getConfidenceType() != TransactionConfidence.ConfidenceType.BUILDING && (confidence.numBroadcastPeers() == 0 ||
+                        confidence.getIXType() != TransactionConfidence.IXType.IX_LOCKED));
+    }
 }
