@@ -38,6 +38,8 @@ class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewMode
 
     fun restoreWalletFromSeed(words: MutableList<String>) {
         try {
+            if(words.size != 12)
+                throw MnemonicException.MnemonicLengthException("Word list size must be 12")
             MnemonicCode.INSTANCE.check(words)
         } catch (x: MnemonicException) {
             log.info("problem restoring wallet from seed: ", x)
