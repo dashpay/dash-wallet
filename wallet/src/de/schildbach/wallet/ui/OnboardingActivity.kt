@@ -83,7 +83,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
         try {
             startActivity(LockScreenActivity.createIntent(this))
             finish()
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         } catch (x: Exception) {
             fatal_error_message.visibility = View.VISIBLE
         }
@@ -151,5 +150,10 @@ class OnboardingActivity : RestoreFromFileActivity() {
             result = resources.getDimensionPixelSize(resourceId)
         }
         return result
+    }
+
+    override fun finish() {
+        super.finish()
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 }

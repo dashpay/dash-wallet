@@ -251,7 +251,6 @@ class SetPinActivity : SessionActivity() {
                 pin.clear()
             }
             State.CONFIRM_PIN -> {
-                pageTitleView.setText(R.string.set_pin_confirm_pin)
                 if (pinProgressSwitcherView.currentView.id == R.id.progress) {
                     pinProgressSwitcherView.showPrevious()
                 }
@@ -261,6 +260,7 @@ class SetPinActivity : SessionActivity() {
                 confirmButtonView.visibility = View.GONE
                 Handler().postDelayed({
                     pinPreviewView.clear()
+                    pageTitleView.setText(R.string.set_pin_confirm_pin)
                 }, 200)
                 pin.clear()
             }
@@ -357,6 +357,11 @@ class SetPinActivity : SessionActivity() {
         }
         startActivity(intent)
         finish()
+    }
+
+    override fun finish() {
+        super.finish()
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

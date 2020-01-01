@@ -99,4 +99,9 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
     override fun onUserInteraction() {
         (application as WalletApplication).resetAutoLogoutTimer()
     }
+
+    override fun finish() {
+        super.finish()
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+    }
 }
