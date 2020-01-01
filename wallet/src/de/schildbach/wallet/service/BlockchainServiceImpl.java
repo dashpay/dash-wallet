@@ -705,9 +705,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         if (!blockChainFileExists) {
             log.info("blockchain does not exist, resetting wallet");
             wallet.reset();
-            SimplifiedMasternodeListManager manager = wallet.getContext().masternodeListManager;
-            if(manager != null)
-                manager.resetMNList(true, true);
+            try {
+                SimplifiedMasternodeListManager manager = wallet.getContext().masternodeListManager;
+                if (manager != null)
+                    manager.resetMNList(true, true);
+            } catch (RuntimeException x) {
+                // swallow this exception.  It is thrown when there is not a bootstrap mnlist file
+                // there is not a bootstrap mnlist file for testnet
+            }
         }
 
         try {

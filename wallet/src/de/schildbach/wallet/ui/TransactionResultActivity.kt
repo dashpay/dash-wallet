@@ -82,7 +82,7 @@ class TransactionResultActivity : AppCompatActivity() {
         setContentView(R.layout.activity_successful_transaction)
 
         view_on_explorer.setOnClickListener { viewOnExplorer(transactionResult.transactionHash) }
-        transaction_close_btn.setOnClickListener { finish() }
+        transaction_close_btn.setOnClickListener { startActivity(WalletActivity.createIntent(this)) }
 
         val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container)
         transactionResultViewBinder.bind(transactionResult)
