@@ -31,7 +31,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_successful_transaction.*
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Transaction
-import org.bitcoinj.wallet.Wallet
+
 
 /**
  * @author Samuel Barbosa
@@ -51,9 +51,15 @@ class TransactionResultActivity : AppCompatActivity() {
             val primaryStatus = TransactionUtil.getTransactionTypeName(transaction, wallet)
             val secondaryStatus = TransactionUtil.getReceivedStatusString(transaction, wallet)
             val errorStatus = TransactionUtil.getErrorName(transaction)
-            val primaryStatusStr = if (transaction.type != Transaction.Type.TRANSACTION_NORMAL || transaction.isCoinBase) context.getString(primaryStatus) else ""
-            val secondaryStatusStr = if (secondaryStatus != -1) context.getString(secondaryStatus) else ""
+            var primaryStatusStr = if (transaction.type != Transaction.Type.TRANSACTION_NORMAL || transaction.isCoinBase) context.getString(primaryStatus) else ""
+            var secondaryStatusStr = if (secondaryStatus != -1) context.getString(secondaryStatus) else ""
             val errorStatusStr = if (errorStatus != -1) context.getString(errorStatus) else ""
+
+            // handle sending
+            if(TransactionUtil.isSending(transaction, wallet)) {
+                primaryStatusStr = context.getString(R.string.transaction_row_status_sending)
+                secondaryStatusStr = ""
+            }
 
             val transactionResult = TransactionResult(
                     transaction.getValue(wallet), transaction.exchangeRate, address.toString(),
@@ -76,7 +82,7 @@ class TransactionResultActivity : AppCompatActivity() {
         setContentView(R.layout.activity_successful_transaction)
 
         view_on_explorer.setOnClickListener { viewOnExplorer(transactionResult.transactionHash) }
-        transaction_close_btn.setOnClickListener { finish() }
+        transaction_close_btn.setOnClickListener { startActivity(WalletActivity.createIntent(this)) }
 
         val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container)
         transactionResultViewBinder.bind(transactionResult)

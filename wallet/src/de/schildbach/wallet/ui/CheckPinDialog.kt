@@ -100,13 +100,7 @@ class CheckPinDialog : DialogFragment() {
                     setState(State.DECRYPTING)
                 }
                 Status.SUCCESS -> {
-                    if (EnableFingerprintDialog.shouldBeShown(activity!!)) {
-                        val requestCode = arguments!!.getInt(ARG_REQUEST_CODE)
-                        EnableFingerprintDialog.show(it.data, requestCode, activity!!.supportFragmentManager)
-                        dismiss()
-                    } else {
-                        dismiss(it.data!!)
-                    }
+                    dismiss(it.data!!)
                 }
             }
         })
