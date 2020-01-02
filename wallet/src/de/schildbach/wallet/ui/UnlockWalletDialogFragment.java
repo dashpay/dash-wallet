@@ -31,24 +31,20 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
 
     private static final String FRAGMENT_TAG = UnlockWalletDialogFragment.class.getName();
 
-    public static UnlockWalletDialogFragment show(final FragmentManager fm) {
-        UnlockWalletDialogFragment unlockWalletDialogFragment = new UnlockWalletDialogFragment();
-        unlockWalletDialogFragment.show(fm, FRAGMENT_TAG);
-        return unlockWalletDialogFragment;
+    public static void show(final FragmentManager fm) {
+        new UnlockWalletDialogFragment().show(fm, FRAGMENT_TAG);
     }
 
-    public static UnlockWalletDialogFragment show(FragmentManager fm, DialogInterface.OnDismissListener onDismissListener) {
+    public static void show(FragmentManager fm, DialogInterface.OnDismissListener onDismissListener) {
         UnlockWalletDialogFragment dialogFragment = new UnlockWalletDialogFragment();
         dialogFragment.onDismissListener = onDismissListener;
         dialogFragment.show(fm, FRAGMENT_TAG);
-        return dialogFragment;
     }
 
-    public static UnlockWalletDialogFragment show(FragmentManager fm, Fragment targetFragment) {
+    public static void show(FragmentManager fm, Fragment targetFragment) {
         UnlockWalletDialogFragment dialogFragment = new UnlockWalletDialogFragment();
         dialogFragment.setTargetFragment(targetFragment, 0);
         dialogFragment.show(fm, FRAGMENT_TAG);
-        return dialogFragment;
     }
 
     public UnlockWalletDialogFragment() {
@@ -112,6 +108,7 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
     }
 
     public interface OnUnlockWalletListener {
+
         void onUnlockWallet(String password);
     }
 }
