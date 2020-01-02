@@ -35,7 +35,6 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_security.*
 import org.bitcoinj.wallet.Wallet
 
-
 class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletProvider {
 
     private lateinit var fingerprintHelper: FingerprintHelper
@@ -43,6 +42,8 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
 
     companion object {
         private const val AUTH_REQUEST_CODE_BACKUP = 1
+        private const val ENABLE_FINGERPRINT_REQUEST_CODE = 2
+        private const val FINGERPRINT_ENABLED_REQUEST_CODE = 3
     }
 
     override fun getLayoutId(): Int {
@@ -59,15 +60,25 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
             configuration.hideBalance = hideBalanceOnLaunch
         }
 
-
         val checkPinSharedModel: CheckPinSharedModel = ViewModelProviders.of(this).get(CheckPinSharedModel::class.java)
-        checkPinSharedModel.onCorrectPinCallback.observe(this, Observer<Pair<Int?, String?>> { (data, _) ->
-            if (data == AUTH_REQUEST_CODE_BACKUP) {
-                val permission = Manifest.permission.WRITE_EXTERNAL_STORAGE
-                if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
-                    BackupWalletDialogFragment.show(supportFragmentManager)
-                } else {
-                    ActivityCompat.requestPermissions(this, arrayOf(permission), 1)
+        checkPinSharedModel.onCorrectPinCallback.observe(this, Observer<Pair<Int?, String?>> { (requestCode, pin) ->
+            when (requestCode) {
+                AUTH_REQUEST_CODE_BACKUP -> {
+                    val permission = Manifest.permission.WRITE_EXTERNAL_STORAGE
+                    if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
+                        BackupWalletDialogFragment.show(supportFragmentManager)
+                    } else {
+                        ActivityCompat.requestPermissions(this, arrayOf(permission), 1)
+                    }
+                }
+                ENABLE_FINGERPRINT_REQUEST_CODE -> {
+                    if (pin != null) {
+                        EnableFingerprintDialog.show(pin, FINGERPRINT_ENABLED_REQUEST_CODE,
+                                supportFragmentManager)
+                    }
+                }
+                FINGERPRINT_ENABLED_REQUEST_CODE -> {
+                    updateFingerprintSwitchSilently(fingerprintHelper.isFingerprintEnabled)
                 }
             }
         })
@@ -85,16 +96,16 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
 
     private val fingerprintSwitchListener= CompoundButton.OnCheckedChangeListener { _, isChecked ->
         if (isChecked) {
-            UnlockWalletDialogFragment.show(supportFragmentManager)
-            unCheckFingerprintAuthSwitchSilently()
+            CheckPinDialog.show(this, ENABLE_FINGERPRINT_REQUEST_CODE)
+            updateFingerprintSwitchSilently(false)
         } else {
             fingerprintHelper.clear()
         }
     }
 
-    private fun unCheckFingerprintAuthSwitchSilently() {
+    private fun updateFingerprintSwitchSilently(checked: Boolean) {
         fingerprint_auth_switch.setOnCheckedChangeListener(null)
-        fingerprint_auth_switch.isChecked = false
+        fingerprint_auth_switch.isChecked = checked
         fingerprint_auth_switch.setOnCheckedChangeListener(fingerprintSwitchListener)
     }
 
