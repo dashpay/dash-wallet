@@ -34,19 +34,27 @@ class CheckPinDialog : DialogFragment() {
         private val FRAGMENT_TAG = CheckPinDialog::class.java.simpleName
 
         private const val ARG_REQUEST_CODE = "arg_request_code"
+        private const val ARG_PIN_ONLY = "arg_pin_only"
 
         @JvmStatic
-        fun show(activity: AppCompatActivity, requestCode: Int = 0) {
+        fun show(activity: AppCompatActivity, requestCode: Int = 0, pinOnly: Boolean = false) {
             val checkPinDialog = CheckPinDialog()
             if (PinRetryController.getInstance().isLocked) {
                 checkPinDialog.showLockedAlert(activity)
             } else {
                 val args = Bundle()
                 args.putInt(ARG_REQUEST_CODE, requestCode)
+                args.putBoolean(ARG_PIN_ONLY, pinOnly)
                 checkPinDialog.arguments = args
                 checkPinDialog.show(activity.supportFragmentManager, FRAGMENT_TAG)
             }
         }
+
+        @JvmStatic
+        fun show(activity: AppCompatActivity, requestCode: Int = 0) {
+            show(activity, requestCode, false)
+        }
+
     }
 
     private lateinit var state: State
@@ -143,6 +151,13 @@ class CheckPinDialog : DialogFragment() {
         pin_preview.hideForgotPinAction()
         initFingerprint()
         setState(State.ENTER_PIN)
+
+        arguments?.getBoolean(ARG_PIN_ONLY, false).let {
+            if (true == it) {
+                fingerprintFlow(!it)
+                pin_or_fingerprint_button.isEnabled = false
+            }
+        }
     }
 
     private fun dismiss(pin: String) {
