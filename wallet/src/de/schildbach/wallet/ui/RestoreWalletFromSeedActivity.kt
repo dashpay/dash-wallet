@@ -17,12 +17,16 @@
 package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
+import android.text.TextUtils
 import android.text.TextWatcher
 import android.view.View
+import android.widget.Toast
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_recover_wallet_from_seed.*
@@ -33,18 +37,29 @@ import org.slf4j.LoggerFactory
 import java.util.*
 
 
-class RestoreWalletFromSeedActivity : BaseMenuActivity() {
+class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
     private val log = LoggerFactory.getLogger(RestoreWalletFromSeedDialogFragment::class.java)
 
+    private lateinit var viewModel: RestoreWalletFromSeedViewModel
 
-    override fun getLayoutId(): Int {
-        return R.layout.activity_recover_wallet_from_seed
-    }
+    private lateinit var walletApplication: WalletApplication
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        setContentView(R.layout.activity_recover_wallet_from_seed)
+
         setTitle(R.string.recover_wallet_title)
+
+        walletApplication = (application as WalletApplication)
+
+        viewModel = ViewModelProviders.of(this).get(RestoreWalletFromSeedViewModel::class.java)
+
+        initView()
+        initViewModel()
+    }
+
+    private fun initView() {
         input.requestFocus()
         input.addTextChangedListener(object : TextWatcher {
             override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
@@ -53,43 +68,37 @@ class RestoreWalletFromSeedActivity : BaseMenuActivity() {
             override fun afterTextChanged(s: Editable?) { }
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) { }
         })
-
+        submit.setOnClickListener {
+            walletApplication.initEnvironmentIfNeeded()
+            val seed = input.text.trim()
+            if (seed.isNotEmpty()) {
+                val words = ArrayList(mutableListOf(*seed.split(' ').toTypedArray()))
+                viewModel.restoreWalletFromSeed(words)
+            }
+        }
     }
 
     @SuppressLint("StringFormatInvalid")
-    fun onContinueClick(view: View) {
-        val seed = input.text.trim()
-        if (seed.isEmpty()) {
-            return
-        }
-
-        val words = ArrayList(mutableListOf(*seed.split(' ').toTypedArray()))
-
-        try {
-            MnemonicCode.INSTANCE.check(words)
-        } catch (x: MnemonicException) {
-            log.info("problem restoring wallet from seed: ", x)
+    private fun initViewModel() {
+        viewModel.showRestoreWalletFailureAction.observe(this, Observer {
+            val message = when {
+                TextUtils.isEmpty(it.message) -> it.javaClass.simpleName
+                else -> it.message!!
+            }
             val dialog = DialogBuilder.warn(this, R.string.import_export_keys_dialog_failure_title)
-            dialog.setMessage(getString(R.string.import_keys_dialog_failure, x.message))
+
+            val errorMessage = when (it) {
+                is MnemonicException.MnemonicLengthException -> walletApplication.getString(R.string.restore_wallet_from_invalid_seed_not_twelve_words)
+                is MnemonicException.MnemonicChecksumException -> walletApplication.getString(R.string.restore_wallet_from_invalid_seed_bad_checksum)
+                is MnemonicException.MnemonicWordException -> walletApplication.getString(R.string.restore_wallet_from_invalid_seed_warning_message, it.badWord)
+                else -> walletApplication.getString(R.string.restore_wallet_from_invalid_seed_failure, message)
+            }
+            dialog.setMessage(errorMessage)
             dialog.setPositiveButton(R.string.button_dismiss, null)
             dialog.show()
-            return
-        }
-
-        walletApplication.wallet = WalletUtils
-                .restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS)
-        log.info("successfully restored wallet from seed")
-        walletApplication.configuration.disarmBackupSeedReminder()
-        walletApplication.configuration.isRestoringBackup = true
-
-        val dialog = DialogBuilder(this)
-        dialog.setTitle(R.string.restore_wallet_dialog_success)
-        dialog.setMessage(getString(R.string.restore_wallet_dialog_success_replay))
-        dialog.setPositiveButton(R.string.button_ok) { _, _ ->
-            val intent = SetPinActivity
-                    .createIntent(walletApplication, R.string.set_pin_create_new_wallet)
-            startActivity(intent)
-        }
-        dialog.show()
+        })
+        viewModel.startActivityAction.observe(this, Observer {
+            startActivity(it)
+        })
     }
 }

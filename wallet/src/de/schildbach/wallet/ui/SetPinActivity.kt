@@ -38,7 +38,7 @@ import de.schildbach.wallet_test.R
 private const val FINGERPRINT_REQUEST_SEED = 1
 private const val FINGERPRINT_REQUEST_WALLET = 2
 
-class SetPinActivity : AppCompatActivity() {
+class SetPinActivity : SessionActivity() {
 
     private lateinit var numericKeyboardView: NumericKeyboardView
     private lateinit var confirmButtonView: View
@@ -251,7 +251,6 @@ class SetPinActivity : AppCompatActivity() {
                 pin.clear()
             }
             State.CONFIRM_PIN -> {
-                pageTitleView.setText(R.string.set_pin_confirm_pin)
                 if (pinProgressSwitcherView.currentView.id == R.id.progress) {
                     pinProgressSwitcherView.showPrevious()
                 }
@@ -261,6 +260,7 @@ class SetPinActivity : AppCompatActivity() {
                 confirmButtonView.visibility = View.GONE
                 Handler().postDelayed({
                     pinPreviewView.clear()
+                    pageTitleView.setText(R.string.set_pin_confirm_pin)
                 }, 200)
                 pin.clear()
             }
@@ -359,6 +359,11 @@ class SetPinActivity : AppCompatActivity() {
         finish()
     }
 
+    override fun finish() {
+        super.finish()
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+    }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
@@ -385,6 +390,7 @@ class SetPinActivity : AppCompatActivity() {
             FINGERPRINT_REQUEST_SEED -> startVerifySeedActivity()
             FINGERPRINT_REQUEST_WALLET -> goHome()
         }
+        (application as WalletApplication).maybeStartAutoLogoutTimer()
     }
 
     private fun startVerifySeedActivity() {

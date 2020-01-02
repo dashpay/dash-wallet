@@ -105,7 +105,10 @@
     <string name="button_copy_address">Copy address</string>
     <string name="request_coins_clipboard_address_msg">Dash address copied to clipboard</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Show</string>
-    <string name="restore_wallet_from_invalid_seed_warning_message">%s is an invalid word.</string>
+    <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" is not a recovery phrase word</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Recovery phrase must have 12 words</string>
+    <string name="restore_wallet_from_invalid_seed_bad_checksum">Bad recovery phrase</string>
+    <string name="restore_wallet_from_invalid_seed_failure">Wallet could not be restored:\n\n%s\n\nBad recovery phrase?</string>
 
     <string name="send_coins_options_fee_category_zero">No Fee</string>
     <string name="send_coins_fragment_hint_fee_zero">No fee of will be paid. Use \'no fee\' only if you don\'t care about confirmation time.</string>
@@ -246,6 +249,25 @@
     <string name="scan_private_key_intro_2">This will move all coins from that wallet to your wallet on this device.</string>
     <string name="scan_private_key_intro_3">When the transaction is confirmed, the other wallet will be worthless and should not be re-used for safety reasons.</string>
     <string name="confirm">Confirm</string>
+
+    <string name="auto_logout">Auto Logout</string>
+    <string name="spending_confirmation">Spending Confirmation</string>
+    <string name="logout_after">Logout after</string>
+    <string name="immediately">Immediately</string>
+    <string name="twenty_four_hours">24 hours</string>
+    <string name="one_minute">1 minute</string>
+    <string name="five_minute">5 minutes</string>
+    <string name="one_hour">1 hour</string>
+    <string name="one_day">1 day</string>
+    <string name="biometric_limit">Biometric Limit</string>
+    <string name="spending_confirmation_hint_zero">PIN is always required to make a payment</string>
+    <string name="spending_confirmation_hint_above_zero">You can authenticate with Biometric Authentication for payments below</string>
+
+    <string name="security_none">None</string>
+    <string name="security_low">Low</string>
+    <string name="security_medium">Medium</string>
+    <string name="security_high">High</string>
+    <string name="security_very_high">Very High</string>
 
     <string-array name="history_filter">
         <item>All</item>

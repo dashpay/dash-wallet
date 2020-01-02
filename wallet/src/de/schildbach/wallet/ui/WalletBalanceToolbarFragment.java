@@ -23,7 +23,6 @@ import androidx.lifecycle.ViewModelProviders;
 import android.content.Intent;
 import android.os.Bundle;
 
-import android.os.Handler;
 import androidx.fragment.app.Fragment;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
@@ -49,7 +48,6 @@ import javax.annotation.Nullable;
 import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.service.BlockchainState;
@@ -60,7 +58,7 @@ import de.schildbach.wallet_test.R;
 /**
  * @author Andreas Schildbach
  */
-public final class WalletBalanceToolbarFragment extends Fragment implements WalletLock.OnLockChangeListener {
+public final class WalletBalanceToolbarFragment extends Fragment {
 	private WalletApplication application;
 	private AbstractBindServiceActivity activity;
 	private Configuration config;
@@ -99,8 +97,6 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 
 	private boolean initComplete = false;
 
-	private Handler autoLockHandler = new Handler();
-
 	@Override
 	public void onCreate(Bundle savedInstanceState)
 	{
@@ -111,11 +107,6 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         MenuItem walletLockMenuItem = menu.findItem(R.id.wallet_options_lock);
-        if (walletLockMenuItem != null) {
-            boolean isWalletLocked = WalletLock.getInstance().isWalletLocked(wallet);
-            walletLockMenuItem.setVisible(isWalletLocked);
-            viewBalance.setVisibility(isWalletLocked ? View.GONE : View.VISIBLE);
-        }
         super.onCreateOptionsMenu(menu, inflater);
     }
 
@@ -199,20 +190,6 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 		});
 
 		updateView();
-
-		WalletLock.getInstance().addListener(this);
-		scheduleAutoLock();
-	}
-
-	private void scheduleAutoLock() {
-		autoLockHandler.removeCallbacksAndMessages(null);
-        autoLockHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                application.lockWalletIfNeeded();
-                scheduleAutoLock();
-            }
-        }, WalletLock.DEFAULT_LOCK_TIMER_MILLIS);
 	}
 
 	@Override
@@ -222,8 +199,6 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 		loaderManager.destroyLoader(ID_BALANCE_LOADER);
 		//loaderManager.destroyLoader(ID_MASTERNODE_SYNC_LOADER);
 
-		WalletLock.getInstance().removeListener(this);
-		autoLockHandler.removeCallbacksAndMessages(null);
 		super.onPause();
 	}
 
@@ -393,12 +368,4 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 		{
 		}
 	};
-
-	@Override
-	public void onLockChanged(boolean locked) {
-		updateView();
-		if (!locked) {
-			scheduleAutoLock();
-		}
-	}
 }

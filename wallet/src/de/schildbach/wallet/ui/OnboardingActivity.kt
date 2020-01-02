@@ -83,7 +83,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
         try {
             startActivity(LockScreenActivity.createIntent(this))
             finish()
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         } catch (x: Exception) {
             fatal_error_message.visibility = View.VISIBLE
         }
@@ -102,7 +101,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
         recovery_wallet.setOnClickListener {
             walletApplication.initEnvironmentIfNeeded()
             startActivity(Intent(this, RestoreWalletFromSeedActivity::class.java))
-//            RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
         }
         restore_wallet.setOnClickListener {
             restoreWalletFromFile()
@@ -145,10 +143,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
         sloganDrawable.mutate().alpha = 0
     }
 
-    fun restoreWalletFromSeed(words: MutableList<String>) {
-        viewModel.restoreWalletFromSeed(words)
-    }
-
     private fun getStatusBarHeightPx(): Int {
         var result = 0
         val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
@@ -156,5 +150,10 @@ class OnboardingActivity : RestoreFromFileActivity() {
             result = resources.getDimensionPixelSize(resourceId)
         }
         return result
+    }
+
+    override fun finish() {
+        super.finish()
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 }
