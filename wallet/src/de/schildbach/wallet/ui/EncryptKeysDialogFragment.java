@@ -30,7 +30,6 @@ import org.bouncycastle.crypto.params.KeyParameter;
 import com.google.common.base.Strings;
 
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 
 import de.schildbach.wallet.util.FingerprintHelper;
@@ -147,7 +146,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         this.activity = (AbstractWalletActivity) activity;
         this.application = (WalletApplication) activity.getApplication();
         this.wallet = application.getWallet();
-        this.pinRetryController = new PinRetryController(getActivity());
+        this.pinRetryController = PinRetryController.getInstance();
     }
 
     @Override
@@ -327,7 +326,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                                     pinRetryController.failedAttempt(oldPassword);
                                     badPasswordView.setVisibility(View.VISIBLE);
                                     attemptsRemainingTextView.setVisibility(View.VISIBLE);
-                                    attemptsRemainingTextView.setText(pinRetryController.getRemainingAttemptsMessage());
+                                    attemptsRemainingTextView.setText(pinRetryController.getRemainingAttemptsMessage(getContext()));
 
                                     state = State.INPUT;
                                     oldPasswordView.requestFocus();
@@ -351,7 +350,6 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                             fingerprintHelper.clear();
                             delayedDismiss();
 
-                            WalletLock.getInstance().setWalletLocked(wallet.isEncrypted());
                         } else {
                             updateView();
                         }

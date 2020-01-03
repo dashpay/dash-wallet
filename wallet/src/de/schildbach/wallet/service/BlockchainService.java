@@ -42,6 +42,8 @@ public interface BlockchainService {
             + ".cancel_coins_received";
     public static final String ACTION_RESET_BLOCKCHAIN = BlockchainService.class.getPackage().getName()
             + ".reset_blockchain";
+    public static final String ACTION_WIPE_WALLET = BlockchainService.class.getPackage().getName()
+            + ".wipe_wallet";
     public static final String ACTION_BROADCAST_TRANSACTION = BlockchainService.class.getPackage().getName()
             + ".broadcast_transaction";
     public static final String ACTION_BROADCAST_TRANSACTION_HASH = "hash";

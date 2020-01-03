@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:background="@color/bg_less_bright"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <include
+        layout="@layout/app_bar_general"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <TextView
+            android:id="@+id/label"
+            style="@style/MontserratMedium.MenuRowTitle.Internal"
+            android:layout_width="200dp"
+            android:layout_margin="10dp"
+            android:text="@string/forgot_pin_instruction_1"
+            android:gravity="center"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <EditText
+            android:id="@+id/input"
+            android:layout_width="match_parent"
+            android:gravity="top"
+            android:padding="10dp"
+            android:layout_height="150dp"
+            android:layout_margin="10dp"
+            android:inputType="textMultiLine|textNoSuggestions|textVisiblePassword"
+            android:background="@color/dash_white"
+            app:layout_constraintTop_toBottomOf="@id/label" />
+
+        <Button
+            style="@style/DashButton.Blue"
+            android:id="@+id/submit"
+            android:enabled="false"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="10dp"
+            android:text="@string/verify_continue"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</LinearLayout>

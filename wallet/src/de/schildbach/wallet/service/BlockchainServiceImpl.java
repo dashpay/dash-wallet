@@ -54,7 +54,6 @@ import org.bitcoinj.core.FilteredBlock;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.SporkManager;
 import org.bitcoinj.core.SporkMessage;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
@@ -148,6 +147,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private AtomicInteger transactionsReceived = new AtomicInteger();
     private long serviceCreatedAt;
     private boolean resetBlockchainOnShutdown = false;
+    private boolean deleteWalletFileOnShutdown = false;
 
     //Settings to bypass dashj default dns seeds
     private final SeedPeers seedPeerDiscovery = new SeedPeers(Constants.NETWORK_PARAMETERS);
@@ -705,9 +705,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         if (!blockChainFileExists) {
             log.info("blockchain does not exist, resetting wallet");
             wallet.reset();
-            SimplifiedMasternodeListManager manager = wallet.getContext().masternodeListManager;
-            if(manager != null)
-                manager.resetMNList(true, true);
+            try {
+                SimplifiedMasternodeListManager manager = wallet.getContext().masternodeListManager;
+                if (manager != null)
+                    manager.resetMNList(true, true);
+            } catch (RuntimeException x) {
+                // swallow this exception.  It is thrown when there is not a bootstrap mnlist file
+                // there is not a bootstrap mnlist file for testnet
+            }
         }
 
         try {
@@ -792,6 +797,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
                 resetBlockchainOnShutdown = true;
                 stopSelf();
+            } else if (BlockchainService.ACTION_WIPE_WALLET.equals(action)) {
+                log.info("will remove blockchain and delete walletFile on service shutdown");
+
+                deleteWalletFileOnShutdown = true;
+                stopSelf();
             } else if (BlockchainService.ACTION_BROADCAST_TRANSACTION.equals(action)) {
                 final Sha256Hash hash = Sha256Hash
                         .wrap(intent.getByteArrayExtra(BlockchainService.ACTION_BROADCAST_TRANSACTION_HASH));
@@ -863,7 +873,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             throw new RuntimeException(x);
         }
 
-        application.saveWallet();
+        if (!deleteWalletFileOnShutdown) {
+            application.saveWallet();
+        }
 
         //Dash Specific
 
@@ -877,12 +889,17 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             wakeLock.release();
         }
 
-        if (resetBlockchainOnShutdown) {
+        if (resetBlockchainOnShutdown || deleteWalletFileOnShutdown) {
             log.info("removing blockchain");
+            //noinspection ResultOfMethodCallIgnored
             blockChainFile.delete();
             SimplifiedMasternodeListManager manager = application.getWallet().getContext().masternodeListManager;
             if(manager != null) {
                 manager.resetMNList(true, false);
+            }
+            if (deleteWalletFileOnShutdown) {
+                log.info("removing wallet file and app data");
+                application.finalizeWipe();
             }
         }
 

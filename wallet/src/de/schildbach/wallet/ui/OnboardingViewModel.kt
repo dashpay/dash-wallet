@@ -41,24 +41,9 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
     fun createNewWallet() {
         walletApplication.initEnvironmentIfNeeded()
         val wallet = Wallet(Constants.NETWORK_PARAMETERS)
+        log.info("successfully created new wallet")
         walletApplication.wallet = wallet
         walletApplication.configuration.armBackupSeedReminder()
         startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_create_new_wallet))
-    }
-
-    fun restoreWalletFromSeed(words: MutableList<String>) {
-        try {
-            MnemonicCode.INSTANCE.check(words)
-        } catch (x: MnemonicException) {
-            log.info("problem restoring wallet from seed: ", x)
-            showRestoreWalletFailureAction.call(x)
-            return
-        }
-        val wallet = WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS)
-        walletApplication.wallet = wallet
-        log.info("successfully restored wallet from seed")
-        walletApplication.configuration.disarmBackupSeedReminder()
-        walletApplication.configuration.setRestoringBackup(true)
-        startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_restore_wallet))
     }
 }

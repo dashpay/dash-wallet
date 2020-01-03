@@ -52,6 +52,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Transaction.Purpose;
@@ -81,6 +82,7 @@ import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Qr;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
+import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
@@ -389,9 +391,22 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         } else {
             address = WalletUtils.getWalletAddressOfReceived(tx, wallet).toBase58();
         }
+        int primaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet);
+        int secondaryStatus = TransactionUtil.getReceivedStatusString(tx, wallet);
+        int errorStatus = TransactionUtil.getErrorName(tx);
+        String primaryStatusStr = (tx.getType() != Transaction.Type.TRANSACTION_NORMAL || tx.isCoinBase()) ? getString(primaryStatus) : "";
+        String secondaryStatusStr = secondaryStatus != -1 ? getString(secondaryStatus) : "";
+        String errorStatusStr = errorStatus != -1 ? getString(errorStatus) : "";
+
+        // handle sending
+        if(TransactionUtil.isSending(tx, wallet)) {
+            primaryStatusStr = getString(R.string.transaction_row_status_sending);
+            secondaryStatusStr = "";
+        }
+
         TransactionResult transactionResult = new TransactionResult(tx.getValue(wallet),
-                tx.getExchangeRate(), address, tx.getFee(), tx.getHashAsString(), tx.getUpdateTime(),
-                tx.getPurpose());
+                tx.getExchangeRate(), address, tx.getFee(), tx.getTxId().toString(), tx.getUpdateTime(),
+                tx.getPurpose(), primaryStatusStr, secondaryStatusStr, errorStatusStr);
         TransactionDetailsDialogFragment transactionDetailsDialogFragment =
                 TransactionDetailsDialogFragment.newInstance(transactionResult, direction);
         transactionDetailsDialogFragment.show(getChildFragmentManager(), null);

@@ -14,8 +14,8 @@
     </declare-styleable>
     <declare-styleable name="LockScreenButton">
         <attr name="action_icon" />
-        <attr name="action_icon_size_percent" />
         <attr name="text" />
+        <attr name="action_icon_padding" format="dimension" />
     </declare-styleable>
     <declare-styleable name="FingerprintView">
         <attr name="custom_layout" format="reference" />

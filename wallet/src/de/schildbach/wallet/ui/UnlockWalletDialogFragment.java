@@ -25,7 +25,6 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet_test.R;
 
 public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
@@ -76,7 +75,6 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
             protected void onSuccess() {
                 if (getActivity() != null && isAdded()) {
                     pinRetryController.clearPinFailPrefs();
-                    WalletLock.getInstance().setWalletLocked(false);
 
                     if (getTargetFragment() instanceof OnUnlockWalletListener) {
                         ((OnUnlockWalletListener) getTargetFragment()).onUnlockWallet(password);
@@ -102,7 +100,7 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
                     pinView.setEnabled(true);
                     pinRetryController.failedAttempt(password);
                     badPinView.setText(getString(R.string.wallet_lock_wrong_pin,
-                            pinRetryController.getRemainingAttemptsMessage()));
+                            pinRetryController.getRemainingAttemptsMessage(getContext())));
                     badPinView.setVisibility(View.VISIBLE);
                 }
             }

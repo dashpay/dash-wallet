@@ -1,6 +1,8 @@
 package de.schildbach.wallet.ui
 
+import android.app.AlertDialog
 import android.app.Dialog
+import android.content.Context
 import android.content.DialogInterface
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -12,9 +14,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.os.CancellationSignal
 import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.livedata.Status
@@ -34,12 +36,16 @@ class CheckPinDialog : DialogFragment() {
         private const val ARG_REQUEST_CODE = "arg_request_code"
 
         @JvmStatic
-        fun show(manager: FragmentManager, requestCode: Int = 0) {
+        fun show(activity: AppCompatActivity, requestCode: Int = 0) {
             val checkPinDialog = CheckPinDialog()
-            val args = Bundle()
-            args.putInt(ARG_REQUEST_CODE, requestCode)
-            checkPinDialog.arguments = args
-            checkPinDialog.show(manager, FRAGMENT_TAG)
+            if (PinRetryController.getInstance().isLocked) {
+                checkPinDialog.showLockedAlert(activity)
+            } else {
+                val args = Bundle()
+                args.putInt(ARG_REQUEST_CODE, requestCode)
+                checkPinDialog.arguments = args
+                checkPinDialog.show(activity.supportFragmentManager, FRAGMENT_TAG)
+            }
         }
     }
 
@@ -48,7 +54,7 @@ class CheckPinDialog : DialogFragment() {
     private lateinit var viewModel: CheckPinViewModel
     private lateinit var sharedModel: CheckPinSharedModel
 
-    private lateinit var pinRetryController: PinRetryController
+    private val pinRetryController = PinRetryController.getInstance()
     private var fingerprintHelper: FingerprintHelper? = null
     private lateinit var fingerprintCancellationSignal: CancellationSignal
 
@@ -74,20 +80,19 @@ class CheckPinDialog : DialogFragment() {
         viewModel.checkPinLiveData.observe(viewLifecycleOwner, Observer {
             when (it.status) {
                 Status.ERROR -> {
-                    pinRetryController.failedAttempt(it.data)
+                    pinRetryController.failedAttempt(it.data!!)
+                    if (pinRetryController.isLocked) {
+                        showLockedAlert(context!!)
+                        dismiss()
+                        return@Observer
+                    }
                     setState(State.INVALID_PIN)
                 }
                 Status.LOADING -> {
                     setState(State.DECRYPTING)
                 }
                 Status.SUCCESS -> {
-                    if (EnableFingerprintDialog.shouldBeShown(activity!!)) {
-                        val requestCode = arguments!!.getInt(ARG_REQUEST_CODE)
-                        EnableFingerprintDialog.show(it.data, requestCode, activity!!.supportFragmentManager)
-                        dismiss()
-                    } else {
-                        dismiss(it.data!!)
-                    }
+                    dismiss(it.data!!)
                 }
             }
         })
@@ -155,7 +160,6 @@ class CheckPinDialog : DialogFragment() {
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         activity?.run {
-            pinRetryController = PinRetryController(this)
             sharedModel = ViewModelProviders.of(this)[CheckPinSharedModel::class.java]
         } ?: throw IllegalStateException("Invalid Activity")
     }
@@ -180,7 +184,7 @@ class CheckPinDialog : DialogFragment() {
                 Handler().postDelayed({
                     pin_preview.clear()
                 }, 200)
-                pin_preview.badPin(pinRetryController.remainingAttemptsMessage)
+                pin_preview.badPin(pinRetryController.getRemainingAttemptsMessage(context))
                 numeric_keyboard.isEnabled = true
             }
             State.DECRYPTING -> {
@@ -245,5 +249,13 @@ class CheckPinDialog : DialogFragment() {
                 fingerprint_view.showError(false)
             }
         })
+    }
+
+    private fun showLockedAlert(context: Context) {
+        val dialogBuilder = AlertDialog.Builder(context)
+        dialogBuilder.setTitle(R.string.wallet_lock_wallet_disabled)
+        dialogBuilder.setMessage(pinRetryController.getWalletTemporaryLockedMessage(context))
+        dialogBuilder.setPositiveButton(android.R.string.ok, null)
+        dialogBuilder.show()
     }
 }

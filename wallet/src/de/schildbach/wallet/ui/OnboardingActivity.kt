@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.graphics.drawable.LayerDrawable
 import android.os.Bundle
 import android.os.Handler
@@ -43,7 +44,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (PinRetryController.handleLockedForever(this, false)) {
+        if (PinRetryController.getInstance().isLockedForever) {
             setContentView(R.layout.activity_onboarding_perm_lock)
             getStatusBarHeightPx()
             hideSlogan()
@@ -51,7 +52,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 finish()
             }
             wipe_wallet.setOnClickListener {
-                PinRetryController.showResetWalletDialog(this, false)
+                ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
             }
             return
         }
@@ -82,7 +83,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
         try {
             startActivity(LockScreenActivity.createIntent(this))
             finish()
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         } catch (x: Exception) {
             fatal_error_message.visibility = View.VISIBLE
         }
@@ -100,7 +100,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
         }
         recovery_wallet.setOnClickListener {
             walletApplication.initEnvironmentIfNeeded()
-            RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
+            startActivity(Intent(this, RestoreWalletFromSeedActivity::class.java))
         }
         restore_wallet.setOnClickListener {
             restoreWalletFromFile()
@@ -143,10 +143,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
         sloganDrawable.mutate().alpha = 0
     }
 
-    fun restoreWalletFromSeed(words: MutableList<String>) {
-        viewModel.restoreWalletFromSeed(words)
-    }
-
     private fun getStatusBarHeightPx(): Int {
         var result = 0
         val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
@@ -154,5 +150,10 @@ class OnboardingActivity : RestoreFromFileActivity() {
             result = resources.getDimensionPixelSize(resourceId)
         }
         return result
+    }
+
+    override fun finish() {
+        super.finish()
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 }

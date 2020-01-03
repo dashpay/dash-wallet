@@ -61,7 +61,7 @@ class SettingsActivity : BaseMenuActivity() {
             log.info("manually initiated blockchain reset")
 
             WalletApplication.getInstance().resetBlockchain()
-            finish()
+            startActivity(WalletActivity.createIntent(this))
         }
         dialog.setNegativeButton(R.string.button_dismiss, null)
         dialog.show()
