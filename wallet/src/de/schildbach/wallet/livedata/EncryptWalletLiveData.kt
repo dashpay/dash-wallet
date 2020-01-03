@@ -22,6 +22,7 @@ import android.os.AsyncTask
 import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.util.FingerprintHelper
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
 import org.bitcoinj.wallet.Wallet
@@ -37,6 +38,7 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
 
     private var scryptIterationsTarget: Int = Constants.SCRYPT_ITERATIONS_TARGET
     private var walletApplication = application as WalletApplication
+    private var fingerprintHelper = FingerprintHelper(application)
 
     fun encrypt(password: String, scryptIterationsTarget: Int) {
         if (encryptWalletTask == null) {
@@ -143,6 +145,9 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
                 val keyCrypter = KeyCrypterScrypt(scryptIterationsTarget)
                 val newKey = keyCrypter.deriveKey(newPassword)
                 wallet.encrypt(keyCrypter, newKey)
+
+                //Clear fingerprint data
+                fingerprintHelper.clear()   
 
                 log.info("wallet successfully encrypted, using key derived by new spending password (${keyCrypter.scryptParameters.n} scrypt iterations)")
 
