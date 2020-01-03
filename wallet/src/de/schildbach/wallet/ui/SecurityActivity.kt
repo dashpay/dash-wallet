@@ -21,20 +21,29 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
+import android.view.View.GONE
+import android.view.View.VISIBLE
+import android.widget.CompoundButton
 import android.widget.Switch
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.activity_security.*
 import org.bitcoinj.wallet.Wallet
-
 
 class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletProvider {
 
+    private lateinit var fingerprintHelper: FingerprintHelper
+    private lateinit var checkPinSharedModel: CheckPinSharedModel
+
     companion object {
         private const val AUTH_REQUEST_CODE_BACKUP = 1
+        private const val ENABLE_FINGERPRINT_REQUEST_CODE = 2
+        private const val FINGERPRINT_ENABLED_REQUEST_CODE = 3
     }
 
     override fun getLayoutId(): Int {
@@ -52,16 +61,52 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         }
 
         val checkPinSharedModel: CheckPinSharedModel = ViewModelProviders.of(this).get(CheckPinSharedModel::class.java)
-        checkPinSharedModel.onCorrectPinCallback.observe(this, Observer<Pair<Int?, String?>> { (data, _) ->
-            if (data == AUTH_REQUEST_CODE_BACKUP) {
-                val permission = Manifest.permission.WRITE_EXTERNAL_STORAGE
-                if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
-                    BackupWalletDialogFragment.show(supportFragmentManager)
-                } else {
-                    ActivityCompat.requestPermissions(this, arrayOf(permission), 1)
+        checkPinSharedModel.onCorrectPinCallback.observe(this, Observer<Pair<Int?, String?>> { (requestCode, pin) ->
+            when (requestCode) {
+                AUTH_REQUEST_CODE_BACKUP -> {
+                    val permission = Manifest.permission.WRITE_EXTERNAL_STORAGE
+                    if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
+                        BackupWalletDialogFragment.show(supportFragmentManager)
+                    } else {
+                        ActivityCompat.requestPermissions(this, arrayOf(permission), 1)
+                    }
+                }
+                ENABLE_FINGERPRINT_REQUEST_CODE -> {
+                    if (pin != null) {
+                        EnableFingerprintDialog.show(pin, FINGERPRINT_ENABLED_REQUEST_CODE,
+                                supportFragmentManager)
+                    }
+                }
+                FINGERPRINT_ENABLED_REQUEST_CODE -> {
+                    updateFingerprintSwitchSilently(fingerprintHelper.isFingerprintEnabled)
                 }
             }
         })
+
+        //Fingerprint group and switch setup
+        fingerprintHelper = FingerprintHelper(this)
+        if (fingerprintHelper.init()) {
+            fingerprint_auth_group.visibility = VISIBLE
+            fingerprint_auth_switch.isChecked = fingerprintHelper.isFingerprintEnabled
+            fingerprint_auth_switch.setOnCheckedChangeListener(fingerprintSwitchListener)
+        } else {
+            fingerprint_auth_group.visibility = GONE
+        }
+    }
+
+    private val fingerprintSwitchListener= CompoundButton.OnCheckedChangeListener { _, isChecked ->
+        if (isChecked) {
+            CheckPinDialog.show(this, ENABLE_FINGERPRINT_REQUEST_CODE)
+            updateFingerprintSwitchSilently(false)
+        } else {
+            fingerprintHelper.clear()
+        }
+    }
+
+    private fun updateFingerprintSwitchSilently(checked: Boolean) {
+        fingerprint_auth_switch.setOnCheckedChangeListener(null)
+        fingerprint_auth_switch.isChecked = checked
+        fingerprint_auth_switch.setOnCheckedChangeListener(fingerprintSwitchListener)
     }
 
     fun backupWallet(view: View) {
