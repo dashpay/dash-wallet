@@ -238,9 +238,11 @@ class SetPinActivity : SessionActivity() {
                 confirmButtonView.visibility = View.GONE
                 viewModel.pin.clear()
                 pin.clear()
+                if (pinRetryController.failCount() > 0) {
+                    pinPreviewView.badPin(pinRetryController.getRemainingAttemptsMessage(this))
+                }
                 if (newState == State.INVALID_PIN) {
                     pinPreviewView.shake()
-                    pinPreviewView.badPin(pinRetryController.getRemainingAttemptsMessage(this))
                 }
             }
             State.SET_PIN -> {
