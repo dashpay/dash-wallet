@@ -87,7 +87,6 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.data.PaymentIntent.Standard;
-import de.schildbach.wallet.data.TransactionResult;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.offline.DirectPaymentTask;
 import de.schildbach.wallet.service.BlockchainState;
@@ -98,12 +97,10 @@ import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StreamInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
-import de.schildbach.wallet.ui.SetPinActivity;
 import de.schildbach.wallet.ui.SingleActionSharedViewModel;
 import de.schildbach.wallet.ui.TransactionResultActivity;
 import de.schildbach.wallet.util.Bluetooth;
 import de.schildbach.wallet.util.Nfc;
-import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet_test.R;
 import kotlin.Pair;
 
@@ -226,7 +223,13 @@ public final class SendCoinsFragment extends Fragment {
             public void onChanged(Boolean aBoolean) {
                 String sessionPin = activity.getSessionPin();
                 if (sessionPin == null || config.getSpendingConfirmationEnabled()) {
-                    CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND);
+                    Coin thresholdAmount = Coin.parseCoin(
+                            Float.valueOf(config.getSpendingConfirmationLimit()).toString());
+                    if (enterAmountSharedViewModel.getDashAmount().isLessThan(thresholdAmount)) {
+                        CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND);
+                    } else {
+                        CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND, true);
+                    }
                 } else {
                     handleGo(sessionPin);
                 }

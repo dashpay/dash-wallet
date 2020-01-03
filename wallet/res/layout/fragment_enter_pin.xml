@@ -104,7 +104,7 @@
                         android:padding="16dp"
                         android:text="@string/authenticate_switch_to_pin"
                         android:textAllCaps="true"
-                        android:textColor="@color/dash_blue" />
+                        android:textColor="@color/dialog_button_text" />
 
                     <TextView
                         android:id="@+id/cancel_button"
@@ -115,7 +115,7 @@
                         android:padding="16dp"
                         android:text="@string/button_cancel"
                         android:textAllCaps="true"
-                        android:textColor="@color/dash_blue" />
+                        android:textColor="@color/dialog_button_text" />
                 </LinearLayout>
 
             </LinearLayout>
