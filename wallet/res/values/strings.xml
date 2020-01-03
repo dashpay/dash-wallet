@@ -29,7 +29,7 @@
     <string name="wallet_transactions_row_warning_backup">Congratulations, you received your first payment! Have you already backed up your wallet, to protect against loss?</string>
     <string name="wallet_transactions_fragment_coinbase">mined</string>
     <string name="wallet_transactions_fragment_internal">internal</string>
-    <string name="wallet_transactions_options_filter">Filter</string>
+    <string name="wallet_transactions_options_filter">Filter Transactions</string>
     <string name="wallet_transactions_options_filter_all">All payments</string>
     <string name="wallet_transactions_options_filter_received">Received payments</string>
     <string name="wallet_transactions_options_filter_sent">Sent payments</string>
@@ -95,8 +95,8 @@
     <string name="sweep_wallet_fragment_hint">Paper wallets are most commonly used for cold storage. Some ATMs print them on their paper slip rather than sending the coins to your mobile device directly. People sometimes use pre-charged paper wallets to pass value around (not recommended).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Start by scanning the private key of a paper wallet. Use the camera action button.</string>
     <string name="sweep_wallet_fragment_encrypted">This private key is protected with a password.</string>
-    <string name="sweep_wallet_fragment_password">password</string>
-    <string name="sweep_wallet_fragment_bad_password">bad password!</string>
+    <string name="sweep_wallet_fragment_password">Password</string>
+    <string name="sweep_wallet_fragment_bad_password">Bad password!</string>
     <string name="sweep_wallet_fragment_balance">Balance to sweep</string>
     <string name="sweep_wallet_fragment_button_decrypt">Decrypt</string>
     <string name="sweep_wallet_fragment_button_sweep">Sweep</string>
@@ -174,6 +174,7 @@
     <string name="transaction_row_status_error_obsolete">Obsolete</string>
     <string name="transaction_row_status_error_invalid">Invalid</string>
     <string name="transaction_row_status_error_other">Unknown</string>
+    <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">On %s at %s</string>
     <string name="transaction_row_rate_not_available">Not available</string>
     <string name="transaction_row_status_masternode_registration">Masternode Registration</string>
@@ -236,7 +237,7 @@
     <string name="encrypt_keys_dialog_show">Show PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">Encrypting…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Decrypting…</string>
-    <string name="encrypt_keys_dialog_state_done">Done.</string>
+    <string name="encrypt_keys_dialog_state_done">Done</string>
     <string name="scan_camera_problem_dialog_title">Sorry</string>
     <string name="scan_camera_problem_dialog_message">The camera has a problem. You probably need to restart the device.</string>
     <string name="scan_camera_permission_dialog_title">Camera permission</string>

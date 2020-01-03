@@ -42,7 +42,7 @@
     <string name="lock_unlock_with_fingerprint">Use your fingerprint to unlock</string>
 
     <string name="perm_lock_info">Wallet permanently locked</string>
-    <string name="perm_lock_wipe_wallet">Wipe wallet</string>
+    <string name="perm_lock_wipe_wallet">Wipe Wallet</string>
     <string name="perm_lock_close_app">Close</string>
 
     <string name="scan_to_pay_error_dialog_title">Scan to Send</string>
@@ -74,9 +74,9 @@
     <string name="payments_pay_to_clipboard_button">Send</string>
 
     <string name="forgot_pin_title">Forgot PIN?</string>
-    <string name="forgot_pin_message">You can set a new PIN with the help of your recovery phrase?</string>
-    <string name="forgot_pin_instruction_1">Enter Recovery Phrase to recover your wallet</string>
-    <string name="forgot_pin_instruction_2">Setup a new PIN</string>
+    <string name="forgot_pin_message">You can set a new PIN with the help of your recovery phrase.</string>
+    <string name="forgot_pin_instruction_1">Enter recovery phrase to recover your wallet</string>
+    <string name="forgot_pin_instruction_2">Set up a new PIN</string>
     <string name="forgot_pin_instruction_3">Login with your new PIN to access your wallet</string>
     <string name="forgot_pin_warning">If you have forgot your PIN and lost your recover phrase, you cannot get back access to your wallet and funds.</string>
 
@@ -192,10 +192,10 @@
     <string name="verify_it_is_important_subtitle">We are about to show you the secret key to your wallet.</string>
     <string name="verify_info_text_1">This recovery phrase is your access to the funds in this wallet.</string>
     <string name="verify_info_text_2">We do not store this recovery phrase.</string>
-    <string name="verify_info_text_3">In case if this device is lost / damaged, incase if the dash wallet is uninstalled accidentally from this device, you will need this recovery phrase to access your funds.</string>
+    <string name="verify_info_text_3">In case if this device is lost / damaged, in case if the Dash Wallet is uninstalled accidentally from this device, you will need this recovery phrase to access your funds.</string>
     <string name="verify_skip">Skip</string>
     <string name="verify_secure_now_btn">Secure Now</string>
-    <string name="verify_secure_now_message">If you lose this device, you will lose your funds. Get your UniqueSecretKey so that you can restore your wallet on another device.</string>
+    <string name="verify_secure_now_message">If you lose this device, you will lose your funds. Get your recovery phrase so that you can restore your wallet on another device.</string>
     <string name="verify_seed_title">Please write this down</string>
     <string name="verify_seed_write_down_confirmation">I have written this down</string>
     <string name="verify_seed_buttons_tip">Please tap on the words from your recovery phrase in the right order</string>
@@ -217,7 +217,7 @@
     <string name="authenticate_switch_to_fingerprint">Use Fingerprint</string>
     <string name="authenticate_switch_to_pin">Use Password</string>
 
-    <string name="menu_buy_and_sell_title">Buy &amp; Sell Dash"</string>
+    <string name="menu_buy_and_sell_title">Buy &amp; Sell Dash</string>
     <string name="menu_buy_and_sell_subtitle">Connect with third party exchanges</string>
     <string name="menu_security_title">Security</string>
     <string name="menu_security_subtitle">View passphrase, backup wallet…</string>
