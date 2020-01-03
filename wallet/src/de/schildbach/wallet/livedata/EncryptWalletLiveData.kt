@@ -147,7 +147,7 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
                 wallet.encrypt(keyCrypter, newKey)
 
                 //Clear fingerprint data
-                fingerprintHelper.clear()   
+                fingerprintHelper.clear()
 
                 log.info("wallet successfully encrypted, using key derived by new spending password (${keyCrypter.scryptParameters.n} scrypt iterations)")
 

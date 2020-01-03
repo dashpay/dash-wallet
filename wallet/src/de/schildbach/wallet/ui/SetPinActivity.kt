@@ -36,6 +36,7 @@ import de.schildbach.wallet_test.R
 
 private const val FINGERPRINT_REQUEST_SEED = 1
 private const val FINGERPRINT_REQUEST_WALLET = 2
+private const val FINGERPRINT_REQUEST_CHANGE_PIN = 3
 
 class SetPinActivity : SessionActivity() {
 
@@ -337,7 +338,11 @@ class SetPinActivity : SessionActivity() {
                     } else {
                         if (changePin) {
                             saveSessionPin(viewModel.getPinAsString())
-                            finish()
+                            if (EnableFingerprintDialog.shouldBeShown(this@SetPinActivity)) {
+                                EnableFingerprintDialog.show(viewModel.getPinAsString(), FINGERPRINT_REQUEST_CHANGE_PIN, supportFragmentManager)
+                            } else {
+                                performNextStep(FINGERPRINT_REQUEST_CHANGE_PIN)
+                            }
                         } else {
                             viewModel.initWallet()
                         }
@@ -420,6 +425,7 @@ class SetPinActivity : SessionActivity() {
         when (requestCode) {
             FINGERPRINT_REQUEST_SEED -> startVerifySeedActivity()
             FINGERPRINT_REQUEST_WALLET -> goHome()
+            FINGERPRINT_REQUEST_CHANGE_PIN -> finish()
         }
         (application as WalletApplication).maybeStartAutoLogoutTimer()
     }
