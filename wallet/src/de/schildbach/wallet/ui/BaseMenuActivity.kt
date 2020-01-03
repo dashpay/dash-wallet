@@ -31,7 +31,7 @@ import org.dash.wallet.common.Configuration
  * @author Samuel Barbosa
  */
 @SuppressLint("Registered")
-abstract class BaseMenuActivity : AppCompatActivity() {
+abstract class BaseMenuActivity : SessionActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,7 +49,7 @@ abstract class BaseMenuActivity : AppCompatActivity() {
     @LayoutRes
     abstract fun getLayoutId(): Int
 
-    override fun startActivity(intent: Intent?) {
+    override fun startActivity(intent: Intent) {
         super.startActivity(intent)
         overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
     }

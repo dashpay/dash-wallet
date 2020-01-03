@@ -17,7 +17,6 @@
 package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import de.schildbach.wallet.WalletApplication
 
@@ -25,29 +24,19 @@ import de.schildbach.wallet.WalletApplication
 open class SessionActivity : AppCompatActivity() {
 
     companion object {
-        private const val EXTRA_SESSION_PIN = "extra_session_pin"
+        private var sessionPin: String? = null
     }
 
     protected fun saveSessionPin(pin: String?) {
-        this.intent.putExtra(EXTRA_SESSION_PIN, pin)
+        sessionPin = pin
     }
 
     protected fun resetSessionPin() {
-        this.intent.removeExtra(EXTRA_SESSION_PIN)
-    }
-
-    override fun startActivity(intent: Intent) {
-        intent.putExtra(EXTRA_SESSION_PIN, this.intent.getStringExtra(EXTRA_SESSION_PIN))
-        super.startActivity(intent)
-    }
-
-    override fun startActivityForResult(intent: Intent, requestCode: Int) {
-        intent.putExtra(EXTRA_SESSION_PIN, this.intent.getStringExtra(EXTRA_SESSION_PIN))
-        super.startActivityForResult(intent, requestCode)
+        sessionPin = null
     }
 
     fun getSessionPin(): String? {
-        return intent.getStringExtra(EXTRA_SESSION_PIN)
+        return sessionPin
     }
 
     override fun onUserInteraction() {
