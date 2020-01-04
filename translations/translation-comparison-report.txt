@@ -1,0 +1,1049 @@
+﻿Translation Source Comparison Report:  2020-01-03
+-------------------------------------------------------
+iOS total number of strings: 386 in 2 files.
+android total number of strings: 567 in 4 files.
+iOS File:     iOS/dashsync-localizable-strings.strings
+iOS File:     iOS/app-localizable-strings.strings
+Android File: ../common/src/main/res/values/strings.xml
+Android File: ../wallet/res/values/strings.xml
+Android File: ../wallet/res/values/strings-extra.xml
+Android File: ../uphold-integration/src/main/res/values/strings-uphold.xml
+
+Summary Report iOS vs Android
+-------------------------------------
+122 strings match exactly between iOS and android
+264 iOS strings do not match Android
+445 Android Strings do not match iOS
+30 strings have wildcards for iOS
+51 strings have wildcards for Android
+3 iOS strings differ by case with Android
+49 iOS strings start with words similar to Android
+1 iOS strings differ by punctuation with Android
+
+iOS Strings that differ by case with Android
+--------------------------------------------
+iOS:     'Scanning QR code'
+android: 'Scanning QR Code'
+iOS:     'Secure now'
+android: 'Secure Now'
+iOS:     'You are about to sweep funds from another Dash Wallet.'
+android: 'You are about to sweep funds from another Dash wallet.'
+
+iOS Strings start with words similar Android
+--------------------------------------------
+iOS:     'Down'
+android: 'Download'
+iOS:     'Parse Error'
+android: 'Parse error: %s'
+iOS:     'Recovery Phrase'
+android: 'Recovery phrase goes here.'
+iOS:     'Up'
+android: 'Uphold Error'
+iOS:     '1 min'
+android: '1 minute'
+iOS:     '5 min'
+android: '5 minutes'
+iOS:     'All'
+android: 'All payments'
+iOS:     'Are you sure?'
+android: 'Are you sure? Your wallet will be deleted and all your Dash will be lost.\n\nThe only way to recover your Dash is with a backup file or recovery phrase.'
+iOS:     'Change'
+android: 'Change to %s'
+iOS:     'Confirm'
+android: 'Confirm fingerprint to continue'
+iOS:     'Date'
+android: 'Date & Time'
+iOS:     'Enter'
+android: 'Enter your PIN to continue'
+iOS:     'Enter Recovery Phrase'
+android: 'Enter recovery phrase to recover your wallet'
+iOS:     'Fee will be deducted from requested amount'
+android: 'Fee will be deducted from requested amount.'
+iOS:     'Masternode Update'
+android: 'Masternode Update Service'
+iOS:     'Max'
+android: 'Maximum fingerprint attempts exceeded. Please try again later.'
+iOS:     'Network'
+android: 'Network Monitor'
+iOS:     'Not a valid Dash address'
+android: 'Not a valid Dash Address or URL request in clipboard.'
+iOS:     'Request'
+android: 'Request from local app'
+iOS:     'Reset'
+android: 'Reset block chain, transactions and wallet balance. Replay will take a while, so only do this if you know why.'
+iOS:     'Send'
+android: 'Send to\nAddress'
+iOS:     'skip'
+android: 'Skip regular peer discovery'
+iOS:     'Tap'
+android: 'Tap the lock icon above to unlock your wallet and see the transaction history.'
+iOS:     'Try again'
+android: 'Try again in %1$d %2$s'
+iOS:     'Your transaction was sent and the amount should appear in your wallet in a few minutes.'
+android: 'Your transaction was sent and the amount should appear in your wallet in a few minutes.\n\nTransaction id: %s'
+iOS:     'Rate: %@ = %@'
+android: 'Rate'
+iOS:     'Internal Error'
+android: 'Internal'
+iOS:     'Download peer: %@'
+android: 'Download'
+iOS:     'Unknown address'
+android: 'Unknown'
+iOS:     'Unknown Error'
+android: 'Unknown'
+iOS:     'Unknown JSON-RPC Response'
+android: 'Unknown'
+iOS:     'Moved'
+android: 'Move'
+iOS:     'Moved from'
+android: 'Move'
+iOS:     'Moved internally to'
+android: 'Move'
+iOS:     'Moved to Address'
+android: 'Move'
+iOS:     'Password protected key'
+android: 'password'
+iOS:     'Error from payment request server %@'
+android: 'Error'
+iOS:     'Error signing transaction'
+android: 'Error'
+iOS:     'Report an Issue'
+android: 'Report'
+iOS:     'Copyright Â© 2019 Dash Core'
+android: 'Copyright'
+iOS:     'Add Shortcut'
+android: 'Add'
+iOS:     'Set a trusted node'
+android: 'Set'
+iOS:     'Set PIN'
+android: 'Set'
+iOS:     'Setup Wallet'
+android: 'Set'
+iOS:     'PIN for %@'
+android: 'PIN'
+iOS:     'Wallet disabled'
+android: 'Wallet'
+iOS:     'Wallet Keys'
+android: 'Wallet'
+iOS:     'Show Masternode Keys'
+android: 'Show'
+iOS:     'Block #%d of %d'
+android: 'Block'
+
+iOS Strings that differ by punctuation with Android
+--------------------------------------------
+iOS:     'Fee will be deducted from requested amount'
+android: 'Fee will be deducted from requested amount.'
+
+iOS Strings that differ by wildcard with Android
+--------------------------------------------
+
+iOS Strings found in Android
+-------------------------------------
+Cancel : in iOS matches button_cancel in Android
+Confirm : in iOS matches confirm in Android
+Confirm PIN : in iOS matches set_pin_confirm_pin in Android
+Double spend : in iOS matches transaction_row_status_error_dead in Android
+Enter old PIN : in iOS matches set_pin_enter_pin in Android
+OK : in iOS matches button_ok in Android
+Password : in iOS matches sweep_wallet_fragment_password in Android
+Reset : in iOS matches wallet_lock_reset in Android
+Retry : in iOS matches button_retry in Android
+Send : in iOS matches payments_pay_to_clipboard_button in Android
+Set PIN : in iOS matches set_pin_set_pin in Android
+Wallet disabled : in iOS matches wallet_lock_wallet_disabled in Android
+1 hour : in iOS matches one_hour in Android
+24 hours : in iOS matches twenty_four_hours in Android
+About : in iOS matches about_title in Android
+Address : in iOS matches edit_address_book_entry_dialog_address_label in Android
+Advanced Security : in iOS matches activity_security_advanced in Android
+Amount : in iOS matches uphold_withdrawal_amount in Android
+Amount Received : in iOS matches transaction_details_amount_received in Android
+Amount Sent : in iOS matches transaction_details_amount_sent in Android
+Auto Logout : in iOS matches auto_logout in Android
+Available balance : in iOS matches home_available_balance in Android
+Backup Wallet : in iOS matches verify_backup_wallet in Android
+Balance hidden : in iOS matches home_balance_hidden in Android
+Buy & Sell Dash : in iOS matches menu_buy_and_sell_title in Android
+Buy Dash : in iOS matches uphold_buy_dash_button in Android
+Buy Dash with Uphold account : in iOS matches uphold_buy_dash_with_uphold in Android
+Change PIN : in iOS matches encrypt_keys_dialog_title in Android
+Close : in iOS matches transaction_close in Android
+Confirm transaction : in iOS matches uphold_withdrawal_confirm_title in Android
+Confirming : in iOS matches transaction_row_status_confirming in Android
+Connect with third party exchanges : in iOS matches menu_buy_and_sell_subtitle in Android
+Contact Support : in iOS matches about_contact_support in Android
+Continue : in iOS matches verify_continue in Android
+Copied : in iOS matches receive_copied in Android
+Copy : in iOS matches button_copy in Android
+Create a New Wallet : in iOS matches set_pin_create_new_wallet in Android
+Done : in iOS matches encrypt_keys_dialog_state_done in Android
+Enter PIN : in iOS matches lock_enter_pin in Android
+Enter the amount to transfer below : in iOS matches uphold_withdrawal_instructions in Android
+Enter your 2FA code below : in iOS matches uphold_otp_dialog_title in Android
+Fee : in iOS matches uphold_withdrawal_fee in Android
+Filter Transactions : in iOS matches wallet_transactions_options_filter in Android
+Forgot PIN? : in iOS matches forgot_pin_title in Android
+Go to Website : in iOS matches uphold_logout_go_to_website in Android
+Help us improve your experience : in iOS matches about_help_us_improve in Android
+High : in iOS matches security_high in Android
+History : in iOS matches history_title in Android
+If you lose this device, you will lose your funds. Get your recovery phrase so that you can restore your wallet on another device. : in iOS matches verify_secure_now_message in Android
+Immediately : in iOS matches immediately in Android
+Import Private Key : in iOS matches tools_import_private_key in Android
+In case if this device is lost / damaged, in case if the Dash Wallet is uninstalled accidentally from this device, you will need this recovery phrase to access your funds. : in iOS matches verify_info_text_3 in Android
+Insufficient Funds : in iOS matches send_coins_fragment_hint_insufficient_money in Android
+Invalid : in iOS matches transaction_row_status_error_invalid in Android
+Link Uphold Account : in iOS matches uphold_link_account in Android
+Local Currency : in iOS matches menu_local_currency in Android
+Locked : in iOS matches transaction_row_status_locked in Android
+Log Out : in iOS matches uphold_logout in Android
+Log out from Uphold : in iOS matches uphold_logout_title in Android
+Logout after : in iOS matches logout_after in Android
+Low : in iOS matches security_low in Android
+Masternode Registration : in iOS matches transaction_row_status_masternode_registration in Android
+Masternode Revoke : in iOS matches transaction_row_status_masternode_revoke in Android
+Medium : in iOS matches security_medium in Android
+More : in iOS matches more_title in Android
+Network fee : in iOS matches dialog_confirm_fee in Android
+No address copied : in iOS matches payments_pay_to_clipboard_sub_title in Android
+None : in iOS matches security_none in Android
+Payments : in iOS matches payments_title in Android
+PIN is always required to make a payment : in iOS matches spending_confirmation_hint_zero in Android
+Please tap on the words from your recovery phrase in the right order : in iOS matches verify_seed_buttons_tip in Android
+Processing : in iOS matches transaction_row_status_processing in Android
+Receive : in iOS matches payments_tab_receive_label in Android
+Received : in iOS matches transaction_row_status_received in Android
+Recover Wallet : in iOS matches recover_wallet_title in Android
+Rescan Blockchain : in iOS matches menu_rescan_blockchain in Android
+Reset to Default : in iOS matches reset_to_default in Android
+Reset Wallet : in iOS matches wallet_lock_reset_wallet_title in Android
+Review & Rate the app : in iOS matches about_review_and_rate in Android
+Scan : in iOS matches payments_pay_by_qr_button in Android
+Scan Private Key : in iOS matches scan_private_key in Android
+Scan to Send : in iOS matches scan_to_pay_error_dialog_title in Android
+Secure Wallet Now : in iOS matches verify_secure_now in Android
+Security : in iOS matches menu_security_title in Android
+See on Uphold : in iOS matches uphold_see_on_uphold in Android
+Send by : in iOS matches payments_pay_by_qr_title in Android
+Send to : in iOS matches dialog_confirm_pay_to in Android
+Send to copied address : in iOS matches payments_pay_to_clipboard_title in Android
+Sending : in iOS matches transaction_row_status_sending in Android
+Sent : in iOS matches transaction_row_status_sent in Android
+Sent successfully : in iOS matches transaction_result_paid_successfully in Android
+Sent to : in iOS matches transaction_result_sent_to in Android
+Settings : in iOS matches menu_settings_title in Android
+Share : in iOS matches receive_share_button in Android
+Show Recovery Phrase : in iOS matches verify_show_recovery_phrase in Android
+Skip : in iOS matches verify_skip in Android
+Specify Amount : in iOS matches receive_enter_amount_button in Android
+Spending Confirmation : in iOS matches spending_confirmation in Android
+Success : in iOS matches uphold_withdrawal_success_title in Android
+Tap to hide balance : in iOS matches home_balance_hide_hint in Android
+Tap to unhide balance : in iOS matches home_balance_show_hint in Android
+There are no transactions to display : in iOS matches wallet_transactions_fragment_empty_text in Android
+This PIN will be required to unlock your app everytime when you use it. : in iOS matches set_pin_message in Android
+This recovery phrase is your access to the funds in this wallet. : in iOS matches verify_info_text_1 in Android
+This transaction may take several minutes to settle. : in iOS matches send_coins_instant_send_not_feasible in Android
+This will move all coins from that wallet to your wallet on this device. : in iOS matches scan_private_key_intro_2 in Android
+Tools : in iOS matches menu_tools_title in Android
+Total : in iOS matches uphold_withdrawal_total in Android
+Transfer : in iOS matches uphold_transfer in Android
+Transfer Dash from your Uphold account to this wallet : in iOS matches uphold_transfer_to_this_wallet in Android
+Transfer from Uphold : in iOS matches uphold_transfer_to_this_wallet_button in Android
+Uphold : in iOS matches uphold_account in Android
+Verified Successfully : in iOS matches verify_seed_success_title in Android
+Verify : in iOS matches verify in Android
+Very High : in iOS matches security_very_high in Android
+View Recovery Phrase : in iOS matches export_keys_dialog_title_to_seed in Android
+We are about to show you the secret key to your wallet. : in iOS matches verify_it_is_important_subtitle in Android
+We do not store this recovery phrase. : in iOS matches verify_info_text_2 in Android
+When the transaction is confirmed, the other wallet will be worthless and should not be re-used for safety reasons. : in iOS matches scan_private_key_intro_3 in Android
+Wipe Wallet : in iOS matches perm_lock_wipe_wallet in Android
+Your Uphold account Dash balance is : in iOS matches uphold_account_dash_balance in Android
+Your wallet is secured now. You can use your recovery phrase anytime to recover your account on another device. : in iOS matches verify_seed_success_message in Android
+
+Wildcard strings containing %
+--------------------------------------------
+android: %1$s available  -  android - dash_available
+android: %1$s, %2$d days behind  -  android - blockchain_state_progress_days
+android: %1$s, %2$d hours behind  -  android - blockchain_state_progress_hours
+android: %1$s, %2$d months behind  -  android - blockchain_state_progress_months
+android: %1$s, %2$d weeks behind  -  android - blockchain_state_progress_weeks
+android: %1$s\nprotocol: %2$d  -  android - protocol_version
+iOS:     %@ is not allowed to access Face ID  -  iOS
+iOS:     %@ is not allowed to access the camera  -  iOS
+iOS:     %@ is not allowed to access Touch ID  -  iOS
+android: %d peers connected  -  android - notification_peers_connected_msg
+android: %s is an invalid word.  -  android - restore_wallet_from_invalid_seed_warning_message
+android: (%s waiting for confirmation)  -  android - send_coins_fragment_pending
+android: <p>Your wallet has been backed up to <tt>%s</tt></p><p>If your device has a removable SD card, your backup <i>should</i> be on that card. Remove it and keep it at a safe place. If the card is <i>not</i> removable, you need to archive your backup to some other place than your device.</p><p><b>If the only place your backup exists is on your device, you run the risk of losing both at the same time!</b></p><p>In any case, make sure you remember your backup password. Do you want to archive your wallet now?</p>  -  android - export_keys_dialog_success
+android: A network fee of %s will be paid.  -  android - send_coins_fragment_hint_fee_economic
+android: A priority fee of %s will be paid. If you care about low fees, use \'priority\' only if you need confirmation as soon as possible.  -  android - send_coins_fragment_hint_fee_priority
+iOS:     Application %@ is requesting a payment to  -  iOS
+iOS:     Application %@ is requesting an address so it can pay you.  Would you like to authorize this?  -  iOS
+iOS:     Application %@ would like to receive your Master Public Key.  This can be used to keep track of your wallet, this can not be used to move your Dash.  -  iOS
+android: Application %s is requesting an address so it can pay you.  Would you like to authorize this?  -  android - wallet_uri_handler_address_request_dialog_msg
+android: Application %s would like to receive your Master Public Key.  This can be used to keep track of your wallet, this can not be used to move your Dash.  -  android - wallet_uri_handler_public_key_request_dialog_msg
+iOS:     Are you sure you would like to register a masternode at %@:%d?  -  iOS
+iOS:     Are you sure you would like to register the username %@ and spend %@ on credits?  -  iOS
+iOS:     Are you sure you would like to topup %@ and spend %@ on credits?  -  iOS
+iOS:     Are you sure you would like to update this masternode to %@:%d?  -  iOS
+iOS:     Are you sure you would like to update this masternode to pay to %@?  -  iOS
+android: automatic backup %s  -  android - import_keys_dialog_file_created_automatic
+android: Base amount: %1$f\nFee: %2$f\nTotal: %3$f\n\nDo you want to confirm this transaction?  -  android - uphold_withdrawal_confirm_message
+android: Bluetooth error: %1$s  -  android - error_bluetooth
+android: Cannot read data:\n%s  -  android - input_parser_io_error
+android: Cannot recognize input:\n%s  -  android - input_parser_cannot_classify
+android: Cannot verify payment request:\n%s  -  android - input_parser_unverifyable_paymentrequest
+android: Change to %s  -  android - change_to
+iOS:     Dash payments can't be less than %@  -  iOS
+iOS:     Dash payments can't be less than %@  -  iOS
+iOS:     Dash transaction outputs can't be less than %@  -  iOS
+android: Dash Wallet %s  -  android - about_version_name
+android: dashj %s, a Dash protocol implementation  -  android - about_credits_bitcoinj_title
+iOS:     Download peer: %@  -  iOS
+iOS:     Error from payment request server %@  -  iOS
+android: Fetching signature from %s…  -  android - send_coins_fragment_request_payment_request_progress
+android: HTTP error %1$s:\n%2$s  -  android - error_http
+android: I/O error: %s  -  android - error_io
+android: Invalid Dash URI:\n%s  -  android - input_parser_invalid_bitcoin_uri
+android: Invalid payment request:\n%s  -  android - input_parser_invalid_paymentrequest
+android: Invalid transaction:\n%s  -  android - input_parser_invalid_transaction
+android: Leave as %s  -  android - leave_as
+iOS:     Local requested amount: %@  -  iOS
+android: manually backed up %s  -  android - import_keys_dialog_file_created_manual
+android: Not a valid Dash Address or URL request in clipboard:\n\n%s  -  android - scan_to_pay_error_dialog_message
+android: On %s at %s  -  android - transaction_row_time_text
+android: Parse error: %s  -  android - error_parse
+android: Pick a wallet backup file from external storage (%s):  -  android - import_keys_dialog_message
+iOS:     PIN for %@  -  iOS
+android: Price from %s  -  android - exchange_rates_fragment_source
+iOS:     Rate: %@ = %@  -  iOS
+iOS:     Received %@ (%@)  -  iOS
+android: Received %s  -  android - notification_coins_received_msg
+iOS:     Reduce payment amount by\n%@ (%@)?  -  iOS
+iOS:     Send %@ (%@) from this private key into your wallet? The Dash network will receive a fee of %@ (%@).  -  iOS
+android: This transaction may take several minutes to settle. Complete instantly for %1$s%2$s?  -  android - send_coins_auto_lock_not_feasible
+android: Try again in %1$d %2$s  -  android - wallet_lock_try_again
+iOS:     Try again in %@  -  iOS
+iOS:     Unexpected response from %@  -  iOS
+iOS:     Updated: %@  -  iOS
+android: verified by: %s  -  android - send_coins_fragment_payee_verified_by
+android: Wallet could not be restored:\n\n%s\n\nBad password?  -  android - import_keys_dialog_failure
+android: Wrong PIN! %s  -  android - wallet_lock_wrong_pin
+android: You have <b>%1$s Dash</b> in your Uphold account. Do you want to <u>transfer this value to this wallet</u>?  -  android - uphold_withdrawal_message
+android: You received %1$s to unsecure addresses. Would you like to move these coins to secure addresses? A small network fee of %2$s will be paid.  -  android - maintenance_dialog_message
+android: You still have Dash on this device! Please be sure to write down your recovery phrase before you uninstall the Dash Wallet or you will lose your balance of %s.  -  android - notification_inactivity_message
+android: Your device time is off by %d minutes. You probably cannot send or receive Dash due to this problem.\n\nYou should check and if necessary correct your date, time and timezone settings.  -  android - wallet_timeskew_dialog_msg
+android: Your local currency is %1$s, but in this app your default currency is set to %2$s. Would you like to change it to %1$s or leave it as %2$s?  -  android - change_exchange_currency_code_message
+android: Your transaction was sent and the amount should appear in your wallet in a few minutes.\n\nTransaction id: %s  -  android - uphold_withdrawal_success_message
+android: Your wallet could not be backed up:\n%s  -  android - export_keys_dialog_failure
+android: You\'re missing %s.  -  android - send_coins_fragment_insufficient_money_msg1
+iOS:     \n         total %@ (%@)  -  iOS
+iOS:     \n(local requested amount: %@)  -  iOS
+iOS:     \nnetwork fee +%@ (%@)  -  iOS
+iOS:     \ntry again in %@  -  iOS
+iOS:     \n\n     amount %@ (%@)  -  iOS
+android: ⇆ %d ms  -  android - peer_list_row_ping_time
+
+iOS Strings not found in Android
+--------------------------------------------
+android: %1$s available  -  android -- dash_available
+android: %1$s, %2$d days behind  -  android -- blockchain_state_progress_days
+android: %1$s, %2$d hours behind  -  android -- blockchain_state_progress_hours
+android: %1$s, %2$d months behind  -  android -- blockchain_state_progress_months
+android: %1$s, %2$d weeks behind  -  android -- blockchain_state_progress_weeks
+android: %1$s\nprotocol: %2$d  -  android -- protocol_version
+iOS:     %@ is not allowed to access Face ID  -  iOS
+iOS:     %@ is not allowed to access the camera  -  iOS
+iOS:     %@ is not allowed to access Touch ID  -  iOS
+android: %d peers connected  -  android -- notification_peers_connected_msg
+android: %s is an invalid word.  -  android -- restore_wallet_from_invalid_seed_warning_message
+android: (%s waiting for confirmation)  -  android -- send_coins_fragment_pending
+android: (default)  -  android -- exchange_rates_fragment_default
+android: (unlabeled)  -  android -- address_unlabeled
+android: 1 day  -  android -- one_day
+iOS:     1 min  -  iOS
+android: 1 minute  -  android -- one_minute
+iOS:     5 min  -  iOS
+android: 5 minutes  -  android -- five_minute
+android: <p>Your wallet has been backed up to <tt>%s</tt></p><p>If your device has a removable SD card, your backup <i>should</i> be on that card. Remove it and keep it at a safe place. If the card is <i>not</i> removable, you need to archive your backup to some other place than your device.</p><p><b>If the only place your backup exists is on your device, you run the risk of losing both at the same time!</b></p><p>In any case, make sure you remember your backup password. Do you want to archive your wallet now?</p>  -  android -- export_keys_dialog_success
+iOS:     A device passcode is needed to safeguard your wallet. Go to settings and turn passcode on to continue.  -  iOS
+android: A network fee of %s will be paid.  -  android -- send_coins_fragment_hint_fee_economic
+android: A new version is available!  -  android -- wallet_version_dialog_title
+android: A priority fee of %s will be paid. If you care about low fees, use \'priority\' only if you need confirmation as soon as possible.  -  android -- send_coins_fragment_hint_fee_priority
+android: Accept payment via Bluetooth for more reliable processing  -  android -- request_coins_fragment_accept_bluetooth_payment
+android: Add  -  android -- button_add
+android: Add label to your address  -  android -- edit_address_book_entry_dialog_title_add_receive
+android: Add sending address  -  android -- edit_address_book_entry_dialog_title_add
+iOS:     Add Shortcut  -  iOS
+android: Address book  -  android -- address_book_activity_title
+android: Address Book  -  android -- tools_address_book
+android: Add\nShortcut  -  android -- quick_action_add_shortcut
+android: After a couple of weeks of not being used, the app will notify if there are still coins in the wallet.  -  android -- preferences_remind_balance_summary
+android: again  -  android -- backup_wallet_dialog_password_again
+iOS:     All  -  iOS
+android: All payments  -  android -- wallet_transactions_options_filter_all
+iOS:     Allow camera access in Settings  -  iOS
+iOS:     Allow Face ID access in Settings  -  iOS
+iOS:     Allow Touch ID access in Settings  -  iOS
+android: Amount to send  -  android -- send_coins_fragment_amount_label
+iOS:     Amount too small  -  iOS
+android: An error occurred. Please try again later.  -  android -- loading_error
+iOS:     An intuitive and familiar experience across all your devices  -  iOS
+android: Android version is out of date  -  android -- wallet_old_sdk_dialog_title
+android: app-private storage  -  android -- import_keys_dialog_file_security_internal
+android: Append application log  -  android -- report_issue_dialog_collect_application_log
+android: Append device information  -  android -- report_issue_dialog_collect_device_info
+android: Append list of installed packages  -  android -- report_issue_dialog_collect_installed_packages
+android: Append wallet dump  -  android -- report_issue_dialog_collect_wallet_dump
+iOS:     Application %@ is requesting a payment to  -  iOS
+iOS:     Application %@ is requesting an address so it can pay you.  Would you like to authorize this?  -  iOS
+iOS:     Application %@ would like to receive your Master Public Key.  This can be used to keep track of your wallet, this can not be used to move your Dash.  -  iOS
+android: Application %s is requesting an address so it can pay you.  Would you like to authorize this?  -  android -- wallet_uri_handler_address_request_dialog_msg
+android: Application %s would like to receive your Master Public Key.  This can be used to keep track of your wallet, this can not be used to move your Dash.  -  android -- wallet_uri_handler_public_key_request_dialog_msg
+android: Archive  -  android -- export_keys_dialog_button_archive
+android: Archive wallet using…  -  android -- export_keys_dialog_mail_intent_chooser
+android: Archiving wallet failed.  -  android -- export_keys_dialog_mail_intent_failed
+iOS:     Are you sure you would like to reclaim this masternode?  -  iOS
+iOS:     Are you sure you would like to register a masternode at %@:%d?  -  iOS
+iOS:     Are you sure you would like to register the username %@ and spend %@ on credits?  -  iOS
+iOS:     Are you sure you would like to reset this user?  -  iOS
+iOS:     Are you sure you would like to topup %@ and spend %@ on credits?  -  iOS
+iOS:     Are you sure you would like to update this masternode to %@:%d?  -  iOS
+iOS:     Are you sure you would like to update this masternode to pay to %@?  -  iOS
+iOS:     Are you sure?  -  iOS
+android: Are you sure? Your wallet will be deleted and all your Dash will be lost.\n\nThe only way to recover your Dash is with a backup file or recovery phrase.  -  android -- wallet_lock_reset_wallet_message
+android: Authenticate  -  android -- authenticate_fingerprint_title
+iOS:     Authentication is unvailable  -  iOS
+android: Auto-close send coins dialog  -  android -- preferences_send_coins_autoclose_title
+iOS:     Autohide Balance  -  iOS
+android: automatic backup %s  -  android -- import_keys_dialog_file_created_automatic
+iOS:     Available  -  iOS
+android: Back  -  android -- send_coins_fragment_button_back
+android: Back up  -  android -- export_keys_dialog_button_export
+android: Back up wallet  -  android -- export_keys_dialog_title
+android: Backup now  -  android -- backup_now
+android: Backup Wallet to File  -  android -- activity_security_backup_wallet
+android: Bad password!  -  android -- sweep_wallet_fragment_bad_password
+iOS:     Bad password, try again  -  iOS
+iOS:     Bad payment request  -  iOS
+iOS:     Bad payment request URL  -  iOS
+iOS:     Bad payment URL  -  iOS
+android: Bad PIN!  -  android -- private_key_bad_password
+iOS:     Bad recovery phrase  -  iOS
+android: Balance  -  android -- exchange_rates_fragment_balance
+android: Balance is unavailable during replay.  -  android -- wallet_balance_fragment_replaying
+android: Balance reminder  -  android -- preferences_remind_balance_title
+android: Balance to sweep  -  android -- sweep_wallet_fragment_balance
+android: Base amount: %1$f\nFee: %2$f\nTotal: %3$f\n\nDo you want to confirm this transaction?  -  android -- uphold_withdrawal_confirm_message
+android: Biometric Authentication  -  android -- activity_security_biometric_auth
+android: Biometric Limit  -  android -- biometric_limit
+android: BIP70 for scan-to-pay  -  android -- preferences_enable_payment_request_title
+android: Block  -  android -- block
+iOS:     block #%d of %d  -  iOS
+iOS:     Block #%d of %d  -  iOS
+android: Block explorer  -  android -- preferences_block_explorer_title
+android: Block Info  -  android -- block_info
+android: Blocks  -  android -- network_monitor_block_list_title
+android: Bluetooth error: %1$s  -  android -- error_bluetooth
+android: Browse  -  android -- action_browse
+iOS:     Buy / Sell Dash  -  iOS
+android: Buy / Sell\nDash  -  android -- quick_action_buy_sell
+android: Buy/Sell Dash with Uphold  -  android -- uphold_buy_dash_activity_title
+iOS:     By wiping this device you will no longer have access to funds on this device. This should only be done if you no longer have access to your passphrase and have also forgotten your PIN code.  -  iOS
+android: Camera permission  -  android -- scan_camera_permission_dialog_title
+android: Cannot read data:\n%s  -  android -- input_parser_io_error
+android: Cannot recognize input:\n%s  -  android -- input_parser_cannot_classify
+android: Cannot verify payment request:\n%s  -  android -- input_parser_unverifyable_paymentrequest
+android: Chances are that one of the next releases of Dash Wallet will not support your device any more. In some cases, it can get difficult to spend coins on this device.\n\nUnless you know what you are doing, it is recommended to move out your coins soon.  -  android -- wallet_old_sdk_dialog_message
+iOS:     Change  -  iOS
+iOS:     Change payment amount?  -  iOS
+android: Change spending PIN  -  android -- wallet_options_encrypt_keys_change
+android: Change to %s  -  android -- change_to
+android: Check date & time settings  -  android -- wallet_timeskew_dialog_title
+iOS:     Check your connection  -  iOS
+iOS:     Clear  -  iOS
+iOS:     Clear trusted node?  -  iOS
+iOS:     Clipboard doesn't contain a valid Dash address  -  iOS
+android: Clipboard is empty  -  android -- address_book_options_paste_from_clipboard_empty
+iOS:     Close App  -  iOS
+android: Collect information about your issue and email your report to the developers.  -  android -- preferences_report_issue_summary
+android: complex\naddress  -  android -- send_coins_fragment_receiving_address_complex
+android: Configuration  -  android -- navigation_configuration
+android: Confirm fingerprint to continue  -  android -- authenticate_fingerprint_message
+android: Confirmations  -  android -- transaction_fragment_confirmations_label
+android: Congratulations, you received your first payment! Have you already backed up your wallet, to protect against loss?  -  android -- wallet_transactions_row_warning_backup
+iOS:     Connect timeout  -  iOS
+iOS:     Connected peers: %d  -  iOS
+android: Connectivity indicator  -  android -- preferences_connectivity_notification_title
+android: Copy address  -  android -- button_copy_address
+iOS:     Copy Logs  -  iOS
+android: Copy request  -  android -- button_copy_request
+android: Copy to clipboard  -  android -- address_book_context_copy_to_clipboard_title
+android: Copyright  -  android -- about_copyright_title
+android: Copyright © 2019 Dash Core  -  android -- about_copyright
+iOS:     Copyright Â© 2019 Dash Core  -  iOS
+android: Could not find exchange rate.  -  android -- exchange_rates_fragment_empty_search
+android: Could not load exchange rates.  -  android -- exchange_rates_fragment_empty_text
+iOS:     Couldn't make payment  -  iOS
+iOS:     Couldn't make payment  -  iOS
+iOS:     Couldn't sweep balance  -  iOS
+iOS:     Couldn't transmit payment to Dash network  -  iOS
+android: Currently payments are not possible because a replay is in progress.  -  android -- send_coins_fragment_hint_replaying
+android: Dash address copied to clipboard  -  android -- request_coins_clipboard_address_msg
+android: Dash balance  -  android -- appwidget_wallet_balance_title
+iOS:     Dash payments can't be less than %@  -  iOS
+iOS:     Dash payments can't be less than %@  -  iOS
+android: Dash request copied to clipboard  -  android -- request_coins_clipboard_msg
+iOS:     Dash transaction not signed  -  iOS
+iOS:     Dash transaction outputs can't be less than %@  -  iOS
+android: Dash Wallet %s  -  android -- about_version_name
+android: Dash Wallet backup  -  android -- export_keys_dialog_mail_subject
+android: Dash Wallet is no longer linked to your Uphold account.  On the next screen press Link Uphold account.  -  android -- uphold_error_not_logged_in
+android: Dash Wallet uses internal storage for remembering transactions and blocks. If it runs out of space, it will stop working and your Dash will be at risk!\n\nDo you want to open the Application Manager to uninstall unneeded apps?  -  android -- wallet_low_storage_dialog_msg
+android: DASH, 4 decimal places  -  android -- preferences_precision_labels_4
+android: DASH, 6 decimal places  -  android -- preferences_precision_labels_6
+android: DASH, 8 decimal places  -  android -- preferences_precision_labels_8
+android: dashj %s, a Dash protocol implementation  -  android -- about_credits_bitcoinj_title
+android: Data from clipboard is unrecognizable  -  android -- address_book_options_paste_from_clipboard_invalid
+android: Data usage  -  android -- preferences_data_usage_title
+iOS:     Date  -  iOS
+android: Date & Time  -  android -- transaction_date_and_time
+android: Decrypt  -  android -- sweep_wallet_fragment_button_decrypt
+android: Decrypting wallet  -  android -- set_pin_decrypting
+android: Decrypting…  -  android -- encrypt_keys_dialog_state_decrypting
+android: Decrypting…\nTakes up to 2 minutes.  -  android -- sweep_wallet_fragment_decrypt_progress
+iOS:     Default currency, shortcuts, aboutâ€¦  -  iOS
+android: Default currency, shortcuts, about…  -  android -- menu_settings_subtitle
+android: Delete  -  android -- button_delete
+android: Denomination and precision  -  android -- preferences_precision_title
+iOS:     DEVICE SECURITY COMPROMISED\nAny 'jailbreak' app can access any other app's keychain data (and steal your Dash).  -  iOS
+iOS:     DEVICE SECURITY COMPROMISED\nAny 'jailbreak' app can access any other app's keychain data (and steal your Dash). Wipe this wallet immediately and restore on a secure device.  -  iOS
+iOS:     Devnet  -  iOS
+android: Diagnostics  -  android -- preferences_category_diagnostics
+android: Direct payment failed  -  android -- send_coins_fragment_direct_payment_failed_title
+android: Disconnect  -  android -- wallet_options_disconnect
+android: Discuss about the app  -  android -- about_community_googleplus_summary
+android: Dismiss  -  android -- button_dismiss
+android: DO NOT let anyone see your recovery phrase or they can spend your Dash.  -  android -- backup_wallet_to_seed_dialog_warning
+android: Do you want to send with all you have?  -  android -- send_coins_fragment_insufficient_money_msg2
+android: Done.  -  android -- maintenance_dialog_state_done
+android: Don\'t remind me  -  android -- notification_inactivity_action_dismiss_forever
+iOS:     Down  -  iOS
+android: Download  -  android -- wallet_version_dialog_button_binary
+iOS:     Download peer: %@  -  iOS
+android: Duplicate  -  android -- transaction_row_status_error_duplicate
+android: Dust  -  android -- transaction_row_status_error_dust
+android: Economic  -  android -- send_coins_options_fee_category_economic
+android: Edit  -  android -- button_edit
+android: Edit address  -  android -- address_book_context_edit_title
+android: Edit label of sending address  -  android -- edit_address_book_entry_dialog_title_edit
+android: Edit label of your address  -  android -- edit_address_book_entry_dialog_title_edit_receive
+iOS:     Email client is not configured. Please add your email account in Settings  -  iOS
+android: Empty wallet  -  android -- send_coins_options_empty
+android: Emptying of wallet failed  -  android -- send_coins_fragment_empty_wallet_failed_title
+iOS:     Enable Face ID  -  iOS
+android: Enable fingerprint  -  android -- enable_fingerprint
+iOS:     Enable Receive Notifications  -  iOS
+iOS:     Enable Touch ID  -  iOS
+android: Encrypting wallet  -  android -- set_pin_encrypting
+android: Encrypting…  -  android -- encrypt_keys_dialog_state_encrypting
+iOS:     Enter  -  iOS
+iOS:     Enter Recovery Phrase  -  iOS
+android: Enter recovery phrase to recover your wallet  -  android -- forgot_pin_instruction_1
+android: Enter your PIN to continue  -  android -- authenticate_pin_message
+android: Enter your recovery phrase here.  -  android -- import_keys_from_seed_dialog_message
+android: Error  -  android -- import_export_keys_dialog_failure_title
+iOS:     Error from payment request server %@  -  iOS
+android: Error Sending  -  android -- transaction_row_status_error_sending
+iOS:     Error signing transaction  -  iOS
+iOS:     Exit  -  iOS
+android: Extended Public Key  -  android -- extended_public_key_fragment_title
+android: External block explorer to use for browsing transactions, addresses and blocks.  -  android -- preferences_block_explorer_summary
+android: external storage  -  android -- import_keys_dialog_file_security_external
+iOS:     Face ID limit  -  iOS
+android: Failed to recognize fingerprint, please try again.  -  android -- unlock_with_fingerprint_error
+iOS:     Failed wallet update  -  iOS
+android: Failed!  -  android -- send_coins_failed_msg
+android: fair  -  android -- encrypt_keys_dialog_password_strength_fair
+android: FAQ  -  android -- about_faq_title
+iOS:     Fee is greater than balance  -  iOS
+iOS:     Fee will be deducted from requested amount  -  iOS
+android: Fee will be deducted from requested amount.  -  android -- uphold_withdrawal_deduct_fee_disclaimer
+android: Fetching signature failed  -  android -- send_coins_fragment_request_payment_request_failed_title
+android: Fetching signature from %s…  -  android -- send_coins_fragment_request_payment_request_progress
+android: Fingerprint data changed  -  android -- fingerprint_changed_title
+android: Frequently asked questions about the app  -  android -- about_faq_summary
+iOS:     Get Started  -  iOS
+android: GNU General Public License v3.0  -  android -- about_license
+android: good  -  android -- encrypt_keys_dialog_password_strength_good
+android: Google Play  -  android -- wallet_version_dialog_button_market
+android: Google Play page  -  android -- about_market_app_title
+android: Google+ community  -  android -- about_community_googleplus_title
+android: Got invalid Dash address!\n(Mixing up mainnet/testnet?)  -  android -- input_parser_invalid_address
+android: Hash  -  android -- hash
+iOS:     Have complete control and customize your wallet based on your needs  -  iOS
+android: Have this code scanned by the sender.  -  android -- request_coins_fragment_initiate_request_qr
+android: Have you really read the safety notes? Did you already back up your wallet to a safe place?  -  android -- preferences_show_disclaimer_summary
+android: Help  -  android -- button_help
+android: Hide Balance on Launch  -  android -- activity_security_hide_balance
+android: HTTP error %1$s:\n%2$s  -  android -- error_http
+android: https://github.com/dashevo/dash-wallet  -  android -- about_github_link
+iOS:     I accept that I will lose my coins if I no longer possess the recovery phrase  -  iOS
+android: I have written down the recovery phrase  -  android -- backup_wallet_seed_private_key_written_down_box
+android: I have written this down  -  android -- verify_seed_write_down_confirmation
+iOS:     I wrote it down  -  iOS
+android: I/O error: %s  -  android -- error_io
+android: If you don\'t see an update, this probably means your version of Android isn\'t supported any more.  -  android -- wallet_version_dialog_msg_deprecated
+android: If you have forgot your PIN and lost your recover phrase, you cannot get back access to your wallet and funds.  -  android -- forgot_pin_warning
+iOS:     If you still would like to wipe it please input: \  -  iOS
+iOS:     Ignore  -  iOS
+iOS:     Ignore  -  iOS
+iOS:     Import private keyâ€¦  -  iOS
+android: Import private key…  -  android -- menu_tools_subtitle
+android: Important: Do not load private keys from dubious sources! Others can gain control over your funds if you do.  -  android -- import_keys_dialog_warning
+android: Important: You need to remember your PIN! Do not use common numbers (like birthdates).  -  android -- encrypt_keys_dialog_warning
+android: Import\nPrivate Key  -  android -- quick_action_import_key
+android: In conflict  -  android -- transaction_row_status_error_conflicting
+android: In order to backup your wallet to external storage, you need to grant write permission.  -  android -- backup_wallet_permission_dialog_message
+android: In order to scan QR codes, you need to grant permission to use the camera.  -  android -- scan_camera_permission_dialog_message
+android: In order to search for wallet backups on your external storage, you need to grant read permission.  -  android -- restore_wallet_permission_dialog_message
+android: Instant - Private - Secure  -  android -- dash_slogan
+iOS:     Instant payment  -  iOS
+iOS:     InstantSend requires enough inputs with 6 confirmations, send anyways as regular transaction?  -  iOS
+android: Insufficient fee  -  android -- transaction_row_status_error_insufficient_fee
+iOS:     Insufficient funds  -  iOS
+iOS:     Insufficient funds for Dash network fee  -  iOS
+android: internal  -  android -- wallet_transactions_fragment_internal
+android: Internal  -  android -- transaction_row_status_sent_interally
+android: Internal device storage space low!  -  android -- wallet_low_storage_dialog_title
+iOS:     Internal Error  -  iOS
+iOS:     Invalid amount  -  iOS
+iOS:     Invalid DAPI Response  -  iOS
+android: Invalid Dash address!  -  android -- send_coins_fragment_receiving_address_error
+android: Invalid Dash URI:\n%s  -  android -- input_parser_invalid_bitcoin_uri
+iOS:     Invalid Params  -  iOS
+android: Invalid payment request:\n%s  -  android -- input_parser_invalid_paymentrequest
+iOS:     Invalid Request  -  iOS
+android: Invalid transaction:\n%s  -  android -- input_parser_invalid_transaction
+android: IP or hostname of single peer to connect to.  -  android -- preferences_trusted_peer_summary
+android: issue description  -  android -- report_issue_dialog_description
+iOS:     It's Important  -  iOS
+android: It\'s important  -  android -- verify_it_is_important
+android: just now  -  android -- block_row_now
+iOS:     Keypair %ld  -  iOS
+android: Label  -  android -- edit_address_book_entry_dialog_label_label
+android: Labs  -  android -- preferences_category_labs
+android: Leave as %s  -  android -- leave_as
+android: License  -  android -- about_license_title
+iOS:     Load more  -  iOS
+android: Loading balance…  -  android -- sweep_wallet_fragment_request_wallet_balance_progress
+android: Loading wallet balance failed  -  android -- sweep_wallet_fragment_request_wallet_balance_failed_title
+android: Loading…  -  android -- loading
+iOS:     Local requested amount: %@  -  iOS
+iOS:     Login with Face ID  -  iOS
+iOS:     Login with Touch ID  -  iOS
+android: Login with your new PIN to access your wallet  -  android -- forgot_pin_instruction_3
+android: Login with\nFingerprint  -  android -- lock_action_login_with_fingerprint
+android: Login\nwith PIN  -  android -- lock_action_login_with_pin
+iOS:     Logout  -  iOS
+iOS:     Long press to copy ID  -  iOS
+iOS:     Mainnet  -  iOS
+android: Maintenance recommended  -  android -- maintenance_dialog_title
+android: Malformed  -  android -- transaction_row_status_error_malformed
+android: Manage apps  -  android -- wallet_low_storage_dialog_button_apps
+iOS:     Manage Trusted Node  -  iOS
+android: manually backed up %s  -  android -- import_keys_dialog_file_created_manual
+android: Masternode Reward  -  android -- transaction_row_status_masternode_reward
+iOS:     Masternode Update  -  iOS
+android: Masternode Update Registrar  -  android -- transaction_row_status_masternode_update_registrar
+android: Masternode Update Service  -  android -- transaction_row_status_masternode_update_service
+android: Masternodes  -  android -- network_monitor_masternodes_title
+iOS:     Max  -  iOS
+android: Maximum fingerprint attempts exceeded. Please try again later.  -  android -- unlock_with_fingerprint_error_max_attempts
+android: mDASH, 2 decimal places  -  android -- preferences_precision_labels_2_3
+iOS:     Method Not Found  -  iOS
+android: mined  -  android -- wallet_transactions_fragment_coinbase
+android: Mining difficulty adjustment  -  android -- block_row_mining_difficulty_adjustment
+android: Mining Reward  -  android -- transaction_row_status_mining_reward
+android: Mining reward halving  -  android -- block_row_mining_reward_adjustment
+android: mismatch!  -  android -- backup_wallet_dialog_password_mismatch
+iOS:     Missing certificate  -  iOS
+iOS:     More Control  -  iOS
+android: Move  -  android -- maintenance_dialog_button_move
+iOS:     Moved  -  iOS
+iOS:     Moved from  -  iOS
+iOS:     Moved internally to  -  iOS
+iOS:     Moved to Address  -  iOS
+android: Name of yourself, to be added to payment requests. Try to keep it short.  -  android -- preferences_own_name_summary
+iOS:     Network  -  iOS
+android: Network monitor  -  android -- network_monitor_activity_title
+android: Network Monitor  -  android -- tools_network_monitor
+iOS:     NFC device  -  iOS
+iOS:     NFC device didn't transmit a valid Dash address  -  iOS
+iOS:     No attempts remaining  -  iOS
+android: No entries in address book  -  android -- address_book_empty_text
+android: No Fee  -  android -- send_coins_options_fee_category_zero
+android: No fee of will be paid. Use \'no fee\' only if you don\'t care about confirmation time.  -  android -- send_coins_fragment_hint_fee_zero
+android: No other Dash app found  -  android -- request_coins_no_local_app_msg
+android: No peers connected  -  android -- peer_list_fragment_empty
+iOS:     No peers found  -  iOS
+iOS:     Node IP  -  iOS
+android: Nonstandard  -  android -- transaction_row_status_error_non_standard
+iOS:     Not a Dash QR code  -  iOS
+iOS:     Not a Dash URL  -  iOS
+iOS:     Not a valid Dash address  -  iOS
+android: Not a valid Dash Address or URL request in clipboard.  -  android -- scan_to_pay_error_dialog_message_no_data
+android: Not a valid Dash Address or URL request in clipboard:\n\n%s  -  android -- scan_to_pay_error_dialog_message
+iOS:     Not a valid private key  -  iOS
+android: Not available  -  android -- transaction_row_rate_not_available
+iOS:     Not connected to the Dash network  -  iOS
+android: Not enough available coins  -  android -- send_coins_fragment_insufficient_money_title
+android: Not enough coins  -  android -- sweep_wallet_fragment_insufficient_money_title
+iOS:     Not yet used  -  iOS
+android: Obsolete  -  android -- transaction_row_status_error_obsolete
+android: Old addresses  -  android -- address_book_list_receiving_random
+android: Old PIN  -  android -- encrypt_keys_dialog_password_old
+android: On %s at %s  -  android -- transaction_row_time_text
+iOS:     Operator Keys  -  iOS
+android: Or tap an NFC enabled device.  -  android -- request_coins_fragment_initiate_request_nfc
+android: Or use your fingerprint to unlock.  -  android -- or_unlock_with_fingerprint
+android: Own name  -  android -- preferences_own_name_title
+iOS:     Owner Address  -  iOS
+iOS:     Owner Keys  -  iOS
+android: Paper wallets are most commonly used for cold storage. Some ATMs print them on their paper slip rather than sending the coins to your mobile device directly. People sometimes use pre-charged paper wallets to pass value around (not recommended).  -  android -- sweep_wallet_fragment_hint
+iOS:     Parse Error  -  iOS
+android: Parse error: %s  -  android -- error_parse
+iOS:     Passcode  -  iOS
+android: password  -  android -- import_export_keys_dialog_password
+android: password encrypted  -  android -- import_keys_dialog_file_security_encrypted
+iOS:     Password protected key  -  iOS
+android: Paste  -  android -- button_paste
+android: Paste from clipboard  -  android -- options_paste_from_clipboard_title
+iOS:     Pay and get paid instantly with easy to use payment flows  -  iOS
+iOS:     Pay with Ease  -  iOS
+iOS:     Payee identity isn't certified  -  iOS
+android: Peers  -  android -- network_monitor_peer_list_title
+android: Pick a wallet backup file from external storage (%s):  -  android -- import_keys_dialog_message
+android: PIN  -  android -- private_key_password
+iOS:     PIN for %@  -  iOS
+android: Please describe your issue precisely enough to be reproduced. Use English language if you can.  Expect an email from Dash Support regarding your issue within 24 hours.   -  android -- report_issue_dialog_message_issue
+iOS:     Please enter PIN to upgrade wallet  -  iOS
+iOS:     Please place your phone near NFC device.  -  iOS
+android: Please report this issue to the Dash Wallet support team using "Report Issue" from the main menu.  -  android -- uphold_error_report_issue
+iOS:     Please try again  -  iOS
+iOS:     Please wait for the sync to complete  -  iOS
+iOS:     Please write it down  -  iOS
+android: Please write this down  -  android -- verify_seed_title
+android: Prevents connecting to any peers besides the trusted peer.  -  android -- preferences_trusted_peer_only_summary
+android: Previous crash detected  -  android -- report_issue_dialog_title_crash
+iOS:     Previously used at IP address  -  iOS
+android: Price from %s  -  android -- exchange_rates_fragment_source
+android: Priority  -  android -- send_coins_options_fee_category_priority
+iOS:     Private key  -  iOS
+android: Problem sending coins!  -  android -- send_coins_error_msg
+iOS:     Provider Address  -  iOS
+iOS:     Public key  -  iOS
+iOS:     Quick Receive  -  iOS
+android: Quick\nReceive  -  android -- lock_action_quick_receive
+iOS:     Quorums validated: %d/%d  -  iOS
+android: Rate  -  android -- exchange_rates_fragment_rate
+iOS:     Rate: %@ = %@  -  iOS
+android: Read permission missing  -  android -- restore_wallet_permission_dialog_title
+android: Receive alerts about incoming transactions.  -  android -- notification_transactions_channel_description
+iOS:     Received %@ (%@)  -  iOS
+android: Received %s  -  android -- notification_coins_received_msg
+iOS:     Received at  -  iOS
+iOS:     Received from  -  iOS
+android: Received payments  -  android -- wallet_transactions_options_filter_received
+iOS:     Recovery phrase  -  iOS
+iOS:     Recovery Phrase  -  iOS
+iOS:     Recovery phrase doesn't match  -  iOS
+android: Recovery phrase goes here.  -  android -- import_export_keys_dialog_password_phrase
+iOS:     Recovery phrase must have %d words  -  iOS
+iOS:     Reduce payment amount by\n%@ (%@)?  -  iOS
+iOS:     Registered from  -  iOS
+iOS:     Registered Masternode  -  iOS
+android: Reload balance  -  android -- sweep_wallet_options_reload
+android: Remind later  -  android -- remind_later
+android: Remind me later  -  android -- notification_inactivity_action_dismiss
+android: Remove  -  android -- button_remove
+android: Remove address  -  android -- address_book_context_remove_title
+android: Report  -  android -- report_issue_dialog_report
+iOS:     Report an Issue  -  iOS
+android: Report issue  -  android -- report_issue_dialog_title_issue
+android: Report issue with selected payment  -  android -- report_issue_dialog_title_transaction
+iOS:     Request  -  iOS
+android: Request Dash  -  android -- button_request_coins
+iOS:     Request expired  -  iOS
+android: Request from local app  -  android -- request_coins_options_local_app_title
+android: Requested amount (optional)  -  android -- request_coins_fragment_amount_label
+iOS:     Requested network \  -  iOS
+iOS:     Rescan  -  iOS
+iOS:     Rescan  -  iOS
+android: Reset block chain  -  android -- preferences_initiate_reset_title
+android: Reset block chain, transactions and wallet balance. Replay will take a while, so only do this if you know why.  -  android -- preferences_initiate_reset_summary
+android: Resolving…  -  android -- preferences_trusted_peer_resolve_progress
+android: Restore  -  android -- import_keys_dialog_button_import
+android: Restore from recovery phrase  -  android -- import_keys_dialog_title_from_seed
+android: Restore wallet  -  android -- import_keys_intent_filter_action
+android: Restore Wallet  -  android -- set_pin_restore_wallet
+android: Restore Wallet From File  -  android -- onboarding_restore_wallet
+android: Restore Wallet From Recovery Phrase  -  android -- onboarding_recover_wallet
+android: Review or rate the app  -  android -- about_market_app_summary
+iOS:     Reward  -  iOS
+iOS:     Rewards  -  iOS
+android: Safety  -  android -- wallet_options_safety_menu
+android: Safety notes  -  android -- wallet_options_safety
+android: Save  -  android -- edit_address_book_entry_dialog_button_edit
+android: Scan address  -  android -- address_book_options_scan_title
+iOS:     Scan QR Code  -  iOS
+iOS:     Scan this to Pay  -  iOS
+iOS:     Scan to Pay  -  iOS
+android: Scan to\nSend  -  android -- lock_action_scan_to_pay
+android: Scanned data is unrecognizable  -  android -- address_book_options_scan_invalid
+android: Scanning QR Code  -  android -- payments_pay_by_qr_sub_title
+iOS:     Screenshot detected. New recovery phrase:  -  iOS
+iOS:     Screenshots are visible to other apps and devices. Generate a new recovery phrase and keep it secret.  -  iOS
+android: Scrypt, implemented by Will Glozer and Colin Percival  -  android -- about_credits_scrypt_title
+android: Search exchange rate  -  android -- exchange_rates_options_search
+android: Secure Now  -  android -- verify_secure_now_btn
+android: Secure\nWallet Now  -  android -- quick_action_secure_now
+iOS:     Security Level  -  iOS
+iOS:     Send %@ (%@) from this private key into your wallet? The Dash network will receive a fee of %@ (%@).  -  iOS
+iOS:     Send crash report  -  iOS
+android: Send Dash  -  android -- button_send_coins
+android: Send Dash to address  -  android -- address_book_context_send_title
+android: Send payment directly to the payee.  -  android -- send_coins_fragment_direct_payment_enable
+android: Send report using…  -  android -- report_issue_dialog_mail_intent_chooser
+iOS:     Send to Address  -  iOS
+android: Send to\nAddress  -  android -- quick_action_pay_to_address
+iOS:     Send with NFC  -  iOS
+android: Sending addresses  -  android -- address_book_list_sending_title
+android: Sending report failed.  -  android -- report_issue_dialog_mail_intent_failed
+iOS:     Sending.  -  iOS
+iOS:     Sending..  -  iOS
+iOS:     Sending...  -  iOS
+android: Sending…  -  android -- send_coins_sending_msg
+iOS:     Sent from  -  iOS
+android: Sent payments  -  android -- wallet_transactions_options_filter_sent
+android: Sent!  -  android -- send_coins_sent_msg
+iOS:     Server Error  -  iOS
+android: Set  -  android -- button_set
+iOS:     Set a trusted node  -  iOS
+android: Set as default  -  android -- button_set_as_default
+android: Set spending PIN  -  android -- wallet_options_encrypt_keys_set
+android: Set up a new PIN  -  android -- forgot_pin_instruction_2
+iOS:     Setup Wallet  -  iOS
+android: Share request for Dash…  -  android -- request_coins_share_dialog_title
+android: Share xpub…  -  android -- extended_public_key_fragment_share
+android: Share…  -  android -- bitmap_fragment_share
+android: Show  -  android -- backup_wallet_to_seed_show_recovery_phrase
+android: Show current number of connected peers in the notification area.  -  android -- preferences_connectivity_notification_summary
+android: Show disclaimer  -  android -- preferences_show_disclaimer_title
+iOS:     Show Masternode Keys  -  iOS
+android: Show options to restrict data usage on mobile networks.  -  android -- preferences_data_usage_summary
+android: Show password  -  android -- import_export_keys_dialog_show
+android: Show PIN  -  android -- encrypt_keys_dialog_show
+android: Show QR code  -  android -- action_show_qr
+android: Show xpub  -  android -- preferences_extended_public_key_title
+android: Shows a notification when the app is synchronizing with the network.  -  android -- notification_synchronization_channel_description
+android: Signing…  -  android -- send_coins_preparation_msg
+iOS:     skip  -  iOS
+android: Skip regular peer discovery  -  android -- preferences_trusted_peer_only_title
+iOS:     Something went wrong  -  iOS
+android: Sorry  -  android -- scan_camera_problem_dialog_title
+android: Source code  -  android -- about_source_title
+android: Specify the amount to be received  -  android -- receive_enter_amount_message
+android: Spending from your wallet will be protected with the chosen PIN.  -  android -- encrypt_keys_dialog_message
+android: Start by scanning the private key of a paper wallet. Use the camera action button.  -  android -- sweep_wallet_fragment_wallet_unknown
+iOS:     Steps to reproduce the crash  -  iOS
+android: strong  -  android -- encrypt_keys_dialog_password_strength_strong
+android: Sweep  -  android -- sweep_wallet_fragment_button_sweep
+iOS:     Swept!  -  iOS
+iOS:     Switch to Mainnet  -  iOS
+iOS:     Switch to Testnet  -  iOS
+iOS:     Sync Failed  -  iOS
+iOS:     Sync Now  -  iOS
+android: Synchronization  -  android -- notification_synchronization_channel_name
+android: Synchronization stalled  -  android -- blockchain_state_progress_stalled
+android: Synchronizing with network  -  android -- blockchain_state_progress_downloading
+android: Synchronizing: Network problem  -  android -- blockchain_state_progress_problem_network
+android: Synchronizing: Storage problem  -  android -- blockchain_state_progress_problem_storage
+iOS:     Syncing  -  iOS
+iOS:     Tap  -  iOS
+android: Tap the lock icon above to unlock your wallet and see the transaction history.  -  android -- wallet_lock_unlock_to_see_txs_txt
+iOS:     Testnet  -  iOS
+android: The address on the clipboard is your own.  -  android -- address_book_options_paste_from_clipboard_own_address
+android: The amount is too small to send  -  android -- send_coins_fragment_hint_dusty_send
+android: The amount of coins in the wallet is too small for sweeping.  -  android -- sweep_wallet_fragment_insufficient_money_msg
+android: The amount of tiny payments in your wallet doesn\'t add up to a sendable value.  -  android -- send_coins_fragment_hint_empty_wallet_failed
+android: The attached encrypted file contains Dash private keys and should be kept safe at all times. Don\'t forget the encryption password!  -  android -- export_keys_dialog_mail_text
+android: The camera has a problem. You probably need to restart the device.  -  android -- scan_camera_problem_dialog_message
+android: The confirmation of this payment is delayed, likely due to an overload of the Dash network.  -  android -- transaction_row_message_received_unconfirmed_delayed
+android: The scanned address is your own.  -  android -- address_book_options_scan_own_address
+android: The Uphold service is not available.  Please try again later.  -  android -- uphold_error_not_available
+android: This address might be compromised. You should not use it any more for receiving coins.  -  android -- address_book_row_message_compromised_key
+android: This amount is quite high for carrying in your pocket. Please move some to a safer place.  -  android -- wallet_balance_fragment_too_much
+iOS:     This app is open source:  -  iOS
+android: This app is using an icon by \'bitboy\'  -  android -- about_credits_icon_title
+android: This app is using…  -  android -- about_category_credits
+android: This app now requires a PIN to spend and view the balance and transactions.  -  android -- pin_code_required_dialog_message
+android: This is an open source app forked from Bitcoin Wallet  -  android -- about_fork_disclaimer
+android: This is your recovery phrase.  Please write it down.  -  android -- backup_to_seed_wallet_dialog_message
+iOS:     This payment address is already in your wallet  -  iOS
+android: This payment can be spent now without being confirmed.  -  android -- transaction_row_message_received_unconfirmed_unlocked
+android: This payment has an increased risk of being reversed by the sender! If you can, wait for confirmation.  -  android -- transaction_row_message_received_in_conflict
+android: This payment has been received directly. There is a risk it might never become spendable.  -  android -- transaction_row_message_received_direct
+android: This payment has been reversed by the sender.  -  android -- transaction_row_message_received_dead
+android: This payment has been sent.  -  android -- transaction_row_message_sent_to_single_peer
+android: This payment has not been transmitted yet.  -  android -- transaction_row_message_own_instantx_lock_request_notsent
+android: This payment is too old to get the fiat value.  -  android -- exchange_rate_missing
+android: This payment pays to many wallets besides yours, which makes the app slow down over time. If you can, try receiving payments which pay only to you.  -  android -- transaction_row_message_received_pay_to_many
+android: This payment was delayed because the sender used an insecure transaction type.  -  android -- transaction_row_message_received_rbf
+iOS:     This private key is already in your wallet  -  iOS
+iOS:     This private key is empty  -  iOS
+android: This private key is protected with a password.  -  android -- sweep_wallet_fragment_encrypted
+iOS:     This request requires an instant payment but you do not have enough inputs with 6 confirmations required by InstantSend, you may ask the merchant to accept a normal transaction or wait a few minutes.  -  iOS
+android: This small amount can probably never be spent economically.  -  android -- transaction_row_message_received_dust
+android: This transaction may take several minutes to settle. Complete instantly for %1$s%2$s?  -  android -- send_coins_auto_lock_not_feasible
+android: This transaction raises the network fee for a previous payment.  -  android -- transaction_row_message_purpose_raise_fee
+iOS:     This transaction should settle instantly at no extra fee  -  iOS
+android: This transaction strengthens your wallet against theft. <u>More info.</u>  -  android -- transaction_row_message_purpose_key_rotation
+android: This transaction was not settled instantly.  -  android -- regular_transaction_info_message
+android: This transaction will settle instantly at no extra fee  -  android -- send_coins_auto_lock_feasible
+android: This version fixes important bugs. For details, see the change log on Google Play.  -  android -- wallet_version_dialog_msg
+iOS:     This wallet is not empty or sync has not finished, you may not wipe it without the recovery phrase  -  iOS
+android: Time  -  android -- time
+android: To protect your privacy, your address will change once it receives a payment.  -  android -- wallet_address_dialog_fragment_hint
+android: today  -  android -- time_today
+iOS:     Touch ID limit  -  iOS
+android: Touch the fingerprint sensor to enable unlocking with fingerprint.  -  android -- touch_fingerprint_to_enable
+android: Touch the fingerprint sensor.  -  android -- touch_fingerprint_sensor
+iOS:     Transaction canceled, network timeout  -  iOS
+iOS:     Transaction fees would cost more than the funds available on this private key (due to tiny \  -  iOS
+iOS:     Transaction id  -  iOS
+iOS:     Transaction rejected  -  iOS
+android: Transactions  -  android -- notification_transactions_channel_name
+android: Transfer Dash to this wallet  -  android -- uphold_withdrawal_title
+android: Trusted peer  -  android -- preferences_trusted_peer_title
+iOS:     Try again  -  iOS
+android: Try again in %1$d %2$s  -  android -- wallet_lock_try_again
+iOS:     Try again in %@  -  iOS
+iOS:     Turn device passcode on  -  iOS
+android: type address or name  -  android -- send_coins_fragment_receiving_address_hint
+iOS:     Unable to connect  -  iOS
+iOS:     Unable to get new QR code  -  iOS
+android: unencrypted  -  android -- import_keys_dialog_file_security_unencrypted
+iOS:     Unexpected response from %@  -  iOS
+android: Unit to show amounts in. This does not affect computations.  -  android -- preferences_precision_summary
+android: unknown  -  android -- send_coins_fragment_payee_verified_by_unknown
+android: Unknown  -  android -- transaction_row_status_error_other
+iOS:     Unknown address  -  iOS
+iOS:     Unknown Error  -  iOS
+android: Unknown hostname!  -  android -- preferences_trusted_peer_resolve_unknown_host
+iOS:     Unknown JSON-RPC Response  -  iOS
+android: Unlock  -  android -- wallet_lock_unlock
+android: Unlock wallet  -  android -- wallet_lock_unlock_wallet
+android: Unlock your wallet  -  android -- wallet_lock_unlock_dialog_title
+iOS:     Unrecognized address  -  iOS
+iOS:     Unsupported or corrupted document  -  iOS
+iOS:     Unsupported signature type  -  iOS
+iOS:     Unsupported URL  -  iOS
+iOS:     Untrusted certificate  -  iOS
+iOS:     Up  -  iOS
+iOS:     Updated: %@  -  iOS
+iOS:     Updating Price  -  iOS
+android: Upgrade  -  android -- encrypt_new_key_chain_upgrade_button
+android: Upgrade your wallet  -  android -- encrypt_new_key_chain_dialog_title
+android: Uphold Error  -  android -- uphold_error
+android: Use at your own risk. Read the <u>safety notes</u>.  -  android -- wallet_disclaimer_fragment_remind_safety
+android: Use Fingerprint  -  android -- authenticate_switch_to_fingerprint
+android: Use Password  -  android -- authenticate_switch_to_pin
+android: Use payment protocol for QR-code initiated payments  -  android -- preferences_enable_payment_request_summary
+android: Use your fingerprint to unlock  -  android -- lock_unlock_with_fingerprint
+android: Use your fingerprint to unlock.  -  android -- unlock_with_fingerprint
+iOS:     Used  -  iOS
+iOS:     Used at IP address  -  iOS
+android: verified by: %s  -  android -- send_coins_fragment_payee_verified_by
+android: Version  -  android -- about_version_title
+iOS:     View in Explorer  -  iOS
+android: View on Explorer  -  android -- transaction_result_view_on_explorer
+iOS:     View passphrase, backup walletâ€¦  -  iOS
+android: View passphrase, backup wallet…  -  android -- menu_security_subtitle
+android: View the extended public key of your wallet, so it can be imported into other apps and services. Be careful: doing so will disclose your monetary privacy to that app.  -  android -- preferences_extended_public_key_summary
+iOS:     Voting Address  -  iOS
+iOS:     Voting Keys  -  iOS
+android: Wallet  -  android -- dash_wallet
+android: Wallet could not be restored:\n\n%s\n\nBad password?  -  android -- import_keys_dialog_failure
+iOS:     Wallet Keys  -  iOS
+android: Wallet locked.  -  android -- wallet_lock_unlock_to_see_txs_title
+android: Wallet permanently locked  -  android -- perm_lock_info
+android: Wallet was restored.  -  android -- restore_wallet_dialog_success
+iOS:     WARNING  -  iOS
+iOS:     Warning  -  iOS
+iOS:     WARNING  -  iOS
+android: We detected a change in your fingerprint authentication data. You need to use PIN this time.  -  android -- fingerprint_changed_message
+iOS:     We have detected that Dash Wallet crashed during migration. Rescanning the blockchain will solve this issue or you may try again. Rescanning should preferably be performed on wifi and will take up to half an hour. Your funds will be available once the sync process is complete.  -  iOS
+iOS:     We have detected that Dash Wallet crashed last time it was opened. Would you like to help us solve the issue by sending us the crash report data? Your transaction history and any other private information WILL NOT be shared.  -  iOS
+iOS:     We upgraded  -  iOS
+android: weak  -  android -- encrypt_keys_dialog_password_strength_weak
+iOS:     Welcome  -  iOS
+android: When the payment is made, the send dialog will close automatically.  -  android -- preferences_send_coins_autoclose_summary
+iOS:     Wipe  -  iOS
+iOS:     Wipe  -  iOS
+iOS:     with Dash blockchain  -  iOS
+android: Would you like to reset and replay the block chain?\n\nThis will temporarily hide your wallet balance and remove transactions. Both will recover as block chain sync progresses. Make sure you\'ve got a reliable connection to the internet.  -  android -- preferences_initiate_reset_dialog_message
+android: Would you like to send a crash report, helping to fix this issue in the future?  -  android -- report_issue_dialog_message_crash
+android: Write permission missing  -  android -- backup_wallet_permission_dialog_title
+android: Wrong PIN! %s  -  android -- wallet_lock_wrong_pin
+android: Wrong signature!  -  android -- send_coins_fragment_request_payment_request_wrong_signature
+android: You also need to logout from the Uphold website on your browser.  -  android -- uphold_logout_explanation_text
+android: You are about to replace your current wallet. Any coins in the current wallet will be lost unless you\'ve got a separate backup of that.  -  android -- restore_wallet_dialog_replace_warning
+android: You are about to sweep a paper wallet or coupon. This will move all coins from that paper to your wallet on this device. When the transaction is confirmed, the paper will be worthless and should not be re-used for safety reasons.  -  android -- sweep_wallet_fragment_intro
+android: You are about to sweep funds from another Dash wallet.  -  android -- scan_private_key_intro_1
+iOS:     You are about to wipe this wallet from this device. Funds associated with this wallet can only be retrieved if you have your recovery phrase.  -  iOS
+android: You can authenticate with Biometric Authentication for payments below  -  android -- spending_confirmation_hint_above_zero
+iOS:     You can authenticate with Face ID for payments below  -  iOS
+iOS:     You can authenticate with Touch ID for payments below  -  iOS
+android: You can set a new PIN with the help of your recovery phrase.  -  android -- forgot_pin_message
+android: You have <b>%1$s Dash</b> in your Uphold account. Do you want to <u>transfer this value to this wallet</u>?  -  android -- uphold_withdrawal_message
+iOS:     You must enter your PIN in order to enter Dash Wallet  -  iOS
+android: You must enter your PIN to finish the upgrade process.  -  android -- encrypt_new_key_chain_enter_pin_dialog_message
+android: You need to back up your wallet!  -  android -- wallet_disclaimer_fragment_remind_backup
+android: You received %1$s to unsecure addresses. Would you like to move these coins to secure addresses? A small network fee of %2$s will be paid.  -  android -- maintenance_dialog_message
+iOS:     You received Dash! If you lose this device, you will lose your funds. Get your recovery phrase so that you can restore your wallet on another device.  -  iOS
+android: You still have Dash on this device! Please be sure to write down your recovery phrase before you uninstall the Dash Wallet or you will lose your balance of %s.  -  android -- notification_inactivity_message
+iOS:     You will also need to log out from the Uphold website using your browser  -  iOS
+android: Your addresses  -  android -- address_book_list_receiving_title
+android: Your backup will be encrypted with the chosen password and written to external storage.  -  android -- backup_wallet_dialog_message
+android: Your device time is off by %d minutes. You probably cannot send or receive Dash due to this problem.\n\nYou should check and if necessary correct your date, time and timezone settings.  -  android -- wallet_timeskew_dialog_msg
+android: Your local currency is %1$s, but in this app your default currency is set to %2$s. Would you like to change it to %1$s or leave it as %2$s?  -  android -- change_exchange_currency_code_message
+android: Your payment was rejected via direct connection.  -  android -- send_coins_fragment_direct_payment_nack
+android: Your payment was successfully sent directly.  -  android -- send_coins_fragment_direct_payment_ack
+android: Your payment will still be broadcasted via the P2P network.  -  android -- send_coins_fragment_direct_payment_failed_msg
+iOS:     Your transaction was sent and the amount should appear in your wallet in a few minutes.  -  iOS
+android: Your transaction was sent and the amount should appear in your wallet in a few minutes.\n\nTransaction id: %s  -  android -- uphold_withdrawal_success_message
+android: Your wallet could not be backed up:\n%s  -  android -- export_keys_dialog_failure
+android: Your wallet is protected by a spending PIN.  Enter your PIN and press Show to view your recovery phrase.  -  android -- backup_to_seed_wallet_dialog_enter_pin_message
+android: Your wallet is protected by a spending PIN. Enter your PIN and press Unlock to continue.  -  android -- wallet_lock_unlock_dialog_message
+android: Your wallet is protected by a spending PIN. Make sure you remember the PIN in addition to the backup password!  -  android -- backup_wallet_dialog_warning_encrypted
+iOS:     Your wallet may be out of sync.\nThis can often be fixed by rescanning the blockchain.  -  iOS
+android: Your wallet was reset!\nIt will take some time to recover.  -  android -- toast_wallet_reset
+android: Your wallet was successfully restored. Its balance will be determined next. This will take some time.  -  android -- restore_wallet_dialog_success_replay
+android: Your wallet will be upgraded to support importing from and exporting to more apps.  -  android -- encrypt_new_key_chain_dialog_message
+android: You\'re about to send to yourself!  -  android -- send_coins_fragment_receiving_address_own
+android: You\'re missing %s.  -  android -- send_coins_fragment_insufficient_money_msg1
+android: You\'ve still got Dash on this device!  -  android -- notification_inactivity_title
+android: ZXing, a QR-code processing library  -  android -- about_credits_zxing_title
+iOS:     \  -  iOS
+iOS:     \n         total %@ (%@)  -  iOS
+iOS:     \n(local requested amount: %@)  -  iOS
+iOS:     \nADDRESS ALREADY USED\nDash addresses are intended for single use only\n\nre-use reduces privacy for both you and the recipient and can result in loss if the recipient doesn't directly control the address  -  iOS
+iOS:     \nnetwork fee +%@ (%@)  -  iOS
+iOS:     \ntry again in %@  -  iOS
+iOS:     \n\n     amount %@ (%@)  -  iOS
+android: µDASH, no decimal places  -  android -- preferences_precision_labels_0_6
+android: ⇆ %d ms  -  android -- peer_list_row_ping_time
