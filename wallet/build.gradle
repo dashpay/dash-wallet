@@ -3,6 +3,7 @@ apply plugin: 'com.android.application'
 ext {
     archivesBaseName = 'dash-wallet'
     androidSupportVersion = '28.0.0'
+    fossBuild = false
 }
 repositories {
     mavenLocal()
@@ -56,11 +57,13 @@ dependencies {
 
     implementation 'com.android.support:multidex:1.0.3'
 
-    implementation ('com.google.firebase:firebase-inappmessaging-display:17.2.0') {
-        exclude group: 'com.google.protobuf', module: 'protobuf-lite'
-        exclude group: 'com.google.firebase', module: 'protolite-well-known-types'
+    if (!fossBuild) {
+        implementation('com.google.firebase:firebase-inappmessaging-display:17.2.0') {
+            exclude group: 'com.google.protobuf', module: 'protobuf-lite'
+            exclude group: 'com.google.firebase', module: 'protolite-well-known-types'
+        }
+        implementation 'com.google.firebase:firebase-core:16.0.9'
     }
-    implementation 'com.google.firebase:firebase-core:16.0.9'
 
     testImplementation 'junit:junit:4.12'
     //Espresso
@@ -141,6 +144,9 @@ android {
         devNet {
             res.srcDirs = ["devNet/res"]
         }
+        foss {
+            fossBuild = true
+        }
     }
     flavorDimensions "default"
     productFlavors {
@@ -155,6 +161,9 @@ android {
         }
         devNet {
             applicationId = "hashengineering.darkcoin.wallet.devnet"
+        }
+        foss {
+
         }
     }
     externalNativeBuild {
@@ -183,3 +192,9 @@ clean {
 }
 
 apply plugin: 'com.google.gms.google-services'
+
+// must be after the plugin is applied otherwise no tasks will be found
+android.applicationVariants.all { variant ->
+    def googleTask = tasks.findByName("process${variant.name.capitalize()}GoogleServices")
+    googleTask.enabled = !"foss".equals(variant.flavorName)
+}
