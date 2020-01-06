@@ -33,8 +33,6 @@ import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceScreen;
 
-import com.google.firebase.iid.FirebaseInstanceId;
-
 /**
  * @author Andreas Schildbach
  */
@@ -79,7 +77,7 @@ public final class AboutFragment extends PreferenceFragment {
             PreferenceScreen screen = getPreferenceScreen();
             screen.removePreference(firebaseIdLabel);
         } else {
-            firebaseIdLabel.setSummary(FirebaseInstanceId.getInstance().getId());
+            firebaseIdLabel.setSummary("Not installed");
         }
     }
 }
