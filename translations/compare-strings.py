@@ -60,6 +60,10 @@ def mykey(val):
     return val.upper()
 
 
+def printHeader(header, text, output):
+    print("<" + header + ">" + text + "</" + header +">", file=output)
+
+
 def main():
     loadAndroidFiles()
     #print(androidStrings)
@@ -77,17 +81,31 @@ def main():
     stringsWithWildcards = {}
     stringsWithWildcardsList = []
 
-    outputFile = codecs.open("translation-comparison-report.txt", "w", "utf-8")
+    outputFile = codecs.open("translation-comparison-report.html", "w", "utf-8")
     outputFile.write(u'\ufeff')
-    print("Translation Source Comparison Report: ", date.today(), file=outputFile)
-    print("-------------------------------------------------------", file=outputFile)
-    print("iOS total number of strings:", len(iOSStrings), "in", len(iOSFiles), "files.", file=outputFile)
-    print("android total number of strings:", len(androidStrings), "in", len(androidFiles), "files.", file=outputFile)
+    title = "Translation Source Comparison Report: " + str(date.today())
+    print("<!DOCTYPE html><html><head>", file=outputFile)
+    print("  <title>", end="", file=outputFile)
+    print(title, end="", file=outputFile)
+    print("  </title>", end="", file=outputFile)
+    print('<STYLE type="text/css"">' +
+    'H1, H2, H3 { color: blue; font-family: Arial}\n' +
+    '.ios { color: red; }\n' +
+    '.android { color: green; }\n' +
+    '.string { border-width: 1px; border-style: solid }' +
+    '</STYLE>', file=outputFile)
+    print("</head><body>", file=outputFile)
+    print("<h1>", title, "</h1>", sep="", file=outputFile)
+    printHorizontalLine(outputFile)
+    printHeader("h2", "Source File Summary", outputFile)
+    print("<ul>", file=outputFile)
+    print("<li>iOS total number of strings:", len(iOSStrings), "in", len(iOSFiles), "files.</li>", file=outputFile)
+    print("<li>android total number of strings:", len(androidStrings), "in", len(androidFiles), "files.</li>", file=outputFile)
     for f in iOSFiles:
-        print("iOS File:    ", f, file=outputFile)
+        print("<li>iOS File:    ", f, "</li>", file=outputFile)
     for f in androidFiles:
-        print("Android File:", f, file=outputFile)
-
+        print("<li>Android File:", f, "</li>", file=outputFile)
+    print("</ul>", file=outputFile)
     # find exact matches
     for i in iOSStrings:
         if i.find("%@") != -1:
@@ -194,83 +212,114 @@ def main():
 
     # print report
     print(file=outputFile)
-    print("Summary Report iOS vs Android", file=outputFile)
-    print("-------------------------------------", file=outputFile)
-    print(len(found), "strings match exactly between iOS and android", file=outputFile)
-    print(len(iOSStrings), "iOS strings do not match Android", file=outputFile)
-    print(len(androidStrings), "Android Strings do not match iOS", file=outputFile)
-    print(withWildcards, "strings have wildcards for iOS", file=outputFile)
-    print(withWildcardsAndroid, "strings have wildcards for Android", file=outputFile)
-    print(len(foundUpper), "iOS strings differ by case with Android", file=outputFile)
-    print(len(foundStartsWith), "iOS strings start with words similar to Android", file=outputFile)
-    print(len(foundPunctuation), "iOS strings differ by punctuation with Android", file=outputFile)
+    printHeader("h2", "<a name='top'>Summary Report iOS vs Android</a>", outputFile)
+    printHorizontalLine(outputFile)
+    print("<ul>", file=outputFile)
+    print("<li><a href='#exact'>", len(found), "strings match exactly between iOS and android</a></li>", file=outputFile)
+    print("<li><a href='#nomatch'>", len(iOSStrings), "iOS strings do not match Android</li>", file=outputFile)
+    print("<li><a href='#nomatch'>", len(androidStrings), "Android Strings do not match iOS</li>", file=outputFile)
+    print("<li><a href='#wildcard'>", withWildcards, "strings have wildcards for iOS</li>", file=outputFile)
+    print("<li><a href='#wildcard'>", withWildcardsAndroid, "strings have wildcards for Android</li>", file=outputFile)
+    print("<li><a href='#case'>", len(foundUpper), "iOS strings differ by case with Android</a></li>", file=outputFile)
+    print("<li><a href='#start'>", len(foundStartsWith), "iOS strings start with words similar to Android</a></li>", file=outputFile)
+    print("<li><a href='#punctuation'>", len(foundPunctuation), "iOS strings differ by punctuation with Android</a></li>", file=outputFile)
+    print("</ul>", file=outputFile)
 
-    print(file=outputFile)
-    print("iOS Strings that differ by case with Android", file=outputFile)
-    print("--------------------------------------------", file=outputFile)
-    for f in foundUpper:
-        print("iOS:     '", f, "'", sep="", file=outputFile)
-        print("android: '", foundUpper[f], "'", sep="", file=outputFile)
+    printHeader("h2", "<a name='case'>iOS Strings that differ by case with Android</a>", outputFile)
+    printHorizontalLine(outputFile)
+    printPreformatedComparisonList(foundUpper, outputFile)
 
-    print(file=outputFile)
-    print("iOS Strings start with words similar Android", file=outputFile)
-    print("--------------------------------------------", file=outputFile)
-    for f in foundStartsWith:
-        print("iOS:     '", f, "'", sep="", file=outputFile)
-        print("android: '", foundStartsWith[f], "'", sep="", file=outputFile)
+    printHeader("h2", "<a name='start'>iOS Strings start with words similar Android</a>", outputFile)
+    printHorizontalLine(outputFile)
+    printPreformatedComparisonList(foundStartsWith, outputFile)
 
-    print(file=outputFile)
-    print("iOS Strings that differ by punctuation with Android", file=outputFile)
-    print("--------------------------------------------", file=outputFile)
-    for f in foundPunctuation:
-        print("iOS:     '", f, "'", sep="", file=outputFile)
-        print("android: '", foundPunctuation[f], "'", sep="", file=outputFile)
+    printHeader("h2", "<a name='punctuation'>iOS Strings that differ by punctuation with Android</a>", outputFile)
+    printHorizontalLine(outputFile)
+    printPreformatedComparisonList(foundPunctuation, outputFile)
 
-    print(file=outputFile)
-    print("iOS Strings that differ by wildcard with Android", file=outputFile)
-    print("--------------------------------------------", file=outputFile)
-    for f in foundWildCards:
-        print("iOS:     '", f, "'", sep="", file=outputFile)
-        print("android: '", foundPunctuation[f], "'", sep="", file=outputFile)
+    printHeader("h2", "<a name='wildcard'>iOS Strings that differ by wildcard with Android</a>", outputFile)
+    printHorizontalLine(outputFile)
+    printPreformatedComparisonList(foundWildCards, outputFile)
 
-    print(file=outputFile)
-    print("iOS Strings found in Android", file=outputFile)
-    print("-------------------------------------", file=outputFile)
+    printHeader("h2", "<a name='exact'>iOS Strings found in Android</a>", outputFile)
+    printHorizontalLine(outputFile)
+
     for f in found:
-        print(f, ": in iOS matches", found[f], "in Android", file=outputFile)
+        print("<div class=string>", file=outputFile)
+        print("<pre>", file=outputFile)
+        print("'", f, "': in iOS matches ", found[f], " in Android", sep="", file=outputFile)
+        print("</pre>", file=outputFile)
+        print("</div>", file=outputFile)
 
-    print(file=outputFile)
-    print("Wildcard strings containing %", file=outputFile)
-    print("--------------------------------------------", file=outputFile)
+    printHeader("h2", "<a name='wildcard'>Wildcard strings containing %</a>", outputFile)
+    printHorizontalLine(outputFile)
 
     stringsWithWildcardsList.sort(key=mykey)
 
     for w in stringsWithWildcardsList:
+        print("<div class=string>", file=outputFile)
         try:
             if stringsWithWildcards[w][0] == 'i':
+                print("<pre class=ios>", file=outputFile)
                 print("iOS:     ", end="", file=outputFile)
             else:
+                print("<pre class=android>", file=outputFile)
                 print("android: ", end="", file=outputFile)
-            print(w, " - ", stringsWithWildcards[w], file=outputFile)
+            print("'", w, "' - ", stringsWithWildcards[w], sep="", file=outputFile)
+            print("</pre>", file=outputFile)
         except UnicodeEncodeError:
             print("UnicodeDecodeError exception")
+        print("</div>", file=outputFile)
 
     print(file=outputFile)
-    print("iOS Strings not found in Android", file=outputFile)
-    print("--------------------------------------------", file=outputFile)
+    printHeader("h2", "<a name='notfound'>List of Strings not found in the other platform</a>", outputFile)
+    printHorizontalLine(outputFile)
 
     listNotFound.sort(key=mykey)
 
     for l in listNotFound:
+        print("<div class=string>", file=outputFile)
         try:
             if notFound[l][0] == 'i':
+                print("<pre class=ios>", file=outputFile)
                 print("iOS:     ", end="", file=outputFile)
             else:
+                print("<pre class=android>", file=outputFile)
                 print("android: ", end="", file=outputFile)
-            print(l, " - ", notFound[l], file=outputFile)
+            print("'", l, "' - ", notFound[l], sep="", file=outputFile)
+            print("</pre>", file=outputFile)
         except UnicodeEncodeError:
             print("UnicodeDecodeError exception")
+        print("</div>", file=outputFile)
+
+    print("</body>", file=outputFile)
+    print("</html>", file=outputFile)
     outputFile.close()
+
+
+def printPreformatedComparisonList(found, outputFile):
+    if len(found) > 0:
+
+        for f in found:
+            print("<div class=string>", file=outputFile)
+            print("<pre class=ios>", file=outputFile)
+            print("iOS:     '", f, "'", sep="", file=outputFile)
+            print("</pre>", file=outputFile)
+            print("<pre class=android>", file=outputFile)
+            print("android: '", found[f], "'", sep="", file=outputFile)
+            print("</pre>", file=outputFile)
+            print("</div>", file=outputFile)
+    else:
+        printParagraph("no results found that match this criteria", outputFile)
+
+
+def printParagraph(text, outputFile):
+    print("<p>" + text + "</p>", file=outputFile)
+
+
+def printHorizontalLine(outputFile):
+    print("<hr />", file=outputFile)
+
 
 # perform the comparisons
 main()
