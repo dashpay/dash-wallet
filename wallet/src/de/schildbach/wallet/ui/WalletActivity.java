@@ -1098,6 +1098,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
         } catch (Exception e) {
             //fail safe
+            log.info("NMA-243:  Exception thrown obtaining Locale information: ", e);
         }
     }
 
