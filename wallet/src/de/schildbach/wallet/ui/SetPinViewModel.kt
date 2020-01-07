@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.livedata.CheckPinLiveData
 import de.schildbach.wallet.livedata.EncryptWalletLiveData
 import org.slf4j.LoggerFactory
 
@@ -29,9 +30,11 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
     private val walletApplication = application as WalletApplication
 
     val pin = arrayListOf<Int>()
+    var oldPinCache: String? = null
 
     internal val startNextActivity = SingleLiveEvent<Boolean>()
     internal val encryptWalletLiveData = EncryptWalletLiveData(application)
+    internal val checkPinLiveData = CheckPinLiveData(application)
 
     fun setPin(pin: ArrayList<Int>) {
         this.pin.clear()
@@ -42,10 +45,10 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
         return pin.joinToString("")
     }
 
-    fun encryptKeys(changingPin: Boolean) {
+    fun encryptKeys() {
         val password = getPinAsString()
         if (!walletApplication.wallet.isEncrypted) {
-            encryptWalletLiveData.encrypt(password, changingPin, walletApplication.scryptIterationsTarget())
+            encryptWalletLiveData.encrypt(password, walletApplication.scryptIterationsTarget())
         } else {
             log.warn("Trying to encrypt already encrypted wallet")
         }
@@ -65,5 +68,19 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
 
     fun initWallet() {
         startNextActivity.call(walletApplication.configuration.remindBackupSeed())
+    }
+
+    fun checkPin() {
+        val password = getPinAsString()
+        if (walletApplication.wallet.isEncrypted) {
+            checkPinLiveData.checkPin(password)
+        } else {
+            log.warn("Trying to check PIN of unencrypted wallet")
+        }
+    }
+
+    fun changePin() {
+        val newPassword = getPinAsString()
+        encryptWalletLiveData.changePassword(oldPinCache!!, newPassword)
     }
 }

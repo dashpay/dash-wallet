@@ -13,8 +13,7 @@
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:layout_height="match_parent">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -86,7 +85,7 @@
             </androidx.constraintlayout.widget.ConstraintLayout>
 
             <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/biometric_auth"
+                android:id="@+id/fingerprint_auth_group"
                 style="@style/MenuRow.Internal">
 
                 <TextView
@@ -97,6 +96,7 @@
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <Switch
+                    android:id="@+id/fingerprint_auth_switch"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     app:layout_constraintBottom_toBottomOf="parent"
@@ -172,6 +172,4 @@
 
     </ScrollView>
 
-
 </LinearLayout>
-

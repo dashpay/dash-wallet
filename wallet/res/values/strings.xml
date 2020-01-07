@@ -372,7 +372,7 @@
     <string name="activity_security_backup_wallet">Backup Wallet to File</string>
     <string name="activity_security_view_recovery_phrase">View Recovery Phrase</string>
     <string name="activity_security_advanced">Advanced Security</string>
-    <string name="activity_security_biometric_auth">Biometric Authentication</string>
+    <string name="activity_security_biometric_auth">Fingerprint Authentication</string>
     <string name="activity_security_hide_balance">Hide Balance on Launch</string>
     <string name="reset_to_default">Reset to Default</string>
 

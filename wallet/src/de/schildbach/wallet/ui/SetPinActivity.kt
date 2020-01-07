@@ -24,7 +24,6 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
 import android.widget.ViewSwitcher
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
@@ -37,6 +36,7 @@ import de.schildbach.wallet_test.R
 
 private const val FINGERPRINT_REQUEST_SEED = 1
 private const val FINGERPRINT_REQUEST_WALLET = 2
+private const val FINGERPRINT_REQUEST_CHANGE_PIN = 3
 
 class SetPinActivity : SessionActivity() {
 
@@ -188,7 +188,11 @@ class SetPinActivity : SessionActivity() {
         if (state == State.CONFIRM_PIN) {
             if (pin == viewModel.pin) {
                 Handler().postDelayed({
-                    viewModel.encryptKeys(changePin)
+                    if (changePin) {
+                        viewModel.changePin()
+                    } else {
+                        viewModel.encryptKeys()
+                    }
                 }, 200)
             } else {
                 pinPreviewView.shake()
@@ -197,7 +201,11 @@ class SetPinActivity : SessionActivity() {
         } else {
             viewModel.setPin(pin)
             if (state == State.DECRYPT || state == State.CHANGE_PIN || state == State.INVALID_PIN) {
-                viewModel.decryptKeys()
+                if (changePin) {
+                    viewModel.checkPin()
+                } else {
+                    viewModel.decryptKeys()
+                }
             } else {
                 setState(State.CONFIRM_PIN)
             }
@@ -231,13 +239,16 @@ class SetPinActivity : SessionActivity() {
                 confirmButtonView.visibility = View.GONE
                 viewModel.pin.clear()
                 pin.clear()
+                if (pinRetryController.failCount() > 0) {
+                    pinPreviewView.badPin(pinRetryController.getRemainingAttemptsMessage(this))
+                }
                 if (newState == State.INVALID_PIN) {
                     pinPreviewView.shake()
-                    pinPreviewView.badPin(pinRetryController.getRemainingAttemptsMessage(this))
                 }
             }
             State.SET_PIN -> {
                 pinPreviewView.mode = PinPreviewView.PinType.STANDARD
+                pinPreviewView.clearBadPin()
                 pageTitleView.setText(R.string.set_pin_set_pin)
                 if (pinProgressSwitcherView.currentView.id == R.id.progress) {
                     pinProgressSwitcherView.showPrevious()
@@ -275,7 +286,7 @@ class SetPinActivity : SessionActivity() {
                 confirmButtonView.visibility = View.GONE
             }
             State.DECRYPTING -> {
-                pageTitleView.setText(R.string.set_pin_decrypting)
+                pageTitleView.setText(if (changePin) R.string.set_pin_verifying_pin else R.string.set_pin_decrypting)
                 if (pinProgressSwitcherView.currentView.id == R.id.pin_preview) {
                     pinProgressSwitcherView.showNext()
                 }
@@ -326,11 +337,36 @@ class SetPinActivity : SessionActivity() {
                         setState(State.SET_PIN)
                     } else {
                         if (changePin) {
-                            finish()
+                            saveSessionPin(viewModel.getPinAsString())
+                            if (EnableFingerprintDialog.shouldBeShown(this@SetPinActivity)) {
+                                EnableFingerprintDialog.show(viewModel.getPinAsString(), FINGERPRINT_REQUEST_CHANGE_PIN, supportFragmentManager)
+                            } else {
+                                performNextStep(FINGERPRINT_REQUEST_CHANGE_PIN)
+                            }
                         } else {
                             viewModel.initWallet()
                         }
                     }
+                }
+            }
+        })
+        viewModel.checkPinLiveData.observe(this, Observer {
+            when (it.status) {
+                Status.ERROR -> {
+                    pinRetryController.failedAttempt(viewModel.getPinAsString())
+                    if (pinRetryController.isLocked) {
+                        setState(State.LOCKED)
+                    } else {
+                        setState(if (changePin) State.INVALID_PIN else State.DECRYPT)
+                    }
+                }
+                Status.LOADING -> {
+                    setState(State.DECRYPTING)
+                }
+                Status.SUCCESS -> {
+                    viewModel.oldPinCache = viewModel.getPinAsString()
+                    pinRetryController.clearPinFailPrefs()
+                    setState(State.SET_PIN)
                 }
             }
         })
@@ -389,6 +425,7 @@ class SetPinActivity : SessionActivity() {
         when (requestCode) {
             FINGERPRINT_REQUEST_SEED -> startVerifySeedActivity()
             FINGERPRINT_REQUEST_WALLET -> goHome()
+            FINGERPRINT_REQUEST_CHANGE_PIN -> finish()
         }
         (application as WalletApplication).maybeStartAutoLogoutTimer()
     }

@@ -223,7 +223,13 @@ public final class SendCoinsFragment extends Fragment {
             public void onChanged(Boolean aBoolean) {
                 String sessionPin = activity.getSessionPin();
                 if (sessionPin == null || config.getSpendingConfirmationEnabled()) {
-                    CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND);
+                    Coin thresholdAmount = Coin.parseCoin(
+                            Float.valueOf(config.getSpendingConfirmationLimit()).toString());
+                    if (enterAmountSharedViewModel.getDashAmount().isLessThan(thresholdAmount)) {
+                        CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND);
+                    } else {
+                        CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND, true);
+                    }
                 } else {
                     handleGo(sessionPin);
                 }
