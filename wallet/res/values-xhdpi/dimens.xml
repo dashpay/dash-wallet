@@ -17,4 +17,12 @@
     <dimen name="about_text_margin">28dp</dimen>
     <dimen name="about_button_margin">20dp</dimen>
 
+    <item name="pay_amount_vert_guideline_percent" format="float" type="dimen">0.5</item>
+    <dimen name="pay_amount_dash_symbol_size">32dp</dimen>
+    <dimen name="pay_input_symbol_text_size">34sp</dimen>
+    <dimen name="pay_calc_amount_dash_size">20dp</dimen>
+    <dimen name="pay_calc_amount_symbol_size">22sp</dimen>
+
+    <dimen name="transaction_fee_text_size">16sp</dimen>
+
 </resources>
