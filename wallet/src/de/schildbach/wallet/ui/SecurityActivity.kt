@@ -33,17 +33,21 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_security.*
+import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 
 class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletProvider {
 
     private lateinit var fingerprintHelper: FingerprintHelper
     private lateinit var checkPinSharedModel: CheckPinSharedModel
+    private lateinit var decryptSeedViewModel2: DecryptSeedViewModel2
+
 
     companion object {
         private const val AUTH_REQUEST_CODE_BACKUP = 1
         private const val ENABLE_FINGERPRINT_REQUEST_CODE = 2
         private const val FINGERPRINT_ENABLED_REQUEST_CODE = 3
+        private const val AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE = 4
     }
 
     override fun getLayoutId(): Int {
@@ -80,6 +84,9 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
                 FINGERPRINT_ENABLED_REQUEST_CODE -> {
                     updateFingerprintSwitchSilently(fingerprintHelper.isFingerprintEnabled)
                 }
+                AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE -> {
+                    viewRecoveryPhrase(pin)
+                }
             }
         })
 
@@ -114,7 +121,8 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
     }
 
     fun viewRecoveryPhrase(view: View) {
-        BackupWalletToSeedDialogFragment.show(supportFragmentManager)
+        //CheckPinDialog.show(this, AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE)
+        DecryptSeedWithPinDialog.show(this, AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE)
     }
 
     fun changePin(view: View) {
@@ -136,5 +144,22 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
 
     override fun getWallet(): Wallet {
         return WalletApplication.getInstance().wallet
+    }
+
+    fun viewRecoveryPhrase(pin : String?) {
+
+        decryptSeedViewModel2 = DecryptSeedViewModel2(walletApplication)
+
+        decryptSeedViewModel2.processDecryptedSeed.observe(this, Observer { seed -> startVerifySeedActivity(seed) })
+
+        decryptSeedViewModel2.decryptSeed(pin)
+
+    }
+
+    fun startVerifySeedActivity(seed : DeterministicSeed) {
+        val mnemonicCode = seed.mnemonicCode
+        var seedArray = mnemonicCode!!.toTypedArray()
+        val intent = VerifySeedActivity.createIntent(this, seedArray, true)
+        startActivity(intent)
     }
 }
