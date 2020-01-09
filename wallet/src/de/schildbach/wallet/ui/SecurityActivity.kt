@@ -84,8 +84,14 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
                 FINGERPRINT_ENABLED_REQUEST_CODE -> {
                     updateFingerprintSwitchSilently(fingerprintHelper.isFingerprintEnabled)
                 }
+            }
+        })
+
+        val decryptSeedSharedModel : DecryptSeedSharedModel = ViewModelProviders.of(this).get(DecryptSeedSharedModel::class.java)
+        decryptSeedSharedModel.onDecryptSeedCallback.observe(this, Observer<Pair<Int?, DeterministicSeed?>> { (requestCode, seed) ->
+            when (requestCode) {
                 AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE -> {
-                    viewRecoveryPhrase(pin)
+                    startVerifySeedActivity(seed)
                 }
             }
         })
@@ -121,7 +127,6 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
     }
 
     fun viewRecoveryPhrase(view: View) {
-        //CheckPinDialog.show(this, AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE)
         DecryptSeedWithPinDialog.show(this, AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE)
     }
 
@@ -146,20 +151,10 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         return WalletApplication.getInstance().wallet
     }
 
-    fun viewRecoveryPhrase(pin : String?) {
-
-        decryptSeedViewModel2 = DecryptSeedViewModel2(walletApplication)
-
-        decryptSeedViewModel2.processDecryptedSeed.observe(this, Observer { seed -> startVerifySeedActivity(seed) })
-
-        decryptSeedViewModel2.decryptSeed(pin)
-
-    }
-
-    fun startVerifySeedActivity(seed : DeterministicSeed) {
-        val mnemonicCode = seed.mnemonicCode
+    fun startVerifySeedActivity(seed : DeterministicSeed?) {
+        val mnemonicCode = seed!!.mnemonicCode
         var seedArray = mnemonicCode!!.toTypedArray()
-        val intent = VerifySeedActivity.createIntent(this, seedArray, true)
+        val intent = ViewSeedActivity.createIntent(this, seedArray)
         startActivity(intent)
     }
 }
