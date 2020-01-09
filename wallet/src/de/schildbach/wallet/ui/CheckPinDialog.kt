@@ -63,8 +63,8 @@ open class CheckPinDialog : DialogFragment() {
     protected lateinit var sharedModel: CheckPinSharedModel
 
     protected val pinRetryController = PinRetryController.getInstance()
-    private var fingerprintHelper: FingerprintHelper? = null
-    private lateinit var fingerprintCancellationSignal: CancellationSignal
+    protected var fingerprintHelper: FingerprintHelper? = null
+    protected lateinit var fingerprintCancellationSignal: CancellationSignal
 
     protected enum class State {
         ENTER_PIN,
@@ -255,7 +255,7 @@ open class CheckPinDialog : DialogFragment() {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
-    private fun startFingerprintListener() {
+    protected open fun startFingerprintListener() {
         fingerprintCancellationSignal = CancellationSignal()
         fingerprintHelper!!.getPassword(fingerprintCancellationSignal, object : FingerprintHelper.Callback {
             override fun onSuccess(savedPass: String) {

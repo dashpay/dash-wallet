@@ -1,11 +1,16 @@
 package de.schildbach.wallet.ui
 
+import android.os.Build
 import android.os.Bundle
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.os.CancellationSignal
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
+import de.schildbach.wallet.util.FingerprintHelper
+import kotlinx.android.synthetic.main.fragment_enter_pin.*
 import org.bitcoinj.wallet.DeterministicSeed
 
 /**
@@ -84,5 +89,26 @@ class DecryptSeedWithPinDialog : CheckPinDialog() {
         activity?.run {
             sharedModel = ViewModelProviders.of(this)[DecryptSeedSharedModel::class.java]
         } ?: throw IllegalStateException("Invalid Activity")
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    override fun startFingerprintListener() {
+        fingerprintCancellationSignal = CancellationSignal()
+        fingerprintHelper!!.getPassword(fingerprintCancellationSignal, object : FingerprintHelper.Callback {
+            override fun onSuccess(savedPass: String) {
+                //dismiss(savedPass)
+                (viewModel as DecryptSeedViewModel).checkPin(savedPass)
+            }
+
+            override fun onFailure(message: String, canceled: Boolean, exceededMaxAttempts: Boolean) {
+                if (!canceled) {
+                    fingerprint_view.showError(exceededMaxAttempts)
+                }
+            }
+
+            override fun onHelp(helpCode: Int, helpString: String) {
+                fingerprint_view.showError(false)
+            }
+        })
     }
 }
