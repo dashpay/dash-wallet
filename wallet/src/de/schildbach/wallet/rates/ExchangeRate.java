@@ -68,6 +68,9 @@ public class ExchangeRate {
         if (currencyCode.equalsIgnoreCase("VES")) {
             return "Venezuelan Bolívar";
         }
+        if (currencyCode.equalsIgnoreCase("USDC")) {
+            return "USD Coin (USDC)";
+        }
 
         if (currencyName == null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
