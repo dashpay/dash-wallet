@@ -48,6 +48,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         private const val ENABLE_FINGERPRINT_REQUEST_CODE = 2
         private const val FINGERPRINT_ENABLED_REQUEST_CODE = 3
         private const val AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE = 4
+        private const val AUTH_REQUEST_CODE_ADVANCED_SECURITY = 5
     }
 
     override fun getLayoutId(): Int {
@@ -83,6 +84,9 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
                 }
                 FINGERPRINT_ENABLED_REQUEST_CODE -> {
                     updateFingerprintSwitchSilently(fingerprintHelper.isFingerprintEnabled)
+                }
+                AUTH_REQUEST_CODE_ADVANCED_SECURITY -> {
+                    startActivity(Intent(this, AdvancedSecurityActivity::class.java))
                 }
             }
         })
@@ -135,7 +139,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
     }
 
     fun openAdvancedSecurity(view: View) {
-        startActivity(Intent(this, AdvancedSecurityActivity::class.java))
+        CheckPinDialog.show(this, AUTH_REQUEST_CODE_ADVANCED_SECURITY)
     }
 
     fun resetWallet(view: View) {
@@ -151,7 +155,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         return WalletApplication.getInstance().wallet
     }
 
-    fun startVerifySeedActivity(seed : DeterministicSeed?) {
+    private fun startVerifySeedActivity(seed : DeterministicSeed?) {
         val mnemonicCode = seed!!.mnemonicCode
         var seedArray = mnemonicCode!!.toTypedArray()
         val intent = ViewSeedActivity.createIntent(this, seedArray)
