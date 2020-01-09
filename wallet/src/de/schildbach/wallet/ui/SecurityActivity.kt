@@ -72,7 +72,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
                     if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
                         BackupWalletDialogFragment.show(supportFragmentManager)
                     } else {
-                        ActivityCompat.requestPermissions(this, arrayOf(permission), 1)
+                        ActivityCompat.requestPermissions(this, arrayOf(permission), AUTH_REQUEST_CODE_BACKUP)
                     }
                 }
                 ENABLE_FINGERPRINT_REQUEST_CODE -> {
@@ -156,5 +156,14 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         var seedArray = mnemonicCode!!.toTypedArray()
         val intent = ViewSeedActivity.createIntent(this, seedArray)
         startActivity(intent)
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>,
+                                            grantResults: IntArray) {
+        if (requestCode == AUTH_REQUEST_CODE_BACKUP) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                BackupWalletDialogFragment.show(supportFragmentManager)
+
+        }
     }
 }
