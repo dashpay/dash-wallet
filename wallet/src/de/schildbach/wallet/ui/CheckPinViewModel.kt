@@ -22,17 +22,17 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.CheckPinLiveData
 import org.slf4j.LoggerFactory
 
-class CheckPinViewModel(application: Application) : AndroidViewModel(application) {
+open class CheckPinViewModel(application: Application) : AndroidViewModel(application) {
 
     private val log = LoggerFactory.getLogger(CheckPinViewModel::class.java)
 
-    val walletApplication = application as WalletApplication
+    protected val walletApplication = application as WalletApplication
 
     val pin = StringBuilder()
 
     internal val checkPinLiveData = CheckPinLiveData(application)
 
-    fun checkPin(password: CharSequence) {
+    open fun checkPin(password: CharSequence) {
         if (walletApplication.wallet.isEncrypted) {
             checkPinLiveData.checkPin(password.toString())
         } else {

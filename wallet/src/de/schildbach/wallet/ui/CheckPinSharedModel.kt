@@ -19,7 +19,7 @@ package de.schildbach.wallet.ui
 import androidx.lifecycle.ViewModel
 
 
-class CheckPinSharedModel : ViewModel() {
+open class CheckPinSharedModel : ViewModel() {
 
     val onCorrectPinCallback = SingleLiveEventExt<Pair<Int, String>>()
 

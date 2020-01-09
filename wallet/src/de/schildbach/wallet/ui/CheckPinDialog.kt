@@ -27,7 +27,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_enter_pin.*
 
 
-class CheckPinDialog : DialogFragment() {
+open class CheckPinDialog : DialogFragment() {
 
     companion object {
 
@@ -59,14 +59,14 @@ class CheckPinDialog : DialogFragment() {
 
     private lateinit var state: State
 
-    private lateinit var viewModel: CheckPinViewModel
-    private lateinit var sharedModel: CheckPinSharedModel
+    protected lateinit var viewModel: CheckPinViewModel
+    protected lateinit var sharedModel: CheckPinSharedModel
 
-    private val pinRetryController = PinRetryController.getInstance()
+    protected val pinRetryController = PinRetryController.getInstance()
     private var fingerprintHelper: FingerprintHelper? = null
     private lateinit var fingerprintCancellationSignal: CancellationSignal
 
-    private enum class State {
+    protected enum class State {
         ENTER_PIN,
         INVALID_PIN,
         DECRYPTING
@@ -84,26 +84,7 @@ class CheckPinDialog : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel = ViewModelProviders.of(this).get(CheckPinViewModel::class.java)
-        viewModel.checkPinLiveData.observe(viewLifecycleOwner, Observer {
-            when (it.status) {
-                Status.ERROR -> {
-                    pinRetryController.failedAttempt(it.data!!)
-                    if (pinRetryController.isLocked) {
-                        showLockedAlert(context!!)
-                        dismiss()
-                        return@Observer
-                    }
-                    setState(State.INVALID_PIN)
-                }
-                Status.LOADING -> {
-                    setState(State.DECRYPTING)
-                }
-                Status.SUCCESS -> {
-                    dismiss(it.data!!)
-                }
-            }
-        })
+        initViewModel()
         cancel_button.setOnClickListener {
             sharedModel.onCancelCallback.call()
             dismiss()
@@ -154,6 +135,33 @@ class CheckPinDialog : DialogFragment() {
         }
     }
 
+    /*
+        initViewModel can be overridden by subclasses to specify their own view model
+        and actions
+     */
+    protected open fun initViewModel() {
+        viewModel = ViewModelProviders.of(this).get(CheckPinViewModel::class.java)
+        viewModel.checkPinLiveData.observe(viewLifecycleOwner, Observer {
+            when (it.status) {
+                Status.ERROR -> {
+                    pinRetryController.failedAttempt(it.data!!)
+                    if (pinRetryController.isLocked) {
+                        showLockedAlert(context!!)
+                        dismiss()
+                        return@Observer
+                    }
+                    setState(State.INVALID_PIN)
+                }
+                Status.LOADING -> {
+                    setState(State.DECRYPTING)
+                }
+                Status.SUCCESS -> {
+                    dismiss(it.data!!)
+                }
+            }
+        })
+    }
+
     private fun dismiss(pin: String) {
         if (pinRetryController.isLocked) {
             return
@@ -179,7 +187,7 @@ class CheckPinDialog : DialogFragment() {
         } ?: throw IllegalStateException("Invalid Activity")
     }
 
-    private fun setState(newState: State) {
+    protected fun setState(newState: State) {
         when (newState) {
             State.ENTER_PIN -> {
                 if (pin_progress_switcher.currentView.id == R.id.progress) {
@@ -266,7 +274,7 @@ class CheckPinDialog : DialogFragment() {
         })
     }
 
-    private fun showLockedAlert(context: Context) {
+    protected fun showLockedAlert(context: Context) {
         val dialogBuilder = AlertDialog.Builder(context)
         dialogBuilder.setTitle(R.string.wallet_lock_wallet_disabled)
         dialogBuilder.setMessage(pinRetryController.getWalletTemporaryLockedMessage(context))
