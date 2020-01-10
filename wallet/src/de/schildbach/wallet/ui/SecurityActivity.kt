@@ -40,8 +40,6 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
 
     private lateinit var fingerprintHelper: FingerprintHelper
     private lateinit var checkPinSharedModel: CheckPinSharedModel
-    private lateinit var decryptSeedViewModel2: DecryptSeedViewModel2
-
 
     companion object {
         private const val AUTH_REQUEST_CODE_BACKUP = 1
