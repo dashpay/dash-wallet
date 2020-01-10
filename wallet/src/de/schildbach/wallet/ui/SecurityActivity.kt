@@ -93,7 +93,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         decryptSeedSharedModel.onDecryptSeedCallback.observe(this, Observer<Pair<Int?, DeterministicSeed?>> { (requestCode, seed) ->
             when (requestCode) {
                 AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE -> {
-                    startVerifySeedActivity(seed)
+                    startViewSeedActivity(seed)
                 }
             }
         })
@@ -125,11 +125,11 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
     }
 
     fun backupWallet(view: View) {
-        CheckPinDialog.show(this, AUTH_REQUEST_CODE_BACKUP)
+        CheckPinDialog.show(this, AUTH_REQUEST_CODE_BACKUP, true)
     }
 
     fun viewRecoveryPhrase(view: View) {
-        DecryptSeedWithPinDialog.show(this, AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE)
+        DecryptSeedWithPinDialog.show(this, AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE, true)
     }
 
     fun changePin(view: View) {
@@ -137,7 +137,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
     }
 
     fun openAdvancedSecurity(view: View) {
-        CheckPinDialog.show(this, AUTH_REQUEST_CODE_ADVANCED_SECURITY)
+        CheckPinDialog.show(this, AUTH_REQUEST_CODE_ADVANCED_SECURITY, true)
     }
 
     fun resetWallet(view: View) {
@@ -153,7 +153,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         return WalletApplication.getInstance().wallet
     }
 
-    private fun startVerifySeedActivity(seed : DeterministicSeed?) {
+    private fun startViewSeedActivity(seed : DeterministicSeed?) {
         val mnemonicCode = seed!!.mnemonicCode
         var seedArray = mnemonicCode!!.toTypedArray()
         val intent = ViewSeedActivity.createIntent(this, seedArray)
