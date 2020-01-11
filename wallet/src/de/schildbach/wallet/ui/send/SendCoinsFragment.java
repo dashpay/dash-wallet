@@ -684,8 +684,11 @@ public final class SendCoinsFragment extends Fragment {
             else if (viewModel.dryrunException != null) {
                 if (viewModel.dryrunException instanceof DustySendRequested)
                     message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
-                else if (viewModel.dryrunException instanceof InsufficientMoneyException)
-                    message = coloredString(getString(R.string.send_coins_fragment_hint_insufficient_money), R.color.dash_red, true);
+                else if (viewModel.dryrunException instanceof InsufficientMoneyException) {
+                    if (activity.getSessionPin() != null) {
+                        message = coloredString(getString(R.string.send_coins_fragment_hint_insufficient_money), R.color.dash_red, true);
+                    }
+                }
                 else if (viewModel.dryrunException instanceof CouldNotAdjustDownwards)
                     message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
                 else
