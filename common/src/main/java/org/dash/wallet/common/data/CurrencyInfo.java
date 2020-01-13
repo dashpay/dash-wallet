@@ -67,6 +67,8 @@ public class CurrencyInfo {
         otherCurrencyMap.put("GGP", "Guernsey Pound");
         otherCurrencyMap.put("JEP", "Jersey Pound");
         otherCurrencyMap.put("IMP", "Isle of Man Pound");
+        otherCurrencyMap.put("USDC", "USD Coin");
+
 
         useOtherNameMap = new HashMap<>();
         useOtherNameMap.put("CNH", "CNY");
