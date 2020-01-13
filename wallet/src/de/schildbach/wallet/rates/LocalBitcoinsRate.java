@@ -1,22 +1,13 @@
 package de.schildbach.wallet.rates;
 
-import com.squareup.moshi.Json;
-
 import java.math.BigDecimal;
 
 public class LocalBitcoinsRate {
 
-    @Json(name = "avg_1h")
-    private BigDecimal avg1h;
-
-    @Json(name = "avg_6h")
-    private BigDecimal avg6h;
-
-    @Json(name = "avg_12h")
-    private BigDecimal avg12h;
-
-    @Json(name = "avg_24h")
-    private BigDecimal avg24h;
+    private final BigDecimal avg1h;
+    private final BigDecimal avg6h;
+    private final BigDecimal avg12h;
+    private final BigDecimal avg24h;
 
     public LocalBitcoinsRate(BigDecimal avg1h, BigDecimal avg6h, BigDecimal avg12h, BigDecimal avg24h) {
         this.avg1h = avg1h;
