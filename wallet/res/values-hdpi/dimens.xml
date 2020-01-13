@@ -8,4 +8,22 @@
     <dimen name="app_bar_logo_width">73dp</dimen>
     <dimen name="app_bar_logo_height">22dp</dimen>
 
+    <dimen name="lock_screen_bottom_guideline_margin">0dp</dimen>
+    <dimen name="pin_preview_textview_padding">4dp</dimen>
+    <dimen name="lock_screen_content_margin_bottom">16dp</dimen>
+    <dimen name="about_logo_margin_top">24dp</dimen>
+    <dimen name="about_text_margin">14dp</dimen>
+    <dimen name="about_button_margin">10dp</dimen>
+
+    <item name="pay_amount_vert_guideline_percent" format="float" type="dimen">0.33</item>
+    <dimen name="pay_amount_dash_symbol_size">26dp</dimen>
+    <dimen name="pay_input_symbol_text_size">28sp</dimen>
+    <dimen name="pay_calc_amount_dash_size">16dp</dimen>
+    <dimen name="pay_calc_amount_symbol_size">18sp</dimen>
+
+    <item name="quick_action_button_image_size" format="float" type="dimen">0.33</item>
+    <dimen name="quick_action_button_text_size">9sp</dimen>
+
+    <dimen name="transaction_fee_text_size">12sp</dimen>
+
 </resources>

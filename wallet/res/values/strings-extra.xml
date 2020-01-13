@@ -269,6 +269,7 @@
     <string name="security_medium">Medium</string>
     <string name="security_high">High</string>
     <string name="security_very_high">Very High</string>
+    <string name="max">Max</string>
 
     <string-array name="history_filter">
         <item>All</item>

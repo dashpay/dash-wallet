@@ -10,4 +10,22 @@
 
     <dimen name="backup_buttons_margin">28dp</dimen>
 
+    <dimen name="lock_screen_bottom_guideline_margin">48dp</dimen>
+    <dimen name="pin_preview_textview_padding">12dp</dimen>
+    <dimen name="lock_screen_content_margin_bottom">0dp</dimen>
+    <dimen name="about_logo_margin_top">45dp</dimen>
+    <dimen name="about_text_margin">28dp</dimen>
+    <dimen name="about_button_margin">20dp</dimen>
+
+    <item name="pay_amount_vert_guideline_percent" format="float" type="dimen">0.5</item>
+    <dimen name="pay_amount_dash_symbol_size">32dp</dimen>
+    <dimen name="pay_input_symbol_text_size">34sp</dimen>
+    <dimen name="pay_calc_amount_dash_size">20dp</dimen>
+    <dimen name="pay_calc_amount_symbol_size">22sp</dimen>
+
+    <item name="quick_action_button_image_size" format="float" type="dimen">0.4</item>
+    <dimen name="quick_action_button_text_size">11sp</dimen>
+
+    <dimen name="transaction_fee_text_size">16sp</dimen>
+
 </resources>
