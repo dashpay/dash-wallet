@@ -63,6 +63,14 @@ def mykey(val):
 def printHeader(header, text, output):
     print("<" + header + ">" + text + "</" + header +">", file=output)
 
+def countWords(text):
+    words = 1
+    lastChar = ''
+    for char in text:
+        if char.isspace() and char != lastChar:
+            words += 1
+        lastChar = char
+    return words
 
 def main():
     loadAndroidFiles()
@@ -159,14 +167,16 @@ def main():
         else:
             # look for strings that start with the same words
             for a in androidStringsUpper:
-                if a.startswith(i):
-                    foundStartsWith[iOSStringsUpper[i]] = androidStringsUpper[a]
+                if countWords(i) >= 2:
+                    if a.startswith(i):
+                        foundStartsWith[iOSStringsUpper[i]] = androidStringsUpper[a]
 
     for a in androidStringsUpper:
         if a not in iOSStringsUpper:
             for i in iOSStringsUpper:
-                if i.startswith(a):
-                    foundStartsWith[iOSStringsUpper[i]] = androidStringsUpper[a]
+                if countWords(a) >= 2:
+                    if i.startswith(a):
+                        foundStartsWith[iOSStringsUpper[i]] = androidStringsUpper[a]
 
     # find differences in punctuation:
     iOSStringsUpperNoPunctuation = {}
@@ -290,6 +300,8 @@ def main():
             print("</pre>", file=outputFile)
         except UnicodeEncodeError:
             print("UnicodeDecodeError exception")
+        except KeyError:
+            print("KeyError")
         print("</div>", file=outputFile)
 
     print("</body>", file=outputFile)
