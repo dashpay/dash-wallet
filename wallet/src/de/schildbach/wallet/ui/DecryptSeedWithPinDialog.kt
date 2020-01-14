@@ -1,10 +1,8 @@
 package de.schildbach.wallet.ui
 
-import android.os.Build
 import android.os.Bundle
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.os.CancellationSignal
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.livedata.Status
@@ -84,31 +82,11 @@ class DecryptSeedWithPinDialog : CheckPinDialog() {
         dismiss()
     }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        activity?.run {
-            sharedModel = ViewModelProviders.of(this)[DecryptSeedSharedModel::class.java]
-        } ?: throw IllegalStateException("Invalid Activity")
+    override fun FragmentActivity.initSharedModel() {
+        sharedModel = ViewModelProviders.of(this)[DecryptSeedSharedModel::class.java]
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
-    override fun startFingerprintListener() {
-        fingerprintCancellationSignal = CancellationSignal()
-        fingerprintHelper!!.getPassword(fingerprintCancellationSignal, object : FingerprintHelper.Callback {
-            override fun onSuccess(savedPass: String) {
-                //dismiss(savedPass)
-                (viewModel as DecryptSeedViewModel).checkPin(savedPass)
-            }
-
-            override fun onFailure(message: String, canceled: Boolean, exceededMaxAttempts: Boolean) {
-                if (!canceled) {
-                    fingerprint_view.showError(exceededMaxAttempts)
-                }
-            }
-
-            override fun onHelp(helpCode: Int, helpString: String) {
-                fingerprint_view.showError(false)
-            }
-        })
+    override fun onFingerprintSuccess(savedPass : String) {
+        (viewModel as DecryptSeedViewModel).checkPin(savedPass)
     }
 }

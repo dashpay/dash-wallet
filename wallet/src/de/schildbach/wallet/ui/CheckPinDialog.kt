@@ -17,6 +17,7 @@ import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.os.CancellationSignal
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.livedata.Status
@@ -183,8 +184,12 @@ open class CheckPinDialog : DialogFragment() {
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         activity?.run {
-            sharedModel = ViewModelProviders.of(this)[CheckPinSharedModel::class.java]
+            initSharedModel()
         } ?: throw IllegalStateException("Invalid Activity")
+    }
+
+    protected open fun FragmentActivity.initSharedModel() {
+        sharedModel = ViewModelProviders.of(this)[CheckPinSharedModel::class.java]
     }
 
     protected fun setState(newState: State) {
@@ -255,11 +260,11 @@ open class CheckPinDialog : DialogFragment() {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
-    protected open fun startFingerprintListener() {
+    private fun startFingerprintListener() {
         fingerprintCancellationSignal = CancellationSignal()
         fingerprintHelper!!.getPassword(fingerprintCancellationSignal, object : FingerprintHelper.Callback {
             override fun onSuccess(savedPass: String) {
-                dismiss(savedPass)
+                onFingerprintSuccess(savedPass)
             }
 
             override fun onFailure(message: String, canceled: Boolean, exceededMaxAttempts: Boolean) {
@@ -272,6 +277,10 @@ open class CheckPinDialog : DialogFragment() {
                 fingerprint_view.showError(false)
             }
         })
+    }
+
+    protected open fun onFingerprintSuccess(savedPass: String) {
+        dismiss(savedPass)
     }
 
     protected fun showLockedAlert(context: Context) {
