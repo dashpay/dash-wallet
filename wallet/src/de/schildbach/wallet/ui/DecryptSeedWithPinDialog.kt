@@ -82,8 +82,8 @@ class DecryptSeedWithPinDialog : CheckPinDialog() {
         dismiss()
     }
 
-    override fun FragmentActivity.initSharedModel() {
-        sharedModel = ViewModelProviders.of(this)[DecryptSeedSharedModel::class.java]
+    override fun FragmentActivity.initSharedModel(activity: FragmentActivity) {
+        sharedModel = ViewModelProviders.of(activity)[DecryptSeedSharedModel::class.java]
     }
 
     override fun onFingerprintSuccess(savedPass : String) {

@@ -184,12 +184,12 @@ open class CheckPinDialog : DialogFragment() {
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         activity?.run {
-            initSharedModel()
+            initSharedModel(this)
         } ?: throw IllegalStateException("Invalid Activity")
     }
 
-    protected open fun FragmentActivity.initSharedModel() {
-        sharedModel = ViewModelProviders.of(this)[CheckPinSharedModel::class.java]
+    protected open fun FragmentActivity.initSharedModel(activity: FragmentActivity) {
+        sharedModel = ViewModelProviders.of(activity)[CheckPinSharedModel::class.java]
     }
 
     protected fun setState(newState: State) {
