@@ -56,12 +56,9 @@ class ViewSeedActivity : BaseMenuActivity() {
                     "containing the recovery seed.")
         }
 
-        val sb = StringBuilder(12)
-        seed.forEach {
-            sb.append("$it  ")
-        }
+        val sb = seed.joinToString(" ")
 
-        recovery_seed.text = sb.toString().trim()
+        recovery_seed.text = sb.trim()
 
         confirm_btn.setOnClickListener {
            finish()
