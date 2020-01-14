@@ -78,6 +78,10 @@
             android:theme="@style/My.Theme.ChildActivity"
             android:screenOrientation="portrait"/>
 
+        <activity android:name="de.schildbach.wallet.ui.ViewSeedActivity"
+            android:theme="@style/My.Theme.ChildActivity"
+            android:screenOrientation="portrait"/>
+
         <activity
             android:name="de.schildbach.wallet.ui.WalletActivity"
             android:configChanges="keyboard|keyboardHidden"
