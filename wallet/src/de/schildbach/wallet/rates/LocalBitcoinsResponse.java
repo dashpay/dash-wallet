@@ -14,15 +14,15 @@ public class LocalBitcoinsResponse {
     }
 
     public BigDecimal getDashVesPrice() {
-        if (vesRate.getAvg1h() != null) {
-            return vesRate.getAvg1h();
-        } else if (vesRate.getAvg6h() != null) {
-            return vesRate.getAvg6h();
-        } else if (vesRate.getAvg12h() != null) {
-            return vesRate.getAvg12h();
+        if (vesRate.avg1h != null) {
+            return vesRate.avg1h;
+        } else if (vesRate.avg6h != null) {
+            return vesRate.avg6h;
+        } else if (vesRate.avg12h != null) {
+            return vesRate.avg12h;
         } else {
-            return vesRate.getAvg24h();
+            return vesRate.avg24h;
         }
     }
-
 }
+
