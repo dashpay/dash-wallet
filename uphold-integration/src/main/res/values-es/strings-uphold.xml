@@ -9,13 +9,6 @@
     <string name="uphold_link_account">Vincular cuenta de Uphold</string>
     <string name="uphold_account_dash_balance">El balance de tu cuenta de Uphold es</string>
     <string name="uphold_transfer_to_this_wallet">Transfiere Dash desde tu cuenta de Uphold a esta billetera</string>
-    <string name="uphold_withdrawal_amount">Cantidad</string>
-    <string name="uphold_withdrawal_fee">Comisión</string>
-    <string name="uphold_withdrawal_total">Total</string>
-    <string name="uphold_withdrawal_title">Transfiere Dash a esta billetera</string>
-    <string name="uphold_withdrawal_message">Tu tienes &lt;b>%1$s Dash&lt;/b> en tu cuenta de Uphold. Deseas &lt;u>ttransferir este monto a esta billetera&lt;/u>?</string>
-    <string name="uphold_withdrawal_confirm_title">Confirmar transacción</string>
-    <string name="uphold_withdrawal_confirm_message">Cantidad base: %1$f\nComisión: %2$f\nTotal: %3$f\n\nDeseas confirmar esta transacción?</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">La comisión se deducirá de la cantidad solicitada.</string>
     <string name="uphold_withdrawal_instructions">Ingresa abajo la cantidad a transferir </string>
     <string name="uphold_withdrawal_success_title">Éxito</string>

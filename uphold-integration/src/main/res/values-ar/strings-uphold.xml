@@ -9,13 +9,6 @@
     <string name="uphold_link_account">رابط حساب أفلود</string>
     <string name="uphold_account_dash_balance">رصيد داش في حسابك في أفلود هو</string>
     <string name="uphold_transfer_to_this_wallet">نقل داش من حسابك في أفلود لهذه المحفظة</string>
-    <string name="uphold_withdrawal_amount">الرصيد</string>
-    <string name="uphold_withdrawal_fee">رسوم</string>
-    <string name="uphold_withdrawal_total">المجموع</string>
-    <string name="uphold_withdrawal_title">نقل داش لهذه المحفظة</string>
-    <string name="uphold_withdrawal_message">لديك  &lt;b> %1$sداش&lt;/b> في حسابك في أفلود. هل تريد تحويله إلى هذه المحفظة&lt;/u>؟</string>
-    <string name="uphold_withdrawal_confirm_title">تأكيد المعاملة</string>
-    <string name="uphold_withdrawal_confirm_message">كمية الرصيد  %1$f \nمجانا: %2$f \nالمجموع: %3$f /n/nهل تريد تأكيد هذه المعاملة؟</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">سيتم خصم الرسوم من الرصيد المطلوب.</string>
     <string name="uphold_withdrawal_instructions">أدخل الرصيد الذي تريد نقله هنا</string>
     <string name="uphold_withdrawal_success_title">تم بنجاح</string>

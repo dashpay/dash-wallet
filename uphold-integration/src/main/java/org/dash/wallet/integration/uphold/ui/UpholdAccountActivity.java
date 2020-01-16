@@ -227,21 +227,6 @@ public class UpholdAccountActivity extends AppCompatActivity {
         startActivityForResult(intent, REQUEST_CODE_TRANSFER);
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_CODE_TRANSFER && resultCode == Activity.RESULT_OK) {
-            UpholdWithdrawalHelper withdrawalDialog = new UpholdWithdrawalHelper(balance, new UpholdWithdrawalHelper.OnTransferListener() {
-                @Override
-                public void onTransfer() {
-                    loadUserBalance();
-                }
-            });
-            String amountStr = data.getStringExtra("result_amount");
-            withdrawalDialog.transfer(this, receivingAddress, new BigDecimal(amountStr), false);
-        }
-    }
-
     private void revokeAccessToken() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(R.string.uphold_logout_title);

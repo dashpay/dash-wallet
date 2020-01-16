@@ -9,13 +9,6 @@
     <string name="uphold_link_account">Uphold Account verknüpfen</string>
     <string name="uphold_account_dash_balance">Das Dash-Guthaben des Uphold Accounts beträgt</string>
     <string name="uphold_transfer_to_this_wallet">Dash vom Uphold Account an diese Wallet transferieren</string>
-    <string name="uphold_withdrawal_amount">Betrag</string>
-    <string name="uphold_withdrawal_fee">Netzwerk-Gebühr</string>
-    <string name="uphold_withdrawal_total">Gesamtbetrag</string>
-    <string name="uphold_withdrawal_title">Dash an diese Wallet transferieren</string>
-    <string name="uphold_withdrawal_message">Du hast &lt;b>%1$s Dash&lt;/b> in deinem Uphold Account. Möchtest du &lt;u>diesen Wert an diese Wallet transferieren&lt;/u>?</string>
-    <string name="uphold_withdrawal_confirm_title">Transaktion bestätigen</string>
-    <string name="uphold_withdrawal_confirm_message">Grundbetrag: %1$f\nGebühr: %2$f\nGesamtbetrag: %3$f\n\nMöchtest du diese Transaktion bestätigen?</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">Die Gebühr wird vom angeforderten Betrag abgezogen.</string>
     <string name="uphold_withdrawal_instructions">Gib bitte den Transaktionsbetrag an</string>
     <string name="uphold_withdrawal_success_title">Erfolg</string>

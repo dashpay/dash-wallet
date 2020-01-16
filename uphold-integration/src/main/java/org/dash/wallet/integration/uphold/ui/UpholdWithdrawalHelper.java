@@ -21,9 +21,6 @@ import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -56,7 +53,7 @@ public class UpholdWithdrawalHelper {
                     public void onSuccess(UpholdTransaction tx) {
                         transaction = tx;
                         progressDialog.dismiss();
-                        showCommitTransactionConfirmationDialog(activity, receivingAddress, deductFeeFromAmount);
+                        showCommitTransactionConfirmationDialog(activity, receivingAddress);
                     }
 
                     @Override
@@ -72,19 +69,8 @@ public class UpholdWithdrawalHelper {
     }
 
     @SuppressLint("SetTextI18n")
-    private void showCommitTransactionConfirmationDialog(final AppCompatActivity activity, String receivingAddress, boolean deductFeeFromAmount) {
-        AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(activity);
-        dialogBuilder.setTitle(R.string.uphold_withdrawal_confirm_title);
-
-        View contentView = LayoutInflater.from(activity)
-                .inflate(R.layout.uphold_confirm_transaction_dialog, null);
-        TextView amountTxt = contentView.findViewById(R.id.uphold_withdrawal_amount);
-        TextView feeTxt = contentView.findViewById(R.id.uphold_withdrawal_fee);
-        TextView totalTxt = contentView.findViewById(R.id.uphold_withdrawal_total);
-        View deductFeeDisclaimer = contentView.findViewById(R.id.uphold_withdrawal_confirmation_fee_deduction_disclaimer);
-
+    private void showCommitTransactionConfirmationDialog(final AppCompatActivity activity, String receivingAddress) {
         BigDecimal fee = transaction.getOrigin().getFee();
-        final BigDecimal baseAmount = transaction.getOrigin().getBase();
         final BigDecimal total = transaction.getOrigin().getAmount();
 
         if (total.compareTo(balance) > 0) {
@@ -92,41 +78,15 @@ public class UpholdWithdrawalHelper {
             return;
         }
 
-        amountTxt.setText(baseAmount.toPlainString());
-        feeTxt.setText(fee.toPlainString());
-        totalTxt.setText(total.toPlainString());
-
-        if (deductFeeFromAmount) {
-            deductFeeDisclaimer.setVisibility(View.VISIBLE);
-        }
-
-        dialogBuilder.setView(contentView);
-        dialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                commitTransaction(activity);
-            }
-        });
-
-        dialogBuilder.setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                transaction = null;
-            }
-        });
-        dialogBuilder.setCancelable(false);
-        dialogBuilder.show();
+        this.onTransferListener.onConfirm(transaction);
     }
 
-    private void commitTransaction(final AppCompatActivity activity) {
+    public void commitTransaction(final AppCompatActivity activity) {
         final ProgressDialog progressDialog = showLoading(activity);
         final String txId = transaction.getId();
         UpholdClient.getInstance().commitTransaction(txId, new UpholdClient.Callback<Object>() {
             @Override
             public void onSuccess(Object data) {
-                if (onTransferListener != null) {
-                    onTransferListener.onTransfer();
-                }
                 progressDialog.dismiss();
                 showSuccessDialog(activity, txId);
             }
@@ -159,6 +119,9 @@ public class UpholdWithdrawalHelper {
             @Override
             public void onDismiss(DialogInterface dialog) {
                 dialog.dismiss();
+                if (onTransferListener != null) {
+                    onTransferListener.onTransfer();
+                }
             }
         });
     }
@@ -190,7 +153,9 @@ public class UpholdWithdrawalHelper {
     }
 
     public interface OnTransferListener {
+
+        void onConfirm(UpholdTransaction transaction);
+
         void onTransfer();
     }
-
 }
