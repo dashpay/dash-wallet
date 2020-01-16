@@ -125,14 +125,13 @@ open class CheckPinDialog : DialogFragment() {
         }
         pin_preview.setTextColor(R.color.dash_light_gray)
         pin_preview.hideForgotPinAction()
-        initFingerprint()
         setState(State.ENTER_PIN)
 
         arguments?.getBoolean(ARG_PIN_ONLY, false).let {
             if (true == it) {
                 fingerprintFlow(!it)
                 pin_or_fingerprint_button.isEnabled = false
-            }
+            } else initFingerprint()
         }
     }
 
