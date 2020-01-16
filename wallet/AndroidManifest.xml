@@ -130,20 +130,6 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
-            <intent-filter android:label="@string/send_coins_activity_title" >
-                <action android:name="android.intent.action.VIEW" />
-
-                <data android:mimeType="application/dash-paymentrequest" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-            <intent-filter android:label="@string/send_coins_activity_title" >
-                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
-
-                <data android:mimeType="application/dash-paymentrequest" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
         </activity>
         <activity
             android:name="de.schildbach.wallet.ui.SendCoinsQrActivity"
@@ -280,6 +266,10 @@
             android:theme="@style/My.Theme.Fullscreen" />
 
         <activity android:name="de.schildbach.wallet.ui.ForgotPinActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity" />
+
+        <activity android:name="de.schildbach.wallet.ui.UpholdTransferActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 

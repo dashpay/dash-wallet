@@ -17,7 +17,7 @@
     <string name="uphold_withdrawal_confirm_title">Confirm transaction</string>
     <string name="uphold_withdrawal_confirm_message">Base amount: %1$f\nFee: %2$f\nTotal: %3$f\n\nDo you want to confirm this transaction?</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">Fee will be deducted from requested amount.</string>
-    <string name="uphold_withdrawal_instructions">Enter the amount to transfer below</string>
+    <string name="uphold_withdrawal_instructions">Enter the amount to transfer.</string>
     <string name="uphold_withdrawal_success_title">Success</string>
     <string name="uphold_withdrawal_success_message">Your transaction was sent and the amount should appear in your wallet in a few minutes.\n\nTransaction id: %s</string>
     <string name="uphold_otp_dialog_title">Enter your 2FA code below:</string>

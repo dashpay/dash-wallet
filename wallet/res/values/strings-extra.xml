@@ -272,6 +272,8 @@
     <string name="security_very_high">Very High</string>
     <string name="max">Max</string>
 
+    <string name="enter_amount_available">available</string>
+
     <string-array name="history_filter">
         <item>All</item>
         <item>Received</item>
