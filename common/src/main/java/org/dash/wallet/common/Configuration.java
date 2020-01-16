@@ -74,6 +74,7 @@ public class Configuration {
     public static final String PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER = "backup_seed_last_dismissed_reminder";
     private static final String PREFS_KEY_LAST_BACKUP_SEED = "last_backup_seed";
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
+    private static final String PREFS_ENABLE_FINGERPRINT = "enable_fingerprint";
     public static final String PREFS_RESTORING_BACKUP = "restoring_backup";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
@@ -387,5 +388,13 @@ public class Configuration {
 
     public void setRemindEnableFingerprint(boolean remind) {
         prefs.edit().putBoolean(PREFS_REMIND_ENABLE_FINGERPRINT, remind).apply();
+    }
+
+    public boolean getEnableFingerprint() {
+        return prefs.getBoolean(PREFS_ENABLE_FINGERPRINT, false);
+    }
+
+    public void setEnableFingerprint(boolean remind) {
+        prefs.edit().putBoolean(PREFS_ENABLE_FINGERPRINT, remind).apply();
     }
 }
