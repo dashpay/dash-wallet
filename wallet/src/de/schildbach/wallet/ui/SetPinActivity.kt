@@ -338,7 +338,8 @@ class SetPinActivity : SessionActivity() {
                     } else {
                         if (changePin) {
                             saveSessionPin(viewModel.getPinAsString())
-                            if (EnableFingerprintDialog.shouldBeShown(this@SetPinActivity)) {
+                            val enableFingerprint = (application as WalletApplication).configuration.enableFingerprint
+                            if (EnableFingerprintDialog.shouldBeShown(this@SetPinActivity) && enableFingerprint) {
                                 EnableFingerprintDialog.show(viewModel.getPinAsString(), FINGERPRINT_REQUEST_CHANGE_PIN, supportFragmentManager)
                             } else {
                                 performNextStep(FINGERPRINT_REQUEST_CHANGE_PIN)
