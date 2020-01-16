@@ -67,7 +67,7 @@
     <string name="payments_tab_pay_label">Send</string>
     <string name="payments_tab_receive_label">Receive</string>
     <string name="payments_pay_by_qr_title">Send by</string>
-    <string name="payments_pay_by_qr_sub_title">Scanning QR Code</string>
+    <string name="payments_pay_by_qr_sub_title">Scanning QR code</string>
     <string name="payments_pay_by_qr_button">Scan</string>
     <string name="payments_pay_to_clipboard_title">Send to copied address</string>
     <string name="payments_pay_to_clipboard_sub_title">No address copied</string>
@@ -194,7 +194,7 @@
     <string name="verify_info_text_2">We do not store this recovery phrase.</string>
     <string name="verify_info_text_3">In case if this device is lost / damaged, in case if the Dash Wallet is uninstalled accidentally from this device, you will need this recovery phrase to access your funds.</string>
     <string name="verify_skip">Skip</string>
-    <string name="verify_secure_now_btn">Secure Now</string>
+    <string name="verify_secure_now_btn">Secure now</string>
     <string name="verify_secure_now_message">If you lose this device, you will lose your funds. Get your recovery phrase so that you can restore your wallet on another device.</string>
     <string name="verify_seed_title">Please write this down</string>
     <string name="verify_seed_write_down_confirmation">I have written this down</string>
@@ -247,7 +247,7 @@
     <string name="block_info">Block Info</string>
 
     <string name="scan_private_key">Scan Private Key</string>
-    <string name="scan_private_key_intro_1">You are about to sweep funds from another Dash wallet.</string>
+    <string name="scan_private_key_intro_1">You are about to sweep funds from another Dash Wallet.</string>
     <string name="scan_private_key_intro_2">This will move all coins from that wallet to your wallet on this device.</string>
     <string name="scan_private_key_intro_3">When the transaction is confirmed, the other wallet will be worthless and should not be re-used for safety reasons.</string>
     <string name="confirm">Confirm</string>
