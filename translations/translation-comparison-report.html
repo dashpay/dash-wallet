@@ -1,10 +1,10 @@
 ﻿<!DOCTYPE html><html><head>
-  <title>Translation Source Comparison Report: 2020-01-13  </title><STYLE type="text/css"">H1, H2, H3 { color: blue; font-family: Arial}
+  <title>Translation Source Comparison Report: 2020-01-15  </title><STYLE type="text/css"">H1, H2, H3 { color: blue; font-family: Arial}
 .ios { color: red; }
 .android { color: green; }
 .string { border-width: 1px; border-style: solid }</STYLE>
 </head><body>
-<h1>Translation Source Comparison Report: 2020-01-13</h1>
+<h1>Translation Source Comparison Report: 2020-01-15</h1>
 <hr />
 <h2>Source File Summary</h2>
 <ul>
@@ -12,50 +12,27 @@
 <li>android total number of strings: 567 in 4 files.</li>
 <li>iOS File:     iOS/dashsync-localizable-strings.strings </li>
 <li>iOS File:     iOS/app-localizable-strings.strings </li>
-<li>Android File: ../wallet/res/values/strings.xml </li>
 <li>Android File: ../uphold-integration/src/main/res/values/strings-uphold.xml </li>
 <li>Android File: ../wallet/res/values/strings-extra.xml </li>
+<li>Android File: ../wallet/res/values/strings.xml </li>
 <li>Android File: ../common/src/main/res/values/strings.xml </li>
 </ul>
 
 <h2><a name='top'>Summary Report iOS vs Android</a></h2>
 <hr />
 <ul>
-<li><a href='#exact'> 116 strings match exactly between iOS and android</a></li>
-<li><a href='#nomatch'> 267 iOS strings do not match Android</li>
-<li><a href='#nomatch'> 451 Android Strings do not match iOS</li>
+<li><a href='#exact'> 119 strings match exactly between iOS and android</a></li>
+<li><a href='#nomatch'> 264 iOS strings do not match Android</li>
+<li><a href='#nomatch'> 448 Android Strings do not match iOS</li>
 <li><a href='#wildcard'> 31 strings have wildcards for iOS</li>
 <li><a href='#wildcard'> 51 strings have wildcards for Android</li>
-<li><a href='#case'> 3 iOS strings differ by case with Android</a></li>
+<li><a href='#case'> 0 iOS strings differ by case with Android</a></li>
 <li><a href='#start'> 11 iOS strings start with words similar to Android</a></li>
 <li><a href='#punctuation'> 0 iOS strings differ by punctuation with Android</a></li>
 </ul>
 <h2><a name='case'>iOS Strings that differ by case with Android</a></h2>
 <hr />
-<div class=string>
-<pre class=ios>
-iOS:     'Scanning QR code'
-</pre>
-<pre class=android>
-android: 'Scanning QR Code'
-</pre>
-</div>
-<div class=string>
-<pre class=ios>
-iOS:     'Secure now'
-</pre>
-<pre class=android>
-android: 'Secure Now'
-</pre>
-</div>
-<div class=string>
-<pre class=ios>
-iOS:     'You are about to sweep funds from another Dash Wallet.'
-</pre>
-<pre class=android>
-android: 'You are about to sweep funds from another Dash wallet.'
-</pre>
-</div>
+<p>no results found that match this criteria</p>
 <h2><a name='start'>iOS Strings start with words similar Android</a></h2>
 <hr />
 <div class=string>
@@ -196,7 +173,7 @@ android: 'Your transaction was sent and the amount should appear in your wallet 
 </div>
 <div class=string>
 <pre>
-'Reset': in iOS matches wallet_lock_reset in Android
+'Reset': in iOS matches preferences_initiate_reset_dialog_positive in Android
 </pre>
 </div>
 <div class=string>
@@ -206,7 +183,7 @@ android: 'Your transaction was sent and the amount should appear in your wallet 
 </div>
 <div class=string>
 <pre>
-'Send': in iOS matches payments_pay_to_clipboard_button in Android
+'Send': in iOS matches button_pay in Android
 </pre>
 </div>
 <div class=string>
@@ -341,7 +318,7 @@ android: 'Your transaction was sent and the amount should appear in your wallet 
 </div>
 <div class=string>
 <pre>
-'Enter PIN': in iOS matches lock_enter_pin in Android
+'Enter PIN': in iOS matches send_coins_fragment_pin_label in Android
 </pre>
 </div>
 <div class=string>
@@ -351,7 +328,7 @@ android: 'Your transaction was sent and the amount should appear in your wallet 
 </div>
 <div class=string>
 <pre>
-'Fee': in iOS matches uphold_withdrawal_fee in Android
+'Fee': in iOS matches send_coins_options_fee_category in Android
 </pre>
 </div>
 <div class=string>
@@ -401,7 +378,7 @@ android: 'Your transaction was sent and the amount should appear in your wallet 
 </div>
 <div class=string>
 <pre>
-'Import Private Key': in iOS matches tools_import_private_key in Android
+'Import Private Key': in iOS matches sweep_wallet_activity_title in Android
 </pre>
 </div>
 <div class=string>
@@ -416,7 +393,7 @@ android: 'Your transaction was sent and the amount should appear in your wallet 
 </div>
 <div class=string>
 <pre>
-'Local Currency': in iOS matches menu_local_currency in Android
+'Local Currency': in iOS matches exchange_rates_activity_title in Android
 </pre>
 </div>
 <div class=string>
@@ -461,7 +438,7 @@ android: 'Your transaction was sent and the amount should appear in your wallet 
 </div>
 <div class=string>
 <pre>
-'Network fee': in iOS matches dialog_confirm_fee in Android
+'Network fee': in iOS matches transaction_row_fee in Android
 </pre>
 </div>
 <div class=string>
@@ -531,7 +508,7 @@ android: 'Your transaction was sent and the amount should appear in your wallet 
 </div>
 <div class=string>
 <pre>
-'Scan': in iOS matches payments_pay_by_qr_button in Android
+'Scan': in iOS matches button_scan in Android
 </pre>
 </div>
 <div class=string>
@@ -542,6 +519,16 @@ android: 'Your transaction was sent and the amount should appear in your wallet 
 <div class=string>
 <pre>
 'Scan to Send': in iOS matches scan_to_pay_error_dialog_title in Android
+</pre>
+</div>
+<div class=string>
+<pre>
+'Scanning QR code': in iOS matches payments_pay_by_qr_sub_title in Android
+</pre>
+</div>
+<div class=string>
+<pre>
+'Secure now': in iOS matches verify_secure_now_btn in Android
 </pre>
 </div>
 <div class=string>
@@ -566,7 +553,7 @@ android: 'Your transaction was sent and the amount should appear in your wallet 
 </div>
 <div class=string>
 <pre>
-'Send to': in iOS matches dialog_confirm_pay_to in Android
+'Send to': in iOS matches send_coins_fragment_receiving_address_label in Android
 </pre>
 </div>
 <div class=string>
@@ -596,12 +583,12 @@ android: 'Your transaction was sent and the amount should appear in your wallet 
 </div>
 <div class=string>
 <pre>
-'Settings': in iOS matches menu_settings_title in Android
+'Settings': in iOS matches button_settings in Android
 </pre>
 </div>
 <div class=string>
 <pre>
-'Share': in iOS matches receive_share_button in Android
+'Share': in iOS matches button_share in Android
 </pre>
 </div>
 <div class=string>
@@ -701,7 +688,7 @@ android: 'Your transaction was sent and the amount should appear in your wallet 
 </div>
 <div class=string>
 <pre>
-'View Recovery Phrase': in iOS matches export_keys_dialog_title_to_seed in Android
+'View Recovery Phrase': in iOS matches activity_security_view_recovery_phrase in Android
 </pre>
 </div>
 <div class=string>
@@ -722,6 +709,11 @@ android: 'Your transaction was sent and the amount should appear in your wallet 
 <div class=string>
 <pre>
 'Wipe Wallet': in iOS matches perm_lock_wipe_wallet in Android
+</pre>
+</div>
+<div class=string>
+<pre>
+'You are about to sweep funds from another Dash Wallet.': in iOS matches scan_private_key_intro_1 in Android
 </pre>
 </div>
 <div class=string>
@@ -1296,12 +1288,12 @@ iOS:     'Add Shortcut' - iOS
 </div>
 <div class=string>
 <pre class=android>
-android: 'Address book' - android -- address_book_activity_title
+android: 'Address Book' - android -- tools_address_book
 </pre>
 </div>
 <div class=string>
 <pre class=android>
-android: 'Address Book' - android -- tools_address_book
+android: 'Address book' - android -- address_book_activity_title
 </pre>
 </div>
 <div class=string>
@@ -1836,7 +1828,7 @@ android: 'Copyright © 2019 Dash Core' - android -- about_copyright
 </div>
 <div class=string>
 <pre class=ios>
-iOS:     'Copyright Â© 2019 Dash Core' - iOS
+iOS:     'Copyright Â© 2020 Dash Core' - iOS
 </pre>
 </div>
 <div class=string>
@@ -1876,7 +1868,7 @@ android: 'Currently payments are not possible because a replay is in progress.' 
 </div>
 <div class=string>
 <pre class=android>
-android: 'Dash address copied to clipboard' - android -- request_coins_clipboard_address_msg
+android: 'Dash address copied to clipboard' - android -- wallet_address_fragment_clipboard_msg
 </pre>
 </div>
 <div class=string>
@@ -2816,12 +2808,12 @@ iOS:     'Network' - iOS
 </div>
 <div class=string>
 <pre class=android>
-android: 'Network monitor' - android -- network_monitor_activity_title
+android: 'Network Monitor' - android -- tools_network_monitor
 </pre>
 </div>
 <div class=string>
 <pre class=android>
-android: 'Network Monitor' - android -- tools_network_monitor
+android: 'Network monitor' - android -- network_monitor_activity_title
 </pre>
 </div>
 <div class=string>
@@ -3026,7 +3018,7 @@ android: 'Paste' - android -- button_paste
 </div>
 <div class=string>
 <pre class=android>
-android: 'Paste from clipboard' - android -- options_paste_from_clipboard_title
+android: 'Paste from clipboard' - android -- address_book_options_paste_from_clipboard_title
 </pre>
 </div>
 <div class=string>
@@ -3361,12 +3353,12 @@ android: 'Restore from recovery phrase' - android -- import_keys_dialog_title_fr
 </div>
 <div class=string>
 <pre class=android>
-android: 'Restore wallet' - android -- import_keys_intent_filter_action
+android: 'Restore Wallet' - android -- set_pin_restore_wallet
 </pre>
 </div>
 <div class=string>
 <pre class=android>
-android: 'Restore Wallet' - android -- set_pin_restore_wallet
+android: 'Restore wallet' - android -- import_keys_intent_filter_action
 </pre>
 </div>
 <div class=string>
@@ -3440,11 +3432,6 @@ android: 'Scanned data is unrecognizable' - android -- address_book_options_scan
 </pre>
 </div>
 <div class=string>
-<pre class=android>
-android: 'Scanning QR Code' - android -- payments_pay_by_qr_sub_title
-</pre>
-</div>
-<div class=string>
 <pre class=ios>
 iOS:     'Screenshot detected. New recovery phrase:' - iOS
 </pre>
@@ -3462,11 +3449,6 @@ android: 'Scrypt, implemented by Will Glozer and Colin Percival' - android -- ab
 <div class=string>
 <pre class=android>
 android: 'Search exchange rate' - android -- exchange_rates_options_search
-</pre>
-</div>
-<div class=string>
-<pre class=android>
-android: 'Secure Now' - android -- verify_secure_now_btn
 </pre>
 </div>
 <div class=string>
@@ -3921,7 +3903,7 @@ android: 'This payment has been sent.' - android -- transaction_row_message_sent
 </div>
 <div class=string>
 <pre class=android>
-android: 'This payment has not been transmitted yet.' - android -- transaction_row_message_own_instantx_lock_request_notsent
+android: 'This payment has not been transmitted yet.' - android -- transaction_row_message_own_unbroadcasted
 </pre>
 </div>
 <div class=string>
@@ -4447,11 +4429,6 @@ android: 'You are about to replace your current wallet. Any coins in the current
 <div class=string>
 <pre class=android>
 android: 'You are about to sweep a paper wallet or coupon. This will move all coins from that paper to your wallet on this device. When the transaction is confirmed, the paper will be worthless and should not be re-used for safety reasons.' - android -- sweep_wallet_fragment_intro
-</pre>
-</div>
-<div class=string>
-<pre class=android>
-android: 'You are about to sweep funds from another Dash wallet.' - android -- scan_private_key_intro_1
 </pre>
 </div>
 <div class=string>
