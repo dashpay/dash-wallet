@@ -295,8 +295,4 @@ class LockScreenActivity : SendCoinsQrActivity() {
         }
         dialogBuilder.show()
     }
-
-    override fun onBackPressed() {
-        // block closing activity by back button
-    }
 }
