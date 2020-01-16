@@ -60,7 +60,8 @@ public class CurrencyInfo {
 
     static {
         obsoleteCurrencyMap = new HashMap<>();
-        obsoleteCurrencyMap.put("BYR", "BYN");
+        obsoleteCurrencyMap.put("BYR", "BYN"); // Belarus Ruble, changed in 2016
+        obsoleteCurrencyMap.put("MRO", "MRU"); // Mauritania Ouguiya, changed in 2018
 
         otherCurrencyMap = new HashMap<>();
         otherCurrencyMap.put("VES", "Venezuelan Bolívar");
@@ -68,7 +69,11 @@ public class CurrencyInfo {
         otherCurrencyMap.put("JEP", "Jersey Pound");
         otherCurrencyMap.put("IMP", "Isle of Man Pound");
         otherCurrencyMap.put("USDC", "USD Coin");
-
+        otherCurrencyMap.put("LTC", "Litecoin");
+        otherCurrencyMap.put("ETH", "Etherium");
+        otherCurrencyMap.put("BTC", "Bitcoin");
+        otherCurrencyMap.put("PAX", "Paxos Standard");
+        otherCurrencyMap.put("GUSD", "Gemini Dollar");
 
         useOtherNameMap = new HashMap<>();
         useOtherNameMap.put("CNH", "CNY");

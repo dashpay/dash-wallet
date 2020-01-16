@@ -72,7 +72,11 @@ public class ExchangeRate {
 
         if (currencyName == null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                currencyName = getCurrency().getDisplayName();
+                // currency codes must be 3 letters before calling getCurrency()
+                if(currencyCode.length() == 3)
+                    currencyName = getCurrency().getDisplayName();
+                else currencyName = currencyCode;
+
                 if(currencyCode.toUpperCase().equals(currencyName.toUpperCase())) {
                     currencyName = CurrencyInfo.getOtherCurrencyName(currencyCode);
                 }
