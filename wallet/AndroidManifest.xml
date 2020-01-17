@@ -279,6 +279,10 @@
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
+        <activity android:name="de.schildbach.wallet.ui.WelcomeActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.Fullscreen" />
+
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"
             android:authorities="${applicationId}.address_book"
