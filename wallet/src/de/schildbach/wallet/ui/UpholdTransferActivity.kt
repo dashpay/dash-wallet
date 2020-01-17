@@ -155,4 +155,8 @@ class UpholdTransferActivity : AppCompatActivity() {
 
         return super.onOptionsItemSelected(item)
     }
+
+    override fun onUserInteraction() {
+        (application as WalletApplication).resetAutoLogoutTimer()
+    }
 }
