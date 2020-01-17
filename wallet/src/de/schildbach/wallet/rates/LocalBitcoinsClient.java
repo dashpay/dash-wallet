@@ -36,7 +36,7 @@ public class LocalBitcoinsClient extends RetrofitClient {
     }
 
     private interface LocalBitcoinsService {
-        @GET("bitcoinaverage/ticker-all-currencies")
+        @GET("bitcoinaverage/ticker-all-currencies/")
         Call<LocalBitcoinsResponse> getRates();
     }
 

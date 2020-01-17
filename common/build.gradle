@@ -32,12 +32,12 @@ dependencies {
     implementation "org.dashj:dashj-core:$dashjVersion"
 
     //Retrofit + OkHttp
-    api 'com.squareup.okhttp:okhttp:2.7.5'
-    api 'com.squareup.okhttp:logging-interceptor:2.7.5'
-    api 'com.squareup.moshi:moshi:1.5.0'
-    api 'com.squareup.retrofit2:retrofit:2.4.0'
-    api 'com.squareup.retrofit2:converter-moshi:2.3.0'
-    api 'com.squareup.retrofit2:converter-scalars:2.3.0'
+    api 'com.squareup.okhttp3:okhttp:4.3.1'
+    api 'com.squareup.okhttp3:logging-interceptor:4.3.1'
+    api 'com.squareup.moshi:moshi:1.9.2'
+    api 'com.squareup.retrofit2:retrofit:2.6.4'
+    api 'com.squareup.retrofit2:converter-moshi:2.6.4'
+    api 'com.squareup.retrofit2:converter-scalars:2.6.4'
 
     //Android Arch
     api 'androidx.lifecycle:lifecycle-extensions:2.0.0'
