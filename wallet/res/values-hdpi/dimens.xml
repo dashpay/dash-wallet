@@ -9,7 +9,7 @@
     <dimen name="app_bar_logo_height">22dp</dimen>
 
     <dimen name="welcome_screenshot_height">320dp</dimen>
-    <dimen name="welcome_screenshot_margin_top">24dp</dimen>
+    <dimen name="welcome_screenshot_vertical_margin">24dp</dimen>
     <dimen name="welcome_screen_title_size">24sp</dimen>
     <dimen name="welcome_screen_subtitle_size">15sp</dimen>
     <dimen name="welcome_screen_skip_size">12sp</dimen>
