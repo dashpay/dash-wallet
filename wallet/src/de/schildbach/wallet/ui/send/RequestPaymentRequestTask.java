@@ -29,10 +29,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
-import com.squareup.okhttp.CacheControl;
-import com.squareup.okhttp.Call;
-import com.squareup.okhttp.Request;
-import com.squareup.okhttp.Response;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.PaymentIntent;
@@ -45,6 +41,11 @@ import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
 import android.os.Looper;
 import de.schildbach.wallet_test.R;
+import okhttp3.CacheControl;
+import okhttp3.Call;
+import okhttp3.Request;
+import okhttp3.Response;
+
 /**
  * @author Andreas Schildbach
  */
@@ -85,14 +86,14 @@ public abstract class RequestPaymentRequestTask {
                 public void run() {
                     log.info("trying to request payment request from {}", url);
 
-                    final Request.Builder request = new Request.Builder();
-                    request.url(url);
-                    request.cacheControl(new CacheControl.Builder().noCache().build());
-                    request.header("Accept", PaymentProtocol.MIMETYPE_PAYMENTREQUEST);
+                    final Request.Builder requestBuilder = new Request.Builder()
+                            .url(url)
+                            .cacheControl(new CacheControl.Builder().noCache().build())
+                            .header("Accept", PaymentProtocol.MIMETYPE_PAYMENTREQUEST);
                     if (userAgent != null)
-                        request.header("User-Agent", userAgent);
+                        requestBuilder.header("User-Agent", userAgent);
 
-                    final Call call = Constants.HTTP_CLIENT.newCall(request.build());
+                    final Call call = Constants.HTTP_CLIENT.newCall(requestBuilder.build());
                     try {
                         final Response response = call.execute();
                         if (response.isSuccessful()) {

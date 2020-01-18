@@ -79,7 +79,7 @@
 
         <Button
             android:id="@+id/uphold_link_account"
-            style="@style/MontserratButton"
+            style="@style/DashButton.Blue"
             android:layout_alignParentBottom="true"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

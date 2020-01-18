@@ -21,9 +21,12 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.BitmapDrawable
+import android.text.style.ImageSpan
 import android.util.AttributeSet
 import android.view.View
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.content.ContextCompat
+import androidx.core.text.toSpannable
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.ReceiveActivity
 import de.schildbach.wallet.util.Qr
@@ -97,7 +100,15 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
         qrCodeBitmap.isFilterBitmap = false
 
         qr_preview.setImageDrawable(qrCodeBitmap)
-        address_preview.text = address.toBase58()
+        address_preview.text = address.toBase58() + "  "
+
+        val addressSpannable = address_preview.text.toSpannable()
+        val copyIconDrawable = ContextCompat.getDrawable(context, R.drawable.ic_copy_addres)!!
+        val iconSize = address_preview.lineHeight
+        copyIconDrawable.setBounds(0, 0, iconSize, iconSize)
+        val imageSpan = ImageSpan(copyIconDrawable, ImageSpan.ALIGN_BOTTOM)
+        addressSpannable.setSpan(imageSpan, addressSpannable.length - 1, addressSpannable.length, 0)
+        address_preview.text = addressSpannable
     }
 
     private fun refreshData() {

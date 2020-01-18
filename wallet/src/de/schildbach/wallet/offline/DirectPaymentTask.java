@@ -30,13 +30,6 @@ import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.squareup.okhttp.CacheControl;
-import com.squareup.okhttp.Call;
-import com.squareup.okhttp.MediaType;
-import com.squareup.okhttp.Request;
-import com.squareup.okhttp.RequestBody;
-import com.squareup.okhttp.Response;
-
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.util.Bluetooth;
 import de.schildbach.wallet_test.R;
@@ -46,6 +39,13 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
 import android.os.Looper;
+
+import okhttp3.CacheControl;
+import okhttp3.Call;
+import okhttp3.MediaType;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 import okio.BufferedSink;
 
 /**
@@ -90,30 +90,32 @@ public abstract class DirectPaymentTask {
                 public void run() {
                     log.info("trying to send tx to {}", url);
 
-                    final Request.Builder request = new Request.Builder();
-                    request.url(url);
-                    request.cacheControl(new CacheControl.Builder().noCache().build());
-                    request.header("Accept", PaymentProtocol.MIMETYPE_PAYMENTACK);
+                    final Request.Builder requestBuilder = new Request.Builder()
+                            .url(url)
+                            .cacheControl(new CacheControl.Builder().noCache().build())
+                            .header("Accept", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                            .post(new RequestBody() {
+                                @Override
+                                public MediaType contentType() {
+                                    return MediaType.parse(PaymentProtocol.MIMETYPE_PAYMENT);
+                                }
+
+                                @Override
+                                public long contentLength() throws IOException {
+                                    return payment.getSerializedSize();
+                                }
+
+                                @Override
+                                public void writeTo(final BufferedSink sink) throws IOException {
+                                    payment.writeTo(sink.outputStream());
+                                }
+                            });
+
                     if (userAgent != null)
-                        request.header("User-Agent", userAgent);
-                    request.post(new RequestBody() {
-                        @Override
-                        public MediaType contentType() {
-                            return MediaType.parse(PaymentProtocol.MIMETYPE_PAYMENT);
-                        }
+                        requestBuilder.header("User-Agent", userAgent);
 
-                        @Override
-                        public long contentLength() throws IOException {
-                            return payment.getSerializedSize();
-                        }
 
-                        @Override
-                        public void writeTo(final BufferedSink sink) throws IOException {
-                            payment.writeTo(sink.outputStream());
-                        }
-                    });
-
-                    final Call call = Constants.HTTP_CLIENT.newCall(request.build());
+                    final Call call = Constants.HTTP_CLIENT.newCall(requestBuilder.build());
                     try {
                         final Response response = call.execute();
                         if (response.isSuccessful()) {

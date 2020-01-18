@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -123,7 +124,7 @@
             style="@style/NewMontserratButton.Secondary.Inverted.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:src="@drawable/ic_backspace"
+            app:srcCompat="@drawable/ic_backspace"
             android:textColor="@color/keyboard_button"
             tools:ignore="ContentDescription" />
     </TableRow>
