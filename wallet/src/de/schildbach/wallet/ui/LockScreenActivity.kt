@@ -141,24 +141,6 @@ class LockScreenActivity : SendCoinsQrActivity() {
     private fun initViewModel() {
         viewModel = ViewModelProviders.of(this).get(LockScreenViewModel::class.java)
         decryptSeedViewModel = ViewModelProviders.of(this).get(DecryptSeedViewModel::class.java)
-//        decryptSeedViewModel.checkPinLiveData.observe(this, Observer {
-//            when (it.status) {
-//                Status.ERROR -> {
-//                    pinRetryController.failedAttempt(it.data!!)
-//                    if (pinRetryController.isLocked) {
-//                        setState(State.LOCKED)
-//                    } else {
-//                        setState(State.INVALID_PIN)
-//                    }
-//                }
-//                Status.LOADING -> {
-//                    setState(State.DECRYPTING)
-//                }
-//                Status.SUCCESS -> {
-//                    onCorrectPin(it.data)
-//                }
-//            }
-//        })
         decryptSeedViewModel.decryptSeedLiveData.observe(this, Observer {
             when (it.status) {
                 Status.ERROR -> {
