@@ -17,14 +17,17 @@
 
 package de.schildbach.wallet;
 
-import java.io.File;
-import java.util.concurrent.TimeUnit;
+import android.os.Build;
+import android.os.Environment;
+import android.text.format.DateUtils;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.io.BaseEncoding;
 
 import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
-import org.bitcoinj.kits.EvolutionWalletAppKit;
 import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
@@ -33,17 +36,13 @@ import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.io.BaseEncoding;
-import com.squareup.okhttp.HttpUrl;
-import com.squareup.okhttp.OkHttpClient;
-import com.squareup.okhttp.logging.HttpLoggingInterceptor;
+import java.io.File;
+import java.util.concurrent.TimeUnit;
 
 import de.schildbach.wallet_test.BuildConfig;
-
-import android.os.Build;
-import android.os.Environment;
-import android.text.format.DateUtils;
+import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.logging.HttpLoggingInterceptor;
 
 /**
  * @author Andreas Schildbach
@@ -254,24 +253,20 @@ public final class Constants {
             .equals(NetworkParameters.ID_MAINNET) ? 50002 : 51002;
 
     /** Shared HTTP client, can reuse connections */
-    public static final OkHttpClient HTTP_CLIENT = new OkHttpClient();
-    static {
-        HTTP_CLIENT.setFollowRedirects(false);
-        HTTP_CLIENT.setFollowSslRedirects(true);
-        HTTP_CLIENT.setConnectTimeout(15, TimeUnit.SECONDS);
-        HTTP_CLIENT.setWriteTimeout(15, TimeUnit.SECONDS);
-        HTTP_CLIENT.setReadTimeout(15, TimeUnit.SECONDS);
-
-        final HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor(
-                new HttpLoggingInterceptor.Logger() {
-                    @Override
-                    public void log(final String message) {
-                        log.debug(message);
-                    }
-                });
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BASIC);
-        HTTP_CLIENT.interceptors().add(loggingInterceptor);
-    }
+    public static final OkHttpClient HTTP_CLIENT = new OkHttpClient.Builder()
+            .followRedirects(false)
+            .followSslRedirects(true)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .addInterceptor(new HttpLoggingInterceptor(
+                    new HttpLoggingInterceptor.Logger() {
+                        @Override
+                        public void log(final String message) {
+                            log.debug(message);
+                        }
+                    }).setLevel(HttpLoggingInterceptor.Level.BASIC))
+            .build();
 
     private static final Logger log = LoggerFactory.getLogger(Constants.class);
 
