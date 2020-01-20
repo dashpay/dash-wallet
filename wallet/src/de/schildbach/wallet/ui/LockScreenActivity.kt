@@ -49,7 +49,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
         }
     }
 
-    private lateinit var walletApplication: WalletApplication
+    private val walletApplication = WalletApplication.getInstance()
     private lateinit var viewModel: LockScreenViewModel
     private lateinit var decryptSeedViewModel: DecryptSeedViewModel
     private lateinit var enableFingerprintViewModel: CheckPinSharedModel
@@ -80,7 +80,6 @@ class LockScreenActivity : SendCoinsQrActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_lock_screen)
 
-        walletApplication = (application as WalletApplication)
         pinRetryController = PinRetryController.getInstance()
         resetSessionPin()
         initView()
@@ -167,11 +166,11 @@ class LockScreenActivity : SendCoinsQrActivity() {
 
     private fun onCorrectPin(seed: DeterministicSeed?, pin: String?) {
         pinRetryController.clearPinFailPrefs()
-        val walletApplication = (application as WalletApplication)
         walletApplication.maybeStartAutoLogoutTimer()
         saveSessionPin(pin)
         if (shouldShowBackupReminder && seed != null) {
             startActivity(VerifySeedActivity.createIntent(this, seed.mnemonicCode!!.toTypedArray()))
+            walletApplication.configuration.disarmBackupSeedReminder()
         } else {
             startActivity(WalletActivity.createIntent(this))
         }
