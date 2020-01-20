@@ -36,7 +36,7 @@ import org.bitcoinj.core.Transaction
 /**
  * @author Samuel Barbosa
  */
-class TransactionResultActivity : AppCompatActivity() {
+class TransactionResultActivity : AbstractWalletActivity() {
 
     private lateinit var transactionResult: TransactionResult
 
@@ -82,7 +82,13 @@ class TransactionResultActivity : AppCompatActivity() {
         setContentView(R.layout.activity_successful_transaction)
 
         view_on_explorer.setOnClickListener { viewOnExplorer(transactionResult.transactionHash) }
-        transaction_close_btn.setOnClickListener { startActivity(WalletActivity.createIntent(this)) }
+        transaction_close_btn.setOnClickListener {
+            if (getSessionPin() !== null) {
+                startActivity(WalletActivity.createIntent(this))
+            } else {
+                startActivity(LockScreenActivity.createIntent(this))
+            }
+        }
 
         val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container)
         transactionResultViewBinder.bind(transactionResult)

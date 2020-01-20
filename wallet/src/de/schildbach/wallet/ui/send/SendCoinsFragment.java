@@ -110,6 +110,11 @@ public final class SendCoinsFragment extends Fragment {
 
     private static Coin ECONOMIC_FEE = Coin.valueOf(1000);
 
+    private String password;
+    private String getPassword() {
+        return password != null ? password : activity.getSessionPin();
+    }
+
     private AbstractBindServiceActivity activity;
     private WalletApplication application;
     private Configuration config;
@@ -173,15 +178,14 @@ public final class SendCoinsFragment extends Fragment {
         checkPinSharedModel.getOnCorrectPinCallback().observe(activity, new Observer<Pair<Integer, String>>() {
             @Override
             public void onChanged(Pair<Integer, String> data) {
+                password = data.getSecond();
+                dryrunRunnable.run();
                 switch (data.getFirst()) {
                     case AUTH_REQUEST_CODE_MAX:
                         handleEmpty();
                         break;
                     case AUTH_REQUEST_CODE_SEND:
-                        String password = data.getSecond();
-                        if (password != null) {
-                            handleGo(password);
-                        }
+                        showPaymentConfirmation();
                         break;
                 }
             }
@@ -201,7 +205,17 @@ public final class SendCoinsFragment extends Fragment {
             @Override
             public void onChanged(Coin coin) {
                 if (everythingPlausible()) {
-                    showPaymentConfirmation();
+                    if (getPassword() == null || config.getSpendingConfirmationEnabled()) {
+                        Coin thresholdAmount = Coin.parseCoin(
+                                Float.valueOf(config.getSpendingConfirmationLimit()).toString());
+                        if (enterAmountSharedViewModel.getDashAmount().isLessThan(thresholdAmount)) {
+                            CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND);
+                        } else {
+                            CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND, true);
+                        }
+                    } else {
+                        showPaymentConfirmation();
+                    }
                 }
                 updateView();
             }
@@ -209,8 +223,7 @@ public final class SendCoinsFragment extends Fragment {
         enterAmountSharedViewModel.getMaxButtonClickEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean unused) {
-                String sessionPin = activity.getSessionPin();
-                if (sessionPin == null) {
+                if (getPassword() == null) {
                     CheckPinDialog.show(activity, AUTH_REQUEST_CODE_MAX);
                 } else {
                     handleEmpty();
@@ -221,18 +234,8 @@ public final class SendCoinsFragment extends Fragment {
         confirmTransactionSharedViewModel.getClickConfirmButtonEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean aBoolean) {
-                String sessionPin = activity.getSessionPin();
-                if (sessionPin == null || config.getSpendingConfirmationEnabled()) {
-                    Coin thresholdAmount = Coin.parseCoin(
-                            Float.valueOf(config.getSpendingConfirmationLimit()).toString());
-                    if (enterAmountSharedViewModel.getDashAmount().isLessThan(thresholdAmount)) {
-                        CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND);
-                    } else {
-                        CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND, true);
-                    }
-                } else {
-                    handleGo(sessionPin);
-                }
+                handleGo();
+                password = activity.getSessionPin();
             }
         });
 
@@ -366,6 +369,8 @@ public final class SendCoinsFragment extends Fragment {
     private boolean isAmountPlausible() {
         if (viewModel.dryrunSendRequest != null) {
             return viewModel.dryrunException == null;
+        } else if (getPassword() == null) {
+            return true;
         } else if (viewModel.paymentIntent.mayEditAmount()) {
             return enterAmountSharedViewModel.hasAmount();
         } else {
@@ -377,7 +382,7 @@ public final class SendCoinsFragment extends Fragment {
         return viewModel.state == SendCoinsViewModel.State.INPUT && isPayeePlausible() && isAmountPlausible();
     }
 
-    private void handleGo(final String pin) {
+    private void handleGo() {
         final Wallet wallet = viewModel.wallet;
         if (wallet.isEncrypted()) {
             new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
@@ -385,13 +390,13 @@ public final class SendCoinsFragment extends Fragment {
                 protected void onSuccess(final KeyParameter encryptionKey, final boolean wasChanged) {
                     if (wasChanged)
                         application.backupWallet();
-                    signAndSendPayment(encryptionKey, pin);
+                    signAndSendPayment(encryptionKey, getPassword());
                 }
-            }.deriveKey(wallet, pin);
+            }.deriveKey(wallet, getPassword());
 
             setState(SendCoinsViewModel.State.DECRYPTING);
         } else {
-            signAndSendPayment(null, pin);
+            signAndSendPayment(null, getPassword());
         }
     }
 
@@ -603,9 +608,12 @@ public final class SendCoinsFragment extends Fragment {
                     wallet.completeTx(sendRequest);
                 }
                 viewModel.dryrunSendRequest = sendRequest;
-
             } catch (final Exception x) {
-                viewModel.dryrunException = x;
+                if (x instanceof InsufficientMoneyException && getPassword() == null) {
+                    viewModel.dryrunSendRequest = createSendRequest(finalPaymentIntent, false, false);
+                } else {
+                    viewModel.dryrunException = x;
+                }
             }
         }
     };
@@ -684,8 +692,9 @@ public final class SendCoinsFragment extends Fragment {
             else if (viewModel.dryrunException != null) {
                 if (viewModel.dryrunException instanceof DustySendRequested)
                     message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
-                else if (viewModel.dryrunException instanceof InsufficientMoneyException)
+                else if (viewModel.dryrunException instanceof InsufficientMoneyException) {
                     message = coloredString(getString(R.string.send_coins_fragment_hint_insufficient_money), R.color.dash_red, true);
+                }
                 else if (viewModel.dryrunException instanceof CouldNotAdjustDownwards)
                     message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
                 else
@@ -933,7 +942,9 @@ public final class SendCoinsFragment extends Fragment {
     }
 
     private void showPaymentConfirmation() {
-        if (viewModel.dryrunSendRequest == null) {
+        if (viewModel.dryrunSendRequest == null
+                || getPassword() == null
+                || viewModel.dryrunException != null) {
             return;
         }
 
