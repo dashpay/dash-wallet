@@ -17,13 +17,7 @@
 package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
-import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import de.schildbach.wallet.ui.widget.GlobalFooterView
 import de.schildbach.wallet_test.R
 
@@ -33,25 +27,7 @@ private const val FINISH_ALL_ACTIVITIES_ACTION = "dash.wallet.action.CLOSE_ALL_A
 @SuppressLint("Registered")
 open class GlobalFooterActivity : SessionActivity(), GlobalFooterView.OnFooterActionListener {
 
-    companion object {
-        @JvmStatic
-        fun finishAll(context: Context) {
-            val localIntent = Intent(FINISH_ALL_ACTIVITIES_ACTION)
-            LocalBroadcastManager.getInstance(context).sendBroadcast(localIntent)
-        }
-    }
-
     private lateinit var globalFooterView: GlobalFooterView
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        registerFinishAllReceiver()
-        super.onCreate(savedInstanceState)
-    }
-
-    override fun onDestroy() {
-        unregisterFinishAllReceiver()
-        super.onDestroy()
-    }
 
     fun setContentViewWithFooter(layoutResId: Int) {
         globalFooterView = GlobalFooterView.encloseContentView(this, layoutResId)
@@ -95,21 +71,5 @@ open class GlobalFooterActivity : SessionActivity(), GlobalFooterView.OnFooterAc
 
     fun activateGotoButton() {
         globalFooterView.activateGotoButton(true)
-    }
-
-    private val finishAllReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            LocalBroadcastManager.getInstance(application).unregisterReceiver(this)
-            this@GlobalFooterActivity.finish()
-        }
-    }
-
-    private fun registerFinishAllReceiver() {
-        val finishAllFilter = IntentFilter(FINISH_ALL_ACTIVITIES_ACTION)
-        LocalBroadcastManager.getInstance(application).registerReceiver(finishAllReceiver, finishAllFilter)
-    }
-
-    private fun unregisterFinishAllReceiver() {
-        LocalBroadcastManager.getInstance(application).unregisterReceiver(finishAllReceiver)
     }
 }

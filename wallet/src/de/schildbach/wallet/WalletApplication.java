@@ -732,10 +732,6 @@ public class WalletApplication extends MultiDexApplication {
         return instance;
     }
 
-    public void killAllActivities() {
-        GlobalFooterActivity.finishAll(this);
-    }
-
     private void registerDeviceInteractiveReceiver() {
 
         final IntentFilter filter = new IntentFilter();
