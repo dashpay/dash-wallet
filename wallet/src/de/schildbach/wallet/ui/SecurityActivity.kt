@@ -33,6 +33,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_security.*
+import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 
 class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletProvider {
@@ -44,6 +45,8 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         private const val AUTH_REQUEST_CODE_BACKUP = 1
         private const val ENABLE_FINGERPRINT_REQUEST_CODE = 2
         private const val FINGERPRINT_ENABLED_REQUEST_CODE = 3
+        private const val AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE = 4
+        private const val AUTH_REQUEST_CODE_ADVANCED_SECURITY = 5
     }
 
     override fun getLayoutId(): Int {
@@ -68,7 +71,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
                     if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
                         BackupWalletDialogFragment.show(supportFragmentManager)
                     } else {
-                        ActivityCompat.requestPermissions(this, arrayOf(permission), 1)
+                        ActivityCompat.requestPermissions(this, arrayOf(permission), AUTH_REQUEST_CODE_BACKUP)
                     }
                 }
                 ENABLE_FINGERPRINT_REQUEST_CODE -> {
@@ -79,6 +82,18 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
                 }
                 FINGERPRINT_ENABLED_REQUEST_CODE -> {
                     updateFingerprintSwitchSilently(fingerprintHelper.isFingerprintEnabled)
+                }
+                AUTH_REQUEST_CODE_ADVANCED_SECURITY -> {
+                    startActivity(Intent(this, AdvancedSecurityActivity::class.java))
+                }
+            }
+        })
+
+        val decryptSeedSharedModel : DecryptSeedSharedModel = ViewModelProviders.of(this).get(DecryptSeedSharedModel::class.java)
+        decryptSeedSharedModel.onDecryptSeedCallback.observe(this, Observer<Pair<Int?, DeterministicSeed?>> { (requestCode, seed) ->
+            when (requestCode) {
+                AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE -> {
+                    startViewSeedActivity(seed)
                 }
             }
         })
@@ -110,11 +125,11 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
     }
 
     fun backupWallet(view: View) {
-        CheckPinDialog.show(this, AUTH_REQUEST_CODE_BACKUP)
+        CheckPinDialog.show(this, AUTH_REQUEST_CODE_BACKUP, true)
     }
 
     fun viewRecoveryPhrase(view: View) {
-        BackupWalletToSeedDialogFragment.show(supportFragmentManager)
+        DecryptSeedWithPinDialog.show(this, AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE, true)
     }
 
     fun changePin(view: View) {
@@ -122,7 +137,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
     }
 
     fun openAdvancedSecurity(view: View) {
-        startActivity(Intent(this, AdvancedSecurityActivity::class.java))
+        CheckPinDialog.show(this, AUTH_REQUEST_CODE_ADVANCED_SECURITY, true)
     }
 
     fun resetWallet(view: View) {
@@ -136,5 +151,21 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
 
     override fun getWallet(): Wallet {
         return WalletApplication.getInstance().wallet
+    }
+
+    private fun startViewSeedActivity(seed : DeterministicSeed?) {
+        val mnemonicCode = seed!!.mnemonicCode
+        var seedArray = mnemonicCode!!.toTypedArray()
+        val intent = ViewSeedActivity.createIntent(this, seedArray)
+        startActivity(intent)
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>,
+                                            grantResults: IntArray) {
+        if (requestCode == AUTH_REQUEST_CODE_BACKUP) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                BackupWalletDialogFragment.show(supportFragmentManager)
+
+        }
     }
 }

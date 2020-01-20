@@ -105,7 +105,7 @@ public class SweepWalletFragment extends Fragment {
 	private HandlerThread backgroundThread;
 	private Handler backgroundHandler;
 
-	private State state = State.DECODE_KEY;
+	private State state = State.INTRO;
 	private PrefixedChecksummedBytes privateKeyToSweep = null;
 	@Nullable
 	private Map<FeeCategory, Coin> fees = null;
@@ -126,6 +126,7 @@ public class SweepWalletFragment extends Fragment {
 	private static final int REQUEST_CODE_SCAN = 0;
 
 	private enum State {
+	    INTRO,
 		DECODE_KEY, // ask for password
 		CONFIRM_SWEEP, // displays balance and asks for confirmation
 		PREPARATION, SENDING, SENT, FAILED // sending states
@@ -182,6 +183,9 @@ public class SweepWalletFragment extends Fragment {
 						.getSerializableExtra(SweepWalletActivity.INTENT_EXTRA_KEY);
 
 				// delay until fragment is resumed
+				if (State.INTRO == state) {
+				    state = State.DECODE_KEY;
+				}
 				handler.post(maybeDecodeKeyRunnable);
 			}
 		}
@@ -201,10 +205,17 @@ public class SweepWalletFragment extends Fragment {
 		viewGo.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(final View v) {
-				if (state == State.DECODE_KEY)
-					handleDecrypt();
-				if (state == State.CONFIRM_SWEEP)
-					handleSweep();
+				switch (state) {
+					case INTRO:
+						handleScan();
+						break;
+					case DECODE_KEY:
+						handleDecrypt();
+						break;
+					case CONFIRM_SWEEP:
+						handleSweep();
+						break;
+				}
 			}
 		});
 
@@ -219,13 +230,6 @@ public class SweepWalletFragment extends Fragment {
 						}
 					}
 				});
-
-		view.findViewById(R.id.scan_private_key).setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				handleScan();
-			}
-		});
 
 		return view;
 	}
@@ -471,13 +475,11 @@ public class SweepWalletFragment extends Fragment {
 
 		if (walletToSweep != null) {
 		    introductionGroup.setVisibility(View.GONE);
-		    viewGo.setVisibility(View.VISIBLE);
 			balanceGroup.setVisibility(View.VISIBLE);
 			balanceView.setFormat(btcFormat.noCode());
 			balanceView.setAmount(walletToSweep.getBalance(BalanceType.ESTIMATED));
 		} else {
 		    introductionGroup.setVisibility(View.VISIBLE);
-			viewGo.setVisibility(View.GONE);
 			balanceGroup.setVisibility(View.GONE);
 		}
 

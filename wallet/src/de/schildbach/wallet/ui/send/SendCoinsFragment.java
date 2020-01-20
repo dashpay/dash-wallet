@@ -967,7 +967,7 @@ public final class SendCoinsFragment extends Fragment {
         String fiatSymbol = GenericUtils.currencySymbol(fiatAmount.currencyCode);
         String fee = txFee.toPlainString();
 
-        DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat, fiatSymbol, fee, total);
+        DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat, fiatSymbol, fee, total, null);
         dialog.show(getFragmentManager(), "ConfirmTransactionDialog");
     }
 

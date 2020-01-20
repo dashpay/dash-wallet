@@ -17,24 +17,22 @@
 package de.schildbach.wallet.ui
 
 import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.livedata.CheckPinLiveData
+import de.schildbach.wallet.livedata.DecryptSeedLiveData
 import org.slf4j.LoggerFactory
 
-open class CheckPinViewModel(application: Application) : AndroidViewModel(application) {
+/**
+ * @author:  Eric Britten
+ */
 
-    private val log = LoggerFactory.getLogger(CheckPinViewModel::class.java)
+class DecryptSeedViewModel(application: Application) : CheckPinViewModel(application) {
 
-    protected val walletApplication = application as WalletApplication
+    private val log = LoggerFactory.getLogger(DecryptSeedViewModel::class.java)
 
-    val pin = StringBuilder()
+    internal val decryptSeedLiveData = DecryptSeedLiveData(application)
 
-    internal val checkPinLiveData = CheckPinLiveData(application)
-
-    open fun checkPin(password: CharSequence) {
+    override fun checkPin(password: CharSequence) {
         if (walletApplication.wallet.isEncrypted) {
-            checkPinLiveData.checkPin(password.toString())
+            decryptSeedLiveData.checkPin(password.toString())
         } else {
             log.warn("Trying to decrypt unencrypted wallet")
         }

@@ -16,13 +16,12 @@
 
 package de.schildbach.wallet.ui
 
-import androidx.lifecycle.ViewModel
+import org.bitcoinj.wallet.DeterministicSeed
 
+/**
+ * @author:  Eric Britten
+ */
 
-open class CheckPinSharedModel : ViewModel() {
-
-    val onCorrectPinCallback = SingleLiveEventExt<Pair<Int, String>>()
-
-    val onCancelCallback = SingleLiveEventExt<Void>()
-
+class DecryptSeedSharedModel : CheckPinSharedModel() {
+    val onDecryptSeedCallback = SingleLiveEventExt<Pair<Int?, DeterministicSeed?>>()
 }
