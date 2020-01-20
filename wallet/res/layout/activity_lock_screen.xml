@@ -20,7 +20,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:orientation="horizontal"
-        app:layout_constraintGuide_end="48dp" />
+        app:layout_constraintGuide_end="@dimen/lock_screen_bottom_guideline_margin" />
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/v_center_guideline"
@@ -58,6 +58,7 @@
         android:id="@+id/content"
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:layout_marginBottom="@dimen/lock_screen_content_margin_bottom"
         android:gravity="center"
         android:orientation="vertical"
         app:layout_constraintBottom_toTopOf="@id/numeric_keyboard"

@@ -1,8 +1,9 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     tools:context="de.schildbach.wallet.ui.PaymentsPayFragment">
 
     <de.schildbach.wallet.ui.widget.ReceiveInfoView
@@ -13,4 +14,4 @@
         app:ri_show_amount_action="true"
         app:ri_show_share_action="true" />
 
-</FrameLayout>
+</ScrollView>

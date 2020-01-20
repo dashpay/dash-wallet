@@ -5,150 +5,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/sweep_wallet_introduction_group"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="24dp"
-        tools:visibility="gone">
-
-        <TextView
-            android:id="@+id/title"
-            style="@style/MontserratMedium"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="48dp"
-            android:gravity="center"
-            android:text="@string/scan_private_key"
-            android:textColor="@android:color/black"
-            android:textSize="20sp"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <ImageView
-            android:id="@+id/imageView3"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="34dp"
-            android:tint="@android:color/black"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/title"
-            app:srcCompat="@drawable/ic_transaction_info" />
-
-        <TextView
-            android:id="@+id/text_1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_marginLeft="12dp"
-            android:text="@string/scan_private_key_intro_1"
-            app:layout_constraintStart_toEndOf="@id/imageView3"
-            app:layout_constraintTop_toTopOf="@id/imageView3" />
-
-        <ImageView
-            android:id="@+id/imageView4"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:tint="@android:color/black"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/text_1"
-            app:srcCompat="@drawable/ic_transaction_info" />
-
-        <TextView
-            android:id="@+id/text_2"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_marginLeft="12dp"
-            android:text="@string/scan_private_key_intro_2"
-            app:layout_constraintStart_toEndOf="@id/imageView4"
-            app:layout_constraintTop_toTopOf="@id/imageView4" />
-
-        <ImageView
-            android:id="@+id/imageView5"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:tint="@android:color/black"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/text_2"
-            app:srcCompat="@drawable/ic_transaction_info" />
-
-        <TextView
-            android:id="@+id/text_3"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_marginLeft="12dp"
-            android:text="@string/scan_private_key_intro_3"
-            app:layout_constraintStart_toEndOf="@id/imageView5"
-            app:layout_constraintTop_toTopOf="@id/imageView5" />
-
-        <Button
-            android:id="@+id/scan_private_key"
-            style="@style/NewMontserratButton.Primary"
-            android:layout_width="match_parent"
-            android:layout_height="54dp"
-            android:layout_marginLeft="15dp"
-            android:layout_marginRight="15dp"
-            android:text="@string/scan_private_key"
-            app:layout_constraintBottom_toBottomOf="parent" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <RelativeLayout
-        android:id="@+id/sweep_wallet_balance_group"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="gone"
-        tools:visibility="visible">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
-            android:gravity="center"
-            android:orientation="vertical">
-
-            <TextView
-                style="@style/MontserratMedium.MG"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="18dp"
-                android:text="@string/sweep_wallet_fragment_balance"
-                android:textSize="16sp" />
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="32dp"
-                android:orientation="horizontal">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_marginTop="4dp"
-                    app:srcCompat="@drawable/ic_dash_d_white_bottom"
-                    android:tint="@color/darkest_blue" />
-
-                <org.dash.wallet.common.ui.CurrencyTextView
-                    android:id="@+id/sweep_wallet_fragment_balance"
-                    style="@style/MontserratRegular.DB"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginLeft="8dp"
-                    android:includeFontPadding="false"
-                    android:textSize="26sp"
-                    tools:text="0.00" />
-
-            </LinearLayout>
-
-        </LinearLayout>
-
-    </RelativeLayout>
-
     <Button
         android:id="@+id/confirm_button"
         style="@style/NewMontserratButton.Primary"
@@ -157,8 +13,156 @@
         android:layout_alignParentBottom="true"
         android:layout_margin="16dp"
         android:maxLines="2"
-        android:visibility="gone"
-        tools:text="@string/sweep_wallet_fragment_button_sweep"
-        tools:visibility="visible" />
+        android:text="@string/scan_private_key" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/confirm_button">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/sweep_wallet_introduction_group"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="24dp"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/title"
+                style="@style/MontserratMedium"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="48dp"
+                android:gravity="center"
+                android:text="@string/scan_private_key"
+                android:textColor="@android:color/black"
+                android:textSize="20sp"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <ImageView
+                android:id="@+id/imageView3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="34dp"
+                android:tint="@android:color/black"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/title"
+                app:srcCompat="@drawable/ic_transaction_info" />
+
+            <TextView
+                android:id="@+id/text_1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginLeft="12dp"
+                android:layout_marginEnd="12dp"
+                android:layout_marginRight="12dp"
+                android:text="@string/scan_private_key_intro_1"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/imageView3"
+                app:layout_constraintTop_toTopOf="@id/imageView3" />
+
+            <ImageView
+                android:id="@+id/imageView4"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:tint="@android:color/black"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/text_1"
+                app:srcCompat="@drawable/ic_transaction_info" />
+
+            <TextView
+                android:id="@+id/text_2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginLeft="12dp"
+                android:layout_marginEnd="12dp"
+                android:layout_marginRight="12dp"
+                android:text="@string/scan_private_key_intro_2"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/imageView4"
+                app:layout_constraintTop_toTopOf="@id/imageView4" />
+
+            <ImageView
+                android:id="@+id/imageView5"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:tint="@android:color/black"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/text_2"
+                app:srcCompat="@drawable/ic_transaction_info" />
+
+            <TextView
+                android:id="@+id/text_3"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginLeft="12dp"
+                android:layout_marginEnd="12dp"
+                android:layout_marginRight="12dp"
+                android:text="@string/scan_private_key_intro_3"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/imageView5"
+                app:layout_constraintTop_toTopOf="@id/imageView5" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <RelativeLayout
+            android:id="@+id/sweep_wallet_balance_group"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            tools:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/MontserratMedium.MG"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="18dp"
+                    android:text="@string/sweep_wallet_fragment_balance"
+                    android:textSize="16sp" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="32dp"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_marginTop="4dp"
+                        android:tint="@color/darkest_blue"
+                        app:srcCompat="@drawable/ic_dash_d_white_bottom" />
+
+                    <org.dash.wallet.common.ui.CurrencyTextView
+                        android:id="@+id/sweep_wallet_fragment_balance"
+                        style="@style/MontserratRegular.DB"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginLeft="8dp"
+                        android:includeFontPadding="false"
+                        android:textSize="26sp"
+                        tools:text="0.00" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </RelativeLayout>
+
+    </FrameLayout>
 
 </RelativeLayout>

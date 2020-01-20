@@ -67,6 +67,7 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.DialogBuilder;
@@ -78,6 +79,7 @@ import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.IOException;
 import java.util.Currency;
+import java.util.List;
 import java.util.Locale;
 
 import de.schildbach.wallet.Constants;
@@ -176,7 +178,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         this.clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
 
         if (config.remindBackupSeed() && config.lastDismissedReminderMoreThan24hAgo()) {
-            BackupWalletToSeedDialogFragment.show(getSupportFragmentManager());
+            handleVerifySeed();
         }
 
         View appBar = findViewById(R.id.app_bar);
@@ -529,7 +531,31 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     public void handleBackupWalletToSeed() {
-        BackupWalletToSeedDialogFragment.show(getSupportFragmentManager());
+        handleVerifySeed();
+    }
+
+    private void handleVerifySeed() {
+        final int AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE = 1;
+        DecryptSeedSharedModel decryptSeedSharedModel = ViewModelProviders.of(this).get(DecryptSeedSharedModel.class);
+        decryptSeedSharedModel.getOnDecryptSeedCallback().observe(this, new Observer<Pair<Integer, DeterministicSeed>>() {
+
+            @Override
+            public void onChanged(Pair<Integer, DeterministicSeed> data) {
+                switch (data.getFirst()) {
+                    case AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE:
+                        startVerifySeedActivity(data.getSecond());
+                        break;
+                }
+            }
+        });
+        DecryptSeedWithPinDialog.show(this, AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE);
+    }
+
+    private void startVerifySeedActivity(DeterministicSeed seed) {
+        List<String> mnemonicCode = seed.getMnemonicCode();
+        String [] seedArray = mnemonicCode.toArray(new String[0]);
+        Intent intent = VerifySeedActivity.createIntent(this, seedArray);
+        startActivity(intent);
     }
 
     public void handleRestoreWalletFromSeed() {

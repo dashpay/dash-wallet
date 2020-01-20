@@ -9,13 +9,6 @@
     <string name="uphold_link_account">Associar conta de Uphold</string>
     <string name="uphold_account_dash_balance">O saldo da sua conta Uphold é de</string>
     <string name="uphold_transfer_to_this_wallet">Transferir Dash de sua conta Uphold para essa carteira</string>
-    <string name="uphold_withdrawal_amount">Quantia</string>
-    <string name="uphold_withdrawal_fee">Taxa</string>
-    <string name="uphold_withdrawal_total">Total</string>
-    <string name="uphold_withdrawal_title">Transferir Dash para essa carteira</string>
-    <string name="uphold_withdrawal_message">Você tem &lt;b>%1$s Dash&lt;/b> na sua conta Uphold. Você deseja &lt;u>transferir esse valor para esta carteira&lt;/u>?</string>
-    <string name="uphold_withdrawal_confirm_title">Confirmar transação</string>
-    <string name="uphold_withdrawal_confirm_message">Quantia base: %1$f\nTaxa: %2$f\nTotal: %3$f\n\nDeseja confirmar essa transação?</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">A taxa será deduzida do valor solicitado.</string>
     <string name="uphold_withdrawal_instructions">Insira abaixo o valor a ser transferido</string>
     <string name="uphold_withdrawal_success_title">Sucesso</string>

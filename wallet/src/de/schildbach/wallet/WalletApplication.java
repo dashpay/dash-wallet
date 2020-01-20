@@ -755,7 +755,6 @@ public class WalletApplication extends MultiDexApplication {
         if (!isSpecialActivity(activity)) {
             context = context.getApplicationContext();
             Intent lockScreenIntent = LockScreenActivity.createIntent(context);
-            lockScreenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(lockScreenIntent);
         }
         deviceWasLocked = false;

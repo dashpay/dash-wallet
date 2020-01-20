@@ -43,9 +43,10 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
         private const val ARG_FIAT_SYMBOL = "arg_fiat_symbol"
         private const val ARG_FEE = "arg_fee"
         private const val ARG_TOTAL = "arg_total"
+        private const val ARG_BUTTON_TEXT = "arg_button_text"
 
         @JvmStatic
-        fun createDialog(address: String, amount: String, amountFiat: String, fiatSymbol: String, fee: String, total: String): DialogFragment {
+        fun createDialog(address: String, amount: String, amountFiat: String, fiatSymbol: String, fee: String, total: String, buttonText: String? = null): DialogFragment {
             val dialog = ConfirmTransactionDialog()
             val bundle = Bundle()
             bundle.putString(ARG_ADDRESS, address)
@@ -54,6 +55,7 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
             bundle.putString(ARG_FIAT_SYMBOL, fiatSymbol)
             bundle.putString(ARG_FEE, fee)
             bundle.putString(ARG_TOTAL, total)
+            bundle.putString(ARG_BUTTON_TEXT, buttonText)
             dialog.arguments = bundle
             return dialog
         }
@@ -74,6 +76,9 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
             address.text = getString(ARG_ADDRESS)
             transaction_fee.text = getString(ARG_FEE)
             total_amount.text = getString(ARG_TOTAL)
+            getString(ARG_BUTTON_TEXT)?.run {
+                confirm_payment.text = this
+            }
         }
         collapse_button.setOnClickListener {
             dismiss()

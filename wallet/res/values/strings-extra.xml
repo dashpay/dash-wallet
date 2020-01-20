@@ -201,7 +201,8 @@
     <string name="verify_seed_buttons_tip">Please tap on the words from your recovery phrase in the right order</string>
     <string name="verify_seed_success_title">Verified Successfully</string>
     <string name="verify_seed_success_message">Your wallet is secured now. You can use your recovery phrase anytime to recover your account on another device.</string>
-
+    <string name="view_seed_done">Done</string>
+    <string name="view_seed_title">Recovery Phrase</string>
 	<string name="transaction_result_view_on_explorer">View on Explorer</string>
 	<string name="transaction_result_paid_successfully">Sent successfully</string>
 	<string name="transaction_result_sent_to">Sent to</string>
@@ -269,6 +270,9 @@
     <string name="security_medium">Medium</string>
     <string name="security_high">High</string>
     <string name="security_very_high">Very High</string>
+    <string name="max">Max</string>
+
+    <string name="enter_amount_available">available</string>
 
     <string-array name="history_filter">
         <item>All</item>

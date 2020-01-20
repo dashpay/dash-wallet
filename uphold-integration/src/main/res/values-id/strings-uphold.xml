@@ -9,13 +9,6 @@
     <string name="uphold_link_account">Tautkan akun Uphold</string>
     <string name="uphold_account_dash_balance">Saldo Dash akun Uphold anda adalah</string>
     <string name="uphold_transfer_to_this_wallet">Transfer Dash dari akun Uphold Anda ke dompet ini</string>
-    <string name="uphold_withdrawal_amount">Jumlah</string>
-    <string name="uphold_withdrawal_fee">Biaya</string>
-    <string name="uphold_withdrawal_total">Total</string>
-    <string name="uphold_withdrawal_title">Transfer Dash ke dompet ini</string>
-    <string name="uphold_withdrawal_message">Anda mempunyai  &lt;b>%1$sDash&lt;/b> di akun Uphold Anda. Apakah Anda ingin &lt;u> mentransfer nilai ini ke dompet ini&lt;/u>?</string>
-    <string name="uphold_withdrawal_confirm_title">Konfirmasikan transaksi</string>
-    <string name="uphold_withdrawal_confirm_message">Jumlah dasar: %1$f\nBiaya: %2$f\nTotal: %3$f\n\nApakah Anda ingin mengkonfirmasi transaksi ini?</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">Biaya akan dipotong dari jumlah yang diminta.</string>
     <string name="uphold_withdrawal_instructions">Masukkan jumlah yang akan ditransfer di bawah ini</string>
     <string name="uphold_withdrawal_success_title">Berhasil</string>

@@ -43,6 +43,8 @@ class LockScreenActivity : SendCoinsQrActivity() {
         @JvmStatic
         fun createIntent(context: Context): Intent {
             return Intent(context, LockScreenActivity::class.java)
+                    .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                            or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         }
     }
 
@@ -294,9 +296,5 @@ class LockScreenActivity : SendCoinsQrActivity() {
             setState(State.ENTER_PIN)
         }
         dialogBuilder.show()
-    }
-
-    override fun onBackPressed() {
-        // block closing activity by back button
     }
 }

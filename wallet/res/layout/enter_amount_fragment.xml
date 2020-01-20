@@ -25,7 +25,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            app:layout_constraintGuide_percent="0.50" />
+            app:layout_constraintGuide_percent="@dimen/pay_amount_vert_guideline_percent" />
 
         <ImageView
             android:id="@+id/convert_direction"
@@ -34,11 +34,11 @@
             android:layout_margin="8dp"
             android:background="@drawable/selectable_background_dark"
             android:padding="8dp"
-            android:src="@drawable/ic_convert"
             app:layout_constraintBottom_toBottomOf="@+id/h_center_guideline"
             app:layout_constraintEnd_toEndOf="@+id/v_center_guideline"
             app:layout_constraintStart_toStartOf="@+id/v_center_guideline"
-            app:layout_constraintTop_toTopOf="@+id/h_center_guideline" />
+            app:layout_constraintTop_toTopOf="@+id/h_center_guideline"
+            app:srcCompat="@drawable/ic_convert" />
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -51,13 +51,13 @@
 
             <ImageView
                 android:id="@+id/input_symbol_dash"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="@dimen/pay_amount_dash_symbol_size"
+                android:layout_height="@dimen/pay_amount_dash_symbol_size"
                 android:layout_gravity="center_vertical"
                 android:layout_marginTop="2dp"
                 android:layout_marginEnd="8dp"
                 android:layout_marginRight="8dp"
-                android:src="@drawable/ic_dash_d_black" />
+                app:srcCompat="@drawable/ic_dash_d_black" />
 
             <TextView
                 android:id="@+id/input_symbol"
@@ -68,7 +68,7 @@
                 android:layout_marginRight="8dp"
                 android:text="$"
                 android:textColor="@color/dash_black"
-                android:textSize="34sp" />
+                android:textSize="@dimen/pay_input_symbol_text_size" />
 
             <TextView
                 android:id="@+id/input_amount"
@@ -78,7 +78,7 @@
                 android:layout_gravity="center_horizontal"
                 android:hint="0"
                 android:textColor="@color/dash_black"
-                android:textSize="34sp" />
+                android:textSize="@dimen/pay_input_symbol_text_size" />
 
         </LinearLayout>
 
@@ -93,13 +93,13 @@
 
             <ImageView
                 android:id="@+id/calc_amount_symbol_dash"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
+                android:layout_width="@dimen/pay_calc_amount_dash_size"
+                android:layout_height="@dimen/pay_calc_amount_dash_size"
                 android:layout_gravity="center_vertical"
                 android:layout_marginTop="1dp"
                 android:layout_marginEnd="4dp"
                 android:layout_marginRight="4dp"
-                android:src="@drawable/ic_dash_d_black" />
+                app:srcCompat="@drawable/ic_dash_d_black" />
 
             <TextView
                 android:id="@+id/calc_amount_symbol"
@@ -110,7 +110,7 @@
                 android:layout_marginRight="4dp"
                 android:text="$"
                 android:textColor="@color/dash_gray"
-                android:textSize="22sp" />
+                android:textSize="@dimen/pay_calc_amount_symbol_size" />
 
             <TextView
                 android:id="@+id/calc_amount"
@@ -119,7 +119,7 @@
                 android:layout_height="wrap_content"
                 android:text="0.00"
                 android:textColor="@color/dash_gray"
-                android:textSize="22sp" />
+                android:textSize="@dimen/pay_calc_amount_symbol_size" />
 
         </LinearLayout>
 
@@ -134,7 +134,7 @@
             android:paddingTop="2dp"
             android:paddingEnd="24dp"
             android:paddingBottom="3dp"
-            android:text="Max"
+            android:text="@string/max"
             android:textColor="@color/dash_gray"
             android:textSize="18sp"
             app:layout_constraintEnd_toEndOf="@+id/v_center_guideline"
@@ -153,7 +153,7 @@
         android:paddingTop="8dp"
         android:paddingBottom="8dp"
         android:text="@string/send_coins_auto_lock_feasible"
-        android:textSize="16sp" />
+        android:textSize="@dimen/transaction_fee_text_size" />
 
     <de.schildbach.wallet.ui.widget.NumericKeyboardView
         android:id="@+id/numeric_keyboard"

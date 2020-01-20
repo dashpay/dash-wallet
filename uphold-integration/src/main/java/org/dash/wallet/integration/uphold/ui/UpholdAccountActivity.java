@@ -1,18 +1,17 @@
 /*
- * Copyright 2015-present the original author or authors.
+ * Copyright 2019 Dash Core Group
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package org.dash.wallet.integration.uphold.ui;
@@ -25,21 +24,20 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
+import android.view.View;
+
 import androidx.annotation.Nullable;
-import androidx.browser.customtabs.CustomTabsIntent;
-import androidx.core.content.ContextCompat;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import android.view.MenuItem;
-import android.view.View;
+import androidx.browser.customtabs.CustomTabsIntent;
+import androidx.core.content.ContextCompat;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.ui.DialogBuilder;
@@ -54,6 +52,8 @@ import java.math.BigDecimal;
 public class UpholdAccountActivity extends AppCompatActivity {
 
     public static final String WALLET_RECEIVING_ADDRESS_EXTRA = "uphold_receiving_address_extra";
+
+    public static final int REQUEST_CODE_TRANSFER = 1;
 
     private CurrencyTextView balanceView;
     private BigDecimal balance;
@@ -219,19 +219,12 @@ public class UpholdAccountActivity extends AppCompatActivity {
     }
 
     private void showWithdrawalDialog() {
-        Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
-        String currencyCode = config.getFormat().code();
-        MonetaryFormat inputFormat = config.getMaxPrecisionFormat();
-        MonetaryFormat hintFormat = config.getFormat();
-
-        UpholdWithdrawalDialog.show(getSupportFragmentManager(), balance,
-                receivingAddress, currencyCode, inputFormat, hintFormat,
-                new UpholdWithdrawalDialog.OnTransferListener() {
-                    @Override
-                    public void onTransfer() {
-                        loadUserBalance();
-                    }
-                });
+        Intent intent = new Intent();
+        intent.setClassName(this, "de.schildbach.wallet.ui.UpholdTransferActivity");
+        intent.putExtra("extra_title", getString(R.string.uphold_account));
+        intent.putExtra("extra_message", getString(R.string.uphold_withdrawal_instructions));
+        intent.putExtra("extra_max_amount", balance.toString());
+        startActivityForResult(intent, REQUEST_CODE_TRANSFER);
     }
 
     private void revokeAccessToken() {

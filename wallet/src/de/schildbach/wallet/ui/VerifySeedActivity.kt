@@ -33,6 +33,7 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
 
         private const val EXTRA_SEED = "extra_seed"
 
+        @JvmStatic
         fun createIntent(context: Context, seed: Array<String>): Intent {
             val intent = Intent(context, VerifySeedActivity::class.java)
             intent.putExtra(EXTRA_SEED, seed)
@@ -54,7 +55,7 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
         }
 
         supportFragmentManager.beginTransaction().add(R.id.container,
-                VerifySeedSecureNowFragment.newInstance()).commit()
+                    VerifySeedSecureNowFragment.newInstance()).commit()
     }
 
     private fun replaceFragment(fragment: Fragment) {
@@ -78,8 +79,8 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
     }
 
     override fun onVerifyWriteDown() {
-        supportFragmentManager.beginTransaction().replace(R.id.container,
-                VerifySeedConfirmFragment.newInstance(seed)).commit()
+            supportFragmentManager.beginTransaction().replace(R.id.container,
+                    VerifySeedConfirmFragment.newInstance(seed)).commit()
     }
 
     override fun onSeedVerified() {
