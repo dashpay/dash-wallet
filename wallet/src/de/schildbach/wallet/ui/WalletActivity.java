@@ -37,6 +37,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.LocaleList;
 import android.telephony.TelephonyManager;
 import android.view.ContextMenu;
 import android.view.Menu;
@@ -70,6 +71,7 @@ import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
@@ -1106,24 +1108,68 @@ public final class WalletActivity extends AbstractBindServiceActivity
         try {
             final TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
             final String simCountry = tm.getSimCountryIso();
+
+            log.info("Detecting currency based on device, mobile network or locale:");
             if (simCountry != null && simCountry.length() == 2) { // SIM country code is available
+                log.info("Device Sim Country: " + simCountry);
                 updateCurrencyExchange(simCountry.toUpperCase());
             } else if (tm.getPhoneType() != TelephonyManager.PHONE_TYPE_CDMA) { // device is not 3G (would be unreliable)
                 String networkCountry = tm.getNetworkCountryIso();
+                log.info("Network Country: " + simCountry);
                 if (networkCountry != null && networkCountry.length() == 2) { // network country code is available
                     updateCurrencyExchange(networkCountry.toUpperCase());
                 } else {
                     //Couldn't obtain country code - Use Default
                     if (config.getExchangeCurrencyCode() == null)
-                        config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
+                        setDefaultCurrency();
                 }
             } else {
                 //No cellular network - Wifi Only
                 if (config.getExchangeCurrencyCode() == null)
-                    config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
+                    setDefaultCurrency();
             }
         } catch (Exception e) {
             //fail safe
+            log.info("NMA-243:  Exception thrown obtaining Locale information: ", e);
+            if (config.getExchangeCurrencyCode() == null)
+                setDefaultCurrency();
+        }
+    }
+
+    private void setDefaultCurrency() {
+        String countryCode = getCurrentCountry();
+        log.info("Setting default currency:");
+        if(countryCode != null) {
+            log.info("Local Country: " + countryCode);
+            Locale l = new Locale("", countryCode);
+            Currency currency = Currency.getInstance(l);
+            String newCurrencyCode = currency.getCurrencyCode();
+            if(CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
+                log.info("found obsolete currency: " + newCurrencyCode);
+                newCurrencyCode = CurrencyInfo.getUpdatedCurrency(newCurrencyCode);
+            }
+            log.info("Setting Local Currency: " + newCurrencyCode);
+            config.setExchangeCurrencyCode(newCurrencyCode);
+
+            //Fallback to default
+            if (config.getExchangeCurrencyCode() == null) {
+                log.info("Using default Country: US");
+                log.info("Using default currency: " + Constants.DEFAULT_EXCHANGE_CURRENCY);
+                config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
+            }
+
+        } else {
+            log.info("Using default Country: US");
+            log.info("Using default currency: " + Constants.DEFAULT_EXCHANGE_CURRENCY);
+            config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
+        }
+    }
+
+    private String getCurrentCountry() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N){
+            return LocaleList.getDefault().get(0).getCountry();
+        } else{
+            return Locale.getDefault().getCountry();
         }
     }
 
@@ -1134,6 +1180,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
      * @param countryCode countryCode ISO 3166-1 alpha-2 country code.
      */
     private void updateCurrencyExchange(String countryCode) {
+        log.info("Updating currency exchange rate based on country: " + countryCode);
         Locale l = new Locale("", countryCode);
         Currency currency = Currency.getInstance(l);
         String newCurrencyCode = currency.getCurrencyCode();
@@ -1146,6 +1193,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
             if (config.wasUpgraded()) {
                 showFiatCurrencyChangeDetectedDialog(currentCurrencyCode, newCurrencyCode);
             } else {
+                if(CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
+                    log.info("found obsolete currency: " + newCurrencyCode);
+                    newCurrencyCode = CurrencyInfo.getUpdatedCurrency(newCurrencyCode);
+                }
+                log.info("Setting Local Currency: " + newCurrencyCode);
                 config.setExchangeCurrencyCodeDetected(true);
                 config.setExchangeCurrencyCode(newCurrencyCode);
             }
@@ -1153,6 +1205,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         //Fallback to default
         if (config.getExchangeCurrencyCode() == null) {
+            log.info("Using default Country: US");
+            log.info("Using default currency: " + Constants.DEFAULT_EXCHANGE_CURRENCY);
             config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
         }
     }

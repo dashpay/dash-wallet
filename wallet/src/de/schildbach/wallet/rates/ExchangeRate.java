@@ -8,6 +8,7 @@ import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 
 import org.bitcoinj.utils.Fiat;
+import org.dash.wallet.common.data.CurrencyInfo;
 
 import java.math.BigDecimal;
 import java.util.Currency;
@@ -71,12 +72,21 @@ public class ExchangeRate {
 
         if (currencyName == null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                currencyName = getCurrency().getDisplayName();
+                // currency codes must be 3 letters before calling getCurrency()
+                if(currencyCode.length() == 3)
+                    currencyName = getCurrency().getDisplayName();
+                else currencyName = currencyCode;
+
+                if(currencyCode.toUpperCase().equals(currencyName.toUpperCase())) {
+                    currencyName = CurrencyInfo.getOtherCurrencyName(currencyCode);
+                }
             } else {
+                // before kitkat, no names will be displayed
+                // this doesn't matter since the app doesn't run on
+                // pre kitkat devices
                 currencyName = "";
             }
         }
         return currencyName;
     }
-
 }

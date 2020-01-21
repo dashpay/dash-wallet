@@ -61,6 +61,7 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
+import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.KeyChain.KeyPurpose;
@@ -960,11 +961,14 @@ public final class SendCoinsFragment extends Fragment {
         }
 
         String address = viewModel.paymentIntent.getAddress().toBase58();
-        Fiat fiatAmount = enterAmountSharedViewModel.getExchangeRate().coinToFiat(amount);
+        ExchangeRate rate = enterAmountSharedViewModel.getExchangeRate();
+        // prevent crash if the exchange rate is null
+        Fiat fiatAmount = rate != null ? rate.coinToFiat(amount): null;
 
         String amountStr = MonetaryFormat.BTC.noCode().format(amount).toString();
-        String amountFiat = Constants.LOCAL_FORMAT.format(fiatAmount).toString();
-        String fiatSymbol = GenericUtils.currencySymbol(fiatAmount.currencyCode);
+        // if the exchange rate is not available, then show "Not Available"
+        String amountFiat = fiatAmount != null ? Constants.LOCAL_FORMAT.format(fiatAmount).toString() : getString(R.string.transaction_row_rate_not_available);
+        String fiatSymbol = fiatAmount != null ? GenericUtils.currencySymbol(fiatAmount.currencyCode) : "";
         String fee = txFee.toPlainString();
 
         DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat, fiatSymbol, fee, total, null);
