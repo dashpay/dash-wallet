@@ -276,7 +276,8 @@
 
     <string name="skip">skip</string>
     <string name="get_started">Get Started</string>
-    <string name="welcome_screen_title_1">New Experience</string>
+    <string name="welcome_screen_title_1_new_install">Welcome</string>
+    <string name="welcome_screen_title_1_upgrade">We Upgraded</string>
     <string name="welcome_screen_subtitle_1">An intuitive and familiar experience across all your devices</string>
     <string name="welcome_screen_title_2">Pay with Ease</string>
     <string name="welcome_screen_subtitle_2">Pay and get paid instantly with easy to use payment flows</string>

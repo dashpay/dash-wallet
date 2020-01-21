@@ -27,17 +27,22 @@ import androidx.viewpager.widget.ViewPager
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_welcome.*
+import org.dash.wallet.common.Configuration
 
 /**
  * @author Samuel Barbosa
  */
 class WelcomeActivity : AppCompatActivity() {
 
+    lateinit var configuration: Configuration
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_welcome)
 
-        viewpager.adapter = WelcomePagerAdapter(supportFragmentManager, 0)
+        configuration = WalletApplication.getInstance().configuration
+
+        viewpager.adapter = WelcomePagerAdapter(supportFragmentManager, 0, configuration)
         page_indicator.setViewPager(viewpager)
 
         viewpager.addOnPageChangeListener(object : ViewPager.OnPageChangeListener {
@@ -72,13 +77,20 @@ class WelcomeActivity : AppCompatActivity() {
         super.finish()
     }
 
-    private class WelcomePagerAdapter(fragmentManager: FragmentManager, behavior: Int) :
-            FragmentPagerAdapter(fragmentManager, behavior) {
+    private class WelcomePagerAdapter(fragmentManager: FragmentManager, behavior: Int,
+                                      val configuration: Configuration) : FragmentPagerAdapter(fragmentManager, behavior) {
 
         override fun getItem(position: Int): Fragment {
             when (position) {
-                0 -> return WelcomeScreenFragment.newInstance(R.string.welcome_screen_title_1,
-                        R.string.welcome_screen_subtitle_1, R.drawable.welcome_screenshot_1)
+                0 -> {
+                    var title = if (configuration.wasUpgraded()) {
+                        R.string.welcome_screen_title_1_upgrade
+                    } else {
+                        R.string.welcome_screen_title_1_new_install
+                    }
+                    return WelcomeScreenFragment.newInstance(title, R.string.welcome_screen_subtitle_1,
+                            R.drawable.welcome_screenshot_1)
+                }
                 1 -> return WelcomeScreenFragment.newInstance(R.string.welcome_screen_title_2,
                         R.string.welcome_screen_subtitle_2, R.drawable.welcome_screenshot_2)
                 2 -> return WelcomeScreenFragment.newInstance(R.string.welcome_screen_title_3,
