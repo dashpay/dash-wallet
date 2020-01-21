@@ -1110,8 +1110,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }
     }
 
-
-
     private void setDefaultCurrency() {
         String countryCode = getCurrentCountry();
         log.info("Setting default currency:");
