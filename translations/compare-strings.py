@@ -19,11 +19,11 @@ iOSStrings = []
 
 
 def loadAndroidFiles():
-    '''
+    """
         Load all of the android strings into a dictionary
         The key is the string
         The value is the android string id
-    '''
+    """
     for fileName in androidFiles:
         doc = xml.dom.minidom.parse(fileName)
         for string in doc.firstChild.childNodes:
@@ -35,9 +35,9 @@ def loadAndroidFiles():
 
 
 def loadiOSFiles():
-    '''
+    """
         load all of the iOS strings into a list
-    '''
+    """
     for fileName in iOSFiles:
         file = open(fileName+"-utf8", "r")
         for line in file:
@@ -48,7 +48,7 @@ def loadiOSFiles():
 
 
 def formatiOSFiles():
-    '''Convert the iOS string format of UTF-16LE to UTF8'''
+    """Convert the iOS string format of UTF-16LE to UTF8"""
     for fileName in iOSFiles:
         with open(fileName, 'rb') as source_file:
             with open(fileName + "-utf8", 'w+b') as dest_file:
@@ -61,7 +61,7 @@ def mykey(val):
 
 
 def printHeader(header, text, output):
-    print("<" + header + ">" + text + "</" + header +">", file=output)
+    print("<" + header + ">" + text + "</" + header + ">", file=output)
 
 def countWords(text):
     words = 1
@@ -213,7 +213,6 @@ def main():
     for a in androidStringsUpperNoWildCards:
         if a in iOSStringsUpperNoWildCards:
             foundWildCards[iOSStringsUpperNoPunctuation[a]] = androidStringsUpperNoWildCards[a]
-
 
     # add the remaining non matching android strings to the not found lists
     for a in androidStrings:
