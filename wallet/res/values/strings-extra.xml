@@ -203,7 +203,7 @@
     <string name="verify_seed_success_message">Your wallet is secured now. You can use your recovery phrase anytime to recover your account on another device.</string>
     <string name="view_seed_done">Done</string>
     <string name="view_seed_title">Recovery Phrase</string>
-	<string name="transaction_result_view_on_explorer">View on Explorer</string>
+	<string name="transaction_result_view_on_explorer">View in Explorer</string>
 	<string name="transaction_result_paid_successfully">Sent successfully</string>
 	<string name="transaction_result_sent_to">Sent to</string>
 	<string name="transaction_date_and_time">Date &amp; Time</string>
@@ -257,8 +257,8 @@
     <string name="logout_after">Logout after</string>
     <string name="immediately">Immediately</string>
     <string name="twenty_four_hours">24 hours</string>
-    <string name="one_minute">1 minute</string>
-    <string name="five_minute">5 minutes</string>
+    <string name="one_minute">1 min</string>
+    <string name="five_minute">5 min</string>
     <string name="one_hour">1 hour</string>
     <string name="one_day">1 day</string>
     <string name="biometric_limit">Biometric Limit</string>
