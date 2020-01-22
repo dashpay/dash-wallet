@@ -34,6 +34,7 @@ import de.schildbach.wallet.ui.widget.NumericKeyboardView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_lock_screen.*
+import org.bitcoinj.wallet.DeterministicSeed
 import org.dash.wallet.common.ui.DialogBuilder
 import java.util.concurrent.TimeUnit
 
@@ -48,8 +49,9 @@ class LockScreenActivity : SendCoinsQrActivity() {
         }
     }
 
+    private val walletApplication = WalletApplication.getInstance()
     private lateinit var viewModel: LockScreenViewModel
-    private lateinit var checkPinViewModel: CheckPinViewModel
+    private lateinit var decryptSeedViewModel: DecryptSeedViewModel
     private lateinit var enableFingerprintViewModel: CheckPinSharedModel
 
     private val temporaryLockCheckHandler = Handler()
@@ -87,7 +89,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
     override fun onStart() {
         super.onStart()
         setupInitState()
-        (application as WalletApplication).startBlockchainService(true)
+        walletApplication.startBlockchainService(true)
     }
 
     private fun initView() {
@@ -110,20 +112,20 @@ class LockScreenActivity : SendCoinsQrActivity() {
                 if (pinRetryController.isLocked) {
                     return
                 }
-                if (checkPinViewModel.pin.length < 4) {
-                    checkPinViewModel.pin.append(number)
+                if (decryptSeedViewModel.pin.length < 4) {
+                    decryptSeedViewModel.pin.append(number)
                     pin_preview.next()
                 }
-                if (checkPinViewModel.pin.length == 4) {
+                if (decryptSeedViewModel.pin.length == 4) {
                     Handler().postDelayed({
-                        checkPinViewModel.checkPin(checkPinViewModel.pin)
+                        decryptSeedViewModel.checkPin(decryptSeedViewModel.pin)
                     }, 200)
                 }
             }
 
             override fun onBack(longClick: Boolean) {
-                if (checkPinViewModel.pin.isNotEmpty()) {
-                    checkPinViewModel.pin.deleteCharAt(checkPinViewModel.pin.length - 1)
+                if (decryptSeedViewModel.pin.isNotEmpty()) {
+                    decryptSeedViewModel.pin.deleteCharAt(decryptSeedViewModel.pin.length - 1)
                     pin_preview.prev()
                 }
             }
@@ -136,12 +138,12 @@ class LockScreenActivity : SendCoinsQrActivity() {
     }
 
     private fun initViewModel() {
-        checkPinViewModel = ViewModelProviders.of(this).get(CheckPinViewModel::class.java)
         viewModel = ViewModelProviders.of(this).get(LockScreenViewModel::class.java)
-        checkPinViewModel.checkPinLiveData.observe(this, Observer {
+        decryptSeedViewModel = ViewModelProviders.of(this).get(DecryptSeedViewModel::class.java)
+        decryptSeedViewModel.decryptSeedLiveData.observe(this, Observer {
             when (it.status) {
                 Status.ERROR -> {
-                    pinRetryController.failedAttempt(it.data!!)
+                    pinRetryController.failedAttempt(it.data!!.second)
                     if (pinRetryController.isLocked) {
                         setState(State.LOCKED)
                     } else {
@@ -152,22 +154,26 @@ class LockScreenActivity : SendCoinsQrActivity() {
                     setState(State.DECRYPTING)
                 }
                 Status.SUCCESS -> {
-                    onCorrectPin(it.data)
+                    onCorrectPin(it.data!!.first, it.data.second)
                 }
             }
         })
         enableFingerprintViewModel = ViewModelProviders.of(this)[CheckPinSharedModel::class.java]
         enableFingerprintViewModel.onCorrectPinCallback.observe(this, Observer {
-            val pin = it.second
-            onCorrectPin(pin)
+            onFingerprintSuccess(it.second)
         })
     }
 
-    private fun onCorrectPin(pin: String?) {
+    private fun onCorrectPin(seed: DeterministicSeed?, pin: String?) {
         pinRetryController.clearPinFailPrefs()
-        (application as WalletApplication).maybeStartAutoLogoutTimer()
+        walletApplication.maybeStartAutoLogoutTimer()
         saveSessionPin(pin)
-        startActivity(WalletActivity.createIntent(this))
+        if (shouldShowBackupReminder && seed != null) {
+            startActivity(VerifySeedActivity.createIntent(this, seed.mnemonicCode!!.toTypedArray()))
+            walletApplication.configuration.disarmBackupSeedReminder()
+        } else {
+            startActivity(WalletActivity.createIntent(this))
+        }
         finish()
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
@@ -189,7 +195,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
                 numeric_keyboard.isEnabled = true
 
                 if (state == State.INVALID_PIN) {
-                    checkPinViewModel.pin.clear()
+                    decryptSeedViewModel.pin.clear()
                     pin_preview.shake()
                     Handler().postDelayed({
                         pin_preview.clear()
@@ -216,7 +222,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
             }
             State.LOCKED -> {
                 view_flipper.displayedChild = 3
-                checkPinViewModel.pin.clear()
+                decryptSeedViewModel.pin.clear()
                 pin_preview.clear()
                 temporaryLockCheckHandler.postDelayed(temporaryLockCheckRunnable, temporaryLockCheckInterval)
 
@@ -258,7 +264,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
         fingerprintCancellationSignal = CancellationSignal()
         fingerprintHelper!!.getPassword(fingerprintCancellationSignal, object : FingerprintHelper.Callback {
             override fun onSuccess(savedPass: String) {
-                onCorrectPin(savedPass)
+                onFingerprintSuccess(savedPass)
             }
 
             override fun onFailure(message: String, canceled: Boolean, exceededMaxAttempts: Boolean) {
@@ -297,4 +303,18 @@ class LockScreenActivity : SendCoinsQrActivity() {
         }
         dialogBuilder.show()
     }
+
+    private fun onFingerprintSuccess(pass: String) {
+        // In order to display the VerifySeedActivity (when needed) the seed is required
+        // but when using fingerprint to unlock the App we only know the pin, that is why
+        // decryptSeedViewModel.checkPin(savedPass) has to be called
+        if (shouldShowBackupReminder) {
+            decryptSeedViewModel.checkPin(pass)
+        } else {
+            onCorrectPin(null, pass)
+        }
+    }
+
+    private val shouldShowBackupReminder =
+            walletApplication.configuration.remindBackupSeed() && walletApplication.configuration.lastDismissedReminderMoreThan24hAgo()
 }
