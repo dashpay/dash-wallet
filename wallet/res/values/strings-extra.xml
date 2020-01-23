@@ -43,11 +43,11 @@
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Quick Receive</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
-    <string name="lock_action_login_with_pin">Login\nwith PIN</string>
+    <string name="lock_action_login_with_pin">Login with PIN</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
-    <string name="lock_action_login_with_fingerprint">Login with\nFingerprint</string>
+    <string name="lock_action_login_with_fingerprint">Login with Fingerprint</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
-    <string name="lock_action_scan_to_pay">Scan to\nSend</string>
+    <string name="lock_action_scan_to_pay">Scan to Send</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
     <string name="lock_enter_pin">Enter PIN</string>
     <string name="lock_unlock_with_fingerprint">Use your fingerprint to unlock</string>
@@ -125,7 +125,9 @@
     <string name="send_coins_options_fee_category_zero">No Fee</string>
     <string name="send_coins_fragment_hint_fee_zero">No fee of will be paid. Use \'no fee\' only if you don\'t care about confirmation time.</string>
 
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">Application %s would like to receive your Master Public Key.  This can be used to keep track of your wallet, this can not be used to move your Dash.</string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_address_request_dialog_msg">Application %s is requesting an address so it can pay you.  Would you like to authorize this?</string>
 
     <string name="wallet_lock_unlock">Unlock</string>
