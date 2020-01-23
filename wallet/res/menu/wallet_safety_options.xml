@@ -2,10 +2,6 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
-        android:id="@+id/wallet_options_safety"
-        android:title="@string/wallet_options_safety"
-        app:showAsAction="never" />
-    <item
         android:id="@+id/wallet_options_backup_wallet"
         android:title="@string/export_keys_dialog_title"
         app:showAsAction="never" />

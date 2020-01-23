@@ -75,14 +75,6 @@ public final class WalletDisclaimerFragment extends Fragment implements OnShared
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
             final Bundle savedInstanceState) {
         final View view = inflater.inflate(R.layout.wallet_disclaimer_fragment, container);
-        messageView = view.findViewById(R.id.wallet_disclaimer_text);
-
-        messageView.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(final View v) {
-                HelpDialogFragment.page(getFragmentManager(), R.string.help_safety);
-            }
-        });
 
         closeSafetyDisclaimerView = view.findViewById(R.id.wallet_disclaimer_close);
         closeSafetyDisclaimerView.setOnClickListener(new View.OnClickListener() {
