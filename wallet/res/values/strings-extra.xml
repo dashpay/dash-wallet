@@ -209,8 +209,8 @@
     <string name="verify_skip">Skip</string>
     <string name="verify_secure_now_btn">Secure now</string>
     <string name="verify_secure_now_message">If you lose this device, you will lose your funds. Get your recovery phrase so that you can restore your wallet on another device.</string>
-    <string name="verify_seed_title">Please write this down</string>
-    <string name="verify_seed_write_down_confirmation">I have written this down</string>
+    <string name="verify_seed_title">Please write it down</string>
+    <string name="verify_seed_write_down_confirmation">I have written it down</string>
     <string name="verify_seed_buttons_tip">Please tap on the words from your recovery phrase in the right order</string>
     <string name="verify_seed_success_title">Verified Successfully</string>
     <string name="verify_seed_success_message">Your wallet is secured now. You can use your recovery phrase anytime to recover your account on another device.</string>
