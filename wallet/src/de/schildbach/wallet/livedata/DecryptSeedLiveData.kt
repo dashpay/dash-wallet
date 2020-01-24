@@ -22,6 +22,7 @@ import android.os.HandlerThread
 import android.os.Process
 import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DecryptSeedTask
 import de.schildbach.wallet.ui.send.DeriveKeyTask
 import org.bitcoinj.wallet.DeterministicSeed
@@ -46,7 +47,17 @@ class DecryptSeedLiveData(application: Application) : MutableLiveData<Resource<P
 
     private var walletApplication = application as WalletApplication
 
-    fun checkPin(pin : String) {
+    private val securityGuard = SecurityGuard()
+
+    fun checkPin(pin: String) {
+        if (securityGuard.checkPin(pin)) {
+            decryptSeed(pin, securityGuard.retrievePassword())
+        } else {
+            value = Resource.error("wrong pin", Pair(walletApplication.wallet.keyChainSeed, pin))
+        }
+    }
+
+    private fun decryptSeed(pin: String, password: String) {
         if (deriveKeyTask == null) {
             deriveKeyTask = object : DeriveKeyTask(backgroundHandler, walletApplication.scryptIterationsTarget()) {
 
@@ -71,7 +82,7 @@ class DecryptSeedLiveData(application: Application) : MutableLiveData<Resource<P
                 }
             }
             value = Resource.loading(null)
-            deriveKeyTask!!.deriveKey(walletApplication.wallet, pin)
+            deriveKeyTask!!.deriveKey(walletApplication.wallet, password)
         }
     }
 }

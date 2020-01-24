@@ -68,7 +68,6 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.ChildNumber;
-import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.CurrencyInfo;
@@ -81,7 +80,6 @@ import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.IOException;
 import java.util.Currency;
-import java.util.List;
 import java.util.Locale;
 
 import de.schildbach.wallet.Constants;
@@ -141,8 +139,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private boolean showBackupWalletDialog = false;
 
-    private CheckPinSharedModel checkPinSharedModel;
-
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -167,7 +163,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         initUphold();
         initView();
-        initViewModel();
 
         //Prevent showing dialog twice or more when activity is recreated (e.g: rotating device, etc)
         if (savedInstanceState == null) {
@@ -191,16 +186,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 WalletTransactionsFragment walletTransactionsFragment = (WalletTransactionsFragment)
                         getSupportFragmentManager().findFragmentById(R.id.wallet_transactions_fragment);
                 return walletTransactionsFragment != null && !walletTransactionsFragment.isHistoryEmpty();
-            }
-        });
-    }
-
-    private void initViewModel() {
-        checkPinSharedModel = ViewModelProviders.of(this).get(CheckPinSharedModel.class);
-        checkPinSharedModel.getOnCorrectPinCallback().observe(this, new Observer<Pair<Integer, String>>() {
-            @Override
-            public void onChanged(Pair<Integer, String> integerStringPair) {
-
             }
         });
     }
@@ -533,26 +518,18 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void handleVerifySeed() {
-        final int AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE = 1;
-        DecryptSeedSharedModel decryptSeedSharedModel = ViewModelProviders.of(this).get(DecryptSeedSharedModel.class);
-        decryptSeedSharedModel.getOnDecryptSeedCallback().observe(this, new Observer<Pair<Integer, DeterministicSeed>>() {
-
+        CheckPinSharedModel checkPinSharedModel = ViewModelProviders.of(this).get(CheckPinSharedModel.class);
+        checkPinSharedModel.getOnCorrectPinCallback().observe(this, new Observer<Pair<Integer, String>>() {
             @Override
-            public void onChanged(Pair<Integer, DeterministicSeed> data) {
-                switch (data.getFirst()) {
-                    case AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE:
-                        startVerifySeedActivity(data.getSecond());
-                        break;
-                }
+            public void onChanged(Pair<Integer, String> data) {
+                startVerifySeedActivity(data.getSecond());
             }
         });
-        DecryptSeedWithPinDialog.show(this, AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE);
+        CheckPinDialog.show(this, 0);
     }
 
-    private void startVerifySeedActivity(DeterministicSeed seed) {
-        List<String> mnemonicCode = seed.getMnemonicCode();
-        String [] seedArray = mnemonicCode.toArray(new String[0]);
-        Intent intent = VerifySeedActivity.createIntent(this, seedArray);
+    private void startVerifySeedActivity(String pin) {
+        Intent intent = VerifySeedActivity.createIntent(this, pin);
         startActivity(intent);
     }
 
