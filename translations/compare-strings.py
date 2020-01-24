@@ -72,6 +72,19 @@ def countWords(text):
         lastChar = char
     return words
 
+def getFirstThreeWords(text):
+    words = 1
+    threeWords = ''
+    lastChar = ''
+    for char in text:
+        if char.isspace() and char != lastChar:
+            words += 1
+        if words > 3:
+            return threeWords.rstrip(",.!?;:")
+        lastChar = char
+        threeWords += char
+    return threeWords.rstrip(",.!?;:")
+
 def main():
     loadAndroidFiles()
     #print(androidStrings)
@@ -88,6 +101,8 @@ def main():
     androidStringsWithWildcards = []
     stringsWithWildcards = {}
     stringsWithWildcardsList = []
+    iOSStringsWithEscapeSequences = {}
+    androidStringsWithEscapeSequences = {}
 
     outputFile = codecs.open("translation-comparison-report.html", "w", "utf-8")
     outputFile.write(u'\ufeff')
@@ -121,11 +136,17 @@ def main():
             iOSStringsWithWildcards.append(i)
             stringsWithWildcards[i] = "iOS"
             stringsWithWildcardsList.append(i)
+        if i.find('\\') != -1:
+            iOSStringsWithEscapeSequences[i] = "iOS"
         if i in androidStrings:
             found[i] = androidStrings[i]
         else:
             notFound[i] = "iOS"
             listNotFound.append(i)
+
+    for a in androidStrings:
+        if a.find('\\') != -1:
+            androidStringsWithEscapeSequences[a] = "android - " + androidStrings[a]
 
     for f in found:
         if f in androidStrings:
@@ -166,17 +187,28 @@ def main():
                 pass
         else:
             # look for strings that start with the same words
+            words = countWords(i)
+            threeWords = getFirstThreeWords(i)
             for a in androidStringsUpper:
-                if countWords(i) >= 2:
+                if words >= 2:
                     if a.startswith(i):
                         foundStartsWith[iOSStringsUpper[i]] = androidStringsUpper[a]
+                    elif words > 2:
+                        if a.startswith(threeWords):
+                            foundStartsWith[iOSStringsUpper[i]] = androidStringsUpper[a]
 
     for a in androidStringsUpper:
         if a not in iOSStringsUpper:
+            words = countWords(a)
+            threeWords = getFirstThreeWords(a)
             for i in iOSStringsUpper:
-                if countWords(a) >= 2:
+                if words >= 2:
                     if i.startswith(a):
                         foundStartsWith[iOSStringsUpper[i]] = androidStringsUpper[a]
+                    elif words > 2:
+                        if i.startswith(threeWords):
+                            foundStartsWith[iOSStringsUpper[i]] = androidStringsUpper[a]
+
 
     # find differences in punctuation:
     iOSStringsUpperNoPunctuation = {}
@@ -201,10 +233,12 @@ def main():
     iOSStringsUpperNoWildCards = {}
     androidStringsUpperNoWildCards = {}
     for i in iOSStringsUpper:
-        iOSStringsUpperNoWildCards[re.sub("%[@]", "", i)] = iOSStringsUpper[i]
+        if i.find('%') != -1:
+            iOSStringsUpperNoWildCards[re.sub("%[@D]", "", i)] = iOSStringsUpper[i]
 
     for a in androidStringsUpper:
-        androidStringsUpperNoWildCards[re.sub("%[sd]", "", a)] = androidStringsUpper[a]
+        if a.find('%') != -1:
+            androidStringsUpperNoWildCards[re.sub("%[SD]", "", a)] = androidStringsUpper[a]
 
     for i in iOSStringsUpperNoWildCards:
         if i in androidStringsUpperNoWildCards:
@@ -212,7 +246,7 @@ def main():
 
     for a in androidStringsUpperNoWildCards:
         if a in iOSStringsUpperNoWildCards:
-            foundWildCards[iOSStringsUpperNoPunctuation[a]] = androidStringsUpperNoWildCards[a]
+            foundWildCards[androidStringsUpperNoWildCards[a]] = androidStringsUpperNoWildCards[a]
 
     # add the remaining non matching android strings to the not found lists
     for a in androidStrings:
@@ -232,6 +266,8 @@ def main():
     print("<li><a href='#case'>", len(foundUpper), "iOS strings differ by case with Android</a></li>", file=outputFile)
     print("<li><a href='#start'>", len(foundStartsWith), "iOS strings start with words similar to Android</a></li>", file=outputFile)
     print("<li><a href='#punctuation'>", len(foundPunctuation), "iOS strings differ by punctuation with Android</a></li>", file=outputFile)
+    print("<li><a href='#iosescape'>", len(iOSStringsWithEscapeSequences), "iOS strings have Escape Sequences</a></li>", file=outputFile)
+    print("<li><a href='#androidescape'>", len(androidStringsWithEscapeSequences), "Android strings have Escape Sequences</a></li>", file=outputFile)
     print("</ul>", file=outputFile)
 
     printHeader("h2", "<a name='case'>iOS Strings that differ by case with Android</a>", outputFile)
@@ -246,7 +282,42 @@ def main():
     printHorizontalLine(outputFile)
     printPreformatedComparisonList(foundPunctuation, outputFile)
 
-    printHeader("h2", "<a name='wildcard'>iOS Strings that differ by wildcard with Android</a>", outputFile)
+    printHeader("h2", "<a name='iosescape'>iOS Strings with escape sequences</a>", outputFile)
+    printHorizontalLine(outputFile)
+    for w in iOSStringsWithEscapeSequences:
+        print("<div class=string>", file=outputFile)
+        try:
+            if iOSStringsWithEscapeSequences[w][0] == 'i':
+                print("<pre class=ios>", file=outputFile)
+                print("iOS:     ", end="", file=outputFile)
+            else:
+                print("<pre class=android>", file=outputFile)
+                print("android: ", end="", file=outputFile)
+            print("'", w, "' - ", iOSStringsWithEscapeSequences[w], sep="", file=outputFile)
+            print("</pre>", file=outputFile)
+        except UnicodeEncodeError:
+            print("UnicodeDecodeError exception")
+        print("</div>", file=outputFile)
+
+
+    printHeader("h2", "<a name='androidescape'>Android Strings with escape sequences [problematic: \\n = line breaks]</a>", outputFile)
+    printHorizontalLine(outputFile)
+    for w in androidStringsWithEscapeSequences:
+        print("<div class=string>", file=outputFile)
+        try:
+            if androidStringsWithEscapeSequences[w][0] == 'i':
+                print("<pre class=ios>", file=outputFile)
+                print("iOS:     ", end="", file=outputFile)
+            else:
+                print("<pre class=android>", file=outputFile)
+                print("android: ", end="", file=outputFile)
+            print("'", w, "' - ", androidStringsWithEscapeSequences[w], sep="", file=outputFile)
+            print("</pre>", file=outputFile)
+        except UnicodeEncodeError:
+            print("UnicodeDecodeError exception")
+        print("</div>", file=outputFile)
+
+    printHeader("h2", "<a name='wildcard'>iOS Strings that differ by wildcard with Android (These appear the same to the user)</a>", outputFile)
     printHorizontalLine(outputFile)
     printPreformatedComparisonList(foundWildCards, outputFile)
 
@@ -260,9 +331,9 @@ def main():
         print("</pre>", file=outputFile)
         print("</div>", file=outputFile)
 
+
     printHeader("h2", "<a name='wildcard'>Wildcard strings containing %</a>", outputFile)
     printHorizontalLine(outputFile)
-
     stringsWithWildcardsList.sort(key=mykey)
 
     for w in stringsWithWildcardsList:
