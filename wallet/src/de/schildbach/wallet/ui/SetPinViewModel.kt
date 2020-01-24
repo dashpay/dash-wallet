@@ -34,7 +34,7 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
 
     internal val startNextActivity = SingleLiveEvent<Boolean>()
     internal val encryptWalletLiveData = EncryptWalletLiveData(application)
-    internal val checkPinLiveData = CheckPinLiveData(application)
+    internal val checkPinLiveData = CheckPinLiveData()
 
     fun setPin(pin: ArrayList<Int>) {
         this.pin.clear()
@@ -45,20 +45,25 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
         return pin.joinToString("")
     }
 
-    fun encryptKeys() {
-        val password = getPinAsString()
+    fun savePinAndEncrypt() {
+        val pin = getPinAsString()
+        encryptWalletLiveData.savePin(pin)
+        encryptWallet()
+    }
+
+    private fun encryptWallet() {
         if (!walletApplication.wallet.isEncrypted) {
-            encryptWalletLiveData.encrypt(password, walletApplication.scryptIterationsTarget())
+            encryptWalletLiveData.encrypt(walletApplication.scryptIterationsTarget())
         } else {
             log.warn("Trying to encrypt already encrypted wallet")
         }
     }
 
     fun decryptKeys() {
-        decryptKeys(getPinAsString())
+        decryptKeys(null)
     }
 
-    fun decryptKeys(password: String) {
+    fun decryptKeys(password: String?) {
         if (walletApplication.wallet.isEncrypted) {
             encryptWalletLiveData.decrypt(password)
         } else {
@@ -72,11 +77,7 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
 
     fun checkPin() {
         val password = getPinAsString()
-        if (walletApplication.wallet.isEncrypted) {
-            checkPinLiveData.checkPin(password)
-        } else {
-            log.warn("Trying to check PIN of unencrypted wallet")
-        }
+        checkPinLiveData.checkPin(password)
     }
 
     fun changePin() {

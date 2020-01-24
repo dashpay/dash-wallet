@@ -191,7 +191,7 @@ class SetPinActivity : SessionActivity() {
                     if (changePin) {
                         viewModel.changePin()
                     } else {
-                        viewModel.encryptKeys()
+                        viewModel.savePinAndEncrypt()
                     }
                 }, 200)
             } else {

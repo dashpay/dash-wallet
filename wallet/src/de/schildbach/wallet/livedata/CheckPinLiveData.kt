@@ -16,44 +16,17 @@
 
 package de.schildbach.wallet.livedata
 
-import android.app.Application
-import android.os.Handler
-import android.os.HandlerThread
-import android.os.Process
 import androidx.lifecycle.MutableLiveData
-import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.CheckWalletPasswordTask
+import de.schildbach.wallet.ui.security.SecurityGuard
 
-class CheckPinLiveData(application: Application) : MutableLiveData<Resource<String>>() {
+class CheckPinLiveData : MutableLiveData<Resource<String>>() {
 
-    val backgroundHandler: Handler
-
-    init {
-        val backgroundThread = HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND)
-        backgroundThread.start()
-        backgroundHandler = Handler(backgroundThread.looper)
-    }
-
-    private var checkPinTask: CheckWalletPasswordTask? = null
-
-    private var walletApplication = application as WalletApplication
+    private val securityGuard = SecurityGuard()
 
     fun checkPin(pin: String) {
-        if (checkPinTask == null) {
-            checkPinTask = object : CheckWalletPasswordTask(backgroundHandler) {
-
-                override fun onBadPassword() {
-                    value = Resource.error("", pin)
-                    checkPinTask = null
-                }
-
-                override fun onSuccess() {
-                    value = Resource.success(pin)
-                    checkPinTask = null
-                }
-            }
-            value = Resource.loading(null)
-            checkPinTask!!.checkPassword(walletApplication.wallet, pin)
-        }
+        value = if (securityGuard.checkPin(pin))
+            Resource.success(pin)
+        else
+            Resource.error("", pin)
     }
 }

@@ -30,7 +30,7 @@ open class CheckPinViewModel(application: Application) : AndroidViewModel(applic
 
     val pin = StringBuilder()
 
-    internal val checkPinLiveData = CheckPinLiveData(application)
+    internal val checkPinLiveData = CheckPinLiveData()
 
     open fun checkPin(password: CharSequence) {
         if (walletApplication.wallet.isEncrypted) {

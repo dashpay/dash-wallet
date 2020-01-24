@@ -6,6 +6,7 @@ import android.util.Base64;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.util.UUID;
 
 import de.schildbach.wallet.WalletApplication;
 
@@ -22,6 +23,10 @@ public class SecurityGuard {
     public SecurityGuard() throws GeneralSecurityException, IOException {
         securityPrefs = WalletApplication.getInstance().getSharedPreferences(SECURITY_PREFS_NAME, Context.MODE_PRIVATE);
         encryptionProvider = EncryptionProviderFactory.create(securityPrefs);
+    }
+
+    public String generateRandomPassword() {
+        return UUID.randomUUID().toString();
     }
 
     public void savePassword(String password) throws GeneralSecurityException, IOException {
