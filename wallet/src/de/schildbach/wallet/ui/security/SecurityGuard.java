@@ -34,6 +34,10 @@ public class SecurityGuard {
         securityPrefs.edit().putString(WALLET_PASSWORD_KEY_ALIAS, encryptedPin).apply();
     }
 
+    public boolean isConfigured() {
+        return securityPrefs.contains(WALLET_PASSWORD_KEY_ALIAS);
+    }
+
     public String retrievePassword() {
         String encryptedPasswordStr = securityPrefs.getString(WALLET_PASSWORD_KEY_ALIAS, null);
         byte[] encryptedPassword = Base64.decode(encryptedPasswordStr, Base64.NO_WRAP);

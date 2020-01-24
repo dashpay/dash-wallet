@@ -34,7 +34,7 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
 
     internal val startNextActivity = SingleLiveEvent<Boolean>()
     internal val encryptWalletLiveData = EncryptWalletLiveData(application)
-    internal val checkPinLiveData = CheckPinLiveData()
+    internal val checkPinLiveData = CheckPinLiveData(application)
 
     fun setPin(pin: ArrayList<Int>) {
         this.pin.clear()

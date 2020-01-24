@@ -24,7 +24,7 @@ open class CheckPinViewModel(application: Application) : AndroidViewModel(applic
 
     val pin = StringBuilder()
 
-    internal val checkPinLiveData = CheckPinLiveData()
+    internal val checkPinLiveData = CheckPinLiveData(application)
 
     open fun checkPin(pin: CharSequence) {
         checkPinLiveData.checkPin(pin.toString())
