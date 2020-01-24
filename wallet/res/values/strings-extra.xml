@@ -260,7 +260,7 @@
     <string name="block_info">Block Info</string>
 
     <string name="scan_private_key">Scan Private Key</string>
-    <string name="scan_private_key_intro_1">You are about to sweep funds from another Dash Wallet.</string>
+    <string name="scan_private_key_intro_1">You are about to sweep funds from a Dash paper wallet.</string>
     <string name="scan_private_key_intro_2">This will move all coins from that wallet to your wallet on this device.</string>
     <string name="scan_private_key_intro_3">When the transaction is confirmed, the other wallet will be worthless and should not be re-used for safety reasons.</string>
     <string name="confirm">Confirm</string>
