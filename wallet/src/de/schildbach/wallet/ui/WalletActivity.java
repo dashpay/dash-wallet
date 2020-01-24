@@ -179,10 +179,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         this.clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
 
-        if (config.remindBackupSeed() && config.lastDismissedReminderMoreThan24hAgo()) {
-            handleVerifySeed();
-        }
-
         View appBar = findViewById(R.id.app_bar);
         CoordinatorLayout.LayoutParams params = (CoordinatorLayout.LayoutParams) appBar.getLayoutParams();
         if (params.getBehavior() == null) {

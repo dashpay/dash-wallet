@@ -34,6 +34,7 @@ import kotlinx.android.synthetic.main.activity_onboarding.*
 import kotlinx.android.synthetic.main.activity_onboarding_perm_lock.*
 import org.dash.wallet.common.ui.DialogBuilder
 
+private const val REGULAR_FLOW_TUTORIAL_REQUEST_CODE = 0
 
 class OnboardingActivity : RestoreFromFileActivity() {
 
@@ -79,12 +80,22 @@ class OnboardingActivity : RestoreFromFileActivity() {
         }
     }
 
+    private fun startLockScreenActivity() {
+        startActivity(LockScreenActivity.createIntent(this))
+        finish()
+    }
+
     private fun regularFlow() {
-        try {
-            startActivity(LockScreenActivity.createIntent(this))
-            finish()
-        } catch (x: Exception) {
-            fatal_error_message.visibility = View.VISIBLE
+        if (!walletApplication.configuration.v7TutorialCompleted) {
+            startActivityForResult(Intent(this, WelcomeActivity::class.java),
+                    REGULAR_FLOW_TUTORIAL_REQUEST_CODE)
+            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+        } else {
+            try {
+                startLockScreenActivity()
+            } catch (x: Exception) {
+                fatal_error_message.visibility = View.VISIBLE
+            }
         }
     }
 
@@ -92,6 +103,10 @@ class OnboardingActivity : RestoreFromFileActivity() {
         initView()
         initViewModel()
         showButtonsDelayed()
+        if (!walletApplication.configuration.v7TutorialCompleted) {
+            startActivity(Intent(this, WelcomeActivity::class.java))
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+        }
     }
 
     private fun initView() {
@@ -131,7 +146,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private fun showButtonsDelayed() {
-
         Handler().postDelayed({
             hideSlogan()
             findViewById<LinearLayout>(R.id.buttons).visibility = View.VISIBLE
@@ -155,5 +169,12 @@ class OnboardingActivity : RestoreFromFileActivity() {
     override fun finish() {
         super.finish()
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REGULAR_FLOW_TUTORIAL_REQUEST_CODE) {
+            startLockScreenActivity()
+        }
     }
 }

@@ -269,6 +269,10 @@
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
+        <activity android:name="de.schildbach.wallet.ui.WelcomeActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.Fullscreen" />
+
         <activity android:name="de.schildbach.wallet.ui.UpholdTransferActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
