@@ -13,7 +13,7 @@
     <string name="set_pin_encrypting">Encrypting wallet</string>
     <string name="set_pin_decrypting">Decrypting wallet</string>
     <string name="set_pin_verifying_pin">Verifying PIN</string>
-    <string name="set_pin_message">This PIN will be required to unlock your app everytime when you use it.</string>
+    <string name="set_pin_message">This PIN will be required to unlock your app every time when you use it.</string>
 
     <string name="home_pay">Send</string>
     <string name="home_receive">Receive</string>
