@@ -3,6 +3,8 @@ import codecs
 import xml.dom.minidom
 import re
 from datetime import date
+from fuzzywuzzy import fuzz
+from fuzzywuzzy import process
 
 
 androidFiles = {"../wallet/res/values/strings.xml",
@@ -85,6 +87,19 @@ def getFirstThreeWords(text):
         threeWords += char
     return threeWords.rstrip(",.!?;:")
 
+
+def fuzzycompare(iOSStrings, androidStrings):
+    matches = {}
+    for i in iOSStrings:
+        if countWords(i) > 2:
+            for a in androidStrings:
+                if countWords(a) > 2:
+                    ratio = fuzz.WRatio(i, a)
+                    if ratio > 87:
+                        matches[i] = a
+                        print(ratio, i, "<-- -->", a)
+    return matches
+
 def main():
     loadAndroidFiles()
     #print(androidStrings)
@@ -153,6 +168,8 @@ def main():
             del androidStrings[f]
         if f in iOSStrings:
             iOSStrings.remove(f)
+
+    fuzzy = fuzzycompare(iOSStrings, androidStrings)
 
     # compare case
     iOSStringsUpper = {}
@@ -259,6 +276,7 @@ def main():
     printHorizontalLine(outputFile)
     print("<ul>", file=outputFile)
     print("<li><a href='#exact'>", len(found), "strings match exactly between iOS and android</a></li>", file=outputFile)
+    print("<li><a href='#fuzzy'>", len(fuzzy), "iOS strings are similar to Android</li>", file=outputFile)
     print("<li><a href='#nomatch'>", len(iOSStrings), "iOS strings do not match Android</li>", file=outputFile)
     print("<li><a href='#nomatch'>", len(androidStrings), "Android Strings do not match iOS</li>", file=outputFile)
     print("<li><a href='#wildcard'>", withWildcards, "strings have wildcards for iOS</li>", file=outputFile)
@@ -277,6 +295,10 @@ def main():
     printHeader("h2", "<a name='start'>iOS Strings start with words similar Android</a>", outputFile)
     printHorizontalLine(outputFile)
     printPreformatedComparisonList(foundStartsWith, outputFile)
+
+    printHeader("h2", "<a name='fuzzy'>iOS Strings are similar to Android</a>", outputFile)
+    printHorizontalLine(outputFile)
+    printPreformatedComparisonList(fuzzy, outputFile)
 
     printHeader("h2", "<a name='punctuation'>iOS Strings that differ by punctuation with Android</a>", outputFile)
     printHorizontalLine(outputFile)
