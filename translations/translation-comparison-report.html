@@ -1,27 +1,28 @@
 ﻿<!DOCTYPE html><html><head>
-  <title>Translation Source Comparison Report: 2020-01-23  </title><STYLE type="text/css"">H1, H2, H3 { color: blue; font-family: Arial}
+  <title>Translation Source Comparison Report: 2020-01-24  </title><STYLE type="text/css"">H1, H2, H3 { color: blue; font-family: Arial}
 .ios { color: red; }
 .android { color: green; }
 .string { border-width: 1px; border-style: solid }</STYLE>
 </head><body>
-<h1>Translation Source Comparison Report: 2020-01-23</h1>
+<h1>Translation Source Comparison Report: 2020-01-24</h1>
 <hr />
 <h2>Source File Summary</h2>
 <ul>
 <li>iOS total number of strings: 383 in 2 files.</li>
 <li>android total number of strings: 574 in 4 files.</li>
-<li>iOS File:     iOS/dashsync-localizable-strings.strings </li>
 <li>iOS File:     iOS/app-localizable-strings.strings </li>
+<li>iOS File:     iOS/dashsync-localizable-strings.strings </li>
 <li>Android File: ../wallet/res/values/strings.xml </li>
 <li>Android File: ../wallet/res/values/strings-extra.xml </li>
-<li>Android File: ../uphold-integration/src/main/res/values/strings-uphold.xml </li>
 <li>Android File: ../common/src/main/res/values/strings.xml </li>
+<li>Android File: ../uphold-integration/src/main/res/values/strings-uphold.xml </li>
 </ul>
 
 <h2><a name='top'>Summary Report iOS vs Android</a></h2>
 <hr />
 <ul>
 <li><a href='#exact'> 144 strings match exactly between iOS and android</a></li>
+<li><a href='#fuzzy'> 20 iOS strings are similar to Android</li>
 <li><a href='#nomatch'> 239 iOS strings do not match Android</li>
 <li><a href='#nomatch'> 430 Android Strings do not match iOS</li>
 <li><a href='#wildcard'> 31 strings have wildcards for iOS</li>
@@ -37,110 +38,6 @@
 <p>no results found that match this criteria</p>
 <h2><a name='start'>iOS Strings start with words similar Android</a></h2>
 <hr />
-<div class=string>
-<pre class=ios>
-iOS:     'Are you sure you would like to reclaim this masternode?'
-</pre>
-<pre class=android>
-android: 'Are you sure? Your wallet will be deleted and all your Dash will be lost.\n\nThe only way to recover your Dash is with a backup file or recovery phrase.'
-</pre>
-</div>
-<div class=string>
-<pre class=ios>
-iOS:     'Are you sure you would like to register a masternode at %@:%d?'
-</pre>
-<pre class=android>
-android: 'Are you sure? Your wallet will be deleted and all your Dash will be lost.\n\nThe only way to recover your Dash is with a backup file or recovery phrase.'
-</pre>
-</div>
-<div class=string>
-<pre class=ios>
-iOS:     'Are you sure you would like to register the username %@ and spend %@ on credits?'
-</pre>
-<pre class=android>
-android: 'Are you sure? Your wallet will be deleted and all your Dash will be lost.\n\nThe only way to recover your Dash is with a backup file or recovery phrase.'
-</pre>
-</div>
-<div class=string>
-<pre class=ios>
-iOS:     'Are you sure you would like to reset this user?'
-</pre>
-<pre class=android>
-android: 'Are you sure? Your wallet will be deleted and all your Dash will be lost.\n\nThe only way to recover your Dash is with a backup file or recovery phrase.'
-</pre>
-</div>
-<div class=string>
-<pre class=ios>
-iOS:     'Are you sure you would like to topup %@ and spend %@ on credits?'
-</pre>
-<pre class=android>
-android: 'Are you sure? Your wallet will be deleted and all your Dash will be lost.\n\nThe only way to recover your Dash is with a backup file or recovery phrase.'
-</pre>
-</div>
-<div class=string>
-<pre class=ios>
-iOS:     'Are you sure you would like to update this masternode to %@:%d?'
-</pre>
-<pre class=android>
-android: 'Are you sure? Your wallet will be deleted and all your Dash will be lost.\n\nThe only way to recover your Dash is with a backup file or recovery phrase.'
-</pre>
-</div>
-<div class=string>
-<pre class=ios>
-iOS:     'Are you sure you would like to update this masternode to pay to %@?'
-</pre>
-<pre class=android>
-android: 'Are you sure? Your wallet will be deleted and all your Dash will be lost.\n\nThe only way to recover your Dash is with a backup file or recovery phrase.'
-</pre>
-</div>
-<div class=string>
-<pre class=ios>
-iOS:     'Not a valid private key'
-</pre>
-<pre class=android>
-android: 'Not a valid Dash Address or URL request in clipboard.'
-</pre>
-</div>
-<div class=string>
-<pre class=ios>
-iOS:     'Parse Error'
-</pre>
-<pre class=android>
-android: 'Parse error: %s'
-</pre>
-</div>
-<div class=string>
-<pre class=ios>
-iOS:     'Recovery phrase'
-</pre>
-<pre class=android>
-android: 'Recovery phrase must have 12 words'
-</pre>
-</div>
-<div class=string>
-<pre class=ios>
-iOS:     'This private key is already in your wallet'
-</pre>
-<pre class=android>
-android: 'This private key is protected with a password.'
-</pre>
-</div>
-<div class=string>
-<pre class=ios>
-iOS:     'This private key is empty'
-</pre>
-<pre class=android>
-android: 'This private key is protected with a password.'
-</pre>
-</div>
-<div class=string>
-<pre class=ios>
-iOS:     'Try again in %@'
-</pre>
-<pre class=android>
-android: 'Try again in %1$d %2$s'
-</pre>
-</div>
 <div class=string>
 <pre class=ios>
 iOS:     'Are you sure?'
@@ -253,11 +150,302 @@ iOS:     'Your transaction was sent and the amount should appear in your wallet 
 android: 'Your transaction was sent and the amount should appear in your wallet in a few minutes.\n\nTransaction id: %s'
 </pre>
 </div>
+<div class=string>
+<pre class=ios>
+iOS:     'Are you sure you would like to reclaim this masternode?'
+</pre>
+<pre class=android>
+android: 'Are you sure? Your wallet will be deleted and all your Dash will be lost.\n\nThe only way to recover your Dash is with a backup file or recovery phrase.'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Are you sure you would like to register a masternode at %@:%d?'
+</pre>
+<pre class=android>
+android: 'Are you sure? Your wallet will be deleted and all your Dash will be lost.\n\nThe only way to recover your Dash is with a backup file or recovery phrase.'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Are you sure you would like to register the username %@ and spend %@ on credits?'
+</pre>
+<pre class=android>
+android: 'Are you sure? Your wallet will be deleted and all your Dash will be lost.\n\nThe only way to recover your Dash is with a backup file or recovery phrase.'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Are you sure you would like to reset this user?'
+</pre>
+<pre class=android>
+android: 'Are you sure? Your wallet will be deleted and all your Dash will be lost.\n\nThe only way to recover your Dash is with a backup file or recovery phrase.'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Are you sure you would like to topup %@ and spend %@ on credits?'
+</pre>
+<pre class=android>
+android: 'Are you sure? Your wallet will be deleted and all your Dash will be lost.\n\nThe only way to recover your Dash is with a backup file or recovery phrase.'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Are you sure you would like to update this masternode to %@:%d?'
+</pre>
+<pre class=android>
+android: 'Are you sure? Your wallet will be deleted and all your Dash will be lost.\n\nThe only way to recover your Dash is with a backup file or recovery phrase.'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Are you sure you would like to update this masternode to pay to %@?'
+</pre>
+<pre class=android>
+android: 'Are you sure? Your wallet will be deleted and all your Dash will be lost.\n\nThe only way to recover your Dash is with a backup file or recovery phrase.'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Not a valid private key'
+</pre>
+<pre class=android>
+android: 'Not a valid Dash Address or URL request in clipboard.'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Parse Error'
+</pre>
+<pre class=android>
+android: 'Parse error: %s'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Recovery phrase'
+</pre>
+<pre class=android>
+android: 'Recovery phrase must have 12 words'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'This private key is already in your wallet'
+</pre>
+<pre class=android>
+android: 'This private key is protected with a password.'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'This private key is empty'
+</pre>
+<pre class=android>
+android: 'This private key is protected with a password.'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Try again in %@'
+</pre>
+<pre class=android>
+android: 'Try again in %1$d %2$s'
+</pre>
+</div>
+<h2><a name='fuzzy'>iOS Strings are similar to Android</a></h2>
+<hr />
+<div class=string>
+<pre class=ios>
+iOS:     'Application %@ is requesting an address so it can pay you.  Would you like to authorize this?'
+</pre>
+<pre class=android>
+android: 'Application %s is requesting an address so it can pay you.  Would you like to authorize this?'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Application %@ would like to receive your Master Public Key.  This can be used to keep track of your wallet, this can not be used to move your Dash.'
+</pre>
+<pre class=android>
+android: 'Application %s would like to receive your Master Public Key.  This can be used to keep track of your wallet, this can not be used to move your Dash.'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Connected peers: %d'
+</pre>
+<pre class=android>
+android: '%d peers connected'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Copyright Â© 2020 Dash Core'
+</pre>
+<pre class=android>
+android: 'Copyright © 2020 Dash Core'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Default currency, shortcuts, aboutâ€¦'
+</pre>
+<pre class=android>
+android: 'Default currency, shortcuts, about…'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Enter Recovery Phrase'
+</pre>
+<pre class=android>
+android: 'Enter your recovery phrase here.'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Import private keyâ€¦'
+</pre>
+<pre class=android>
+android: 'Import private key…'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Not a valid Dash address'
+</pre>
+<pre class=android>
+android: 'Not a valid Dash Address or URL request in clipboard.'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Please try again'
+</pre>
+<pre class=android>
+android: 'The Uphold service is not available.  Please try again later.'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Rate: %@ = %@'
+</pre>
+<pre class=android>
+android: 'Review or rate the app'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Received %@ (%@)'
+</pre>
+<pre class=android>
+android: 'Specify the amount to be received'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Recovery phrase must have %d words'
+</pre>
+<pre class=android>
+android: 'Recovery phrase must have 12 words'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Scan QR Code'
+</pre>
+<pre class=android>
+android: 'In order to scan QR codes, you need to grant permission to use the camera.'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Scan to Pay'
+</pre>
+<pre class=android>
+android: 'BIP70 for scan-to-pay'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'This transaction should settle instantly at no extra fee'
+</pre>
+<pre class=android>
+android: 'This transaction will settle instantly at no extra fee'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'View passphrase, backup walletâ€¦'
+</pre>
+<pre class=android>
+android: 'View passphrase, backup wallet…'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'You are about to sweep funds from another Dash Wallet.'
+</pre>
+<pre class=android>
+android: 'You are about to sweep funds from a Dash paper wallet.'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'You will also need to log out from the Uphold website using your browser'
+</pre>
+<pre class=android>
+android: 'You also need to logout from the Uphold website on your browser.'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Your transaction was sent and the amount should appear in your wallet in a few minutes.'
+</pre>
+<pre class=android>
+android: 'Your transaction was sent and the amount should appear in your wallet in a few minutes.\n\nTransaction id: %s'
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'Try again in %@'
+</pre>
+<pre class=android>
+android: 'Try again in %1$d %2$s'
+</pre>
+</div>
 <h2><a name='punctuation'>iOS Strings that differ by punctuation with Android</a></h2>
 <hr />
 <p>no results found that match this criteria</p>
 <h2><a name='iosescape'>iOS Strings with escape sequences</a></h2>
 <hr />
+<div class=string>
+<pre class=ios>
+iOS:     '\' - iOS
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     '\ntry again in %@' - iOS
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'DEVICE SECURITY COMPROMISED\nAny 'jailbreak' app can access any other app's keychain data (and steal your Dash).' - iOS
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'DEVICE SECURITY COMPROMISED\nAny 'jailbreak' app can access any other app's keychain data (and steal your Dash). Wipe this wallet immediately and restore on a secure device.' - iOS
+</pre>
+</div>
+<div class=string>
+<pre class=ios>
+iOS:     'If you still would like to wipe it please input: \' - iOS
+</pre>
+</div>
 <div class=string>
 <pre class=ios>
 iOS:     '\n         total %@ (%@)' - iOS
@@ -301,31 +489,6 @@ iOS:     'Transaction fees would cost more than the funds available on this priv
 <div class=string>
 <pre class=ios>
 iOS:     'Your wallet may be out of sync.\nThis can often be fixed by rescanning the blockchain.' - iOS
-</pre>
-</div>
-<div class=string>
-<pre class=ios>
-iOS:     '\' - iOS
-</pre>
-</div>
-<div class=string>
-<pre class=ios>
-iOS:     '\ntry again in %@' - iOS
-</pre>
-</div>
-<div class=string>
-<pre class=ios>
-iOS:     'DEVICE SECURITY COMPROMISED\nAny 'jailbreak' app can access any other app's keychain data (and steal your Dash).' - iOS
-</pre>
-</div>
-<div class=string>
-<pre class=ios>
-iOS:     'DEVICE SECURITY COMPROMISED\nAny 'jailbreak' app can access any other app's keychain data (and steal your Dash). Wipe this wallet immediately and restore on a secure device.' - iOS
-</pre>
-</div>
-<div class=string>
-<pre class=ios>
-iOS:     'If you still would like to wipe it please input: \' - iOS
 </pre>
 </div>
 <h2><a name='androidescape'>Android Strings with escape sequences [problematic: \n = line breaks]</a></h2>
@@ -543,71 +706,6 @@ android: 'Application %s is requesting an address so it can pay you.  Would you 
 <hr />
 <div class=string>
 <pre>
-'Cancel': in iOS matches button_cancel in Android
-</pre>
-</div>
-<div class=string>
-<pre>
-'Confirm': in iOS matches confirm in Android
-</pre>
-</div>
-<div class=string>
-<pre>
-'Confirm PIN': in iOS matches set_pin_confirm_pin in Android
-</pre>
-</div>
-<div class=string>
-<pre>
-'Double spend': in iOS matches transaction_row_status_error_dead in Android
-</pre>
-</div>
-<div class=string>
-<pre>
-'Enter old PIN': in iOS matches set_pin_enter_pin in Android
-</pre>
-</div>
-<div class=string>
-<pre>
-'Insufficient funds': in iOS matches send_coins_fragment_hint_insufficient_money in Android
-</pre>
-</div>
-<div class=string>
-<pre>
-'OK': in iOS matches button_ok in Android
-</pre>
-</div>
-<div class=string>
-<pre>
-'Password': in iOS matches sweep_wallet_fragment_password in Android
-</pre>
-</div>
-<div class=string>
-<pre>
-'Reset': in iOS matches wallet_lock_reset in Android
-</pre>
-</div>
-<div class=string>
-<pre>
-'Retry': in iOS matches button_retry in Android
-</pre>
-</div>
-<div class=string>
-<pre>
-'Send': in iOS matches payments_pay_to_clipboard_button in Android
-</pre>
-</div>
-<div class=string>
-<pre>
-'Set PIN': in iOS matches set_pin_set_pin in Android
-</pre>
-</div>
-<div class=string>
-<pre>
-'Wallet disabled': in iOS matches wallet_lock_wallet_disabled in Android
-</pre>
-</div>
-<div class=string>
-<pre>
 '1 hour': in iOS matches one_hour in Android
 </pre>
 </div>
@@ -713,12 +811,27 @@ android: 'Application %s is requesting an address so it can pay you.  Would you 
 </div>
 <div class=string>
 <pre>
+'Cancel': in iOS matches button_cancel in Android
+</pre>
+</div>
+<div class=string>
+<pre>
 'Change PIN': in iOS matches encrypt_keys_dialog_title in Android
 </pre>
 </div>
 <div class=string>
 <pre>
 'Close': in iOS matches transaction_close in Android
+</pre>
+</div>
+<div class=string>
+<pre>
+'Confirm': in iOS matches confirm in Android
+</pre>
+</div>
+<div class=string>
+<pre>
+'Confirm PIN': in iOS matches set_pin_confirm_pin in Android
 </pre>
 </div>
 <div class=string>
@@ -848,6 +961,11 @@ android: 'Application %s is requesting an address so it can pay you.  Would you 
 </div>
 <div class=string>
 <pre>
+'Insufficient funds': in iOS matches send_coins_fragment_hint_insufficient_money in Android
+</pre>
+</div>
+<div class=string>
+<pre>
 'Invalid': in iOS matches transaction_row_status_error_invalid in Android
 </pre>
 </div>
@@ -933,6 +1051,11 @@ android: 'Application %s is requesting an address so it can pay you.  Would you 
 </div>
 <div class=string>
 <pre>
+'OK': in iOS matches button_ok in Android
+</pre>
+</div>
+<div class=string>
+<pre>
 'Pay and get paid instantly with easy to use payment flows': in iOS matches welcome_screen_subtitle_2 in Android
 </pre>
 </div>
@@ -998,12 +1121,22 @@ android: 'Application %s is requesting an address so it can pay you.  Would you 
 </div>
 <div class=string>
 <pre>
+'Reset': in iOS matches wallet_lock_reset in Android
+</pre>
+</div>
+<div class=string>
+<pre>
 'Reset to Default': in iOS matches reset_to_default in Android
 </pre>
 </div>
 <div class=string>
 <pre>
 'Reset Wallet': in iOS matches wallet_lock_reset_wallet_title in Android
+</pre>
+</div>
+<div class=string>
+<pre>
+'Retry': in iOS matches button_retry in Android
 </pre>
 </div>
 <div class=string>
@@ -1053,6 +1186,11 @@ android: 'Application %s is requesting an address so it can pay you.  Would you 
 </div>
 <div class=string>
 <pre>
+'Send': in iOS matches payments_pay_to_clipboard_button in Android
+</pre>
+</div>
+<div class=string>
+<pre>
 'Send by': in iOS matches payments_pay_by_qr_title in Android
 </pre>
 </div>
@@ -1089,6 +1227,11 @@ android: 'Application %s is requesting an address so it can pay you.  Would you 
 <div class=string>
 <pre>
 'Sent to': in iOS matches transaction_result_sent_to in Android
+</pre>
+</div>
+<div class=string>
+<pre>
+'Set PIN': in iOS matches set_pin_set_pin in Android
 </pre>
 </div>
 <div class=string>
@@ -1218,6 +1361,11 @@ android: 'Application %s is requesting an address so it can pay you.  Would you 
 </div>
 <div class=string>
 <pre>
+'Wallet disabled': in iOS matches wallet_lock_wallet_disabled in Android
+</pre>
+</div>
+<div class=string>
+<pre>
 'We are about to show you the secret key to your wallet.': in iOS matches verify_it_is_important_subtitle in Android
 </pre>
 </div>
@@ -1259,6 +1407,21 @@ android: 'Application %s is requesting an address so it can pay you.  Would you 
 <div class=string>
 <pre>
 'Your wallet is secured now. You can use your recovery phrase anytime to recover your account on another device.': in iOS matches verify_seed_success_message in Android
+</pre>
+</div>
+<div class=string>
+<pre>
+'Double spend': in iOS matches transaction_row_status_error_dead in Android
+</pre>
+</div>
+<div class=string>
+<pre>
+'Enter old PIN': in iOS matches set_pin_enter_pin in Android
+</pre>
+</div>
+<div class=string>
+<pre>
+'Password': in iOS matches sweep_wallet_fragment_password in Android
 </pre>
 </div>
 <h2><a name='wildcard'>Wildcard strings containing %</a></h2>
@@ -4648,12 +4811,12 @@ android: 'Wallet was restored.' - android -- restore_wallet_dialog_success
 </div>
 <div class=string>
 <pre class=ios>
-iOS:     'WARNING' - iOS
+iOS:     'Warning' - iOS
 </pre>
 </div>
 <div class=string>
 <pre class=ios>
-iOS:     'Warning' - iOS
+iOS:     'WARNING' - iOS
 </pre>
 </div>
 <div class=string>
