@@ -552,7 +552,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private void startVerifySeedActivity(DeterministicSeed seed) {
         List<String> mnemonicCode = seed.getMnemonicCode();
         String [] seedArray = mnemonicCode.toArray(new String[0]);
-        Intent intent = VerifySeedActivity.createIntent(this, seedArray);
+        Intent intent = VerifySeedActivity.createIntent(this, seedArray, false);
         startActivity(intent);
     }
 
