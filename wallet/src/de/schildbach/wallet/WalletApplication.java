@@ -34,7 +34,6 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Handler;
 import android.os.StrictMode;
 import android.preference.PreferenceManager;
 import android.text.format.DateUtils;
@@ -68,6 +67,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.security.GeneralSecurityException;
 import java.util.concurrent.TimeUnit;
 
 import ch.qos.logback.classic.Level;
@@ -79,11 +79,11 @@ import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
-import de.schildbach.wallet.ui.GlobalFooterActivity;
 import de.schildbach.wallet.ui.LockScreenActivity;
 import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet.ui.WalletUriHandlerActivity;
 import de.schildbach.wallet.ui.preference.PinRetryController;
+import de.schildbach.wallet.ui.security.SecurityGuard;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet_test.BuildConfig;
@@ -712,6 +712,12 @@ public class WalletApplication extends MultiDexApplication {
         cleanupFiles();
         config.clear();
         PinRetryController.getInstance().clearPinFailPrefs();
+        try {
+            new SecurityGuard().removeKeys();
+        } catch (GeneralSecurityException | IOException e) {
+            e.printStackTrace();
+            log.warn("error occurred when removing security keys", e);
+        }
 
         File walletBackupFile = getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
         if (walletBackupFile.exists()) {

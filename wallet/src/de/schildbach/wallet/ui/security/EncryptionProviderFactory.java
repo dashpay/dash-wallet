@@ -6,6 +6,7 @@ import android.os.Build;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
 
 public class EncryptionProviderFactory {
 
@@ -32,6 +33,7 @@ public class EncryptionProviderFactory {
         String decrypt(final String keyAlias, final byte[] encryptedData)
                 throws GeneralSecurityException, IOException;
 
+        void deleteKey(final String keyAlias) throws KeyStoreException;
     }
 
 }

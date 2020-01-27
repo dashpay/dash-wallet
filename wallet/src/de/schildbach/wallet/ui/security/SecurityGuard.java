@@ -4,13 +4,19 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Base64;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.security.KeyStoreException;
 import java.util.UUID;
 
 import de.schildbach.wallet.WalletApplication;
 
 public class SecurityGuard {
+
+    private static final Logger log = LoggerFactory.getLogger(SecurityGuard.class);
 
     private static final String SECURITY_PREFS_NAME = "security";
 
@@ -63,5 +69,23 @@ public class SecurityGuard {
     private String encrypt(String keyAlias, String data) throws GeneralSecurityException, IOException {
         byte[] encryptedPin = encryptionProvider.encrypt(keyAlias, data);
         return Base64.encodeToString(encryptedPin, Base64.NO_WRAP);
+    }
+
+    public void removeKeys() {
+        log.warn("removing security keys");
+        try {
+            encryptionProvider.deleteKey(UI_PIN_KEY_ALIAS);
+        } catch (KeyStoreException e) {
+            log.warn("unable to remove UI_PIN_KEY_ALIAS key from keystore", e);
+        }
+        try {
+            encryptionProvider.deleteKey(WALLET_PASSWORD_KEY_ALIAS);
+        } catch (KeyStoreException e) {
+            log.warn("unable to remove WALLET_PASSWORD_KEY_ALIAS key from keystore", e);
+        }
+        securityPrefs.edit()
+                .remove(UI_PIN_KEY_ALIAS)
+                .remove(WALLET_PASSWORD_KEY_ALIAS)
+                .apply();
     }
 }

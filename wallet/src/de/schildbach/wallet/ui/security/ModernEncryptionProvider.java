@@ -11,6 +11,7 @@ import androidx.annotation.RequiresApi;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -67,6 +68,10 @@ public class ModernEncryptionProvider implements EncryptionProviderFactory.Encry
         cipher.init(Cipher.DECRYPT_MODE, secretKey, spec);
 
         return new String(cipher.doFinal(encryptedData), StandardCharsets.UTF_8);
+    }
+
+    public void deleteKey(String keyAlias) throws KeyStoreException {
+        keyStore.deleteEntry(keyAlias);
     }
 
     private SecretKey getSecretKey(String alias) throws GeneralSecurityException {

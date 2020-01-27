@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -55,6 +56,10 @@ public class StaleEncryptionProvider implements EncryptionProviderFactory.Encryp
         Cipher cipher = Cipher.getInstance(AES_MODE, "BC");
         cipher.init(Cipher.DECRYPT_MODE, getSecretKey(keyAlias));
         return new String(cipher.doFinal(encryptedData), StandardCharsets.UTF_8);
+    }
+
+    public void deleteKey(String keyAlias) throws KeyStoreException {
+        keyStore.deleteEntry(keyAlias);
     }
 
     private SecretKey getSecretKey(String alias) throws GeneralSecurityException, IOException {
