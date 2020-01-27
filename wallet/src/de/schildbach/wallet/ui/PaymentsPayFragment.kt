@@ -87,7 +87,7 @@ class PaymentsPayFragment : Fragment() {
 
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
                 if (fireAction) {
-                    SendCoinsActivity.start(context, paymentIntent)
+                    SendCoinsActivity.start(context, paymentIntent, true)
                 } else {
                     manageStateOfPayToAddressButton(paymentIntent)
                 }

@@ -23,8 +23,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.MenuItem;
 
-import javax.annotation.Nullable;
-
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet_test.R;
@@ -35,32 +33,27 @@ import de.schildbach.wallet_test.R;
 public final class SendCoinsActivity extends AbstractBindServiceActivity {
 
     public static final String INTENT_EXTRA_PAYMENT_INTENT = "payment_intent";
-    public static final String INTENT_EXTRA_FEE_CATEGORY = "fee_category";
-    public static final String INTENT_EXTRA_FORCE_INSTANT_SEND = "force_instant_send";
+    public static final String INTENT_EXTRA_USER_AUTHORIZED = "user_authorized";
 
     public static final String ACTION_SEND_FROM_WALLET_URI = "de.schildbach.wallet.action.SEND_FROM_WALLET_URI";
 
-    public static void start(final Context context, final PaymentIntent paymentIntent,
-                             final @Nullable FeeCategory feeCategory, final int intentFlags) {
+    public static void start(final Context context, final PaymentIntent paymentIntent) {
+        start(context, paymentIntent, false);
+    }
+
+    public static void start(final Context context, final PaymentIntent paymentIntent, boolean userAuthorized) {
         final Intent intent = new Intent(context, SendCoinsActivity.class);
         intent.putExtra(INTENT_EXTRA_PAYMENT_INTENT, paymentIntent);
-        if (feeCategory != null)
-            intent.putExtra(INTENT_EXTRA_FEE_CATEGORY, feeCategory);
-        if (intentFlags != 0)
-            intent.setFlags(intentFlags);
+        intent.putExtra(INTENT_EXTRA_USER_AUTHORIZED, userAuthorized);
         context.startActivity(intent);
     }
 
-    public static void start(final Context context, final PaymentIntent paymentIntent) {
-        start(context, paymentIntent, null, 0);
-    }
-
     public static void sendFromWalletUri(final Activity callingActivity, int requestCode,
-                                         final PaymentIntent paymentIntent, boolean forceInstantSend) {
+                                         final PaymentIntent paymentIntent) {
         final Intent intent = new Intent(callingActivity, SendCoinsActivity.class);
         intent.setAction(ACTION_SEND_FROM_WALLET_URI);
+        intent.putExtra(INTENT_EXTRA_USER_AUTHORIZED, false);
         intent.putExtra(INTENT_EXTRA_PAYMENT_INTENT, paymentIntent);
-        intent.putExtra(INTENT_EXTRA_FORCE_INSTANT_SEND, forceInstantSend);
         callingActivity.startActivityForResult(intent, requestCode);
     }
 
@@ -71,6 +64,10 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity {
         setContentView(R.layout.send_coins_content);
 
         getWalletApplication().startBlockchainService(false);
+    }
+
+    public boolean isUserAuthorized() {
+        return getIntent().getBooleanExtra(INTENT_EXTRA_USER_AUTHORIZED, false);
     }
 
     @Override

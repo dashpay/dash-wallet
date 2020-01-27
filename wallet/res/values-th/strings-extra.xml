@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">ธุรกรรมนี้จะชำระทันทีโดยไม่มีค่าธรรมเนียมเพิ่มเติม</string>
 	<string name="send_coins_auto_lock_not_feasible">ธุรกรรมนี้อาจจะใช้เวลาในการชำระหลายนาที  ทำให้เสร็จสมบูรณ์ทันทีสำหรับ%1$s%2$s หรือไม่?</string>
 	<string name="send_coins_instant_send_not_feasible">ธุรกรรมนี้อาจใช้เวลาหลายนาทีในการชำระ</string>
 

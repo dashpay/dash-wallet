@@ -22,7 +22,6 @@ import android.content.Intent
 import android.graphics.drawable.Animatable
 import android.os.Bundle
 import android.view.View
-import androidx.appcompat.app.AppCompatActivity
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.TransactionResult
 import de.schildbach.wallet.util.TransactionUtil
@@ -42,9 +41,10 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
     companion object {
         const val TRANSACTION_RESULT_EXTRA = "transaction_result_extra"
+        const val USER_AUTHORIZED_RESULT_EXTRA = "user_authorized_result_extra"
 
         @JvmStatic
-        fun createIntent(context: Context, transaction: Transaction, address: Address): Intent {
+        fun createIntent(context: Context, transaction: Transaction, address: Address, userAuthorized: Boolean): Intent {
             val wallet = WalletApplication.getInstance().wallet
 
             // obtain the transaction status
@@ -68,6 +68,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
             val transactionResultIntent = Intent(context, TransactionResultActivity::class.java)
             transactionResultIntent.putExtra(TRANSACTION_RESULT_EXTRA, transactionResult)
+            transactionResultIntent.putExtra(USER_AUTHORIZED_RESULT_EXTRA, userAuthorized)
 
             return transactionResultIntent
         }
@@ -83,7 +84,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
         view_on_explorer.setOnClickListener { viewOnExplorer(transactionResult.transactionHash) }
         transaction_close_btn.setOnClickListener {
-            if (getSessionPin() !== null) {
+            if (intent.getBooleanExtra(USER_AUTHORIZED_RESULT_EXTRA, false)) {
                 startActivity(WalletActivity.createIntent(this))
             } else {
                 startActivity(LockScreenActivity.createIntent(this))

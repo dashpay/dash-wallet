@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">Транзакция будет совершена мгновенно без дополнительной комиссии.</string>
 	<string name="send_coins_auto_lock_not_feasible">Подтверждение может занять несколько минут. Провести мгновенно за %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Подтверждение может занять несколько минут.</string>
 

@@ -80,7 +80,6 @@ class LockScreenActivity : SendCoinsQrActivity() {
         setContentView(R.layout.activity_lock_screen)
 
         pinRetryController = PinRetryController.getInstance()
-        resetSessionPin()
         initView()
         initViewModel()
     }
@@ -102,7 +101,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
             startActivity(QuickReceiveActivity.createIntent(this))
         }
         action_scan_to_pay.setOnClickListener {
-            performScanning(it);
+            performScanning(it)
         }
         numeric_keyboard.setFunctionEnabled(false)
         numeric_keyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
@@ -167,7 +166,6 @@ class LockScreenActivity : SendCoinsQrActivity() {
     private fun onCorrectPin(pin: String) {
         pinRetryController.clearPinFailPrefs()
         walletApplication.maybeStartAutoLogoutTimer()
-        saveSessionPin(pin)
         val intent: Intent
         if (shouldShowBackupReminder) {
             intent = VerifySeedActivity.createIntent(this, pin)

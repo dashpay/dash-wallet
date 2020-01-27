@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">تراکنش بدون هر نوع کارمزد اضافی صورت می‌گیرد.</string>
 	<string name="send_coins_auto_lock_not_feasible">تکمیل این تراکنش ممکن است چند دقیقه طول بکشد. آیا مایلید به ازای پرداخت %1$s%2$s تراکنش خود را به صورت آنی انجام دهید؟ </string>
 	<string name="send_coins_instant_send_not_feasible">تکمیل این تراکنش ممکن است چند دقیقه طول بکشد.</string>
 

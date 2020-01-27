@@ -266,7 +266,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         findViewById(R.id.import_key_action).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                SweepWalletActivity.start(WalletActivity.this);
+                SweepWalletActivity.start(WalletActivity.this, true);
             }
         });
     }
@@ -382,12 +382,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
         new StringInputParser(input) {
             @Override
             protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
-                SendCoinsActivity.start(WalletActivity.this, paymentIntent);
+                SendCoinsActivity.start(WalletActivity.this, paymentIntent, true);
             }
 
             @Override
             protected void handlePrivateKey(final PrefixedChecksummedBytes key) {
-                SweepWalletActivity.start(WalletActivity.this, key);
+                SweepWalletActivity.start(WalletActivity.this, key, true);
             }
 
             @Override
@@ -488,7 +488,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     public void handleSendCoins() {
-        startActivity(new Intent(this, SendCoinsActivity.class));
+        SendCoinsActivity.start(this, null, true);
     }
 
     public void handleScan(View clickView) {
@@ -948,7 +948,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         } else if (id == R.id.nav_exchenge_rates) {
             startActivity(new Intent(this, ExchangeRatesActivity.class));
         } else if (id == R.id.nav_paper_wallet) {
-            SweepWalletActivity.start(this);
+            SweepWalletActivity.start(this, true);
         } else if (id == R.id.nav_network_monitor) {
             startActivity(new Intent(this, NetworkMonitorActivity.class));
         } else if (id == R.id.nav_safety) {

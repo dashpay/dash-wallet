@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">此交易將進行即時結算，無需支付額外費用。</string>
 	<string name="send_coins_auto_lock_not_feasible">此交易可能需要幾分鐘才能結算。 支付額外的 %1$s%2$s費用來立即完成該交易嗎?</string>
 	<string name="send_coins_instant_send_not_feasible">此交易可能需要幾分鐘才能結算。</string>
 

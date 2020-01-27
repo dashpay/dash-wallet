@@ -148,7 +148,7 @@ public class WalletApplication extends MultiDexApplication {
             @Override
             protected void onStartedFirst(Activity activity) {
                 autoLogout.setAppInBackground(false);
-                if (deviceWasLocked || autoLogout.shouldLogout()) {
+                if (config.getAutoLogoutEnabled() && (deviceWasLocked || autoLogout.shouldLogout())) {
                     lockTheApp(WalletApplication.this, activity);
                     if (autoLogout.isTimerActive()) {
                         autoLogout.stopTimer();
