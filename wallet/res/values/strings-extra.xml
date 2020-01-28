@@ -4,6 +4,7 @@
     <string name="onboarding_create_wallet">Create a New Wallet</string>
     <string name="onboarding_recover_wallet">Restore Wallet From Recovery Phrase</string>
     <string name="onboarding_restore_wallet">Restore Wallet From File</string>
+    <string name="onboarding_load_wallet_error">Unable to load wallet!</string>
 
     <string name="set_pin_create_new_wallet">Create a New Wallet</string>
     <string name="set_pin_restore_wallet">Restore Wallet</string>
@@ -187,7 +188,7 @@
     <string name="unlock_with_fingerprint_error_max_attempts">Maximum fingerprint attempts exceeded. Please try again later.</string>
     <string name="or_unlock_with_fingerprint">Or use your fingerprint to unlock.</string>
     <string name="enable_fingerprint">Enable fingerprint</string>
-    <string name="touch_fingerprint_sensor">Touch the fingerprint sensor.</string>
+    <string name="touch_fingerprint_sensor">Touch fingerprint sensor</string>
     <string name="touch_fingerprint_to_enable">Touch the fingerprint sensor to enable unlocking with fingerprint.</string>
     <string name="fingerprint_changed_title">Fingerprint data changed</string>
 	<string name="fingerprint_changed_message">We detected a change in your fingerprint authentication data. You need to use PIN this time.</string>
@@ -265,6 +266,7 @@
     <string name="scan_private_key_intro_3">When the transaction is confirmed, the other wallet will be worthless and should not be re-used for safety reasons.</string>
     <string name="confirm">Confirm</string>
 
+    <string name="advanced_security_security_level">Security Level</string>
     <string name="auto_logout">Auto Logout</string>
     <string name="spending_confirmation">Spending Confirmation</string>
     <string name="logout_after">Logout after</string>
@@ -302,5 +304,12 @@
         <item>Received</item>
         <item>Sent</item>
     </string-array>
+
+    <string name="sync_status_wait">Please wait for the sync to complete</string>
+    <string name="sync_status_syncing_title">Syncing</string>
+    <string name="sync_status_syncing_sub_title">with Dash blockchain</string>
+    <string name="sync_status_unable_to_connect">Unable to connect</string>
+    <string name="sync_status_check_connection">Check your connection</string>
+
 
 </resources>

@@ -30,7 +30,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:gravity="center_horizontal"
-            android:text="Please wait for the sync to complete"
+            android:text="@string/sync_status_wait"
             android:textColor="@color/dash_light_gray"
             android:textSize="16sp"
             app:fontFamily="@font/montserrat_regular" />

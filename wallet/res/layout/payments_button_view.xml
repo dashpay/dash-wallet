@@ -29,7 +29,7 @@
             style="@style/TitleTextView.Secondary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Pay by"
+            android:text="@string/payments_pay_by_qr_title"
             android:textColor="@color/dash_gray"
             android:textSize="14sp" />
 
@@ -40,7 +40,7 @@
             android:layout_height="wrap_content"
             android:ellipsize="middle"
             android:singleLine="true"
-            android:text="Scanning QR Code"
+            android:text="@string/payments_pay_by_qr_sub_title"
             android:textColor="@color/dash_black" />
 
     </LinearLayout>
@@ -50,7 +50,7 @@
         style="@style/DashButton.Blue"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:text="Scan"
+        android:text="@string/payments_pay_by_qr_button"
         android:textSize="14sp"
         app:layout_constraintBottom_toBottomOf="@+id/center_guideline"
         app:layout_constraintDimensionRatio="2:1"
