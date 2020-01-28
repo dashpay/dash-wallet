@@ -114,7 +114,6 @@ def fuzzycompare(iOSStrings, androidStrings):
                     ratio = fuzz.WRatio(i, a)
                     if ratio > 87:
                         matches[i] = a
-                        print(ratio, i, "<-- -->", a)
     return matches
 
 def main():
