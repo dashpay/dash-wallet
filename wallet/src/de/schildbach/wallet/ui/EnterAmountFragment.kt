@@ -37,7 +37,6 @@ import org.dash.wallet.common.util.GenericUtils
 class EnterAmountFragment : Fragment() {
 
     companion object {
-        private const val MAX_LENGTH = 10
         private const val DECIMAL_SEPARATOR = '.'
 
         private const val ARGUMENT_INITIAL_AMOUNT = "argument_initial_amount"
@@ -91,12 +90,19 @@ class EnterAmountFragment : Fragment() {
                     // avoid entering leading zeros without decimal separator
                     return
                 }
-                val numOfDecimals = if (value.indexOf(DECIMAL_SEPARATOR) > -1) value.length - value.indexOf(DECIMAL_SEPARATOR) else 0
-                val decimalsThreshold = if (viewModel.dashToFiatDirectionValue) 6 else 2
-                if (numOfDecimals > decimalsThreshold) {
-                    return
+                val isFraction = value.indexOf(DECIMAL_SEPARATOR) > -1
+                if (isFraction) {
+                    val lengthOfDecimalPart = value.length - value.indexOf(DECIMAL_SEPARATOR)
+                    val decimalsThreshold = if (viewModel.dashToFiatDirectionValue) 6 else 2
+                    if (lengthOfDecimalPart > decimalsThreshold) {
+                        return
+                    }
+                } else {
+                    if (value.length > 5) {
+                        return
+                    }
                 }
-                if (value.length < MAX_LENGTH && !maxAmountSelected) {
+                if (!maxAmountSelected) {
                     appendIfValidAfter(number.toString())
                     applyNewValue(value.toString())
                 }
@@ -118,7 +124,7 @@ class EnterAmountFragment : Fragment() {
                     return
                 }
                 refreshValue()
-                if (value.indexOf(DECIMAL_SEPARATOR) == -1 && value.length < MAX_LENGTH) {
+                if (value.indexOf(DECIMAL_SEPARATOR) == -1) {
                     value.append(DECIMAL_SEPARATOR)
                 }
                 applyNewValue(value.toString())
