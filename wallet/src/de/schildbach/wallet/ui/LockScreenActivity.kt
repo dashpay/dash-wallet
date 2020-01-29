@@ -31,9 +31,11 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.widget.NumericKeyboardView
+import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_lock_screen.*
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.DialogBuilder
 import java.util.concurrent.TimeUnit
 
@@ -52,6 +54,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
     private lateinit var viewModel: LockScreenViewModel
     private lateinit var checkPinViewModel: CheckPinViewModel
     private lateinit var enableFingerprintViewModel: CheckPinSharedModel
+    private var pinLength = PinPreviewView.DEFAULT_PIN_LENGTH
 
     private val temporaryLockCheckHandler = Handler()
     private val temporaryLockCheckInterval = TimeUnit.SECONDS.toMillis(10)
@@ -79,6 +82,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_lock_screen)
 
+        pinLength = walletApplication.configuration.pinLength
         pinRetryController = PinRetryController.getInstance()
         initView()
         initViewModel()
@@ -110,11 +114,11 @@ class LockScreenActivity : SendCoinsQrActivity() {
                 if (pinRetryController.isLocked) {
                     return
                 }
-                if (checkPinViewModel.pin.length < 4) {
+                if (checkPinViewModel.pin.length < pinLength) {
                     checkPinViewModel.pin.append(number)
                     pin_preview.next()
                 }
-                if (checkPinViewModel.pin.length == 4) {
+                if (checkPinViewModel.pin.length == pinLength) {
                     Handler().postDelayed({
                         checkPinViewModel.checkPin(checkPinViewModel.pin)
                     }, 200)
@@ -184,6 +188,9 @@ class LockScreenActivity : SendCoinsQrActivity() {
 
         when (state) {
             State.ENTER_PIN, State.INVALID_PIN -> {
+                if (pinLength != PinPreviewView.DEFAULT_PIN_LENGTH) {
+                    pin_preview.mode = PinPreviewView.PinType.CUSTOM
+                }
                 view_flipper.displayedChild = 0
 
                 action_title.setText(R.string.lock_enter_pin)

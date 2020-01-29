@@ -20,9 +20,11 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.widget.NumericKeyboardView
+import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_enter_pin.*
@@ -67,6 +69,8 @@ open class CheckPinDialog : DialogFragment() {
     protected var fingerprintHelper: FingerprintHelper? = null
     protected lateinit var fingerprintCancellationSignal: CancellationSignal
 
+    private var pinLength = PinPreviewView.DEFAULT_PIN_LENGTH
+
     protected enum class State {
         ENTER_PIN,
         INVALID_PIN,
@@ -76,6 +80,9 @@ open class CheckPinDialog : DialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState)
         dialog.window?.requestFeature(Window.FEATURE_NO_TITLE)
+
+        pinLength = WalletApplication.getInstance().configuration.pinLength
+
         return dialog
     }
 
@@ -101,11 +108,11 @@ open class CheckPinDialog : DialogFragment() {
         numeric_keyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
             override fun onNumber(number: Int) {
-                if (viewModel.pin.length < 4) {
+                if (viewModel.pin.length < pinLength) {
                     viewModel.pin.append(number)
                     pin_preview.next()
                 }
-                if (viewModel.pin.length == 4) {
+                if (viewModel.pin.length == pinLength) {
                     Handler().postDelayed({
                         viewModel.checkPin(viewModel.pin)
                     }, 200)
@@ -194,6 +201,9 @@ open class CheckPinDialog : DialogFragment() {
     protected fun setState(newState: State) {
         when (newState) {
             State.ENTER_PIN -> {
+                if (pinLength != PinPreviewView.DEFAULT_PIN_LENGTH) {
+                    pin_preview.mode = PinPreviewView.PinType.CUSTOM
+                }
                 if (pin_progress_switcher.currentView.id == R.id.progress) {
                     pin_progress_switcher.showPrevious()
                 }
