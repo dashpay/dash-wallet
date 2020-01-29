@@ -17,12 +17,6 @@
 		android:visible="@bool/wallet_actions_top"
 		app:showAsAction="ifRoom" />
 
-	<item
-		android:id="@+id/wallet_options_help"
-		android:showAsAction="never"
-		android:orderInCategory="999"
-		android:title="@string/button_help"/>
-
     <item
         android:id="@+id/wallet_options_report_issue"
         android:showAsAction="never"

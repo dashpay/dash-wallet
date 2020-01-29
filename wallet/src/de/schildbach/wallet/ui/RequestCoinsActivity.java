@@ -55,12 +55,7 @@ public final class RequestCoinsActivity extends AbstractBindServiceActivity {
         case android.R.id.home:
             finish();
             return true;
-
-        case R.id.request_coins_options_help:
-            HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_request_coins);
-            return true;
         }
-
         return super.onOptionsItemSelected(item);
     }
 }

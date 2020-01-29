@@ -16,13 +16,6 @@ source_file = wallet/res/values/strings-extra.xml
 source_lang = en
 type = ANDROID
 
-[dash-mobile-wallets.strings_help]
-file_filter = wallet/res/values-<lang>/strings_help.xml
-lang_map = sl_SI:sl, zh_TW:zh-rTW
-source_file = wallet/res/values/strings_help.xml
-source_lang = en
-type = ANDROID
-
 [dash-mobile-wallets.market-promo-text]
 file_filter = market/market-promo-text-<lang>.txt
 lang_map = sl_SI:sl, zh_TW:zh-TW
