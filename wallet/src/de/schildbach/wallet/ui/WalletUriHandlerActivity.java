@@ -96,7 +96,7 @@ public final class WalletUriHandlerActivity extends AppCompatActivity {
                     @Override
                     protected void handlePaymentIntent(final PaymentIntent paymentIntent, boolean forceInstantSend) {
                         SendCoinsActivity.sendFromWalletUri(
-                                WalletUriHandlerActivity.this, REQUEST_CODE_SEND_FROM_WALLET_URI, paymentIntent, forceInstantSend);
+                                WalletUriHandlerActivity.this, REQUEST_CODE_SEND_FROM_WALLET_URI, paymentIntent);
                     }
 
                     protected void handleMasterPublicKeyRequest(String sender) {
@@ -165,6 +165,7 @@ public final class WalletUriHandlerActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE_SEND_FROM_WALLET_URI) {
             Intent result = null;
             if (resultCode == Activity.RESULT_OK) {

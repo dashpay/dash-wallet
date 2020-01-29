@@ -75,6 +75,7 @@ class WelcomeActivity : AppCompatActivity() {
         WalletApplication.getInstance().configuration.setV7TutorialCompleted()
         setResult(Activity.RESULT_OK)
         super.finish()
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 
     private class WelcomePagerAdapter(fragmentManager: FragmentManager, behavior: Int,

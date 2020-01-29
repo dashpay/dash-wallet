@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">此项交易确认将即时完成, 无需额外费用.</string>
 	<string name="send_coins_auto_lock_not_feasible">此项交易确认需要几分钟. 立刻完成需要 %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">此项交易确认需要几分钟.</string>
 

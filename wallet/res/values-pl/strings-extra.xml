@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">Ta transakcja zostanie uregulowana natychmiast bez dodatkowych opłat.</string>
 	<string name="send_coins_auto_lock_not_feasible">Ta transakcja może zająć kilka minut. Zatwierdzić natychmias za dodatkowe %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Ta transakcja może zająć kilka minut zanim zostanie uregulowana.</string>
 

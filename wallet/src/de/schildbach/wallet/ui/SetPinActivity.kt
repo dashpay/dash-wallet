@@ -24,6 +24,7 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
 import android.widget.ViewSwitcher
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
@@ -38,7 +39,7 @@ private const val FINGERPRINT_REQUEST_SEED = 1
 private const val FINGERPRINT_REQUEST_WALLET = 2
 private const val FINGERPRINT_REQUEST_CHANGE_PIN = 3
 
-class SetPinActivity : SessionActivity() {
+class SetPinActivity : AppCompatActivity() {
 
     private lateinit var numericKeyboardView: NumericKeyboardView
     private lateinit var confirmButtonView: View
@@ -191,7 +192,7 @@ class SetPinActivity : SessionActivity() {
                     if (changePin) {
                         viewModel.changePin()
                     } else {
-                        viewModel.encryptKeys()
+                        viewModel.savePinAndEncrypt()
                     }
                 }, 200)
             } else {
@@ -337,7 +338,6 @@ class SetPinActivity : SessionActivity() {
                         setState(State.SET_PIN)
                     } else {
                         if (changePin) {
-                            saveSessionPin(viewModel.getPinAsString())
                             val enableFingerprint = (application as WalletApplication).configuration.enableFingerprint
                             if (EnableFingerprintDialog.shouldBeShown(this@SetPinActivity) && enableFingerprint) {
                                 EnableFingerprintDialog.show(viewModel.getPinAsString(), FINGERPRINT_REQUEST_CHANGE_PIN, supportFragmentManager)

@@ -91,7 +91,6 @@ import de.schildbach.wallet.data.PaymentIntent.Standard;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.offline.DirectPaymentTask;
 import de.schildbach.wallet.service.BlockchainState;
-import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.CheckPinDialog;
 import de.schildbach.wallet.ui.CheckPinSharedModel;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
@@ -100,6 +99,7 @@ import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
 import de.schildbach.wallet.ui.SingleActionSharedViewModel;
 import de.schildbach.wallet.ui.TransactionResultActivity;
+import de.schildbach.wallet.ui.security.SecurityGuard;
 import de.schildbach.wallet.util.Bluetooth;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
@@ -111,12 +111,7 @@ public final class SendCoinsFragment extends Fragment {
 
     private static Coin ECONOMIC_FEE = Coin.valueOf(1000);
 
-    private String password;
-    private String getPassword() {
-        return password != null ? password : activity.getSessionPin();
-    }
-
-    private AbstractBindServiceActivity activity;
+    private SendCoinsActivity activity;
     private WalletApplication application;
     private Configuration config;
     private FragmentManager fragmentManager;
@@ -147,6 +142,14 @@ public final class SendCoinsFragment extends Fragment {
 
     private boolean wasAmountChangedByTheUser = false;
 
+    private boolean userAuthorizedDuring = false;
+
+    private SecurityGuard securityGuard;
+
+    private boolean isUserAuthorized() {
+        return activity.isUserAuthorized() || userAuthorizedDuring;
+    }
+
     private final DialogInterface.OnClickListener activityDismissListener = new DialogInterface.OnClickListener() {
         @Override
         public void onClick(final DialogInterface dialog, final int which) {
@@ -158,7 +161,7 @@ public final class SendCoinsFragment extends Fragment {
     public void onAttach(final Context context) {
         super.onAttach(context);
 
-        this.activity = (AbstractBindServiceActivity) context;
+        this.activity = (SendCoinsActivity) context;
         this.application = (WalletApplication) activity.getApplication();
         this.config = application.getConfiguration();
         this.fragmentManager = getFragmentManager();
@@ -167,6 +170,14 @@ public final class SendCoinsFragment extends Fragment {
     @Override
     public void onActivityCreated(@androidx.annotation.Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
+
+        try {
+            securityGuard = new SecurityGuard();
+        } catch (Exception e) {
+            log.error("Unable to instantiate SecurityGuard", e);
+            activity.finish();
+            return;
+        }
 
         viewModel = ViewModelProviders.of(this).get(SendCoinsViewModel.class);
         viewModel.blockchainState.observe(getViewLifecycleOwner(), new Observer<BlockchainState>() {
@@ -179,8 +190,7 @@ public final class SendCoinsFragment extends Fragment {
         checkPinSharedModel.getOnCorrectPinCallback().observe(activity, new Observer<Pair<Integer, String>>() {
             @Override
             public void onChanged(Pair<Integer, String> data) {
-                password = data.getSecond();
-                dryrunRunnable.run();
+                userAuthorizedDuring = true;
                 switch (data.getFirst()) {
                     case AUTH_REQUEST_CODE_MAX:
                         handleEmpty();
@@ -206,7 +216,7 @@ public final class SendCoinsFragment extends Fragment {
             @Override
             public void onChanged(Coin coin) {
                 if (everythingPlausible()) {
-                    if (getPassword() == null || config.getSpendingConfirmationEnabled()) {
+                    if (!isUserAuthorized() || config.getSpendingConfirmationEnabled()) {
                         Coin thresholdAmount = Coin.parseCoin(
                                 Float.valueOf(config.getSpendingConfirmationLimit()).toString());
                         if (enterAmountSharedViewModel.getDashAmount().isLessThan(thresholdAmount)) {
@@ -224,10 +234,10 @@ public final class SendCoinsFragment extends Fragment {
         enterAmountSharedViewModel.getMaxButtonClickEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean unused) {
-                if (getPassword() == null) {
-                    CheckPinDialog.show(activity, AUTH_REQUEST_CODE_MAX);
-                } else {
+                if (isUserAuthorized()) {
                     handleEmpty();
+                } else {
+                    CheckPinDialog.show(activity, AUTH_REQUEST_CODE_MAX);
                 }
             }
         });
@@ -236,7 +246,6 @@ public final class SendCoinsFragment extends Fragment {
             @Override
             public void onChanged(Boolean aBoolean) {
                 handleGo();
-                password = activity.getSessionPin();
             }
         });
 
@@ -370,8 +379,6 @@ public final class SendCoinsFragment extends Fragment {
     private boolean isAmountPlausible() {
         if (viewModel.dryrunSendRequest != null) {
             return viewModel.dryrunException == null;
-        } else if (getPassword() == null) {
-            return true;
         } else if (viewModel.paymentIntent.mayEditAmount()) {
             return enterAmountSharedViewModel.hasAmount();
         } else {
@@ -386,22 +393,23 @@ public final class SendCoinsFragment extends Fragment {
     private void handleGo() {
         final Wallet wallet = viewModel.wallet;
         if (wallet.isEncrypted()) {
+
             new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
                 @Override
                 protected void onSuccess(final KeyParameter encryptionKey, final boolean wasChanged) {
                     if (wasChanged)
                         application.backupWallet();
-                    signAndSendPayment(encryptionKey, getPassword());
+                    signAndSendPayment(encryptionKey);
                 }
-            }.deriveKey(wallet, getPassword());
+            }.deriveKey(wallet, securityGuard.retrievePassword());
 
             setState(SendCoinsViewModel.State.DECRYPTING);
         } else {
-            signAndSendPayment(null, getPassword());
+            signAndSendPayment(null);
         }
     }
 
-    private void signAndSendPayment(final KeyParameter encryptionKey, final String pin) {
+    private void signAndSendPayment(final KeyParameter encryptionKey) {
         setState(SendCoinsViewModel.State.SIGNING);
 
         // final payment intent
@@ -431,7 +439,7 @@ public final class SendCoinsFragment extends Fragment {
                 final Address refundAddress = viewModel.paymentIntent.standard == Standard.BIP70
                         ? wallet.freshAddress(KeyPurpose.REFUND) : null;
                 final Payment payment = PaymentProtocol.createPaymentMessage(
-                        Arrays.asList(new Transaction[]{viewModel.sentTransaction}), finalAmount, refundAddress, null,
+                        Arrays.asList(viewModel.sentTransaction), finalAmount, refundAddress, null,
                         viewModel.paymentIntent.payeeData);
 
                 if (directPaymentEnableView.isChecked())
@@ -563,7 +571,7 @@ public final class SendCoinsFragment extends Fragment {
 
         Address address = viewModel.paymentIntent.getAddress();
         Intent transactionResultIntent = TransactionResultActivity.createIntent(activity,
-                transaction, address);
+                transaction, address, activity.isUserAuthorized());
         startActivity(transactionResultIntent);
     }
 
@@ -610,11 +618,7 @@ public final class SendCoinsFragment extends Fragment {
                 }
                 viewModel.dryrunSendRequest = sendRequest;
             } catch (final Exception x) {
-                if (x instanceof InsufficientMoneyException && getPassword() == null) {
-                    viewModel.dryrunSendRequest = createSendRequest(finalPaymentIntent, false, false);
-                } else {
-                    viewModel.dryrunException = x;
-                }
+                viewModel.dryrunException = x;
             }
         }
     };
@@ -684,7 +688,6 @@ public final class SendCoinsFragment extends Fragment {
         directPaymentEnableView.setEnabled(viewModel.state == SendCoinsViewModel.State.INPUT);
 
         final BlockchainState blockchainState = viewModel.blockchainState.getValue();
-        final MonetaryFormat dashFormat = config.getFormat();
         enterAmountSharedViewModel.getMessageTextStringData().setValue(null);
         if (viewModel.state == SendCoinsViewModel.State.INPUT) {
             CharSequence message = null;
@@ -695,17 +698,16 @@ public final class SendCoinsFragment extends Fragment {
                     message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
                 else if (viewModel.dryrunException instanceof InsufficientMoneyException) {
                     message = coloredString(getString(R.string.send_coins_fragment_hint_insufficient_money), R.color.dash_red, true);
-                }
-                else if (viewModel.dryrunException instanceof CouldNotAdjustDownwards)
+                } else if (viewModel.dryrunException instanceof CouldNotAdjustDownwards)
                     message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
                 else
                     message = coloredString(viewModel.dryrunException.toString(), R.color.dash_red, true);
             } else if (blockchainState != null && blockchainState.replaying) {
                 message = coloredString(getString(R.string.send_coins_fragment_hint_replaying), R.color.dash_red, true);
-            } else if (viewModel.dryrunSendRequest != null && viewModel.dryrunSendRequest.tx.getFee() != null) {
-                message = coloredString(getString(R.string.send_coins_auto_lock_feasible), R.color.fg_insignificant, false);
             }
-            enterAmountSharedViewModel.getMessageTextStringData().setValue(message);
+            if (isUserAuthorized()) {
+                enterAmountSharedViewModel.getMessageTextStringData().setValue(message);
+            }
         }
 
         if (viewModel.directPaymentAck != null) {
@@ -716,7 +718,8 @@ public final class SendCoinsFragment extends Fragment {
             directPaymentMessageView.setVisibility(View.GONE);
         }
 
-        enterAmountSharedViewModel.getButtonEnabledData().setValue(everythingPlausible() && viewModel.dryrunSendRequest != null
+        enterAmountSharedViewModel.getButtonEnabledData().setValue(everythingPlausible()
+                && (!isUserAuthorized() || viewModel.dryrunSendRequest != null)
                 && (blockchainState == null || !blockchainState.replaying));
 
         if (viewModel.state == null || viewModel.state == SendCoinsViewModel.State.REQUEST_PAYMENT_REQUEST) {
@@ -943,12 +946,6 @@ public final class SendCoinsFragment extends Fragment {
     }
 
     private void showPaymentConfirmation() {
-        if (viewModel.dryrunSendRequest == null
-                || getPassword() == null
-                || viewModel.dryrunException != null) {
-            return;
-        }
-
         Coin txFee = viewModel.dryrunSendRequest.tx.getFee();
         Coin amount;
         String total;
@@ -963,7 +960,7 @@ public final class SendCoinsFragment extends Fragment {
         String address = viewModel.paymentIntent.getAddress().toBase58();
         ExchangeRate rate = enterAmountSharedViewModel.getExchangeRate();
         // prevent crash if the exchange rate is null
-        Fiat fiatAmount = rate != null ? rate.coinToFiat(amount): null;
+        Fiat fiatAmount = rate != null ? rate.coinToFiat(amount) : null;
 
         String amountStr = MonetaryFormat.BTC.noCode().format(amount).toString();
         // if the exchange rate is not available, then show "Not Available"
