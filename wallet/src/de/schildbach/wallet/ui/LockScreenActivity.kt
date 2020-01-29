@@ -50,7 +50,8 @@ class LockScreenActivity : SendCoinsQrActivity() {
         fun createIntentAsNewTask(context: Context): Intent {
             return createIntent(context)
                     .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                            or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                            or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            or Intent.FLAG_ACTIVITY_NO_ANIMATION)
         }
     }
 
