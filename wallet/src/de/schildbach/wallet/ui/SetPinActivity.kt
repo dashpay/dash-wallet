@@ -216,7 +216,7 @@ class SetPinActivity : AppCompatActivity() {
     private fun setState(newState: State) {
         when (newState) {
             State.DECRYPT -> {
-                pinPreviewView.mode = PinPreviewView.PinType.EXTENDED
+                pinPreviewView.mode = PinPreviewView.PinType.CUSTOM
                 pageTitleView.setText(R.string.set_pin_enter_pin)
                 if (pinProgressSwitcherView.currentView.id == R.id.progress) {
                     pinProgressSwitcherView.showPrevious()

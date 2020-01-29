@@ -10,7 +10,7 @@
     tools:parentTag="android.widget.LinearLayout">
 
     <LinearLayout
-        android:id="@+id/items"
+        android:id="@+id/standard_pin_preview"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_horizontal"
@@ -48,6 +48,21 @@
             android:minHeight="50dp" />
 
     </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/custom_pin_preview"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/custom_pin_preview_background_gray"
+        android:gravity="center"
+        android:minWidth="256dp"
+        android:minHeight="50dp"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:textColor="@color/dash_black"
+        android:visibility="gone"
+        tools:visibility="visible" />
 
     <TextView
         android:id="@+id/forgot_pin"
