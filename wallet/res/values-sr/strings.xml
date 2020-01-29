@@ -3,7 +3,7 @@
 
     <string name="toast_wallet_reset">Vaš novčanik je resetovan!\nTrebaću mu neko vreme da se oporavi.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Koristite na sopstvenu odgovornost. Pročitajte &lt;u&gt;sigurnosne preporuke&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Potrebno je da odradite &lt;u&gt;back up vašeg novčanika&lt;/u&gt;!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Potrebno je da odradite back up vašeg novčanika!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d sati kasni</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d dana kasni</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d nedelja kasni</string>
@@ -16,22 +16,18 @@
     <string name="wallet_address_dialog_fragment_hint">Kako bi vaša privatnost bila zaštićena, vaša adresa će se promeniti odmah nakon prijema uplate.</string>
     <string name="wallet_balance_fragment_too_much">Ovaj iznos je dosta visok za nošenje u džepu. Zamolili bismo vas da prebacite deo iznosa na sigurnije mesto.</string>
     <string name="wallet_balance_fragment_replaying">Stanje nije dostupno tokom napada duplog trošenja.</string>
-    <string name="exchange_rates_activity_title">Kursna lista</string>
+    <string name="exchange_rates_activity_title">Lokalna valuta</string>
     <string name="exchange_rates_fragment_empty_text">Ne može da se učita kursna lista.</string>
     <string name="exchange_rates_fragment_empty_search">Ne može da se pronadje kurs za razmenu.</string>
     <string name="exchange_rates_fragment_default">(podrazumevano)</string>
-    <string name="exchange_rates_fragment_rate">kurs</string>
-    <string name="exchange_rates_fragment_balance">stanje</string>
+    <string name="exchange_rates_fragment_rate">Kurs</string>
+    <string name="exchange_rates_fragment_balance">Stanje</string>
     <string name="exchange_rates_fragment_source">Cena od %s</string>
     <string name="exchange_rates_options_search">Traži kurs za razmenu</string>
     <string name="exchange_rates_context_set_as_default_title">Postavi kao podrazumevano</string>
-    <string name="wallet_transactions_fragment_empty_text_received">Dash još uvek nije primljen.</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">Dash još uvek nije poslat.</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">Kako doći do Dash-a?\n\nKupite redovnim novcem,\nprodajte robu ili usluge\nzaradite radom.</string>
-    <string name="wallet_transactions_row_warning_backup">Čestitamo, dobili ste vašu prvu uplatu! Da li ste već odradili &lt;u&gt;backed up vašeg novčanika&lt;/u&gt;, da biste se zaštitili od gubitka?</string>
+    <string name="wallet_transactions_row_warning_backup">Čestitamo, dobili ste vašu prvu uplatu! Da li ste već odradili backed up vašeg novčanika, da biste se zaštitili od gubitka?</string>
     <string name="wallet_transactions_fragment_coinbase">iskopano</string>
     <string name="wallet_transactions_fragment_internal">unutrašnje</string>
-    <string name="wallet_transactions_options_filter">Filtriraj</string>
     <string name="wallet_transactions_options_filter_all">Sva plaćanja</string>
     <string name="wallet_transactions_options_filter_received">Primljene uplate</string>
     <string name="wallet_transactions_options_filter_sent">Poslate uplate</string>
@@ -57,17 +53,15 @@
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Pogrešan potpis!</string>
     <string name="send_coins_fragment_payee_verified_by">overeno od strane: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">nepoznato</string>
-    <string name="send_coins_fragment_receiving_address_label">Plati</string>
     <string name="send_coins_fragment_receiving_address_hint">unesite adresu ili ime</string>
     <string name="send_coins_fragment_receiving_address_error">Neispravna Dash adresa!</string>
     <string name="send_coins_fragment_receiving_address_own">Upravo ćete poslati sami sebi!</string>
     <string name="send_coins_fragment_receiving_address_complex">kompleksna\nadresa</string>
     <string name="send_coins_fragment_pending">(%s čeka se potvrda)</string>
-    <string name="send_coins_fragment_amount_label">Iznos za uplatu</string>
+    <string name="send_coins_fragment_pin_label">Unesite PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Mrežna provizija od %s će biti plaćena.</string>
-    <string name="send_coins_fragment_hint_fee_priority">Prioritetna provizija od %s će biti plaćena. Ako vam je bitna mala provizija koristite \"prioritet\" samo ukoliko vam je bitno da dobijete potvrdu što pre.</string>
-    <string name="send_coins_fragment_hint_dusty_send">Iznos je suviše mali da bi bio poslat.</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Nemate dovoljno novčića na raspolaganju. Nedostaje vam %s.</string>
+    <string name="send_coins_fragment_hint_fee_priority">Prioritetna provizija od %s će biti plaćena. Ako vam je bitna mala provizija koristite "prioritet" samo ukoliko vam je bitno da dobijete potvrdu što pre.</string>
+    <string name="send_coins_fragment_hint_dusty_send">Iznos je suviše mali da bi bio poslat</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Iznos zbira malih uplata u vašem novčaniku ne odgovara vrednosti koja se može poslati.</string>
     <string name="send_coins_fragment_hint_replaying">Plaćanja trenutno nisu moguća jer je u toku napad duplog trošenja.</string>
     <string name="send_coins_fragment_direct_payment_enable">Pošalji uplatu primaocu direktno.</string>
@@ -79,7 +73,6 @@
     <string name="send_coins_fragment_button_back">Nazad</string>
     <string name="send_coins_fragment_insufficient_money_title">Nemate dovoljno novčića na raspolaganju</string>
     <string name="send_coins_fragment_insufficient_money_msg1">Nedostaje vam %s.</string>
-    <string name="send_coins_fragment_insufficient_money_msg2">Da li želite da izvršite uplatu sa svim novčićima koje imate?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">Nije uspelo pražnjenje novčanika</string>
     <string name="send_coins_fragment_state_decrypting">Dešifrovanje...</string>
     <string name="send_coins_preparation_msg">Potpisivanje...</string>
@@ -91,20 +84,11 @@
     <string name="send_coins_options_fee_category_economic">Ekonomik</string>
     <string name="send_coins_options_fee_category_priority">Prioritet</string>
     <string name="send_coins_options_empty">Prazan novčanik</string>
-    <string name="raise_fee_dialog_title">Povećaj mrežnu proviziju</string>
-    <string name="raise_fee_dialog_message">Da li želite da povećate mrežnu proviziju za ovu uplatu za %s? Time će se uplata brže potvrditi.</string>
-    <string name="raise_fee_dialog_determining_fee">Odredjuje se mrežna provizija...</string>
-    <string name="raise_fee_dialog_cant_raise">Mrežna provizija za ovu uplatu se ne može povećati.</string>
-    <string name="raise_fee_dialog_state_decrypting">Dešifrovanje...</string>
-    <string name="raise_fee_dialog_state_done">Gotovo.</string>
-    <string name="raise_fee_dialog_button_raise">Povećaj</string>
-    <string name="sweep_wallet_activity_title">Prebaci i sweep-uj papirni novčanik</string>
-    <string name="sweep_wallet_fragment_intro">Sada ćete prebaciti i odraditi \"sweep\" sa paprinog novčanika ili kupona. Ovim ćete prebaciti sve novčiće sa papira na vaš novčanik na ovom uredjaju. Kada se transakcija potvrdi, taj papir će biti bezvredan i ne bi ga trebalo ponovo upotrebiti iz sigurnosnih razloga.</string>
-    <string name="sweep_wallet_fragment_hint">Papirni novčanici se najčešće koriste kao \"hladno\" skladište. Neki ATM uredjaji štampaju papirni novčanik na potvrdama koje izbacuju umesto da direktno pošalju novčiće na vaš mobilni uredjaj. Ljudi ponekad koriste prethodno napunjene papirne novčanike za slanje iznosa (ovo se ne preporučuje).</string>
+    <string name="sweep_wallet_activity_title">Uvezi privatni ključ</string>
+    <string name="sweep_wallet_fragment_intro">Sada ćete prebaciti i odraditi "sweep" sa paprinog novčanika ili kupona. Ovim ćete prebaciti sve novčiće sa papira na vaš novčanik na ovom uredjaju. Kada se transakcija potvrdi, taj papir će biti bezvredan i ne bi ga trebalo ponovo upotrebiti iz sigurnosnih razloga.</string>
+    <string name="sweep_wallet_fragment_hint">Papirni novčanici se najčešće koriste kao "hladno" skladište. Neki ATM uredjaji štampaju papirni novčanik na potvrdama koje izbacuju umesto da direktno pošalju novčiće na vaš mobilni uredjaj. Ljudi ponekad koriste prethodno napunjene papirne novčanike za slanje iznosa (ovo se ne preporučuje).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Započnite tako što ćete skenirati privatni ključ sa papirnog novčanika. Iskoristite dugme za akciju sa kamerom.</string>
     <string name="sweep_wallet_fragment_encrypted">Privatni ključ je zaštićen šifrom.</string>
-    <string name="sweep_wallet_fragment_password">šifra</string>
-    <string name="sweep_wallet_fragment_bad_password">pogrešna šifra</string>
     <string name="sweep_wallet_fragment_balance">Stanje za prebacivanje i čišćenje</string>
     <string name="sweep_wallet_fragment_button_decrypt">Dešifrovanje</string>
     <string name="sweep_wallet_fragment_button_sweep">Prebacivanje uz čišćenje</string>
@@ -164,6 +148,11 @@
     <string name="transaction_row_message_received_dust">Ovako mali iznos najverovatnije ne može da se iskoristi na ekonomičan način.</string>
     <string name="transaction_row_message_received_pay_to_many">Ova uplata plaća na još mnogo novčanika pored vašeg, što će vremenom prouzrokovati da aplikacija rade sporije. Ukoliko ste u mogućnosti, pokušajte da dobijate uplate koje plaćaju samo vama.</string>
     <string name="transaction_row_message_received_rbf">Ova uplata kasni jer je pošiljalac iskoristio nesiguran tip transakcije.</string>
+    <string name="transaction_row_status_received">Primljeno</string>
+    <string name="transaction_row_status_sent">Poslato</string>
+    <string name="transaction_row_status_sent_interally">Unutrašnje</string>
+    <string name="transaction_row_status_error_dead">Duplo potroši</string>
+    <string name="transaction_row_status_error_other">Nepoznato</string>
     <string name="network_monitor_activity_title">Mrežni nadzor</string>
     <string name="network_monitor_peer_list_title">Čvorovi</string>
     <string name="network_monitor_block_list_title">Blokovi</string>
@@ -207,7 +196,6 @@
     <string name="import_export_keys_dialog_show">Prikaži šifru</string>
     <string name="import_export_keys_dialog_failure_title">Greška</string>
     <string name="import_keys_intent_filter_action">Vrati novčanik u prethodno stanje</string>
-    <string name="encrypt_keys_dialog_title">PIN za potrošnju</string>
     <string name="encrypt_keys_dialog_message">Potrošnja iz vašeg novčanika će biti zaštićena izabranim PIN-om.</string>
     <string name="encrypt_keys_dialog_warning">Važno: Zapamtite vaš PIN! Nemojte koristiti uobičajene brojeve (kao npr. datume rođenja).</string>
     <string name="encrypt_keys_dialog_password_old">Stari PIN</string>
@@ -218,7 +206,7 @@
     <string name="encrypt_keys_dialog_show">Prikaži PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">Dešifrovanje...</string>
     <string name="encrypt_keys_dialog_state_decrypting">Dešifrovanje...</string>
-    <string name="encrypt_keys_dialog_state_done">Gotovo.</string>
+    <string name="encrypt_keys_dialog_state_done">Gotovo</string>
     <string name="scan_camera_problem_dialog_title">Izvinite</string>
     <string name="scan_camera_problem_dialog_message">Postoji problem sa kamerom. Verovatno treba da restartujete uređaj.</string>
     <string name="scan_camera_permission_dialog_title">Dozvola za kameru</string>
@@ -271,7 +259,6 @@
     <string name="report_issue_dialog_title_issue">Prijavi problem</string>
     <string name="report_issue_dialog_title_crash">Prethodni krah detektovan</string>
     <string name="report_issue_dialog_title_transaction">Prijavi problem sa odabranom uplatom</string>
-    <string name="report_issue_dialog_message_issue">Molimo vas da opišete vaš problem dovoljno precizno kako bi se mogao reprodukovati. Koristite Engleski jezik ako možete.</string>
     <string name="report_issue_dialog_message_crash">Da li želite da pošaljete izveštaj za krah, tako ćete pomoći da se problem reši u budućnosti?</string>
     <string name="report_issue_dialog_description">opis problema</string>
     <string name="report_issue_dialog_report">Izveštaj</string>
@@ -289,7 +276,7 @@
     <string name="about_category_credits">Ova aplikacija koristi...</string>
     <string name="about_credits_bitcoinj_title">dashj %s, implementacija Dash protokola</string>
     <string name="about_credits_zxing_title">ZXing, biblioteka za obradu QR-kodova</string>
-    <string name="about_credits_icon_title">Ova aplikacija koristi ikonu koju je napravio \"bitboy\"</string>
+    <string name="about_credits_icon_title">Ova aplikacija koristi ikonu koju je napravio "bitboy"</string>
     <string name="about_credits_scrypt_title">Scrypt, implementaciju odradili Will Glozer i Colin Percival</string>
     <string name="about_market_app_title">Google Play stranica</string>
     <string name="about_market_app_summary">Napisite recenziju ili ocenite aplikaciju</string>
@@ -300,7 +287,6 @@
     <string name="notification_coins_received_msg">Primljeno %s</string>
     <string name="notification_peers_connected_msg">%d povezanih čvorova</string>
     <string name="notification_inactivity_title">Još uvek imate Dash-a na ovom uređaju!</string>
-    <string name="notification_inactivity_message">Imajte na umu da će vaše stanje od %s biti izgubljeno ako deinstalirate Dash Wallet aplikaciju pre nego što pošaljete negde taj iznos.</string>
     <string name="notification_inactivity_action_dismiss">Podseti me kasnije</string>
     <string name="notification_inactivity_action_dismiss_forever">Nemoj me podsećati</string>
     <string name="appwidget_wallet_balance_title">Dash stanje</string>
@@ -320,8 +306,9 @@
     <string name="button_paste">Nalepi</string>
     <string name="button_share">Podeli</string>
     <string name="button_set_as_default">Postavi kao podrazumevano</string>
-    <string name="button_request_coins">Zahtevaj novčiće</string>
-    <string name="button_send_coins">Pošalji novčiće</string>
+    <string name="button_request_coins">Zahtevaj Dash</string>
+    <string name="button_send_coins">Pošalji Dash</string>
+    <string name="button_pay">Pošalji</string>
     <string name="button_scan">Skeniraj</string>
     <string name="button_settings">Podešavanja</string>
     <string name="action_show_qr">Prikaži QR kod</string>
@@ -331,7 +318,7 @@
     <string name="time_today">danas</string>
     <string name="address_unlabeled">(neoznačen)</string>
     <string name="private_key_password">PIN</string>
-    <string name="private_key_bad_password">pogrešan PIN!</string>
+    <string name="private_key_bad_password">Pogrešan PIN!</string>
 
     <!-- generic error messages -->
     <string name="error_io">I/O greška: %s</string>
@@ -341,10 +328,7 @@
 
     <string name="transaction_fragment_confirmations_label">Potvrde</string>
 
-    <string name="navigation_drawer_open">Otvori fioku za navigaciju</string>
-    <string name="navigation_drawer_close">Zatvori fioku za navigaciju</string>
-
     <string name="dash_slogan">Trenutno - Privatno - Sigurno</string>
     <string name="dash_wallet">Novčanik</string>
 
-</resources>
+    </resources>

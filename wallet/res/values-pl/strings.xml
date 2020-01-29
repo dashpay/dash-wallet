@@ -16,7 +16,7 @@
     <string name="wallet_address_dialog_fragment_hint">Aby chronić twoją prywatność, twój adres zmieni się, gdy tylko otrzyma płatność.</string>
     <string name="wallet_balance_fragment_too_much">Ta kwota jest chyba zbyt duża by nosić ją w kieszeni. Proszę przenieś część środków w bezpieczniejsze miejsce.</string>
     <string name="wallet_balance_fragment_replaying">Saldo nie jest dostępne w trakcie odtwarzania.</string>
-    <string name="exchange_rates_activity_title">Kursy wymiany walut</string>
+    <string name="exchange_rates_activity_title">Lokalna Waluta</string>
     <string name="exchange_rates_fragment_empty_text">Załadowanie kursów wymiany walut nie powiodło się</string>
     <string name="exchange_rates_fragment_empty_search">Kurs nie został znaleziony</string>
     <string name="exchange_rates_fragment_default">(domyślnie)</string>
@@ -25,13 +25,11 @@
     <string name="exchange_rates_fragment_source">Cena pobrana z %s</string>
     <string name="exchange_rates_options_search">Znajdź kurs</string>
     <string name="exchange_rates_context_set_as_default_title">Ustaw jako domyślne</string>
-    <string name="wallet_transactions_fragment_empty_text_received">Nie otrzymano jeszcze żadnych Dashów.</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">Nie wysłano jeszcze żadnych Dashów.</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">Jak zdobyć Dashe?\n\nWymień za tradycyjną walutę,\nsprzedawaj dobra bądź usługi lub\nzarabiaj pracując.</string>
+    <string name="wallet_transactions_fragment_empty_text">Brak transakcji do wyświetlenia</string>
     <string name="wallet_transactions_row_warning_backup">Gratulacje, otrzymałeś swoją pierwszą płatność! Czy już wykonałeś kopię zapasową swojego portfela, by ochronić się przed jej utratą?</string>
     <string name="wallet_transactions_fragment_coinbase">wykopany</string>
     <string name="wallet_transactions_fragment_internal">wewnętrzny</string>
-    <string name="wallet_transactions_options_filter">Filtrowanie</string>
+    <string name="wallet_transactions_options_filter">Filtruj Transakcje</string>
     <string name="wallet_transactions_options_filter_all">Wszystkie</string>
     <string name="wallet_transactions_options_filter_received">Otrzymane</string>
     <string name="wallet_transactions_options_filter_sent">Wysłane</string>
@@ -57,18 +55,18 @@
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Zły podpis!</string>
     <string name="send_coins_fragment_payee_verified_by">zweryfikowany przez: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">nieznany</string>
-    <string name="send_coins_fragment_receiving_address_label">Zapłać dla</string>
+    <string name="send_coins_fragment_receiving_address_label">Wyślij do</string>
     <string name="send_coins_fragment_receiving_address_hint">wpisz adres lub nazwę</string>
     <string name="send_coins_fragment_receiving_address_error">Nieprawidłowy adres Dash!</string>
     <string name="send_coins_fragment_receiving_address_own">Zamierzasz wysłać do siebie!</string>
     <string name="send_coins_fragment_receiving_address_complex">adres\\nzłożony</string>
     <string name="send_coins_fragment_pending">(%s oczekuję na potwierdzenie)</string>
-    <string name="send_coins_fragment_amount_label">Kwota do zapłacenia</string>
+    <string name="send_coins_fragment_amount_label">Ilość do wysłania</string>
     <string name="send_coins_fragment_pin_label">Wpisz PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Opłata sieci %s zostanie pobrana.</string>
     <string name="send_coins_fragment_hint_fee_priority">zostanie pobrana opłata priorytetowa  %s. Jeśli zależy ci na niskich opłatach, używaj \'opłaty priorytetowej\', jedynie gdy potrzebujesz szybkiego potwierdzenia transakcji.</string>
-    <string name="send_coins_fragment_hint_dusty_send">Ta kwota jest zbyt mała do wysłania.</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Brak wystarczających środków. Brakuje ci %s.</string>
+    <string name="send_coins_fragment_hint_dusty_send">Kwota jest zbyt mała, aby wysłać</string>
+    <string name="send_coins_fragment_hint_insufficient_money">Niewystarczająca ilość funduszy</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Ilość małych płatności w twoim portfelu nie dodaje się do wartości możliwej do wysyłki.</string>
     <string name="send_coins_fragment_hint_replaying">Obecnie, płatności nie są możliwe, ponieważ trwa proces replay.</string>
     <string name="send_coins_fragment_direct_payment_enable">Wyślij płatność bezpośrednio do odbiorcy.</string>
@@ -80,7 +78,7 @@
     <string name="send_coins_fragment_button_back">Cofnij</string>
     <string name="send_coins_fragment_insufficient_money_title">Brak wystarczających środków</string>
     <string name="send_coins_fragment_insufficient_money_msg1">Brakuje %s.</string>
-    <string name="send_coins_fragment_insufficient_money_msg2">Czy chcesz zapłacić wszystkim co masz?</string>
+    <string name="send_coins_fragment_insufficient_money_msg2">Czy chcesz wysłać wszystko?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">Opróżnienie portfela nie powiodło się</string>
     <string name="send_coins_fragment_state_decrypting">Odszyfrowywanie…</string>
     <string name="send_coins_preparation_msg">Podpisywanie…</string>
@@ -92,13 +90,13 @@
     <string name="send_coins_options_fee_category_economic">Ekonomiczny</string>
     <string name="send_coins_options_fee_category_priority">Priorytetowy</string>
     <string name="send_coins_options_empty">Opróżnij portfel</string>
-    <string name="sweep_wallet_activity_title">Skanuj klucz papierowego portfela</string>
+    <string name="sweep_wallet_activity_title">Zaimportuj Klucz Prywatny</string>
     <string name="sweep_wallet_fragment_intro">Zamierzasz zeskanować portfel papierowy lub kupon. Ta czynność spowoduje przeniesienie wszystkich monet z portfela papierowego na portfel na tym urządzeniu. Gdy transakcja zostanie potwierdzona, portfel papierowy będzie bezużyteczny i nie powinien być używany ponownie z powodów bezpieczeństwa.</string>
     <string name="sweep_wallet_fragment_hint">Portfele papierowe są przeważnie używane jako cold storage. Niektóre ATMy drukują papierowe portfele zamiast bezpośrednio wysyłać monety na twoje urządzenie. Ludzie czasami używają papierowych portfeli w celu przekazywania środków (nie zalecane).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Zacznij skanować klucz prywatny papierowego portfela. Użyj przycisku kamery by zacząć.</string>
     <string name="sweep_wallet_fragment_encrypted">Ten klucz prywatny jest chroniony hasłem.</string>
-    <string name="sweep_wallet_fragment_password">hasło</string>
-    <string name="sweep_wallet_fragment_bad_password">złe hasło!</string>
+    <string name="sweep_wallet_fragment_password">Hasło</string>
+    <string name="sweep_wallet_fragment_bad_password">Błędne hasło!</string>
     <string name="sweep_wallet_fragment_balance">Kwota do wczytania</string>
     <string name="sweep_wallet_fragment_button_decrypt">Odszyfruj</string>
     <string name="sweep_wallet_fragment_button_sweep">Skanuj</string>
@@ -158,6 +156,33 @@
     <string name="transaction_row_message_received_dust">Tak mała kwota prawdopodobnie nigdy nie zostanie wydana ekonomicznie.</string>
     <string name="transaction_row_message_received_pay_to_many">Ta płatność trafia do wielu innych portfeli oprócz twojego, spowolni to działania portfela z upływem czasu. Jeśli możesz, staraj się otrzymywać płatności indywidualne.</string>
     <string name="transaction_row_message_received_rbf">Ta płatność jest opóźniona ponieważ nadawca użył niepewnego typu transakcji.</string>
+    <string name="transaction_row_status_received">Otrzymano</string>
+    <string name="transaction_row_status_sent">Wysłano</string>
+    <string name="transaction_row_status_sending">Wysyłam</string>
+    <string name="transaction_row_status_sent_interally">Wewnętrzny</string>
+    <string name="transaction_row_status_processing">Przetwarzam</string>
+    <string name="transaction_row_status_confirming">Potwierdzam</string>
+    <string name="transaction_row_status_locked">Zablokowane</string>
+    <string name="transaction_row_status_error_sending">Błąd wysyłki</string>
+    <string name="transaction_row_status_error_dead">Podwójne wydatkowanie</string>
+    <string name="transaction_row_status_error_conflicting">W konflikcie</string>
+    <string name="transaction_row_status_error_insufficient_fee">Niewystarczająca opłata</string>
+    <string name="transaction_row_status_error_dust">Kurz</string>
+    <string name="transaction_row_status_error_non_standard">Niestandardowy</string>
+    <string name="transaction_row_status_error_malformed">Zniekształcony</string>
+    <string name="transaction_row_status_error_duplicate">Zduplikowany</string>
+    <string name="transaction_row_status_error_obsolete">Przestarzały</string>
+    <string name="transaction_row_status_error_invalid">Niewłaściwy</string>
+    <string name="transaction_row_status_error_other">Nieznany</string>
+    <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
+    <string name="transaction_row_time_text">Na %s na %s</string>
+    <string name="transaction_row_rate_not_available">Niedostępne</string>
+    <string name="transaction_row_status_masternode_registration">Rejestracja Masternoda</string>
+    <string name="transaction_row_status_masternode_update_registrar">Aktualizacji Masternoda</string>
+    <string name="transaction_row_status_masternode_update_service">Aktualizacji Masternoda</string>
+    <string name="transaction_row_status_masternode_revoke">Odwołanie Masternoda</string>
+    <string name="transaction_row_status_masternode_reward">Nagroda Masternoda</string>
+    <string name="transaction_row_status_mining_reward">Nagroda Górnictwa</string>
     <string name="network_monitor_activity_title">Monitor sieci</string>
     <string name="network_monitor_peer_list_title">Połączenia</string>
     <string name="network_monitor_block_list_title">Bloki</string>
@@ -201,7 +226,7 @@
     <string name="import_export_keys_dialog_show">Wyświetl hasło</string>
     <string name="import_export_keys_dialog_failure_title">Błąd</string>
     <string name="import_keys_intent_filter_action">Importowanie kluczy Dash</string>
-    <string name="encrypt_keys_dialog_title">PIN do wydawania</string>
+    <string name="encrypt_keys_dialog_title">Zmień PIN</string>
     <string name="encrypt_keys_dialog_message">Wydawanie z twojego portfela bedzie chronione wybranym PINem.</string>
     <string name="encrypt_keys_dialog_warning">WAŻNE: Musisz zapamiętać twój PIN! Nie używaj znanych numerow (jak daty urodzin)</string>
     <string name="encrypt_keys_dialog_password_old">Stary PIN</string>
@@ -212,7 +237,7 @@
     <string name="encrypt_keys_dialog_show">Pokaż PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">Szyfruje...</string>
     <string name="encrypt_keys_dialog_state_decrypting">Odszyfrowywuje...</string>
-    <string name="encrypt_keys_dialog_state_done">Zrobione.</string>
+    <string name="encrypt_keys_dialog_state_done">Zrobione</string>
     <string name="scan_camera_problem_dialog_title">Przepraszam</string>
     <string name="scan_camera_problem_dialog_message">Nastąpił problem z aparatem fotograficznym. Prawdopodobnie musisz zrestartować urządzenie.</string>
     <string name="scan_camera_permission_dialog_title">Pozwolenie na użycie kamery</string>
@@ -296,7 +321,7 @@
     <string name="notification_coins_received_msg">Otrzymano %s </string>
     <string name="notification_peers_connected_msg">%d połączonych partnerów</string>
     <string name="notification_inactivity_title">W twoim portfelu nadal są niewykorzystane Dash!</string>
-        <string name="notification_inactivity_message">Wciąż posiadasz Dash na tym urządzeniu! Upewnij się że masz zapisane hasła odzyskiwania portfela zanim odinstalujesz Dash Wallet w innym wypadku stracisz swój balans %s</string>
+    <string name="notification_inactivity_message">Wciąż posiadasz Dash na tym urządzeniu! Upewnij się że masz zapisane hasła odzyskiwania portfela zanim odinstalujesz Dash Wallet w innym wypadku stracisz swój balans %s</string>
     <string name="notification_inactivity_action_dismiss">Przypomnij później</string>
     <string name="notification_inactivity_action_dismiss_forever">Nie przypominaj więcej</string>
     <string name="appwidget_wallet_balance_title">Saldo Dash</string>
@@ -319,6 +344,7 @@
     <string name="button_set_as_default">Ustaw jako domyślne</string>
     <string name="button_request_coins">Poproś o Dashy</string>
     <string name="button_send_coins">Wyślij Dashe</string>
+    <string name="button_pay">Wyślij</string>
     <string name="button_scan">Skanuj</string>
     <string name="button_settings">Ustawienia</string>
     <string name="action_show_qr">Pokaż kod QR</string>
@@ -338,10 +364,14 @@
 
     <string name="transaction_fragment_confirmations_label">Potwierdzenia</string>
 
-    <string name="navigation_drawer_open">Pokaż boczne menu</string>
-    <string name="navigation_drawer_close">Ukryj boczne menu</string>
-
     <string name="dash_slogan">Natychmiastowy - Prywatny - Bezpieczny</string>
     <string name="dash_wallet">Portfel</string>
+
+    <string name="activity_security_backup_wallet">Stwórz plik z kopią zapasową portfela</string>
+    <string name="activity_security_view_recovery_phrase">Pokaż Frazę Odzyskiwania Portfela</string>
+    <string name="activity_security_advanced">Zaawansowane Bezpieczeństwo</string>
+    <string name="activity_security_biometric_auth">Autentykacja za pomocą odcisku palca</string>
+    <string name="activity_security_hide_balance">Ukryj Balans przy Starcie</string>
+    <string name="reset_to_default">Resetuj do domyślne</string>
 
 </resources>

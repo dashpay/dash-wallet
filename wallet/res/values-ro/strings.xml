@@ -16,7 +16,7 @@
     <string name="wallet_address_dialog_fragment_hint">Pentru a-ți proteja confidențialitatea, adresa ta se va schimba odată ce primește o plată.</string>
     <string name="wallet_balance_fragment_too_much">Această sumă este destul de mare pentru a o purta în buzunar. Te rog, mută o parte din ea într-un loc mai sigur.</string>
     <string name="wallet_balance_fragment_replaying">Soldul nu este disponibil în timpul Replay-ului.</string>
-    <string name="exchange_rates_activity_title">Rate de schimb</string>
+    <string name="exchange_rates_activity_title">Monedă Locală</string>
     <string name="exchange_rates_fragment_empty_text">Nu s-au putut încărca ratele de schimb.</string>
     <string name="exchange_rates_fragment_empty_search">Nu se poate găsi cursul de schimb.</string>
     <string name="exchange_rates_fragment_default">(default)</string>
@@ -25,13 +25,9 @@
     <string name="exchange_rates_fragment_source">Preț de la %s</string>
     <string name="exchange_rates_options_search">Caută cursul de schimb</string>
     <string name="exchange_rates_context_set_as_default_title">Setează ca și default</string>
-    <string name="wallet_transactions_fragment_empty_text_received">Nici un Dash nu a fost primit până acum.</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">Nici un Dash nu a trimis primit până acum.</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">Cum obții Dash?\n\nSchimbă în bani tradiționali,\nvinde bunuri sau servicii sau\ncâștiga prin muncă.</string>
     <string name="wallet_transactions_row_warning_backup">Felicitări, ai primit prima ta plată! Ai creat deja portofelul, pentru protecție împotriva pierderii?</string>
     <string name="wallet_transactions_fragment_coinbase">minerit</string>
     <string name="wallet_transactions_fragment_internal">intern</string>
-    <string name="wallet_transactions_options_filter">Filtru</string>
     <string name="wallet_transactions_options_filter_all">Toate plățile</string>
     <string name="wallet_transactions_options_filter_received">Plăți primite</string>
     <string name="wallet_transactions_options_filter_sent">Plăți trimise</string>
@@ -57,18 +53,15 @@
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Semnătura greșită!</string>
     <string name="send_coins_fragment_payee_verified_by">Verificat de: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">necunoscut</string>
-    <string name="send_coins_fragment_receiving_address_label">Plătește către</string>
     <string name="send_coins_fragment_receiving_address_hint">introdu adresa sau numele</string>
     <string name="send_coins_fragment_receiving_address_error">Adresă Dash invalidă</string>
     <string name="send_coins_fragment_receiving_address_own">Ești pe cale să-ți trimiți ție însuți!</string>
     <string name="send_coins_fragment_receiving_address_complex">adresă\ncomplexă</string>
     <string name="send_coins_fragment_pending">(%s se așteaptă confirmarea)</string>
-    <string name="send_coins_fragment_amount_label">Sumă de plată</string>
     <string name="send_coins_fragment_pin_label">Introdu codul PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">O taxă de rețea de %s va fi plătită.</string>
-    <string name="send_coins_fragment_hint_fee_priority">O taxă de prioritate de %s va fi plătită. Dacă vrei taxe reduse, utilizează \"prioritate\" numai dacă ai nevoie de confirmare cât mai curând posibil.</string>
-    <string name="send_coins_fragment_hint_dusty_send">Suma este prea mică pentru a trimite.</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Nu sunt suficiente monede disponibile. Lipsesc %s.</string>
+    <string name="send_coins_fragment_hint_fee_priority">O taxă de prioritate de %s va fi plătită. Dacă vrei taxe reduse, utilizează "prioritate" numai dacă ai nevoie de confirmare cât mai curând posibil.</string>
+    <string name="send_coins_fragment_hint_insufficient_money">Fonduri nesuficiente</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Suma plăților minuscule din portofel tău nu reprezintă o valoare care poate fi trimisă.</string>
     <string name="send_coins_fragment_hint_replaying">În prezent, plățile nu sunt posibile, deoarece un replay este în curs de desfășurare.</string>
     <string name="send_coins_fragment_direct_payment_enable">Trimite plata direct beneficiarului.</string>
@@ -80,7 +73,6 @@
     <string name="send_coins_fragment_button_back">Înapoi</string>
     <string name="send_coins_fragment_insufficient_money_title">Nu sunt suficiente monede disponibile</string>
     <string name="send_coins_fragment_insufficient_money_msg1">Îți lipsesc %s.</string>
-    <string name="send_coins_fragment_insufficient_money_msg2">Vrei să plătești cu tot ce ai?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">Golirea portofelului a eșuat</string>
     <string name="send_coins_fragment_state_decrypting">În curs de securizare...</string>
     <string name="send_coins_preparation_msg">Semnare...</string>
@@ -92,13 +84,12 @@
     <string name="send_coins_options_fee_category_economic">Economic</string>
     <string name="send_coins_options_fee_category_priority">Prioritate</string>
     <string name="send_coins_options_empty">Portofel gol</string>
-    <string name="sweep_wallet_activity_title">Efectuează un sweep al portofelului de hârtie </string>
+    <string name="sweep_wallet_activity_title">Importă Cheia Privată</string>
     <string name="sweep_wallet_fragment_intro">Ești pe cale să efectuezi un sweep al unui portofel de hârtie sau al unui cupon. Asta va permite mutarea tuturor monedelor de pe acea hârtie în portofelul de pe acest dispozitiv. Când tranzacția este confirmată, hârtia va fi lipsită de valoare și nu ar trebui reutilizată din motive de siguranță.</string>
     <string name="sweep_wallet_fragment_hint">Portofele de hârtie sunt utilizate cel mai frecvent pentru depozitarea la rece. Unele bancomate le imprimă pe hârtie, în loc să trimită monedele direct pe dispozitivul mobil. Oamenii folosesc câteodată portofele de hârtie pre-încărcate pentru a muta valoare (nu este recomandat).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Începe prin a scana cheia privată a unui portofel de hârtie. Utilizează butonul de acțiune al camerei.</string>
     <string name="sweep_wallet_fragment_encrypted">Această cheie privată este protejată cu o parolă.</string>
-    <string name="sweep_wallet_fragment_password">parolă</string>
-    <string name="sweep_wallet_fragment_bad_password">parolă greşită</string>
+    <string name="sweep_wallet_fragment_password">Parolă</string>
     <string name="sweep_wallet_fragment_balance">Sold pentru sweep</string>
     <string name="sweep_wallet_fragment_button_decrypt">Securizează</string>
     <string name="sweep_wallet_fragment_button_sweep">Efectuează sweep</string>
@@ -158,6 +149,11 @@
     <string name="transaction_row_message_received_dust">Această sumă mică probabil că nu poate fi cheltuită niciodată în mod economic.</string>
     <string name="transaction_row_message_received_pay_to_many">Această plată se plătește multor alte portofele pe pe lângă al tău, ceea ce face ca aplicația să încetinească. Dacă poți, încearcă să primești plăți care te plătesc doar pe tine.</string>
     <string name="transaction_row_message_received_rbf">Această plată a fost întârziată deoarece expeditorul a folosit un tip de tranzacție nesigură.</string>
+    <string name="transaction_row_status_received">Primiţi</string>
+    <string name="transaction_row_status_sent">Trimis</string>
+    <string name="transaction_row_status_processing">Se procesează</string>
+    <string name="transaction_row_status_locked">Blocat</string>
+    <string name="transaction_row_status_error_dead">Cheltuială dublă</string>
     <string name="network_monitor_activity_title">Monitor de rețea</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Block-uri</string>
@@ -201,7 +197,6 @@
     <string name="import_export_keys_dialog_show">Arată parola</string>
     <string name="import_export_keys_dialog_failure_title">Eroare</string>
     <string name="import_keys_intent_filter_action">Restaurează portofelul</string>
-    <string name="encrypt_keys_dialog_title">Cod PIN de cheltuieli</string>
     <string name="encrypt_keys_dialog_message">Cheltuielile din portofel vor fi protejate prin codul PIN ales.</string>
     <string name="encrypt_keys_dialog_warning">Important: trebuie să-ți amintiești codul PIN! Nu utiliza numere comune (cum ar fi zile de naștere).</string>
     <string name="encrypt_keys_dialog_password_old">Cod PIN vechi</string>
@@ -212,7 +207,7 @@
     <string name="encrypt_keys_dialog_show">Arată codul PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">Securizare...</string>
     <string name="encrypt_keys_dialog_state_decrypting">În curs de securizare...</string>
-    <string name="encrypt_keys_dialog_state_done">Gata.</string>
+    <string name="encrypt_keys_dialog_state_done">Gata</string>
     <string name="scan_camera_problem_dialog_title">Scuze</string>
     <string name="scan_camera_problem_dialog_message">Camera are o problemă. Probabil că trebuie să repornești dispozitivul.</string>
     <string name="scan_camera_permission_dialog_title">Permisiune pentru cameră</string>
@@ -296,7 +291,7 @@
     <string name="notification_coins_received_msg">%s primit</string>
     <string name="notification_peers_connected_msg">%d peer-uri conectați </string>
     <string name="notification_inactivity_title">Încă ai Dash pe acest dispozitiv!</string>
-        <string name="notification_inactivity_message">Mai ai Dash pe acest dispozitiv! Te rog să te asiguri că scrii fraza de recuperare înainte de a dezinstala portofelul Dash sau alfel vei pierde soldul %s.</string>
+    <string name="notification_inactivity_message">Mai ai Dash pe acest dispozitiv! Te rog să te asiguri că scrii fraza de recuperare înainte de a dezinstala portofelul Dash sau alfel vei pierde soldul %s.</string>
     <string name="notification_inactivity_action_dismiss">Amintește-mi mai târziu</string>
     <string name="notification_inactivity_action_dismiss_forever">Nu-mi aminti</string>
     <string name="appwidget_wallet_balance_title">Sold Dash</string>
@@ -319,6 +314,7 @@
     <string name="button_set_as_default">Setează ca si default</string>
     <string name="button_request_coins">Cere Dash</string>
     <string name="button_send_coins">Trimite Dash</string>
+    <string name="button_pay">Trimite</string>
     <string name="button_scan">Scanează</string>
     <string name="button_settings">Setări</string>
     <string name="action_show_qr">Arată codul QR</string>
@@ -338,10 +334,7 @@
 
     <string name="transaction_fragment_confirmations_label">Confirmări</string>
 
-    <string name="navigation_drawer_open">Deschide panoul de navigare</string>
-    <string name="navigation_drawer_close">Închide panoul de navigare </string>
-
     <string name="dash_slogan">Instant - Privat - Securizat</string>
     <string name="dash_wallet">Portofel</string>
 
-</resources>
+    </resources>

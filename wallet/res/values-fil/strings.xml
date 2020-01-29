@@ -16,7 +16,7 @@
     <string name="wallet_address_dialog_fragment_hint">Para maprotektahan ang iyong pagiging pribado, babaguhin ang iyong address sa oras na matanggap ang bayad.</string>
     <string name="wallet_balance_fragment_too_much">Ang halagang ito ay masyadong mataas para dalhin ng iyong pitaka. Pakilipat ang iba sa mas ligtas na lugar.</string>
     <string name="wallet_balance_fragment_replaying">Ang balance ay hindi available habang nirere-play.</string>
-    <string name="exchange_rates_activity_title">Halaga ng palitan</string>
+    <string name="exchange_rates_activity_title">Lokal na pananalapi</string>
     <string name="exchange_rates_fragment_empty_text">Hindi nag-load ang halaga ng palitan.</string>
     <string name="exchange_rates_fragment_empty_search">Hindi makita ang halaga ng palitan</string>
     <string name="exchange_rates_fragment_default">(default)</string>
@@ -25,13 +25,9 @@
     <string name="exchange_rates_fragment_source">Presyo mula %s</string>
     <string name="exchange_rates_options_search">Magsisiyasat ng halaga ng palitan</string>
     <string name="exchange_rates_context_set_as_default_title">Itakda bilang default</string>
-    <string name="wallet_transactions_fragment_empty_text_received">Walang Dash na natatanggap hanggang ngayon.</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">Walang Dash na naipapadala hanggang ngayon</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">Paano makakuha ng Dash?\n\nMagtrade ng tradisyunal na pera,\nmagbenta ng paninda o serbisyo o\nkumita sa pagtatrabaho..</string>
     <string name="wallet_transactions_row_warning_backup">Pagbati, natanggap mo na ang iyong paunang bayad! Na-backed up mo na ba ang iyong pitaka, para maprotektahan sa pagkawala?</string>
     <string name="wallet_transactions_fragment_coinbase">namina</string>
     <string name="wallet_transactions_fragment_internal">internal</string>
-    <string name="wallet_transactions_options_filter">Salain</string>
     <string name="wallet_transactions_options_filter_all">Lahat ng bayad</string>
     <string name="wallet_transactions_options_filter_received">Natanggap na bayad</string>
     <string name="wallet_transactions_options_filter_sent">Naipadalang bayad</string>
@@ -57,18 +53,15 @@
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Maling lagda!</string>
     <string name="send_coins_fragment_payee_verified_by">beripikado ni: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">lingid</string>
-    <string name="send_coins_fragment_receiving_address_label">Bayad kay</string>
     <string name="send_coins_fragment_receiving_address_hint">I-type ang address o pangalan</string>
     <string name="send_coins_fragment_receiving_address_error">Hindi wasto ang iyong Dash address!</string>
     <string name="send_coins_fragment_receiving_address_own">Ikaw ay magsesend na sa iyong sarili!</string>
     <string name="send_coins_fragment_receiving_address_complex">kumplikado\naddress</string>
     <string name="send_coins_fragment_pending">(%s naghihintay ng kumpirmasyon)</string>
-    <string name="send_coins_fragment_amount_label">Halaga ng babayaran</string>
     <string name="send_coins_fragment_pin_label">I-enter ang PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Ang network fee na %s ay mababayaran na.</string>
     <string name="send_coins_fragment_hint_fee_priority">Ang priority fee na %say mababayaran. Kung alintana ang mababang bayad, gamitin lamang ang \'priority\' kung kailangan ng kumpirmasyon sa lalong madaling panahon.</string>
-    <string name="send_coins_fragment_hint_dusty_send">Ang halaga ay sobrang liit para maipadala.</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Hindi sapat ang iyong barya. Kulang ka ng %s.</string>
+    <string name="send_coins_fragment_hint_dusty_send">Ang halaga ay sobrang liit para maipadala</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Ang halaga ng maliit na bayad sa iyong pitaka ay hindi dumagdag sa ipinadalang halaga.</string>
     <string name="send_coins_fragment_hint_replaying">Ang kasalukuyang bayad ay hindi posible dahil ang replay ay umuusad.</string>
     <string name="send_coins_fragment_direct_payment_enable">Magbayad ng direkta sa binabayaran.</string>
@@ -80,7 +73,6 @@
     <string name="send_coins_fragment_button_back">Ibalik</string>
     <string name="send_coins_fragment_insufficient_money_title">Hindi sapat ang iyong barya</string>
     <string name="send_coins_fragment_insufficient_money_msg1">Kulang ka ng %s.</string>
-    <string name="send_coins_fragment_insufficient_money_msg2">Gusto mo bang ibayad lahat ng mayroon ka?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">Hindi naisakatuparan ang pag-ubos ng laman ng pitaka</string>
     <string name="send_coins_fragment_state_decrypting">Nagde-decrypt...</string>
     <string name="send_coins_preparation_msg">Nagsi-sign...</string>
@@ -92,13 +84,11 @@
     <string name="send_coins_options_fee_category_economic">Ekonomiya</string>
     <string name="send_coins_options_fee_category_priority">Prayoridad</string>
     <string name="send_coins_options_empty">Walang laman ang pitaka</string>
-    <string name="sweep_wallet_activity_title">I-sweep ang papel na pitaka</string>
+    <string name="sweep_wallet_activity_title">I-import ang private key</string>
     <string name="sweep_wallet_fragment_intro">Ikaw ay mag-sweep na ng papel na pitaka o kupon. Ang lahat ng barya mula sa papel ay malilipat sa pitaka ng iyong device. Kapag nakumpirma na ang transaksyon, ang papel na ito ay mawawalan ng bisa at hindi na dapat gamitin ulit para sa iyong seguridad.</string>
     <string name="sweep_wallet_fragment_hint">Pinakamadalas gamitin ang papel na pitaka para sa cold storage. Ang ibang ATM ay iniimprinta ito sa kanilang paper slip sa halip na ipadala ang iyong barya ng direkta sa iyong mobile device. Minsan gumagamit ang ibang tao ng pre-charged na papel na pitaka para ipasa ang halaga (hindi inirerekomenda)</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Simulan sa pamamagitan ng pag-scan ng private key ng iyong papel na pitaka. Gamitin ang camera action button.</string>
     <string name="sweep_wallet_fragment_encrypted">Itong private key na ito ay protektado ng password.</string>
-    <string name="sweep_wallet_fragment_password">password</string>
-    <string name="sweep_wallet_fragment_bad_password">maling password!</string>
     <string name="sweep_wallet_fragment_balance">Balanse na is-sweep</string>
     <string name="sweep_wallet_fragment_button_decrypt">I-decrypt</string>
     <string name="sweep_wallet_fragment_button_sweep">I-sweep</string>
@@ -158,6 +148,12 @@
     <string name="transaction_row_message_received_dust">Ang maliit na halagang ito ay maaring hindi magastos ng matipid.</string>
     <string name="transaction_row_message_received_pay_to_many">Ang bayad na ito ay nagbayad sa maraming wallet bukod sa iyo kaya bumagal ang app. Hanggat maaari, subukang tumanggap ng bayad na para lamang sa iyo.</string>
     <string name="transaction_row_message_received_rbf">Delay ang bayad dahil gumamit ng mapanganib na uri ng transaksyon ang nagpadala.</string>
+    <string name="transaction_row_status_received">Natanggap</string>
+    <string name="transaction_row_status_sent">Ipinadala</string>
+    <string name="transaction_row_status_sending">Ipinapadala</string>
+    <string name="transaction_row_status_processing">Pinoproseso</string>
+    <string name="transaction_row_status_locked">Naka-lock</string>
+    <string name="transaction_row_status_error_dead">Dobleng spend</string>
     <string name="network_monitor_activity_title">Network monitor</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Blocks</string>
@@ -201,7 +197,6 @@
     <string name="import_export_keys_dialog_show">Ipakita ang password</string>
     <string name="import_export_keys_dialog_failure_title">Mali</string>
     <string name="import_keys_intent_filter_action">Ibalik ang pitaka</string>
-    <string name="encrypt_keys_dialog_title">Spending PIN</string>
     <string name="encrypt_keys_dialog_message">Ang paggastos mula sa iyong wallet ay protektado ng piniling PIN.</string>
     <string name="encrypt_keys_dialog_warning">Mahalaga: Kailangan mong alalahanin ang iyong PIN! Wag gumamit ng karaniwang numero (tulad ng kaarawan).</string>
     <string name="encrypt_keys_dialog_password_old">Lumang PIN</string>
@@ -212,7 +207,7 @@
     <string name="encrypt_keys_dialog_show">Ipakita ang PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">Nage-encrypt...</string>
     <string name="encrypt_keys_dialog_state_decrypting">Nagde-decrypt...</string>
-    <string name="encrypt_keys_dialog_state_done">Tapos na.</string>
+    <string name="encrypt_keys_dialog_state_done">Tapos</string>
     <string name="scan_camera_problem_dialog_title">Paumanhin</string>
     <string name="scan_camera_problem_dialog_message">Ang camera ay may problema. Marahil kailangan mong i-restart ang device.</string>
     <string name="scan_camera_permission_dialog_title">Pahintulutan ang  camera</string>
@@ -296,7 +291,7 @@
     <string name="notification_coins_received_msg">Natanggap %s</string>
     <string name="notification_peers_connected_msg">%d peers connected</string>
     <string name="notification_inactivity_title">Mayroon ka pang Dash sa device na ito!</string>
-        <string name="notification_inactivity_message">Mayroon ka pang dash sa device na ito! Siguraduhing na naisulat ang iyong recovery phrase bago i-uninstall ang Dash Walet o mawawala lahat ng iyong balanse na %s.</string>
+    <string name="notification_inactivity_message">Mayroon ka pang dash sa device na ito! Siguraduhing na naisulat ang iyong recovery phrase bago i-uninstall ang Dash Walet o mawawala lahat ng iyong balanse na %s.</string>
     <string name="notification_inactivity_action_dismiss">Paalalahanan mo ako mamaya</string>
     <string name="notification_inactivity_action_dismiss_forever">Wag mo akong paalalahanan</string>
     <string name="appwidget_wallet_balance_title">Balanse ng Dash</string>
@@ -319,6 +314,7 @@
     <string name="button_set_as_default">Itakda bilang default</string>
     <string name="button_request_coins">Humiling ng Dash</string>
     <string name="button_send_coins">Ipadala ang Dash</string>
+    <string name="button_pay">Ipadala</string>
     <string name="button_scan">Scan</string>
     <string name="button_settings">Settings</string>
     <string name="action_show_qr">Ipakita ang QR code</string>
@@ -338,10 +334,7 @@
 
     <string name="transaction_fragment_confirmations_label">Mga kumpirmasyon</string>
 
-    <string name="navigation_drawer_open">Ibukas ang navigation drawer</string>
-    <string name="navigation_drawer_close">Isara ang navigation drawer</string>
-
     <string name="dash_slogan">Madaian- Pribado - Protektado</string>
     <string name="dash_wallet">Pitaka</string>
 
-</resources>
+    </resources>

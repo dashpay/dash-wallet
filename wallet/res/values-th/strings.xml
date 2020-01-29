@@ -16,7 +16,7 @@
     <string name="wallet_address_dialog_fragment_hint">เพื่อปกป้องความเป็นส่วนตัวของคุณที่อยู่ของคุณจะเปลี่ยนเมื่อคุณได้รับการชำระเงิน</string>
     <string name="wallet_balance_fragment_too_much">จำนวนเงินนี้ค่อนข้างสูงสำหรับการพกพาไว้ในกระเป๋าของคุณ โปรดย้ายไปที่ที่ปลอดภัยกว่า</string>
     <string name="wallet_balance_fragment_replaying">ยอดคงเหลือไม่เพียงพอที่สามารถเล่นใหม่ได้</string>
-    <string name="exchange_rates_activity_title">อัตราแลกเปลี่ยน</string>
+    <string name="exchange_rates_activity_title">สกุลเงินท้องถิ่น</string>
     <string name="exchange_rates_fragment_empty_text">ไม่สามารถโหลดอัตราแลกเปลี่ยนได้</string>
     <string name="exchange_rates_fragment_empty_search">ไม่พบอัตราแลกเปลี่ยน</string>
     <string name="exchange_rates_fragment_default">(ค่าเริ่มต้น)</string>
@@ -25,13 +25,10 @@
     <string name="exchange_rates_fragment_source">ราคาเริ่มต้นจาก %s</string>
     <string name="exchange_rates_options_search">ค้นหาอัตราแลกเปลี่ยน</string>
     <string name="exchange_rates_context_set_as_default_title">ตั้งเป็นค่าเริ่มต้น</string>
-    <string name="wallet_transactions_fragment_empty_text_received">ยังไม่มี Dash ที่ได้รับ </string>
-    <string name="wallet_transactions_fragment_empty_text_sent">ไม่มี Dash ที่ส่ง</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">จะได้รับ Dash ได้อย่างไร ? \n\n แลกเปลี่ยนเป็นเงินดั้งเดิม ,\n ขายสินค้าหรือบริการหรือ \n ได้รับเงินจากการทำงาน</string>
     <string name="wallet_transactions_row_warning_backup">ยินดีด้วย! คุณได้รับการชำระเงินครั้งแรก!  คุณได้สำรองข้อมูล wallet ไว้เพื่อป้องกันการสูญเสียหรือไม่?</string>
     <string name="wallet_transactions_fragment_coinbase">ศีลธรรม</string>
     <string name="wallet_transactions_fragment_internal">ภายใน</string>
-    <string name="wallet_transactions_options_filter">กรอง</string>
+    <string name="wallet_transactions_options_filter">กรองธุรกรรม</string>
     <string name="wallet_transactions_options_filter_all">การชำระเงินทั้งหมด</string>
     <string name="wallet_transactions_options_filter_received">การชำระเงินที่ได้รับ</string>
     <string name="wallet_transactions_options_filter_sent">การชำระเงินที่ส่ง</string>
@@ -57,18 +54,16 @@
     <string name="send_coins_fragment_request_payment_request_wrong_signature">ลายเซ็นไม่ถูกต้อง </string>
     <string name="send_coins_fragment_payee_verified_by">ยืนยันโดย: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">ไม่ทราบ</string>
-    <string name="send_coins_fragment_receiving_address_label">จ่ายให้</string>
+    <string name="send_coins_fragment_receiving_address_label">ส่งไปยัง</string>
     <string name="send_coins_fragment_receiving_address_hint">พิมพ์ที่อยู่หรือชื่อ</string>
     <string name="send_coins_fragment_receiving_address_error">ที่อยู่ Dash ไม่ถูกต้อง</string>
     <string name="send_coins_fragment_receiving_address_own">คุณกำลังส่งให้ตัวเอง!</string>
     <string name="send_coins_fragment_receiving_address_complex">ที่อยู่ \n ซับซ้อน</string>
     <string name="send_coins_fragment_pending">(%sกำลังรอการยืนยัน​)</string>
-    <string name="send_coins_fragment_amount_label">จำนวนเงินที่ต้องจ่าย</string>
     <string name="send_coins_fragment_pin_label">ใส่รหัส PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">ค่าธรรมเนียมระบบเครือข่ายของ %s จะถูกจ่าย</string>
     <string name="send_coins_fragment_hint_fee_priority">ค่าธรรมเนียมพิเศษของ %s จะถูกจ่าย หากคุณสนใจค่าธรรมเนียมพิเศษนี้ โปรดใช้ \'priority\' เมื่อต้องการการยืนยันอย่างรวดเร็ว</string>
-    <string name="send_coins_fragment_hint_dusty_send">จำนวนเงินน้อยเกินไปที่จะส่ง</string>
-    <string name="send_coins_fragment_hint_insufficient_money">เหรียญของคุณไม่เพียงพอ ขาดอีก %s</string>
+    <string name="send_coins_fragment_hint_insufficient_money">ยอดเงินไม่เพียงพอ</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">จำนวนเงินในการชำระเงิน wallet ของคุณ ไม่เพิ่มขึ้นที่จะสามารถส่งได้</string>
     <string name="send_coins_fragment_hint_replaying">ขณะนี้ยังไม่มีการชำระเงินเนื่องจากการเล่นซ้ำอยู่ระหว่างดำเนินการ</string>
     <string name="send_coins_fragment_direct_payment_enable">ส่งการชำระเงินโดยตรงไปยังผู้รับเงิน</string>
@@ -80,7 +75,6 @@
     <string name="send_coins_fragment_button_back">ย้อนกลับ</string>
     <string name="send_coins_fragment_insufficient_money_title">เหรียญไม่เพียงพอ</string>
     <string name="send_coins_fragment_insufficient_money_msg1">คุณขาดอีก %s</string>
-    <string name="send_coins_fragment_insufficient_money_msg2">คุณต้องการจ่ายทั้งหมดที่คุณมีหรือไม่?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">การว่างเปล่าของ wallet  ล้มเหลว</string>
     <string name="send_coins_fragment_state_decrypting">กำลังถอดรหัส...</string>
     <string name="send_coins_preparation_msg">กำลังลงชื่อ...</string>
@@ -92,13 +86,12 @@
     <string name="send_coins_options_fee_category_economic">ประหยัด</string>
     <string name="send_coins_options_fee_category_priority">สิทธิพิเศษ</string>
     <string name="send_coins_options_empty">wallet ว่างเปล่า</string>
-    <string name="sweep_wallet_activity_title">ปัดกวาด paper wallet</string>
+    <string name="sweep_wallet_activity_title">นำเข้าคีย์ส่วนตัว</string>
     <string name="sweep_wallet_fragment_intro">คุณกำลังจะปัดกวาด paper wallet  หรือ คูปอง  วิธีนี้จะย้ายเหรียญทั้งหมดจากกระดาษดังกล่าวไปยัง wallet ของคุณบนอุปกรณ์นี้  เมื่อการทำธุรกรรมได้รับการยืนยันแล้ว กระดาษจะไม่มีราคาและไม่ควรนำมาใช้อีกครั้งเพื่อความปลอดภัย</string>
     <string name="sweep_wallet_fragment_hint">paper wallet มักจะถูกใช้สำหรับ cold storage  เครื่องเอทีเอ็มบางเครื่องพิมพ์บนใบเสร็จรับเงินแทนการส่งเหรียญไปยังโทรศัพท์มือถือโดยตรง  บางครั้งผู้คนใช้ pre-charged paper wallets เพื่อส่งหลักทรัพย์ให้กับบุคคลอื่น (ไม่แนะนำ)</string>
     <string name="sweep_wallet_fragment_wallet_unknown">เริ่มต้นสแกน private key ของ paper wallet   ใช้ปุ่มการทำงานกล้องถ่ายรูป</string>
     <string name="sweep_wallet_fragment_encrypted">private key นี้ จะถูกป้องกันจากรหัสผ่าน</string>
     <string name="sweep_wallet_fragment_password">รหัสผ่าน</string>
-    <string name="sweep_wallet_fragment_bad_password">รหัสผ่านไม่ถูกต้อง!</string>
     <string name="sweep_wallet_fragment_balance">ยอดคงเหลือที่จะปัดกวาด</string>
     <string name="sweep_wallet_fragment_button_decrypt">ถอดรหัส </string>
     <string name="sweep_wallet_fragment_button_sweep">ปัดกวาด</string>
@@ -158,6 +151,17 @@
     <string name="transaction_row_message_received_dust">จำนวนเงินน้อยนี้อาจจะไม่เคยถูกใช้ในทางเศรษฐกิจ</string>
     <string name="transaction_row_message_received_pay_to_many">การชำระเงินนี้จ่ายถึง wallet จำนวนมากนอกเหนือจากบัญชีของคุณ เมื่อเวลาผ่านอาจจะทำให้แอพพลิเคชั่นช้าลง  ถ้าเป็นไปได้ลองรับการชำระเงินที่จ่ายถึงคุณเท่านั้น</string>
     <string name="transaction_row_message_received_rbf">การชำระเงินนี้ล่าช้าเพราะว่าผู้ส่งใช้ประเภทการทำธุรกรรมที่ไม่ปลอดภัย</string>
+    <string name="transaction_row_status_received">ได้รับ</string>
+    <string name="transaction_row_status_sent">ส่ง</string>
+    <string name="transaction_row_status_sending">กำลังส่ง</string>
+    <string name="transaction_row_status_processing">กำลังประมวลผล</string>
+    <string name="transaction_row_status_confirming">กำลังยืนยัน</string>
+    <string name="transaction_row_status_locked">ล็อค</string>
+    <string name="transaction_row_status_error_dead">จ่ายเงินสองเท่า</string>
+    <string name="transaction_row_status_error_invalid">ไม่ถูกต้อง</string>
+    <string name="transaction_row_status_masternode_registration">การลงทะเบียน Masternode </string>
+    <string name="transaction_row_status_masternode_update_registrar">อัพเดต Masternode</string>
+    <string name="transaction_row_status_masternode_update_service">อัพเดต Masternode</string>
     <string name="network_monitor_activity_title">จอภาพเครือข่าย</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">บล็อค</string>
@@ -201,7 +205,7 @@
     <string name="import_export_keys_dialog_show">แสดงรหัสผ่าน</string>
     <string name="import_export_keys_dialog_failure_title">ผิดพลาด</string>
     <string name="import_keys_intent_filter_action">กู้คืน wallet</string>
-    <string name="encrypt_keys_dialog_title">การใช้ PIN</string>
+    <string name="encrypt_keys_dialog_title">เปลี่ยนแปลง PIN</string>
     <string name="encrypt_keys_dialog_message">การใช้จ่ายจาก wallet ของคุณจะถูกป้องกันด้วยการเลือกรหัส PIN</string>
     <string name="encrypt_keys_dialog_warning">สำคัญ: คุณจำเป็นต้องจดจำ PIN ให้ได้  ห้ามใช้เลขที่คาดเดาง่าย (เช่น วันเกิด)</string>
     <string name="encrypt_keys_dialog_password_old">PIN เก่า</string>
@@ -296,7 +300,7 @@
     <string name="notification_coins_received_msg">ได้รับ %s</string>
     <string name="notification_peers_connected_msg">%d peers ที่เชื่อมต่อ</string>
     <string name="notification_inactivity_title">คุณยังคงมี Dash อยู่บนอุปกรณ์นี้!</string>
-        <string name="notification_inactivity_message">คุณยังคงมี Dash อยู่บนอุปกรณ์นี้   โปรดจดวลีการกู้คืนของคุณก่อนทำการถอนติดตั้ง Dash wallet มิฉะนั้นคุณจะเสียยอดเงินทั้งหมดที่คุณมี %s</string>
+    <string name="notification_inactivity_message">คุณยังคงมี Dash อยู่บนอุปกรณ์นี้   โปรดจดวลีการกู้คืนของคุณก่อนทำการถอนติดตั้ง Dash wallet มิฉะนั้นคุณจะเสียยอดเงินทั้งหมดที่คุณมี %s</string>
     <string name="notification_inactivity_action_dismiss">เตือนฉันภายหลัง</string>
     <string name="notification_inactivity_action_dismiss_forever">ไม่ต้องเตือนฉัน</string>
     <string name="appwidget_wallet_balance_title">ยอดคงเหลือ Dash</string>
@@ -319,6 +323,7 @@
     <string name="button_set_as_default">ตั้งเป็นค่าเริ่มต้น</string>
     <string name="button_request_coins">Dash ที่ต้องการ</string>
     <string name="button_send_coins">ส่ง Dash </string>
+    <string name="button_pay">ส่ง</string>
     <string name="button_scan">สแกน</string>
     <string name="button_settings">ตั้งค่า</string>
     <string name="action_show_qr">แสดงโค้ด QR</string>
@@ -338,10 +343,8 @@
 
     <string name="transaction_fragment_confirmations_label">การยืนยัน</string>
 
-    <string name="navigation_drawer_open">เปิด navigation drawer</string>
-    <string name="navigation_drawer_close">ปิด navigation drawer</string>
-
     <string name="dash_slogan">เร่งด่วน - ส่วนตัว - ปลอดภัย</string>
     <string name="dash_wallet">wallet</string>
 
-</resources>
+    <string name="activity_security_advanced">ความปลอดภัยขั้นสูง</string>
+    </resources>

@@ -16,7 +16,6 @@
     <string name="wallet_address_dialog_fragment_hint">برای حفاظت از حریم خصوصی‌ شما، نشانی‌تان به محض دریافت مبلغ مورد نظر تغییر خواهد یافت.</string>
     <string name="wallet_balance_fragment_too_much">این مقدار موجودی بیش از حد بالاست و بهتر است در جایی دیگر نگهداری شود. لطفا آن را به جایی امن‌تر منتقل کنید.</string>
     <string name="wallet_balance_fragment_replaying">امکان نمایش موجودی حساب طی فرآیند اعتبارسنجی تراکنش‌ها در بلاک چین وجود ندارد.</string>
-    <string name="exchange_rates_activity_title">نرخ‌های تبدیل</string>
     <string name="exchange_rates_fragment_empty_text">امکان دریافت نر‌خ‌های تبدیل وجود ندارد.</string>
     <string name="exchange_rates_fragment_empty_search"> نرخ‌های تبدیل پیدا نشد.</string>
     <string name="exchange_rates_fragment_default">(پیش‌فرض)</string>
@@ -25,13 +24,9 @@
     <string name="exchange_rates_fragment_source">قیمت از %s</string>
     <string name="exchange_rates_options_search">جستجوی نرخ تبدیل</string>
     <string name="exchange_rates_context_set_as_default_title">به عنوان پیش‌فرض قرار بده</string>
-    <string name="wallet_transactions_fragment_empty_text_received">تاکنون هیچ مقداری از دش دریافت نشده است. </string>
-    <string name="wallet_transactions_fragment_empty_text_sent">تاکنون هیچ مقداری از دش ارسال نشده است.</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">چطور دش به دست آوریم؟ n\n\ با پول رسمی مقداری دش بخرید، n\ محصول و یا کالا بفروشید و یا n\ با کار کردن، مقداری دش به دست آورید. </string>
     <string name="wallet_transactions_row_warning_backup">تبریک! اولین دریافت دش توسط شما با موفقیت به انجام رسید. آیا نسبت به گرفتن نسخه پشتیبان از کیف پول‌تان به منظور حفاظت از آن در برابر خطرات احتمالی اقدام کرده‌اید؟ </string>
     <string name="wallet_transactions_fragment_coinbase">استخراج‌شده</string>
     <string name="wallet_transactions_fragment_internal">داخلی</string>
-    <string name="wallet_transactions_options_filter">فیلتر</string>
     <string name="wallet_transactions_options_filter_all">همه تراکنش‌ها</string>
     <string name="wallet_transactions_options_filter_received">تراکنش‌های دریافتی</string>
     <string name="wallet_transactions_options_filter_sent">تراکنش‌های ارسالی</string>
@@ -57,18 +52,14 @@
     <string name="send_coins_fragment_request_payment_request_wrong_signature">امضای نادرست!</string>
     <string name="send_coins_fragment_payee_verified_by">تایید شده توسط: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">ناشناس</string>
-    <string name="send_coins_fragment_receiving_address_label">دریافت‌کننده:</string>
     <string name="send_coins_fragment_receiving_address_hint">نشانی یا نام دریافت‌کننده را وارد کنید</string>
     <string name="send_coins_fragment_receiving_address_error">نشانی وارد شده مامعتبر است!</string>
     <string name="send_coins_fragment_receiving_address_own">با این نشانی، مبلغ مورد نظر را برای خودتان ارسال می‌کنید!</string>
     <string name="send_coins_fragment_receiving_address_complex">نشانی n\ پیچیده</string>
     <string name="send_coins_fragment_pending">(%sانتظار برای تایید تراکنش)</string>
-    <string name="send_coins_fragment_amount_label">میزان پرداخت</string>
     <string name="send_coins_fragment_pin_label">رمز را وارد کنید</string>
     <string name="send_coins_fragment_hint_fee_economic">کارمزد شبکه معادل با %s پرداخت خواهد شد. </string>
     <string name="send_coins_fragment_hint_fee_priority">کارمزد اولویت معادل با %s پرداخت خواهد شد. اگر به دنبال کارمزد پایین هستید، از گزینه «اولویت» فقط در مواردی که نیازمند تایید سریع تراکنش از سوی شبکه هستید استفاده کنید. </string>
-    <string name="send_coins_fragment_hint_dusty_send">مبلغ وارد شده بیش از حد پایین است و امکان ارسال آن وجود ندارد.</string>
-    <string name="send_coins_fragment_hint_insufficient_money">موجودی به اندازه کافی نیست. به میزان %s کمبود موجودی دارید. </string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">پرداخت‌های جزیی در کیف پول‌تان روی هم رفته آن قدر نیست که بتواند به یک میزان قابل ارسال برسد. </string>
     <string name="send_coins_fragment_hint_replaying">در حال حاضر امکان پرداخت وجود ندارد، زیرا فرآیند اعتبارسنجی تراکنش‌ها در بلاک چین در حال انجام است.</string>
     <string name="send_coins_fragment_direct_payment_enable">مبلغ را به صورت مستقیم برای دریافت‌کننده ارسال کنید.</string>
@@ -80,7 +71,6 @@
     <string name="send_coins_fragment_button_back">بازگشت</string>
     <string name="send_coins_fragment_insufficient_money_title">موجودی کافی نیست</string>
     <string name="send_coins_fragment_insufficient_money_msg1"> به میزان %s کمبود موجودی دارید. </string>
-    <string name="send_coins_fragment_insufficient_money_msg2">آیا مایلید با همه موجودی‌تان پرداخت مورد نظر را انجام دهید؟</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">خالی کردن موجودی کیف پول ناموفق بود</string>
     <string name="send_coins_fragment_state_decrypting">در حال رمزگشایی...</string>
     <string name="send_coins_preparation_msg">در حال امضاء کردن تراکنش...</string>
@@ -92,13 +82,10 @@
     <string name="send_coins_options_fee_category_economic">اقتصادی</string>
     <string name="send_coins_options_fee_category_priority">اولویت‌دار</string>
     <string name="send_coins_options_empty">کیف پول را خالی کنید</string>
-    <string name="sweep_wallet_activity_title">خالی کردن کیف پول کاغذی</string>
     <string name="sweep_wallet_fragment_intro">اکنون قصد دارید موجودی دش یک کیف پول کاغذی و یا کوپن را خالی کنید. با این کار، موجودی آن به کیف پول‌تان بر روی این دستگاه منتقل خواهد شد. به محض تایید نهایی تراکنش، کیف پول کاغذی شما دیگر ارزشی نخواهد داشت و به دلایل امنیتی، بهتر است دوباره از آن استفاده نکنید. </string>
     <string name="sweep_wallet_fragment_hint">از کیف پول کاغذی معمولا برای ذخیره سرد استفاده می‌شود. برخی از دستگاه‌های خودپرداز ارز دیجیتال نیز به جای ارسال مستقیم مبلغ مورد نظر به دستگاه کاربر، آن را بر روی یک قطعه کاغذ پرینت می‌کنند. برخی افراد نیز از کاغذهایی که مقدار مشخصی ارز دیجیتال از پیش بر روی آن قرار گرفته برای تبادلات مالی استفاده می‌کنند (که البته این کار توصیه نمی‌شود).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">ابتدا کلید خصوصی کیف کاغذی مورد نظر را اسکن کنید. برای این کار، دگمه مربوطه را در دوربین دستگاه‌تان فشار دهید.</string>
     <string name="sweep_wallet_fragment_encrypted">کلید خصوصی توسط یک گذرواژه حفاظت می‌شود.</string>
-    <string name="sweep_wallet_fragment_password">گذرواژه</string>
-    <string name="sweep_wallet_fragment_bad_password">گذرواژه نادرست!</string>
     <string name="sweep_wallet_fragment_balance">موجودی قابل برداشت</string>
     <string name="sweep_wallet_fragment_button_decrypt">رمزگشایی</string>
     <string name="sweep_wallet_fragment_button_sweep">برداشت کامل</string>
@@ -201,7 +188,6 @@
     <string name="import_export_keys_dialog_show">نمایش گذرواژه</string>
     <string name="import_export_keys_dialog_failure_title">خطا</string>
     <string name="import_keys_intent_filter_action">بازیابی کیف پول</string>
-    <string name="encrypt_keys_dialog_title">رمز پرداخت</string>
     <string name="encrypt_keys_dialog_message">پرداخت از کیف پول‌تان فقط پس از وارد کردن رمز انتخابی امکان‌پذیر خواهد شد.</string>
     <string name="encrypt_keys_dialog_warning">توجه: حتما باید این رمز را به خاطر بسپارید. از اعداد رایج (نظیر سال تولد) استفاده نکنید. </string>
     <string name="encrypt_keys_dialog_password_old">رمز قبلی</string>
@@ -212,7 +198,6 @@
     <string name="encrypt_keys_dialog_show">رمز را نشان بده</string>
     <string name="encrypt_keys_dialog_state_encrypting">در حال رمزگذاری...</string>
     <string name="encrypt_keys_dialog_state_decrypting">رمزگشایی...</string>
-    <string name="encrypt_keys_dialog_state_done">انجام شد.</string>
     <string name="scan_camera_problem_dialog_title">متاسفیم!</string>
     <string name="scan_camera_problem_dialog_message">دوربین مشکل دارد. احتمالا باید دستگاه‌تان را خاموش و دوباره روشن کنید.</string>
     <string name="scan_camera_permission_dialog_title">مجوز استفاده از دوربین</string>
@@ -296,7 +281,7 @@
     <string name="notification_coins_received_msg">دریافتی %s</string>
     <string name="notification_peers_connected_msg">%d همتا متصل وجود دارد. </string>
     <string name="notification_inactivity_title">هنوز مقداری دش بر روی دستگاه خود دارید!</string>
-        <string name="notification_inactivity_message">هنوزمقداری دش در کیف پول‌تان در این دستگاه قرار دارد! لطفا پیش از حذف دش والت، عبارت بازیابی را یادداشت کنید، در غیر این صورت، موجودی‌تان به مبلغ %s را از دست خواهید داد. </string>
+    <string name="notification_inactivity_message">هنوزمقداری دش در کیف پول‌تان در این دستگاه قرار دارد! لطفا پیش از حذف دش والت، عبارت بازیابی را یادداشت کنید، در غیر این صورت، موجودی‌تان به مبلغ %s را از دست خواهید داد. </string>
     <string name="notification_inactivity_action_dismiss">بعدا یادآوری کن!</string>
     <string name="notification_inactivity_action_dismiss_forever">دیگر یادآوری نکن!</string>
     <string name="appwidget_wallet_balance_title">موجودی دش</string>
@@ -319,6 +304,7 @@
     <string name="button_set_as_default">به عنوان پیش‌فرض قرار بده</string>
     <string name="button_request_coins">درخواست دش</string>
     <string name="button_send_coins">ارسال دش</string>
+    <string name="button_pay">ارسال</string>
     <string name="button_scan">اسکن</string>
     <string name="button_settings">تنظیمات</string>
     <string name="action_show_qr">نمایش کیوآر کد</string>
@@ -338,10 +324,7 @@
 
     <string name="transaction_fragment_confirmations_label">تائیدها</string>
 
-    <string name="navigation_drawer_open">باز کردن کشوی ناوبری</string>
-    <string name="navigation_drawer_close">بستن کشوی ناوبری</string>
-
     <string name="dash_slogan">سریع - ناشناس - امن</string>
     <string name="dash_wallet">کیف پول</string>
 
-</resources>
+    </resources>

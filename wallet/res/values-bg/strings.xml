@@ -16,7 +16,7 @@
     <string name="wallet_address_dialog_fragment_hint">За да се защити вашата неприкосновеност, адресът ви ще се промени веднъж получил плащане.</string>
     <string name="wallet_balance_fragment_too_much">Тази сума е твърде голяма за да остане в джоба ви. Моля преместете част от нея на сигурно място.</string>
     <string name="wallet_balance_fragment_replaying">Балансът е недостъпен по време на проиграването.</string>
-    <string name="exchange_rates_activity_title">Обменни курсове</string>
+    <string name="exchange_rates_activity_title">Местна валута</string>
     <string name="exchange_rates_fragment_empty_text">Не може да зареди обеменните курсове.</string>
     <string name="exchange_rates_fragment_empty_search">Не може да намери обменните курсове.</string>
     <string name="exchange_rates_fragment_default">(по подразбиране)</string>
@@ -25,13 +25,11 @@
     <string name="exchange_rates_fragment_source">Цена от %s</string>
     <string name="exchange_rates_options_search">Търсене на обменен курс</string>
     <string name="exchange_rates_context_set_as_default_title">Задай по подразбиране</string>
-    <string name="wallet_transactions_fragment_empty_text_received">Не са получавани Dash скоро.</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">Не са изпращани Dash скоро.</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">Как да получите Dash?\\n\\nОбменете за конвенционална валута,\\nпродайте стоки или услуги или\\nспечелете с работа.</string>
+    <string name="wallet_transactions_fragment_empty_text">Няма транзакции за показване</string>
     <string name="wallet_transactions_row_warning_backup">Поздравления, Вие получихте първото си плащане! Направихте ли вече архивно копие на вашия портфейл, за да го защитите срещу кражба?</string>
     <string name="wallet_transactions_fragment_coinbase">изкопани</string>
     <string name="wallet_transactions_fragment_internal">вътрешен</string>
-    <string name="wallet_transactions_options_filter">Филтър</string>
+    <string name="wallet_transactions_options_filter">Филтър на транзакциите </string>
     <string name="wallet_transactions_options_filter_all">Всички плащания</string>
     <string name="wallet_transactions_options_filter_received">Получени плащания</string>
     <string name="wallet_transactions_options_filter_sent">Изпратени плащания</string>
@@ -57,18 +55,18 @@
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Грешен подпис!</string>
     <string name="send_coins_fragment_payee_verified_by">проверен от: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">непознат</string>
-    <string name="send_coins_fragment_receiving_address_label">Плати на</string>
+    <string name="send_coins_fragment_receiving_address_label">Изпрати на</string>
     <string name="send_coins_fragment_receiving_address_hint">напишете адрес или име</string>
     <string name="send_coins_fragment_receiving_address_error">Невалиден Dash адрес!</string>
     <string name="send_coins_fragment_receiving_address_own">На път сте да го изпратите на себе си!</string>
     <string name="send_coins_fragment_receiving_address_complex">комплексен\\nадрес</string>
     <string name="send_coins_fragment_pending">(%s чака за потвърждение)</string>
-    <string name="send_coins_fragment_amount_label">Сума за плащане</string>
+    <string name="send_coins_fragment_amount_label">Сума за изпращане</string>
     <string name="send_coins_fragment_pin_label">Въведи PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Мрежова такса от %s ще бъде платена.</string>
     <string name="send_coins_fragment_hint_fee_priority">Приоритетна такса от %s ще бъде платена. Ако се интересувате от ниски такси, използвайте \'приоритетна\' само ако се нуждаете от бързо потвърждение.</string>
     <string name="send_coins_fragment_hint_dusty_send">Тази сума е прекалено малка за да бъде изпратена.</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Няма достатъчно налични монети. Липсват ви %s.</string>
+    <string name="send_coins_fragment_hint_insufficient_money">Недостатъчно средства</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Сумата на малките плащания във вашият портфейл не може да се добави към стойността за изпращане.</string>
     <string name="send_coins_fragment_hint_replaying">В момента плащанията не са възможни, защото се извършва повторение.</string>
     <string name="send_coins_fragment_direct_payment_enable">Изпратете плащането директно до получателя.</string>
@@ -92,13 +90,12 @@
     <string name="send_coins_options_fee_category_economic">Икономичен</string>
     <string name="send_coins_options_fee_category_priority">Приоритетен</string>
     <string name="send_coins_options_empty">Празен портфейл</string>
-    <string name="sweep_wallet_activity_title">Извличане от хартиен портфейл</string>
+    <string name="sweep_wallet_activity_title">Импортиране на частен ключ.</string>
     <string name="sweep_wallet_fragment_intro">Вие сте на път да направите извличане от хартиен портфейл или купон. Така ще преместите всички монети от такъв портфейл във вашият портфейл на това устройство. Когато транзакцията бъде потвърдена, хартията ще бъде безполезна и не трябва да бъде използвана отново от съображения за сигурност.</string>
     <string name="sweep_wallet_fragment_hint">Хартиените портфейли се използват предимно за студено хранилище. Някой ATM принтират на хартиен носител вместо да изпратят монетите директно на вашето мобилно устройство. Хората понякога използват предварително заредени хартиени портфейли за да заредят(не е препорачително).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Започнете като сканирате частния ключ на хартиеният портфейл. Иползвайте бутона за камерата.</string>
     <string name="sweep_wallet_fragment_encrypted">Този частен ключ е защитен с парола.</string>
-    <string name="sweep_wallet_fragment_password">парола</string>
-    <string name="sweep_wallet_fragment_bad_password">лоша парола!</string>
+    <string name="sweep_wallet_fragment_password">Парола</string>
     <string name="sweep_wallet_fragment_balance">Баланс за извличане</string>
     <string name="sweep_wallet_fragment_button_decrypt">Декриптира</string>
     <string name="sweep_wallet_fragment_button_sweep">Извличане</string>
@@ -158,6 +155,33 @@
     <string name="transaction_row_message_received_dust">Това малко количество никога няма да бъде извършено в икономическо отношение.</string>
     <string name="transaction_row_message_received_pay_to_many">Това плащане е изпратено до много портфейли освен вашият, това може да направи приложението по-бавно. Ако можете, опитайте да получите плащането извършено само към вас.</string>
     <string name="transaction_row_message_received_rbf">Плащането се забави, защото изпращача използва несигурен вид транзакция.</string>
+    <string name="transaction_row_status_received">Получени</string>
+    <string name="transaction_row_status_sent">Изпратено</string>
+    <string name="transaction_row_status_sending">Изпраща</string>
+    <string name="transaction_row_status_sent_interally">Вътрешен</string>
+    <string name="transaction_row_status_processing">Обработване</string>
+    <string name="transaction_row_status_confirming">Потвърждаване</string>
+    <string name="transaction_row_status_locked">Заключена</string>
+    <string name="transaction_row_status_error_sending">Грешка при изпращане</string>
+    <string name="transaction_row_status_error_dead">Двойно похарчени</string>
+    <string name="transaction_row_status_error_conflicting">В конфликт</string>
+    <string name="transaction_row_status_error_insufficient_fee">Недостатъчна такса</string>
+    <string name="transaction_row_status_error_dust">Незначителен остатък</string>
+    <string name="transaction_row_status_error_non_standard">Нестандартен</string>
+    <string name="transaction_row_status_error_malformed">Деформиран</string>
+    <string name="transaction_row_status_error_duplicate">Дубликат</string>
+    <string name="transaction_row_status_error_obsolete">Остарял</string>
+    <string name="transaction_row_status_error_invalid">Невалиден</string>
+    <string name="transaction_row_status_error_other">Непознат</string>
+    <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
+    <string name="transaction_row_time_text">На %s от %s</string>
+    <string name="transaction_row_rate_not_available">Не е налично</string>
+    <string name="transaction_row_status_masternode_registration">Masternode регистрирация</string>
+    <string name="transaction_row_status_masternode_update_registrar">Masternode обновяване</string>
+    <string name="transaction_row_status_masternode_update_service">Masternode обновяване</string>
+    <string name="transaction_row_status_masternode_revoke">Masternode отменяне</string>
+    <string name="transaction_row_status_masternode_reward">Награда на Masternode</string>
+    <string name="transaction_row_status_mining_reward">Възнаграждение за минно дело</string>
     <string name="network_monitor_activity_title">Мрежово наблюдение</string>
     <string name="network_monitor_peer_list_title">Пиъри</string>
     <string name="network_monitor_block_list_title">Блокове</string>
@@ -201,7 +225,7 @@
     <string name="import_export_keys_dialog_show">Покажи парола</string>
     <string name="import_export_keys_dialog_failure_title">Грешка</string>
     <string name="import_keys_intent_filter_action">Възстанови портфейл</string>
-    <string name="encrypt_keys_dialog_title">PIN за плащане</string>
+    <string name="encrypt_keys_dialog_title">Промяна ПИН</string>
     <string name="encrypt_keys_dialog_message">Плащането от вашият портфейл е защитено с избрания ПИН.</string>
     <string name="encrypt_keys_dialog_warning">Важно: Нужно е да запомните вашият ПИН! Не използвайте познати цифри (като датата на раждане).</string>
     <string name="encrypt_keys_dialog_password_old">Стар PIN</string>
@@ -212,7 +236,7 @@
     <string name="encrypt_keys_dialog_show">Покажи PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">Криптира…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Декриптира…</string>
-    <string name="encrypt_keys_dialog_state_done">Готово.</string>
+    <string name="encrypt_keys_dialog_state_done">Завършено</string>
     <string name="scan_camera_problem_dialog_title">Съжалявам</string>
     <string name="scan_camera_problem_dialog_message">Камерата има проблем. Може би е необходимо да рестартирате устройството.</string>
     <string name="scan_camera_permission_dialog_title">Разрешение камера</string>
@@ -285,7 +309,7 @@
     <string name="about_category_credits">Това приложение използва...</string>
     <string name="about_credits_bitcoinj_title">dashj %s, изпълнява Dash протокола</string>
     <string name="about_credits_zxing_title">ZXing, обработва QR библиотеката</string>
-    <string name="about_credits_icon_title">Това приложение използва икона от \"bitboy\"</string>
+    <string name="about_credits_icon_title">Това приложение използва икона от "bitboy"</string>
     <string name="about_credits_scrypt_title">Скрипт,осъществен от Will Glozer и Colin Percival</string>
     <string name="about_market_app_title">Google Play страница</string>
     <string name="about_market_app_summary">Прегледайте и оценете приложението</string>
@@ -296,7 +320,7 @@
     <string name="notification_coins_received_msg">Получен %s</string>
     <string name="notification_peers_connected_msg">%d пиъри са свързани</string>
     <string name="notification_inactivity_title">Все още имате Dash на това устройство!</string>
-        <string name="notification_inactivity_message">Все още имате Dash на това устройство! Моля, не забравяйте да запишете фразата за възстановяване, преди да деинсталирате Dash Wallet или ще загубите баланса си от %s.</string>
+    <string name="notification_inactivity_message">Все още имате Dash на това устройство! Моля, не забравяйте да запишете фразата за възстановяване, преди да деинсталирате Dash Wallet или ще загубите баланса си от %s.</string>
     <string name="notification_inactivity_action_dismiss">Напомни ми по-късно</string>
     <string name="notification_inactivity_action_dismiss_forever">Не ми напомняй</string>
     <string name="appwidget_wallet_balance_title">Dash баланс</string>
@@ -319,6 +343,7 @@
     <string name="button_set_as_default">Задай по подразбиране</string>
     <string name="button_request_coins">Заяви Dash</string>
     <string name="button_send_coins">Изпрати Dash</string>
+    <string name="button_pay">Изпрати</string>
     <string name="button_scan">Сканирай</string>
     <string name="button_settings">Настройки </string>
     <string name="action_show_qr">Покажи QR код</string>
@@ -338,10 +363,12 @@
 
     <string name="transaction_fragment_confirmations_label">Потвърждения</string>
 
-    <string name="navigation_drawer_open">Отваряне на панела за навигация</string>
-    <string name="navigation_drawer_close">Затваряне на панела за навигация</string>
-
     <string name="dash_slogan">Мигновен-Личен-Сигурен</string>
     <string name="dash_wallet">Портфейл</string>
+
+    <string name="activity_security_view_recovery_phrase">Вижте фраза за възстановяване</string>
+    <string name="activity_security_advanced">Разширена сигурност</string>
+    <string name="activity_security_hide_balance">Скривай баланса при стартиране</string>
+    <string name="reset_to_default">Нулиране по подразбиране</string>
 
 </resources>

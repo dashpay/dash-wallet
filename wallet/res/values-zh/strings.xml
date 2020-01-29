@@ -16,7 +16,7 @@
     <string name="wallet_address_dialog_fragment_hint">为了保护您的隐私, 当您收到一笔交易后您的钱包地址将改变.</string>
     <string name="wallet_balance_fragment_too_much">该金额太庞大了, 随身携带存在安全风险. 请将一部分资金转移到一个安全的地方.</string>
     <string name="wallet_balance_fragment_replaying">重放过程中无法显示余额.</string>
-    <string name="exchange_rates_activity_title">汇率</string>
+    <string name="exchange_rates_activity_title">本地货币</string>
     <string name="exchange_rates_fragment_empty_text">无法加载汇率.</string>
     <string name="exchange_rates_fragment_empty_search">汇率未找到.</string>
     <string name="exchange_rates_fragment_default">(默认)</string>
@@ -25,16 +25,14 @@
     <string name="exchange_rates_fragment_source">价格来自 %s</string>
     <string name="exchange_rates_options_search">搜索汇率</string>
     <string name="exchange_rates_context_set_as_default_title">设为默认</string>
-    <string name="wallet_transactions_fragment_empty_text_received">尚未收到达世币.</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">尚未发送达世币.</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">如何获得达世币？\\n\\n用传统货币进行交易，\\n出售商品或服务，或者\\n通过劳动赚取。</string>
+    <string name="wallet_transactions_fragment_empty_text">没有可显示交易</string>
     <string name="wallet_transactions_row_warning_backup">恭喜，您收到了第一笔交易！您已经做好备份钱包以防丢失的准备了吗？</string>
     <string name="wallet_transactions_fragment_coinbase">挖矿所的</string>
     <string name="wallet_transactions_fragment_internal">内部</string>
-    <string name="wallet_transactions_options_filter">过滤</string>
-    <string name="wallet_transactions_options_filter_all">全部</string>
-    <string name="wallet_transactions_options_filter_received">收到的</string>
-    <string name="wallet_transactions_options_filter_sent">发送的</string>
+    <string name="wallet_transactions_options_filter">过滤交易</string>
+    <string name="wallet_transactions_options_filter_all">全部交易</string>
+    <string name="wallet_transactions_options_filter_received">收到的交易</string>
+    <string name="wallet_transactions_options_filter_sent">发送的交易</string>
     <string name="wallet_options_safety_menu">安全</string>
     <string name="wallet_options_encrypt_keys_set">设置支付 PIN 码</string>
     <string name="wallet_options_encrypt_keys_change">更改支付 PIN 码</string>
@@ -57,18 +55,18 @@
     <string name="send_coins_fragment_request_payment_request_wrong_signature">签名错误！</string>
     <string name="send_coins_fragment_payee_verified_by">已由 %s 验证</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">未知</string>
-    <string name="send_coins_fragment_receiving_address_label">支付给</string>
+    <string name="send_coins_fragment_receiving_address_label">发送至</string>
     <string name="send_coins_fragment_receiving_address_hint">输入地址或名称</string>
     <string name="send_coins_fragment_receiving_address_error">无效达世币地址!</string>
     <string name="send_coins_fragment_receiving_address_own">您将要向自己发送交易！</string>
     <string name="send_coins_fragment_receiving_address_complex">复杂\n地址</string>
     <string name="send_coins_fragment_pending">(%s 正在等待确认)</string>
-    <string name="send_coins_fragment_amount_label">要支付的金额</string>
+    <string name="send_coins_fragment_amount_label">要发送的数额</string>
     <string name="send_coins_fragment_pin_label">输入 PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">将支付 %s 的网络费用.</string>
     <string name="send_coins_fragment_hint_fee_priority">将支付 %s 作为优先确认费用. 如果您不在意些许的手续费, 使用\'优先确认\'可以使您的交易尽快完成确认.</string>
-    <string name="send_coins_fragment_hint_dusty_send">该金额太小了，无法支付。</string>
-    <string name="send_coins_fragment_hint_insufficient_money">达世币余额不足。您还缺少 %s.</string>
+    <string name="send_coins_fragment_hint_dusty_send">该金额太小了，无法支付</string>
+    <string name="send_coins_fragment_hint_insufficient_money">资金不足</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">您钱包中的微小付款金额无法达到可支付的金额。</string>
     <string name="send_coins_fragment_hint_replaying">因正在进行重播, 当前交易不可用.</string>
     <string name="send_coins_fragment_direct_payment_enable">直接向收款人付款。</string>
@@ -80,7 +78,7 @@
     <string name="send_coins_fragment_button_back">返回</string>
     <string name="send_coins_fragment_insufficient_money_title">达世币余额不足</string>
     <string name="send_coins_fragment_insufficient_money_msg1">您还缺少 %s.</string>
-    <string name="send_coins_fragment_insufficient_money_msg2">您想要用您拥有的所有达世币进行支付吗？</string>
+    <string name="send_coins_fragment_insufficient_money_msg2">您想要发送您所有的达世币吗？</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">清空钱包失败</string>
     <string name="send_coins_fragment_state_decrypting">正在解密…</string>
     <string name="send_coins_preparation_msg">正在签名…</string>
@@ -92,13 +90,12 @@
     <string name="send_coins_options_fee_category_economic">经济的</string>
     <string name="send_coins_options_fee_category_priority">优先级</string>
     <string name="send_coins_options_empty">清空钱包</string>
-    <string name="sweep_wallet_activity_title">交换纸钱包上的达世币</string>
+    <string name="sweep_wallet_activity_title">导入私钥</string>
     <string name="sweep_wallet_fragment_intro">您将要扫描纸质的钱包或者优惠券。这会将纸钱上的所有达世币转移到您的当前设备上。当交易被确认后，那张纸将会分文不值，而且将不能作为安全措施重新使用该纸钱包。</string>
     <string name="sweep_wallet_fragment_hint">纸钱包常常用于进行冷存储。一些 ATM 机经常会将达世币打印在纸上，而不是直接发送到您的移动设备上。人们有时候会使用已经预付的纸钱包来互相转移金额（不推荐）。</string>
     <string name="sweep_wallet_fragment_wallet_unknown">该操作将从扫描纸钱包上的私钥开始。请使用界面上的相机按钮。</string>
     <string name="sweep_wallet_fragment_encrypted">该私钥受密码保护。</string>
     <string name="sweep_wallet_fragment_password">密码</string>
-    <string name="sweep_wallet_fragment_bad_password">密码错误！</string>
     <string name="sweep_wallet_fragment_balance">要交换的金额</string>
     <string name="sweep_wallet_fragment_button_decrypt">解密</string>
     <string name="sweep_wallet_fragment_button_sweep">交换</string>
@@ -158,6 +155,33 @@
     <string name="transaction_row_message_received_dust">如此小的金额，在经济意义上可能永远也无法花费。</string>
     <string name="transaction_row_message_received_pay_to_many">此项付款除了支付给您以外，还支付给很多其它的钱包，这导致程序运行时间变慢，如果可能，请尝试仅接收支付给您一个人的付款。</string>
     <string name="transaction_row_message_received_rbf">本交易延误，因为发送者使用的是不安全的交易方式。</string>
+    <string name="transaction_row_status_received">已接收</string>
+    <string name="transaction_row_status_sent">已发送</string>
+    <string name="transaction_row_status_sending">正在发送</string>
+    <string name="transaction_row_status_sent_interally">内部</string>
+    <string name="transaction_row_status_processing">处理中</string>
+    <string name="transaction_row_status_confirming">确认中</string>
+    <string name="transaction_row_status_locked">已锁定</string>
+    <string name="transaction_row_status_error_sending">错误发送</string>
+    <string name="transaction_row_status_error_dead">双重花费</string>
+    <string name="transaction_row_status_error_conflicting">发生冲突</string>
+    <string name="transaction_row_status_error_insufficient_fee">手续费不足</string>
+    <string name="transaction_row_status_error_dust">粉尘</string>
+    <string name="transaction_row_status_error_non_standard">非标准的</string>
+    <string name="transaction_row_status_error_malformed">格式错误</string>
+    <string name="transaction_row_status_error_duplicate">重复的</string>
+    <string name="transaction_row_status_error_obsolete">过时的</string>
+    <string name="transaction_row_status_error_invalid">无效的</string>
+    <string name="transaction_row_status_error_other">未知</string>
+    <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
+    <string name="transaction_row_time_text">在 %s 于 %s</string>
+    <string name="transaction_row_rate_not_available">不可用</string>
+    <string name="transaction_row_status_masternode_registration">主节点注册</string>
+    <string name="transaction_row_status_masternode_update_registrar">主节点升级</string>
+    <string name="transaction_row_status_masternode_update_service">主节点升级</string>
+    <string name="transaction_row_status_masternode_revoke">主节点撤销</string>
+    <string name="transaction_row_status_masternode_reward">主节点奖励</string>
+    <string name="transaction_row_status_mining_reward">挖矿奖励</string>
     <string name="network_monitor_activity_title">网络监视器</string>
     <string name="network_monitor_peer_list_title">网络节点</string>
     <string name="network_monitor_block_list_title">区块</string>
@@ -201,7 +225,7 @@
     <string name="import_export_keys_dialog_show">显示密码</string>
     <string name="import_export_keys_dialog_failure_title">错误</string>
     <string name="import_keys_intent_filter_action">恢复钱包</string>
-    <string name="encrypt_keys_dialog_title">支付PIN码</string>
+    <string name="encrypt_keys_dialog_title">更改PIN</string>
     <string name="encrypt_keys_dialog_message">从您的钱包对外付款将会受到该PIN码的保护。</string>
     <string name="encrypt_keys_dialog_warning">重要：请不要使用简单数字（比如生日）作为PIN码。</string>
     <string name="encrypt_keys_dialog_password_old">旧 PIN</string>
@@ -212,7 +236,7 @@
     <string name="encrypt_keys_dialog_show">显示 PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">正在加密…</string>
     <string name="encrypt_keys_dialog_state_decrypting">正在解密…</string>
-    <string name="encrypt_keys_dialog_state_done">已完成。</string>
+    <string name="encrypt_keys_dialog_state_done">完成</string>
     <string name="scan_camera_problem_dialog_title">抱歉</string>
     <string name="scan_camera_problem_dialog_message">相机出现了问题。您可能需要重启设备。</string>
     <string name="scan_camera_permission_dialog_title">相机授权</string>
@@ -296,7 +320,7 @@
     <string name="notification_coins_received_msg">收到了 %s</string>
     <string name="notification_peers_connected_msg">%d 个已连接的网络节点</string>
     <string name="notification_inactivity_title">您的设备中依然存有达世币！</string>
-        <string name="notification_inactivity_message">你的设备上还存有达世币! 在卸载达世币钱包前, 请确保你已经记下了恢复词组, 否则你将丢失%s.</string>
+    <string name="notification_inactivity_message">你的设备上还存有达世币! 在卸载达世币钱包前, 请确保你已经记下了恢复词组, 否则你将丢失%s.</string>
     <string name="notification_inactivity_action_dismiss">以后提醒我</string>
     <string name="notification_inactivity_action_dismiss_forever">不需要提醒</string>
     <string name="appwidget_wallet_balance_title">达世币余额</string>
@@ -319,6 +343,7 @@
     <string name="button_set_as_default">设为默认</string>
     <string name="button_request_coins">接收达世币</string>
     <string name="button_send_coins">发送达世币</string>
+    <string name="button_pay">发送</string>
     <string name="button_scan">扫描</string>
     <string name="button_settings">设置</string>
     <string name="action_show_qr">显示二维码</string>
@@ -338,10 +363,12 @@
 
     <string name="transaction_fragment_confirmations_label">确认</string>
 
-    <string name="navigation_drawer_open">开启导航抽屉</string>
-    <string name="navigation_drawer_close">关闭导航抽屉</string>
-
     <string name="dash_slogan">即时-隐私-安全</string>
     <string name="dash_wallet">钱包</string>
+
+    <string name="activity_security_view_recovery_phrase">查看恢复密语</string>
+    <string name="activity_security_advanced">高级安全</string>
+    <string name="activity_security_hide_balance">启动时隐藏余额</string>
+    <string name="reset_to_default">重置为默认</string>
 
 </resources>

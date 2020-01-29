@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="loading">Učitavanje...</string>
+    <string name="loading_error">Došlo je do greške. Molimo vas pokušajte kasnije.</string>
+    <string name="dash_available">%1$s raspoloživo</string>
+
+</resources>
