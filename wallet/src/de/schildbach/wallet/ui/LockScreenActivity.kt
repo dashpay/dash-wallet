@@ -44,6 +44,11 @@ class LockScreenActivity : SendCoinsQrActivity() {
         @JvmStatic
         fun createIntent(context: Context): Intent {
             return Intent(context, LockScreenActivity::class.java)
+        }
+
+        @JvmStatic
+        fun createIntentAsNewTask(context: Context): Intent {
+            return createIntent(context)
                     .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                             or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         }
