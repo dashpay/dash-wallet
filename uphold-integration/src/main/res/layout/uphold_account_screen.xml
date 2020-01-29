@@ -24,7 +24,7 @@
             android:background="?android:attr/selectableItemBackground"
             android:paddingRight="16dp"
             android:paddingLeft="16dp"
-            android:text="Log Out"
+            android:text="@string/uphold_logout"
             android:clickable="true"
             android:focusable="true"
             android:textSize="14sp" />
