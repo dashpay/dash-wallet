@@ -97,14 +97,15 @@ class EnterAmountFragment : Fragment() {
                     if (lengthOfDecimalPart > decimalsThreshold) {
                         return
                     }
-                } else {
-                    if (value.length > 5) {
-                        return
-                    }
                 }
                 if (!maxAmountSelected) {
-                    appendIfValidAfter(number.toString())
-                    applyNewValue(value.toString())
+                    try {
+                        appendIfValidAfter(number.toString())
+                        applyNewValue(value.toString())
+                    } catch (x: Exception) {
+                        value.deleteCharAt(value.length - 1)
+                        applyNewValue(value.toString())
+                    }
                 }
             }
 
