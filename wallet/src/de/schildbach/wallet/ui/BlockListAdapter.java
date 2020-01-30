@@ -241,7 +241,7 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
         final boolean self = WalletUtils.isEntirelySelf(tx, wallet);
         final Address address;
         if (sent)
-            address = WalletUtils.getToAddressOfSent(tx, wallet);
+            address = WalletUtils.getToAddressOfSent(tx, wallet).get(0);
         else
             address = WalletUtils.getWalletAddressOfReceived(tx, wallet);
 

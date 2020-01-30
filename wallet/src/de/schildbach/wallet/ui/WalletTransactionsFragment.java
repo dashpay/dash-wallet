@@ -53,6 +53,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.TransactionInput;
+import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Transaction.Purpose;
@@ -267,7 +269,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     @Override
     public void onTransactionMenuClick(final View view, final Transaction tx) {
         final boolean txSent = tx.getValue(wallet).signum() < 0;
-        final Address txAddress = txSent ? WalletUtils.getToAddressOfSent(tx, wallet)
+        final Address txAddress = txSent ? WalletUtils.getToAddressOfSent(tx, wallet).get(0)
                 : WalletUtils.getWalletAddressOfReceived(tx, wallet);
         final byte[] txSerialized = tx.unsafeBitcoinSerialize();
         final boolean txRotation = tx.getPurpose() == Purpose.KEY_ROTATION;
@@ -387,7 +389,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
             if(WalletUtils.isEntirelySelf(tx, wallet))
                 address = getString(R.string.transaction_row_status_sent_interally);
             else
-                address = WalletUtils.getToAddressOfSent(tx, wallet).toBase58();
+                address = WalletUtils.getToAddressOfSent(tx, wallet).get(0).toBase58();
         } else {
             address = WalletUtils.getWalletAddressOfReceived(tx, wallet).toBase58();
         }
@@ -398,15 +400,23 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         String secondaryStatusStr = secondaryStatus != -1 ? getString(secondaryStatus) : "";
         String errorStatusStr = errorStatus != -1 ? getString(errorStatus) : "";
 
+
+        List<Address> inputAddresses = new ArrayList<>();
+
         // handle sending
         if(TransactionUtil.isSending(tx, wallet)) {
             primaryStatusStr = getString(R.string.transaction_row_status_sending);
             secondaryStatusStr = "";
+
+            inputAddresses = WalletUtils.getFromAddressOfSent(tx, wallet);
         }
 
+        List<Address> outputAddresses = WalletUtils.getToAddressOfReceived(tx, wallet);
+
         TransactionResult transactionResult = new TransactionResult(tx.getValue(wallet),
-                tx.getExchangeRate(), address, tx.getFee(), tx.getTxId().toString(), tx.getUpdateTime(),
-                tx.getPurpose(), primaryStatusStr, secondaryStatusStr, errorStatusStr);
+                tx.getExchangeRate(), inputAddresses, outputAddresses, tx.getFee(),
+                tx.getTxId().toString(), tx.getUpdateTime(), tx.getPurpose(), direction,
+                primaryStatusStr, secondaryStatusStr, errorStatusStr);
         TransactionDetailsDialogFragment transactionDetailsDialogFragment =
                 TransactionDetailsDialogFragment.newInstance(transactionResult, direction);
         transactionDetailsDialogFragment.show(getChildFragmentManager(), null);

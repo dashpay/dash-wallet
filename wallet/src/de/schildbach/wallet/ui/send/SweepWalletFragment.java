@@ -577,7 +577,7 @@ public class SweepWalletFragment extends Fragment {
 
 				setState(State.SENDING);
 				application.processDirectTransaction(sentTransaction);
-				showTransactionResult(sentTransaction, receivingAddress);
+				showTransactionResult(sentTransaction);
 			}
 
 			@Override
@@ -619,13 +619,12 @@ public class SweepWalletFragment extends Fragment {
 		}.sendCoinsOffline(sendRequest); // send asynchronously
 	}
 
-	private void showTransactionResult(Transaction sentTransaction, Address receivingAddress) {
+	private void showTransactionResult(Transaction sentTransaction) {
 		if (!isAdded()) {
 			return;
 		}
 
-		Intent transactionResultIntent = TransactionResultActivity.createIntent(activity, sentTransaction,
-				receivingAddress);
+		Intent transactionResultIntent = TransactionResultActivity.createIntent(activity, sentTransaction);
 		startActivity(transactionResultIntent);
 		activity.finish();
 	}

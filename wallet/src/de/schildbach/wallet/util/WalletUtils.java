@@ -29,6 +29,7 @@ import java.io.InputStreamReader;
 import java.io.Writer;
 import java.text.DateFormat;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -58,7 +59,6 @@ import com.google.common.base.Charsets;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.ui.TransactionResultActivity;
 
 import android.content.Context;
 import android.content.Intent;
@@ -115,22 +115,6 @@ public class WalletUtils {
     }
 
     @Nullable
-    public static Address getToAddressOfSent(final Transaction tx, final Wallet wallet) {
-        for (final TransactionOutput output : tx.getOutputs()) {
-            try {
-                if (!output.isMine(wallet)) {
-                    final Script script = output.getScriptPubKey();
-                    return script.getToAddress(Constants.NETWORK_PARAMETERS, true);
-                }
-            } catch (final ScriptException x) {
-                // swallow
-            }
-        }
-
-        return null;
-    }
-
-    @Nullable
     public static Address getWalletAddressOfReceived(final Transaction tx, final Wallet wallet) {
         for (final TransactionOutput output : tx.getOutputs()) {
             try {
@@ -144,6 +128,59 @@ public class WalletUtils {
         }
 
         return null;
+    }
+
+    public static List<Address> getFromAddressOfSent(final Transaction tx, final Wallet wallet) {
+        List<Address> result = new ArrayList<>();
+
+        for (final TransactionInput input : tx.getInputs()) {
+            try {
+                Transaction connectedTransaction = input.getConnectedTransaction();
+                if (connectedTransaction != null) {
+                    TransactionOutput output = connectedTransaction.getOutput(input.getOutpoint().getIndex());
+                    final Script script = output.getScriptPubKey();
+                    result.add(script.getToAddress(Constants.NETWORK_PARAMETERS, true));
+                }
+            } catch (final ScriptException x) {
+                // swallow
+            }
+        }
+
+        return result;
+    }
+
+    public static List<Address> getToAddressOfReceived(final Transaction tx, final  Wallet wallet) {
+        List<Address> result = new ArrayList<>();
+
+        for (TransactionOutput output : tx.getOutputs()) {
+            try {
+                if (output.isMine(wallet)) {
+                    final Script script = output.getScriptPubKey();
+                    result.add(script.getToAddress(Constants.NETWORK_PARAMETERS, true));
+                }
+            } catch (final ScriptException x) {
+                // swallow
+            }
+        }
+
+        return result;
+    }
+
+    public static List<Address> getToAddressOfSent(final Transaction tx, final Wallet wallet) {
+        List<Address> result = new ArrayList<>();
+
+        for (TransactionOutput output : tx.getOutputs()) {
+            try {
+                if (!output.isMine(wallet)) {
+                    final Script script = output.getScriptPubKey();
+                    result.add(script.getToAddress(Constants.NETWORK_PARAMETERS, true));
+                }
+            } catch (final ScriptException x) {
+                // swallow
+            }
+        }
+
+        return result;
     }
 
     public static boolean isEntirelySelf(final Transaction tx, final Wallet wallet) {

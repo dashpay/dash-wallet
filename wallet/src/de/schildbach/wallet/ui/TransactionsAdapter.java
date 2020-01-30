@@ -295,7 +295,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 final boolean showFee = sent && fee != null && !fee.isZero();
                 final Address address;
                 if (sent)
-                    address = WalletUtils.getToAddressOfSent(tx, wallet);
+                    address = WalletUtils.getToAddressOfSent(tx, wallet).get(0);
                 else
                     address = WalletUtils.getWalletAddressOfReceived(tx, wallet);
                 final String addressLabel = address != null

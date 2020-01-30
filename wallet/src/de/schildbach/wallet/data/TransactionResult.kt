@@ -16,6 +16,8 @@
 
 package de.schildbach.wallet.data
 
+import de.schildbach.wallet.ui.WalletTransactionsFragment
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.ExchangeRate
@@ -27,11 +29,13 @@ import java.util.*
  */
 data class TransactionResult(val dashAmount: Coin,
                              val exchangeRate: ExchangeRate?,
-                             val address: String,
+                             val inputAddresses: List<Address>,
+                             val outputAddresses: List<Address>,
                              val feeAmount: Coin?,
                              val transactionHash: String,
                              val date: Date,
                              val purpose: Transaction.Purpose,
+                             val direction: WalletTransactionsFragment.Direction,
                              val primaryStatus: String,
                              val secondaryStatus: String,
                              val errorStatus: String) : Serializable

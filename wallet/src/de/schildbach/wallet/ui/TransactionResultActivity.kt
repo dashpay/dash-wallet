@@ -22,7 +22,6 @@ import android.content.Intent
 import android.graphics.drawable.Animatable
 import android.os.Bundle
 import android.view.View
-import androidx.appcompat.app.AppCompatActivity
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.TransactionResult
 import de.schildbach.wallet.util.TransactionUtil
@@ -44,7 +43,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
         const val TRANSACTION_RESULT_EXTRA = "transaction_result_extra"
 
         @JvmStatic
-        fun createIntent(context: Context, transaction: Transaction, address: Address): Intent {
+        fun createIntent(context: Context, transaction: Transaction): Intent {
             val wallet = WalletApplication.getInstance().wallet
 
             // obtain the transaction status
@@ -55,6 +54,23 @@ class TransactionResultActivity : AbstractWalletActivity() {
             var secondaryStatusStr = if (secondaryStatus != -1) context.getString(secondaryStatus) else ""
             val errorStatusStr = if (errorStatus != -1) context.getString(errorStatus) else ""
 
+            val transactionDirection = if (transaction.getValue(wallet).signum() < 0) {
+                WalletTransactionsFragment.Direction.SENT
+            } else {
+                WalletTransactionsFragment.Direction.RECEIVED
+            }
+
+            val inputAddresses: List<Address>
+            val outputAddresses: List<Address>
+
+            if (WalletTransactionsFragment.Direction.SENT == transactionDirection) {
+                inputAddresses = WalletUtils.getFromAddressOfSent(transaction, wallet)
+                outputAddresses = WalletUtils.getToAddressOfSent(transaction, wallet)
+            } else {
+                inputAddresses = arrayListOf()
+                outputAddresses = WalletUtils.getToAddressOfReceived(transaction, wallet)
+            }
+
             // handle sending
             if(TransactionUtil.isSending(transaction, wallet)) {
                 primaryStatusStr = context.getString(R.string.transaction_row_status_sending)
@@ -62,9 +78,10 @@ class TransactionResultActivity : AbstractWalletActivity() {
             }
 
             val transactionResult = TransactionResult(
-                    transaction.getValue(wallet), transaction.exchangeRate, address.toString(),
-                    transaction.fee, transaction.txId.toString(), transaction.updateTime,
-                    transaction.purpose, primaryStatusStr, secondaryStatusStr, errorStatusStr)
+                    transaction.getValue(wallet), transaction.exchangeRate, inputAddresses,
+                    outputAddresses, transaction.fee, transaction.txId.toString(),
+                    transaction.updateTime, transaction.purpose, transactionDirection,
+                    primaryStatusStr, secondaryStatusStr, errorStatusStr)
 
             val transactionResultIntent = Intent(context, TransactionResultActivity::class.java)
             transactionResultIntent.putExtra(TRANSACTION_RESULT_EXTRA, transactionResult)
