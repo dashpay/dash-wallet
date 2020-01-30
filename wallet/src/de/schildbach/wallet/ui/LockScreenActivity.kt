@@ -160,7 +160,11 @@ class LockScreenActivity : SendCoinsQrActivity() {
                     setState(State.DECRYPTING)
                 }
                 Status.SUCCESS -> {
-                    onCorrectPin(it.data!!.first, it.data.second)
+                    if (EnableFingerprintDialog.shouldBeShown(this)) {
+                        EnableFingerprintDialog.show(it.data!!.second, supportFragmentManager)
+                    } else {
+                        onCorrectPin(it.data!!.first, it.data.second)
+                    }
                 }
             }
         })
