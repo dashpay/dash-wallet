@@ -103,8 +103,13 @@ class EnterAmountFragment : Fragment() {
                     }
                 }
                 if (!maxAmountSelected) {
-                    appendIfValidAfter(number.toString())
-                    applyNewValue(value.toString())
+                    try {
+                        appendIfValidAfter(number.toString())
+                        applyNewValue(value.toString())
+                    } catch (x: ArithmeticException) {
+                        value.deleteCharAt(value.length - 1)
+                        applyNewValue(value.toString())
+                    }
                 }
             }
 
