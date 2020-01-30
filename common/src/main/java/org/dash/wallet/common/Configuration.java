@@ -409,7 +409,7 @@ public class Configuration {
     }
 
     public int getPinLength() {
-        return prefs.getInt(PREFS_PIN_LENGTH, 5);
+        return prefs.getInt(PREFS_PIN_LENGTH, 4);
     }
 
     public void setPinLength(int pinLength) {

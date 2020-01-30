@@ -35,7 +35,6 @@ import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_lock_screen.*
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.DialogBuilder
 import java.util.concurrent.TimeUnit
 

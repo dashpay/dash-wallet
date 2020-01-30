@@ -29,6 +29,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.preference.PinRetryController
+import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_onboarding.*
 import kotlinx.android.synthetic.main.activity_onboarding_perm_lock.*
@@ -82,20 +83,27 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     private fun regularFlow() {
         if (!walletApplication.configuration.v7TutorialCompleted) {
+            upgradeOrStartMainActivity()
+        } else {
             startActivityForResult(Intent(this, WelcomeActivity::class.java),
                     REGULAR_FLOW_TUTORIAL_REQUEST_CODE)
             overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
-        } else {
+        }
+    }
+
+    private fun upgradeOrStartMainActivity() {
+        if (SecurityGuard.isConfiguredQuickCheck()) {
             startMainActivity()
+        } else {
+            startActivity(AppUpgradeActivity.createIntent(this))
         }
     }
 
     private fun startMainActivity() {
-        val intent: Intent
-        if (walletApplication.configuration.autoLogoutEnabled) {
-            intent = LockScreenActivity.createIntent(this)
+        val intent = if (walletApplication.configuration.autoLogoutEnabled) {
+            LockScreenActivity.createIntent(this)
         } else {
-            intent = WalletActivity.createIntent(this)
+            WalletActivity.createIntent(this)
         }
         startActivity(intent)
         finish()
@@ -176,7 +184,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REGULAR_FLOW_TUTORIAL_REQUEST_CODE) {
-            startMainActivity()
+            upgradeOrStartMainActivity()
         }
     }
 }

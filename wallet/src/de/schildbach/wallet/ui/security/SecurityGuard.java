@@ -40,6 +40,12 @@ public class SecurityGuard {
         securityPrefs.edit().putString(WALLET_PASSWORD_KEY_ALIAS, encryptedPin).apply();
     }
 
+    public static boolean isConfiguredQuickCheck() {
+        return WalletApplication.getInstance()
+                .getSharedPreferences(SECURITY_PREFS_NAME, Context.MODE_PRIVATE)
+                .contains(WALLET_PASSWORD_KEY_ALIAS);
+    }
+
     public boolean isConfigured() {
         return securityPrefs.contains(WALLET_PASSWORD_KEY_ALIAS);
     }

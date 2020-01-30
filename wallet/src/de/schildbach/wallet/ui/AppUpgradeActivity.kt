@@ -27,17 +27,18 @@ import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.security.SecurityGuard
+import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_app_update.*
 import org.dash.wallet.common.Configuration
 import java.util.concurrent.TimeUnit
 
-class AppUpdateActivity : AppCompatActivity() {
+class AppUpgradeActivity : AppCompatActivity() {
 
     companion object {
         @JvmStatic
         fun createIntent(context: Context): Intent {
-            return Intent(context, AppUpdateActivity::class.java)
+            return Intent(context, AppUpgradeActivity::class.java)
         }
     }
 
@@ -59,6 +60,8 @@ class AppUpdateActivity : AppCompatActivity() {
         setContentView(R.layout.activity_app_update)
 
         configuration = WalletApplication.getInstance().configuration
+        configuration.pinLength = PinPreviewView.CUSTOM_PIN_LENGTH
+        
         pinRetryController = PinRetryController.getInstance()
 
         temporaryLockCheckRunnable.run()

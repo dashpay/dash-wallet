@@ -33,6 +33,7 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
 
     companion object {
         const val DEFAULT_PIN_LENGTH = 4
+        const val CUSTOM_PIN_LENGTH = 100
     }
 
     private var lastIndex = 0
@@ -48,7 +49,7 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
                 standard_pin_preview.visibility = View.VISIBLE
                 custom_pin_preview.visibility = View.GONE
             } else {
-                lastIndex = 100
+                lastIndex = CUSTOM_PIN_LENGTH
                 standard_pin_preview.visibility = View.GONE
                 custom_pin_preview.visibility = View.VISIBLE
             }
@@ -146,6 +147,10 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
             for (i in 0 until numOfMissingDots) {
                 val dot = FrameLayout(context)
                 dot.setBackgroundResource(R.drawable.custom_pin_preview_item_dot)
+                if (custom_pin_preview.childCount > 7) {
+                    //avoid extending the width of custom_pin_preview when PIN is very long
+                    dot.visibility = View.GONE
+                }
                 custom_pin_preview.addView(dot, LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
             }
         }
