@@ -29,15 +29,14 @@ import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_enter_pin.*
 
-
 open class CheckPinDialog : DialogFragment() {
 
     companion object {
 
-        private val FRAGMENT_TAG = CheckPinDialog::class.java.simpleName
+        internal val FRAGMENT_TAG = CheckPinDialog::class.java.simpleName
 
-        private const val ARG_REQUEST_CODE = "arg_request_code"
-        private const val ARG_PIN_ONLY = "arg_pin_only"
+        internal const val ARG_REQUEST_CODE = "arg_request_code"
+        internal const val ARG_PIN_ONLY = "arg_pin_only"
 
         @JvmStatic
         fun show(activity: AppCompatActivity, requestCode: Int = 0, pinOnly: Boolean = false) {
@@ -57,7 +56,6 @@ open class CheckPinDialog : DialogFragment() {
         fun show(activity: AppCompatActivity, requestCode: Int = 0) {
             show(activity, requestCode, false)
         }
-
     }
 
     private lateinit var state: State
@@ -93,6 +91,7 @@ open class CheckPinDialog : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         initViewModel()
+        unlock_button.visibility = View.GONE
         cancel_button.setOnClickListener {
             sharedModel.onCancelCallback.call()
             dismiss()
@@ -292,7 +291,7 @@ open class CheckPinDialog : DialogFragment() {
         dismiss(savedPass)
     }
 
-    protected fun showLockedAlert(context: Context) {
+    protected open fun showLockedAlert(context: Context) {
         val dialogBuilder = AlertDialog.Builder(context)
         dialogBuilder.setTitle(R.string.wallet_lock_wallet_disabled)
         dialogBuilder.setMessage(pinRetryController.getWalletTemporaryLockedMessage(context))

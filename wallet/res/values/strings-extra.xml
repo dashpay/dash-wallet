@@ -131,6 +131,10 @@
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_address_request_dialog_msg">Application %s is requesting an address so it can pay you.  Would you like to authorize this?</string>
 
+    <string name="update_app_unlock_wallet_title">Unlock Wallet</string>
+    <string name="update_app_unlock_wallet_message">Enter PIN to unlock your wallet</string>
+    <string name="update_app_unlock_button">Unlock</string>
+
     <string name="wallet_lock_unlock">Unlock</string>
     <string name="wallet_lock_unlock_wallet">Unlock wallet</string>
     <string name="wallet_lock_unlock_to_see_txs_title">Wallet locked.</string>

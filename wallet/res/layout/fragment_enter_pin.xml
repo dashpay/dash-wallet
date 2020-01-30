@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
+    android:fitsSystemWindows="true"
     android:background="@android:color/transparent"
     android:orientation="vertical">
 
@@ -27,6 +28,7 @@
                 android:padding="16dp">
 
                 <TextView
+                    android:id="@+id/title"
                     style="@style/MontserratMedium.PageTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -116,6 +118,17 @@
                         android:text="@string/button_cancel"
                         android:textAllCaps="true"
                         android:textColor="@color/dialog_button_text" />
+
+                    <Button
+                        android:id="@+id/unlock_button"
+                        style="@style/DashButton.Blue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="16dp"
+                        android:text="@string/update_app_unlock_button"
+                        android:textAllCaps="true"
+                        android:textSize="14sp" />
+
                 </LinearLayout>
 
             </LinearLayout>
