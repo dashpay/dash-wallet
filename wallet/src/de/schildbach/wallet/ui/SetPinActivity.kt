@@ -321,6 +321,9 @@ class SetPinActivity : SessionActivity() {
                     } else {
                         if (state == State.DECRYPTING) {
                             setState(if (changePin) State.INVALID_PIN else State.DECRYPT)
+                            if(!changePin) {
+                                android.widget.Toast.makeText(this, "Incorrect PIN", android.widget.Toast.LENGTH_LONG).show()
+                            }
                         } else {
                             android.widget.Toast.makeText(this, "Encrypting error", android.widget.Toast.LENGTH_LONG).show()
                             setState(State.CONFIRM_PIN)
