@@ -60,7 +60,7 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun decryptKeys() {
-        decryptKeys(null)
+        decryptKeys(getPinAsString())
     }
 
     fun decryptKeys(password: String?) {
