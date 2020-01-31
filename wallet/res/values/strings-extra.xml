@@ -4,6 +4,7 @@
     <string name="onboarding_create_wallet">Create a New Wallet</string>
     <string name="onboarding_recover_wallet">Restore Wallet From Recovery Phrase</string>
     <string name="onboarding_restore_wallet">Restore Wallet From File</string>
+    <string name="onboarding_load_wallet_error">Unable to load wallet!</string>
 
     <string name="set_pin_create_new_wallet">Create a New Wallet</string>
     <string name="set_pin_restore_wallet">Restore Wallet</string>
@@ -13,7 +14,7 @@
     <string name="set_pin_encrypting">Encrypting wallet</string>
     <string name="set_pin_decrypting">Decrypting wallet</string>
     <string name="set_pin_verifying_pin">Verifying PIN</string>
-    <string name="set_pin_message">This PIN will be required to unlock your app everytime when you use it.</string>
+    <string name="set_pin_message">This PIN will be required to unlock your app every time when you use it.</string>
 
     <string name="home_pay">Send</string>
     <string name="home_receive">Receive</string>
@@ -27,22 +28,33 @@
     <string name="dialog_confirm_fee">Network fee</string>
     <string name="dialog_confirm_total">Total</string>
 
-    <string name="quick_action_secure_now">Secure\nWallet Now</string>
-    <string name="quick_action_scan_to_pay">Scan to\nSend</string>
-    <string name="quick_action_pay_to_address">Send to\nAddress</string>
-    <string name="quick_action_buy_sell">Buy / Sell\nDash</string>
-    <string name="quick_action_import_key">Import\nPrivate Key</string>
-    <string name="quick_action_add_shortcut">Add\nShortcut</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_secure_now">Secure Wallet Now</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_scan_to_pay">Scan to Send</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_pay_to_address">Send to Address</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_buy_sell">Buy / Sell Dash</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_import_key">Import Private Key</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_add_shortcut">Add Shortcut</string>
 
-    <string name="lock_action_quick_receive">Quick\nReceive</string>
-    <string name="lock_action_login_with_pin">Login\nwith PIN</string>
-    <string name="lock_action_login_with_fingerprint">Login with\nFingerprint</string>
-    <string name="lock_action_scan_to_pay">Scan to\nSend</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_quick_receive">Quick Receive</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_pin">Login with PIN</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_fingerprint">Login with Fingerprint</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_scan_to_pay">Scan to Send</string>
+    <!-- Lock Screen: Text above the PIN Entry area -->
     <string name="lock_enter_pin">Enter PIN</string>
     <string name="lock_unlock_with_fingerprint">Use your fingerprint to unlock</string>
 
     <string name="perm_lock_info">Wallet permanently locked</string>
-    <string name="perm_lock_wipe_wallet">Wipe wallet</string>
+    <string name="perm_lock_wipe_wallet">Wipe Wallet</string>
     <string name="perm_lock_close_app">Close</string>
 
     <string name="scan_to_pay_error_dialog_title">Scan to Send</string>
@@ -67,19 +79,20 @@
     <string name="payments_tab_pay_label">Send</string>
     <string name="payments_tab_receive_label">Receive</string>
     <string name="payments_pay_by_qr_title">Send by</string>
-    <string name="payments_pay_by_qr_sub_title">Scanning QR Code</string>
+    <string name="payments_pay_by_qr_sub_title">Scanning QR code</string>
     <string name="payments_pay_by_qr_button">Scan</string>
     <string name="payments_pay_to_clipboard_title">Send to copied address</string>
     <string name="payments_pay_to_clipboard_sub_title">No address copied</string>
     <string name="payments_pay_to_clipboard_button">Send</string>
 
     <string name="forgot_pin_title">Forgot PIN?</string>
-    <string name="forgot_pin_message">You can set a new PIN with the help of your recovery phrase?</string>
-    <string name="forgot_pin_instruction_1">Enter Recovery Phrase to recover your wallet</string>
-    <string name="forgot_pin_instruction_2">Setup a new PIN</string>
+    <string name="forgot_pin_message">You can set a new PIN with the help of your recovery phrase.</string>
+    <string name="forgot_pin_instruction_1">Enter recovery phrase to recover your wallet</string>
+    <string name="forgot_pin_instruction_2">Set up a new PIN</string>
     <string name="forgot_pin_instruction_3">Login with your new PIN to access your wallet</string>
     <string name="forgot_pin_warning">If you have forgot your PIN and lost your recover phrase, you cannot get back access to your wallet and funds.</string>
 
+    <string name="send_coins_auto_lock_feasible">This transaction should settle instantly at no extra fee</string>
     <string name="send_coins_auto_lock_not_feasible">This transaction may take several minutes to settle. Complete instantly for %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">This transaction may take several minutes to settle.</string>
 
@@ -113,7 +126,9 @@
     <string name="send_coins_options_fee_category_zero">No Fee</string>
     <string name="send_coins_fragment_hint_fee_zero">No fee of will be paid. Use \'no fee\' only if you don\'t care about confirmation time.</string>
 
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">Application %s would like to receive your Master Public Key.  This can be used to keep track of your wallet, this can not be used to move your Dash.</string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_address_request_dialog_msg">Application %s is requesting an address so it can pay you.  Would you like to authorize this?</string>
 
     <string name="wallet_lock_unlock">Unlock</string>
@@ -173,7 +188,7 @@
     <string name="unlock_with_fingerprint_error_max_attempts">Maximum fingerprint attempts exceeded. Please try again later.</string>
     <string name="or_unlock_with_fingerprint">Or use your fingerprint to unlock.</string>
     <string name="enable_fingerprint">Enable fingerprint</string>
-    <string name="touch_fingerprint_sensor">Touch the fingerprint sensor.</string>
+    <string name="touch_fingerprint_sensor">Touch fingerprint sensor</string>
     <string name="touch_fingerprint_to_enable">Touch the fingerprint sensor to enable unlocking with fingerprint.</string>
     <string name="fingerprint_changed_title">Fingerprint data changed</string>
 	<string name="fingerprint_changed_message">We detected a change in your fingerprint authentication data. You need to use PIN this time.</string>
@@ -191,18 +206,18 @@
     <string name="verify_it_is_important_subtitle">We are about to show you the secret key to your wallet.</string>
     <string name="verify_info_text_1">This recovery phrase is your access to the funds in this wallet.</string>
     <string name="verify_info_text_2">We do not store this recovery phrase.</string>
-    <string name="verify_info_text_3">In case if this device is lost / damaged, incase if the dash wallet is uninstalled accidentally from this device, you will need this recovery phrase to access your funds.</string>
+    <string name="verify_info_text_3">You will need this recovery phrase to access your funds if this device is lost, damaged or if Dash Wallet ever is accidentally uninstalled from this device.</string>
     <string name="verify_skip">Skip</string>
-    <string name="verify_secure_now_btn">Secure Now</string>
-    <string name="verify_secure_now_message">If you lose this device, you will lose your funds. Get your UniqueSecretKey so that you can restore your wallet on another device.</string>
-    <string name="verify_seed_title">Please write this down</string>
-    <string name="verify_seed_write_down_confirmation">I have written this down</string>
+    <string name="verify_secure_now_btn">Secure now</string>
+    <string name="verify_secure_now_message">If you lose this device, you will lose your funds. Get your recovery phrase so that you can restore your wallet on another device.</string>
+    <string name="verify_seed_title">Please write it down</string>
+    <string name="verify_seed_write_down_confirmation">I wrote it down</string>
     <string name="verify_seed_buttons_tip">Please tap on the words from your recovery phrase in the right order</string>
     <string name="verify_seed_success_title">Verified Successfully</string>
     <string name="verify_seed_success_message">Your wallet is secured now. You can use your recovery phrase anytime to recover your account on another device.</string>
     <string name="view_seed_done">Done</string>
     <string name="view_seed_title">Recovery Phrase</string>
-	<string name="transaction_result_view_on_explorer">View on Explorer</string>
+	<string name="transaction_result_view_on_explorer">View in Explorer</string>
 	<string name="transaction_result_paid_successfully">Sent successfully</string>
 	<string name="transaction_result_sent_to">Sent to</string>
 	<string name="transaction_date_and_time">Date &amp; Time</string>
@@ -216,7 +231,7 @@
     <string name="authenticate_switch_to_fingerprint">Use Fingerprint</string>
     <string name="authenticate_switch_to_pin">Use Password</string>
 
-    <string name="menu_buy_and_sell_title">Buy &amp; Sell Dash"</string>
+    <string name="menu_buy_and_sell_title">Buy &amp; Sell Dash</string>
     <string name="menu_buy_and_sell_subtitle">Connect with third party exchanges</string>
     <string name="menu_security_title">Security</string>
     <string name="menu_security_subtitle">View passphrase, backup wallet…</string>
@@ -235,9 +250,9 @@
     <string name="about_review_and_rate">Review &amp; Rate the app</string>
     <string name="about_contact_support">Contact Support</string>
     <string name="about_fork_disclaimer">This is an open source app forked from Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2019 Dash Core</string>
+    <string name="about_copyright">Copyright © 2020 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
-    <string name="about_github_link">https://github.com/dashevo/dash-wallet</string>
+    <string name="about_github_link" translatable="false">https://github.com/dashevo/dash-wallet</string>
     <string name="about_version_name">Dash Wallet %s</string>
 
     <string name="block">Block</string>
@@ -246,18 +261,19 @@
     <string name="block_info">Block Info</string>
 
     <string name="scan_private_key">Scan Private Key</string>
-    <string name="scan_private_key_intro_1">You are about to sweep funds from another Dash wallet.</string>
+    <string name="scan_private_key_intro_1">You are about to sweep funds from a Dash paper wallet.</string>
     <string name="scan_private_key_intro_2">This will move all coins from that wallet to your wallet on this device.</string>
     <string name="scan_private_key_intro_3">When the transaction is confirmed, the other wallet will be worthless and should not be re-used for safety reasons.</string>
     <string name="confirm">Confirm</string>
 
+    <string name="advanced_security_security_level">Security Level</string>
     <string name="auto_logout">Auto Logout</string>
     <string name="spending_confirmation">Spending Confirmation</string>
     <string name="logout_after">Logout after</string>
     <string name="immediately">Immediately</string>
     <string name="twenty_four_hours">24 hours</string>
-    <string name="one_minute">1 minute</string>
-    <string name="five_minute">5 minutes</string>
+    <string name="one_minute">1 min</string>
+    <string name="five_minute">5 min</string>
     <string name="one_hour">1 hour</string>
     <string name="one_day">1 day</string>
     <string name="biometric_limit">Biometric Limit</string>
@@ -288,5 +304,12 @@
         <item>Received</item>
         <item>Sent</item>
     </string-array>
+
+    <string name="sync_status_wait">Please wait for the sync to complete</string>
+    <string name="sync_status_syncing_title">Syncing</string>
+    <string name="sync_status_syncing_sub_title">with Dash blockchain</string>
+    <string name="sync_status_unable_to_connect">Unable to connect</string>
+    <string name="sync_status_check_connection">Check your connection</string>
+
 
 </resources>
