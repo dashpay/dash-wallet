@@ -51,7 +51,7 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
         override fun onStopTrackingTouch(seekBar: SeekBar?) { }
         override fun onStartTrackingTouch(seekBar: SeekBar?) { }
         override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-            configuration.spendingConfirmationLimit = when(biometric_limit_seekbar.progress) {
+            configuration.biometricLimit = when(biometric_limit_seekbar.progress) {
                 0 -> 0f
                 1 -> 0.1f
                 2 -> 0.5f
@@ -139,20 +139,24 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
             auto_logout_group.visibility = View.GONE
         }
 
-        // Spending Confirmation group
         spending_confirmation_switch.isChecked = configuration.spendingConfirmationEnabled
         if (configuration.spendingConfirmationEnabled) {
-            spending_confirmation_group.visibility = View.VISIBLE
-            biometric_limit_value.text = configuration.spendingConfirmationLimit
+            spending_confirmation_group.visibility = if (configuration.enableFingerprint) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+
+            biometric_limit_value.text = configuration.biometricLimit
                     .toString().removeSuffix(".0")
-            biometric_limit_seekbar.progress = when(configuration.spendingConfirmationLimit) {
+            biometric_limit_seekbar.progress = when(configuration.biometricLimit) {
                 0f -> 0
                 .1f -> 1
                 .5f -> 2
                 1f -> 3
                 else -> 4
             }
-            if (configuration.spendingConfirmationLimit == 0f) {
+            if (configuration.biometricLimit == 0f) {
                 spending_confirmation_hint.text = getText(R.string.spending_confirmation_hint_zero)
             } else {
                 val builder = SpannableStringBuilder()
@@ -194,7 +198,7 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
         configuration.autoLogoutEnabled = true
         configuration.autoLogoutMinutes = 1
         configuration.spendingConfirmationEnabled = true
-        configuration.spendingConfirmationLimit = .5f
+        configuration.biometricLimit = .5f
         updateView()
     }
 }

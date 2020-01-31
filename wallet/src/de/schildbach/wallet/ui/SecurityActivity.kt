@@ -105,7 +105,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
             fingerprint_auth_switch.isChecked = fingerprintHelper.isFingerprintEnabled
             fingerprint_auth_switch.setOnCheckedChangeListener(fingerprintSwitchListener)
             configuration.enableFingerprint = true
-        } else {
+    } else {
             fingerprint_auth_group.visibility = GONE
         }
     }
