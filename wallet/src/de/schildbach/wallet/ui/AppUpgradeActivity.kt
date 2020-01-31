@@ -77,7 +77,7 @@ class AppUpgradeActivity : AppCompatActivity() {
         checkPinSharedModel.onCancelCallback.observe(this, Observer<Void> {
             temporaryLockCheckRunnable.run()
         })
-        CheckPinDialogExt.show(this, 0)
+        CheckPinDuringUpgradeDialog.show(this, 0)
     }
 
     private fun onCorrectPin(pin: String) {

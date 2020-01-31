@@ -9,13 +9,13 @@ import androidx.appcompat.app.AppCompatActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_enter_pin.*
 
-open class CheckPinDialogExt : CheckPinDialog() {
+open class CheckPinDuringUpgradeDialog : CheckPinDialog() {
 
     companion object {
 
         @JvmStatic
         fun show(activity: AppCompatActivity, requestCode: Int = 0) {
-            val checkPinDialogExt = CheckPinDialogExt()
+            val checkPinDialogExt = CheckPinDuringUpgradeDialog()
             val args = Bundle()
             args.putInt(ARG_REQUEST_CODE, requestCode)
             args.putBoolean(ARG_PIN_ONLY, true)
@@ -34,13 +34,10 @@ open class CheckPinDialogExt : CheckPinDialog() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         isCancelable = false
-        title.setText(R.string.update_app_unlock_wallet_title)
-        message.setText(R.string.update_app_unlock_wallet_message)
-        cancel_button.visibility = View.GONE
         pin_or_fingerprint_button.visibility = View.GONE
 
-        unlock_button.visibility = View.VISIBLE
-        unlock_button.setOnClickListener {
+        cancel_button.setText(R.string.wallet_lock_unlock)
+        cancel_button.setOnClickListener {
             if (viewModel.pin.isNotEmpty()) {
                 viewModel.checkPin(viewModel.pin)
             }

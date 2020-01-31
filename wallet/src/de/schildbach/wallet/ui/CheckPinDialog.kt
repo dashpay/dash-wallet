@@ -91,7 +91,6 @@ open class CheckPinDialog : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         initViewModel()
-        unlock_button.visibility = View.GONE
         cancel_button.setOnClickListener {
             sharedModel.onCancelCallback.call()
             dismiss()
