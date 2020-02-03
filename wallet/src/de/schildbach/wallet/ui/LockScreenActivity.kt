@@ -44,8 +44,14 @@ class LockScreenActivity : SendCoinsQrActivity() {
         @JvmStatic
         fun createIntent(context: Context): Intent {
             return Intent(context, LockScreenActivity::class.java)
+        }
+
+        @JvmStatic
+        fun createIntentAsNewTask(context: Context): Intent {
+            return createIntent(context)
                     .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                            or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                            or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            or Intent.FLAG_ACTIVITY_NO_ANIMATION)
         }
     }
 
@@ -154,7 +160,11 @@ class LockScreenActivity : SendCoinsQrActivity() {
                     setState(State.DECRYPTING)
                 }
                 Status.SUCCESS -> {
-                    onCorrectPin(it.data!!.first, it.data.second)
+                    if (EnableFingerprintDialog.shouldBeShown(this)) {
+                        EnableFingerprintDialog.show(it.data!!.second, supportFragmentManager)
+                    } else {
+                        onCorrectPin(it.data!!.first, it.data.second)
+                    }
                 }
             }
         })

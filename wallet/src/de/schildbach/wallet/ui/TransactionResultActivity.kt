@@ -22,7 +22,6 @@ import android.content.Intent
 import android.graphics.drawable.Animatable
 import android.os.Bundle
 import android.view.View
-import androidx.appcompat.app.AppCompatActivity
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.TransactionResult
 import de.schildbach.wallet.util.TransactionUtil
@@ -86,7 +85,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
             if (getSessionPin() !== null) {
                 startActivity(WalletActivity.createIntent(this))
             } else {
-                startActivity(LockScreenActivity.createIntent(this))
+                startActivity(LockScreenActivity.createIntentAsNewTask(this))
             }
         }
 
