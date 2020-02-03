@@ -32,11 +32,13 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
     companion object {
 
         private const val EXTRA_SEED = "extra_seed"
+        private const val EXTRA_REMINDER = "extra_reminder"
 
         @JvmStatic
-        fun createIntent(context: Context, seed: Array<String>): Intent {
+        fun createIntent(context: Context, seed: Array<String>, reminder: Boolean): Intent {
             val intent = Intent(context, VerifySeedActivity::class.java)
             intent.putExtra(EXTRA_SEED, seed)
+            intent.putExtra(EXTRA_REMINDER, reminder)
             return intent
         }
     }
@@ -68,7 +70,9 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
     }
 
     override fun skipSeedVerification() {
-        WalletApplication.getInstance().configuration.setBackupSeedLastDismissedReminder()
+        if (intent.getBooleanExtra(EXTRA_REMINDER, false)) {
+            WalletApplication.getInstance().configuration.setBackupSeedLastDismissedReminderOnce()
+        }
         goHome()
     }
 

@@ -432,7 +432,7 @@ class SetPinActivity : SessionActivity() {
     }
 
     private fun startVerifySeedActivity() {
-        val intent = VerifySeedActivity.createIntent(this, seed.toTypedArray())
+        val intent = VerifySeedActivity.createIntent(this, seed.toTypedArray(), true)
         startActivityNewTask(intent)
     }
 

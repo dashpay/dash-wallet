@@ -169,8 +169,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
         walletApplication.maybeStartAutoLogoutTimer()
         saveSessionPin(pin)
         if (shouldShowBackupReminder && seed != null) {
-            startActivity(VerifySeedActivity.createIntent(this, seed.mnemonicCode!!.toTypedArray()))
-            walletApplication.configuration.disarmBackupSeedReminder()
+            startActivity(VerifySeedActivity.createIntent(this, seed.mnemonicCode!!.toTypedArray(), true))
         } else {
             startActivity(WalletActivity.createIntent(this))
         }
