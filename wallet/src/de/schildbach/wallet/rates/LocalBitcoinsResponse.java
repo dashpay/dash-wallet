@@ -14,14 +14,14 @@ public class LocalBitcoinsResponse {
     }
 
     public BigDecimal getDashVesPrice() {
-        if (localBitcoinsRate.getAvg1h() != null) {
-            return localBitcoinsRate.getAvg1h();
-        } else if (localBitcoinsRate.getAvg6h() != null) {
-            return localBitcoinsRate.getAvg6h();
-        } else if (localBitcoinsRate.getAvg12h() != null) {
-            return localBitcoinsRate.getAvg12h();
+        if (localBitcoinsRate.avg1h != null) {
+            return localBitcoinsRate.avg1h;
+        } else if (localBitcoinsRate.avg6h != null) {
+            return localBitcoinsRate.avg6h;
+        } else if (localBitcoinsRate.avg12h != null) {
+            return localBitcoinsRate.avg12h;
         } else {
-            return localBitcoinsRate.getAvg24h();
+            return localBitcoinsRate.avg24h;
         }
     }
 
