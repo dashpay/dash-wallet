@@ -60,6 +60,7 @@
     <string name="send_coins_fragment_pin_label">Εισάγετε PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Θα πληρώσετε %s για το δίκτυο.</string>
     <string name="send_coins_fragment_hint_fee_priority">Θα πληρώσετε τέλη προτεραιότητας %s. Αν σας ενδιαφέρουν χαμηλά τέλη, χρησιμοποιήστε την επιλογή "προτεραιότητα" μόνο αν χρειάζεστε επιβεβαίωση το συντομότερο δυνατόν.</string>
+    <string name="send_coins_fragment_hint_insufficient_money">Ανεπαρκή χρήματα</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Το ποσό των μικρών πληρωμών στο πορτοφόλι σας δεν επαρκεί για το ποσό που είναι προς αποστολή.</string>
     <string name="send_coins_fragment_hint_replaying">Αυτή την στιγμή δεν διεκπεραιώνονται πληρωμές γιατί βρίσκεται σε εξέλιξη ένα replay.</string>
     <string name="send_coins_fragment_direct_payment_enable">Στείλτε πληρωμή απευθείας στον δικαιούχο διακομιστή.</string>
@@ -86,6 +87,7 @@
     <string name="sweep_wallet_fragment_hint">Τα χάρτινα πορτοφόλια χρησιμοποιούνται για ψυχρή αποθήκευση. Μερικά ATM τα τυπώνουν πάνω στο χαρτάκι που δίνουν αντί να στέλνουν τα νομίσματα κατευθείαν στο κινητό σας. Κάποιοι μερικές φορές χρησιμοποιούν προ-φορτισμένα χάρτινα πορτοφόλια για να μεταφέρουν αξίες (δεν συνιστάται).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Ξεκινήστε με τη σάρωση του ιδιωτικού κλειδιού ενός χάρτινου πορτοφολιού. Χρησιμοποιήστε το κουμπί της κάμερας.</string>
     <string name="sweep_wallet_fragment_encrypted">Αυτό το ιδιωτικό κλειδί προστατεύεται με κωδικό πρόσβασης.</string>
+    <string name="sweep_wallet_fragment_password">Κωδικός</string>
     <string name="sweep_wallet_fragment_balance">Υπόλοιπο για σάρωση</string>
     <string name="sweep_wallet_fragment_button_decrypt">Αποκρυπτογράφηση</string>
     <string name="sweep_wallet_fragment_button_sweep">Σάρωση</string>
@@ -148,7 +150,9 @@
     <string name="transaction_row_status_received">Ελήφθησαν</string>
     <string name="transaction_row_status_sent">Εστάλη</string>
     <string name="transaction_row_status_processing">Επεξεργασία</string>
+    <string name="transaction_row_status_confirming">Επιβεβαίωση</string>
     <string name="transaction_row_status_locked">Κλείδωσε</string>
+    <string name="transaction_row_status_error_dead">Διπλό ξόδεμα</string>
     <string name="network_monitor_activity_title">Παρακολούθηση δικτύου</string>
     <string name="network_monitor_peer_list_title">Ομότιμοι</string>
     <string name="network_monitor_block_list_title">Τμήματα</string>
@@ -192,6 +196,7 @@
     <string name="import_export_keys_dialog_show">Εμφάνιση κωδικού</string>
     <string name="import_export_keys_dialog_failure_title">Σφάλμα</string>
     <string name="import_keys_intent_filter_action">Επαναφορά πορτοφολιού</string>
+    <string name="encrypt_keys_dialog_title">Αλλαγή PIN</string>
     <string name="encrypt_keys_dialog_message">Οι δαπάνες από το πορτοφόλι σας θα πρέπει να προστατεύονται με το επιλεγμένο PIN.</string>
     <string name="encrypt_keys_dialog_warning">Σημαντικό: Πρέπει να θυμάστε το PIN σας! Μη χρησιμοποιείτε κοινούς αριθμούς (όπως ημερομηνίες γέννησης).</string>
     <string name="encrypt_keys_dialog_password_old">Παλιό PIN</string>
@@ -332,4 +337,5 @@
     <string name="dash_slogan">Άμεσο - Ιδιωτικό - Ασφαλές</string>
     <string name="dash_wallet">Πορτοφόλι</string>
 
+    <string name="activity_security_advanced">Ενισχυμένη Ασφάλεια</string>
     </resources>

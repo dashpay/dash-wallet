@@ -25,6 +25,7 @@
     <string name="exchange_rates_fragment_source">ราคาเริ่มต้นจาก %s</string>
     <string name="exchange_rates_options_search">ค้นหาอัตราแลกเปลี่ยน</string>
     <string name="exchange_rates_context_set_as_default_title">ตั้งเป็นค่าเริ่มต้น</string>
+    <string name="wallet_transactions_fragment_empty_text">ไม่มีธุรกรรมเพื่อแสดง</string>
     <string name="wallet_transactions_row_warning_backup">ยินดีด้วย! คุณได้รับการชำระเงินครั้งแรก!  คุณได้สำรองข้อมูล wallet ไว้เพื่อป้องกันการสูญเสียหรือไม่?</string>
     <string name="wallet_transactions_fragment_coinbase">ศีลธรรม</string>
     <string name="wallet_transactions_fragment_internal">ภายใน</string>
@@ -347,4 +348,6 @@
     <string name="dash_wallet">wallet</string>
 
     <string name="activity_security_advanced">ความปลอดภัยขั้นสูง</string>
-    </resources>
+    <string name="reset_to_default">ตั้งค่าเป็นค่าเริ่มต้น</string>
+
+</resources>

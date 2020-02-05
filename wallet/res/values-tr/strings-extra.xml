@@ -41,6 +41,10 @@
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Hızlı Al</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_pin">PİN ile Oturum aç</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_fingerprint">Parmak izi ile Oturum aç</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_scan_to_pay">Göndermek için Tara</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
     <string name="lock_enter_pin">PIN Girin</string>
@@ -79,6 +83,8 @@
     <string name="payments_pay_to_clipboard_button">Gönder</string>
 
     <string name="forgot_pin_title">PİN\'inizi unuttunuz mu?</string>
+    <string name="forgot_pin_instruction_1">Cüzdanınızı kurtarmak için kurtarma sözcük grubunu girin.</string>
+    <string name="forgot_pin_instruction_2">Yeni PİN oluşturun</string>
     <string name="forgot_pin_instruction_3">Yeni PİN\'inizle oturum açarak cüzdanınıza erişin</string>
     <string name="forgot_pin_warning">Eğer kurtarma sözcük grubunuzu ve PİN\'inizi unuttuysanız cüzdanınıza ve paranıza erişemezsiniz.</string>
 
@@ -108,6 +114,8 @@
     <string name="button_copy_address">Adresi Kopyala</string>
     <string name="request_coins_clipboard_address_msg">Dash adresi panoya kopyalandı</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Göster</string>
+    <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" kurtarma cümlesi kelimesi değil</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Kurtarma cümlesi 12 kelime olmalı</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Hatalı kurtarma cümlesi</string>
     <string name="send_coins_options_fee_category_zero">Ücret Yok</string>
     <string name="send_coins_fragment_hint_fee_zero">Ücret ödenmeyecek. Sadece onay süresi sizin için önemli değilse \'ücret yok\' seçeneğini kullanın.</string>
@@ -231,6 +239,7 @@
     <string name="about_review_and_rate">Uygulamamızı değerlendirip &amp; Puanlayın</string>
     <string name="about_contact_support">Destekle İletişime Geçin</string>
     <string name="about_fork_disclaimer">Bu uygulama açık kaynak kodlu bir Bitcoin çatallanmasıdır</string>
+    <string name="about_copyright">Telif Hakkı © 2020 Dash Core</string>
     <string name="about_license">GNU Genel Kamu Lisansı v3.0</string>
     <string name="about_version_name">Dash Cüzdanı %s</string>
 

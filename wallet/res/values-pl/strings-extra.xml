@@ -4,6 +4,8 @@
     <string name="onboarding_create_wallet">Stwórz Nowy Portfel</string>
     <string name="onboarding_recover_wallet">Przywróć Portfel Z Fraz Odzyskiwania</string>
     <string name="onboarding_restore_wallet">Przywróć Portfel Z Pliku</string>
+    <string name="onboarding_load_wallet_error">Nie można załadować portfela!</string>
+
     <string name="set_pin_create_new_wallet">Stwórz Nowy Portfel</string>
     <string name="set_pin_restore_wallet">Przywróć Portfel</string>
     <string name="set_pin_enter_pin">Wprowadź Stary PIN</string>
@@ -190,6 +192,7 @@
     <string name="unlock_with_fingerprint_error_max_attempts">Osiągnięto maksymalna ilość prób odczytu odcisku palca. Proszę spróbować później.</string>
     <string name="or_unlock_with_fingerprint">Lub użyj odcisku palca by odblokować.</string>
     <string name="enable_fingerprint">Aktywuj odcisk palca</string>
+    <string name="touch_fingerprint_sensor">Dotykowy czujnik linii papilarnych</string>
     <string name="touch_fingerprint_to_enable">Dotknij czytnik odcisku palca aby aktywować odblokowywanie za jego pomocą.</string>
     <string name="fingerprint_changed_title">Dane linii papilarnych zostały zmienione</string>
 	<string name="fingerprint_changed_message">Wykryliśmy zmianę danych uwierzytelniających odcisk palca. Tym razem musisz użyć kodu PIN.</string>
@@ -261,6 +264,7 @@
     <string name="block_info">Blok Info</string>
 
     <string name="scan_private_key">Skanuj Klucz Prywatny</string>
+    <string name="scan_private_key_intro_1">Zamierzasz załadować fundusze z papierowego portfela Dash.</string>
     <string name="scan_private_key_intro_2">Spowoduje to przeniesienie wszystkich monet z tego portfela do portfela na tym urządzeniu.</string>
     <string name="scan_private_key_intro_3">Po potwierdzeniu transakcji, drugi portfel będzie bezwartościowy i nie powinien być ponownie wykorzystywany ze względów bezpieczeństwa.</string>
     <string name="confirm">Potwierdź</string>

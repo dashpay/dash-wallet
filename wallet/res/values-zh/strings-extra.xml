@@ -4,6 +4,8 @@
     <string name="onboarding_create_wallet">创建一个新钱包</string>
     <string name="onboarding_recover_wallet">通过恢复密语还原钱包</string>
     <string name="onboarding_restore_wallet">通过文件还原钱包</string>
+    <string name="onboarding_load_wallet_error">无法加载钱包!</string>
+
     <string name="set_pin_create_new_wallet">创建一个新钱包</string>
     <string name="set_pin_restore_wallet">还原钱包</string>
     <string name="set_pin_enter_pin">输入旧PIN</string>
@@ -11,6 +13,7 @@
     <string name="set_pin_confirm_pin">确认PIN</string>
     <string name="set_pin_encrypting">正在加密钱包</string>
     <string name="set_pin_decrypting">正在解密钱包</string>
+    <string name="set_pin_verifying_pin">验证PIN</string>
     <string name="set_pin_message">每次使用时都需要输入PIN以解锁您的app。</string>
 
     <string name="home_pay">发送</string>
@@ -40,6 +43,10 @@
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">快速接收</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_pin">以PIN登入</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_fingerprint">以指纹登入</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_scan_to_pay">扫描发送</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
@@ -79,6 +86,9 @@
     <string name="payments_pay_to_clipboard_button">发送</string>
 
     <string name="forgot_pin_title">忘记PIN？</string>
+    <string name="forgot_pin_message">您可以借助恢复密语来设置新的PIN</string>
+    <string name="forgot_pin_instruction_1">输入恢复密语来找回您的钱包</string>
+    <string name="forgot_pin_instruction_2">设置一个新PIN</string>
     <string name="forgot_pin_instruction_3">通过您的新PIN来访问钱包</string>
     <string name="forgot_pin_warning">如果您遗忘了PIN并丢失了恢复密语，就无法再访问您的钱包和资金。</string>
 
@@ -108,7 +118,11 @@
     <string name="button_copy_address">复制地址</string>
     <string name="request_coins_clipboard_address_msg">达世币地址已复制</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">显示</string>
+    <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" 不是一个恢复密语中的单词</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">恢复密语必须包括 12 个词</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">错误的恢復密语</string>
+    <string name="restore_wallet_from_invalid_seed_failure">无法恢复钱包：\n\n%s\n\n是否输入了错误的密码？</string>
+
     <string name="send_coins_options_fee_category_zero">无手续费</string>
     <string name="send_coins_fragment_hint_fee_zero">不支付任何交易手续费. 仅在您不在意确认时间长短的情况下使用此选项.</string>
 
@@ -169,6 +183,7 @@
     <string name="unlock_with_fingerprint_error_max_attempts">超过最大指纹解锁次数. 请稍后再试.</string>
     <string name="or_unlock_with_fingerprint">或使用您的指纹解锁.</string>
     <string name="enable_fingerprint">开启指纹</string>
+    <string name="touch_fingerprint_sensor">触摸指纹传感器</string>
     <string name="touch_fingerprint_to_enable">触摸指纹传感器来解锁.</string>
     <string name="fingerprint_changed_title">指纹数据已变更</string>
 	<string name="fingerprint_changed_message">我们检测到您指纹认证数据发生了变化。这次您需要使用PIN。</string>
@@ -186,6 +201,7 @@
     <string name="verify_it_is_important_subtitle">我们即将向您显示您钱包的私钥。</string>
     <string name="verify_info_text_1">此恢复密语是您获取本钱包中资金的方法。</string>
     <string name="verify_info_text_2">我们不会存储此恢复密语。</string>
+    <string name="verify_info_text_3">如果此设备丢失, 损坏或意外从该设备卸载了DASH钱包, 则需要此恢复密语来找回您的资金.</string>
     <string name="verify_skip">跳过</string>
     <string name="verify_secure_now_btn">立刻保护</string>
     <string name="verify_secure_now_message">如果您丢失此设备，您将丢失您的资金。获取您恢复密语以便在其他设备能够恢复您的钱包。</string>
@@ -210,6 +226,7 @@
     <string name="authenticate_switch_to_fingerprint">使用指纹</string>
     <string name="authenticate_switch_to_pin">使用密码</string>
 
+    <string name="menu_buy_and_sell_title">买 &amp; 卖 Dash</string>
     <string name="menu_buy_and_sell_subtitle">与第三方交易所连接</string>
     <string name="menu_security_title">安全</string>
     <string name="menu_security_subtitle">查看密码，备份钱包...</string>
@@ -238,6 +255,7 @@
     <string name="block_info">区块信息</string>
 
     <string name="scan_private_key">扫描私钥</string>
+    <string name="scan_private_key_intro_1">您即将从一个DASH纸钱包来清除资金.</string>
     <string name="scan_private_key_intro_2">这会从另一钱包中将所有币移动到本设备的钱包中。</string>
     <string name="scan_private_key_intro_3">当交易被确认后，另一个钱包将会分文不值，并且出于安全原因不应当再被使用。</string>
     <string name="confirm">确认</string>
@@ -251,7 +269,11 @@
     <string name="one_minute">1 分钟</string>
     <string name="five_minute">5 分钟</string>
     <string name="one_hour">1 小时</string>
+    <string name="one_day">1 天</string>
+    <string name="biometric_limit">生物识别限制</string>
     <string name="spending_confirmation_hint_zero">付款时始终需要输入PIN</string>
+    <string name="spending_confirmation_hint_above_zero">您可以使用生物特征识别来认证下方交易</string>
+
     <string name="security_none">无</string>
     <string name="security_low">低</string>
     <string name="security_medium">中等</string>
