@@ -485,10 +485,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 handleReportIssue();
                 return true;
 
-            case R.id.wallet_options_help:
-                HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_wallet);
-                return true;
-
             case R.id.options_paste:
                 handlePaste();
                 return true;
@@ -552,7 +548,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private void startVerifySeedActivity(DeterministicSeed seed) {
         List<String> mnemonicCode = seed.getMnemonicCode();
         String [] seedArray = mnemonicCode.toArray(new String[0]);
-        Intent intent = VerifySeedActivity.createIntent(this, seedArray);
+        Intent intent = VerifySeedActivity.createIntent(this, seedArray, false);
         startActivity(intent);
     }
 
@@ -928,9 +924,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @Override
     public boolean onContextItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            case R.id.wallet_options_safety:
-                HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_safety);
-                return true;
 
             case R.id.wallet_options_backup_wallet:
                 handleBackupWallet();

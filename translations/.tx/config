@@ -1,0 +1,17 @@
+[main]
+host = https://www.transifex.com
+minimum_perc = 80
+
+[dash-mobile-wallets.app-localizable-strings]
+file_filter = iOS/app-localizable-strings-<lang>.strings
+lang_map = sl_SI:sl, zh_TW:zh-rTW
+source_file = iOS/app-localizable-strings.strings
+source_lang = en
+type = iOS
+
+[dash-mobile-wallets.dashsync-localizable-strings]
+file_filter = iOS/dashsync-localizable-strings-<lang>.strings
+lang_map = sl_SI:sl, zh_TW:zh-rTW
+source_file = iOS/dashsync-localizable-strings.strings
+source_lang = en
+type = iOS

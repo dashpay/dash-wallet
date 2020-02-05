@@ -229,9 +229,13 @@ public class Configuration {
     }
 
     public boolean lastDismissedReminderMoreThan24hAgo() {
-        long now = System.currentTimeMillis();
-        long lastReminder = prefs.getLong(PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER, now);
-        return now - lastReminder > TimeUnit.HOURS.toMillis(24);
+        long lastReminder = prefs.getLong(PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER, -1);
+        if (lastReminder == -1) {
+            return false;
+        } else {
+            long now = System.currentTimeMillis();
+            return now - lastReminder > TimeUnit.HOURS.toMillis(24);
+        }
     }
 
     public long getLastBackupTime() {
@@ -255,9 +259,14 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true).apply();
     }
 
-    public void setBackupSeedLastDismissedReminder() {
-        long now = System.currentTimeMillis();
-        prefs.edit().putLong(PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER, now).apply();
+    public void setBackupSeedLastDismissedReminderOnce() {
+        long value;
+        if (prefs.contains(PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER)){
+            value = -1;
+        } else {
+            value = System.currentTimeMillis();
+        }
+        prefs.edit().putLong(PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER, value).apply();
     }
 
     public void disarmBackupSeedReminder() {

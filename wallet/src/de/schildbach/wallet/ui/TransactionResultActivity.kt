@@ -58,7 +58,6 @@ class TransactionResultActivity : AbstractWalletActivity() {
         val txId = intent.getSerializableExtra(TX_ID) as Sha256Hash
         setContentView(R.layout.activity_successful_transaction)
 
-
         val transactionResultViewBinder = TransactionResultViewBinder(container)
         val tx = WalletApplication.getInstance().wallet.getTransaction(txId)
         if (tx != null) {
@@ -68,10 +67,9 @@ class TransactionResultActivity : AbstractWalletActivity() {
                 if (getSessionPin() !== null) {
                     startActivity(WalletActivity.createIntent(this))
                 } else {
-                    startActivity(LockScreenActivity.createIntent(this))
+                    startActivity(LockScreenActivity.createIntentAsNewTask(this))
                 }
             }
-
         } else {
             log.error("Transaction not found. TxId:", txId)
             finish()
