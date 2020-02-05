@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="de.schildbach.wallet_test"
     android:installLocation="internalOnly"
-    android:versionCode="70008"
-    android:versionName="7.0.3">
+    android:versionCode="80000"
+    android:versionName="8.0.0-evonet">
 
     <!-- normal permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -72,10 +72,6 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
-            <meta-data
-                android:name="android.app.shortcuts"
-                android:resource="@xml/shortcuts" />
-
         </activity>
 
         <activity android:name="de.schildbach.wallet.ui.VerifySeedActivity"
@@ -105,6 +101,10 @@
                 <data android:mimeType="application/x-dashtx" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity-alias>
 
         <activity
@@ -135,7 +135,7 @@
             android:name="de.schildbach.wallet.ui.SendCoinsQrActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.Transparent" >
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" >
         </activity>
         <activity
             android:name="de.schildbach.wallet.ui.RequestCoinsActivity"
@@ -276,10 +276,6 @@
         <activity android:name="de.schildbach.wallet.ui.UpholdTransferActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
-
-        <activity android:name="de.schildbach.wallet.ui.AppUpgradeActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/LockScreenActivity.Theme" />
 
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"
