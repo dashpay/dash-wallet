@@ -271,7 +271,7 @@
 
         <activity android:name="de.schildbach.wallet.ui.WelcomeActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.Fullscreen" />
+            android:theme="@style/LockScreenActivity.Theme" />
 
         <activity android:name="de.schildbach.wallet.ui.UpholdTransferActivity"
             android:screenOrientation="portrait"

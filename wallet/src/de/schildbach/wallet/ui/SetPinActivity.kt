@@ -35,16 +35,14 @@ import de.schildbach.wallet.ui.widget.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 
-private const val FINGERPRINT_REQUEST_SEED = 1
-private const val FINGERPRINT_REQUEST_WALLET = 2
-private const val FINGERPRINT_REQUEST_CHANGE_PIN = 3
-
 class SetPinActivity : AppCompatActivity() {
+
+    private lateinit var walletApplication: WalletApplication
 
     private lateinit var numericKeyboardView: NumericKeyboardView
     private lateinit var confirmButtonView: View
     private lateinit var viewModel: SetPinViewModel
-    private lateinit var checkPinSharedModel: CheckPinSharedModel
+    private lateinit var enableFingerprintViewModel: CheckPinSharedModel
     private lateinit var pinProgressSwitcherView: ViewSwitcher
     private lateinit var pinPreviewView: PinPreviewView
     private lateinit var pageTitleView: TextView
@@ -110,7 +108,7 @@ class SetPinActivity : AppCompatActivity() {
         pinRetryController = PinRetryController.getInstance()
         pinLength = WalletApplication.getInstance().configuration.pinLength
 
-        val walletApplication = application as WalletApplication
+        walletApplication = application as WalletApplication
         if (walletApplication.wallet.isEncrypted) {
             val password = intent.getStringExtra(EXTRA_PASSWORD)
             changePin = intent.getBooleanExtra(CHANGE_PIN, false)
@@ -329,6 +327,9 @@ class SetPinActivity : AppCompatActivity() {
                     } else {
                         if (state == State.DECRYPTING) {
                             setState(if (changePin) State.INVALID_PIN else State.DECRYPT)
+                            if(!changePin) {
+                                android.widget.Toast.makeText(this, "Incorrect PIN", android.widget.Toast.LENGTH_LONG).show()
+                            }
                         } else {
                             android.widget.Toast.makeText(this, "Encrypting error", android.widget.Toast.LENGTH_LONG).show()
                             setState(State.CONFIRM_PIN)
@@ -340,17 +341,16 @@ class SetPinActivity : AppCompatActivity() {
                 }
                 Status.SUCCESS -> {
                     if (state == State.DECRYPTING) {
-                        val walletApplication = application as WalletApplication
                         seed = walletApplication.wallet.keyChainSeed.mnemonicCode!!
                         setState(State.SET_PIN)
                     } else {
                         if (changePin) {
                             WalletApplication.getInstance().configuration.pinLength = PinPreviewView.DEFAULT_PIN_LENGTH
-                            val enableFingerprint = (application as WalletApplication).configuration.enableFingerprint
+                            val enableFingerprint = walletApplication.configuration.enableFingerprint
                             if (EnableFingerprintDialog.shouldBeShown(this@SetPinActivity) && enableFingerprint) {
-                                EnableFingerprintDialog.show(viewModel.getPinAsString(), FINGERPRINT_REQUEST_CHANGE_PIN, supportFragmentManager)
+                                EnableFingerprintDialog.show(viewModel.getPinAsString(), supportFragmentManager)
                             } else {
-                                performNextStep(FINGERPRINT_REQUEST_CHANGE_PIN)
+                                finish()
                             }
                         } else {
                             viewModel.initWallet()
@@ -380,17 +380,16 @@ class SetPinActivity : AppCompatActivity() {
             }
         })
         viewModel.startNextActivity.observe(this, Observer {
-
-            val requestCode = if (it) FINGERPRINT_REQUEST_SEED else FINGERPRINT_REQUEST_WALLET
-            if (EnableFingerprintDialog.shouldBeShown(this@SetPinActivity)) {
-                EnableFingerprintDialog.show(viewModel.getPinAsString(), requestCode, supportFragmentManager)
+            if (it) {
+                startVerifySeedActivity()
             } else {
-                performNextStep(requestCode)
+                goHome()
             }
+            walletApplication.maybeStartAutoLogoutTimer()
         })
-        checkPinSharedModel = ViewModelProviders.of(this).get(CheckPinSharedModel::class.java)
-        checkPinSharedModel.onCorrectPinCallback.observe(this, Observer {
-            performNextStep(it.first)
+        enableFingerprintViewModel = ViewModelProviders.of(this).get(CheckPinSharedModel::class.java)
+        enableFingerprintViewModel.onCorrectPinCallback.observe(this, Observer {
+            finish()
         })
     }
 
@@ -430,17 +429,8 @@ class SetPinActivity : AppCompatActivity() {
         }
     }
 
-    private fun performNextStep(requestCode: Int) {
-        when (requestCode) {
-            FINGERPRINT_REQUEST_SEED -> startVerifySeedActivity()
-            FINGERPRINT_REQUEST_WALLET -> goHome()
-            FINGERPRINT_REQUEST_CHANGE_PIN -> finish()
-        }
-        (application as WalletApplication).maybeStartAutoLogoutTimer()
-    }
-
     private fun startVerifySeedActivity() {
-        val intent = VerifySeedActivity.createIntent(this, seed.toTypedArray())
+        val intent = VerifySeedActivity.createIntent(this, seed.toTypedArray(), true)
         startActivityNewTask(intent)
     }
 

@@ -87,7 +87,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
             if (intent.getBooleanExtra(USER_AUTHORIZED_RESULT_EXTRA, false)) {
                 startActivity(WalletActivity.createIntent(this))
             } else {
-                startActivity(LockScreenActivity.createIntent(this))
+                startActivity(LockScreenActivity.createIntentAsNewTask(this))
             }
         }
 
