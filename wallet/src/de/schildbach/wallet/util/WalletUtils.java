@@ -183,6 +183,7 @@ public class WalletUtils {
         return result;
     }
 
+
     public static boolean isEntirelySelf(final Transaction tx, final Wallet wallet) {
         for (final TransactionInput input : tx.getInputs()) {
             final TransactionOutput connectedOutput = input.getConnectedOutput();
@@ -253,8 +254,7 @@ public class WalletUtils {
                 throw new IOException("inconsistent wallet backup");
 
             return wallet;
-        }
-        finally {
+        } finally {
 
         }
 

@@ -382,43 +382,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
     @Override
     public void onTransactionRowClicked(Transaction tx) {
-        Direction direction = tx.getValue(wallet).signum() < 0 ? Direction.SENT : Direction.RECEIVED;
-        String address;
-        if (direction == Direction.SENT) {
-            // Check for internal transactions to prevent NPE from getToAddressOfSent
-            if(WalletUtils.isEntirelySelf(tx, wallet))
-                address = getString(R.string.transaction_row_status_sent_interally);
-            else
-                address = WalletUtils.getToAddressOfSent(tx, wallet).get(0).toBase58();
-        } else {
-            address = WalletUtils.getWalletAddressOfReceived(tx, wallet).toBase58();
-        }
-        int primaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet);
-        int secondaryStatus = TransactionUtil.getReceivedStatusString(tx, wallet);
-        int errorStatus = TransactionUtil.getErrorName(tx);
-        String primaryStatusStr = (tx.getType() != Transaction.Type.TRANSACTION_NORMAL || tx.isCoinBase()) ? getString(primaryStatus) : "";
-        String secondaryStatusStr = secondaryStatus != -1 ? getString(secondaryStatus) : "";
-        String errorStatusStr = errorStatus != -1 ? getString(errorStatus) : "";
-
-
-        List<Address> inputAddresses = new ArrayList<>();
-
-        // handle sending
-        if(TransactionUtil.isSending(tx, wallet)) {
-            primaryStatusStr = getString(R.string.transaction_row_status_sending);
-            secondaryStatusStr = "";
-
-            inputAddresses = WalletUtils.getFromAddressOfSent(tx, wallet);
-        }
-
-        List<Address> outputAddresses = WalletUtils.getToAddressOfReceived(tx, wallet);
-
-        TransactionResult transactionResult = new TransactionResult(tx.getValue(wallet),
-                tx.getExchangeRate(), inputAddresses, outputAddresses, tx.getFee(),
-                tx.getTxId().toString(), tx.getUpdateTime(), tx.getPurpose(), direction,
-                primaryStatusStr, secondaryStatusStr, errorStatusStr);
         TransactionDetailsDialogFragment transactionDetailsDialogFragment =
-                TransactionDetailsDialogFragment.newInstance(transactionResult, direction);
+                TransactionDetailsDialogFragment.newInstance(tx.getTxId());
         transactionDetailsDialogFragment.show(getChildFragmentManager(), null);
     }
 

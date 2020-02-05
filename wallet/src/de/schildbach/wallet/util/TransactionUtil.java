@@ -38,7 +38,7 @@ public class TransactionUtil {
                     if (confidence.hasErrors())
                         typeId = R.string.transaction_row_status_error_sending;
                     else if (WalletUtils.isEntirelySelf(tx, wallet))
-                        typeId = R.string.transaction_row_status_sent_interally;
+                        typeId = R.string.transaction_row_status_sent_internally;
                     else if (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING ||
                             (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING &&
                                 (confidence.numBroadcastPeers() >= 1 || confidence.getIXType() == TransactionConfidence.IXType.IX_LOCKED ||

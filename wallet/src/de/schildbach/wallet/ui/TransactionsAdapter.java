@@ -39,11 +39,13 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.ZeroConfCoinSelector;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.ui.Formats;
+import org.dash.wallet.common.util.GenericUtils;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 
+import de.schildbach.wallet.util.FiatExtensionsKt;
 import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -287,17 +289,19 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
             final TransactionConfidence.IXType ixStatus = confidence.getIXType();
 
-            TransactionCacheEntry txCache = transactionCache.get(tx.getHash());
+            TransactionCacheEntry txCache = transactionCache.get(tx.getTxId());
             if (txCache == null) {
                 final Coin value = tx.getValue(wallet);
                 final boolean sent = value.signum() < 0;
                 final boolean self = WalletUtils.isEntirelySelf(tx, wallet);
                 final boolean showFee = sent && fee != null && !fee.isZero();
                 final Address address;
-                if (sent)
-                    address = WalletUtils.getToAddressOfSent(tx, wallet).get(0);
-                else
+                if (sent) {
+                    List<Address> addresses = WalletUtils.getToAddressOfSent(tx, wallet);
+                    address = addresses.isEmpty() ? null : addresses.get(0);
+                } else {
                     address = WalletUtils.getWalletAddressOfReceived(tx, wallet);
+                }
                 final String addressLabel = address != null
                         ? AddressBookProvider.resolveLabel(context, address.toBase58()) : null;
 
@@ -370,9 +374,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             // fiat value
             if(!value.isZero()) {
                 final ExchangeRate exchangeRate = tx.getExchangeRate();
-                String exchangeCurrencyCode = WalletApplication.getInstance().getConfiguration()
-                        .getExchangeCurrencyCode();
                 if(exchangeRate != null) {
+                    String exchangeCurrencyCode = GenericUtils.currencySymbol(exchangeRate.fiat.currencyCode);
                     fiatView.setFiatAmount(txCache.value, exchangeRate, Constants.LOCAL_FORMAT,
                             exchangeCurrencyCode);
                     fiatView.setVisibility(View.VISIBLE);

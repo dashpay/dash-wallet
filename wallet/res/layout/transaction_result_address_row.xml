@@ -1,18 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/address"
+    style="@style/MontserratRegular.MG"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:orientation="vertical">
-
-    <TextView
-        android:id="@+id/address"
-        style="@style/MontserratRegular.MG"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="4dp"
-        android:text="@string/transaction_result_sent_to"
-        android:textSize="16sp"
-        tools:text="XkDnBY4…RfzLRJH6Ex" />
-
-</LinearLayout>
+    android:layout_marginBottom="4dp"
+    android:ellipsize="middle"
+    android:singleLine="true"
+    android:text="@string/transaction_result_sent_to"
+    android:textSize="16sp"
+    tools:text="XkDnBY4…RfzLRJH6Ex" />

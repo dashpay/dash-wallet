@@ -159,7 +159,7 @@
     <string name="transaction_row_status_received">Received</string>
     <string name="transaction_row_status_sent">Sent</string>
     <string name="transaction_row_status_sending">Sending</string>
-    <string name="transaction_row_status_sent_interally">Internal</string>
+    <string name="transaction_row_status_sent_internally">Internal</string>
     <string name="transaction_row_status_processing">Processing</string>
     <string name="transaction_row_status_confirming">Confirming</string>
     <string name="transaction_row_status_locked">Locked</string>
