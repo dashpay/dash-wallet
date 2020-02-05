@@ -81,9 +81,6 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
                 Status.ERROR -> {
                     finish()
                 }
-                Status.LOADING -> {
-
-                }
                 Status.SUCCESS -> {
                     val deterministicSeed = it.data!!.first
                     seed = deterministicSeed!!.mnemonicCode!!.toTypedArray()
