@@ -23,6 +23,7 @@ import android.os.Process
 import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.CheckWalletPasswordTask
+import de.schildbach.wallet.ui.security.SecurityGuard
 
 class CheckPinLiveData(application: Application) : MutableLiveData<Resource<String>>() {
 
@@ -35,10 +36,21 @@ class CheckPinLiveData(application: Application) : MutableLiveData<Resource<Stri
     }
 
     private var checkPinTask: CheckWalletPasswordTask? = null
-
     private var walletApplication = application as WalletApplication
+    private val securityGuard = SecurityGuard()
 
     fun checkPin(pin: String) {
+        if (securityGuard.isConfigured) {
+            value = if (securityGuard.checkPin(pin))
+                Resource.success(pin)
+            else
+                Resource.error("", pin)
+        } else {
+            setupSecurityGuard(pin)
+        }
+    }
+
+    private fun setupSecurityGuard(pin: String) {
         if (checkPinTask == null) {
             checkPinTask = object : CheckWalletPasswordTask(backgroundHandler) {
 
@@ -48,6 +60,8 @@ class CheckPinLiveData(application: Application) : MutableLiveData<Resource<Stri
                 }
 
                 override fun onSuccess() {
+                    securityGuard.savePin(pin)
+                    securityGuard.savePassword(pin)
                     value = Resource.success(pin)
                     checkPinTask = null
                 }

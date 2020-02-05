@@ -241,14 +241,14 @@ class EnterAmountFragment : Fragment() {
         })
         sharedViewModel.messageTextStringData.observe(viewLifecycleOwner, Observer {
             message.text = it
-            message.visibility = if (it != null) View.VISIBLE else View.GONE
+            message.visibility = if (it != null) View.VISIBLE else View.INVISIBLE
         })
         sharedViewModel.messageTextData.observe(viewLifecycleOwner, Observer {
             when {
                 it > 0 -> message.setText(it)
                 else -> message.text = null
             }
-            message.visibility = if (it > 0) View.VISIBLE else View.GONE
+            message.visibility = if (it > 0) View.VISIBLE else View.INVISIBLE
         })
         sharedViewModel.exchangeRateData.observe(viewLifecycleOwner, Observer {
             it?.also {

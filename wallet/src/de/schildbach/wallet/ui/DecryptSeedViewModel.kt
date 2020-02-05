@@ -30,11 +30,7 @@ class DecryptSeedViewModel(application: Application) : CheckPinViewModel(applica
 
     internal val decryptSeedLiveData = DecryptSeedLiveData(application)
 
-    override fun checkPin(password: CharSequence) {
-        if (walletApplication.wallet.isEncrypted) {
-            decryptSeedLiveData.checkPin(password.toString())
-        } else {
-            log.warn("Trying to decrypt unencrypted wallet")
-        }
+    override fun checkPin(pin: CharSequence) {
+        decryptSeedLiveData.checkPin(pin.toString())
     }
 }

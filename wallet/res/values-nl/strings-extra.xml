@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">Deze transactie wordt direct uitgevoerd zonder extra kosten.</string>
 	<string name="send_coins_auto_lock_not_feasible">Het uitvoeren van deze transactie kan enkele minuten duren. Direct uitvoeren voor %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Het uitvoeren van deze transactie kan enkele minuten duren. </string>
 

@@ -18,14 +18,13 @@ package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import androidx.appcompat.app.AppCompatActivity
 import de.schildbach.wallet.ui.widget.GlobalFooterView
 import de.schildbach.wallet_test.R
 
 
-private const val FINISH_ALL_ACTIVITIES_ACTION = "dash.wallet.action.CLOSE_ALL_ACTIVITIES_ACTION"
-
 @SuppressLint("Registered")
-open class GlobalFooterActivity : SessionActivity(), GlobalFooterView.OnFooterActionListener {
+open class GlobalFooterActivity : AppCompatActivity(), GlobalFooterView.OnFooterActionListener {
 
     private lateinit var globalFooterView: GlobalFooterView
 

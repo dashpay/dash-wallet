@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">Táto transakcia sa okamžite potvrdí bez dodatočného poplatku.</string>
 	<string name="send_coins_auto_lock_not_feasible">Táto transakcia môže trvať niekoľko minút. Potvrdiť ihneď za %1$s%2$s? </string>
 	<string name="send_coins_instant_send_not_feasible">Táto transakcia môže trvať niekoľko minút.</string>
 

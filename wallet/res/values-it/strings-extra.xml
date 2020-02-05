@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">Questa transazione verrà eseguita immediatamente senza alcun costo aggiuntivo.</string>
 	<string name="send_coins_auto_lock_not_feasible">Questa transazione potrebbe richiedere diversi minuti per essere eseguita. Vuoi eseguirla istantaneamente per un extra %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Questa transazione potrebbe richiedere diversi minuti per essere eseguita.</string>
 
