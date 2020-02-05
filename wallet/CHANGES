@@ -1,4 +1,9 @@
 Dash Wallet
+v6.6.5
+* Use DashJ 0.16.5
+* Addresses send delays and failures
+* Fix price source #4
+
 v6.6.4
 * Revert: Large numbers have separators (e.g. 1,999.00 instead of 1999.00).
   This caused many bugs on the Send and Request screens
