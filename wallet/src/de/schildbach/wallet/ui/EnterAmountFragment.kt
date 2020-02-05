@@ -93,7 +93,7 @@ class EnterAmountFragment : Fragment() {
                 val isFraction = value.indexOf(DECIMAL_SEPARATOR) > -1
                 if (isFraction) {
                     val lengthOfDecimalPart = value.length - value.indexOf(DECIMAL_SEPARATOR)
-                    val decimalsThreshold = if (viewModel.dashToFiatDirectionValue) 6 else 2
+                    val decimalsThreshold = if (viewModel.dashToFiatDirectionValue) 8 else 2
                     if (lengthOfDecimalPart > decimalsThreshold) {
                         return
                     }
