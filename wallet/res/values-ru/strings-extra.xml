@@ -4,6 +4,8 @@
     <string name="onboarding_create_wallet">Создать новый кошелёк</string>
     <string name="onboarding_recover_wallet">Восстановить кошелёк из фразы восстановления</string>
     <string name="onboarding_restore_wallet">Восстановить кошелёк из файла</string>
+    <string name="onboarding_load_wallet_error">Не удалось загрузить кошелёк!</string>
+
     <string name="set_pin_create_new_wallet">Создать новый кошелёк</string>
     <string name="set_pin_restore_wallet">Восстановить кошелёк</string>
     <string name="set_pin_enter_pin">Введите старый PIN</string>
@@ -11,6 +13,7 @@
     <string name="set_pin_confirm_pin">Подтвердите PIN</string>
     <string name="set_pin_encrypting">Шифрование кошелька</string>
     <string name="set_pin_decrypting">Расшифровка кошелька</string>
+    <string name="set_pin_verifying_pin">Подтверждение PIN-кода</string>
     <string name="set_pin_message">Этот PIN нужно будет вводить для разблокировки приложения при каждом его использовании.</string>
 
     <string name="home_pay">Отправить</string>
@@ -40,6 +43,10 @@
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Получить быстро</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_pin">Войти с помощью PIN-кода</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_fingerprint">Войти с помощью Отпечатка</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_scan_to_pay">Сканировать</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
@@ -79,6 +86,9 @@
     <string name="payments_pay_to_clipboard_button">Отправить</string>
 
     <string name="forgot_pin_title">Забыли PIN-код?</string>
+    <string name="forgot_pin_message">Вы можете задать новый PIN-код с помощью фразы восстановления.</string>
+    <string name="forgot_pin_instruction_1">Введите фразу восстановления для восстановления вашего кошелька</string>
+    <string name="forgot_pin_instruction_2">Задайте новый PIN-код</string>
     <string name="forgot_pin_instruction_3">Войдите в кошелёк, используя новый PIN-код</string>
     <string name="forgot_pin_warning">Если Вы забыли PIN-код и потеряли фразу восстановления, Вы не сможете получить доступ к кошельку и средствам. </string>
 
@@ -108,7 +118,11 @@
     <string name="button_copy_address">Скопировать адрес</string>
     <string name="request_coins_clipboard_address_msg">Адрес скопирован в буфер обмена</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Показать</string>
+    <string name="restore_wallet_from_invalid_seed_warning_message">«%s» не является словом из фразы восстановления</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Фраза восстановления должна состоять из 12 слов</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Некорректная фраза восстановления</string>
+    <string name="restore_wallet_from_invalid_seed_failure">Кошелёк не может быть восстановлен:\n\n%s\n\nПроверьте правильность фразы восстановления.</string>
+
     <string name="send_coins_options_fee_category_zero">Бесплатно</string>
     <string name="send_coins_fragment_hint_fee_zero">Без комиссии. Используйте эту опцию, только если Вас не волнует время прохождения транзакции.</string>
 
@@ -178,6 +192,7 @@
     <string name="unlock_with_fingerprint_error_max_attempts">Превышено максимальное количество попыток разблокировки с помощью отпечатка пальцев. Пожалуйста, попробуйте позже.</string>
     <string name="or_unlock_with_fingerprint">Или используйте свой отпечаток пальца, чтобы разблокировать.</string>
     <string name="enable_fingerprint">Включить разблокировку с помощью отпечатка пальца.</string>
+    <string name="touch_fingerprint_sensor">Коснитесь датчика отпечатков пальцев.</string>
     <string name="touch_fingerprint_to_enable">Коснитесь датчика отпечатков пальцев, чтобы разблокировать с помощью отпечатка пальца.</string>
     <string name="fingerprint_changed_title">Данные об отпечатке изменены</string>
 	<string name="fingerprint_changed_message">Мы обнаружили изменение данных об отпечатке. В этот раз для входа нужно ввести PIN-код. </string>
@@ -220,6 +235,7 @@
     <string name="authenticate_switch_to_fingerprint">Использовать отпечаток пальца</string>
     <string name="authenticate_switch_to_pin">Использовать пароль</string>
 
+    <string name="menu_buy_and_sell_title">Купить &amp; Продать Dash</string>
     <string name="menu_buy_and_sell_subtitle">Подключиться к сторонним биржам</string>
     <string name="menu_security_title">Безопасность</string>
     <string name="menu_security_subtitle">Показать кодовую фразу, сделать резервную копию кошелька...</string>
@@ -248,6 +264,7 @@
     <string name="block_info">Информация о блоке</string>
 
     <string name="scan_private_key">Сканировать приватный ключ</string>
+    <string name="scan_private_key_intro_1">Вы собираетесь перенести все средства из другого кошелька Dash.</string>
     <string name="scan_private_key_intro_2">Все средства будут перемещены на Ваш кошелёк на этом устройстве.</string>
     <string name="scan_private_key_intro_3">Когда эта транзакция будет подтверждена, кошелёк будет бесполезен и не должен быть повторно использован в целях безопасности.</string>
     <string name="confirm">Подтвердить</string>
@@ -261,7 +278,11 @@
     <string name="one_minute">1 мин</string>
     <string name="five_minute">5 мин</string>
     <string name="one_hour">1 час</string>
+    <string name="one_day">1 день</string>
+    <string name="biometric_limit">Лимит для биометрической аутентификации</string>
     <string name="spending_confirmation_hint_zero">Всегда требовать PIN для совершения платежа</string>
+    <string name="spending_confirmation_hint_above_zero">Ниже вы можете пройти биометрическую аутентификацию для перевода средств</string>
+
     <string name="security_none">Отсутствует</string>
     <string name="security_low">Низкий</string>
     <string name="security_medium">Средний</string>

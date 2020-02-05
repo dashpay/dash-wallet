@@ -1,36 +1,39 @@
-Use bajo su propio riesgo!(Requiere Android 4 o superior)
+DESCRIPCIÓN PRINCIPAL
 
-<b>Ten tus Dash siempre contigo, en tu bolsillo!</b> Puedes pagar rápidamente escaneando tu código QR. Como un proveedor, puedes recibir págos eficientemente y de forma instantanea. Dash wallet es la primer app móvil de Dash, y la más segura!
+La billetera de Dash es la billetera Android de referencia mantenida por el grupo central de Dash para Dash - Dinero digital - una alternativa innovadora a Bitcoin que está específicamente diseñada para pagos.
 
-<b>CARACTERISTICAS</b>
+Dash es una criptomoneda que busca corregir los defectos que sufren otras criptomonedas. Se basa en una red de Masternodes para permitir funciones tales como privacidad opcional, transacciones instantáneas y un mecanismo de financiación directa para promover el crecimiento de la red.
 
-• Sin necesidad de registro, servicio web o cuenta en la nube! Esta cartera es decentralizada y operada entre pares (P2P).
-• Muestra cantidades en DASH, mDASH y µDASH.
-• Conversiones hacia y desde divisas nacionales.
-• Enviar y recibir Dash vía NFC, códigos QR o URLs Dash.
-• Registro para direcciones de uso regular en Dash.
-• Cuando estas desconectado, aun puedes pagar vía Bluetooth.
-• Sistema de notificación para monedas recibidas.
-• Barrido de billeteras de papel (Ej: las usadas para almacenamiento en frio).
-• Widget con el balance de Dash.
+Intuitiva y segura, Dash Wallet le brinda control total sobre su dinero digital. Envíe y reciba pagos rápidos al instante, con la billetera móvil más segura disponible.
 
+La billeterad de Dash se conecta directamente a la red Dash. Esto significa que no hay servidores para ser hackeados o que se puedan caer, tus fondos siempre están seguros. Incluso si tu teléfono se pierde, se daña o te lo roban, puedes recuperar fácilmente tus fondos utilizando tu frase de recuperación personal.
 
-<b>CONTRIBUIR</b>
+Características:
 
-La cartera Dash es <b>código abierto</b> y <b>software libre</b>. Licencia: GPLv3
+* Envíe y reciba pagos de Dash en segundos, en línea o personalmente
+* Pagos con un botón para comerciantes y sitios web que aceptan Dash
+* Paga rápidamente con autenticación biométrica
+* Barrido de billeteras de papel (Ej: las usadas para almacenamiento en frío)
+* Integraciones de terceros para auxiliar los usuarios a comprar y vender Dash
+* La frase de recuperación simple te permite recuperar fondos cuando tu dispositivo se pierde o cambia
+* Configuraciones flexibles para cumplir con una variedad de preferencias de seguridad personalizadas
+* Cliente directo de la red de Dash - sin servidores que sean vulnerados o atacados
+
+La billetera de Dash es de código abierto y gratuito. Las tarifas de red son más bajas que la mayoría de las criptomonedas y no hay costos centralizados adicionales. Envía cualquier cantidad de dinero a cualquier persona en el mundo en segundos. Acepta pagos de manera confiable e instantánea en tu negocio. Así es como debería ser el dinero.
+
+CONTRIBUIR
+
+La cartera Dash es código abierto y software libre. Licencia: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Nuestro código fuente esta disponible en GitHub:
-https://github.com/HashEngineering/dash-wallet
+https://github.com/dashevo/dash-wallet
 
 Toda las traudcciones estan gestionadas por Transifex:
-https://www.transifex.com/dash/dash-wallet/
+https://www.transifex.com/dash/dash-mobile-wallets/
 
 Puedes encontrar mas información sobre Dash en
 https://www.dash.org/
 
-<b>TESTIMONIOS</b>
-
-• Una billetera móvil recomendada por https://www.dash.org
-
-¡Usar bajo tu propio riesgo!</i>
+Actualización v7.0.0 
+La billetera de Dash v7.0 trae consigo una experiencia completamente rediseñada que busca mejorar la facilidad de uso de una manera intuitiva y familiar en todos tus dispositivos. Reimaginamos nuestro proceso de verificación de frases de recuperación para resaltar la importancia de proteger esta información para la recuperación posterior de la billetera y los usuarios ahora pueden decidir cuándo quieren tomarse el tiempo para escribir su frase de recuperación de 12 palabras. También hemos agregado accesos directos a la pantalla de inicio para un acceso más rápido a las funciones de uso común y nuestro menú ha sido reposicionado en la aplicación y organizado para ayudar a los usuarios a configurar su billetera de manera más rápida y eficiente. Los usuarios ahora tienen un control mucho más amplio sobre su configuración de seguridad y la capacidad de decidir con qué frecuencia tienen que ingresar su código PIN.

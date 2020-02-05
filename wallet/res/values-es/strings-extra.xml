@@ -4,6 +4,8 @@
     <string name="onboarding_create_wallet">Crear una Nueva Billetera</string>
     <string name="onboarding_recover_wallet">Restaurar billetera desde la frase de recuperación</string>
     <string name="onboarding_restore_wallet">Restaurar billetera desde un archivo</string>
+    <string name="onboarding_load_wallet_error">¡No se puede cargar la billetera!</string>
+
     <string name="set_pin_create_new_wallet">Crear una Nueva Billetera</string>
     <string name="set_pin_restore_wallet">Restaurar Billetera</string>
     <string name="set_pin_enter_pin">Ingrese PIN antiguo</string>
@@ -11,6 +13,7 @@
     <string name="set_pin_confirm_pin">Confirmar PIN</string>
     <string name="set_pin_encrypting">Encriptando billetera</string>
     <string name="set_pin_decrypting">Desencriptando billetera</string>
+    <string name="set_pin_verifying_pin">Verificando PIN</string>
     <string name="set_pin_message">Este PIN será requerido para desbloquear su app toda vez que la utilices.</string>
 
     <string name="home_pay">Enviar</string>
@@ -118,6 +121,8 @@
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" no es una palabra de la frase de recuperación</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">La frase de recuperación debe contener 12 palabras</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Frase de recuperación incorrecta</string>
+    <string name="restore_wallet_from_invalid_seed_failure">La billetera no se pudo restaurar:\n\n%s\n\nBad frase de recuperación?</string>
+
     <string name="send_coins_options_fee_category_zero">Sin comisión</string>
     <string name="send_coins_fragment_hint_fee_zero">No se pagará ninguna comisión. Usa "Sin comisión", solo si no te importa el tiempo de confirmación.</string>
 
@@ -181,6 +186,7 @@
     <string name="unlock_with_fingerprint_error_max_attempts">Máximo número de intentos de huella superado. Intente nuevamente más tarde por favor.</string>
     <string name="or_unlock_with_fingerprint">O use tu huella para desbloquear.</string>
     <string name="enable_fingerprint">Habilitar huella.</string>
+    <string name="touch_fingerprint_sensor">Sensor de huella dactilar táctil</string>
     <string name="touch_fingerprint_to_enable">Toque el sensor de huellas para habilitar desbloqueo con huella.</string>
     <string name="fingerprint_changed_title">Datos de huella dactilar cambiados</string>
 	<string name="fingerprint_changed_message">Detectamos un cambio en tus datos de autenticación de huellas dactilares. Necesitas usar PIN esta vez.</string>
@@ -198,6 +204,7 @@
     <string name="verify_it_is_important_subtitle">Estamos a punto de mostrar la frase de recuperación de su billetera.</string>
     <string name="verify_info_text_1">Esta frase de recuperación es su acceso para los fondos en esta billetera.</string>
     <string name="verify_info_text_2">Nosotros no guardamos esta frase de recuperación.</string>
+    <string name="verify_info_text_3">Necesitarás esta frase de recuperación para acceder a tus fondos si este dispositivo se pierde, daña o si la billetera de Dash se desinstala accidentalmente de este dispositivo.</string>
     <string name="verify_skip">Salta</string>
     <string name="verify_secure_now_btn">Asegurar ahora</string>
     <string name="verify_secure_now_message">Si pierdes este dispositivo, podrás perder sus fondos. Obtenga su frase de recuperación para que puedas restaurar su billetera en otro dispositivo.</string>
@@ -251,6 +258,7 @@
     <string name="block_info">Información de bloque</string>
 
     <string name="scan_private_key">Escanear Llave Privada</string>
+    <string name="scan_private_key_intro_1">Estás a punto de cambiar los fondos desde una billetera de papel Dash.</string>
     <string name="scan_private_key_intro_2">Esto moverá todas las monedas de aquella billetera a la billetera en su dispositivo.</string>
     <string name="scan_private_key_intro_3">Cuando la transacción sea confirmada, la otra billetera será inútil y no deberá ser reutilizada por razones de seguridad.</string>
     <string name="confirm">Confirmar</string>
@@ -264,7 +272,11 @@
     <string name="one_minute">1 minuto</string>
     <string name="five_minute">5 minutos</string>
     <string name="one_hour">1 hora</string>
+    <string name="one_day">1 día</string>
+    <string name="biometric_limit">Límite biométrico</string>
     <string name="spending_confirmation_hint_zero">PIN siempre será requerido para realizar un pago</string>
+    <string name="spending_confirmation_hint_above_zero">Puedes autenticarte con la autenticación biométrica para los pagos a continuación</string>
+
     <string name="security_none">Ninguna</string>
     <string name="security_low">Bajo</string>
     <string name="security_medium">Mediano</string>

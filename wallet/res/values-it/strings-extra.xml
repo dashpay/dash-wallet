@@ -4,6 +4,8 @@
     <string name="onboarding_create_wallet">Crea un nuovo portafoglio</string>
     <string name="onboarding_recover_wallet">Ripristina portafoglio dalla frase di recupero</string>
     <string name="onboarding_restore_wallet">Ripristina portafoglio da file</string>
+    <string name="onboarding_load_wallet_error">Impossibile caricare il portafoglio!</string>
+
     <string name="set_pin_create_new_wallet">Crea un nuovo portafoglio</string>
     <string name="set_pin_restore_wallet">Ripristina portafoglio</string>
     <string name="set_pin_enter_pin">Inserisci il vecchio PIN</string>
@@ -11,6 +13,7 @@
     <string name="set_pin_confirm_pin">Conferma PIN</string>
     <string name="set_pin_encrypting">Cripta wallet</string>
     <string name="set_pin_decrypting">Decriptazione wallet</string>
+    <string name="set_pin_verifying_pin">Verificando PIN</string>
     <string name="set_pin_message">Questo PIN ti sarà richiesto per sbloccare l\'app ogni volta che la usi.</string>
 
     <string name="home_pay">Manda</string>
@@ -40,6 +43,10 @@
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Rapido Ricevi</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_pin">Accedi con PIN</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_fingerprint">Login con Impronta</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_scan_to_pay">Scansiona per inviare</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
@@ -79,6 +86,9 @@
     <string name="payments_pay_to_clipboard_button">Invia</string>
 
     <string name="forgot_pin_title">Hai dimenticato il PIN?</string>
+    <string name="forgot_pin_message">È possibile impostare un nuovo PIN con l\'aiuto della frase di recupero.</string>
+    <string name="forgot_pin_instruction_1">Inserisci la frase di recupero per recuperare il tuo portafoglio</string>
+    <string name="forgot_pin_instruction_2">Imposta un nuovo PIN</string>
     <string name="forgot_pin_instruction_3">Accedi con il tuo nuovo PIN per accedere al tuo portafoglio</string>
     <string name="forgot_pin_warning">Se hai dimenticato il PIN e perso la frase di recupero, non puoi ottenere di nuovo l\'accesso al tuo portafoglio e ai tuoi fondi.</string>
 
@@ -108,7 +118,11 @@
     <string name="button_copy_address">Copia indirizzo</string>
     <string name="request_coins_clipboard_address_msg">Indirizzo Dash copiato negli appunti</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Mostra</string>
+    <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" non è una parola della frase di recupero</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">La frase di recupero deve avere 12 parole</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Frase di recupero errata</string>
+    <string name="restore_wallet_from_invalid_seed_failure">Impossibile ripristinare il portafoglio:\n\n%s\n\nFrase di recupero Errata?</string>
+
     <string name="send_coins_options_fee_category_zero">Senza Costi</string>
     <string name="send_coins_fragment_hint_fee_zero">Nessun costo verrà addebitato. Usa "Senza Costi" soltanto se non hai bisogno di un tempo di conferma rapido.</string>
 
@@ -172,6 +186,7 @@
     <string name="unlock_with_fingerprint_error_max_attempts">Numero massimo di tentativi raggiunto . Per cortesia prova più tardi.</string>
     <string name="or_unlock_with_fingerprint">Oppure usa la tua impronta digitale per sbloccare.</string>
     <string name="enable_fingerprint">Abilita impronta digitale</string>
+    <string name="touch_fingerprint_sensor">Toccare il sensore di impronta digitale</string>
     <string name="touch_fingerprint_to_enable">Toccare il sensore di impronte digitali per abilitare lo sblocco con l\'impronta digitale.</string>
     <string name="fingerprint_changed_title">Dati biometrici dell\'impronta digitale modificati</string>
 	<string name="fingerprint_changed_message">Abbiamo rilevato un cambiamento nei dati di autenticazione delle tue impronte digitali. Questa volta devi usare il PIN.</string>
@@ -214,6 +229,7 @@
     <string name="authenticate_switch_to_fingerprint">Usa impronta digitale</string>
     <string name="authenticate_switch_to_pin">Usa Password</string>
 
+    <string name="menu_buy_and_sell_title">Compra &amp; Vendi Dash</string>
     <string name="menu_buy_and_sell_subtitle">Connetti a Exchanges esterni</string>
     <string name="menu_security_title">Sicurezza</string>
     <string name="menu_security_subtitle">Visualizza frase di recupero, portafoglio di backup</string>
@@ -242,6 +258,7 @@
     <string name="block_info">Informazioni sul Blocco</string>
 
     <string name="scan_private_key">Scansione Chiave Privata</string>
+    <string name="scan_private_key_intro_1">Stai per trasferire (spazzolare) fondi da un portafoglio cartaceo Dash.</string>
     <string name="scan_private_key_intro_2">Questa operazione sposterà tutte le monete da quel portafoglio al portafoglio su questo dispositivo.</string>
     <string name="scan_private_key_intro_3">A transazione confermata, il portafoglio di origine  sarà privo di valore e non dovrebbe essere riutilizzato per motivi di sicurezza.</string>
     <string name="confirm">Confermare</string>
@@ -255,7 +272,11 @@
     <string name="one_minute">1 minuto</string>
     <string name="five_minute">5 minuti</string>
     <string name="one_hour">1 ora</string>
+    <string name="one_day">1 giorno</string>
+    <string name="biometric_limit">Limite Biometrico</string>
     <string name="spending_confirmation_hint_zero">Il PIN è sempre richiesto per effettuare un pagamento</string>
+    <string name="spending_confirmation_hint_above_zero">Puoi eseguire l\'Autenticazione Biometrica per i pagamenti di seguito</string>
+
     <string name="security_none">Nessuno</string>
     <string name="security_low">Basso</string>
     <string name="security_medium">Medio</string>

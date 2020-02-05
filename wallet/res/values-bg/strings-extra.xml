@@ -4,6 +4,8 @@
     <string name="onboarding_create_wallet">Създай нов портфейл</string>
     <string name="onboarding_recover_wallet">Възстановяване на портфейл чрез фразата за възстановяване</string>
     <string name="onboarding_restore_wallet">Възстановяване на портфейл от файл</string>
+    <string name="onboarding_load_wallet_error">Не може да се зареди портфейла!</string>
+
     <string name="set_pin_create_new_wallet">Създай нов портфейл</string>
     <string name="set_pin_restore_wallet">Възстанови портфейл</string>
     <string name="set_pin_enter_pin">Въведи стар ПИН</string>
@@ -11,6 +13,7 @@
     <string name="set_pin_confirm_pin">Потвърди ПИН</string>
     <string name="set_pin_encrypting">Криптиране на портфейла</string>
     <string name="set_pin_decrypting">Декриптиране на портфейла</string>
+    <string name="set_pin_verifying_pin">Потвърждаване на ПИН</string>
     <string name="set_pin_message">Този ПИН ще бъде необходим за отключване на приложението ви всеки път, когато го използвате.</string>
 
     <string name="home_pay">Изпрати</string>
@@ -40,6 +43,10 @@
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Бързо получаване</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_pin">Влизане с ПИН</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_fingerprint">Влизане с пръстов отпечатък</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_scan_to_pay">Сканиране за изпращане</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
@@ -79,6 +86,9 @@
     <string name="payments_pay_to_clipboard_button">Изпрати</string>
 
     <string name="forgot_pin_title">Забравен ПИН?</string>
+    <string name="forgot_pin_message">Можете да зададете нов ПИН с помощта на вашата фраза за възстановяване.</string>
+    <string name="forgot_pin_instruction_1">Въведете фразата си за възстановяване, за да възстановите  вашият портфейл.</string>
+    <string name="forgot_pin_instruction_2">Задайте нов ПИН</string>
     <string name="forgot_pin_instruction_3">Влезте с новият си ПИН код, за да получите достъп до портфейла си</string>
     <string name="forgot_pin_warning">Ако сте забравили вашият ПИН и сте загубили фразата за възстановяване, няма да можете да получите обратно достъп до портфейла и средствата си.</string>
 
@@ -108,7 +118,11 @@
     <string name="button_copy_address">Копирай адрес</string>
     <string name="request_coins_clipboard_address_msg">Dash е копиран в клипборда</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Покажи</string>
+    <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" не е фраза за възстановяване</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Фразата за възстановяване трябва да има 12 думи</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Грешна възстановяваща фраза</string>
+    <string name="restore_wallet_from_invalid_seed_failure">Портфейлът не може да бъде възстановен:\n\n%s\n\nГрешна фраза за възстановяване?</string>
+
     <string name="send_coins_options_fee_category_zero">Без такса</string>
     <string name="send_coins_fragment_hint_fee_zero">Няма да бъде платена такса. Използвайте "без такса" само ако не ви е грижа за времето за потвърждение.</string>
 
@@ -172,6 +186,7 @@
     <string name="unlock_with_fingerprint_error_max_attempts">Максималните опити с пръстов отпечатък са достигнати. Моля опитайте отново по-късно.</string>
     <string name="or_unlock_with_fingerprint">Или използвайте пръстов отпечатък за отключване.</string>
     <string name="enable_fingerprint">Активиране на пръстов отпечатък.</string>
+    <string name="touch_fingerprint_sensor">Докоснете сензора за пръстов отпечатък.</string>
     <string name="touch_fingerprint_to_enable">Докоснете сензора за да активиране отключване с пръстов отпечатък.</string>
     <string name="fingerprint_changed_title">Данни за пръстовият отпечатък са променени</string>
 	<string name="fingerprint_changed_message">Установихме промяна във вашите данни за удостоверяване с пръстов отпечатък. Този път трябва да използвате ПИН.</string>
@@ -214,6 +229,7 @@
     <string name="authenticate_switch_to_fingerprint">Използвайте пръстов отпечатък</string>
     <string name="authenticate_switch_to_pin">Използвайте парола</string>
 
+    <string name="menu_buy_and_sell_title">Купи &amp; Продай Dash</string>
     <string name="menu_buy_and_sell_subtitle">Свържете се с борси от трета страна</string>
     <string name="menu_security_title">Сигурност</string>
     <string name="menu_security_subtitle">Преглед на парола, резервен портфейл ...</string>
@@ -242,6 +258,7 @@
     <string name="block_info">Информация за блока</string>
 
     <string name="scan_private_key">Сканирай частен ключ</string>
+    <string name="scan_private_key_intro_1">На път сте да усвоите средства от хартиен Dash портфейл.</string>
     <string name="scan_private_key_intro_2">Това ще премести всички монети от него в портфейлът Ви на това устройство.</string>
     <string name="scan_private_key_intro_3">Когато транзакцията бъде потвърдена, другият портфейл ще бъде безполезен и не бива да се използва повторно от съображения за безопасност.</string>
     <string name="confirm">Потвърди</string>
@@ -255,7 +272,11 @@
     <string name="one_minute">1 мин</string>
     <string name="five_minute">5 мин</string>
     <string name="one_hour">1 час</string>
+    <string name="one_day">1 ден</string>
+    <string name="biometric_limit">Биометричен лимит</string>
     <string name="spending_confirmation_hint_zero">ПИН се изисква винаги при правене на плащания</string>
+    <string name="spending_confirmation_hint_above_zero">Можете да потвърдите с  биометрично удостоверяване при плащанията по-долу</string>
+
     <string name="security_none">Никакъв</string>
     <string name="security_low">Ниско</string>
     <string name="security_medium">Средно</string>

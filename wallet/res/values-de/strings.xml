@@ -97,6 +97,7 @@
     <string name="sweep_wallet_fragment_wallet_unknown">Beginne bitte damit, dass Du den privaten Schlüssel eines Paper-Wallets scannst. Benutze dafür die Kamera-Schaltfläche.</string>
     <string name="sweep_wallet_fragment_encrypted">Dieser private Schlüssel ist mit einem Passwort geschützt.</string>
     <string name="sweep_wallet_fragment_password">Passwort</string>
+    <string name="sweep_wallet_fragment_bad_password">Falsches Passwort!</string>
     <string name="sweep_wallet_fragment_balance">Zu leerendes Guthaben</string>
     <string name="sweep_wallet_fragment_button_decrypt">Entschlüsseln</string>
     <string name="sweep_wallet_fragment_button_sweep">Leeren</string>
@@ -367,8 +368,10 @@
     <string name="dash_slogan">Sofort - Vertraulich - Sicher</string>
     <string name="dash_wallet">Wallet</string>
 
+    <string name="activity_security_backup_wallet">Wallet-Backup als Datei</string>
     <string name="activity_security_view_recovery_phrase">Wiederherstellungsphrase ansehen</string>
     <string name="activity_security_advanced">Erweiterte Sicherheit</string>
+    <string name="activity_security_biometric_auth">Authentifizierung per Fingerabdruck</string>
     <string name="activity_security_hide_balance">Guthaben beim Start nicht anzeigen</string>
     <string name="reset_to_default">Auf Standard setzen</string>
 

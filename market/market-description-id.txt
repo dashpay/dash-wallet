@@ -1,36 +1,39 @@
-Gunakan dengan resiko Anda sendiri! (Membutuhkan Android 4 atau lebih tinggi)
+DESKRIPSI UTAMA
 
-<b>Miliki Dash Anda selalu bersama Anda, di saku Anda! </b>Anda membayar dengan cepat memindai kode QR. Sebagai pedagang, Anda menerima pembayaran dengan andal dan instan. Dash Wallet adalah aplikasi Dash ponsel pertama, dan bisa dibilang juga yang paling aman!  
+Dash Wallet is the reference Android wallet maintained by Dash Core Group for Dash - Digital Cash - an innovative alternative to Bitcoin which is explicitly designed for payments.
 
-<b>FITUR</b> 
+Dash adalah mata uang digital yang berupaya memperbaiki kekurangan yang dimiliki oleh mata uang digital lainnya. Dash bergantung pada jaringan masternodes untuk memungkinkan hal-hal seperti privasi opsional, transaksi instan, dan mekanisme pendanaan langsung untuk mempromosikan pertumbuhan jaringan.
 
-• Tidak perlu registrasi, layanan web atau cloud! Dompet ini tidak terpusat dan peer to peer.
-• Tampilan jumlah Dash dalam DASH, mDASH, dan µDASH.
-• Konversi ke dan dari mata uang nasional.
-• Mengirim dan menerima Dash melalui NFC, kode QR atau Dash URL.
-• Buku alamat untuk alamat-alamat Dash yang sering digunakan.
-• Saat Anda offline, Anda tetap dapat membayar melalui Bluetooth.
-• Pemberitahuan sistem untuk koin yang diterima.
-• Menyapu dompet kertas (misalnya yang digunakan untuk cold storage).
-• Widget aplikasi untuk saldo Dash.
+Intuitif dan aman, Dash Wallet memberi Anda kendali penuh atas uang digital Anda. Kirim dan terima pembayaran cepat, dengan dompet seluler teraman yang tersedia.
 
+Dompet Dash terhubung langsung ke jaringan Dash. Ini berarti bahwa tidak ada server untuk diretas atau dihancurkan - dana Anda selalu aman. Bahkan jika ponsel Anda hilang, rusak atau dicuri, Anda dapat dengan mudah memulihkan dana menggunakan frasa pemulihan pribadi.
 
-<b>BERKONTRIBUSI</b>
+Fitur:
 
-Dash Wallet adalah <b>sumber terbuka</b> dan <b>perangkat lunak bebas</b>. Lisensi: GPLv3
+* Kirim dan terima pembayaran Dash cepat dalam hitungan detik, online atau secara langsung
+* Pembayaran satu tombol untuk pedagang dan situs web yang menerimanya
+* Bayar cepat dengan otentikasi biometrik
+* Menyapu dompet kertas (misalnya yang digunakan untuk cold storage)
+* Integrasi pihak ke-3 untuk memungkinkan pengguna membeli dan menjual Dash
+* Frasa pemulihan sederhana memungkinkan Anda untuk memulihkan dana saat perangkat Anda hilang atau berubah
+* Pengaturan fleksibel untuk memenuhi berbagai preferensi keamanan khusus
+* Klien jaringan langsung Dash - tidak ada server pusat untuk diretas atau mati
+
+Dash Wallet adalah sumber terbuka dan gratis. Biaya jaringan lebih rendah daripada kebanyakan cryptocurrency dan tidak ada biaya terpusat tambahan. Kirim sejumlah uang kepada siapa pun di dunia dalam hitungan detik. Terima pembayaran dengan andal dan instan di bisnis Anda. Beginilah seharusnya uang.
+
+MENYUMBANG
+
+Dash Wallet adalah sumber terbuka dan perangkat lunak bebas. Lisensi: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Kode sumber kami tersedia di GitHub:
-https://github.com/HashEngineering/dash-wallet
+https://github.com/dashevo/dash-wallet
 
 Semua terjemahan dikelola melalui Transifex:
-https://www.transifex.com/dash/dash-wallet/
+https://www.transifex.com/dash/dash-mobile-wallets/
 
 Anda dapat menemukan lebih banyak tentang Dash di
 https://www.dash.org/
 
-<b>TANDA PENGHARGAAN</b>
-
-• Dompet ponsel yang direkomendasikan oleh https://www.dash.org
-
-<i>Gunakan dengan resiko Anda sendiri!</i>
+Upgrade v7.0.0
+Dash Dompet v7.0 membawa serta pengalaman yang sepenuhnya didesain ulang yang bertujuan untuk meningkatkan kemudahan penggunaan dengan cara yang intuitif dan akrab di semua perangkat Anda. Kami menata ulang proses verifikasi frasa pemulihan untuk menyoroti pentingnya menjaga informasi untuk pemulihan dompet selanjutnya, dan pengguna kini dapat memutuskan kapan mereka ingin meluangkan waktu untuk menuliskan frasa pemulihan 12 kata mereka. Kami juga telah menambahkan pintasan ke layar beranda untuk akses yang lebih cepat ke fitur-fitur yang umum digunakan dan menu kami telah diposisikan ulang di aplikasi dan diorganisir untuk membantu pengguna mengonfigurasi dompet mereka lebih cepat dan lebih efisien. Pengguna sekarang memiliki kontrol yang lebih luas atas pengaturan keamanan mereka dan kemampuan untuk memutuskan seberapa sering mereka harus memasukkan kode pin mereka.

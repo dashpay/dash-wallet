@@ -96,6 +96,7 @@
     <string name="sweep_wallet_fragment_wallet_unknown">Inizia con la scansione della chiave privata di un portafoglio cartaceo. Utilizza il pulsante azione della telecamera.</string>
     <string name="sweep_wallet_fragment_encrypted">Questa chiave privata è protetta da password.</string>
     <string name="sweep_wallet_fragment_password">Password</string>
+    <string name="sweep_wallet_fragment_bad_password">Password Errata!</string>
     <string name="sweep_wallet_fragment_balance">Quantità da spostare</string>
     <string name="sweep_wallet_fragment_button_decrypt">Decritta</string>
     <string name="sweep_wallet_fragment_button_sweep">Svuota</string>
@@ -366,8 +367,10 @@
     <string name="dash_slogan">Immediato - Privato - Sicuro</string>
     <string name="dash_wallet">Portafoglio</string>
 
+    <string name="activity_security_backup_wallet">Eseguire il backup del portafoglio su file</string>
     <string name="activity_security_view_recovery_phrase">Visualizza la frase di recupero</string>
     <string name="activity_security_advanced">Sicurezza Avanzata</string>
+    <string name="activity_security_biometric_auth">Autenticazione tramite impronta digitale</string>
     <string name="activity_security_hide_balance">Nascondi saldo all\'avvio</string>
     <string name="reset_to_default">Riportare alle condizioni originali</string>
 

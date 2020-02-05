@@ -4,6 +4,8 @@
     <string name="onboarding_create_wallet">Maak een nieuwe portemonnee aan</string>
     <string name="onboarding_recover_wallet">Herstellen met herstelzin</string>
     <string name="onboarding_restore_wallet">Herstel portemonnee uit bestand</string>
+    <string name="onboarding_load_wallet_error">Kan portemonnee niet laden!</string>
+
     <string name="set_pin_create_new_wallet">Maak een nieuwe portemonnee aan</string>
     <string name="set_pin_restore_wallet">Herstel portemonnee</string>
     <string name="set_pin_enter_pin">Voer oude PIN in</string>
@@ -184,6 +186,7 @@
     <string name="unlock_with_fingerprint_error_max_attempts">Maximum aantal vingerafdruk pogingen overschreden. Probeer het later opnieuw.</string>
     <string name="or_unlock_with_fingerprint">Of gebruik je vingerafdruk om te ontgrendelen.</string>
     <string name="enable_fingerprint">Vingerafdruk activeren</string>
+    <string name="touch_fingerprint_sensor">Raak de vingerafdruk sensor aan.</string>
     <string name="touch_fingerprint_to_enable">Raak de vingerafdruk sensor aan om ontgrendelen met vingerafdruk te activeren.</string>
     <string name="fingerprint_changed_title">Vingerafdruk gegevens gewijzigd</string>
 	<string name="fingerprint_changed_message">We hebben een wijziging in uw vingerafdrukverificatie gedetecteerd. U moet deze keer uw PIN gebruiken.</string>
@@ -255,6 +258,7 @@
     <string name="block_info">Block info</string>
 
     <string name="scan_private_key">Scan persoonlijke sleutel</string>
+    <string name="scan_private_key_intro_1">U staat op het punt het saldo van een papieren Dash portemonnee op te nemen.</string>
     <string name="scan_private_key_intro_2">Hiermee worden het saldo van die portemonnee naar uw portemonnee op dit apparaat verplaatst.</string>
     <string name="scan_private_key_intro_3">Wanneer de transactie is bevestigd, is de andere portemonnee waardeloos en mag deze om veiligheidsredenen niet opnieuw worden gebruikt.</string>
     <string name="confirm">Bevestig</string>

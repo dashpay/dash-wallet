@@ -4,6 +4,8 @@
     <string name="onboarding_create_wallet">Tạo một ví mới</string>
     <string name="onboarding_recover_wallet">Khôi phục ví từ câu phục hồi</string>
     <string name="onboarding_restore_wallet">Khôi phục ví từ file</string>
+    <string name="onboarding_load_wallet_error">Không thể nạp ví!</string>
+
     <string name="set_pin_create_new_wallet">Tạo một ví mới</string>
     <string name="set_pin_restore_wallet">Khôi phục ví</string>
     <string name="set_pin_enter_pin">Nhập mã PIN cũ</string>
@@ -11,6 +13,7 @@
     <string name="set_pin_confirm_pin">Xác nhận mã PIN</string>
     <string name="set_pin_encrypting">Mã hoá ví</string>
     <string name="set_pin_decrypting">Giải mã ví</string>
+    <string name="set_pin_verifying_pin">Đang kiểm tra mã PIN</string>
     <string name="set_pin_message">Mã PIN này sẽ được hỏi để mở ứng dụng của bạn mỗi khi bạn sử dụng nó.</string>
 
     <string name="home_pay">Gửi</string>
@@ -40,6 +43,10 @@
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Nhận nhanh</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_pin">Đăng nhập với mã PIN</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_fingerprint">Đăng nhập với Vân tay</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_scan_to_pay">Quét để gửi</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
@@ -79,6 +86,9 @@
     <string name="payments_pay_to_clipboard_button">Gửi</string>
 
     <string name="forgot_pin_title">Quên mã PIN</string>
+    <string name="forgot_pin_message">Bạn có thể thiết lập mã PIN mới với sự giúp đỡ của câu phục hồi.</string>
+    <string name="forgot_pin_instruction_1">Nhập câu phục hồi để khôi phục lại ví của bạn</string>
+    <string name="forgot_pin_instruction_2">Thiết lập mã PIN mới</string>
     <string name="forgot_pin_instruction_3">Đăng nhập với mã PIN mới để truy cập ví của bạn</string>
     <string name="forgot_pin_warning">Nếu bạn quên mã PIN của mình và mất câu phục hồi, thì bạn không thể nào truy cập vào ví và tiền của bạn nữa.</string>
 
@@ -108,7 +118,11 @@
     <string name="button_copy_address">Chép địa chỉ</string>
     <string name="request_coins_clipboard_address_msg">Địa chỉ Dash đã được copy vào bộ đệm</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Hiển thị</string>
+    <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" không phải là một cụm từ khôi phục</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Cụm từ phục hồi phải có 12 từ</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Câu phục hồi không đúng</string>
+    <string name="restore_wallet_from_invalid_seed_failure">Ví không thể được phục hồi:\n\n%s\n\nCâu phục hồi không đúng?</string>
+
     <string name="send_coins_options_fee_category_zero">Không phí</string>
     <string name="send_coins_fragment_hint_fee_zero">Không phải trả phí. Sử dụng "không phí" chỉ khi bạn không quan tâm đến thời gian chờ xác thực.</string>
 
@@ -169,6 +183,7 @@
     <string name="unlock_with_fingerprint_error_max_attempts">Đã vượt quá số lần thử vân tay tối đa cho phép. Hãy thử lại sau nhé.</string>
     <string name="or_unlock_with_fingerprint">Hoặc sử dụng vân tay để mở khoá.</string>
     <string name="enable_fingerprint">Cho phép vân tay</string>
+    <string name="touch_fingerprint_sensor">Hãy chạm tay vào cảm biến vân tay</string>
     <string name="touch_fingerprint_to_enable">Hãy chạm vào cảm biến vân tay để bật tính năng mở khoá vằng vân tay.</string>
     <string name="fingerprint_changed_title">Dữ liệu vân tay đã bị thay đổi</string>
 	<string name="fingerprint_changed_message">Chúng tôi phát hiện thấy có một thay đổi trong dữ liệu xác thực vân tay của bạn. Bạn cần sử dụng mã PIN lần này.</string>
@@ -211,6 +226,7 @@
     <string name="authenticate_switch_to_fingerprint">Sử dụng vân tay</string>
     <string name="authenticate_switch_to_pin">Sử dụng mật khẩu</string>
 
+    <string name="menu_buy_and_sell_title">Mua &amp; Bán Dash</string>
     <string name="menu_buy_and_sell_subtitle">Kết nối với sàn giao dịch của bên thứ ba</string>
     <string name="menu_security_title">Bảo mật</string>
     <string name="menu_security_subtitle">Xem mật khẩu, sao lưu ví...</string>
@@ -239,6 +255,7 @@
     <string name="block_info">Thông tin khối</string>
 
     <string name="scan_private_key">Quét khoá riêng</string>
+    <string name="scan_private_key_intro_1">Bạn sắp quét tiền từ một ví giấy Dash.</string>
     <string name="scan_private_key_intro_2">Việc này sẽ chuyển tất cả tiền từ ví đó vào ví của bạn trên thiết bị này.</string>
     <string name="scan_private_key_intro_3">Khi giao dịch được xác thực, ví kia trở nên không còn gì nữa và không nên tiếp tục sử dụng lại ví những lý do an toàn.</string>
     <string name="confirm">Xác nhận</string>
@@ -252,7 +269,11 @@
     <string name="one_minute">1 phút</string>
     <string name="five_minute">5 phút</string>
     <string name="one_hour">1 giờ</string>
+    <string name="one_day">1 ngày</string>
+    <string name="biometric_limit">Giới hạn sinh trắc học</string>
     <string name="spending_confirmation_hint_zero">Mã PIN luôn được cần đến khi thực hiện giao dịch</string>
+    <string name="spending_confirmation_hint_above_zero">Bạn có thể xác thực với Xác thực Sinh trắc học cho các giao dịch dưới đây</string>
+
     <string name="security_none">Không có</string>
     <string name="security_low">Thấp</string>
     <string name="security_medium">Trung bình</string>

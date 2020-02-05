@@ -4,6 +4,8 @@
     <string name="onboarding_create_wallet">Créer un nouveau portefeuille</string>
     <string name="onboarding_recover_wallet">Restaurer le portefeuille avec la phrase de récupération</string>
     <string name="onboarding_restore_wallet">Restaurer le portefeuille à partir d\'un fichier</string>
+    <string name="onboarding_load_wallet_error">Impossible de charger le portefeuille !</string>
+
     <string name="set_pin_create_new_wallet">Créer un nouveau portefeuille</string>
     <string name="set_pin_restore_wallet">Restaurer le portefeuille</string>
     <string name="set_pin_enter_pin">Saisissez l\'ancien code PIN</string>
@@ -11,6 +13,7 @@
     <string name="set_pin_confirm_pin">Confirmer le code PIN</string>
     <string name="set_pin_encrypting">Chiffrement du portefeuille…</string>
     <string name="set_pin_decrypting">Déchiffrement du portefeuille…</string>
+    <string name="set_pin_verifying_pin">Vérification du code PIN</string>
     <string name="set_pin_message">Ce code PIN sera demandé pour déverrouiller votre app avant chaque utilisation.</string>
 
     <string name="home_pay">Envoyer</string>
@@ -85,6 +88,7 @@
     <string name="forgot_pin_title">Code PIN oublié ?</string>
     <string name="forgot_pin_message">Vous pouvez choisir un nouveau code PIN au moyen de votre phrase de récupération.</string>
     <string name="forgot_pin_instruction_1">Saisissez la phrase de récupération pour récupérer votre portefeuille</string>
+    <string name="forgot_pin_instruction_2">Choisir un nouveau code PIN</string>
     <string name="forgot_pin_instruction_3">Connectez-vous avec votre nouveau code PIN pour accéder à votre portefeuille</string>
     <string name="forgot_pin_warning">Si vous avez perdu votre code PIN et votre phrase de récupération, vous ne pouvez plus accéder à votre portefeuille ni à vos fonds.</string>
 
@@ -117,6 +121,8 @@
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" n\'est pas un mot de phrase de récupération</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">La phrase de récupération doit avoir 12 mots</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Phrase de récupération incorrecte</string>
+    <string name="restore_wallet_from_invalid_seed_failure">Impossible de restaurer le portefeuille :\n\n%s\n\nPhrase de récupération erronée ?</string>
+
     <string name="send_coins_options_fee_category_zero">Sans frais</string>
     <string name="send_coins_fragment_hint_fee_zero">Aucuns frais ne seront payés. Utilisez “Sans frais” si le temps de confirmation ne vous importe pas.</string>
 
@@ -180,6 +186,7 @@
     <string name="unlock_with_fingerprint_error_max_attempts">Le nombre maximal de reconnaissances d\'empreinte a été atteint. Veuillez réessayer plus tard.</string>
     <string name="or_unlock_with_fingerprint">Ou utilisez votre empreinte digitale pour déverrouiller.</string>
     <string name="enable_fingerprint">Activer l\'empreinte digitale</string>
+    <string name="touch_fingerprint_sensor">Touchez le capteur d\'empreinte digitale</string>
     <string name="touch_fingerprint_to_enable">Touchez le capteur d\'empreinte digitale pour activer le déverrouillage par empreinte.</string>
     <string name="fingerprint_changed_title">Données d\'empreinte digitale modifiées</string>
 	<string name="fingerprint_changed_message">Nous avons détecté un changement dans vos données d\'authentification par empreinte digitale. Vous devez utiliser votre code PIN cette fois-ci.</string>
@@ -222,6 +229,7 @@
     <string name="authenticate_switch_to_fingerprint">Utiliser l\'empreinte digitale</string>
     <string name="authenticate_switch_to_pin">Utiliser le mot de passe</string>
 
+    <string name="menu_buy_and_sell_title">Acheter &amp; vendre des dashs</string>
     <string name="menu_buy_and_sell_subtitle">Se connecter aux plateformes de change tierces</string>
     <string name="menu_security_title">Sécurité</string>
     <string name="menu_security_subtitle">Voir la phrase de récupération, sauvegarder le portefeuille…</string>
@@ -250,6 +258,7 @@
     <string name="block_info">Info de bloc</string>
 
     <string name="scan_private_key">Scanner une clé privée</string>
+    <string name="scan_private_key_intro_1">Vous êtes sur le point de récupérer les fonds d\'un portefeuille papier Dash.</string>
     <string name="scan_private_key_intro_2">Cela déplacera tous les fonds de ce portefeuille-là vers votre portefeuille sur cet appareil.</string>
     <string name="scan_private_key_intro_3">Quand la transaction sera confirmée, l\'autre portefeuille ne contiendra plus de fonds, et il ne devra pas être réutilisé pour des raisons de sécurité.</string>
     <string name="confirm">Confirmer</string>
@@ -263,7 +272,11 @@
     <string name="one_minute">1 min.</string>
     <string name="five_minute">5 min.</string>
     <string name="one_hour">1 heure</string>
+    <string name="one_day">1 jour</string>
+    <string name="biometric_limit">Limite pour la biométrie</string>
     <string name="spending_confirmation_hint_zero">Le code PIN est toujours demandé pour faire un paiement</string>
+    <string name="spending_confirmation_hint_above_zero">Vous pouvez vous authentifier biométriquement pour les paiements ci-dessous</string>
+
     <string name="security_none">Aucun</string>
     <string name="security_low">Bas</string>
     <string name="security_medium">Moyen</string>

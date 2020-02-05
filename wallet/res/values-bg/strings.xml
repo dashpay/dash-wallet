@@ -96,6 +96,7 @@
     <string name="sweep_wallet_fragment_wallet_unknown">Започнете като сканирате частния ключ на хартиеният портфейл. Иползвайте бутона за камерата.</string>
     <string name="sweep_wallet_fragment_encrypted">Този частен ключ е защитен с парола.</string>
     <string name="sweep_wallet_fragment_password">Парола</string>
+    <string name="sweep_wallet_fragment_bad_password">Грешна парола!</string>
     <string name="sweep_wallet_fragment_balance">Баланс за извличане</string>
     <string name="sweep_wallet_fragment_button_decrypt">Декриптира</string>
     <string name="sweep_wallet_fragment_button_sweep">Извличане</string>
@@ -366,8 +367,10 @@
     <string name="dash_slogan">Мигновен-Личен-Сигурен</string>
     <string name="dash_wallet">Портфейл</string>
 
+    <string name="activity_security_backup_wallet">Архивирайте портфейла във файл</string>
     <string name="activity_security_view_recovery_phrase">Вижте фраза за възстановяване</string>
     <string name="activity_security_advanced">Разширена сигурност</string>
+    <string name="activity_security_biometric_auth">Удостоверяване с пръстов отпечатък</string>
     <string name="activity_security_hide_balance">Скривай баланса при стартиране</string>
     <string name="reset_to_default">Нулиране по подразбиране</string>
 

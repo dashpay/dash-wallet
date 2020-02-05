@@ -96,6 +96,7 @@
     <string name="sweep_wallet_fragment_wallet_unknown">Commencez en numérisant la clé privée d\'un portefeuille papier. Utilisez le bouton de l\'appareil photo.</string>
     <string name="sweep_wallet_fragment_encrypted">La clé privée est protégée par un mot de passe.</string>
     <string name="sweep_wallet_fragment_password">Mot de passe</string>
+    <string name="sweep_wallet_fragment_bad_password">Mot de passe erroné !</string>
     <string name="sweep_wallet_fragment_balance">Solde à récupérer</string>
     <string name="sweep_wallet_fragment_button_decrypt">Déchiffrer</string>
     <string name="sweep_wallet_fragment_button_sweep">Tout récupérer</string>
@@ -366,8 +367,10 @@
     <string name="dash_slogan">Instantané - Confidentiel - Sûr</string>
     <string name="dash_wallet">Portefeuille</string>
 
+    <string name="activity_security_backup_wallet">Sauvegarder le portefeuille dans un fichier</string>
     <string name="activity_security_view_recovery_phrase">Voir la phrase de récupération</string>
     <string name="activity_security_advanced">Sécurité avancée</string>
+    <string name="activity_security_biometric_auth">Authentification par empreinte digitale</string>
     <string name="activity_security_hide_balance">Masquer le solde au lancement</string>
     <string name="reset_to_default">Retour aux valeurs par défaut</string>
 

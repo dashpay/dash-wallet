@@ -96,6 +96,7 @@
     <string name="sweep_wallet_fragment_wallet_unknown">Bắt đầu quét chia khoá từ một ví giấy. Hãy dùng nút chụp ảnh.</string>
     <string name="sweep_wallet_fragment_encrypted">Chìa khoá được bảo vệ bởi một mật khẩu.</string>
     <string name="sweep_wallet_fragment_password">Mật khẩu</string>
+    <string name="sweep_wallet_fragment_bad_password">Sai mật khẩu!</string>
     <string name="sweep_wallet_fragment_balance">Số dư để quét</string>
     <string name="sweep_wallet_fragment_button_decrypt">Giải mã</string>
     <string name="sweep_wallet_fragment_button_sweep">Quét sạch</string>
@@ -366,8 +367,10 @@
     <string name="dash_slogan">Tức thời - Riêng tư - An toàn</string>
     <string name="dash_wallet">Ví</string>
 
+    <string name="activity_security_backup_wallet">Sao lưu ví về file</string>
     <string name="activity_security_view_recovery_phrase">Hiển thị câu phục hồi</string>
     <string name="activity_security_advanced">Bảo mật nâng cao</string>
+    <string name="activity_security_biometric_auth">Xác thực vân tay</string>
     <string name="activity_security_hide_balance">Ẩn số dư khi khởi động</string>
     <string name="reset_to_default">Thiết lập lại về giá trị ngầm định</string>
 

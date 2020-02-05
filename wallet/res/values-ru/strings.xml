@@ -370,6 +370,7 @@
     <string name="activity_security_backup_wallet">Сохранить резервную копию кошелька в файл</string>
     <string name="activity_security_view_recovery_phrase">Посмотреть фразу восстановления</string>
     <string name="activity_security_advanced">Настройки безопасности</string>
+    <string name="activity_security_biometric_auth">Аутентификация по отпечатку пальца</string>
     <string name="activity_security_hide_balance">Не показывать баланс при запуске</string>
     <string name="reset_to_default">Установить по умолчанию</string>
 
