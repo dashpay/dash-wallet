@@ -96,6 +96,7 @@
     <string name="sweep_wallet_fragment_wallet_unknown">Kağıt cüzdanın özel anahtarını tarayarak başlayın. Kamera butonunu kullanın.</string>
     <string name="sweep_wallet_fragment_encrypted">Bu özel anahtar bir şifre ile korunmaktadır.</string>
     <string name="sweep_wallet_fragment_password">Şifre</string>
+    <string name="sweep_wallet_fragment_bad_password">Yanlış şifre!</string>
     <string name="sweep_wallet_fragment_balance">Taranacak bakiye</string>
     <string name="sweep_wallet_fragment_button_decrypt">Şifreyi Çöz</string>
     <string name="sweep_wallet_fragment_button_sweep">Tara</string>
@@ -366,8 +367,10 @@
     <string name="dash_slogan">Anlık - Özel - Güvenli</string>
     <string name="dash_wallet">Cüzdan</string>
 
+    <string name="activity_security_backup_wallet">Cüzdanı Dosyaya Yedekle</string>
     <string name="activity_security_view_recovery_phrase">Kurtarma Sözcük Grubunu Göster</string>
     <string name="activity_security_advanced">Gelişmiş Güvenlik</string>
+    <string name="activity_security_biometric_auth">Parmak İzi Kimlik Doğrulaması</string>
     <string name="activity_security_hide_balance">Açılışta Bakiyeyi Gizle</string>
     <string name="reset_to_default">Varsayılana sıfırla</string>
 

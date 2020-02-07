@@ -61,6 +61,7 @@
     <string name="send_coins_fragment_receiving_address_own">自分自身に送金しようとしています！</string>
     <string name="send_coins_fragment_receiving_address_complex">複雑な\nアドレス</string>
     <string name="send_coins_fragment_pending">（%sが確認待ちです）</string>
+    <string name="send_coins_fragment_amount_label">送金金額</string>
     <string name="send_coins_fragment_pin_label">PINを入力</string>
     <string name="send_coins_fragment_hint_fee_economic">ネットワーク手数料 %s が支払われます。</string>
     <string name="send_coins_fragment_hint_fee_priority">優先手数料%s が支払われます。できるだけ早い承認が必要な場合のみ「優先」をお使いください。</string>
@@ -77,6 +78,7 @@
     <string name="send_coins_fragment_button_back">戻る</string>
     <string name="send_coins_fragment_insufficient_money_title">コインが不足しています。</string>
     <string name="send_coins_fragment_insufficient_money_msg1">%sが不足しています。</string>
+    <string name="send_coins_fragment_insufficient_money_msg2">保有する全額を送りますか?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">ウォレットを空にできませんでした</string>
     <string name="send_coins_fragment_state_decrypting">復号中…</string>
     <string name="send_coins_preparation_msg">署名中…</string>
@@ -94,6 +96,7 @@
     <string name="sweep_wallet_fragment_wallet_unknown">ペーパーウォレットの秘密鍵のスキャンを開始してください。カメラアクションボタンを使用してください。</string>
     <string name="sweep_wallet_fragment_encrypted">この秘密鍵はパスワードで保護されています。</string>
     <string name="sweep_wallet_fragment_password">パスワード</string>
+    <string name="sweep_wallet_fragment_bad_password">パスワードが間違っています!</string>
     <string name="sweep_wallet_fragment_balance">スウィープする額</string>
     <string name="sweep_wallet_fragment_button_decrypt">復号</string>
     <string name="sweep_wallet_fragment_button_sweep">スウィープ</string>
@@ -156,14 +159,30 @@
     <string name="transaction_row_status_received">受取済み</string>
     <string name="transaction_row_status_sent">送信済み</string>
     <string name="transaction_row_status_sending">送金中</string>
+    <string name="transaction_row_status_sent_interally">内部の</string>
     <string name="transaction_row_status_processing">処理中</string>
     <string name="transaction_row_status_confirming">確認中</string>
     <string name="transaction_row_status_locked">ロック済み</string>
+    <string name="transaction_row_status_error_sending">送金エラー</string>
     <string name="transaction_row_status_error_dead">二重支払い</string>
+    <string name="transaction_row_status_error_conflicting">衝突しています</string>
+    <string name="transaction_row_status_error_insufficient_fee">手数料が足りません</string>
+    <string name="transaction_row_status_error_dust">ダスト</string>
+    <string name="transaction_row_status_error_non_standard">非標準</string>
+    <string name="transaction_row_status_error_malformed">不正な形式の</string>
+    <string name="transaction_row_status_error_duplicate">複製する</string>
+    <string name="transaction_row_status_error_obsolete">旧式の</string>
     <string name="transaction_row_status_error_invalid">無効</string>
+    <string name="transaction_row_status_error_other">未知の</string>
+    <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
+    <string name="transaction_row_time_text"> %sに関して %sで</string>
+    <string name="transaction_row_rate_not_available">ご利用できません</string>
     <string name="transaction_row_status_masternode_registration">マスターノードの登録</string>
     <string name="transaction_row_status_masternode_update_registrar">マスターノードのアップデート</string>
     <string name="transaction_row_status_masternode_update_service">マスターノードのアップデート</string>
+    <string name="transaction_row_status_masternode_revoke">マスターノードの取り消し</string>
+    <string name="transaction_row_status_masternode_reward">マスターノード報酬</string>
+    <string name="transaction_row_status_mining_reward">マイニング報酬</string>
     <string name="network_monitor_activity_title">ネットワークモニタ</string>
     <string name="network_monitor_peer_list_title">ピア</string>
     <string name="network_monitor_block_list_title">ブロック</string>
@@ -348,8 +367,11 @@
     <string name="dash_slogan">Instant - Private - Secure</string>
     <string name="dash_wallet">ウォレット</string>
 
+    <string name="activity_security_backup_wallet">ウォレットをファイルにバックアップする</string>
     <string name="activity_security_view_recovery_phrase">復元フレーズを表示する</string>
     <string name="activity_security_advanced">高度なセキュリティ</string>
+    <string name="activity_security_biometric_auth">指紋認証</string>
+    <string name="activity_security_hide_balance">起動時に残高を非表示にする</string>
     <string name="reset_to_default">初期設定にリセットする</string>
 
 </resources>

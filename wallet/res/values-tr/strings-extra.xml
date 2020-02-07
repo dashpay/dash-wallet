@@ -4,6 +4,8 @@
     <string name="onboarding_create_wallet">Yeni Cüzdan Oluştur</string>
     <string name="onboarding_recover_wallet">Kurtarma Sözcük Grubundan Geri Yükle</string>
     <string name="onboarding_restore_wallet">Dosyadan Geri Yükle</string>
+    <string name="onboarding_load_wallet_error">Cüzdanı yükleme başarısız!</string>
+
     <string name="set_pin_create_new_wallet">Yeni Cüzdan Oluştur</string>
     <string name="set_pin_restore_wallet">Cüzdanı Geri Yükle</string>
     <string name="set_pin_enter_pin">Eski PİN\'i girin</string>
@@ -11,6 +13,7 @@
     <string name="set_pin_confirm_pin">PİN\'i Onayla</string>
     <string name="set_pin_encrypting">Cüzdanı Şifrele</string>
     <string name="set_pin_decrypting">Cüzdan şifresi çözülüyor</string>
+    <string name="set_pin_verifying_pin">PİN Doğrulanıyor</string>
     <string name="set_pin_message">Bu PİN uygulamanın açılması için her zaman gerekecektir.</string>
 
     <string name="home_pay">Gönder</string>
@@ -83,6 +86,7 @@
     <string name="payments_pay_to_clipboard_button">Gönder</string>
 
     <string name="forgot_pin_title">PİN\'inizi unuttunuz mu?</string>
+    <string name="forgot_pin_message">Kurtarma sözcük grubuyla yeni bir PİN oluşturabilirsiniz.</string>
     <string name="forgot_pin_instruction_1">Cüzdanınızı kurtarmak için kurtarma sözcük grubunu girin.</string>
     <string name="forgot_pin_instruction_2">Yeni PİN oluşturun</string>
     <string name="forgot_pin_instruction_3">Yeni PİN\'inizle oturum açarak cüzdanınıza erişin</string>
@@ -117,6 +121,8 @@
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" kurtarma cümlesi kelimesi değil</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Kurtarma cümlesi 12 kelime olmalı</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Hatalı kurtarma cümlesi</string>
+    <string name="restore_wallet_from_invalid_seed_failure">Cüzdan geri yüklenemedi:\n\n%s\n\nYanlış kurtarma sözcük grubu?</string>
+
     <string name="send_coins_options_fee_category_zero">Ücret Yok</string>
     <string name="send_coins_fragment_hint_fee_zero">Ücret ödenmeyecek. Sadece onay süresi sizin için önemli değilse \'ücret yok\' seçeneğini kullanın.</string>
 
@@ -180,6 +186,7 @@
     <string name="unlock_with_fingerprint_error_max_attempts">Parmak izi deneme sınırı aşıldı. Lütfen daha sonra tekrar dene.</string>
     <string name="or_unlock_with_fingerprint">Ya da açmak için parmak izini kullan.</string>
     <string name="enable_fingerprint">Parmak izini etkinleştir</string>
+    <string name="touch_fingerprint_sensor">Parmak izi sensörüne dokunun</string>
     <string name="touch_fingerprint_to_enable">Parmak izi ile kilit açma için parmak izi okuyucusuna dokun.</string>
     <string name="fingerprint_changed_title">Parmak izi verileri değiştirildi</string>
 	<string name="fingerprint_changed_message">Parmak izi kimlik doğrulama verilerinizde bir değişiklik tespit ettik. Bu sefer PIN kodunuzu kullanmanız gerekiyor.</string>
@@ -197,6 +204,7 @@
     <string name="verify_it_is_important_subtitle">Size cüzdanınızın gizli anahtarını göstermek üzereyiz.</string>
     <string name="verify_info_text_1">Bu kurtarma sözcük grubu cüzdanınızdaki paranıza erişmenizi sağlar.</string>
     <string name="verify_info_text_2">Kurtarma sözcük grubunuzu saklamıyoruz.</string>
+    <string name="verify_info_text_3">Bu cihazın kaybolması / hasar görmesi, Dash cüzdanının bu cihazdan yanlışlıkla silinmesi durumunda paranıza erişmek için bu kurtarma ifadesine ihtiyacınız olacaktır.</string>
     <string name="verify_skip">Atla</string>
     <string name="verify_secure_now_btn">Şimdi Korumaya Al</string>
     <string name="verify_secure_now_message">Bu cihazı kaybederseniz, paranızı kaybedersiniz. Cüzdanınızı başka bir cihaza geri yükleyebilmeniz için kurtarma sözcük grubunuzu sahip olun.</string>
@@ -221,6 +229,7 @@
     <string name="authenticate_switch_to_fingerprint">Parmak izinizi kullanın</string>
     <string name="authenticate_switch_to_pin">Şifre kullan</string>
 
+    <string name="menu_buy_and_sell_title">Dash Al &amp; Sat</string>
     <string name="menu_buy_and_sell_subtitle">Üçüncü parti borsalara bağlanın</string>
     <string name="menu_security_title">Güvenlik</string>
     <string name="menu_security_subtitle">Kurtarma sözcük grubunu göster, cüzdanı yedekle...</string>
@@ -249,6 +258,7 @@
     <string name="block_info">Blok Bilgisi</string>
 
     <string name="scan_private_key">Özel Anahtarı Tara</string>
+    <string name="scan_private_key_intro_1">Bir Dash kağıt cüzdanından para aktarmak üzeresiniz.</string>
     <string name="scan_private_key_intro_2">Bu işlem o cüzdandaki tüm parayı şuan kullandığınız cihazdaki cüzdanınıza aktaracaktır.</string>
     <string name="scan_private_key_intro_3">İşlem onaylandığında, diğer cüzdan değersiz olacaktır ve güvenlik nedeniyle yeniden kullanılmamalıdır.</string>
     <string name="confirm">Onayla</string>
@@ -262,7 +272,11 @@
     <string name="one_minute">1 dk</string>
     <string name="five_minute">5 dk</string>
     <string name="one_hour">1 saat</string>
+    <string name="one_day">1 gün</string>
+    <string name="biometric_limit">Biyometrik Limit</string>
     <string name="spending_confirmation_hint_zero">Ödeme yapmak için her zaman PIN gereklidir</string>
+    <string name="spending_confirmation_hint_above_zero">Aşağıdaki ödemeleri Biyometrik Kimlik Doğrulaması ile onaylayabilirsin</string>
+
     <string name="security_none">Hiçbiri</string>
     <string name="security_low">Düşük</string>
     <string name="security_medium">Orta</string>
