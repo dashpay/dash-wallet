@@ -761,8 +761,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         application.getWallet().addCoinsSentEventListener(Threading.SAME_THREAD, walletEventListener);
         application.getWallet().addChangeEventListener(Threading.SAME_THREAD, walletEventListener);
 
-        application.getWallet().getContext().sporkManager.addEventListener(sporkUpdatedEventListener, Threading.SAME_THREAD);
-
         registerReceiver(tickReceiver, new IntentFilter(Intent.ACTION_TIME_TICK));
 
         wallet.getContext().initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
@@ -849,8 +847,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         application.getWallet().removeChangeEventListener(walletEventListener);
         application.getWallet().removeCoinsSentEventListener(walletEventListener);
         application.getWallet().removeCoinsReceivedEventListener(walletEventListener);
-
-        application.getWallet().getContext().sporkManager.removeEventListener(sporkUpdatedEventListener);
 
         unregisterReceiver(connectivityReceiver);
 
@@ -1034,12 +1030,4 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         log.info("mostCommonChainHeight: " + mostCommonChainHeight + "\tchainHeadHeight: " + chainHeadHeight + "\t" + percentage + "%\t" + config.getBestChainHeightEver());
         return (int) percentage;
     }
-
-    private SporkUpdatedEventListener sporkUpdatedEventListener = new SporkUpdatedEventListener() {
-
-        @Override
-        public void onSporkUpdated(final SporkMessage sporkMessage) {
-            //do nothing
-        }
-    };
 }
