@@ -259,9 +259,9 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true).apply();
     }
 
-    public void setBackupSeedLastDismissedReminderOnce() {
+    public void setBackupSeedLastDismissedReminderOnce(boolean forceReset) {
         long value;
-        if (prefs.contains(PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER)){
+        if (prefs.contains(PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER) && !forceReset){
             value = -1;
         } else {
             value = System.currentTimeMillis();

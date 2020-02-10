@@ -100,7 +100,7 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
 
     override fun skipSeedVerification() {
         if (intent.getBooleanExtra(EXTRA_REMINDER, false)) {
-            WalletApplication.getInstance().configuration.setBackupSeedLastDismissedReminderOnce()
+            WalletApplication.getInstance().configuration.setBackupSeedLastDismissedReminderOnce(false)
         }
         goHome()
     }
