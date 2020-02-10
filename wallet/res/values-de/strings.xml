@@ -372,7 +372,7 @@
     <string name="activity_security_view_recovery_phrase">Wiederherstellungsphrase ansehen</string>
     <string name="activity_security_advanced">Erweiterte Sicherheit</string>
     <string name="activity_security_biometric_auth">Authentifizierung per Fingerabdruck</string>
-    <string name="activity_security_hide_balance">Guthaben beim Start nicht anzeigen</string>
+    <string name="activity_security_hide_balance">Guthaben automatisch verstecken</string>
     <string name="reset_to_default">Auf Standard setzen</string>
 
 </resources>

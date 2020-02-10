@@ -371,7 +371,7 @@
     <string name="activity_security_view_recovery_phrase">查看恢复密语</string>
     <string name="activity_security_advanced">高级安全</string>
     <string name="activity_security_biometric_auth">指纹验证</string>
-    <string name="activity_security_hide_balance">启动时隐藏余额</string>
+    <string name="activity_security_hide_balance">自动隐藏余额</string>
     <string name="reset_to_default">重置为默认</string>
 
 </resources>

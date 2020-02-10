@@ -371,7 +371,7 @@
     <string name="activity_security_view_recovery_phrase">Hiển thị câu phục hồi</string>
     <string name="activity_security_advanced">Bảo mật nâng cao</string>
     <string name="activity_security_biometric_auth">Xác thực vân tay</string>
-    <string name="activity_security_hide_balance">Ẩn số dư khi khởi động</string>
+    <string name="activity_security_hide_balance">Tự ẩn số dư</string>
     <string name="reset_to_default">Thiết lập lại về giá trị ngầm định</string>
 
 </resources>

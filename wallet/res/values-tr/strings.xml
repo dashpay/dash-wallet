@@ -371,7 +371,7 @@
     <string name="activity_security_view_recovery_phrase">Kurtarma Sözcük Grubunu Göster</string>
     <string name="activity_security_advanced">Gelişmiş Güvenlik</string>
     <string name="activity_security_biometric_auth">Parmak İzi Kimlik Doğrulaması</string>
-    <string name="activity_security_hide_balance">Açılışta Bakiyeyi Gizle</string>
+    <string name="activity_security_hide_balance">Otomatik Bakiye Gizleme</string>
     <string name="reset_to_default">Varsayılana sıfırla</string>
 
 </resources>

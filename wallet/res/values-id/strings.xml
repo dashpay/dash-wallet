@@ -371,7 +371,7 @@
     <string name="activity_security_view_recovery_phrase">Lihat frasa pemulihan</string>
     <string name="activity_security_advanced">Keamanan Tingkat Lanjut</string>
     <string name="activity_security_biometric_auth">Otentikasi sidik jari</string>
-    <string name="activity_security_hide_balance">Sembunyikan Saldo saat Peluncuran</string>
+    <string name="activity_security_hide_balance">Otomatis sembunyikan saldo</string>
     <string name="reset_to_default">Setel Ulang ke Default</string>
 
 </resources>

@@ -371,7 +371,7 @@
     <string name="activity_security_view_recovery_phrase">Visualizza la frase di recupero</string>
     <string name="activity_security_advanced">Sicurezza Avanzata</string>
     <string name="activity_security_biometric_auth">Autenticazione tramite impronta digitale</string>
-    <string name="activity_security_hide_balance">Nascondi saldo all\'avvio</string>
+    <string name="activity_security_hide_balance">Mascheramento Automatico Bilancio </string>
     <string name="reset_to_default">Riportare alle condizioni originali</string>
 
 </resources>

@@ -371,7 +371,7 @@
     <string name="activity_security_view_recovery_phrase">Toon herstelzin</string>
     <string name="activity_security_advanced">Geavanceerde Beveiliging</string>
     <string name="activity_security_biometric_auth">Vingerafdrukauthenticatie</string>
-    <string name="activity_security_hide_balance">Verberg saldo bij starten</string>
+    <string name="activity_security_hide_balance">Automatisch saldo verbergen</string>
     <string name="reset_to_default">Reset naar standaard</string>
 
 </resources>

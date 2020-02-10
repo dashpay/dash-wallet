@@ -352,6 +352,7 @@
 
     <string name="activity_security_view_recovery_phrase">Zobraziť frázu pre obnovenie</string>
     <string name="activity_security_advanced">Pokročilá bezpečnosť</string>
+    <string name="activity_security_hide_balance">Automaticky skryť zostatok</string>
     <string name="reset_to_default">Obnoviť pôvodné nastavenia</string>
 
 </resources>

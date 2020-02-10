@@ -368,7 +368,7 @@
 
     <string name="activity_security_view_recovery_phrase">Ver Frase de Recuperação</string>
     <string name="activity_security_advanced">Segurança Avançada</string>
-    <string name="activity_security_hide_balance">Esconder Saldo ao Iniciar</string>
+    <string name="activity_security_hide_balance">Auto-esconder Saldo</string>
     <string name="reset_to_default">Restaurar ao Padrão</string>
 
 </resources>

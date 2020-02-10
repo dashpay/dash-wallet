@@ -371,7 +371,7 @@
     <string name="activity_security_view_recovery_phrase">Ver frase de recuperación</string>
     <string name="activity_security_advanced">Seguridad avanzada</string>
     <string name="activity_security_biometric_auth">Autenticación por huella dactilar</string>
-    <string name="activity_security_hide_balance">Ocultar saldo al iniciar</string>
+    <string name="activity_security_hide_balance">Esconder Saldo Automáticamente</string>
     <string name="reset_to_default">Restablecer a los valores predeterminados</string>
 
 </resources>

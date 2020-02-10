@@ -371,7 +371,7 @@
     <string name="activity_security_view_recovery_phrase">復元フレーズを表示する</string>
     <string name="activity_security_advanced">高度なセキュリティ</string>
     <string name="activity_security_biometric_auth">指紋認証</string>
-    <string name="activity_security_hide_balance">起動時に残高を非表示にする</string>
+    <string name="activity_security_hide_balance">残高を自動的に非表示にする</string>
     <string name="reset_to_default">初期設定にリセットする</string>
 
 </resources>

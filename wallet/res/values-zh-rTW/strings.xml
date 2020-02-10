@@ -371,7 +371,7 @@
     <string name="activity_security_view_recovery_phrase">查看恢復詞組</string>
     <string name="activity_security_advanced">進階的安全性</string>
     <string name="activity_security_biometric_auth">指紋認證</string>
-    <string name="activity_security_hide_balance">啟動時隱藏餘額</string>
+    <string name="activity_security_hide_balance">自動隱藏結餘</string>
     <string name="reset_to_default">重置為預設值</string>
 
 </resources>

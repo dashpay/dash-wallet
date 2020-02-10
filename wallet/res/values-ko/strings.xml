@@ -371,7 +371,7 @@
     <string name="activity_security_view_recovery_phrase">복원 문구 확인</string>
     <string name="activity_security_advanced">향상된 보안</string>
     <string name="activity_security_biometric_auth">지문 인증</string>
-    <string name="activity_security_hide_balance">시작 시 잔고 숨기기</string>
+    <string name="activity_security_hide_balance">잔고 자동숨김</string>
     <string name="reset_to_default">기본값으로 재설정하기</string>
 
 </resources>

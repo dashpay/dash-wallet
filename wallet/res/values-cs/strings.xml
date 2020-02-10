@@ -349,6 +349,7 @@
 
     <string name="activity_security_view_recovery_phrase">Zobrazit Frázi Pro Obnovení</string>
     <string name="activity_security_advanced">Pokročilé zabzpečení</string>
+    <string name="activity_security_hide_balance">Automaticky skrýt zůstatek</string>
     <string name="reset_to_default">Obnovit výchozí nastavení</string>
 
 </resources>

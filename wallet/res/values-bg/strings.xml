@@ -371,7 +371,7 @@
     <string name="activity_security_view_recovery_phrase">Вижте фраза за възстановяване</string>
     <string name="activity_security_advanced">Разширена сигурност</string>
     <string name="activity_security_biometric_auth">Удостоверяване с пръстов отпечатък</string>
-    <string name="activity_security_hide_balance">Скривай баланса при стартиране</string>
+    <string name="activity_security_hide_balance">Автоматично скриване на баланса</string>
     <string name="reset_to_default">Нулиране по подразбиране</string>
 
 </resources>

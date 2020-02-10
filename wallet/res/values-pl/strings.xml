@@ -371,7 +371,7 @@
     <string name="activity_security_view_recovery_phrase">Pokaż Frazę Odzyskiwania Portfela</string>
     <string name="activity_security_advanced">Zaawansowane Bezpieczeństwo</string>
     <string name="activity_security_biometric_auth">Autentykacja za pomocą odcisku palca</string>
-    <string name="activity_security_hide_balance">Ukryj Balans przy Starcie</string>
+    <string name="activity_security_hide_balance">Automatyczne Ukrywanie Salda</string>
     <string name="reset_to_default">Resetuj do domyślne</string>
 
 </resources>

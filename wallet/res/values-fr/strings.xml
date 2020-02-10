@@ -371,7 +371,7 @@
     <string name="activity_security_view_recovery_phrase">Voir la phrase de récupération</string>
     <string name="activity_security_advanced">Sécurité avancée</string>
     <string name="activity_security_biometric_auth">Authentification par empreinte digitale</string>
-    <string name="activity_security_hide_balance">Masquer le solde au lancement</string>
+    <string name="activity_security_hide_balance">Cacher autom. le solde</string>
     <string name="reset_to_default">Retour aux valeurs par défaut</string>
 
 </resources>
