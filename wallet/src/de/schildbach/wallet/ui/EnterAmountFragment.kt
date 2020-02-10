@@ -93,7 +93,7 @@ class EnterAmountFragment : Fragment() {
                 val isFraction = value.indexOf(DECIMAL_SEPARATOR) > -1
                 if (isFraction) {
                     val lengthOfDecimalPart = value.length - value.indexOf(DECIMAL_SEPARATOR)
-                    val decimalsThreshold = if (viewModel.dashToFiatDirectionValue) 6 else 2
+                    val decimalsThreshold = if (viewModel.dashToFiatDirectionValue) 8 else 2
                     if (lengthOfDecimalPart > decimalsThreshold) {
                         return
                     }
@@ -241,14 +241,14 @@ class EnterAmountFragment : Fragment() {
         })
         sharedViewModel.messageTextStringData.observe(viewLifecycleOwner, Observer {
             message.text = it
-            message.visibility = if (it != null) View.VISIBLE else View.GONE
+            message.visibility = if (it != null) View.VISIBLE else View.INVISIBLE
         })
         sharedViewModel.messageTextData.observe(viewLifecycleOwner, Observer {
             when {
                 it > 0 -> message.setText(it)
                 else -> message.text = null
             }
-            message.visibility = if (it > 0) View.VISIBLE else View.GONE
+            message.visibility = if (it > 0) View.VISIBLE else View.INVISIBLE
         })
         sharedViewModel.exchangeRateData.observe(viewLifecycleOwner, Observer {
             it?.also {

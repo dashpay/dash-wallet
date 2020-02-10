@@ -80,23 +80,25 @@ class OnboardingActivity : RestoreFromFileActivity() {
         }
     }
 
-    private fun startLockScreenActivity() {
-        startActivity(LockScreenActivity.createIntent(this))
-        finish()
-    }
-
     private fun regularFlow() {
         if (!walletApplication.configuration.v7TutorialCompleted) {
             startActivityForResult(Intent(this, WelcomeActivity::class.java),
                     REGULAR_FLOW_TUTORIAL_REQUEST_CODE)
             overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
         } else {
-            try {
-                startLockScreenActivity()
-            } catch (x: Exception) {
-                fatal_error_message.visibility = View.VISIBLE
-            }
+            startMainActivity()
         }
+    }
+
+    private fun startMainActivity() {
+        val intent: Intent
+        if (walletApplication.configuration.autoLogoutEnabled) {
+            intent = LockScreenActivity.createIntent(this)
+        } else {
+            intent = WalletActivity.createIntent(this)
+        }
+        startActivity(intent)
+        finish()
     }
 
     private fun onboarding() {
@@ -174,7 +176,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REGULAR_FLOW_TUTORIAL_REQUEST_CODE) {
-            startLockScreenActivity()
+            startMainActivity()
         }
     }
 }

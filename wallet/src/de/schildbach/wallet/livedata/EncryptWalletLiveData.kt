@@ -22,6 +22,7 @@ import android.os.AsyncTask
 import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.util.FingerprintHelper
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
@@ -34,31 +35,40 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
 
     private var encryptWalletTask: EncryptWalletTask? = null
     private var decryptWalletTask: DecryptWalletTask? = null
-    private var changePinWalletTask: ChangePinWalletTask? = null
 
     private var scryptIterationsTarget: Int = Constants.SCRYPT_ITERATIONS_TARGET
     private var walletApplication = application as WalletApplication
     private var fingerprintHelper = FingerprintHelper(application)
 
-    fun encrypt(password: String, scryptIterationsTarget: Int) {
+    private val securityGuard = SecurityGuard()
+
+    fun savePin(pin: String) {
+        securityGuard.savePin(pin)
+    }
+
+    fun encrypt(scryptIterationsTarget: Int) {
         if (encryptWalletTask == null) {
             this.scryptIterationsTarget = scryptIterationsTarget
             encryptWalletTask = EncryptWalletTask()
-            encryptWalletTask!!.execute(password)
+            encryptWalletTask!!.execute()
         }
     }
 
-    fun decrypt(password: String) {
+    fun decrypt(password: String?) {
         if (decryptWalletTask == null) {
+            val pass = password ?: securityGuard.retrievePassword()
             decryptWalletTask = DecryptWalletTask()
-            decryptWalletTask!!.execute(password)
+            decryptWalletTask!!.execute(pass)
         }
     }
 
-    fun changePassword(oldPassword: String, newPassword: String) {
-        if (changePinWalletTask == null) {
-            changePinWalletTask = ChangePinWalletTask()
-            changePinWalletTask!!.execute(oldPassword, newPassword)
+    fun changePassword(oldPin: String, newPin: String) {
+        value = if (securityGuard.checkPin(oldPin)) {
+            securityGuard.savePin(newPin)
+            fingerprintHelper.clear()
+            Resource.success(walletApplication.wallet)
+        } else {
+            Resource.error("", null)
         }
     }
 
@@ -70,8 +80,10 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
         }
 
         override fun doInBackground(vararg args: Any): Resource<Wallet> {
-            val password = args[0] as String
             val wallet = walletApplication.wallet
+
+            val password = securityGuard.generateRandomPassword()
+
             return try {
                 org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
                 // For the new key, we create a new key crypter according to the desired parameters.
@@ -80,6 +92,8 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
                 wallet.encrypt(keyCrypter, newKey)
 
                 walletApplication.saveWalletAndFinalizeInitialization()
+
+                securityGuard.savePassword(password)
 
                 log.info("wallet successfully encrypted, using key derived by new spending password (${keyCrypter.scryptParameters.n} scrypt iterations)")
 
@@ -118,49 +132,6 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
         override fun onPostExecute(result: Resource<Wallet>) {
             value = result
             decryptWalletTask = null
-        }
-    }
-
-    @SuppressLint("StaticFieldLeak")
-    internal inner class ChangePinWalletTask : AsyncTask<String, Void, Resource<Wallet>>() {
-
-        override fun onPreExecute() {
-            value = Resource.loading(null)
-        }
-
-        override fun doInBackground(vararg args: String): Resource<Wallet> {
-            val oldPassword = args[0]
-            val newPassword = args[1]
-            val wallet = walletApplication.wallet
-
-            org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
-            try {
-                log.info("changing wallet spending password")
-
-                val oldKey = wallet.keyCrypter!!.deriveKey(oldPassword)
-                wallet.decrypt(oldKey)
-
-                log.info("wallet successfully decrypted")
-
-                val keyCrypter = KeyCrypterScrypt(scryptIterationsTarget)
-                val newKey = keyCrypter.deriveKey(newPassword)
-                wallet.encrypt(keyCrypter, newKey)
-
-                //Clear fingerprint data
-                fingerprintHelper.clear()
-
-                log.info("wallet successfully encrypted, using key derived by new spending password (${keyCrypter.scryptParameters.n} scrypt iterations)")
-
-            } catch (x: KeyCrypterException) {
-                Resource.error(x.message!!, null)
-            }
-
-            return Resource.success(wallet)
-        }
-
-        override fun onPostExecute(result: Resource<Wallet>) {
-            value = result
-            changePinWalletTask = null
         }
     }
 }

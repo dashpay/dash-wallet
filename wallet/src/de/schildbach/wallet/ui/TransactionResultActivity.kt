@@ -41,12 +41,13 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
     companion object {
         const val TX_ID = "tx_id"
+        const val USER_AUTHORIZED_RESULT_EXTRA = "user_authorized_result_extra"
 
         @JvmStatic
-        fun createIntent(context: Context, transaction: Transaction): Intent {
+        fun createIntent(context: Context, transaction: Transaction, userAuthorized: Boolean): Intent {
             val transactionResultIntent = Intent(context, TransactionResultActivity::class.java)
             transactionResultIntent.putExtra(TX_ID, transaction.txId)
-
+            transactionResultIntent.putExtra(USER_AUTHORIZED_RESULT_EXTRA, userAuthorized)
             return transactionResultIntent
         }
     }
@@ -64,7 +65,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
             transactionResultViewBinder.bind(tx)
             view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
             transaction_close_btn.setOnClickListener {
-                if (getSessionPin() !== null) {
+                if (intent.getBooleanExtra(USER_AUTHORIZED_RESULT_EXTRA, false)) {
                     startActivity(WalletActivity.createIntent(this))
                 } else {
                     startActivity(LockScreenActivity.createIntentAsNewTask(this))

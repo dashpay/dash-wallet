@@ -25,9 +25,11 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 
+import androidx.appcompat.app.AppCompatActivity;
+
+import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.PrefixedChecksummedBytes;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
@@ -39,7 +41,7 @@ import de.schildbach.wallet.ui.send.SweepWalletActivity;
 /**
  * @author Andreas Schildbach
  */
-public class SendCoinsQrActivity extends SessionActivity {
+public class SendCoinsQrActivity extends AppCompatActivity {
 
     private static final String EXTRA_QUICK_SCAN = "extra_quick_scan";
 
@@ -76,7 +78,7 @@ public class SendCoinsQrActivity extends SessionActivity {
             new StringInputParser(input) {
                 @Override
                 protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
-                    SendCoinsActivity.start(SendCoinsQrActivity.this, paymentIntent);
+                    SendCoinsActivity.start(SendCoinsQrActivity.this, paymentIntent, false);
 
                     if (isQuickScan()) {
                         SendCoinsQrActivity.this.finish();
@@ -85,7 +87,7 @@ public class SendCoinsQrActivity extends SessionActivity {
 
                 @Override
                 protected void handlePrivateKey(final PrefixedChecksummedBytes key) {
-                    SweepWalletActivity.start(SendCoinsQrActivity.this, key);
+                    SweepWalletActivity.start(SendCoinsQrActivity.this, key, false);
 
                     if (isQuickScan()) {
                         SendCoinsQrActivity.this.finish();

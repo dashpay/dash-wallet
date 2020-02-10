@@ -31,7 +31,7 @@ import org.dash.wallet.common.Configuration
  * @author Samuel Barbosa
  */
 @SuppressLint("Registered")
-abstract class BaseMenuActivity : SessionActivity() {
+abstract class BaseMenuActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

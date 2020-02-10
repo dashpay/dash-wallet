@@ -24,6 +24,7 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
 import android.widget.ViewSwitcher
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
@@ -34,7 +35,7 @@ import de.schildbach.wallet.ui.widget.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 
-class SetPinActivity : SessionActivity() {
+class SetPinActivity : AppCompatActivity() {
 
     private lateinit var walletApplication: WalletApplication
 
@@ -189,7 +190,7 @@ class SetPinActivity : SessionActivity() {
                     if (changePin) {
                         viewModel.changePin()
                     } else {
-                        viewModel.encryptKeys()
+                        viewModel.savePinAndEncrypt()
                     }
                 }, 200)
             } else {
@@ -337,7 +338,6 @@ class SetPinActivity : SessionActivity() {
                         setState(State.SET_PIN)
                     } else {
                         if (changePin) {
-                            saveSessionPin(viewModel.getPinAsString())
                             val enableFingerprint = walletApplication.configuration.enableFingerprint
                             if (EnableFingerprintDialog.shouldBeShown(this@SetPinActivity) && enableFingerprint) {
                                 EnableFingerprintDialog.show(viewModel.getPinAsString(), supportFragmentManager)

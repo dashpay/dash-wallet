@@ -21,7 +21,10 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet_test.R
 
 /**
@@ -32,6 +35,7 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
     companion object {
 
         private const val EXTRA_SEED = "extra_seed"
+        private const val EXTRA_PIN = "extra_pin"
         private const val EXTRA_REMINDER = "extra_reminder"
 
         @JvmStatic
@@ -41,7 +45,16 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
             intent.putExtra(EXTRA_REMINDER, reminder)
             return intent
         }
+
+        @JvmStatic
+        fun createIntent(context: Context, pin: String): Intent {
+            val intent = Intent(context, VerifySeedActivity::class.java)
+            intent.putExtra(EXTRA_PIN, pin)
+            return intent
+        }
     }
+
+    private lateinit var decryptSeedViewModel: DecryptSeedViewModel
 
     private var seed: Array<String> = arrayOf()
 
@@ -49,15 +62,31 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_verify_seed)
 
-        seed = if (intent.extras?.containsKey(EXTRA_SEED)!!) {
-            intent.extras!!.getStringArray(EXTRA_SEED)!!
+        if (intent.extras!!.containsKey(EXTRA_SEED)) {
+            seed = intent.extras!!.getStringArray(EXTRA_SEED)!!
         } else {
-            throw IllegalStateException("This activity needs to receive a String[] Intent Extra " +
-                    "containing the recovery seed.")
+            initViewModel()
+            val pin = intent.extras!!.getString(EXTRA_PIN)!!
+            decryptSeedViewModel.checkPin(pin)
         }
 
         supportFragmentManager.beginTransaction().add(R.id.container,
-                    VerifySeedSecureNowFragment.newInstance()).commit()
+                VerifySeedSecureNowFragment.newInstance()).commit()
+    }
+
+    private fun initViewModel() {
+        decryptSeedViewModel = ViewModelProviders.of(this).get(DecryptSeedViewModel::class.java)
+        decryptSeedViewModel.decryptSeedLiveData.observe(this, Observer {
+            when (it.status) {
+                Status.ERROR -> {
+                    finish()
+                }
+                Status.SUCCESS -> {
+                    val deterministicSeed = it.data!!.first
+                    seed = deterministicSeed!!.mnemonicCode!!.toTypedArray()
+                }
+            }
+        })
     }
 
     private fun replaceFragment(fragment: Fragment) {

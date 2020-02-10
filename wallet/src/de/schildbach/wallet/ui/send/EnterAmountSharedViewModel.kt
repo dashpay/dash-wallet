@@ -64,6 +64,6 @@ class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(ap
     }
 
     fun hasAmount(): Boolean {
-        return dashAmountData.value != null
+        return Coin.ZERO.isLessThan(dashAmountData.value)
     }
 }

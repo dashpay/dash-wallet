@@ -81,7 +81,6 @@ import de.schildbach.wallet.data.DynamicFeeLoader;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
-import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
 import de.schildbach.wallet.ui.TransactionResultActivity;
@@ -95,7 +94,7 @@ import static com.google.common.base.Preconditions.checkState;
  * @author Andreas Schildbach
  */
 public class SweepWalletFragment extends Fragment {
-	private AbstractBindServiceActivity activity;
+	private SweepWalletActivity activity;
 	private WalletApplication application;
 	private Configuration config;
 	private LoaderManager loaderManager;
@@ -155,7 +154,7 @@ public class SweepWalletFragment extends Fragment {
 	public void onAttach(final Activity activity) {
 		super.onAttach(activity);
 
-		this.activity = (AbstractBindServiceActivity) activity;
+		this.activity = (SweepWalletActivity) activity;
 		this.application = (WalletApplication) activity.getApplication();
 		this.config = application.getConfiguration();
 		this.loaderManager = getLoaderManager();
@@ -624,7 +623,8 @@ public class SweepWalletFragment extends Fragment {
 			return;
 		}
 
-		Intent transactionResultIntent = TransactionResultActivity.createIntent(activity, sentTransaction);
+		Intent transactionResultIntent = TransactionResultActivity.createIntent(activity,
+				sentTransaction, activity.isUserAuthorized());
 		startActivity(transactionResultIntent);
 		activity.finish();
 	}

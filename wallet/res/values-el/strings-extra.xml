@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">Αυτή η συναλλαγή θα διευθετηθεί άμεσα χωρίς πρόσθετη χρέωση.</string>
 	<string name="send_coins_auto_lock_not_feasible">Αυτή η συναλλαγή μπορεί να διαρκέσει αρκετά λεπτά για να διευθετηθεί. Να ολοκληρωθεί άμεσα για %1$s%2$s;</string>
 	<string name="send_coins_instant_send_not_feasible">Αυτή η συναλλαγή μπορεί να διαρκέσει αρκετά λεπτά για να διευθετηθεί.</string>
 

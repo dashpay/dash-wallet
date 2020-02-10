@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">このトランザクションは追加料金なしで即時に決済されます。</string>
 	<string name="send_coins_auto_lock_not_feasible">このトランザクションは決済に数分かかるかもしれません。 %1$s%2$sの追加で即時に完了させますか ？</string>
 	<string name="send_coins_instant_send_not_feasible">このトランザクションは決済に数分がかかります。</string>
 
