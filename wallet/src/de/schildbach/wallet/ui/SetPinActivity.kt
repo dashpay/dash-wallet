@@ -145,7 +145,7 @@ class SetPinActivity : AppCompatActivity() {
         numericKeyboardView.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
             override fun onNumber(number: Int) {
-                if (pinRetryController.isLocked) {
+                if (changePin && pinRetryController.isLocked) {
                     return
                 }
 
@@ -321,9 +321,11 @@ class SetPinActivity : AppCompatActivity() {
         viewModel.encryptWalletLiveData.observe(this, Observer {
             when (it.status) {
                 Status.ERROR -> {
-                    pinRetryController.failedAttempt(viewModel.getPinAsString())
-                    if (pinRetryController.isLocked) {
-                        setState(State.LOCKED)
+                    if (changePin) {
+                        pinRetryController.failedAttempt(viewModel.getPinAsString())
+                        if (pinRetryController.isLocked) {
+                            setState(State.LOCKED)
+                        }
                     } else {
                         if (state == State.DECRYPTING) {
                             setState(if (changePin) State.INVALID_PIN else State.DECRYPT)
