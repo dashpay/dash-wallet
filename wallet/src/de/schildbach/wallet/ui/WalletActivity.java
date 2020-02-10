@@ -1044,13 +1044,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
             syncPercentageView.setText(percentage + "%");
             if (percentage == 100) {
                 syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
-                syncStatusTitle.setText("Sync");
-                syncStatusMessage.setText("Completed");
+                syncStatusTitle.setText(R.string.sync_status_sync_title);
+                syncStatusMessage.setText(R.string.sync_status_sync_completed);
                 showSyncPane(R.id.sync_status_pane, false);
             } else {
                 syncPercentageView.setTextColor(getResources().getColor(R.color.dash_gray));
-                syncStatusTitle.setText("Syncing");
-                syncStatusMessage.setText("with Dash Blockchain");
+                syncStatusTitle.setText(R.string.sync_status_syncing_title);
+                syncStatusMessage.setText(R.string.sync_status_syncing_sub_title);
                 showSyncPane(R.id.sync_status_pane, true);
             }
         }
