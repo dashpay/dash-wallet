@@ -176,8 +176,7 @@ public class Configuration {
     }
 
     public Uri getBlockExplorer() {
-        return Uri.parse(prefs.getString(PREFS_KEY_BLOCK_EXPLORER,
-                res.getStringArray(R.array.preferences_block_explorer_values)[0]));
+        return Uri.parse(prefs.getString(PREFS_KEY_BLOCK_EXPLORER, null));
     }
 
     public boolean remindBalance() {
