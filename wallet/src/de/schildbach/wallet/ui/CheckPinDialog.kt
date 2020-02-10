@@ -264,6 +264,7 @@ open class CheckPinDialog : DialogFragment() {
         numeric_keyboard.visibility = if (active) View.GONE else View.VISIBLE
         message.setText(if (active) R.string.authenticate_fingerprint_message else R.string.authenticate_pin_message)
         pin_or_fingerprint_button.setText(if (active) R.string.authenticate_switch_to_pin else R.string.authenticate_switch_to_fingerprint)
+        pin_or_fingerprint_button.visibility = if (active) View.VISIBLE else View.GONE
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)

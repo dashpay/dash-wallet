@@ -269,6 +269,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
                 } else {
                     fingerprintHelper = null
                     action_login_with_fingerprint.isEnabled = false
+                    action_login_with_fingerprint.alpha = 0f
                 }
             }
         }
