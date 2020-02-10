@@ -59,6 +59,7 @@ import com.google.common.base.Charsets;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.TransactionResultActivity;
+import de.schildbach.wallet_test.R;
 
 import android.content.Context;
 import android.content.Intent;
@@ -369,7 +370,9 @@ public class WalletUtils {
 
     public static void viewOnBlockExplorer(Context context, Transaction.Purpose txPurpose,
                                            String txHash) {
-        Uri blockExplorer = WalletApplication.getInstance().getConfiguration().getBlockExplorer();
+        Uri blockExplorer = WalletApplication.getInstance()
+                .getConfiguration()
+                .getBlockExplorer(R.array.preferences_block_explorer_values);
         Uri keyRotationUri = Uri.parse("https://bitcoin.org/en/alert/2013-08-11-android");
         boolean txRotation = txPurpose == Transaction.Purpose.KEY_ROTATION;
         if (!txRotation) {
