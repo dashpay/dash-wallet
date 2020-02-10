@@ -175,8 +175,8 @@ public class Configuration {
         return prefs.getBoolean(PREFS_KEY_TRUSTED_PEER_ONLY, false);
     }
 
-    public Uri getBlockExplorer() {
-        return Uri.parse(prefs.getString(PREFS_KEY_BLOCK_EXPLORER, null));
+    public Uri getBlockExplorer(int defValueResValue) {
+        return Uri.parse(prefs.getString(PREFS_KEY_BLOCK_EXPLORER, res.getStringArray(defValueResValue)[0]));
     }
 
     public boolean remindBalance() {

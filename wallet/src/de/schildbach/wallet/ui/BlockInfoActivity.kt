@@ -55,7 +55,8 @@ class BlockInfoActivity : BaseMenuActivity() {
 
         view_on_explorer.setOnClickListener {
             val config = WalletApplication.getInstance().configuration
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.withAppendedPath(config.blockExplorer,
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.withAppendedPath(
+                    config.getBlockExplorer(R.array.preferences_block_explorer_values),
                     "block/" + blockInfo.hash)))
         }
     }
