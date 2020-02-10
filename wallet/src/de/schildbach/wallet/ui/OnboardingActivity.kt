@@ -82,7 +82,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private fun regularFlow() {
-        if (!walletApplication.configuration.v7TutorialCompleted) {
+        if (walletApplication.configuration.v7TutorialCompleted) {
             upgradeOrStartMainActivity()
         } else {
             startActivityForResult(Intent(this, WelcomeActivity::class.java),
