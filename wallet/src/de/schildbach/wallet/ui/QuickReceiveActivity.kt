@@ -21,11 +21,10 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import de.schildbach.wallet_test.R
 
-class QuickReceiveActivity : AppCompatActivity() {
+class QuickReceiveActivity : ShortcutComponentActivity() {
 
     companion object {
         @JvmStatic
@@ -36,6 +35,10 @@ class QuickReceiveActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (finishIfNotInitialized()) {
+            return
+        }
+
         setContentView(R.layout.activity_quick_receive)
 
         if (savedInstanceState == null) {

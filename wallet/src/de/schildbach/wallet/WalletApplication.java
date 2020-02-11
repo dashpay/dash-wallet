@@ -81,8 +81,10 @@ import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.ui.LockScreenActivity;
 import de.schildbach.wallet.ui.OnboardingActivity;
+import de.schildbach.wallet.ui.ShortcutComponentActivity;
 import de.schildbach.wallet.ui.WalletUriHandlerActivity;
 import de.schildbach.wallet.ui.preference.PinRetryController;
+import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.security.SecurityGuard;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.util.CrashReporter;
@@ -132,9 +134,10 @@ public class WalletApplication extends MultiDexApplication {
 
     private boolean isSpecialActivity(Activity activity) {
         return (activity instanceof OnboardingActivity)
-                || (activity instanceof LockScreenActivity)
                 || (activity instanceof SendCoinsActivity)
-                || (activity instanceof WalletUriHandlerActivity);
+                || (activity instanceof WalletUriHandlerActivity)
+                || (activity instanceof ScanActivity)
+                || (activity instanceof ShortcutComponentActivity);
     }
 
     @Override

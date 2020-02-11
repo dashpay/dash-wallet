@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.LayerDrawable
 import android.os.Bundle
@@ -37,6 +38,14 @@ import org.dash.wallet.common.ui.DialogBuilder
 private const val REGULAR_FLOW_TUTORIAL_REQUEST_CODE = 0
 
 class OnboardingActivity : RestoreFromFileActivity() {
+
+    companion object {
+        @JvmStatic
+        fun createIntent(context: Context): Intent {
+            return Intent(context, OnboardingActivity::class.java)
+                    .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        }
+    }
 
     private lateinit var viewModel: OnboardingViewModel
 

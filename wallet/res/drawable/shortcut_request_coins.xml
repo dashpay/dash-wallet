@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android" >
+<layer-list xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android" >
 
     <item
         android:bottom="@dimen/shortcut_padding"
@@ -15,9 +16,10 @@
         </shape>
     </item>
     <item
-        android:drawable="@drawable/ic_send_flipped_white_24dp"
+        android:drawable="@drawable/ic_lock_quick_receive"
         android:gravity="center"
         android:height="@dimen/shortcut_icon_size"
-        android:width="@dimen/shortcut_icon_size"/>
+        android:width="@dimen/shortcut_icon_size"
+        tools:ignore="UnusedAttribute" />
 
 </layer-list>
