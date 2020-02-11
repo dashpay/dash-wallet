@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "1039839682638-rq6rhh5v6cfv6ri33uuocfur9ogqcnhc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "hashengineering.darkcoin.wallet",
+            "certificate_hash": "168b06eaea793d7c1bc8ec92e658aa37104dda9a"
+          }
+        },
+        {
           "client_id": "1039839682638-ptp5u4p6c5ioatg7apqp3tvald05alb1.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -40,6 +48,43 @@
         "mobilesdk_app_id": "1:1039839682638:android:67503b93d496d1db",
         "android_client_info": {
           "package_name": "hashengineering.darkcoin.wallet.devnet"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1039839682638-kag258p0mlv8v9musaeir41o9hcr12pb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "hashengineering.darkcoin.wallet.devnet",
+            "certificate_hash": "168b06eaea793d7c1bc8ec92e658aa37104dda9a"
+          }
+        },
+        {
+          "client_id": "1039839682638-ptp5u4p6c5ioatg7apqp3tvald05alb1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDBEolfMU2qC6Pfe-Ot_6HcZ1f6LyXZt5w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1039839682638-ptp5u4p6c5ioatg7apqp3tvald05alb1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1039839682638:android:b6feebc0a2eab038ea631f",
+        "android_client_info": {
+          "package_name": "hashengineering.darkcoin.wallet.evonet"
         }
       },
       "oauth_client": [
@@ -73,6 +118,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "1039839682638-uhckali3ma7drt93ehb8m93tk41e5pma.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "hashengineering.darkcoin.wallet_test",
+            "certificate_hash": "168b06eaea793d7c1bc8ec92e658aa37104dda9a"
+          }
+        },
+        {
           "client_id": "1039839682638-ptp5u4p6c5ioatg7apqp3tvald05alb1.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -101,6 +154,14 @@
         }
       },
       "oauth_client": [
+        {
+          "client_id": "1039839682638-lboilb76mdtu9s4vnrde2j3ernrgb284.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "hashengineering.dash.wallet.beta",
+            "certificate_hash": "168b06eaea793d7c1bc8ec92e658aa37104dda9a"
+          }
+        },
         {
           "client_id": "1039839682638-ptp5u4p6c5ioatg7apqp3tvald05alb1.apps.googleusercontent.com",
           "client_type": 3

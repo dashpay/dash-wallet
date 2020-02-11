@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<string name="app_name">Dash [palinka]</string>
-	<string name="app_name_short">Dash [palinka]</string>
+	<string name="app_name">Dash [Evonet]</string>
+	<string name="app_name_short">Dash [Evonet]</string>
 
 	<string-array name="preferences_precision_values">
 		<item>8</item>
@@ -18,12 +18,10 @@
 		<item>µtDASH, no decimal places</item>
 	</string-array>
 	<string-array name="preferences_block_explorer_values">
-		<item>https://test.insight.dash.siampm.com/</item>
-		<item>http://test.explorer.dash.org/</item>
+		<item>http://devnet-evonet-1117662964.us-west-2.elb.amazonaws.com:3001/insight</item>
 	</string-array>
 	<string-array name="preferences_block_explorer_labels">
-		<item>Insight TestNet Block Explorer</item>
-		<item>Dash Block Explorer (Official Testnet)</item>
+		<item>Insight Evonet Block Explorer</item>
 	</string-array>
 
 </resources>
