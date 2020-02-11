@@ -165,7 +165,7 @@ android {
             res.srcDirs = ["devNet/res"]
         }
         evonet {
-            res.srcDirs = ["devNet/res"]
+            res.srcDirs = ["evonet/res"]
         }
     }
     flavorDimensions "default"
