@@ -32,9 +32,9 @@ import android.app.Activity;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.LoaderManager;
-import android.support.v4.content.Loader;
+import androidx.fragment.app.Fragment;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.Loader;
 import android.text.Html;
 import android.text.SpannableStringBuilder;
 import android.view.LayoutInflater;
@@ -75,14 +75,6 @@ public final class WalletDisclaimerFragment extends Fragment implements OnShared
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
             final Bundle savedInstanceState) {
         final View view = inflater.inflate(R.layout.wallet_disclaimer_fragment, container);
-        messageView = view.findViewById(R.id.wallet_disclaimer_text);
-
-        messageView.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(final View v) {
-                HelpDialogFragment.page(getFragmentManager(), R.string.help_safety);
-            }
-        });
 
         closeSafetyDisclaimerView = view.findViewById(R.id.wallet_disclaimer_close);
         closeSafetyDisclaimerView.setOnClickListener(new View.OnClickListener() {

@@ -48,6 +48,7 @@ import com.google.common.base.Strings;
 import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet_test.BuildConfig;
 
 import android.app.ActivityManager;
 import android.app.admin.DevicePolicyManager;
@@ -57,8 +58,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.os.Build;
-import android.support.v4.app.ActivityManagerCompat;
-import de.schildbach.wallet_test.BuildConfig;
+import androidx.core.app.ActivityManagerCompat;
 
 /**
  * @author Andreas Schildbach

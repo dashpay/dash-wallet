@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">Esta transação será concretizada imediatamente sem taxa adicional. </string>
 	<string name="send_coins_auto_lock_not_feasible">Esta transação poderá levar vários minutos para se concretizar. Completar imediatamente por %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Esta transação poderá levar vários minutos para se concretizar.</string>
 
@@ -82,10 +80,6 @@
 	<string name="notification_transactions_channel_description">Receba alerta sobre transações entrantes</string>
 	<string name="notification_synchronization_channel_name">Sincronização</string>
 	<string name="notification_synchronization_channel_description">Mostra uma notificação enquanto o app está sincronizando com a rede.</string>
-
-	<string name="fastest_payment_network_dialog_title">Seu Dinheiro, Seu Jeito</string>
-	<string name="fastest_payment_network_dialog_message">Envia e Recebe Dash em um instante sem taxa adicional</string>
-	<string name="fastest_payment_network_dialog_button">Entendido</string>
 
     <string name="net_type_indicator" />
 

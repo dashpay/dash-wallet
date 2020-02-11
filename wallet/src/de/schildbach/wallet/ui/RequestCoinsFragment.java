@@ -45,8 +45,8 @@ import de.schildbach.wallet.util.Toast;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
-import android.arch.lifecycle.Observer;
-import android.arch.lifecycle.ViewModelProviders;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProviders;
 import android.bluetooth.BluetoothAdapter;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
@@ -62,7 +62,7 @@ import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
 import android.nfc.NfcEvent;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
+import androidx.fragment.app.Fragment;
 import android.text.SpannableStringBuilder;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -261,7 +261,7 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
     }
 
     private void restoreInstanceState(final Bundle savedInstanceState) {
-        address = new Address(Constants.NETWORK_PARAMETERS, savedInstanceState.getByteArray("receive_address"));
+        address = Address.fromPubKeyHash(Constants.NETWORK_PARAMETERS, savedInstanceState.getByteArray("receive_address"));
     }
 
     @Override

@@ -29,7 +29,6 @@
     <string name="wallet_transactions_fragment_empty_text_sent">아직 대시를 보낸 내역이 없습니다.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">대시 획득 방법\n\n1. 로컬 통화로 대시 구매\n2. 상품이나 서비스 판매\n3. 용역 대가로 획득</string>
     <string name="wallet_transactions_row_warning_backup">축하합니다, 첫번째 지불금을 받으셨습니다! 분실 방지를 위한 지갑 백업하기를 진행하셨습니까?</string>
-    <string name="wallet_transactions_row_warning_storage_encryption">힌트: 지갑의 안전을 위해 &lt;u&gt;기기 암호화&lt;u&gt;를 사용해 보세요. 이것은 다른 앱의 자료도 보호해 줍니다.</string>
     <string name="wallet_transactions_fragment_coinbase">신규 채굴 코인</string>
     <string name="wallet_transactions_fragment_internal">내부 처리 금액</string>
     <string name="wallet_transactions_options_filter">필터</string>

@@ -6,16 +6,15 @@
 
 #include <jni.h>
 
-jbyteArray JNICALL x11_native(JNIEnv *env, jclass cls, jbyteArray input)
+jbyteArray JNICALL x11_native(JNIEnv *env, jclass cls, jbyteArray input, jint offset, jint length)
 {
-    jint Plen = (env)->GetArrayLength(input);
     jbyte *pInput = (env)->GetByteArrayElements(input, NULL);
     jbyteArray byteArray = NULL;
 
     if (pInput)
-	{
-	    jbyte result[HASH256_SIZE];
-	    HashX11((uint8_t *)pInput, (uint8_t *)pInput+Plen, (uint8_t *)result);
+    {
+        jbyte result[HASH256_SIZE];
+        HashX11((uint8_t *)pInput+offset, (uint8_t *)pInput+offset+length, (uint8_t *)result);
 
         byteArray = (env)->NewByteArray(32);
         if (byteArray)
@@ -24,7 +23,7 @@ jbyteArray JNICALL x11_native(JNIEnv *env, jclass cls, jbyteArray input)
         }
 
         (env)->ReleaseByteArrayElements(input, pInput, JNI_ABORT);
-	} else {
+    } else {
         jclass e = env->FindClass("java/lang/NullPointerException");
         env->ThrowNew(e, "input is null");
     }
@@ -32,7 +31,7 @@ jbyteArray JNICALL x11_native(JNIEnv *env, jclass cls, jbyteArray input)
 }
 
 static const JNINativeMethod methods[] = {
-    { "x11_native", "([B)[B", (void *) x11_native }
+        { "x11_native", "([BII)[B", (void *) x11_native }
 };
 
 jint JNI_OnLoad(JavaVM *vm, void *reserved) {

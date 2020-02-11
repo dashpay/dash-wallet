@@ -29,7 +29,6 @@
     <string name="wallet_transactions_fragment_empty_text_sent">Aún no se han enviado Dash.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">¿Cómo obtener Dash?\n\nCámbialos por dinero tradicional,\nvende bienes o servicios o\ngánalos trabajando</string>
     <string name="wallet_transactions_row_warning_backup">Felicitaciones, recibiste tu primer pago! ¿Ya hiciste backup de tu billetera para protegerse contra pérdidas?</string>
-    <string name="wallet_transactions_row_warning_storage_encryption">Tip: para incrementar la seguridad de tu billetera, puedes &lt;u&gt;encriptar tu dispositivo&lt;/u&gt;. Esto tambien protege los datos de otras apps.</string>
     <string name="wallet_transactions_fragment_coinbase">extraído</string>
     <string name="wallet_transactions_fragment_internal">interno</string>
     <string name="wallet_transactions_options_filter">Filtrar</string>

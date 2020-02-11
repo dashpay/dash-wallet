@@ -3,13 +3,6 @@
 	xmlns:app="http://schemas.android.com/apk/res-auto">
 
 	<item
-		android:id="@+id/wallet_options_lock"
-		android:icon="@drawable/ic_menu_safety_white"
-		android:title="@string/wallet_lock_unlock_wallet"
-		android:visible="true"
-		app:showAsAction="always" />
-
-	<item
 		android:id="@+id/wallet_options_request"
 		android:icon="@drawable/ic_send_flipped_white_24dp"
 		android:title="@string/request_coins_activity_title"
@@ -23,12 +16,6 @@
 		android:titleCondensed="@string/button_send_coins"
 		android:visible="@bool/wallet_actions_top"
 		app:showAsAction="ifRoom" />
-
-	<item
-		android:id="@+id/wallet_options_help"
-		android:showAsAction="never"
-		android:orderInCategory="999"
-		android:title="@string/button_help"/>
 
     <item
         android:id="@+id/wallet_options_report_issue"

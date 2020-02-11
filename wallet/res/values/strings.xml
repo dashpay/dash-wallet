@@ -16,7 +16,7 @@
     <string name="wallet_address_dialog_fragment_hint">To protect your privacy, your address will change once it receives a payment.</string>
     <string name="wallet_balance_fragment_too_much">This amount is quite high for carrying in your pocket. Please move some to a safer place.</string>
     <string name="wallet_balance_fragment_replaying">Balance is unavailable during replay.</string>
-    <string name="exchange_rates_activity_title">Exchange rates</string>
+    <string name="exchange_rates_activity_title">Local Currency</string>
     <string name="exchange_rates_fragment_empty_text">Could not load exchange rates.</string>
     <string name="exchange_rates_fragment_empty_search">Could not find exchange rate.</string>
     <string name="exchange_rates_fragment_default">(default)</string>
@@ -25,14 +25,11 @@
     <string name="exchange_rates_fragment_source">Price from %s</string>
     <string name="exchange_rates_options_search">Search exchange rate</string>
     <string name="exchange_rates_context_set_as_default_title">Set as default</string>
-    <string name="wallet_transactions_fragment_empty_text_received">No Dash received so far.</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">No Dash sent so far.</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">How to get Dash?\n\nTrade for traditional money,\nsell goods or services or\nearn by working.</string>
+    <string name="wallet_transactions_fragment_empty_text">There are no transactions to display</string>
     <string name="wallet_transactions_row_warning_backup">Congratulations, you received your first payment! Have you already backed up your wallet, to protect against loss?</string>
-    <string name="wallet_transactions_row_warning_storage_encryption">Hint: to increase the safety of your wallet, you can &lt;u&gt;encrypt your device&lt;/u&gt;. This also protects data of other apps.</string>
     <string name="wallet_transactions_fragment_coinbase">mined</string>
     <string name="wallet_transactions_fragment_internal">internal</string>
-    <string name="wallet_transactions_options_filter">Filter</string>
+    <string name="wallet_transactions_options_filter">Filter Transactions</string>
     <string name="wallet_transactions_options_filter_all">All payments</string>
     <string name="wallet_transactions_options_filter_received">Received payments</string>
     <string name="wallet_transactions_options_filter_sent">Sent payments</string>
@@ -58,18 +55,18 @@
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Wrong signature!</string>
     <string name="send_coins_fragment_payee_verified_by">verified by: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">unknown</string>
-    <string name="send_coins_fragment_receiving_address_label">Pay to</string>
+    <string name="send_coins_fragment_receiving_address_label">Send to</string>
     <string name="send_coins_fragment_receiving_address_hint">type address or name</string>
     <string name="send_coins_fragment_receiving_address_error">Invalid Dash address!</string>
     <string name="send_coins_fragment_receiving_address_own">You\'re about to send to yourself!</string>
     <string name="send_coins_fragment_receiving_address_complex">complex\naddress</string>
     <string name="send_coins_fragment_pending">(%s waiting for confirmation)</string>
-    <string name="send_coins_fragment_amount_label">Amount to pay</string>
+    <string name="send_coins_fragment_amount_label">Amount to send</string>
     <string name="send_coins_fragment_pin_label">Enter PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">A network fee of %s will be paid.</string>
     <string name="send_coins_fragment_hint_fee_priority">A priority fee of %s will be paid. If you care about low fees, use \'priority\' only if you need confirmation as soon as possible.</string>
-    <string name="send_coins_fragment_hint_dusty_send">The amount is too small to send.</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Not enough available coins. You\'re missing %s.</string>
+    <string name="send_coins_fragment_hint_dusty_send">The amount is too small to send</string>
+    <string name="send_coins_fragment_hint_insufficient_money">Insufficient funds</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">The amount of tiny payments in your wallet doesn\'t add up to a sendable value.</string>
     <string name="send_coins_fragment_hint_replaying">Currently payments are not possible because a replay is in progress.</string>
     <string name="send_coins_fragment_direct_payment_enable">Send payment directly to the payee.</string>
@@ -81,7 +78,7 @@
     <string name="send_coins_fragment_button_back">Back</string>
     <string name="send_coins_fragment_insufficient_money_title">Not enough available coins</string>
     <string name="send_coins_fragment_insufficient_money_msg1">You\'re missing %s.</string>
-    <string name="send_coins_fragment_insufficient_money_msg2">Do you want to pay with all you have?</string>
+    <string name="send_coins_fragment_insufficient_money_msg2">Do you want to send with all you have?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">Emptying of wallet failed</string>
     <string name="send_coins_fragment_state_decrypting">Decrypting…</string>
     <string name="send_coins_preparation_msg">Signing…</string>
@@ -93,13 +90,13 @@
     <string name="send_coins_options_fee_category_economic">Economic</string>
     <string name="send_coins_options_fee_category_priority">Priority</string>
     <string name="send_coins_options_empty">Empty wallet</string>
-    <string name="sweep_wallet_activity_title">Sweep paper wallet</string>
+    <string name="sweep_wallet_activity_title">Import Private Key</string>
     <string name="sweep_wallet_fragment_intro">You are about to sweep a paper wallet or coupon. This will move all coins from that paper to your wallet on this device. When the transaction is confirmed, the paper will be worthless and should not be re-used for safety reasons.</string>
     <string name="sweep_wallet_fragment_hint">Paper wallets are most commonly used for cold storage. Some ATMs print them on their paper slip rather than sending the coins to your mobile device directly. People sometimes use pre-charged paper wallets to pass value around (not recommended).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Start by scanning the private key of a paper wallet. Use the camera action button.</string>
     <string name="sweep_wallet_fragment_encrypted">This private key is protected with a password.</string>
-    <string name="sweep_wallet_fragment_password">password</string>
-    <string name="sweep_wallet_fragment_bad_password">bad password!</string>
+    <string name="sweep_wallet_fragment_password">Password</string>
+    <string name="sweep_wallet_fragment_bad_password">Bad password!</string>
     <string name="sweep_wallet_fragment_balance">Balance to sweep</string>
     <string name="sweep_wallet_fragment_button_decrypt">Decrypt</string>
     <string name="sweep_wallet_fragment_button_sweep">Sweep</string>
@@ -159,6 +156,33 @@
     <string name="transaction_row_message_received_dust">This small amount can probably never be spent economically.</string>
     <string name="transaction_row_message_received_pay_to_many">This payment pays to many wallets besides yours, which makes the app slow down over time. If you can, try receiving payments which pay only to you.</string>
     <string name="transaction_row_message_received_rbf">This payment was delayed because the sender used an insecure transaction type.</string>
+    <string name="transaction_row_status_received">Received</string>
+    <string name="transaction_row_status_sent">Sent</string>
+    <string name="transaction_row_status_sending">Sending</string>
+    <string name="transaction_row_status_sent_interally">Internal</string>
+    <string name="transaction_row_status_processing">Processing</string>
+    <string name="transaction_row_status_confirming">Confirming</string>
+    <string name="transaction_row_status_locked">Locked</string>
+    <string name="transaction_row_status_error_sending">Error Sending</string>
+    <string name="transaction_row_status_error_dead">Double spend</string>
+    <string name="transaction_row_status_error_conflicting">In conflict</string>
+    <string name="transaction_row_status_error_insufficient_fee">Insufficient fee</string>
+    <string name="transaction_row_status_error_dust">Dust</string>
+    <string name="transaction_row_status_error_non_standard">Nonstandard</string>
+    <string name="transaction_row_status_error_malformed">Malformed</string>
+    <string name="transaction_row_status_error_duplicate">Duplicate</string>
+    <string name="transaction_row_status_error_obsolete">Obsolete</string>
+    <string name="transaction_row_status_error_invalid">Invalid</string>
+    <string name="transaction_row_status_error_other">Unknown</string>
+    <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
+    <string name="transaction_row_time_text">On %s at %s</string>
+    <string name="transaction_row_rate_not_available">Not available</string>
+    <string name="transaction_row_status_masternode_registration">Masternode Registration</string>
+    <string name="transaction_row_status_masternode_update_registrar">Masternode Update</string>
+    <string name="transaction_row_status_masternode_update_service">Masternode Update</string>
+    <string name="transaction_row_status_masternode_revoke">Masternode Revoke</string>
+    <string name="transaction_row_status_masternode_reward">Masternode Reward</string>
+    <string name="transaction_row_status_mining_reward">Mining Reward</string>
     <string name="network_monitor_activity_title">Network monitor</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Blocks</string>
@@ -202,7 +226,7 @@
     <string name="import_export_keys_dialog_show">Show password</string>
     <string name="import_export_keys_dialog_failure_title">Error</string>
     <string name="import_keys_intent_filter_action">Restore wallet</string>
-    <string name="encrypt_keys_dialog_title">Spending PIN</string>
+    <string name="encrypt_keys_dialog_title">Change PIN</string>
     <string name="encrypt_keys_dialog_message">Spending from your wallet will be protected with the chosen PIN.</string>
     <string name="encrypt_keys_dialog_warning">Important: You need to remember your PIN! Do not use common numbers (like birthdates).</string>
     <string name="encrypt_keys_dialog_password_old">Old PIN</string>
@@ -213,7 +237,7 @@
     <string name="encrypt_keys_dialog_show">Show PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">Encrypting…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Decrypting…</string>
-    <string name="encrypt_keys_dialog_state_done">Done.</string>
+    <string name="encrypt_keys_dialog_state_done">Done</string>
     <string name="scan_camera_problem_dialog_title">Sorry</string>
     <string name="scan_camera_problem_dialog_message">The camera has a problem. You probably need to restart the device.</string>
     <string name="scan_camera_permission_dialog_title">Camera permission</string>
@@ -297,7 +321,7 @@
     <string name="notification_coins_received_msg">Received %s</string>
     <string name="notification_peers_connected_msg">%d peers connected</string>
     <string name="notification_inactivity_title">You\'ve still got Dash on this device!</string>
-        <string name="notification_inactivity_message">You still have Dash on this device! Please be sure to write down your recovery phrase before you uninstall the Dash Wallet or you will lose your balance of %s.</string>
+    <string name="notification_inactivity_message">You still have Dash on this device! Please be sure to write down your recovery phrase before you uninstall the Dash Wallet or you will lose your balance of %s.</string>
     <string name="notification_inactivity_action_dismiss">Remind me later</string>
     <string name="notification_inactivity_action_dismiss_forever">Don\'t remind me</string>
     <string name="appwidget_wallet_balance_title">Dash balance</string>
@@ -320,6 +344,7 @@
     <string name="button_set_as_default">Set as default</string>
     <string name="button_request_coins">Request Dash</string>
     <string name="button_send_coins">Send Dash</string>
+    <string name="button_pay">Send</string>
     <string name="button_scan">Scan</string>
     <string name="button_settings">Settings</string>
     <string name="action_show_qr">Show QR code</string>
@@ -339,10 +364,14 @@
 
     <string name="transaction_fragment_confirmations_label">Confirmations</string>
 
-    <string name="navigation_drawer_open">Open navigation drawer</string>
-    <string name="navigation_drawer_close">Close navigation drawer</string>
-
     <string name="dash_slogan">Instant - Private - Secure</string>
     <string name="dash_wallet">Wallet</string>
+
+    <string name="activity_security_backup_wallet">Back Up Wallet to File</string>
+    <string name="activity_security_view_recovery_phrase">View Recovery Phrase</string>
+    <string name="activity_security_advanced">Advanced Security</string>
+    <string name="activity_security_biometric_auth">Fingerprint Authentication</string>
+    <string name="activity_security_hide_balance">Hide Balance on Launch</string>
+    <string name="reset_to_default">Reset to Default</string>
 
 </resources>

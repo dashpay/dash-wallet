@@ -17,20 +17,25 @@
 
 package org.dash.wallet.common.ui;
 
-import org.bitcoinj.core.Monetary;
-import org.bitcoinj.utils.MonetaryFormat;
-
-import org.dash.wallet.common.Constants;
-import org.dash.wallet.common.R;
-import org.dash.wallet.common.util.MonetarySpannable;
-
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.graphics.Paint;
-import android.support.v7.widget.AppCompatTextView;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.ScaleXSpan;
 import android.util.AttributeSet;
+
+import androidx.appcompat.widget.AppCompatTextView;
+
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Monetary;
+import org.bitcoinj.utils.ExchangeRate;
+import org.bitcoinj.utils.MonetaryFormat;
+import org.dash.wallet.common.Constants;
+import org.dash.wallet.common.R;
+import org.dash.wallet.common.util.MonetarySpannable;
+
+import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 
 /**
  * @author Andreas Schildbach
@@ -44,6 +49,7 @@ public class CurrencyTextView extends AppCompatTextView {
     private ForegroundColorSpan prefixColorSpan = null;
     private RelativeSizeSpan insignificantRelativeSizeSpan = null;
     private boolean applyMarkup = true;
+    private int prefixColor = 0;
 
     public CurrencyTextView(final Context context) {
         super(context);
@@ -51,6 +57,13 @@ public class CurrencyTextView extends AppCompatTextView {
 
     public CurrencyTextView(final Context context, final AttributeSet attrs) {
         super(context, attrs);
+
+        TypedArray attrsArray = context.obtainStyledAttributes(attrs, R.styleable.CurrencyTextView);
+        try {
+            prefixColor = attrsArray.getColor(R.styleable.CurrencyTextView_prefixColor, 0);
+        } finally {
+            attrsArray.recycle();
+        }
     }
 
     public void setAmount(final Monetary amount) {
@@ -99,11 +112,27 @@ public class CurrencyTextView extends AppCompatTextView {
         updateView();
     }
 
+    public void setFiatAmount(Coin amount, ExchangeRate exchangeRate, MonetaryFormat format,
+                              String exchangeCurrencyCode) {
+        setAmount(null);  //clear the exchange rate first
+        if (exchangeRate != null) {
+            setFormat(format.code(0,
+                    PREFIX_ALMOST_EQUAL_TO + exchangeRate.fiat.getCurrencyCode() + " "));
+            Coin absCoin = Coin.valueOf(Math.abs(amount.value));
+            setAmount(exchangeRate.coinToFiat(absCoin));
+        } else {
+            setText(PREFIX_ALMOST_EQUAL_TO + exchangeCurrencyCode + " ----");
+        }
+    }
+
     @Override
     protected void onFinishInflate() {
         super.onFinishInflate();
-
-        setPrefixColor(getResources().getColor(R.color.fg_less_significant));
+        if (prefixColor != 0) {
+            setPrefixColor(prefixColor);
+        } else {
+            setPrefixColor(getResources().getColor(R.color.fg_less_significant));
+        }
         setPrefixScaleX(1);
         setInsignificantRelativeSize(0.85f);
         setSingleLine();

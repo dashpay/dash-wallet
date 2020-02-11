@@ -1,299 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout
-	xmlns:android="http://schemas.android.com/apk/res/android"
-	xmlns:tools="http://schemas.android.com/tools"
-	android:layout_height="match_parent"
-	android:layout_width="match_parent">
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp">
 
-	<Button
-		android:id="@+id/send_coins_go"
-		style="@style/MontserratButton"
-		android:layout_alignParentBottom="true"
-		android:layout_width="match_parent"
-		android:layout_height="wrap_content"
-		tools:text="@string/button_send_coins"
-		android:maxLines="2"
-		android:layout_margin="16dp" />
+    <TextView
+        android:id="@+id/send_coins_payee_name"
+        style="@style/MontserratRegular.DB.12"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center_horizontal"
+        android:singleLine="true" />
 
-	<ScrollView
-		android:layout_width="match_parent"
-		android:layout_height="match_parent"
-		android:layout_above="@id/send_coins_go"
-		android:layout_alignParentTop="true">
+    <TextView
+        android:id="@+id/send_coins_payee_verified_by"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:singleLine="true"
+        android:textColor="@color/fg_less_significant"
+        android:textSize="@dimen/font_size_small"
+        tools:text="@string/send_coins_fragment_payee_verified_by" />
 
-		<LinearLayout
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:paddingTop="@dimen/space_medium"
-			android:paddingBottom="@dimen/space_medium"
-			android:paddingLeft="16dp"
-			android:paddingRight="16dp"
-			android:orientation="vertical"
-			android:focusableInTouchMode="true">
+    <TextView
+        android:id="@+id/send_coins_receiving_static_address"
+        style="@style/MontserratMedium.MG.14"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center_horizontal"
+        android:visibility="gone" />
 
-			<TextView
-				android:id="@+id/pay_to_label"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:layout_marginLeft="3dp"
-				android:layout_marginStart="3dp"
-				android:text="@string/send_coins_fragment_receiving_address_label"
-				style="@style/MontserratSemiBold.DB.14" />
+    <LinearLayout
+        android:id="@+id/is_direct_group"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
 
-			<TextView
-				android:id="@+id/send_coins_payee_name"
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:layout_marginTop="8dp"
-				style="@style/MontserratRegular.DB.12"
-				android:singleLine="true" />
+        <de.schildbach.wallet.ui.widget.MontserratCheckBox
+            android:id="@+id/send_coins_direct_payment_enable"
+            style="@style/CheckBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/list_entry_padding"
+            android:text="@string/send_coins_fragment_direct_payment_enable" />
 
-			<TextView
-				android:id="@+id/send_coins_payee_verified_by"
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:singleLine="true"
-				android:textColor="@color/fg_less_significant"
-				tools:text="@string/send_coins_fragment_payee_verified_by"
-				android:textSize="@dimen/font_size_small" />
+        <TextView
+            android:id="@+id/send_coins_direct_payment_message"
+            style="@style/MontserratRegular.DB.12"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/list_entry_padding_vertical"
+            android:visibility="gone"
+            tools:text="Directly payment message"
+            tools:visibilty="visible" />
 
-			<LinearLayout
-				android:id="@+id/send_coins_payee_group"
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:layout_marginTop="4dp"
-				android:layout_marginBottom="8dp"
-				android:layout_marginLeft="3dp"
-				android:layout_marginStart="3dp"
-				android:orientation="vertical" >
+    </LinearLayout>
 
-				<LinearLayout
-					android:id="@+id/send_coins_receiving_static"
-					android:layout_width="match_parent"
-					android:layout_height="wrap_content"
-					android:layout_marginTop="6dp"
-					android:orientation="horizontal"
-					android:visibility="gone">
-
-					<TextView
-						android:id="@+id/send_coins_receiving_static_label"
-						android:layout_width="0dp"
-						android:layout_weight="1"
-						android:layout_height="wrap_content"
-						android:ellipsize="end"
-						android:maxLines="3"
-						android:singleLine="false"
-                        android:text="@string/address_unlabeled"
-						style="@style/MontserratSemiBold.MG.14" />
-
-					<TextView
-						android:id="@+id/send_coins_receiving_static_address"
-						android:layout_width="0dp"
-						android:layout_weight="1"
-						android:layout_height="wrap_content"
-						style="@style/MontserratMedium.MG.14" />
-
-				</LinearLayout>
-
-			</LinearLayout>
-
-			<AutoCompleteTextView
-				android:id="@+id/send_coins_receiving_address"
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:completionThreshold="1"
-				android:textSize="14sp"
-				android:hint="@string/send_coins_fragment_receiving_address_hint"
-				android:imeOptions="flagNoExtractUi"
-				android:singleLine="true"
-				style="@style/MontserratMedium" />
-
-			<TextView
-				android:id="@+id/payment_amount_label"
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:layout_marginTop="26dp"
-				android:text="@string/send_coins_fragment_amount_label"
-				android:layout_marginLeft="3dp"
-				android:layout_marginStart="3dp"
-				style="@style/MontserratSemiBold.DB.14" />
-
-			<LinearLayout
-				android:id="@+id/payment_amount_group"
-				android:orientation="horizontal"
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content">
-
-				<org.dash.wallet.common.ui.CurrencyAmountView
-					android:id="@+id/send_coins_amount_dash"
-					android:layout_width="0px"
-					android:layout_height="wrap_content"
-					android:layout_weight="1" >
-
-					<EditText
-						android:id="@+id/send_coins_amount_dash_edittext"
-						android:drawablePadding="8dp"
-						android:layout_width="match_parent"
-						android:layout_height="wrap_content"
-						android:imeOptions="flagNoExtractUi"
-						android:textSize="16sp"
-						style="@style/MontserratRegular"
-						tools:ignore="TextFields" />
-
-				</org.dash.wallet.common.ui.CurrencyAmountView>
-
-				<org.dash.wallet.common.ui.CurrencyAmountView
-					android:id="@+id/send_coins_amount_local"
-					android:layout_width="0px"
-					android:layout_height="wrap_content"
-					android:layout_weight="1" >
-
-					<EditText
-						android:id="@+id/send_coins_amount_local_edittext"
-						android:drawablePadding="4dp"
-						android:layout_width="match_parent"
-						android:layout_height="wrap_content"
-						android:imeOptions="flagNoExtractUi"
-						android:textSize="16sp"
-						style="@style/MontserratRegular"
-						tools:ignore="TextFields" />
-
-				</org.dash.wallet.common.ui.CurrencyAmountView>
-
-			</LinearLayout>
-
-			<TextView
-				android:id="@+id/send_coins_hint"
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				style="@style/MontserratRegular.DB.12"
-				android:textSize="@dimen/font_size_small" />
-
-			<TextView
-				android:id="@+id/pin_label"
-				android:layout_marginTop="26dp"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:text="@string/send_coins_fragment_pin_label"
-				android:layout_marginLeft="3dp"
-				android:layout_marginStart="3dp"
-				style="@style/MontserratSemiBold.DB.14" />
-
-			<RelativeLayout
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content">
-
-				<ImageView
-					android:id="@+id/fingerprint_icon"
-					android:src="@drawable/ic_fingerprint_black_24dp"
-					android:layout_alignParentRight="true"
-					android:layout_alignParentEnd="true"
-					android:layout_width="wrap_content"
-					android:layout_height="wrap_content"
-					android:visibility="gone"
-					tools:visibility="visible"/>
-
-				<EditText
-					android:id="@+id/send_coins_private_key_password"
-					android:layout_width="match_parent"
-					android:layout_height="wrap_content"
-					style="@style/MontserratMedium"
-					android:textSize="14sp"
-					android:hint="@string/private_key_password"
-					android:imeOptions="flagNoExtractUi"
-					android:inputType="numberPassword"
-					android:singleLine="true" />
-
-			</RelativeLayout>
-
-			<TextView
-				android:id="@+id/send_coins_private_key_bad_password"
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:layout_marginLeft="3dp"
-				android:layout_marginStart="3dp"
-				android:text="@string/private_key_bad_password"
-				android:textColor="@color/fg_error"
-				style="@style/MontserratSemiBold"
-				android:textSize="12sp"
-				tools:visibility="visible"
-				android:visibility="invisible" />
-
-			<TextView
-				tools:visibility="visible"
-				tools:text="6 attempts remaining"
-				android:id="@+id/pin_attempts"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:layout_marginLeft="3dp"
-				android:layout_marginStart="3dp"
-				android:textColor="@color/fg_error"
-				style="@style/MontserratSemiBold"
-				android:textSize="12sp"
-				android:visibility="gone" />
-
-			<LinearLayout
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:orientation="horizontal">
-
-				<de.schildbach.wallet.ui.widget.MontserratCheckBox
-					android:id="@+id/send_coins_instantx_enable"
-					style="@style/CheckBox"
-					android:layout_width="wrap_content"
-					android:layout_height="wrap_content" />
-
-				<TextView
-					android:id="@+id/send_coins_instant_send_info"
-					style="@style/MontserratRegular"
-					android:layout_width="0dp"
-					android:layout_height="wrap_content"
-					android:layout_gravity="fill"
-					android:layout_marginLeft="3dp"
-					android:layout_marginStart="3dp"
-					android:layout_marginTop="8dp"
-					android:layout_weight="1"
-					android:text="@string/send_coins_auto_lock_feasible"
-					android:textSize="@dimen/font_size_small" />
-
-			</LinearLayout>
-
-			<LinearLayout
-				android:id="@+id/is_direct_group"
-				android:orientation="vertical"
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:layout_marginTop="@dimen/space_medium">
-
-				<de.schildbach.wallet.ui.widget.MontserratCheckBox
-					android:id="@+id/send_coins_direct_payment_enable"
-					android:layout_width="match_parent"
-					android:layout_height="wrap_content"
-					android:layout_marginBottom="@dimen/list_entry_padding"
-					android:text="@string/send_coins_fragment_direct_payment_enable"
-					style="@style/CheckBox" />
-
-				<TextView
-					android:id="@+id/send_coins_direct_payment_message"
-					android:layout_width="match_parent"
-					android:layout_height="wrap_content"
-					android:layout_marginBottom="@dimen/list_entry_padding_vertical"
-					style="@style/MontserratRegular.DB.12"
-					tools:text="Directly payment message"
-					tools:visibilty="visible"
-					android:visibility="gone" />
-
-			</LinearLayout>
-
-			<FrameLayout
-				android:id="@+id/send_coins_sent_transaction"
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:layoutAnimation="@anim/transaction_layout_anim"
-				android:visibility="gone" />
-
-		</LinearLayout>
-
-	</ScrollView>
-
-</RelativeLayout>
+</LinearLayout>

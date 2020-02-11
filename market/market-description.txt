@@ -1,36 +1,39 @@
-﻿Use at your own risk! (Requires Android 4 or higher)
+﻿MAIN DESCRIPTION
 
-<b>Have your Dash always with you, in your pocket!</b> You pay by quickly scanning a QR code. As a merchant, you receive payments reliably and instantly. Dash Wallet is the first mobile Dash app, and arguably also the most secure!
+Dash Wallet is the reference Android wallet maintained by Dash Core Group for Dash - Digital Cash - an innovative alternative to Bitcoin which is explicitly designed for payments.
 
-<b>FEATURES</b>
+Dash is a cryptocurrency that seeks to fix the flaws that other cryptocurrencies suffer from. It relies on a network of Masternodes to allow such things as optional privacy, instant transactions, and a direct funding mechanism to promote network growth.
 
-• No registration, web service or cloud needed! This wallet is de-centralized and peer to peer.
-• Display of Dash amount in DASH, mDASH and µDASH.
-• Conversion to and from national currencies.
-• Sending and receiving of Dash via NFC, QR codes or Dash URLs.
-• Address book for regularly used Dash addresses.
-• When you're offline, you can still pay via Bluetooth.
-• System notification for received coins.
-• Sweeping of paper wallets (e.g. those used for cold storage).
-• App widget for Dash balance.
+Intuitive and secure, Dash Wallet gives you complete control over your digital cash. Send and receive Dash payments instantly, with the safest mobile wallet available.
 
+Dash Wallet connects directly to the Dash network. This means that there are no servers to get hacked or go down - your funds are always safe. Even if your phone is lost, damaged or stolen, you can easily recover your funds using your personal recovery phrase.
 
-<b>CONTRIBUTE</b>
+Features:
 
-Dash Wallet is <b>open source</b> and <b>free software</b>. License: GPLv3
+* Send and receive Dash payments in seconds, online or in-person
+* One button payments to Dash-accepting merchants and websites
+* Pay quickly with biometric authentication
+* Sweeping of paper wallets (e.g. those used for cold storage)
+* 3rd party integrations to allow users to buy and sell Dash
+* Simple recovery phrase enables you to recover funds when your device is lost or changed
+* Flexible settings to meet a range of custom security preferences
+* Direct dash network client - no central server to get hacked or go down
+
+Dash Wallet is open source and free. Network fees are lower than most cryptocurrencies and there are no additional centralized costs. Send any amount of money to anyone in the world in seconds. Accept payments reliably and instantly at your business. This is how money should be.
+
+CONTRIBUTE
+
+Dash Wallet is open source and free software. License: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Our source code is available at GitHub:
-https://github.com/HashEngineering/dash-wallet
+https://github.com/dashevo/dash-wallet
 
 All translations are managed via Transifex:
-https://www.transifex.com/dash/dash-wallet/
+https://www.transifex.com/dash/dash-mobile-wallets/
 
 You can find more about Dash at
 https://www.dash.org/
 
-<b>TESTIMONIALS</b>
-
-• A recommended mobile wallet by https://www.dash.org
-
-<i>Use at your own risk!</i>
+v7.0.0 Upgrade
+Dash Wallet v7.0 brings with it a completely redesigned experience that seeks to enhance ease of use in an intuitive and familiar way across all your devices. We reimagined our recovery phrase verification process to highlight the importance of safeguarding this information for later wallet recovery, and users can now decide when they want to take the time to write down their 12-word recovery phrase. We have also added shortcuts to the home screen for quicker access to commonly used features and our menu has been repositioned in the app and organized to help users configure their wallet faster and more efficiently. Users now have much broader control over their security settings and the ability to decide how frequently they have to enter their pin code.

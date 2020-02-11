@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">Această tranzacție va fi decontată instantaneu fără taxe suplimentare.</string>
 	<string name="send_coins_auto_lock_not_feasible">Această tranzacție poate dura câteva minute până la decontare. Completați instantaneu pentru %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Această tranzacție poate dura câteva minute până la decontare. </string>
 
@@ -85,10 +83,6 @@
 	<string name="notification_transactions_channel_description">Primeşte alerte despre tranzacțiile primite.</string>
 	<string name="notification_synchronization_channel_name">Sincronizare</string>
 	<string name="notification_synchronization_channel_description">Afișează o notificare atunci când aplicația se sincronizează cu rețeaua.</string>
-
-	<string name="fastest_payment_network_dialog_title">Banii Tăi, Calea Ta</string>
-	<string name="fastest_payment_network_dialog_message">Trimite și primește Dash imediat fără taxă suplimentară</string>
-	<string name="fastest_payment_network_dialog_button">Am înțeles</string>
 
     <string name="net_type_indicator" />
 

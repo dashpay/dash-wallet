@@ -19,7 +19,6 @@ package de.schildbach.wallet.data;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,12 +35,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Stopwatch;
-import com.squareup.okhttp.Call;
-import com.squareup.okhttp.HttpUrl;
-import com.squareup.okhttp.OkHttpClient;
-import com.squareup.okhttp.Request;
-import com.squareup.okhttp.Response;
-import com.squareup.okhttp.ResponseBody;
 import com.squareup.okhttp.internal.http.HttpDate;
 
 import de.schildbach.wallet.Constants;
@@ -52,7 +45,13 @@ import de.schildbach.wallet.util.Io;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.res.AssetManager;
-import android.support.v4.content.AsyncTaskLoader;
+import androidx.loader.content.AsyncTaskLoader;
+import okhttp3.Call;
+import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 
 /**
  * @author Andreas Schildbach
@@ -156,17 +155,18 @@ public class DynamicFeeLoader extends AsyncTaskLoader<Map<FeeCategory, Coin>> {
             final String userAgent) {
         final Stopwatch watch = Stopwatch.createStarted();
 
-        final Request.Builder request = new Request.Builder();
-        request.url(url);
-        request.header("User-Agent", userAgent);
+        final Request.Builder requestBuilder = new Request.Builder()
+                .url(url)
+                .header("User-Agent", userAgent);
         if (targetFile.exists())
-            request.header("If-Modified-Since", HttpDate.format(new Date(targetFile.lastModified())));
+            requestBuilder.header("If-Modified-Since", HttpDate.format(new Date(targetFile.lastModified())));
 
-        final OkHttpClient httpClient = Constants.HTTP_CLIENT.clone();
-        httpClient.setConnectTimeout(5, TimeUnit.SECONDS);
-        httpClient.setWriteTimeout(5, TimeUnit.SECONDS);
-        httpClient.setReadTimeout(5, TimeUnit.SECONDS);
-        final Call call = httpClient.newCall(request.build());
+        final OkHttpClient httpClient = Constants.HTTP_CLIENT.newBuilder()
+                .connectTimeout(5, TimeUnit.SECONDS)
+                .writeTimeout(5, TimeUnit.SECONDS)
+                .readTimeout(5, TimeUnit.SECONDS)
+                .build();
+        final Call call = httpClient.newCall(requestBuilder.build());
         try {
             final Response response = call.execute();
             final int status = response.code();

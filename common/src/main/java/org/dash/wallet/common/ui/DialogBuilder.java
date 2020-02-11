@@ -20,8 +20,8 @@ package org.dash.wallet.common.ui;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.DialogInterface.OnClickListener;
-import android.support.annotation.Nullable;
-import android.support.v7.app.AlertDialog;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import android.view.LayoutInflater;
 import android.widget.TextView;
 
@@ -50,7 +50,7 @@ public class DialogBuilder extends AlertDialog.Builder {
     }
 
     @Override
-    public AlertDialog.Builder setTitle(@android.support.annotation.Nullable CharSequence title) {
+    public AlertDialog.Builder setTitle(@androidx.annotation.Nullable CharSequence title) {
         TextView titleTextView = (TextView) LayoutInflater.from(getContext())
                 .inflate(R.layout.dialog_title, null);
         titleTextView.setText(title);

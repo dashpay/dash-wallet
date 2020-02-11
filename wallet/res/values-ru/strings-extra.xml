@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">Транзакция будет совершена мгновенно без дополнительной комиссии.</string>
 	<string name="send_coins_auto_lock_not_feasible">Подтверждение может занять несколько минут. Провести мгновенно за %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Подтверждение может занять несколько минут.</string>
 
@@ -88,10 +86,6 @@
 	<string name="notification_transactions_channel_description">Получать оповещения о входящих транзакциях.</string>
 	<string name="notification_synchronization_channel_name"> Синхронизация</string>
 	<string name="notification_synchronization_channel_description">Показывает уведомление, когда приложение синхронизируется с сетью.</string>
-
-	<string name="fastest_payment_network_dialog_title">Ваши деньги, Ваш выбор</string>
-	<string name="fastest_payment_network_dialog_message">Отправить и получить Dash мгновенно без дополнительной комиссии</string>
-	<string name="fastest_payment_network_dialog_button">Понятно</string>
 
     <string name="net_type_indicator" />
 

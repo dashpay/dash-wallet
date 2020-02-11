@@ -17,9 +17,7 @@
 package de.schildbach.wallet.ui.widget;
 
 import android.content.Context;
-import android.support.annotation.Nullable;
-import android.support.annotation.StringRes;
-import android.support.v4.content.ContextCompat;
+import android.content.res.TypedArray;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -28,6 +26,9 @@ import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
 
 import de.schildbach.wallet_test.R;
 
@@ -38,34 +39,45 @@ public class FingerprintView extends LinearLayout {
 
     private TextView fingerprintText;
     private ImageView fingerprintIcon;
-    private View separator;
     private String initialText;
 
     public FingerprintView(Context context) {
         super(context);
-        init();
+        init(null);
 
     }
 
     public FingerprintView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
-        init();
+        init(attrs);
     }
 
     public FingerprintView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        init();
+        init(attrs);
     }
 
-    private void init() {
-        LayoutInflater.from(getContext()).inflate(R.layout.fingerprint_view, this, true);
-        separator = findViewById(R.id.separator);
+    private void init(@Nullable AttributeSet attrs) {
+        int layoutResId = R.layout.fingerprint_view;
+        if (attrs != null) {
+            TypedArray attrsArray = getContext().obtainStyledAttributes(attrs, R.styleable.FingerprintView);
+            try {
+                int customLayoutResId = attrsArray.getResourceId(R.styleable.FingerprintView_custom_layout, 0);
+                if (customLayoutResId > 0) {
+                    layoutResId = customLayoutResId;
+                }
+            } finally {
+                attrsArray.recycle();
+            }
+        }
+        LayoutInflater.from(getContext()).inflate(layoutResId, this, true);
         fingerprintText = findViewById(R.id.fingerprint_text);
         fingerprintIcon = findViewById(R.id.fingerprint_icon);
         initialText = fingerprintText.getText().toString();
     }
 
     public void setText(String text) {
+        fingerprintText.setVisibility(View.VISIBLE);
         fingerprintText.setText(text);
         initialText = text;
     }
@@ -80,22 +92,15 @@ public class FingerprintView extends LinearLayout {
         initialText = fingerprintText.getText().toString();
 
         fingerprintIcon.startAnimation(shakeAnimation);
-        fingerprintIcon.setColorFilter(ContextCompat.getColor(context, R.color.fg_error));
         if (exceededMaxAttempts) {
             fingerprintText.setText(R.string.unlock_with_fingerprint_error_max_attempts);
         } else {
             fingerprintText.setText(R.string.unlock_with_fingerprint_error);
         }
+        fingerprintText.setVisibility(View.VISIBLE);
     }
 
     public void hideError() {
-        fingerprintIcon.setColorFilter(ContextCompat.getColor(getContext(),
-                android.R.color.transparent));
         fingerprintText.setText(initialText);
     }
-
-    public void hideSeparator() {
-        separator.setVisibility(View.GONE);
-    }
-
 }

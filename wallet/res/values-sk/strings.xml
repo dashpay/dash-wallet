@@ -29,7 +29,6 @@
     <string name="wallet_transactions_fragment_empty_text_sent">Zatiaľ neboli odoslané žiadne Dashe</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Ako získať Dash?\n\nVýmenou za tradičné peniaze,\npredajom tovarov a služieb,\nalebo zarobené prácou.</string>
     <string name="wallet_transactions_row_warning_backup">Gratulujeme, obdržali ste svoju prvú platbu! Urobili ste zálohu peňaženky, aby ste ju ochránili pred stratou?</string>
-    <string name="wallet_transactions_row_warning_storage_encryption">Tip: pre zvýšenie zabezpečenia vašej peňaženky môžete &lt;u&gt;zašifrovať toto zariadenie&lt;/u&gt;. Zabezpečíte tým aj dáta ostatných aplikácií.</string>
     <string name="wallet_transactions_fragment_coinbase">vyťažené</string>
     <string name="wallet_transactions_fragment_internal">interná</string>
     <string name="wallet_transactions_options_filter">Filter platieb</string>

@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">Transaksi ini akan diselesaikan secara instan tanpa biaya tambahan.</string>
 	<string name="send_coins_auto_lock_not_feasible">Transaksi ini mungkin perlu beberapa menit untuk diselesaikan. Selesaikan instan untuk %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Transaksi ini mungkin perlu beberapa menit untuk diselesaikan.</string>
 
@@ -79,10 +77,6 @@
 	<string name="notification_transactions_channel_description">Terima peringatan untuk transaksi masuk.</string>
 	<string name="notification_synchronization_channel_name">Sinkronisasi</string>
 	<string name="notification_synchronization_channel_description">Perlihatkan pemberitahuan saat aplikasi menyinkronkan dengan jaringan.</string>
-
-	<string name="fastest_payment_network_dialog_title">Uang Anda, Jalan Anda</string>
-	<string name="fastest_payment_network_dialog_message">Kirim dan Terima Dash dalam Sekejap tanpa biaya tambahan</string>
-	<string name="fastest_payment_network_dialog_button">Mengerti</string>
 
     <string name="net_type_indicator" />
 

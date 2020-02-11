@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    tools:context="de.schildbach.wallet.ui.widget.PinPreviewView"
+    tools:background="@color/dash_deep_blue"
+    tools:parentTag="android.widget.LinearLayout">
+
+    <LinearLayout
+        android:id="@+id/items"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="horizontal">
+
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:background="@drawable/pin_item"
+            android:minWidth="50dp"
+            android:minHeight="50dp" />
+
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:background="@drawable/pin_item"
+            android:minWidth="50dp"
+            android:minHeight="50dp" />
+
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:background="@drawable/pin_item"
+            android:minWidth="50dp"
+            android:minHeight="50dp" />
+
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/pin_item"
+            android:minWidth="50dp"
+            android:minHeight="50dp" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/forgot_pin"
+        style="@style/MontserratSemiBold"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/selectable_background_light"
+        android:padding="@dimen/pin_preview_textview_padding"
+        android:text="@string/forgot_pin_title"
+        android:textColor="@color/dash_white"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/bad_pin"
+        style="@style/MontserratSemiBold"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/pin_preview_textview_padding"
+        android:gravity="center_horizontal"
+        android:text="@string/private_key_bad_password"
+        android:textColor="@color/dash_white"
+        android:textSize="14sp"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+</merge>

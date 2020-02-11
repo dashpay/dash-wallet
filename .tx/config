@@ -2,49 +2,42 @@
 host = https://www.transifex.com
 minimum_perc = 80
 
-[dash-wallet.strings]
+[dash-mobile-wallets.strings]
 file_filter = wallet/res/values-<lang>/strings.xml
 lang_map = sl_SI:sl, zh_TW:zh-rTW
 source_file = wallet/res/values/strings.xml
 source_lang = en
 type = ANDROID
 
-[dash-wallet.strings-extra]
+[dash-mobile-wallets.strings-extra]
 file_filter = wallet/res/values-<lang>/strings-extra.xml
 lang_map = sl_SI:sl, zh_TW:zh-rTW
 source_file = wallet/res/values/strings-extra.xml
 source_lang = en
 type = ANDROID
 
-[dash-wallet.strings_help]
-file_filter = wallet/res/values-<lang>/strings_help.xml
-lang_map = sl_SI:sl, zh_TW:zh-rTW
-source_file = wallet/res/values/strings_help.xml
-source_lang = en
-type = ANDROID
-
-[dash-wallet.market-promo-text]
+[dash-mobile-wallets.market-promo-text]
 file_filter = market/market-promo-text-<lang>.txt
 lang_map = sl_SI:sl, zh_TW:zh-TW
 source_file = market/market-promo-text.txt
 source_lang = en
 type = TXT
 
-[dash-wallet.market-description]
+[dash-mobile-wallets.market-description]
 file_filter = market/market-description-<lang>.txt
 lang_map = sl_SI:sl, zh_TW:zh-TW
 source_file = market/market-description.txt
 source_lang = en
 type = TXT
 
-[dash-wallet.strings-common]
+[dash-mobile-wallets.strings-common]
 file_filter = common/src/main/res/values-<lang>/strings.xml
 lang_map = sl_SI:sl, zh_TW:zh-rTW
 source_file = common/src/main/res/values/strings.xml
 source_lang = en
 type = ANDROID
 
-[dash-wallet.strings-uphold]
+[dash-mobile-wallets.strings-uphold]
 file_filter = uphold-integration/src/main/res/values-<lang>/strings-uphold.xml
 lang_map = sl_SI:sl, zh_TW:zh-rTW
 source_file = uphold-integration/src/main/res/values/strings-uphold.xml

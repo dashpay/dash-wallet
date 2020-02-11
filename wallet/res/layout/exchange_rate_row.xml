@@ -1,85 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:background="@color/bg_list"
-    android:paddingTop="18dp"
-    android:paddingLeft="@dimen/space_medium"
-    android:paddingRight="@dimen/space_medium"
-    android:paddingBottom="@dimen/list_entry_padding"
-    android:focusable="true"
-    android:foreground="?android:attr/selectableItemBackground"
-    tools:ignore="RtlHardcoded" >
-
-    <ImageButton
-        android:id="@+id/exchange_rate_row_menu"
-        android:layout_width="28dp"
-        android:tint="@color/menu_gray"
-        android:layout_height="wrap_content"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentTop="true"
-        android:paddingLeft="14dp"
-        android:paddingStart="14dp"
-        android:background="@android:color/transparent"
-        android:src="@drawable/ic_more_vert_24dp" />
+    android:layout_width="match_parent"
+    android:layout_height="70dp"
+    android:layout_marginLeft="15dp"
+    android:layout_marginRight="15dp"
+    android:layout_marginBottom="10dp"
+    android:background="@drawable/round_corners_white_bg">
 
     <TextView
-        android:id="@+id/exchange_rate_row_currency_code"
+        android:id="@+id/local_currency_code"
+        style="@style/MontserratRegular.G"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:layout_centerVertical="true"
-        android:layout_marginRight="50dp"
-        android:layout_marginEnd="50dp"
-        android:singleLine="true"
-        style="@style/MontserratSemiBold.DB.14"
-        tools:text="USD"/>
+        android:layout_marginStart="18dp"
+        android:layout_marginLeft="18dp"
+        android:textColor="@color/black_text"
+        android:textSize="17sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="USD" />
 
-    <TextView
-        android:id="@+id/exchange_rate_label"
+    <CheckBox
+        android:id="@+id/checkbox"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="4dp"
-        android:singleLine="true"
-        android:layout_alignParentTop="true"
-        android:layout_toRightOf="@id/exchange_rate_row_currency_code"
-        android:layout_toEndOf="@id/exchange_rate_row_currency_code"
-        android:text="@string/exchange_rates_fragment_rate"
-        style="@style/MontserratMedium.DB.12"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:singleLine="true"
-        android:text="@string/exchange_rates_fragment_balance"
-        android:layout_alignLeft="@id/exchange_rate_label"
-        android:layout_alignStart="@id/exchange_rate_label"
-        android:layout_below="@id/exchange_rate_label"
-        android:textColor="@color/fg_less_significant"
-        style="@style/MontserratMedium.MG.12"/>
+        android:layout_marginEnd="18dp"
+        android:layout_marginRight="18dp"
+        android:button="@drawable/round_checkbox"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <org.dash.wallet.common.ui.CurrencyTextView
-        android:id="@+id/exchange_rate_row_rate"
-        android:layout_toLeftOf="@id/exchange_rate_row_menu"
-        android:layout_toStartOf="@id/exchange_rate_row_menu"
-        android:layout_marginBottom="4dp"
+        android:id="@+id/price"
+        style="@style/MontserratRegular.MG"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="right|end"
-        style="@style/MontserratSemiBold.DB.12"/>
+        android:layout_marginEnd="16dp"
+        android:layout_marginRight="16dp"
+        android:textSize="15sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/checkbox"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="$63.30" />
 
-    <org.dash.wallet.common.ui.CurrencyTextView
-        android:id="@+id/exchange_rate_row_balance"
-        android:layout_below="@id/exchange_rate_row_rate"
-        android:layout_alignEnd="@id/exchange_rate_row_rate"
-        android:layout_alignRight="@id/exchange_rate_row_rate"
+    <TextView
+        android:id="@+id/local_currency_name"
+        style="@style/MontserratRegular.G"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="right|end"
-        android:textColor="@color/fg_less_significant"
-        style="@style/MontserratMedium.MG.12"/>
+        android:layout_marginStart="5dp"
+        android:layout_marginLeft="5dp"
+        android:layout_marginEnd="10dp"
+        android:layout_marginRight="10dp"
+        android:ellipsize="end"
+        android:lines="1"
+        app:layout_constrainedWidth="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/price"
+        app:layout_constraintHorizontal_bias="0"
+        app:layout_constraintStart_toEndOf="@+id/local_currency_code"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="United States Dollar" />
 
-</RelativeLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

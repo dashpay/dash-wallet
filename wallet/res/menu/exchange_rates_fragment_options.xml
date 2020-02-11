@@ -3,17 +3,10 @@
 	xmlns:app="http://schemas.android.com/apk/res-auto">
 
 	<item
-		android:id="@+id/wallet_options_lock"
-		android:icon="@drawable/ic_menu_safety_white"
-		android:title="@string/wallet_lock_unlock_wallet"
-		android:visible="true"
-		app:showAsAction="always" />
-
-	<item
 		android:id="@+id/exchange_rates_options_search"
 		android:icon="@drawable/ic_action_search"
 		android:title="@string/exchange_rates_options_search"
-		app:actionViewClass="android.support.v7.widget.SearchView"
+		app:actionViewClass="androidx.appcompat.widget.SearchView"
 		app:showAsAction="collapseActionView|ifRoom" />
 
 </menu>

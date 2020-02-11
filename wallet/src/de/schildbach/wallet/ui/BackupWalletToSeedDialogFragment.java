@@ -21,16 +21,13 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
-import android.support.annotation.RequiresApi;
-import android.support.v4.os.CancellationSignal;
-import android.support.v4.app.DialogFragment;
-import android.support.v4.app.FragmentManager;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
@@ -41,18 +38,24 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.os.CancellationSignal;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.FragmentManager;
+
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spongycastle.crypto.params.KeyParameter;
+import org.bouncycastle.crypto.params.KeyParameter;
 
 import java.util.List;
 
 import javax.annotation.Nullable;
 
-import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.send.DecryptSeedTask;
@@ -93,7 +96,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
         newFragment.show(fm, FRAGMENT_TAG);
     }
 
-    private AbstractWalletActivity activity;
+    private AppCompatActivity activity;
     private WalletApplication application;
     private Wallet wallet;
     private PinRetryController pinRetryController;
@@ -118,10 +121,10 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
     public void onAttach(final Activity activity) {
         super.onAttach(activity);
 
-        this.activity = (AbstractWalletActivity) activity;
+        this.activity = (AppCompatActivity) activity;
         this.application = (WalletApplication) activity.getApplication();
         this.wallet = application.getWallet();
-        this.pinRetryController = new PinRetryController(activity);
+        this.pinRetryController = PinRetryController.getInstance();
         this.config = application.getConfiguration();
     }
 
@@ -201,6 +204,9 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
         if (fingerprintCancellationSignal != null) {
             fingerprintCancellationSignal.cancel();
         }
+        if (activity instanceof DialogInterface.OnDismissListener) {
+            ((DialogInterface.OnDismissListener) activity).onDismiss(getDialog());
+        }
         super.onDismiss(dialog);
     }
 
@@ -246,6 +252,14 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
                 }
             });
         }
+    }
+
+    private void showVerifySeedActivity(final DeterministicSeed seed) {
+        List<String> mnemonicCode = seed.getMnemonicCode();
+        String[] seedArr = new String[mnemonicCode.size()];
+        seedArr = mnemonicCode.toArray(seedArr);
+        Intent intent = VerifySeedActivity.Companion.createIntent(activity, seedArr, false);
+        startActivity(intent);
     }
 
     private void showMnemonicSeed(final DeterministicSeed seed) {
@@ -296,16 +310,15 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
                 @Override
                 protected void onSuccess(final DeterministicSeed seed) {
                     pinRetryController.clearPinFailPrefs();
-                    showPasswordViewGroup(false);
-                    showMnemonicSeed(seed);
-                    updateView(true);
+                    showVerifySeedActivity(seed);
+                    dismiss();
                 }
 
                 protected void onBadPassphrase() {
                     pinRetryController.failedAttempt(pin);
                     privateKeyBadPasswordView.setVisibility(View.VISIBLE);
                     privateKeyBadPasswordView.setText(getString(R.string.wallet_lock_wrong_pin,
-                            pinRetryController.getRemainingAttemptsMessage()));
+                            pinRetryController.getRemainingAttemptsMessage(getContext())));
                     privateKeyPasswordView.setEnabled(true);
                     privateKeyPasswordView.requestFocus();
                     showMnemonicSeedButton.setText(getText(R.string.backup_wallet_to_seed_show_recovery_phrase));

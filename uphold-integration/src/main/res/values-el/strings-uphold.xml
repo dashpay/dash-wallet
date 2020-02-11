@@ -9,13 +9,6 @@
     <string name="uphold_link_account">Σύνδεση Uphold λογαριασμού</string>
     <string name="uphold_account_dash_balance">Το υπόλοιπο του Uphold λογαριασμού σας σε Dash είναι</string>
     <string name="uphold_transfer_to_this_wallet">Μεταφέρετε Dash από τον Uphold λογαριασμό σας σε αυτό το πορτοφόλι</string>
-    <string name="uphold_withdrawal_amount">Ποσό</string>
-    <string name="uphold_withdrawal_fee">Τέλη</string>
-    <string name="uphold_withdrawal_total">Σύνολο</string>
-    <string name="uphold_withdrawal_title">Μεταφέρετε Dash σε αυτό το πορτοφόλι</string>
-    <string name="uphold_withdrawal_message">Έχετε &lt;b>%1$s Dash&lt;/b> στον Uphold λογαριασμό σας. Θέλετε να &lt;u>μεταφέρετε αυτήν την αξία σε αυτό το πορτοφόλι&lt;/u>;</string>
-    <string name="uphold_withdrawal_confirm_title">Επιβεβαίωση συναλλαγής</string>
-    <string name="uphold_withdrawal_confirm_message">Βασικό πόσο: %1$f\nΤέλος: %2$f\nΣύνολο: %3$f\n\nΘέλετε να επιβεβαιώσετε αυτή τη συναλλαγή;</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">Το τέλος θα αφαιρεθεί από το ποσό που ζητήσατε.</string>
     <string name="uphold_withdrawal_instructions">Εισάγετε το ποσό που θα μεταφερθεί παρακάτω</string>
     <string name="uphold_withdrawal_success_title">Επιτυχία</string>

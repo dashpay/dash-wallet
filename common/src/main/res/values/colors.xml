@@ -13,8 +13,9 @@
     <color name="white">#ffffff</color>
     <color name="menu_gray">#FFC9C9C9</color>
     <color name="gray">#FF979797</color>
-    <color name="medium_gray">#FF787878</color>
+    <color name="medium_gray">#ff4a4a4a</color>
     <color name="ripple_light">#40ffffff</color>
+    <color name="black_text">#ff171717</color>
 
     <!-- foreground -->
     <color name="fg_significant">#66000000</color>
@@ -29,7 +30,7 @@
 
     <!-- background -->
     <color name="bg_bright">#ffffffff</color>
-    <color name="bg_less_bright">#ffe8e8f0</color>
+    <color name="bg_less_bright">#fff7f7f7</color>
     <color name="bg_action_bar">#ff222222</color>
     <color name="bg_panel">#fff2f2f8</color>
     <color name="bg_form">@android:color/white</color>
@@ -37,5 +38,6 @@
     <color name="bg_list_selected">#40808090</color>
     <color name="bg_dialog_title">@android:color/transparent</color>
     <color name="bg_shortcut">@color/colorPrimary</color>
+    <color name="bg_dialog">#54000000</color>
 
 </resources>

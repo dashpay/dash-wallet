@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/dash_lighter_gray"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/payment_amount_group"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/v_center_guideline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.50" />
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/h_center_guideline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent="@dimen/pay_amount_vert_guideline_percent" />
+
+        <ImageView
+            android:id="@+id/convert_direction"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_margin="8dp"
+            android:background="@drawable/selectable_background_dark"
+            android:padding="8dp"
+            app:layout_constraintBottom_toBottomOf="@+id/h_center_guideline"
+            app:layout_constraintEnd_toEndOf="@+id/v_center_guideline"
+            app:layout_constraintStart_toStartOf="@+id/v_center_guideline"
+            app:layout_constraintTop_toTopOf="@+id/h_center_guideline"
+            app:srcCompat="@drawable/ic_convert" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:orientation="horizontal"
+            app:layout_constraintBottom_toTopOf="@+id/convert_direction"
+            app:layout_constraintEnd_toEndOf="@+id/v_center_guideline"
+            app:layout_constraintStart_toStartOf="@+id/v_center_guideline">
+
+            <ImageView
+                android:id="@+id/input_symbol_dash"
+                android:layout_width="@dimen/pay_amount_dash_symbol_size"
+                android:layout_height="@dimen/pay_amount_dash_symbol_size"
+                android:layout_gravity="center_vertical"
+                android:layout_marginTop="2dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginRight="8dp"
+                app:srcCompat="@drawable/ic_dash_d_black" />
+
+            <TextView
+                android:id="@+id/input_symbol"
+                style="@style/MontserratRegular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_marginRight="8dp"
+                android:text="$"
+                android:textColor="@color/dash_black"
+                android:textSize="@dimen/pay_input_symbol_text_size" />
+
+            <TextView
+                android:id="@+id/input_amount"
+                style="@style/MontserratRegular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:ellipsize="middle"
+                android:hint="0"
+                android:singleLine="true"
+                android:textColor="@color/dash_black"
+                android:textSize="@dimen/pay_input_symbol_text_size" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/calc_pane"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="@+id/v_center_guideline"
+            app:layout_constraintStart_toStartOf="@+id/v_center_guideline"
+            app:layout_constraintTop_toBottomOf="@+id/convert_direction">
+
+            <ImageView
+                android:id="@+id/calc_amount_symbol_dash"
+                android:layout_width="@dimen/pay_calc_amount_dash_size"
+                android:layout_height="@dimen/pay_calc_amount_dash_size"
+                android:layout_gravity="center_vertical"
+                android:layout_marginTop="1dp"
+                android:layout_marginEnd="4dp"
+                android:layout_marginRight="4dp"
+                app:srcCompat="@drawable/ic_dash_d_black" />
+
+            <TextView
+                android:id="@+id/calc_amount_symbol"
+                style="@style/MontserratRegular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:layout_marginRight="4dp"
+                android:text="$"
+                android:textColor="@color/dash_gray"
+                android:textSize="@dimen/pay_calc_amount_symbol_size" />
+
+            <TextView
+                android:id="@+id/calc_amount"
+                style="@style/MontserratRegular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.00"
+                android:textColor="@color/dash_gray"
+                android:textSize="@dimen/pay_calc_amount_symbol_size" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/max_button"
+            style="@style/MontserratRegular"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/rounded_gray_frame"
+            android:paddingStart="24dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="24dp"
+            android:paddingBottom="3dp"
+            android:text="@string/max"
+            android:textColor="@color/dash_gray"
+            android:textSize="18sp"
+            app:layout_constraintEnd_toEndOf="@+id/v_center_guideline"
+            app:layout_constraintStart_toStartOf="@+id/v_center_guideline"
+            app:layout_constraintTop_toBottomOf="@+id/calc_pane" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <TextView
+        android:id="@+id/message"
+        style="@style/MontserratRegular"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/top_bottom_separator"
+        android:gravity="center_horizontal"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:textSize="@dimen/transaction_fee_text_size" />
+
+    <de.schildbach.wallet.ui.widget.NumericKeyboardView
+        android:id="@+id/numeric_keyboard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:stretchColumns="*" />
+
+    <Button
+        android:id="@+id/confirm_button"
+        style="@style/DashButton.Blue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/button_pay" />
+
+</LinearLayout>

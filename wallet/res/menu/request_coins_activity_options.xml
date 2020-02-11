@@ -9,9 +9,4 @@
         android:visible="true"
         app:showAsAction="always" />
 
-    <item
-        android:id="@+id/request_coins_options_help"
-        android:showAsAction="never"
-        android:title="@string/button_help"/>
-
 </menu>

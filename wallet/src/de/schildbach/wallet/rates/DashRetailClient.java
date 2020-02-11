@@ -1,6 +1,6 @@
 package de.schildbach.wallet.rates;
 
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 
 import com.squareup.moshi.Moshi;
 

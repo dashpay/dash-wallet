@@ -29,7 +29,6 @@
     <string name="wallet_transactions_fragment_empty_text_sent">Nog geen Dash verzonden.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Hoe komt u aan Dash?\\n\\nWissel traditionele munteenheden om voor Dash,\\nverkoop goederen of diensten of\\nverdien ze door te werken.</string>
     <string name="wallet_transactions_row_warning_backup">Gefeliciteerd! U heeft uw eerste betaling ontvangen. Heeft u al een back-up gemaakt van uw portemonnee, om verlies tegen te gaan?</string>
-    <string name="wallet_transactions_row_warning_storage_encryption">Tip: om uw portemonnee veiliger te maken, kunt u uw  &lt;u&gt;apparaat versleutelen&lt;/u&gt;. Hierdoor worden ook de gegevens van andere apps beschermd.</string>
     <string name="wallet_transactions_fragment_coinbase">gegenereerd</string>
     <string name="wallet_transactions_fragment_internal">intern</string>
     <string name="wallet_transactions_options_filter">Filteren</string>

@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">Ang transaksyon na ito ay maaayos ng mabilis ng walang ekstrang bayad.</string>
 	<string name="send_coins_auto_lock_not_feasible">Ang transaksyon na ito ay maaaring magtagal ng ilang minuto. Kumpletuhin agad sa halagang %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Ang transaksyon na ito ay maaring magtagal ng ilang minuto.</string>
 
@@ -82,10 +80,6 @@
 	<string name="notification_transactions_channel_description">Makatanggap ng alerto tungkol sa parating na mga transaksyon.</string>
 	<string name="notification_synchronization_channel_name">Pagtutugma</string>
 	<string name="notification_synchronization_channel_description">Magpakita ng notipikasyon kapag ang app ay tumugma sa network.</string>
-
-	<string name="fastest_payment_network_dialog_title">Pera mo, Pamamaraan mo</string>
-	<string name="fastest_payment_network_dialog_message">Magpadala at tumanggap ng Dash ng mabilis ng walang ekstrang bayad.</string>
-	<string name="fastest_payment_network_dialog_button">Nakuha ko na</string>
 
     <string name="net_type_indicator" />
 

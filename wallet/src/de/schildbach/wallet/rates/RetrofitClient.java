@@ -17,8 +17,6 @@
 
 package de.schildbach.wallet.rates;
 
-import android.support.annotation.NonNull;
-
 import com.squareup.moshi.Moshi;
 
 import java.io.IOException;
@@ -26,7 +24,8 @@ import java.util.Date;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-import de.schildbach.wallet.WalletApplication;
+import androidx.annotation.NonNull;
+import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
@@ -42,12 +41,11 @@ public abstract class RetrofitClient {
     protected Executor executor;
 
     protected RetrofitClient(String baseUrl) {
-        OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
+        PinRetryController pinRetryController = PinRetryController.getInstance();
 
-        PinRetryController pinRetryController = new PinRetryController(WalletApplication.getInstance());
-        clientBuilder.addInterceptor(new SecureTimeInterceptor(pinRetryController));
-
-        OkHttpClient okClient = clientBuilder.build();
+        OkHttpClient okClient = Constants.HTTP_CLIENT.newBuilder()
+                .addInterceptor(new SecureTimeInterceptor(pinRetryController))
+                .build();
 
         executor = Executors.newSingleThreadExecutor();
         moshiBuilder = new Moshi.Builder();

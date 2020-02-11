@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">Giao dịch này sẽ được thực hiện tức thời mà không tốn thêm phí.</string>
 	<string name="send_coins_auto_lock_not_feasible">Giao dịch này phải mất vài phút để thực hiện. Hoàn thành trọn vẹn cho %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">Giao dịch này có thể mất vài phút để thực hiện.</string>
 
@@ -79,10 +77,6 @@
 	<string name="notification_transactions_channel_description">Nhận thông báo khi nhận được giao dịch.</string>
 	<string name="notification_synchronization_channel_name">Đồng bộ</string>
 	<string name="notification_synchronization_channel_description">Hiển thị thông báo khi app đang đồng bộ với mạng lưới.</string>
-
-	<string name="fastest_payment_network_dialog_title">Tiền của bạn, cách của bạn.</string>
-	<string name="fastest_payment_network_dialog_message">Gửi và Nhận Dash một cách tức thời mà không tốn thêm phí</string>
-	<string name="fastest_payment_network_dialog_button">Đã nhận được</string>
 
     <string name="net_type_indicator" />
 

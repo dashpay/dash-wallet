@@ -1,108 +1,92 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:background="@color/bg_list"
-    android:orientation="vertical"
-    android:paddingBottom="18dp"
-    android:paddingTop="14dp">
+    android:layout_width="match_parent"
+    android:layout_height="70dp"
+    android:layout_marginLeft="15dp"
+    android:layout_marginRight="15dp"
+    android:layout_marginBottom="10dp"
+    android:background="@drawable/round_corners_white_bg"
+    android:elevation="1dp">
 
-    <TextView
-        android:id="@+id/block_list_row_mining_reward_adjustment"
-        android:layout_width="match_parent"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/block_info_container"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@color/bg_less_bright"
-        android:paddingLeft="@dimen/space_medium"
-        android:paddingRight="@dimen/space_medium"
-        android:paddingBottom="@dimen/list_entry_padding_vertical_cram"
-        android:paddingTop="@dimen/list_entry_padding_vertical_cram"
-        android:layout_marginBottom="4dp"
-        android:text="@string/block_row_mining_reward_adjustment"
-        android:textColor="@color/fg_less_significant"
-        android:textSize="@dimen/font_size_small"
-        style="@style/MontserratMedium"/>
-
-    <TextView
-        android:id="@+id/block_list_row_mining_difficulty_adjustment"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/bg_less_bright"
-        android:paddingLeft="@dimen/space_medium"
-        android:paddingRight="@dimen/space_medium"
-        android:paddingBottom="@dimen/list_entry_padding_vertical_cram"
-        android:paddingTop="@dimen/list_entry_padding_vertical_cram"
-        android:layout_marginBottom="4dp"
-        android:text="@string/block_row_mining_difficulty_adjustment"
-        android:textColor="@color/fg_less_significant"
-        android:textSize="@dimen/font_size_small"
-        style="@style/MontserratMedium"/>
-
-    <RelativeLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingLeft="@dimen/space_medium"
-        android:paddingRight="@dimen/space_medium">
-
-        <ImageButton
-            android:id="@+id/block_list_row_menu"
-            android:layout_width="14dp"
-            android:layout_marginLeft="@dimen/list_entry_padding"
-            android:layout_marginStart="@dimen/list_entry_padding"
-            android:tint="@color/menu_gray"
-            android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:layout_alignParentRight="true"
-            android:layout_alignParentTop="true"
-            android:background="@android:color/transparent"
-            android:src="@drawable/ic_more_vert_24dp"
-            tools:ignore="RtlSymmetry" />
+        android:layout_marginStart="13dp"
+        android:layout_marginLeft="13dp"
+        android:orientation="vertical"
+        android:paddingTop="5dp"
+        android:paddingBottom="5dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
         <TextView
-            android:id="@+id/block_list_row_height"
+            android:id="@+id/block_label"
+            style="@style/MontserratRegular"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            style="@style/MontserratSemiBold.DB.14"
-            android:layout_marginBottom="14dp"
-            tools:text="935940"/>
+            android:text="@string/block"
+            android:textColor="@color/dash_black"
+            android:textSize="12sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0" />
 
         <TextView
-            android:id="@+id/block_list_row_time"
-            android:layout_toStartOf="@id/block_list_row_menu"
-            android:layout_toLeftOf="@id/block_list_row_menu"
+            android:id="@+id/block_height"
+            style="@style/MontserratMedium"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            style="@style/MontserratMedium.MG.14"
-            tools:text="just now"/>
+            android:layout_marginStart="5dp"
+            android:layout_marginLeft="5dp"
+            android:textColor="@color/dash_black"
+            android:textSize="14sp"
+            app:layout_constraintBottom_toBottomOf="@id/block_label"
+            app:layout_constraintStart_toEndOf="@id/block_label"
+            tools:text="112391" />
 
         <TextView
-            android:id="@+id/block_list_row_hash"
-            android:layout_below="@id/block_list_row_height"
-            android:layout_width="match_parent"
+            android:id="@+id/transaction_in_block"
+            style="@style/MontserratRegular"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            tools:text="000000000000002c07adc34df3becd45bdb4417a52485f9e2920ae192ea8a6f7"
-            style="@style/MontserratMedium.MG.14"/>
+            android:layout_marginTop="1dp"
+            android:textColor="@color/dash_blue"
+            android:textSize="12sp"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/block_label"
+            tools:text="1 Transaction"
+            tools:visibility="visible" />
 
-        <TextView
-            android:layout_below="@id/block_list_row_transactions_group"
-            android:paddingTop="4dp"
-            android:id="@+id/block_list_row_chainlock_mnlist"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            tools:text="DMN List"
-            style="@style/MontserratMedium.MG.14"/>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <LinearLayout
-            android:layout_below="@id/block_list_row_hash"
-            android:paddingTop="4dp"
-            android:id="@+id/block_list_row_transactions_group"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"/>
+    <ImageView
+        android:id="@+id/arrow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="19dp"
+        android:layout_marginRight="19dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@drawable/ic_menu_row_arrow" />
 
+    <TextView
+        android:id="@+id/block_time"
+        style="@style/MontserratRegular"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="11dp"
+        android:layout_marginRight="11dp"
+        android:textColor="@color/gray"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/arrow"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="6 minutes ago, 1:00 pm" />
 
-
-    </RelativeLayout>
-
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

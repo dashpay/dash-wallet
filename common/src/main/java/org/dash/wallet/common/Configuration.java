@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common;
 
+import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
@@ -31,6 +32,8 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * @author Andreas Schildbach
  */
@@ -42,6 +45,7 @@ public class Configuration {
 
     public static final String PREFS_KEY_BTC_PRECISION = "btc_precision";
     public static final String PREFS_KEY_OWN_NAME = "own_name";
+    public static final String PREFS_KEY_HIDE_BALANCE = "hide_balance";
     public static final String PREFS_KEY_SEND_COINS_AUTOCLOSE = "send_coins_autoclose";
     public static final String PREFS_KEY_CONNECTIVITY_NOTIFICATION = "connectivity_notification";
     public static final String PREFS_KEY_EXCHANGE_CURRENCY = "exchange_currency";
@@ -54,6 +58,10 @@ public class Configuration {
     public static final String PREFS_KEY_DISCLAIMER = "disclaimer";
     private static final String PREFS_KEY_LABS_QR_PAYMENT_REQUEST = "labs_qr_payment_request";
     private static final String PREFS_KEY_PREVIOUS_VERSION = "previous_version";
+    public static final String PREFS_KEY_AUTO_LOGOUT_ENABLED = "auto_logout_enabled";
+    public static final String PREFS_KEY_AUTO_LOGOUT_MINUTES = "auto_logout_minutes";
+    private static final String PREFS_KEY_SPENDING_CONFIRMATION_ENABLED = "spending_confirmation_enabled";
+    private static final String PREFS_KEY_SPENDING_CONFIRMATION_LIMIT = "spending_confirmation_limit";
 
     private static final String PREFS_KEY_LAST_VERSION = "last_version";
     private static final String PREFS_KEY_LAST_USED = "last_used";
@@ -63,11 +71,13 @@ public class Configuration {
     public static final String PREFS_KEY_REMIND_BACKUP = "remind_backup";
     private static final String PREFS_KEY_LAST_BACKUP = "last_backup";
     public static final String PREFS_KEY_REMIND_BACKUP_SEED = "remind_backup_seed";
+    public static final String PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER = "backup_seed_last_dismissed_reminder";
     private static final String PREFS_KEY_LAST_BACKUP_SEED = "last_backup_seed";
-    public final static String PREFS_LAST_UNLOCK_TIME = "last_unlock_time";
-    public static final String PREFS_KEY_FASTEST_NETWORK_ANNCMNT_SHOWN = "fastest_network_anncmnt_shown";
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
-    public static final String PREFS_KEY_CAN_AUTO_LOCK = "can_auto_lock";
+    private static final String PREFS_ENABLE_FINGERPRINT = "enable_fingerprint";
+    public static final String PREFS_RESTORING_BACKUP = "restoring_backup";
+    public static final String PREFS_V7_REDESIGN_TUTORIAL_COMPLETED = "v7_tutorial_completed";
+
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 4;
@@ -79,6 +89,16 @@ public class Configuration {
         this.res = res;
 
         this.lastVersionCode = prefs.getInt(PREFS_KEY_LAST_VERSION, 0);
+    }
+
+    @SuppressLint("ApplySharedPref")
+    public void clear() {
+        Editor edit = prefs.edit();
+        try {
+            edit.clear();
+        } finally {
+            edit.commit();
+        }
     }
 
     private int getBtcPrecision() {
@@ -131,6 +151,14 @@ public class Configuration {
         return Strings.emptyToNull(prefs.getString(PREFS_KEY_OWN_NAME, "").trim());
     }
 
+    public boolean getHideBalance() {
+        return prefs.getBoolean(PREFS_KEY_HIDE_BALANCE, false);
+    }
+
+    public void setHideBalance(final boolean hideBalance) {
+        prefs.edit().putBoolean(PREFS_KEY_HIDE_BALANCE, hideBalance).apply();
+    }
+
     public boolean getSendCoinsAutoclose() {
         return prefs.getBoolean(PREFS_KEY_SEND_COINS_AUTOCLOSE, true);
     }
@@ -160,12 +188,56 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_KEY_REMIND_BALANCE, remindBalance).apply();
     }
 
+    public boolean getAutoLogoutEnabled() {
+        return prefs.getBoolean(PREFS_KEY_AUTO_LOGOUT_ENABLED, true);
+    }
+
+    public void setAutoLogoutEnabled(final boolean enabled) {
+        prefs.edit().putBoolean(PREFS_KEY_AUTO_LOGOUT_ENABLED, enabled).apply();
+    }
+
+    public int getAutoLogoutMinutes() {
+        return prefs.getInt(PREFS_KEY_AUTO_LOGOUT_MINUTES, 1);
+    }
+
+    public void setAutoLogoutMinutes(final int minutes) {
+        prefs.edit().putInt(PREFS_KEY_AUTO_LOGOUT_MINUTES, minutes).apply();
+    }
+
+    public boolean getSpendingConfirmationEnabled() {
+        return prefs.getBoolean(PREFS_KEY_SPENDING_CONFIRMATION_ENABLED, true);
+    }
+
+    public void setSpendingConfirmationEnabled(final boolean enabled) {
+        prefs.edit().putBoolean(PREFS_KEY_SPENDING_CONFIRMATION_ENABLED, enabled).apply();
+    }
+
+    public float getSpendingConfirmationLimit() {
+        return prefs.getFloat(PREFS_KEY_SPENDING_CONFIRMATION_LIMIT, 0.5f);
+    }
+
+    public void setSpendingConfirmationLimit(final float limit) {
+        prefs.edit().putFloat(PREFS_KEY_SPENDING_CONFIRMATION_LIMIT, limit).apply();
+    }
+
     public boolean remindBackup() {
         return prefs.getBoolean(PREFS_KEY_REMIND_BACKUP, true);
     }
+
     public boolean remindBackupSeed() {
         return prefs.getBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true);
     }
+
+    public boolean lastDismissedReminderMoreThan24hAgo() {
+        long lastReminder = prefs.getLong(PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER, -1);
+        if (lastReminder == -1) {
+            return false;
+        } else {
+            long now = System.currentTimeMillis();
+            return now - lastReminder > TimeUnit.HOURS.toMillis(24);
+        }
+    }
+
     public long getLastBackupTime() {
         return prefs.getLong(PREFS_KEY_LAST_BACKUP, 0);
     }
@@ -185,6 +257,16 @@ public class Configuration {
 
     public void armBackupSeedReminder() {
         prefs.edit().putBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true).apply();
+    }
+
+    public void setBackupSeedLastDismissedReminderOnce() {
+        long value;
+        if (prefs.contains(PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER)){
+            value = -1;
+        } else {
+            value = System.currentTimeMillis();
+        }
+        prefs.edit().putLong(PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER, value).apply();
     }
 
     public void disarmBackupSeedReminder() {
@@ -275,7 +357,15 @@ public class Configuration {
             prefs.edit().putInt(PREFS_KEY_BEST_CHAIN_HEIGHT_EVER, bestChainHeightEver).apply();
     }
 
-        public boolean getLastExchangeDirection() {
+    public boolean isRestoringBackup() {
+        return prefs.getBoolean(PREFS_RESTORING_BACKUP, false);
+    }
+
+    public void setRestoringBackup(final boolean isRestoringBackup) {
+        prefs.edit().putBoolean(PREFS_RESTORING_BACKUP, isRestoringBackup).apply();
+    }
+
+    public boolean getLastExchangeDirection() {
         return prefs.getBoolean(PREFS_KEY_LAST_EXCHANGE_DIRECTION, true);
     }
 
@@ -303,22 +393,6 @@ public class Configuration {
         prefs.unregisterOnSharedPreferenceChangeListener(listener);
     }
 
-    public long getLastUnlockTime() {
-        return prefs.getLong(PREFS_LAST_UNLOCK_TIME, 0);
-    }
-
-    public void setLastUnlockTime(long unlockTime) {
-        prefs.edit().putLong(PREFS_LAST_UNLOCK_TIME, unlockTime).apply();
-    }
-
-    public boolean getFastestNetworkAnncmntShown() {
-        return prefs.getBoolean(PREFS_KEY_FASTEST_NETWORK_ANNCMNT_SHOWN, false);
-    }
-
-    public void setFastestNetworkAnncmntShown() {
-        prefs.edit().putBoolean(PREFS_KEY_FASTEST_NETWORK_ANNCMNT_SHOWN, true).apply();
-    }
-
     public boolean getRemindEnableFingerprint() {
         return prefs.getBoolean(PREFS_REMIND_ENABLE_FINGERPRINT, true);
     }
@@ -327,11 +401,20 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_REMIND_ENABLE_FINGERPRINT, remind).apply();
     }
 
-    public boolean getCanAutoLock() {
-        return prefs.getBoolean(PREFS_KEY_CAN_AUTO_LOCK, false);
+    public boolean getV7TutorialCompleted() {
+        return prefs.getBoolean(PREFS_V7_REDESIGN_TUTORIAL_COMPLETED, false);
     }
 
-    public void setCanAutoLock(boolean enabled) {
-        prefs.edit().putBoolean(PREFS_KEY_CAN_AUTO_LOCK, enabled).apply();
+    public void setV7TutorialCompleted() {
+        prefs.edit().putBoolean(PREFS_V7_REDESIGN_TUTORIAL_COMPLETED, true).apply();
     }
+
+    public boolean getEnableFingerprint() {
+        return prefs.getBoolean(PREFS_ENABLE_FINGERPRINT, false);
+    }
+
+    public void setEnableFingerprint(boolean remind) {
+        prefs.edit().putBoolean(PREFS_ENABLE_FINGERPRINT, remind).apply();
+    }
+    
 }

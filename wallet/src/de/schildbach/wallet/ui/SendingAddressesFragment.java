@@ -37,6 +37,7 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
+import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.Qr;
@@ -57,9 +58,9 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.v4.app.LoaderManager;
-import android.support.v4.content.CursorLoader;
-import android.support.v4.content.Loader;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.CursorLoader;
+import androidx.loader.content.Loader;
 import android.view.ActionMode;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -360,7 +361,7 @@ public final class SendingAddressesFragment extends FancyListFragment
     public void setWalletAddresses(@Nonnull final ArrayList<Address> addresses) {
         final StringBuilder builder = new StringBuilder();
         for (final Address address : addresses)
-            builder.append(address.toBase58()).append(",");
+            builder.append(address.toString()).append(",");
         if (addresses.size() > 0)
             builder.setLength(builder.length() - 1);
 
@@ -380,7 +381,7 @@ public final class SendingAddressesFragment extends FancyListFragment
                 return null;
 
             try {
-                return Address.fromBase58(Constants.NETWORK_PARAMETERS, clipText.toString().trim());
+                return Address.fromString(Constants.NETWORK_PARAMETERS, clipText.toString().trim());
             } catch (final AddressFormatException x) {
                 return null;
             }

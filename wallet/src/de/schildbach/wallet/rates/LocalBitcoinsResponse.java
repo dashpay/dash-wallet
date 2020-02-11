@@ -7,22 +7,22 @@ import java.math.BigDecimal;
 public class LocalBitcoinsResponse {
 
     @Json(name = "VES")
-    private final LocalBitcoinsRate localBitcoinsRate;
+    private final LocalBitcoinsRate vesRate;
 
-    public LocalBitcoinsResponse(LocalBitcoinsRate localBitcoinsRate) {
-        this.localBitcoinsRate = localBitcoinsRate;
+    public LocalBitcoinsResponse(LocalBitcoinsRate vesRate) {
+        this.vesRate = vesRate;
     }
 
     public BigDecimal getDashVesPrice() {
-        if (localBitcoinsRate.getAvg1h() != null) {
-            return localBitcoinsRate.getAvg1h();
-        } else if (localBitcoinsRate.getAvg6h() != null) {
-            return localBitcoinsRate.getAvg6h();
-        } else if (localBitcoinsRate.getAvg12h() != null) {
-            return localBitcoinsRate.getAvg12h();
+        if (vesRate.avg1h != null) {
+            return vesRate.avg1h;
+        } else if (vesRate.avg6h != null) {
+            return vesRate.avg6h;
+        } else if (vesRate.avg12h != null) {
+            return vesRate.avg12h;
         } else {
-            return localBitcoinsRate.getAvg24h();
+            return vesRate.avg24h;
         }
     }
-
 }
+

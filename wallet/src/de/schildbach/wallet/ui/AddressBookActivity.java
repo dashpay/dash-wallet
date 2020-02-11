@@ -34,13 +34,13 @@ import de.schildbach.wallet_test.R;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.design.widget.TabLayout;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentTransaction;
-import android.support.v4.view.PagerAdapter;
-import android.support.v4.view.ViewPager;
+import androidx.annotation.Nullable;
+import com.google.android.material.tabs.TabLayout;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
+import androidx.viewpager.widget.PagerAdapter;
+import androidx.viewpager.widget.ViewPager;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -127,6 +127,12 @@ public final class AddressBookActivity extends AbstractBindServiceActivity {
 		return super.onOptionsItemSelected(item);
 	}
 
+	@Override
+	public void finish() {
+		super.finish();
+		overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_left);
+	}
+
     /* private */void updateFragments() {
 		final Wallet wallet = getWalletApplication().getWallet();
 		final List<ECKey> derivedKeys = wallet.getIssuedReceiveKeys();
@@ -135,7 +141,7 @@ public final class AddressBookActivity extends AbstractBindServiceActivity {
 		final ArrayList<Address> addresses = new ArrayList<Address>(derivedKeys.size() + randomKeys.size());
 
         for (final ECKey key : Iterables.concat(derivedKeys, randomKeys)) {
-			final Address address = key.toAddress(Constants.NETWORK_PARAMETERS);
+			final Address address = Address.fromKey(Constants.NETWORK_PARAMETERS, key);
 			addresses.add(address);
 		}
 

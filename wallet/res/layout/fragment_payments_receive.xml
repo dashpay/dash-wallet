@@ -1,0 +1,17 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context="de.schildbach.wallet.ui.PaymentsPayFragment">
+
+    <de.schildbach.wallet.ui.widget.ReceiveInfoView
+        android:id="@+id/receive_info"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:ri_qr_code_scale="0.8"
+        app:ri_show_amount_action="true"
+        app:ri_show_share_action="true" />
+
+</ScrollView>
