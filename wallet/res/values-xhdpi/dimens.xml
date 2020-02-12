@@ -34,5 +34,6 @@
     <dimen name="quick_action_button_text_size">11sp</dimen>
 
     <dimen name="transaction_fee_text_size">16sp</dimen>
+    <dimen name="transaction_detail_dialog_content_vertical_padding">32dp</dimen>
 
 </resources>

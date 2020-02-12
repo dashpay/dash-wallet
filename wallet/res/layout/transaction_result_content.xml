@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:gravity="center"
+    tools:orientation="vertical"
+    tools:parentTag="android.widget.LinearLayout">
+
+    <ImageView
+        android:id="@+id/check_icon"
+        android:layout_width="62dp"
+        android:layout_height="62dp"
+        android:layout_marginBottom="15dp"
+        android:visibility="invisible"
+        app:srcCompat="@drawable/check_animated"
+        tools:src="@drawable/ic_transaction_sent"
+        tools:visibility="visible" />
+
+    <TextView
+        android:id="@+id/transaction_title"
+        style="@style/MontserratRegular.MG"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="15dp"
+        android:text="@string/transaction_result_paid_successfully"
+        android:textSize="13sp"
+        app:layout_constraintBottom_toTopOf="@+id/dash_amount_container"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/dash_amount_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="6dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toTopOf="@+id/fiat_value"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <TextView
+            android:id="@+id/transaction_amount_signal"
+            style="@style/MontserratMedium.MG"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="2dp"
+            android:layout_marginRight="2dp"
+            android:textSize="17sp"
+            android:visibility="gone"
+            tools:text="+"
+            tools:visibility="visible" />
+
+        <ImageView
+            android:id="@+id/dash_amount_symbol"
+            android:layout_width="18.62dp"
+            android:layout_height="14.63dp"
+            android:layout_marginTop="1dp"
+            android:layout_marginEnd="4dp"
+            android:layout_marginRight="4dp"
+            android:scaleType="centerInside"
+            app:srcCompat="@drawable/ic_dash_symbol_gray" />
+
+        <org.dash.wallet.common.ui.CurrencyTextView
+            android:id="@+id/dash_amount"
+            style="@style/MontserratSemiBold.MG"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="17sp"
+            tools:text="-3.14938028 Dash" />
+
+    </LinearLayout>
+
+    <org.dash.wallet.common.ui.CurrencyTextView
+        android:id="@+id/fiat_value"
+        style="@style/MontserratRegular.MG"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="34dp"
+        android:textSize="13sp"
+        tools:text="-$483.33" />
+
+    <TextView
+        android:id="@+id/view_on_explorer"
+        style="@style/MontserratRegular"
+        android:textColor="@color/dash_blue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
+        android:text="@string/transaction_result_view_on_explorer"
+        android:textSize="15sp" />
+
+    <View
+        android:id="@+id/center_divider"
+        style="@style/SuccessfulTransactionSeparator" />
+
+    <FrameLayout
+        android:id="@+id/inputs_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/center_divider">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/inputs_container_content"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:id="@+id/transaction_input_addresses_container"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/input_addresses_label"
+                app:layout_constraintTop_toTopOf="@id/input_addresses_label" />
+
+            <TextView
+                android:id="@+id/input_addresses_label"
+                style="@style/MontserratRegular.G"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginRight="4dp"
+                android:ellipsize="end"
+                android:lines="1"
+                android:text="@string/transaction_details_sent_from"
+                android:textSize="16sp"
+                app:layout_constraintEnd_toStartOf="@id/transaction_input_addresses_container"
+                app:layout_constraintHorizontal_bias="1.0"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <View
+                android:id="@+id/separator6"
+                style="@style/SuccessfulTransactionSeparator"
+                android:layout_marginTop="12dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/transaction_input_addresses_container" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/outputs_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/inputs_container">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/outputs_container_content"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:id="@+id/transaction_output_addresses_container"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/output_addresses_label"
+                app:layout_constraintTop_toTopOf="@id/output_addresses_label" />
+
+            <TextView
+                android:id="@+id/output_addresses_label"
+                style="@style/MontserratRegular.G"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginRight="4dp"
+                android:ellipsize="end"
+                android:lines="1"
+                android:text="@string/transaction_result_sent_to"
+                android:textSize="16sp"
+                app:layout_constraintEnd_toStartOf="@id/transaction_output_addresses_container"
+                app:layout_constraintHorizontal_bias="1.0"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <View
+                style="@style/SuccessfulTransactionSeparator"
+                android:layout_marginTop="12dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/transaction_output_addresses_container" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/fee_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/outputs_container">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <org.dash.wallet.common.ui.CurrencyTextView
+                android:id="@+id/transaction_fee"
+                style="@style/MontserratRegular.MG"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/transaction_result_sent_to"
+                android:textSize="16sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="-0.00000239 Dash" />
+
+            <ImageView
+                android:id="@+id/fee_dash_icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginRight="8dp"
+                app:layout_constraintBottom_toBottomOf="@+id/transaction_fee"
+                app:layout_constraintEnd_toStartOf="@+id/transaction_fee"
+                app:layout_constraintTop_toTopOf="@+id/transaction_fee"
+                app:srcCompat="@drawable/ic_dash_symbol_gray" />
+
+            <TextView
+                android:id="@+id/network_fee_label"
+                style="@style/MontserratRegular.G"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="4dp"
+                android:ellipsize="end"
+                android:lines="1"
+                android:text="@string/transaction_row_fee"
+                android:textSize="16sp"
+                app:layout_constraintEnd_toStartOf="@id/fee_dash_icon"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@id/transaction_fee" />
+
+            <View
+                android:id="@+id/separator3"
+                style="@style/SuccessfulTransactionSeparator"
+                android:layout_marginTop="16dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/transaction_fee" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/transaction_date_and_time_label"
+            style="@style/MontserratRegular.G"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="4dp"
+            android:layout_weight="0.5"
+            android:ellipsize="end"
+            android:lines="1"
+            android:text="@string/transaction_date_and_time"
+            android:textSize="16sp"
+            app:layout_constraintEnd_toStartOf="@id/transaction_date_and_time"
+            app:layout_constraintHorizontal_bias="1.0"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/transaction_date_and_time" />
+
+        <TextView
+            android:id="@+id/transaction_date_and_time"
+            style="@style/MontserratRegular.MG"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.5"
+            android:width="0dp"
+            android:gravity="right"
+            android:maxLines="2"
+            android:text="@string/transaction_result_sent_to"
+            android:textSize="16sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:text="2014-01-19 01:40" />
+
+    </LinearLayout>
+
+    <View
+        android:id="@+id/separator4"
+        style="@style/SuccessfulTransactionSeparator"
+        android:layout_marginTop="16dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/transaction_date_and_time_label" />
+
+    <LinearLayout
+        android:id="@+id/status_layout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/separator4">
+
+        <TextView
+            android:id="@+id/transaction_primary_status"
+            style="@style/MontserratMedium"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingRight="6dp"
+            android:textColor="@color/primary_status"
+            android:textSize="15sp"
+            tools:text="Receiving" />
+
+        <TextView
+            android:id="@+id/transaction_secondary_status"
+            style="@style/MontserratMedium.B.12"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/secondary_status"
+            tools:text="Processing" />
+
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/transaction_close_btn"
+        style="@style/DashButton.Blue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="30dp"
+        android:text="@string/transaction_close"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/status_layout" />
+
+</merge>

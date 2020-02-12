@@ -116,8 +116,7 @@ public class CurrencyTextView extends AppCompatTextView {
                               String exchangeCurrencyCode) {
         setAmount(null);  //clear the exchange rate first
         if (exchangeRate != null) {
-            setFormat(format.code(0,
-                    PREFIX_ALMOST_EQUAL_TO + exchangeRate.fiat.getCurrencyCode() + " "));
+            setFormat(format.code(0, exchangeCurrencyCode + " "));
             Coin absCoin = Coin.valueOf(Math.abs(amount.value));
             setAmount(exchangeRate.coinToFiat(absCoin));
         } else {

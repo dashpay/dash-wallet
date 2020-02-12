@@ -569,9 +569,8 @@ public final class SendCoinsFragment extends Fragment {
             return;
         }
 
-        Address address = viewModel.paymentIntent.getAddress();
         Intent transactionResultIntent = TransactionResultActivity.createIntent(activity,
-                transaction, address, activity.isUserAuthorized());
+                transaction, activity.isUserAuthorized());
         startActivity(transactionResultIntent);
     }
 
