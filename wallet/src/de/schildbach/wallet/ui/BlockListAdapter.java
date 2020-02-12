@@ -36,12 +36,15 @@ import org.dash.wallet.common.ui.CurrencyTextView;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.AddressBookProvider;
+import de.schildbach.wallet.data.BlockInfo;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
 import android.content.Context;
 import android.graphics.Typeface;
-import android.support.v7.widget.RecyclerView;
+
+import androidx.recyclerview.widget.RecyclerView;
+
 import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -69,7 +72,7 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
     private final String textInternal;
 
     public BlockListAdapter(final Context context, final Wallet wallet,
-            final @Nullable OnClickListener onClickListener) {
+                            final @Nullable OnClickListener onClickListener) {
         this.context = context;
         inflater = LayoutInflater.from(context);
         this.wallet = wallet;
@@ -136,23 +139,31 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
         final StoredBlock storedBlock = getItem(position);
         final Block header = storedBlock.getHeader();
 
+        /*
         holder.miningRewardAdjustmentView
                 .setVisibility(isMiningRewardHalvingPoint(storedBlock) ? View.VISIBLE : View.GONE);
         holder.miningDifficultyAdjustmentView
                 .setVisibility(isDifficultyTransitionPoint(storedBlock) ? View.VISIBLE : View.GONE);
+         */
 
         final int height = storedBlock.getHeight();
         holder.heightView.setText(Integer.toString(height));
 
         final long timeMs = header.getTimeSeconds() * DateUtils.SECOND_IN_MILLIS;
-        if (timeMs < System.currentTimeMillis() - DateUtils.MINUTE_IN_MILLIS)
-            holder.timeView.setText(DateUtils.getRelativeDateTimeString(context, timeMs, DateUtils.MINUTE_IN_MILLIS,
-                    DateUtils.WEEK_IN_MILLIS, 0));
-        else
-            holder.timeView.setText(R.string.block_row_now);
+        final String blockTime;
+        if (timeMs < System.currentTimeMillis() - DateUtils.MINUTE_IN_MILLIS) {
+            blockTime = DateUtils.getRelativeDateTimeString(context, timeMs, DateUtils.MINUTE_IN_MILLIS,
+                    DateUtils.WEEK_IN_MILLIS, 0).toString();
+        } else {
+            blockTime = holder.timeView.getContext().getString(R.string.block_row_now);
+        }
+        holder.timeView.setText(blockTime);
 
+        /*
         holder.hashView.setText(WalletUtils.formatHash(null, header.getHashAsString(), 8, 0, ' '));
+         */
 
+        /*
         final int transactionChildCount = holder.transactionsViewGroup.getChildCount();
         int iTransactionView = 0;
 
@@ -186,11 +197,13 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
                 }
             });
         }
+         */
 
-        StoredBlock block = wallet.getContext().chainLockHandler.getBestChainLockBlock();
+        final StoredBlock block = wallet.getContext().chainLockHandler.getBestChainLockBlock();
         final int chainLockHeight = block != null ? block.getHeight() : 0;
-        final int mnListHeight = (int)wallet.getContext().masternodeListManager.getListAtChainTip().getHeight();
+        final int mnListHeight = (int) wallet.getContext().masternodeListManager.getListAtChainTip().getHeight();
 
+        /*
         if(chainLockHeight == storedBlock.getHeight() || mnListHeight == storedBlock.getHeight()) {
             String text = "";
             if(chainLockHeight == storedBlock.getHeight())
@@ -205,6 +218,17 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
             holder.chainLockDMNListView.setVisibility(View.VISIBLE);
         } else {
             holder.chainLockDMNListView.setVisibility(View.GONE);
+        }
+         */
+        if (onClickListener != null) {
+            holder.itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    BlockInfo blockInfo = new BlockInfo(storedBlock.getHeight(), blockTime,
+                            header.getHashAsString());
+                    onClickListener.onBlockClicked(blockInfo);
+                }
+            });
         }
     }
 
@@ -238,10 +262,10 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
         else if (isInternal || self)
             label = textInternal;
         else if (address != null)
-            label = AddressBookProvider.resolveLabel(context, address.toBase58());
+            label = AddressBookProvider.resolveLabel(context, address.toString());
         else
             label = "?";
-        rowAddress.setText(label != null ? label : address.toBase58());
+        rowAddress.setText(label != null ? label : address.toString());
         rowAddress.setTypeface(label != null ? Typeface.DEFAULT : Typeface.MONOSPACE);
 
         // value
@@ -253,21 +277,32 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
 
     public interface OnClickListener {
         void onBlockMenuClick(View view, StoredBlock block);
+
+        void onBlockClicked(BlockInfo blockInfo);
     }
 
     public static class BlockViewHolder extends RecyclerView.ViewHolder {
+
+        /*
         private final ViewGroup transactionsViewGroup;
         private final View miningRewardAdjustmentView;
         private final View miningDifficultyAdjustmentView;
+         */
+
         private final TextView heightView;
         private final TextView timeView;
+        /*
         private final TextView hashView;
         private final ImageButton menuView;
         private final TextView chainLockDMNListView;
+         */
 
         private BlockViewHolder(final View itemView) {
             super(itemView);
 
+            heightView = itemView.findViewById(R.id.block_height);
+            timeView = itemView.findViewById(R.id.block_time);
+            /*
             transactionsViewGroup = (ViewGroup) itemView.findViewById(R.id.block_list_row_transactions_group);
             miningRewardAdjustmentView = itemView.findViewById(R.id.block_list_row_mining_reward_adjustment);
             miningDifficultyAdjustmentView = itemView.findViewById(R.id.block_list_row_mining_difficulty_adjustment);
@@ -276,6 +311,7 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
             hashView = (TextView) itemView.findViewById(R.id.block_list_row_hash);
             menuView = (ImageButton) itemView.findViewById(R.id.block_list_row_menu);
             chainLockDMNListView = (TextView)itemView.findViewById(R.id.block_list_row_chainlock_mnlist);
+             */
         }
     }
 
@@ -284,6 +320,6 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
     }
 
     public final boolean isDifficultyTransitionPoint(final StoredBlock storedPrev) {
-        return (storedPrev.getHeight() +1) < 15200 ? ((storedPrev.getHeight() + 1) % Constants.NETWORK_PARAMETERS.getInterval()) == 0 : false;
+        return (storedPrev.getHeight() + 1) < 15200 ? ((storedPrev.getHeight() + 1) % Constants.NETWORK_PARAMETERS.getInterval()) == 0 : false;
     }
 }

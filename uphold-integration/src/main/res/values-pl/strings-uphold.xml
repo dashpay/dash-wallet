@@ -9,13 +9,6 @@
     <string name="uphold_link_account">Połącz z kontem Uphold</string>
     <string name="uphold_account_dash_balance">Saldo twojego konta na Uphold wynosi</string>
     <string name="uphold_transfer_to_this_wallet">Przelej Dash z twojego konta na Uphold do tego portfela</string>
-    <string name="uphold_withdrawal_amount">Kwota</string>
-    <string name="uphold_withdrawal_fee">Opłata</string>
-    <string name="uphold_withdrawal_total">Razem</string>
-    <string name="uphold_withdrawal_title">Przelej Dash do tego portfela</string>
-    <string name="uphold_withdrawal_message">Posiadasz&lt;b>%1$s&lt;/b> na twoim koncie Uphold. Chciałbyś &lt;u>tprzelać tę kwotę do tego portfela&lt;u>t? </string>
-    <string name="uphold_withdrawal_confirm_title">Potwierdź przelew</string>
-    <string name="uphold_withdrawal_confirm_message">Kwota podstawowa%1$f\nFee: %2$f: %3$f\n\nChciałbyś potwierdzić tę transakcję?</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">Od zażądanej kwoty zostanie potrącona opłata.</string>
     <string name="uphold_withdrawal_instructions">Poniżej wpisz kwotę jaką chcesz przelać.</string>
     <string name="uphold_withdrawal_success_title">Wszystko odbyło się pomyślnie.</string>

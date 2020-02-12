@@ -49,7 +49,7 @@ import android.content.DialogInterface.OnCancelListener;
 import android.content.DialogInterface.OnClickListener;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v7.app.AlertDialog;
+import androidx.appcompat.app.AlertDialog;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -181,7 +181,7 @@ public final class RestoreWalletActivity extends AbstractWalletActivity
             final InputStream is = new ByteArrayInputStream(plainText);
 
             restoreWallet(WalletUtils.restoreWalletFromProtobufOrBase58(is, Constants.NETWORK_PARAMETERS));
-
+            application.getConfiguration().setRestoringBackup(true);
             log.info("successfully restored encrypted wallet from external source");
         } catch (final IOException x) {
             final DialogBuilder dialog = DialogBuilder.warn(this, R.string.import_export_keys_dialog_failure_title);
@@ -297,6 +297,6 @@ public final class RestoreWalletActivity extends AbstractWalletActivity
 
     @Override
     public void onNewKeyChainEncrypted() {
-        BackupWalletToSeedDialogFragment.show(getSupportFragmentManager(), true);
+
     }
 }

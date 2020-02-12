@@ -1,170 +1,117 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:animateLayoutChanges="true">
+    android:layout_height="70dp"
+    android:layout_marginLeft="15dp"
+    android:layout_marginRight="15dp"
+    android:layout_marginBottom="10dp"
+    android:background="@drawable/selectable_round_corner"
+    android:gravity="center">
 
-    <RelativeLayout
-        android:id="@+id/transaction_row_extend_address"
-        android:layout_width="match_parent"
+    <TextView
+        android:id="@+id/transaction_row_primary_status"
+        style="@style/MontserratMedium"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:paddingStart="19dp"
-        android:paddingLeft="19dp"
-        android:paddingBottom="@dimen/list_entry_padding"
-        android:paddingTop="15dp"
-        android:baselineAligned="true"
-        android:orientation="horizontal" >
+        android:paddingLeft="10dp"
+        android:paddingRight="6dp"
+        android:textSize="15sp"
+        android:textColor="@color/primary_status"
+        tools:text="Receiving" />
 
-        <ImageButton
-            android:id="@+id/transaction_row_menu"
-            android:layout_width="28dp"
-            android:paddingRight="14dp"
-            android:layout_marginLeft="7dp"
-            android:tint="@color/menu_gray"
-            android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:layout_alignParentRight="true"
-            android:layout_alignParentTop="true"
-            android:background="@android:color/transparent"
-            android:src="@drawable/ic_more_vert_24dp" />
+    <TextView
+        android:id="@+id/transaction_row_secondary_status"
+        style="@style/MontserratMedium.B.12"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@id/transaction_row_primary_status"
+        android:layout_toEndOf="@id/transaction_row_primary_status"
+        android:layout_toRightOf="@id/transaction_row_primary_status"
+        android:textColor="@color/secondary_status"
+        tools:text="Processing" />
 
-        <de.schildbach.wallet.util.CircularProgressView
-            android:id="@+id/transaction_row_confidence_circular"
-            android:layout_marginTop="4dp"
-            android:layout_alignParentStart="true"
-            android:layout_alignParentLeft="true"
-            android:layout_marginEnd="16dp"
-            android:layout_marginRight="16dp"
-            android:layout_width="@dimen/symbol_size_normal"
-            android:layout_height="@dimen/symbol_size_normal" />
+    <TextView
+        android:id="@+id/transaction_row_time"
+        style="@style/MontserratRegular.MG.12"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/transaction_row_primary_status"
+        android:layout_marginBottom="5dp"
+        android:paddingLeft="10dp"
+        android:paddingRight="6dp"
+        android:textColor="@color/dash_gray"
+        tools:text="August 30, 11:28 AM" />
+
+    <LinearLayout
+        android:id="@+id/dash_amount_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@id/transaction_row_primary_status"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:gravity="center|right"
+        android:layout_marginRight="11dp"
+        android:orientation="horizontal">
 
         <TextView
-            android:id="@+id/transaction_row_time"
-            android:layout_toRightOf="@id/transaction_row_confidence_circular"
-            android:layout_toEndOf="@id/transaction_row_confidence_circular"
+            android:id="@+id/transaction_amount_signal"
+            style="@style/MontserratMedium.MG"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="5dp"
-            style="@style/MontserratMedium.DB.12"
-            tools:text="August 30, 11:28 AM" />
+            android:layout_marginEnd="2dp"
+            android:layout_marginRight="2dp"
+            android:textSize="17sp"
+            tools:text="+"
+            tools:visibility="visible" />
 
-        <TextView
-            android:id="@+id/transaction_row_confidence_textual"
-            android:layout_width="@dimen/symbol_size_normal"
-            android:layout_height="wrap_content"
-            android:layout_marginRight="8dp"
-            android:layout_marginEnd="8dp"
-            android:ellipsize="none"
-            android:gravity="center_horizontal|top"
-            android:singleLine="true"
-            android:textStyle="bold" />
-
-        <LinearLayout
-            android:id="@+id/transaction_row_address_container"
-            android:orientation="vertical"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_alignLeft="@id/transaction_row_time"
-            android:layout_alignStart="@id/transaction_row_time"
-            android:layout_toLeftOf="@+id/transaction_row_fiat"
-            android:layout_toStartOf="@id/transaction_row_fiat"
-            android:layout_marginEnd="@dimen/list_entry_padding"
-            android:layout_marginRight="@dimen/list_entry_padding"
-            android:layout_below="@id/transaction_row_time">
-
-            <TextView
-                android:id="@+id/transaction_row_address"
-                android:layout_marginTop="5dp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:singleLine="true"
-                style="@style/MontserratMedium.MG.12"
-                tools:text="XcJcu9C2y1MMuNjgjnyqfYCnPoK94D18oL"/>
-            
-        </LinearLayout>
+        <ImageView
+            android:id="@+id/dash_amount_symbol"
+            android:layout_width="18.62dp"
+            android:layout_height="14.63dp"
+            android:layout_marginTop="1dp"
+            android:layout_marginEnd="4dp"
+            android:layout_marginRight="4dp"
+            android:src="@drawable/ic_dash_symbol_gray" />
 
         <org.dash.wallet.common.ui.CurrencyTextView
             android:id="@+id/transaction_row_value"
-            style="@style/MontserratSemiBold.B.14"
-            android:layout_toLeftOf="@id/transaction_row_menu"
-            android:layout_toStartOf="@id/transaction_row_menu"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
-        <org.dash.wallet.common.ui.CurrencyTextView
-            android:id="@id/transaction_row_fiat"
-            android:layout_alignTop="@id/transaction_row_address_container"
-            android:layout_toLeftOf="@id/transaction_row_menu"
-            android:layout_toStartOf="@id/transaction_row_menu"
+            style="@style/MontserratMedium"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            style="@style/MontserratMedium.MG.12" />
+            android:textSize="15sp"
+            tools:text="4.3939" />
 
-        <ImageView
-            android:id="@+id/transaction_row_info_button"
-            android:layout_width="18dp"
-            android:layout_height="18dp"
-            android:layout_marginLeft="4dp"
-            android:layout_marginStart="4dp"
-            android:layout_toEndOf="@id/transaction_row_time"
-            android:layout_toRightOf="@id/transaction_row_time"
-            android:foreground="@drawable/selectable_item_background"
-            android:src="@drawable/ic_transaction_info"
-            tools:ignore="ContentDescription" />
-
-        <LinearLayout
-            android:orientation="vertical"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            style="@style/ExtendedTransactions">
-
-            <RelativeLayout
-                android:id="@+id/transaction_row_extend_fee"
-                tools:visibility="visible"
-                style="@style/ExtendedTransactionItem">
-
-                <TextView
-                    android:layout_alignParentLeft="true"
-                    android:layout_alignParentStart="true"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/transaction_row_fee"
-                    style="@style/MontserratMedium.MG.12"/>
+    </LinearLayout>
 
 
-                <org.dash.wallet.common.ui.CurrencyTextView
-                    android:id="@+id/transaction_row_fee"
-                    android:layout_alignParentEnd="true"
-                    android:layout_alignParentRight="true"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    style="@style/MontserratMedium.MG.12" />
+    <org.dash.wallet.common.ui.CurrencyTextView
+        android:id="@+id/transaction_row_fiat"
+        style="@style/MontserratMedium.MG.12"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/dash_amount_container"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:paddingLeft="0dp"
+        android:paddingRight="15dp"
+        android:textColor="@color/dash_gray"
+        tools:text="350.98" />
 
-            </RelativeLayout>
+    <TextView
+        android:id="@+id/transaction_row_rate_not_available"
+        style="@style/MontserratMedium.MG.12"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/dash_amount_container"
+        android:text="@string/transaction_row_rate_not_available"
+        android:paddingLeft="0dp"
+        android:paddingRight="15dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:textColor="@color/dash_gray"
+        tools:text="Not available"
+        tools:visibility="visible" />
 
-            <RelativeLayout
-                android:id="@+id/transaction_row_extend_message"
-                tools:visibility="visible"
-                style="@style/ExtendedTransactionItem">
-
-                <TextView
-                    android:id="@+id/transaction_row_message"
-                    android:layout_alignParentLeft="true"
-                    android:layout_alignParentStart="true"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/transaction_row_message_sent_to_single_peer"
-                    style="@style/MontserratMedium.MG.12"/>
-
-            </RelativeLayout>
-
-        </LinearLayout>
-
-    </RelativeLayout>
-
-    <View style="@style/ListSeparator" />
-
-</LinearLayout>
+</RelativeLayout>

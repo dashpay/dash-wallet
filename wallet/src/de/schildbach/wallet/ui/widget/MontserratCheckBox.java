@@ -18,12 +18,12 @@
 package de.schildbach.wallet.ui.widget;
 
 import android.content.Context;
-import android.support.v4.content.res.ResourcesCompat;
+import androidx.core.content.res.ResourcesCompat;
 import android.util.AttributeSet;
 
 import de.schildbach.wallet_test.R;
 
-public class MontserratCheckBox extends android.support.v7.widget.AppCompatCheckBox {
+public class MontserratCheckBox extends androidx.appcompat.widget.AppCompatCheckBox {
 
     public MontserratCheckBox(Context context) {
         super(context);

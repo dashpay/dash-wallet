@@ -17,26 +17,29 @@
 
 package de.schildbach.wallet.ui;
 
-import de.schildbach.wallet_test.R;
-
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.design.widget.TabLayout;
-
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentStatePagerAdapter;
-import android.support.v4.view.ViewPager;
-import android.view.LayoutInflater;
 import android.view.MenuItem;
-import android.widget.TextView;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentStatePagerAdapter;
+import androidx.viewpager.widget.ViewPager;
+
+import de.schildbach.wallet_test.R;
 
 /**
  * @author Andreas Schildbach
  */
 public final class NetworkMonitorActivity extends AbstractBindServiceActivity {
+
     private PeerListFragment peerListFragment;
     private BlockListFragment blockListFragment;
+    private ViewPager pager;
+    private CheckBox peersCheckBox;
+    private CheckBox blocksCheckBox;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -44,12 +47,15 @@ public final class NetworkMonitorActivity extends AbstractBindServiceActivity {
 
         setContentView(R.layout.network_monitor_content);
 
-        final ViewPager pager = (ViewPager) findViewById(R.id.network_monitor_pager);
-
+        pager = findViewById(R.id.network_monitor_pager);
         final FragmentManager fm = getSupportFragmentManager();
 
+        peersCheckBox = findViewById(R.id.peers_checkbox);
+        blocksCheckBox = findViewById(R.id.blocks_checkbox);
+
         if (pager != null) {
-            TabLayout tabs = findViewById(R.id.network_monitor_pager_tabs);
+            peersCheckBox.setOnCheckedChangeListener(onCheckedChangeListener);
+            blocksCheckBox.setOnCheckedChangeListener(onCheckedChangeListener);
 
             String peersTitle = getString(R.string.network_monitor_peer_list_title);
             String blocksTitle = getString(R.string.network_monitor_block_list_title);
@@ -58,12 +64,7 @@ public final class NetworkMonitorActivity extends AbstractBindServiceActivity {
             pager.setAdapter(pagerAdapter);
             pager.setPageMargin(2);
             pager.setPageMarginDrawable(R.color.bg_less_bright);
-
-            tabs.setupWithViewPager(pager);
-            for (int i = 0; i < tabs.getTabCount(); i++) {
-                TextView tv = (TextView) LayoutInflater.from(this).inflate(R.layout.tab_title, null);
-                tabs.getTabAt(i).setCustomView(tv);
-            }
+            pager.addOnPageChangeListener(onPageChangeListener);
 
             peerListFragment = new PeerListFragment();
             blockListFragment = new BlockListFragment();
@@ -72,6 +73,49 @@ public final class NetworkMonitorActivity extends AbstractBindServiceActivity {
             blockListFragment = (BlockListFragment) fm.findFragmentById(R.id.block_list_fragment);
         }
     }
+
+    private ViewPager.OnPageChangeListener onPageChangeListener = new ViewPager.OnPageChangeListener() {
+        @Override
+        public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+
+        }
+
+        @Override
+        public void onPageSelected(int position) {
+            peersCheckBox.setOnCheckedChangeListener(null);
+            blocksCheckBox.setOnCheckedChangeListener(null);
+
+            switch (position) {
+                case 0:
+                    peersCheckBox.setChecked(true);
+                    blocksCheckBox.setChecked(false);
+                    break;
+                case 1:
+                    peersCheckBox.setChecked(false);
+                    blocksCheckBox.setChecked(true);
+                    break;
+            }
+
+            peersCheckBox.setOnCheckedChangeListener(onCheckedChangeListener);
+            blocksCheckBox.setOnCheckedChangeListener(onCheckedChangeListener);
+        }
+
+        @Override
+        public void onPageScrollStateChanged(int state) {
+
+        }
+    };
+
+    private CheckBox.OnCheckedChangeListener onCheckedChangeListener = new CompoundButton.OnCheckedChangeListener() {
+        @Override
+        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+            if (buttonView == peersCheckBox) {
+                pager.setCurrentItem(0, true);
+            } else {
+                pager.setCurrentItem(1, true);
+            }
+        }
+    };
 
     @Override
     public boolean onOptionsItemSelected(final MenuItem item) {
@@ -82,6 +126,12 @@ public final class NetworkMonitorActivity extends AbstractBindServiceActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void finish() {
+        super.finish();
+        overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_left);
     }
 
     private class PagerAdapter extends FragmentStatePagerAdapter {

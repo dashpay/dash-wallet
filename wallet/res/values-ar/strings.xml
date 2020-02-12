@@ -29,7 +29,6 @@
 	<string name="wallet_transactions_fragment_empty_text_sent">لم يتم ارسال مبالغ داش إلى الآن</string>
 	<string name="wallet_transactions_fragment_empty_text_howto">كيفية الحصول على  داش؟\n\nالتجارة التقليدية مقابل المال،\nبيع السلع أو الخدمات أو\nالكسب من خلال العمل.</string>
 	<string name="wallet_transactions_row_warning_backup">تهانينا، لقد تلقيت أول دفعة خاصة بك! قل قمت بحفظ احتياطي لمحفظتك لحمايتها من الضياع؟</string>
-	<string name="wallet_transactions_row_warning_storage_encryption">تلميح: لزيادة أمان محفظتك، يمكنك &amp; لوت؛ &amp; غ؛ تشفير جهازك &amp; لوت؛ / &amp; غ ؛. هذا أيضا يحمي البيانات من تطبيقات أخرى.</string>
 	<string name="wallet_transactions_fragment_coinbase">محفور</string>
 	<string name="wallet_transactions_fragment_internal">داخلي</string>
 	<string name="wallet_transactions_options_filter">منقي</string>

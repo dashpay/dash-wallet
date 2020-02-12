@@ -29,7 +29,6 @@
     <string name="wallet_transactions_fragment_empty_text_sent">Nenhum Dash enviado até o momento.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Como conseguir Dash?\n\nTroque por dinheiro tradicional,\nvenda bens ou serviços ou\nganhe trabalhando.</string>
     <string name="wallet_transactions_row_warning_backup">Parabéns, você recebeu o seu primeiro pagamento! Você já fez backup da sua carteira para se proteger contra perdas?</string>
-    <string name="wallet_transactions_row_warning_storage_encryption">Dica: para aumentar a segurança da sua carteira, você pode &lt;u&gt;encriptar o seu dispositivo&lt;/u&gt;. Isto também protege os dados de outros aplicativos.</string>
     <string name="wallet_transactions_fragment_coinbase">minerados</string>
     <string name="wallet_transactions_fragment_internal">interno</string>
     <string name="wallet_transactions_options_filter">Filtro</string>

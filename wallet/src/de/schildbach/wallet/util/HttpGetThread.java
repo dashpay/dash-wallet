@@ -17,19 +17,18 @@
 
 package de.schildbach.wallet.util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.squareup.okhttp.Call;
-import com.squareup.okhttp.HttpUrl;
-import com.squareup.okhttp.Request;
-import com.squareup.okhttp.Response;
-
 import de.schildbach.wallet.Constants;
+import okhttp3.Call;
+import okhttp3.HttpUrl;
+import okhttp3.Request;
+import okhttp3.Response;
 
 /**
  * @author Andreas Schildbach
@@ -50,13 +49,13 @@ public abstract class HttpGetThread extends Thread {
     public void run() {
         log.debug("querying \"{}\"...", url);
 
-        final Request.Builder request = new Request.Builder();
-        request.url(url);
-        request.header("Accept-Charset", "utf-8");
+        final Request.Builder requestBuilder = new Request.Builder()
+                .url(url)
+                .header("Accept-Charset", "utf-8");
         if (userAgent != null)
-            request.header("User-Agent", userAgent);
+            requestBuilder.header("User-Agent", userAgent);
 
-        final Call call = Constants.HTTP_CLIENT.newCall(request.build());
+        final Call call = Constants.HTTP_CLIENT.newCall(requestBuilder.build());
         try {
             final Response response = call.execute();
             if (response.isSuccessful()) {

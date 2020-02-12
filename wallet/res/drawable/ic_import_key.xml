@@ -1,0 +1,50 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <path
+        android:pathData="M2.5001,4.4929V2.5001h1.9928"
+        android:strokeWidth="1"
+        android:strokeColor="#008de4"
+        android:strokeLineCap="round" />
+
+    <path
+        android:pathData="M4.4929,21.5H2.5001v-1.9928"
+        android:strokeWidth="1"
+        android:strokeColor="#008de4"
+        android:strokeLineCap="round" />
+
+    <path
+        android:pathData="M21.5,19.5071V21.5H19.5071"
+        android:strokeWidth="1"
+        android:strokeColor="#008de4"
+        android:strokeLineCap="round" />
+
+    <path
+        android:pathData="M19.5071,2.5001H21.5V4.4929"
+        android:strokeWidth="1"
+        android:strokeColor="#008de4"
+        android:strokeLineCap="round" />
+
+    <path
+        android:pathData="M5.0984,4.8L9.7486,4.8A0.2984,0.2984 0,0 1,10.047 5.0984L10.047,9.7486A0.2984,0.2984 0,0 1,9.7486 10.047L5.0984,10.047A0.2984,0.2984 0,0 1,4.8 9.7486L4.8,5.0984A0.2984,0.2984 0,0 1,5.0984 4.8z"
+        android:strokeWidth="0.6"
+        android:strokeColor="#008de4" />
+
+    <path
+        android:pathData="M14.2512,4.8002L18.9013,4.8002A0.2984,0.2984 0,0 1,19.1998 5.0987L19.1998,9.7488A0.2984,0.2984 0,0 1,18.9013 10.0472L14.2512,10.0472A0.2984,0.2984 0,0 1,13.9528 9.7488L13.9528,5.0987A0.2984,0.2984 0,0 1,14.2512 4.8002z"
+        android:strokeWidth="0.6"
+        android:strokeColor="#008de4" />
+
+    <path
+        android:pathData="M14.2512,13.9528L18.9013,13.9528A0.2984,0.2984 0,0 1,19.1998 14.2512L19.1998,18.9013A0.2984,0.2984 0,0 1,18.9013 19.1998L14.2512,19.1998A0.2984,0.2984 0,0 1,13.9528 18.9013L13.9528,14.2512A0.2984,0.2984 0,0 1,14.2512 13.9528z"
+        android:strokeWidth="0.6"
+        android:strokeColor="#008de4" />
+
+    <path
+        android:pathData="M5.0987,13.9528L9.7488,13.9528A0.2984,0.2984 0,0 1,10.0472 14.2512L10.0472,18.9013A0.2984,0.2984 0,0 1,9.7488 19.1998L5.0987,19.1998A0.2984,0.2984 0,0 1,4.8002 18.9013L4.8002,14.2512A0.2984,0.2984 0,0 1,5.0987 13.9528z"
+        android:strokeWidth="0.6"
+        android:strokeColor="#008de4" />
+</vector>

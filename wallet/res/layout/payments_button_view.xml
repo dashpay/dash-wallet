@@ -1,0 +1,68 @@
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <ImageView
+        android:id="@+id/icon_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:src="@drawable/ic_scan_qr"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_percent="0.13" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="@+id/center_guideline"
+        app:layout_constraintEnd_toStartOf="@+id/button_view"
+        app:layout_constraintStart_toEndOf="@+id/icon_view"
+        app:layout_constraintTop_toTopOf="@+id/center_guideline">
+
+        <TextView
+            android:id="@+id/title_view"
+            style="@style/TitleTextView.Secondary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/payments_pay_by_qr_title"
+            android:textColor="@color/dash_gray"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/sub_title_view"
+            style="@style/TitleTextView.Primary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="middle"
+            android:singleLine="true"
+            android:text="@string/payments_pay_by_qr_sub_title"
+            android:textColor="@color/dash_black" />
+
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/button_view"
+        style="@style/DashButton.Blue"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:text="@string/payments_pay_by_qr_button"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toBottomOf="@+id/center_guideline"
+        app:layout_constraintDimensionRatio="2:1"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/center_guideline"
+        app:layout_constraintWidth_percent="0.2" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/center_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.50" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

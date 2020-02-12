@@ -17,38 +17,30 @@
 
 package de.schildbach.wallet.ui;
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.support.annotation.LayoutRes;
-import android.support.v4.content.LocalBroadcastManager;
-import android.support.v7.app.ActionBar;
-import android.support.v7.widget.Toolbar;
+import android.app.ActivityManager.TaskDescription;
+import android.os.Build;
+import android.os.Bundle;
+import android.view.View;
 
+import androidx.annotation.LayoutRes;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.widget.Toolbar;
+
+import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.WalletLock;
-import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet_test.R;
-
-import android.support.v7.app.AppCompatActivity;
-import android.app.ActivityManager.TaskDescription;
-import android.os.Build;
-import android.os.Bundle;
-import android.view.MenuItem;
 
 /**
  * @author Andreas Schildbach
  */
-public abstract class AbstractWalletActivity extends AppCompatActivity {
+public abstract class AbstractWalletActivity extends GlobalFooterActivity implements AbstractPINDialogFragment.WalletProvider {
+
     private WalletApplication application;
 
     protected static final Logger log = LoggerFactory.getLogger(AbstractWalletActivity.class);
-
-    private static final String FINISH_ALL_ACTIVITIES_ACTION = "dash.wallet.action.CLOSE_ALL_ACTIVITIES_ACTION";
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -56,21 +48,20 @@ public abstract class AbstractWalletActivity extends AppCompatActivity {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
             setTaskDescription(new TaskDescription(null, null, getResources().getColor(R.color.bg_action_bar)));
-        PinRetryController.handleLockedForever(this);
 
-        registerFinishAllReceiver();
         super.onCreate(savedInstanceState);
-    }
-
-    @Override
-    protected void onDestroy() {
-        unregisterFinishAllReceiver();
-        super.onDestroy();
     }
 
     @Override
     public void setContentView(@LayoutRes int layoutResID) {
         super.setContentView(layoutResID);
+
+        initToolbar();
+    }
+
+    @Override
+    public void setContentView(View view) {
+        super.setContentView(view);
 
         initToolbar();
     }
@@ -87,44 +78,17 @@ public abstract class AbstractWalletActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.wallet_options_lock:
-                unlockWallet();
-                return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
-
-    private void unlockWallet() {
-        if(!PinRetryController.handleLockedForever(this))
-            UnlockWalletDialogFragment.show(getSupportFragmentManager());
-    }
-
     protected WalletApplication getWalletApplication() {
         return application;
     }
 
-    private BroadcastReceiver finishAllReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            LocalBroadcastManager.getInstance(application).unregisterReceiver(this);
-            AbstractWalletActivity.this.finish();
-        }
-    };
-
-    private void registerFinishAllReceiver() {
-        IntentFilter finishAllFilter = new IntentFilter(FINISH_ALL_ACTIVITIES_ACTION);
-        LocalBroadcastManager.getInstance(application).registerReceiver(finishAllReceiver, finishAllFilter);
+    @Override
+    public Wallet getWallet() {
+        return application.getWallet();
     }
 
-    private void unregisterFinishAllReceiver() {
-        LocalBroadcastManager.getInstance(application).unregisterReceiver(finishAllReceiver);
-    }
+    @Override
+    public void onWalletUpgradeComplete(String password) {
 
-    public static void finishAll(Context context) {
-        Intent localIntent = new Intent(FINISH_ALL_ACTIVITIES_ACTION);
-        LocalBroadcastManager.getInstance(context).sendBroadcast(localIntent);
     }
 }

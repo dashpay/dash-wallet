@@ -29,7 +29,6 @@
     <string name="wallet_transactions_fragment_empty_text_sent">تاکنون هیچ مقداری از دش ارسال نشده است.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">چطور دش به دست آوریم؟ n\n\ با پول رسمی مقداری دش بخرید، n\ محصول و یا کالا بفروشید و یا n\ با کار کردن، مقداری دش به دست آورید. </string>
     <string name="wallet_transactions_row_warning_backup">تبریک! اولین دریافت دش توسط شما با موفقیت به انجام رسید. آیا نسبت به گرفتن نسخه پشتیبان از کیف پول‌تان به منظور حفاظت از آن در برابر خطرات احتمالی اقدام کرده‌اید؟ </string>
-    <string name="wallet_transactions_row_warning_storage_encryption">نکته: برای افزایش ایمنی کیف پول‌تان می‌توانید &lt;u&gt; دستگاه‌تان را رمزگذاری کنید&lt;/u&gt;. این اقدام از داده‌های سایر اپلیکیشن‌های دستگاه‌تان نیز حفاظت خواهد کرد.  </string>
     <string name="wallet_transactions_fragment_coinbase">استخراج‌شده</string>
     <string name="wallet_transactions_fragment_internal">داخلی</string>
     <string name="wallet_transactions_options_filter">فیلتر</string>

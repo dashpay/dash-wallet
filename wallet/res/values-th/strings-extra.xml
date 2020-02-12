@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">ธุรกรรมนี้จะชำระทันทีโดยไม่มีค่าธรรมเนียมเพิ่มเติม</string>
 	<string name="send_coins_auto_lock_not_feasible">ธุรกรรมนี้อาจจะใช้เวลาในการชำระหลายนาที  ทำให้เสร็จสมบูรณ์ทันทีสำหรับ%1$s%2$s หรือไม่?</string>
 	<string name="send_coins_instant_send_not_feasible">ธุรกรรมนี้อาจใช้เวลาหลายนาทีในการชำระ</string>
 
@@ -79,10 +77,6 @@
 	<string name="notification_transactions_channel_description">รับการแจ้งเตือนเกี่ยวกับการทำธุรกรรมที่เข้ามา</string>
 	<string name="notification_synchronization_channel_name">ซิงโครไนซ์</string>
 	<string name="notification_synchronization_channel_description">แสดงการแจ้งเตือนเมื่อแอพพลิเคชั่นกำลังซิงโครไนซ์กับเครือข่าย</string>
-
-	<string name="fastest_payment_network_dialog_title">เงินของคุณในแบบของคุณเอง</string>
-	<string name="fastest_payment_network_dialog_message">ส่งและรับ Dash ในทันทีที่ไม่มีค่าธรรมเนียมเพิ่มเติม</string>
-	<string name="fastest_payment_network_dialog_button">ได้รับแล้ว</string>
 
     <string name="net_type_indicator" />
 

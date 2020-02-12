@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="action_icon" format="integer" />
+    <attr name="action_icon_size_percent" format="float" />
+    <attr name="action_text" format="string" />
+    <attr name="action_active" format="boolean" />
+    <attr name="action_dark_mode" format="boolean" />
+    <declare-styleable name="QuickActionButton">
+        <attr name="action_icon" />
+        <attr name="action_icon_size_percent" />
+        <attr name="action_text" />
+        <attr name="action_active" />
+        <attr name="action_dark_mode" />
+    </declare-styleable>
+    <declare-styleable name="LockScreenButton">
+        <attr name="action_icon" />
+        <attr name="text" />
+        <attr name="action_icon_padding" format="dimension" />
+    </declare-styleable>
+    <declare-styleable name="FingerprintView">
+        <attr name="custom_layout" format="reference" />
+    </declare-styleable>
+</resources>

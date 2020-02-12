@@ -1,7 +1,6 @@
 package de.schildbach.wallet.ui;
 
 import android.app.Activity;
-
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.Build;
@@ -9,10 +8,10 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
-import android.support.annotation.RequiresApi;
-import android.support.v4.os.CancellationSignal;
-import android.support.v4.app.DialogFragment;
-import android.support.v7.app.AlertDialog;
+import androidx.annotation.RequiresApi;
+import androidx.core.os.CancellationSignal;
+import androidx.fragment.app.DialogFragment;
+import androidx.appcompat.app.AlertDialog;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
@@ -20,6 +19,11 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AlertDialog;
+import androidx.core.os.CancellationSignal;
+import androidx.fragment.app.DialogFragment;
 
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.DialogBuilder;
@@ -39,10 +43,9 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
 
     protected DialogInterface.OnDismissListener onDismissListener;
 
-    protected AbstractWalletActivity activity;
+    protected WalletProvider walletProvider;
     protected WalletApplication application;
     protected Handler backgroundHandler;
-    protected Wallet wallet;
     protected PinRetryController pinRetryController;
     protected FingerprintHelper fingerprintHelper;
     protected CancellationSignal fingerprintCancellationSignal;
@@ -60,15 +63,14 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
     public void onAttach(final Activity activity) {
         super.onAttach(activity);
 
-        this.activity = (AbstractWalletActivity) activity;
+        this.walletProvider = (WalletProvider) activity;
         this.application = (WalletApplication) activity.getApplication();
-        this.wallet = application.getWallet();
-        this.pinRetryController = new PinRetryController(activity);
+        this.pinRetryController = PinRetryController.getInstance();
     }
 
     @Override
     public Dialog onCreateDialog(final Bundle savedInstanceState) {
-        final View view = LayoutInflater.from(activity).inflate(dialogLayout, null);
+        final View view = LayoutInflater.from(getContext()).inflate(dialogLayout, null);
 
         pinView = (EditText) view.findViewById(R.id.pin);
         badPinView = (TextView) view.findViewById(R.id.bad_pin);
@@ -99,13 +101,13 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
             }
         }
 
-        if (wallet.isEncrypted()) {
+        if (walletProvider.getWallet().isEncrypted()) {
             HandlerThread backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);
             backgroundThread.start();
             backgroundHandler = new Handler(backgroundThread.getLooper());
         }
 
-        final DialogBuilder builder = new DialogBuilder(activity);
+        final DialogBuilder builder = new DialogBuilder(getContext());
         builder.setTitle(dialogTitle);
         builder.setView(view);
         builder.setCancelable(false);
@@ -179,4 +181,11 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
     };
 
     abstract protected void checkPassword(final String password);
+
+    public interface WalletProvider {
+
+        Wallet getWallet();
+
+        void onWalletUpgradeComplete(String password);
+    }
 }

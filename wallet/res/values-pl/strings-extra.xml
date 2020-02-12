@@ -1,9 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">Transakcja zostanie rozliczona natychmiast bez dodatkowych opłat.</string>
-	<string name="send_coins_auto_lock_not_feasible">Rozliczenie transakcji może potrwać dłuższą chwilę. Wykonać natychmiast za dodatkowe %1$s%2$s?</string>
-	<string name="send_coins_instant_send_not_feasible">Rozliczenie transakcji może potrwać dłuższą chwilę.</string>
+	<string name="send_coins_auto_lock_not_feasible">Ta transakcja może zająć kilka minut. Zatwierdzić natychmias za dodatkowe %1$s%2$s?</string>
+	<string name="send_coins_instant_send_not_feasible">Ta transakcja może zająć kilka minut zanim zostanie uregulowana.</string>
 
 	<string name="options_paste_from_clipboard_title">Wklej ze schowka</string>
 
@@ -88,10 +86,6 @@
 	<string name="notification_transactions_channel_description">Otrzymuj powiadomienia o nadchodzących transakcjach.</string>
 	<string name="notification_synchronization_channel_name">Synchronizacja</string>
 	<string name="notification_synchronization_channel_description">Wyświetla powiadomienie, gdy aplikacja synchronizuje się z siecią.</string>
-
-	<string name="fastest_payment_network_dialog_title">Twoje Pieniądze, na Twój Sposób</string>
-	<string name="fastest_payment_network_dialog_message">Wysyłaj i Otrzymuj Dash natychmiast i bez dodatkowych opłat</string>
-	<string name="fastest_payment_network_dialog_button">Rozumiem!</string>
 
     <string name="net_type_indicator" />
 

@@ -34,8 +34,8 @@ import android.app.Dialog;
 import android.content.Intent;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
-import android.support.v4.app.DialogFragment;
-import android.support.v4.app.FragmentManager;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.FragmentManager;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.Window;
@@ -81,7 +81,7 @@ public class WalletAddressDialogFragment extends DialogFragment {
     public Dialog onCreateDialog(final Bundle savedInstanceState) {
         final Bundle args = getArguments();
         final Address address = (Address) args.getSerializable(KEY_ADDRESS);
-        final String addressStr = address.toBase58();
+        final String addressStr = address.toString();
         final String addressLabel = args.getString(KEY_ADDRESS_LABEL);
 
         final Dialog dialog = new Dialog(activity);

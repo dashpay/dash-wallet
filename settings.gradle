@@ -1,5 +1,5 @@
 include 'wallet'
 include 'integration-android'
 include 'sample-integration-android'
-include ':uphold-integration'
+include ':uphold-integration', ':ui-redesign'
 include ':common'

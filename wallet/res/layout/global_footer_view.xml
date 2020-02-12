@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/global_footer_view"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="de.schildbach.wallet.ui.widget.GlobalFooterView"
+    tools:ignore="ContentDescription"
+    tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
+
+    <FrameLayout
+        android:id="@+id/content_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@+id/shadow"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <FrameLayout
+        android:id="@+id/shadow"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@color/dash_light_gray"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/goto_button_view" />
+
+    <FrameLayout
+        android:id="@+id/goto_button_back"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/global_footer_goto_back"
+        app:layout_constraintBottom_toBottomOf="@+id/goto_button_view"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintEnd_toEndOf="@+id/center_guideline"
+        app:layout_constraintStart_toStartOf="@+id/center_guideline"
+        app:layout_constraintTop_toTopOf="@+id/goto_button_view"
+        app:layout_constraintWidth_percent="0.18" />
+
+    <FrameLayout
+        android:id="@+id/background"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="1px"
+        android:background="@color/dash_white"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/goto_button_view" />
+
+    <ImageView
+        android:id="@+id/home_button_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/selectable_background_light"
+        android:clickable="true"
+        android:focusable="true"
+        android:src="@drawable/home_button_selector"
+        app:layout_constraintBottom_toBottomOf="@+id/goto_button_view"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintEnd_toEndOf="@+id/home_guideline"
+        app:layout_constraintStart_toStartOf="@+id/home_guideline"
+        app:layout_constraintTop_toTopOf="@+id/goto_button_view"
+        app:layout_constraintWidth_percent="0.08" />
+
+    <ImageView
+        android:id="@+id/more_button_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:src="@drawable/more_button_selector"
+        app:layout_constraintBottom_toBottomOf="@+id/goto_button_view"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintEnd_toEndOf="@+id/more_guideline"
+        app:layout_constraintStart_toStartOf="@+id/more_guideline"
+        app:layout_constraintTop_toTopOf="@+id/goto_button_view"
+        app:layout_constraintWidth_percent="0.07" />
+
+    <ImageView
+        android:id="@+id/goto_button_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginBottom="12dp"
+        android:src="@drawable/goto_button_selector"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintEnd_toEndOf="@+id/center_guideline"
+        app:layout_constraintStart_toStartOf="@+id/center_guideline"
+        app:layout_constraintWidth_percent="0.13" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/home_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.20" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/center_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.5" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/more_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.80" />
+
+</merge>

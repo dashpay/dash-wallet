@@ -18,11 +18,8 @@
 package de.schildbach.wallet.ui;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.ArrayList;
@@ -37,16 +34,17 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Charsets;
 
 import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.util.CrashReporter;
-import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet_test.R;
 
+import android.app.Application;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.net.Uri;
-import android.support.v4.content.FileProvider;
+import androidx.core.content.FileProvider;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.CheckBox;
@@ -90,6 +88,39 @@ public abstract class ReportIssueDialogBuilder extends DialogBuilder implements 
         setView(view);
         setPositiveButton(R.string.report_issue_dialog_report, this);
         setNegativeButton(R.string.button_cancel, null);
+    }
+
+    public static ReportIssueDialogBuilder createReportIssueDialog(final Context context,
+                                                                   final WalletApplication application) {
+        final ReportIssueDialogBuilder dialog = new ReportIssueDialogBuilder(context,
+                R.string.report_issue_dialog_title_issue, R.string.report_issue_dialog_message_issue) {
+            @Override
+            protected CharSequence subject() {
+                return Constants.REPORT_SUBJECT_BEGIN + application.packageInfo().versionName + " "
+                        + Constants.REPORT_SUBJECT_ISSUE;
+            }
+
+            @Override
+            protected CharSequence collectApplicationInfo() throws IOException {
+                final StringBuilder applicationInfo = new StringBuilder();
+                CrashReporter.appendApplicationInfo(applicationInfo, application);
+                return applicationInfo;
+            }
+
+            @Override
+            protected CharSequence collectDeviceInfo() throws IOException {
+                final StringBuilder deviceInfo = new StringBuilder();
+                CrashReporter.appendDeviceInfo(deviceInfo, context);
+                return deviceInfo;
+            }
+
+            @Override
+            protected CharSequence collectWalletDump() {
+                return application.getWallet().toString(false, true,
+                        true, null);
+            }
+        };
+        return dialog;
     }
 
     @Override

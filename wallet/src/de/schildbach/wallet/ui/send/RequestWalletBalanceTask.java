@@ -63,9 +63,6 @@ import com.google.common.hash.Hashing;
 import com.squareup.moshi.JsonAdapter;
 import com.squareup.moshi.JsonDataException;
 import com.squareup.moshi.Moshi;
-import com.squareup.okhttp.Call;
-import com.squareup.okhttp.Request;
-import com.squareup.okhttp.Response;
 
 import de.schildbach.wallet.Constants;
 import static de.schildbach.wallet.Constants.HEX;
@@ -73,6 +70,10 @@ import de.schildbach.wallet_test.R;
 import android.content.res.AssetManager;
 import android.os.Handler;
 import android.os.Looper;
+
+import okhttp3.Call;
+import okhttp3.Request;
+import okhttp3.Response;
 import okio.BufferedSink;
 import okio.BufferedSource;
 import okio.Okio;
@@ -168,7 +169,7 @@ public final class RequestWalletBalanceTask {
 					final Moshi moshi = new Moshi.Builder().build();
 					final JsonAdapter<JsonRpcRequest> requestAdapter = moshi.adapter(JsonRpcRequest.class);
 					final JsonRpcRequest request = new JsonRpcRequest("blockchain.address.listunspent",
-							new String[] { address.toBase58() });
+							new String[] { address.toString() });
 					requestAdapter.toJson(sink, request);
 					sink.writeUtf8("\n").flush();
 					final JsonAdapter<JsonRpcResponse> responseAdapter = moshi.adapter(JsonRpcResponse.class);
@@ -364,11 +365,12 @@ public final class RequestWalletBalanceTask {
 		}
 		log.debug("trying to request wallet balance from {}", url);
 
-		final Request.Builder request = new Request.Builder();
-		request.url(url.toString());
-		request.header("User-Agent", Constants.USER_AGENT);
+		final Request request = new Request.Builder()
+				.url(url.toString())
+				.header("User-Agent", Constants.USER_AGENT)
+				.build();
 
-		final Call call = Constants.HTTP_CLIENT.newCall(request.build());
+		final Call call = Constants.HTTP_CLIENT.newCall(request);
 
 		try
 		{

@@ -18,15 +18,14 @@
 package de.schildbach.wallet.ui;
 
 import android.app.Activity;
-import android.arch.lifecycle.Observer;
-import android.arch.lifecycle.ViewModelProviders;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProviders;
 import android.content.Intent;
 import android.os.Bundle;
 
-import android.os.Handler;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.LoaderManager;
-import android.support.v4.content.Loader;
+import androidx.fragment.app.Fragment;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.Loader;
 import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -49,7 +48,6 @@ import javax.annotation.Nullable;
 import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.service.BlockchainState;
@@ -60,7 +58,7 @@ import de.schildbach.wallet_test.R;
 /**
  * @author Andreas Schildbach
  */
-public final class WalletBalanceToolbarFragment extends Fragment implements WalletLock.OnLockChangeListener {
+public final class WalletBalanceToolbarFragment extends Fragment {
 	private WalletApplication application;
 	private AbstractBindServiceActivity activity;
 	private Configuration config;
@@ -99,8 +97,6 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 
 	private boolean initComplete = false;
 
-	private Handler autoLockHandler = new Handler();
-
 	@Override
 	public void onCreate(Bundle savedInstanceState)
 	{
@@ -111,11 +107,6 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         MenuItem walletLockMenuItem = menu.findItem(R.id.wallet_options_lock);
-        if (walletLockMenuItem != null) {
-            boolean isWalletLocked = WalletLock.getInstance().isWalletLocked(wallet);
-            walletLockMenuItem.setVisible(isWalletLocked);
-            viewBalance.setVisibility(isWalletLocked ? View.GONE : View.VISIBLE);
-        }
         super.onCreateOptionsMenu(menu, inflater);
     }
 
@@ -134,7 +125,7 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 	}
 
 	@Override
-	public void onActivityCreated(@android.support.annotation.Nullable Bundle savedInstanceState)
+	public void onActivityCreated(@androidx.annotation.Nullable Bundle savedInstanceState)
 	{
 		super.onActivityCreated(savedInstanceState);
 		appBarMessageView = activity.findViewById(R.id.toolbar_message);
@@ -199,20 +190,6 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 		});
 
 		updateView();
-
-		WalletLock.getInstance().addListener(this);
-		scheduleAutoLock();
-	}
-
-	private void scheduleAutoLock() {
-		autoLockHandler.removeCallbacksAndMessages(null);
-        autoLockHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                application.lockWalletIfNeeded();
-                scheduleAutoLock();
-            }
-        }, WalletLock.DEFAULT_LOCK_TIMER_MILLIS);
 	}
 
 	@Override
@@ -222,8 +199,6 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 		loaderManager.destroyLoader(ID_BALANCE_LOADER);
 		//loaderManager.destroyLoader(ID_MASTERNODE_SYNC_LOADER);
 
-		WalletLock.getInstance().removeListener(this);
-		autoLockHandler.removeCallbacksAndMessages(null);
 		super.onPause();
 	}
 
@@ -393,35 +368,4 @@ public final class WalletBalanceToolbarFragment extends Fragment implements Wall
 		{
 		}
 	};
-
-	@Override
-	public void onLockChanged(boolean locked) {
-		updateView();
-		if (!locked) {
-			scheduleAutoLock();
-		}
-	}
-
-	/*private final LoaderManager.LoaderCallbacks<Integer> masternodeSyncLoaderCallbacks = new LoaderManager.LoaderCallbacks<Integer>()
-	{
-		@Override
-		public Loader<Integer> onCreateLoader(final int id, final Bundle args)
-		{
-			return new MasternodeSyncLoader(activity, wallet);
-		}
-
-		@Override
-		public void onLoadFinished(final Loader<Integer> loader, final Integer newStatus)
-		{
-			WalletBalanceToolbarFragment.this.masternodeSyncStatus = newStatus;
-
-			updateView();
-
-		}
-
-		@Override
-		public void onLoaderReset(final Loader<Integer> loader)
-		{
-		}
-	};*/
 }

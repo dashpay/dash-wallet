@@ -23,15 +23,13 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.DialogBuilder;
-import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
 import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
-
-import java.util.Set;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
@@ -46,7 +44,7 @@ import de.schildbach.wallet_test.R;
  * It could not be handled directly by WalletActivity, since it is configured
  * as a singleTask and doesn't support startActivityForResult(...) pattern.
  */
-public final class WalletUriHandlerActivity extends Activity {
+public final class WalletUriHandlerActivity extends AppCompatActivity {
 
     private static final int REQUEST_CODE_SEND_FROM_WALLET_URI = 1;
 
@@ -64,6 +62,7 @@ public final class WalletUriHandlerActivity extends Activity {
 
     @Override
     protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
         handleIntent(getIntent());
     }
 
@@ -97,7 +96,7 @@ public final class WalletUriHandlerActivity extends Activity {
                     @Override
                     protected void handlePaymentIntent(final PaymentIntent paymentIntent, boolean forceInstantSend) {
                         SendCoinsActivity.sendFromWalletUri(
-                                WalletUriHandlerActivity.this, REQUEST_CODE_SEND_FROM_WALLET_URI, paymentIntent, forceInstantSend);
+                                WalletUriHandlerActivity.this, REQUEST_CODE_SEND_FROM_WALLET_URI, paymentIntent);
                     }
 
                     protected void handleMasterPublicKeyRequest(String sender) {
@@ -121,7 +120,7 @@ public final class WalletUriHandlerActivity extends Activity {
                             public void onClick(DialogInterface dialog, int which) {
                                 Address address = wallet.freshReceiveAddress();
                                 Uri requestData = getIntent().getData();
-                                Intent result = WalletUri.createAddressResult(requestData, address.toBase58(), getAppName());
+                                Intent result = WalletUri.createAddressResult(requestData, address.toString(), getAppName());
                                 setResult(RESULT_OK, result);
                                 finish();
                             }
@@ -166,6 +165,7 @@ public final class WalletUriHandlerActivity extends Activity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE_SEND_FROM_WALLET_URI) {
             Intent result = null;
             if (resultCode == Activity.RESULT_OK) {

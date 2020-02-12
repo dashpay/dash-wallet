@@ -21,7 +21,7 @@ import de.schildbach.wallet_test.R;
 
 import android.os.Bundle;
 
-import android.support.v7.widget.Toolbar;
+import androidx.appcompat.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.WindowManager;
@@ -34,7 +34,7 @@ public final class RequestCoinsActivity extends AbstractBindServiceActivity {
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setContentView(R.layout.request_coins_content);
+        setContentViewWithFooter(R.layout.request_coins_content);
     }
 
     @Override
@@ -55,12 +55,7 @@ public final class RequestCoinsActivity extends AbstractBindServiceActivity {
         case android.R.id.home:
             finish();
             return true;
-
-        case R.id.request_coins_options_help:
-            HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_request_coins);
-            return true;
         }
-
         return super.onOptionsItemSelected(item);
     }
 }

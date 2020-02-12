@@ -25,12 +25,11 @@ import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spongycastle.crypto.params.KeyParameter;
+import org.bouncycastle.crypto.params.KeyParameter;
 
 import com.google.common.base.Strings;
 
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 
 import de.schildbach.wallet.util.FingerprintHelper;
@@ -42,15 +41,14 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnShowListener;
 import android.graphics.Typeface;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
-import android.support.v4.app.DialogFragment;
-import android.support.v4.app.FragmentActivity;
-import android.support.v4.app.FragmentManager;
-import android.support.v7.app.AlertDialog;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.FragmentActivity;
+import androidx.fragment.app.FragmentManager;
+import androidx.appcompat.app.AlertDialog;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
@@ -69,7 +67,6 @@ public class EncryptKeysDialogFragment extends DialogFragment {
 
     private static final String FRAGMENT_TAG = EncryptKeysDialogFragment.class.getName();
 
-    private static final String ONBOARDING_ARG = "onboarding_arg";
     private static final String CANCELABLE_ARG = "cancelable_arg";
 
     protected DialogInterface.OnDismissListener onDismissListener;
@@ -78,7 +75,6 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         final DialogFragment newFragment = new EncryptKeysDialogFragment();
 
         final Bundle args = new Bundle();
-        args.putBoolean(ONBOARDING_ARG, true);
         args.putBoolean(CANCELABLE_ARG, cancelable);
         newFragment.setArguments(args);
 
@@ -150,7 +146,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         this.activity = (AbstractWalletActivity) activity;
         this.application = (WalletApplication) activity.getApplication();
         this.wallet = application.getWallet();
-        this.pinRetryController = new PinRetryController(getActivity());
+        this.pinRetryController = PinRetryController.getInstance();
     }
 
     @Override
@@ -164,7 +160,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, @android.support.annotation.Nullable ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, @androidx.annotation.Nullable ViewGroup container, Bundle savedInstanceState) {
         setCancelable(getArguments() != null ? getArguments().getBoolean(CANCELABLE_ARG) : false);
         return super.onCreateView(inflater, container, savedInstanceState);
     }
@@ -226,6 +222,18 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         });
 
         return dialog;
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        Dialog dialog = getDialog();
+        if (dialog != null)
+        {
+            int width = ViewGroup.LayoutParams.MATCH_PARENT;
+            int height = ViewGroup.LayoutParams.MATCH_PARENT;
+            dialog.getWindow().setLayout(width, height);
+        }
     }
 
     @Override
@@ -318,7 +326,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                                     pinRetryController.failedAttempt(oldPassword);
                                     badPasswordView.setVisibility(View.VISIBLE);
                                     attemptsRemainingTextView.setVisibility(View.VISIBLE);
-                                    attemptsRemainingTextView.setText(pinRetryController.getRemainingAttemptsMessage());
+                                    attemptsRemainingTextView.setText(pinRetryController.getRemainingAttemptsMessage(getContext()));
 
                                     state = State.INPUT;
                                     oldPasswordView.requestFocus();
@@ -342,7 +350,6 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                             fingerprintHelper.clear();
                             delayedDismiss();
 
-                            WalletLock.getInstance().setWalletLocked(wallet.isEncrypted());
                         } else {
                             updateView();
                         }
@@ -354,20 +361,11 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                             public void run() {
                                 dismiss();
 
-                                Bundle args = getArguments();
-                                boolean onboarding = args != null && args.getBoolean(ONBOARDING_ARG);
-
                                 FragmentActivity activity = getActivity();
 
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-                                        && fingerprintHelper.init() && !fingerprintHelper.isFingerprintEnabled()
-                                        && oldPassword == null && state == State.DONE) {
+                                if (EnableFingerprintDialog.shouldBeShown(activity) && oldPassword == null && state == State.DONE) {
                                     //noinspection ConstantConditions
-                                    EnableFingerprintDialog.show(newPassword, onboarding, activity.getFragmentManager());
-                                } else {
-                                    if (onboarding && activity instanceof OnOnboardingCompleteListener) {
-                                        ((OnOnboardingCompleteListener) activity).onOnboardingComplete();
-                                    }
+                                    EnableFingerprintDialog.show(newPassword, activity.getSupportFragmentManager());
                                 }
                             }
                         }, 2000);
@@ -432,10 +430,5 @@ public class EncryptKeysDialogFragment extends DialogFragment {
             positiveButton.setEnabled(false);
             negativeButton.setEnabled(false);
         }
-    }
-
-    public interface OnOnboardingCompleteListener {
-
-        void onOnboardingComplete();
     }
 }

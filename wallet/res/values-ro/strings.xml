@@ -29,7 +29,6 @@
     <string name="wallet_transactions_fragment_empty_text_sent">Nici un Dash nu a trimis primit până acum.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Cum obții Dash?\n\nSchimbă în bani tradiționali,\nvinde bunuri sau servicii sau\ncâștiga prin muncă.</string>
     <string name="wallet_transactions_row_warning_backup">Felicitări, ai primit prima ta plată! Ai creat deja portofelul, pentru protecție împotriva pierderii?</string>
-    <string name="wallet_transactions_row_warning_storage_encryption">Sugestie: pentru a îmbunatați siguranța portofelului tău, poți &lt;u&gt;securiza dispozitivul&lt;/u&gt;. Astfel vei proteja și datele altor aplicații.</string>
     <string name="wallet_transactions_fragment_coinbase">minerit</string>
     <string name="wallet_transactions_fragment_internal">intern</string>
     <string name="wallet_transactions_options_filter">Filtru</string>

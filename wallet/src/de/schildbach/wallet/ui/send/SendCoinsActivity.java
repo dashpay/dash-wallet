@@ -17,85 +17,67 @@
 
 package de.schildbach.wallet.ui.send;
 
-import javax.annotation.Nullable;
-
-import org.bitcoinj.core.Coin;
-
-import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.ui.AbstractBindServiceActivity;
-import de.schildbach.wallet.ui.HelpDialogFragment;
-import de.schildbach.wallet_test.R;
-
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.Menu;
 import android.view.MenuItem;
+
+import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.ui.AbstractBindServiceActivity;
+import de.schildbach.wallet_test.R;
 
 /**
  * @author Andreas Schildbach
  */
 public final class SendCoinsActivity extends AbstractBindServiceActivity {
-	public static final String INTENT_EXTRA_PAYMENT_INTENT = "payment_intent";
-	public static final String INTENT_EXTRA_FEE_CATEGORY = "fee_category";
-	public static final String INTENT_EXTRA_FORCE_INSTANT_SEND = "force_instant_send";
 
-	public static final String ACTION_SEND_FROM_WALLET_URI = "de.schildbach.wallet.action.SEND_FROM_WALLET_URI";
+    public static final String INTENT_EXTRA_PAYMENT_INTENT = "payment_intent";
+    public static final String INTENT_EXTRA_USER_AUTHORIZED = "user_authorized";
 
-	public static void start(final Context context, final PaymentIntent paymentIntent,
-							 final @Nullable FeeCategory feeCategory, final int intentFlags) {
-		final Intent intent = new Intent(context, SendCoinsActivity.class);
-		intent.putExtra(INTENT_EXTRA_PAYMENT_INTENT, paymentIntent);
-		if (feeCategory != null)
-			intent.putExtra(INTENT_EXTRA_FEE_CATEGORY, feeCategory);
-		if (intentFlags != 0)
-			intent.setFlags(intentFlags);
-		context.startActivity(intent);
-	}
+    public static final String ACTION_SEND_FROM_WALLET_URI = "de.schildbach.wallet.action.SEND_FROM_WALLET_URI";
 
-	public static void start(final Context context, final PaymentIntent paymentIntent) {
-		start(context, paymentIntent, null, 0);
-	}
+    public static void start(final Context context, final PaymentIntent paymentIntent) {
+        start(context, paymentIntent, false);
+    }
 
-	public static void sendFromWalletUri(final Activity callingActivity, int requestCode,
-									  final PaymentIntent paymentIntent, boolean forceInstantSend) {
-		final Intent intent = new Intent(callingActivity, SendCoinsActivity.class);
-		intent.setAction(ACTION_SEND_FROM_WALLET_URI);
-		intent.putExtra(INTENT_EXTRA_PAYMENT_INTENT, paymentIntent);
-		intent.putExtra(INTENT_EXTRA_FORCE_INSTANT_SEND, forceInstantSend);
-		callingActivity.startActivityForResult(intent, requestCode);
-	}
+    public static void start(final Context context, final PaymentIntent paymentIntent, boolean userAuthorized) {
+        final Intent intent = new Intent(context, SendCoinsActivity.class);
+        intent.putExtra(INTENT_EXTRA_PAYMENT_INTENT, paymentIntent);
+        intent.putExtra(INTENT_EXTRA_USER_AUTHORIZED, userAuthorized);
+        context.startActivity(intent);
+    }
 
-	@Override
-	protected void onCreate(final Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
+    public static void sendFromWalletUri(final Activity callingActivity, int requestCode,
+                                         final PaymentIntent paymentIntent) {
+        final Intent intent = new Intent(callingActivity, SendCoinsActivity.class);
+        intent.setAction(ACTION_SEND_FROM_WALLET_URI);
+        intent.putExtra(INTENT_EXTRA_USER_AUTHORIZED, false);
+        intent.putExtra(INTENT_EXTRA_PAYMENT_INTENT, paymentIntent);
+        callingActivity.startActivityForResult(intent, requestCode);
+    }
 
-		setContentView(R.layout.send_coins_content);
+    @Override
+    protected void onCreate(final Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
 
-		getWalletApplication().startBlockchainService(false);
-	}
+        setContentView(R.layout.send_coins_content);
 
-	@Override
-	public boolean onCreateOptionsMenu(final Menu menu) {
-		getMenuInflater().inflate(R.menu.send_coins_activity_options, menu);
+        getWalletApplication().startBlockchainService(false);
+    }
 
-		return super.onCreateOptionsMenu(menu);
-	}
+    public boolean isUserAuthorized() {
+        return getIntent().getBooleanExtra(INTENT_EXTRA_USER_AUTHORIZED, false);
+    }
 
-	@Override
-	public boolean onOptionsItemSelected(final MenuItem item) {
-		switch (item.getItemId()) {
-			case android.R.id.home:
-				finish();
-				return true;
+    @Override
+    public boolean onOptionsItemSelected(final MenuItem item) {
+        switch (item.getItemId()) {
+            case android.R.id.home:
+                finish();
+                return true;
+        }
 
-			case R.id.send_coins_options_help:
-				HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_send_coins);
-				return true;
-		}
-
-		return super.onOptionsItemSelected(item);
-	}
+        return super.onOptionsItemSelected(item);
+    }
 }

@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">此项交易确认将即时完成, 无需额外费用.</string>
 	<string name="send_coins_auto_lock_not_feasible">此项交易确认需要几分钟. 立刻完成需要 %1$s%2$s?</string>
 	<string name="send_coins_instant_send_not_feasible">此项交易确认需要几分钟.</string>
 
@@ -79,10 +77,6 @@
 	<string name="notification_transactions_channel_description">接收关于新转入交易的提醒.</string>
 	<string name="notification_synchronization_channel_name">同步</string>
 	<string name="notification_synchronization_channel_description">当app正在同步网络时显示通知.</string>
-
-	<string name="fastest_payment_network_dialog_title">你的财富, 你做主</string>
-	<string name="fastest_payment_network_dialog_message">立即发送和接收达世币, 无需额外费用</string>
-	<string name="fastest_payment_network_dialog_button">了解</string>
 
     <string name="net_type_indicator" />
 

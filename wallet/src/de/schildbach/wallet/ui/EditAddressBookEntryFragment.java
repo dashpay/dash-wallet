@@ -36,9 +36,9 @@ import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v4.app.DialogFragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v7.app.AlertDialog;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.appcompat.app.AlertDialog;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
@@ -54,7 +54,7 @@ public final class EditAddressBookEntryFragment extends DialogFragment {
     private static final String KEY_SUGGESTED_ADDRESS_LABEL = "suggested_address_label";
 
     public static void edit(final FragmentManager fm, final String address) {
-        edit(fm, Address.fromBase58(Constants.NETWORK_PARAMETERS, address), null);
+        edit(fm, Address.fromString(Constants.NETWORK_PARAMETERS, address), null);
     }
 
     public static void edit(final FragmentManager fm, final Address address) {
@@ -72,7 +72,7 @@ public final class EditAddressBookEntryFragment extends DialogFragment {
         final EditAddressBookEntryFragment fragment = new EditAddressBookEntryFragment();
 
         final Bundle args = new Bundle();
-        args.putString(KEY_ADDRESS, address.toBase58());
+        args.putString(KEY_ADDRESS, address.toString());
         args.putString(KEY_SUGGESTED_ADDRESS_LABEL, suggestedAddressLabel);
         fragment.setArguments(args);
 
@@ -96,15 +96,15 @@ public final class EditAddressBookEntryFragment extends DialogFragment {
     @Override
     public Dialog onCreateDialog(final Bundle savedInstanceState) {
         final Bundle args = getArguments();
-        final Address address = Address.fromBase58(Constants.NETWORK_PARAMETERS, args.getString(KEY_ADDRESS));
+        final Address address = Address.fromString(Constants.NETWORK_PARAMETERS, args.getString(KEY_ADDRESS));
         final String suggestedAddressLabel = args.getString(KEY_SUGGESTED_ADDRESS_LABEL);
 
         final LayoutInflater inflater = LayoutInflater.from(activity);
 
         final Uri uri = AddressBookProvider.contentUri(activity.getPackageName()).buildUpon()
-                .appendPath(address.toBase58()).build();
+                .appendPath(address.toString()).build();
 
-        final String label = AddressBookProvider.resolveLabel(activity, address.toBase58());
+        final String label = AddressBookProvider.resolveLabel(activity, address.toString());
 
         final boolean isAdd = label == null;
         final boolean isOwn = wallet.isPubKeyHashMine(address.getHash160());

@@ -19,11 +19,12 @@ package de.schildbach.wallet.ui;
 
 import android.content.DialogInterface;
 import android.os.Build;
-import android.support.v4.app.FragmentManager;
 import android.view.View;
 
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet_test.R;
 
 public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
@@ -37,6 +38,12 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
     public static void show(FragmentManager fm, DialogInterface.OnDismissListener onDismissListener) {
         UnlockWalletDialogFragment dialogFragment = new UnlockWalletDialogFragment();
         dialogFragment.onDismissListener = onDismissListener;
+        dialogFragment.show(fm, FRAGMENT_TAG);
+    }
+
+    public static void show(FragmentManager fm, Fragment targetFragment) {
+        UnlockWalletDialogFragment dialogFragment = new UnlockWalletDialogFragment();
+        dialogFragment.setTargetFragment(targetFragment, 0);
         dialogFragment.show(fm, FRAGMENT_TAG);
     }
 
@@ -68,7 +75,10 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
             protected void onSuccess() {
                 if (getActivity() != null && isAdded()) {
                     pinRetryController.clearPinFailPrefs();
-                    WalletLock.getInstance().setWalletLocked(false);
+
+                    if (getTargetFragment() instanceof OnUnlockWalletListener) {
+                        ((OnUnlockWalletListener) getTargetFragment()).onUnlockWallet(password);
+                    }
 
                     dismissAllowingStateLoss();
 
@@ -76,7 +86,7 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
                         if (!fingerprintHelper.isFingerprintEnabled() && WalletApplication
                                 .getInstance().getConfiguration().getRemindEnableFingerprint()) {
                             EnableFingerprintDialog.show(password,
-                                    getActivity().getFragmentManager());
+                                    getActivity().getSupportFragmentManager());
                         }
                     }
                 }
@@ -90,11 +100,15 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
                     pinView.setEnabled(true);
                     pinRetryController.failedAttempt(password);
                     badPinView.setText(getString(R.string.wallet_lock_wrong_pin,
-                            pinRetryController.getRemainingAttemptsMessage()));
+                            pinRetryController.getRemainingAttemptsMessage(getContext())));
                     badPinView.setVisibility(View.VISIBLE);
                 }
             }
-        }.checkPassword(wallet, password);
+        }.checkPassword(walletProvider.getWallet(), password);
     }
 
+    public interface OnUnlockWalletListener {
+
+        void onUnlockWallet(String password);
+    }
 }

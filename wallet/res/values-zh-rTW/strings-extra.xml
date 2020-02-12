@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">此交易將進行即時結算，無需支付額外費用。</string>
 	<string name="send_coins_auto_lock_not_feasible">此交易可能需要幾分鐘才能結算。 支付額外的 %1$s%2$s費用來立即完成該交易嗎?</string>
 	<string name="send_coins_instant_send_not_feasible">此交易可能需要幾分鐘才能結算。</string>
 
@@ -79,10 +77,6 @@
 	<string name="notification_transactions_channel_description">接收有關接收交易的警報。</string>
 	<string name="notification_synchronization_channel_name">同步</string>
 	<string name="notification_synchronization_channel_description">應用程序與網絡同步時顯示通知。</string>
-
-	<string name="fastest_payment_network_dialog_title">你的錢，你的方式</string>
-	<string name="fastest_payment_network_dialog_message">免費發送和接收達世幣，無需額外費用</string>
-	<string name="fastest_payment_network_dialog_button">明白了</string>
 
     <string name="net_type_indicator" />
 

@@ -6,7 +6,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical">
 
-    <android.support.v7.widget.Toolbar
+    <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
@@ -24,12 +24,12 @@
             android:background="?android:attr/selectableItemBackground"
             android:paddingRight="16dp"
             android:paddingLeft="16dp"
-            android:text="Log Out"
+            android:text="@string/uphold_logout"
             android:clickable="true"
             android:focusable="true"
             android:textSize="14sp" />
 
-    </android.support.v7.widget.Toolbar>
+    </androidx.appcompat.widget.Toolbar>
 
     <RelativeLayout
         android:orientation="vertical"
@@ -95,7 +95,7 @@
 
         <Button
             android:id="@+id/uphold_buy_dash_btn"
-            style="@style/MontserratButton.Inverted"
+            style="@style/DashButton.White"
             android:layout_alignParentBottom="true"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -105,7 +105,7 @@
 
         <Button
             android:id="@+id/uphold_transfer_to_this_wallet_button"
-            style="@style/MontserratButton"
+            style="@style/DashButton.Blue"
             android:layout_above="@id/uphold_buy_dash_btn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -32,10 +32,12 @@ import android.app.Dialog;
 
 import android.content.DialogInterface;
 import android.os.Bundle;
-import android.support.v4.app.DialogFragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.ShareCompat;
-import android.support.v4.content.FileProvider;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.core.app.ShareCompat;
+import androidx.core.content.FileProvider;
 import android.text.Html;
 
 /**
@@ -61,7 +63,7 @@ public class ArchiveBackupDialogFragment extends DialogFragment {
         return fragment;
     }
 
-    private AbstractWalletActivity activity;
+    private AppCompatActivity activity;
 
     private static final Logger log = LoggerFactory.getLogger(ArchiveBackupDialogFragment.class);
 
@@ -69,7 +71,7 @@ public class ArchiveBackupDialogFragment extends DialogFragment {
     public void onAttach(final Activity activity) {
         super.onAttach(activity);
 
-        this.activity = (AbstractWalletActivity) activity;
+        this.activity = (AppCompatActivity) activity;
     }
 
     @Override

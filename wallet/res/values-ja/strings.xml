@@ -29,7 +29,6 @@
     <string name="wallet_transactions_fragment_empty_text_sent">まだDashを送っていません。</string>
     <string name="wallet_transactions_fragment_empty_text_howto">Dashを入手するには？\n\n法定通貨を交換するか、\n商品やサービスの販売\nまたは労働で稼ぎましょう。</string>
     <string name="wallet_transactions_row_warning_backup">おめでとうございます、初めて支払いを受け取りました！遺失を防ぐためにウォレットをバックアップしていますか？</string>
-    <string name="wallet_transactions_row_warning_storage_encryption">ヒント：ウォレットの安全性を高めるために、&lt;u&gt;デバイスのロック&lt;/u&gt;を推奨します。それにより他のアプリのデータも保護されます。</string>
     <string name="wallet_transactions_fragment_coinbase">採掘されました</string>
     <string name="wallet_transactions_fragment_internal">内部</string>
     <string name="wallet_transactions_options_filter">絞り込み</string>

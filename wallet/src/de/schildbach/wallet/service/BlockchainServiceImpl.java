@@ -17,78 +17,6 @@
 
 package de.schildbach.wallet.service;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.EnumSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-
-import javax.annotation.Nullable;
-
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.BlockChain;
-import org.bitcoinj.core.CheckpointManager;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.FilteredBlock;
-import org.bitcoinj.core.InstantSend;
-import org.bitcoinj.core.Peer;
-import org.bitcoinj.core.PeerGroup;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.SporkManager;
-import org.bitcoinj.core.SporkMessage;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
-import org.bitcoinj.core.listeners.AbstractPeerDataEventListener;
-import org.bitcoinj.core.listeners.PeerConnectedEventListener;
-import org.bitcoinj.core.listeners.PeerDataEventListener;
-import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
-import org.bitcoinj.core.listeners.SporkUpdatedEventListener;
-import org.bitcoinj.evolution.SimplifiedMasternodeList;
-import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
-import org.bitcoinj.net.discovery.DnsDiscovery;
-import org.bitcoinj.net.discovery.MasternodePeerDiscovery;
-import org.bitcoinj.net.discovery.MultiplexingDiscovery;
-import org.bitcoinj.net.discovery.PeerDiscovery;
-import org.bitcoinj.net.discovery.PeerDiscoveryException;
-import org.bitcoinj.net.discovery.SeedPeers;
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.store.SPVBlockStore;
-import org.bitcoinj.utils.ExchangeRate;
-import org.bitcoinj.utils.MonetaryFormat;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.Wallet;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Stopwatch;
-
-import org.dash.wallet.common.Configuration;
-import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.WalletBalanceWidgetProvider;
-import de.schildbach.wallet.data.AddressBookProvider;
-import de.schildbach.wallet.AppDatabase;
-import de.schildbach.wallet.service.BlockchainState.Impediment;
-import de.schildbach.wallet.ui.WalletActivity;
-import de.schildbach.wallet.util.BlockchainStateUtils;
-import de.schildbach.wallet.util.CrashReporter;
-import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
-import de.schildbach.wallet.util.WalletUtils;
-import de.schildbach.wallet_test.R;
-
 import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -110,16 +38,91 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.content.LocalBroadcastManager;
 import android.text.format.DateUtils;
 
+import androidx.core.app.NotificationCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
+import com.google.common.base.Stopwatch;
+
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Block;
+import org.bitcoinj.core.BlockChain;
+import org.bitcoinj.core.CheckpointManager;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.FilteredBlock;
+import org.bitcoinj.core.Peer;
+import org.bitcoinj.core.PeerGroup;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.SporkMessage;
+import org.bitcoinj.core.StoredBlock;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
+import org.bitcoinj.core.listeners.DownloadProgressTracker;
+import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.listeners.PeerConnectedEventListener;
+import org.bitcoinj.core.listeners.PeerDataEventListener;
+import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
+import org.bitcoinj.core.listeners.SporkUpdatedEventListener;
+import org.bitcoinj.evolution.SimplifiedMasternodeList;
+import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
+import org.bitcoinj.net.discovery.DnsDiscovery;
+import org.bitcoinj.net.discovery.MasternodePeerDiscovery;
+import org.bitcoinj.net.discovery.MultiplexingDiscovery;
+import org.bitcoinj.net.discovery.PeerDiscovery;
+import org.bitcoinj.net.discovery.PeerDiscoveryException;
+import org.bitcoinj.net.discovery.SeedPeers;
+import org.bitcoinj.store.BlockStore;
+import org.bitcoinj.store.BlockStoreException;
+import org.bitcoinj.store.SPVBlockStore;
+import org.bitcoinj.utils.ExchangeRate;
+import org.bitcoinj.utils.MonetaryFormat;
+import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.Configuration;
+import org.greenrobot.eventbus.EventBus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.EnumSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+
+import javax.annotation.Nullable;
+
+import de.schildbach.wallet.AppDatabase;
+import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.WalletBalanceWidgetProvider;
+import de.schildbach.wallet.data.AddressBookProvider;
+import de.schildbach.wallet.service.BlockchainState.Impediment;
+import de.schildbach.wallet.ui.SyncProgressEvent;
+import de.schildbach.wallet.ui.WalletActivity;
+import de.schildbach.wallet.util.BlockchainStateUtils;
+import de.schildbach.wallet.util.CrashReporter;
+import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
+import de.schildbach.wallet.util.WalletUtils;
+import de.schildbach.wallet_test.R;
+import androidx.lifecycle.LifecycleService;
 import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 
 /**
  * @author Andreas Schildbach
  */
-public class BlockchainServiceImpl extends android.app.Service implements BlockchainService {
+public class BlockchainServiceImpl extends LifecycleService implements BlockchainService {
+
     private WalletApplication application;
     private Configuration config;
 
@@ -144,6 +147,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
     private AtomicInteger transactionsReceived = new AtomicInteger();
     private long serviceCreatedAt;
     private boolean resetBlockchainOnShutdown = false;
+    private boolean deleteWalletFileOnShutdown = false;
 
     //Settings to bypass dashj default dns seeds
     private final SeedPeers seedPeerDiscovery = new SeedPeers(Constants.NETWORK_PARAMETERS);
@@ -201,12 +205,13 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
             final Address address = WalletUtils.getWalletAddressOfReceived(tx, wallet);
             final Coin amount = tx.getValue(wallet);
             final ConfidenceType confidenceType = tx.getConfidence().getConfidenceType();
+            final boolean isRestoringBackup = application.getConfiguration().isRestoringBackup();
 
             handler.post(new Runnable() {
                 @Override
                 public void run() {
                     final boolean isReceived = amount.signum() > 0;
-                    final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && replaying;
+                    final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && (replaying || isRestoringBackup);
 
                     if (isReceived && !isReplayedTx)
                         notifyCoinsReceived(address, amount, tx.getExchangeRate());
@@ -253,7 +258,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
             if (text.length() > 0)
                 text.append(", ");
 
-            final String addressStr = notificationAddress.toBase58();
+            final String addressStr = notificationAddress.toString();
             final String label = AddressBookProvider.resolveLabel(getApplicationContext(), addressStr);
             text.append(label != null ? label : addressStr);
         }
@@ -337,12 +342,13 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         }
     }
 
-    private final PeerDataEventListener blockchainDownloadListener = new AbstractPeerDataEventListener() {
+    private final PeerDataEventListener blockchainDownloadListener = new DownloadProgressTracker() {
         private final AtomicLong lastMessageTime = new AtomicLong(0);
 
         @Override
         public void onBlocksDownloaded(final Peer peer, final Block block, final FilteredBlock filteredBlock,
                 final int blocksLeft) {
+            super.onBlocksDownloaded(peer, block, filteredBlock, blocksLeft);
             delayHandler.removeCallbacksAndMessages(null);
 
             final long now = System.currentTimeMillis();
@@ -358,9 +364,37 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                 lastMessageTime.set(System.currentTimeMillis());
 
                 config.maybeIncrementBestChainHeightEver(blockChain.getChainHead().getHeight());
+                if(config.isRestoringBackup()) {
+                    long timeAgo = System.currentTimeMillis() - blockChain.getChainHead().getHeader().getTimeSeconds() * 1000;
+                    //if the app was restoring a backup from a file or seed and block chain is nearly synced
+                    //then turn off the restoring indicator
+                    if(timeAgo < DateUtils.DAY_IN_MILLIS)
+                        config.setRestoringBackup(false);
+                }
                 broadcastBlockchainState();
             }
         };
+
+        @Override
+        protected void progress(double pct, int blocksLeft, Date date) {
+            super.progress(pct, blocksLeft, date);
+            if (pct < 0) {
+                pct = 0;
+            }
+            final SyncProgressEvent event = new SyncProgressEvent(pct);
+            log.info(event.toString());
+            EventBus.getDefault().postSticky(event);
+
+        }
+
+        @Override
+        protected void doneDownload() {
+            super.doneDownload();
+            final SyncProgressEvent event = new SyncProgressEvent(100);
+            log.info(event.toString());
+            EventBus.getDefault().postSticky(event);
+
+        }
     };
 
     private final BroadcastReceiver connectivityReceiver = new BroadcastReceiver() {
@@ -410,6 +444,12 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         @SuppressLint("Wakelock")
         private void check() {
             final Wallet wallet = application.getWallet();
+
+            if (impediments.contains(Impediment.NETWORK)) {
+                final SyncProgressEvent event = new SyncProgressEvent(0, true);
+                log.info(event.toString());
+                EventBus.getDefault().postSticky(event);
+            }
 
             if (impediments.isEmpty() && peerGroup == null) {
                 log.debug("acquiring wakelock");
@@ -616,6 +656,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
     @Override
     public IBinder onBind(final Intent intent) {
+        super.onBind(intent);
         log.debug(".onBind()");
 
         return mBinder;
@@ -664,9 +705,14 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         if (!blockChainFileExists) {
             log.info("blockchain does not exist, resetting wallet");
             wallet.reset();
-            SimplifiedMasternodeListManager manager = wallet.getContext().masternodeListManager;
-            if(manager != null)
-                manager.resetMNList(true, true);
+            try {
+                SimplifiedMasternodeListManager manager = wallet.getContext().masternodeListManager;
+                if (manager != null)
+                    manager.resetMNList(true, true);
+            } catch (RuntimeException x) {
+                // swallow this exception.  It is thrown when there is not a bootstrap mnlist file
+                // there is not a bootstrap mnlist file for testnet
+            }
         }
 
         try {
@@ -726,6 +772,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
     @Override
     public int onStartCommand(final Intent intent, final int flags, final int startId) {
+        super.onStartCommand(intent, flags, startId);
+
         if (intent != null) {
             //Restart service as a Foreground Service if it's synchronizing the blockchain
             Bundle extras = intent.getExtras();
@@ -748,6 +796,11 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
                 log.info("will remove blockchain on service shutdown");
 
                 resetBlockchainOnShutdown = true;
+                stopSelf();
+            } else if (BlockchainService.ACTION_WIPE_WALLET.equals(action)) {
+                log.info("will remove blockchain and delete walletFile on service shutdown");
+
+                deleteWalletFileOnShutdown = true;
                 stopSelf();
             } else if (BlockchainService.ACTION_BROADCAST_TRANSACTION.equals(action)) {
                 final Sha256Hash hash = Sha256Hash
@@ -820,7 +873,9 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
             throw new RuntimeException(x);
         }
 
-        application.saveWallet();
+        if (!deleteWalletFileOnShutdown) {
+            application.saveWallet();
+        }
 
         //Dash Specific
 
@@ -834,12 +889,17 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
             wakeLock.release();
         }
 
-        if (resetBlockchainOnShutdown) {
+        if (resetBlockchainOnShutdown || deleteWalletFileOnShutdown) {
             log.info("removing blockchain");
+            //noinspection ResultOfMethodCallIgnored
             blockChainFile.delete();
             SimplifiedMasternodeListManager manager = application.getWallet().getContext().masternodeListManager;
             if(manager != null) {
                 manager.resetMNList(true, false);
+            }
+            if (deleteWalletFileOnShutdown) {
+                log.info("removing wallet file and app data");
+                application.finalizeWipe();
             }
         }
 
@@ -894,7 +954,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         final int chainLockHeight = block != null ? block.getHeight() : 0;
         final int mnListHeight = (int)application.getWallet().getContext().masternodeListManager.getListAtChainTip().getHeight();
 
-        return new BlockchainState(bestChainDate, bestChainHeight, replaying, impediments, chainLockHeight, mnListHeight);
+        return new BlockchainState(bestChainDate, bestChainHeight, replaying, impediments, chainLockHeight, mnListHeight, percentageSync());
     }
 
     @Override
@@ -944,11 +1004,12 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             //Handle Ongoing notification state
-            if (blockchainState.bestChainHeight == config.getBestChainHeightEver()) {
+            boolean syncing = blockchainState.bestChainDate.getTime() < (Utils.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS); //1 hour
+            if (!syncing && blockchainState.bestChainHeight == config.getBestChainHeightEver()) {
                 //Remove ongoing notification if blockchain sync finished
                 stopForeground(true);
                 nm.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC);
-            } else if (blockchainState.replaying) {
+            } else if (blockchainState.replaying || syncing) {
                 //Shows ongoing notification when synchronizing the blockchain
                 Notification notification = createNetworkSyncNotification(blockchainState);
                 if (notification != null) {
@@ -958,22 +1019,27 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         }
     }
 
+    private int percentageSync() {
+        int chainHeadHeight = blockChain.getChainHead().getHeight();
+        int mostCommonChainHeight;
+        if (peerGroup == null) {
+            return 0;
+        }
+        if (peerGroup.getMostCommonChainHeight() > 0) {
+            mostCommonChainHeight = peerGroup.getMostCommonChainHeight();
+        } else {
+            mostCommonChainHeight = chainHeadHeight;
+        }
+        float percentage = ((float) chainHeadHeight / (float) mostCommonChainHeight) * 100;
+        log.info("mostCommonChainHeight: " + mostCommonChainHeight + "\tchainHeadHeight: " + chainHeadHeight + "\t" + percentage + "%\t" + config.getBestChainHeightEver());
+        return (int) percentage;
+    }
+
     private SporkUpdatedEventListener sporkUpdatedEventListener = new SporkUpdatedEventListener() {
 
         @Override
         public void onSporkUpdated(final SporkMessage sporkMessage) {
-            if (sporkMessage.getSporkID() == SporkManager.SPORK_16_INSTANTSEND_AUTOLOCKS) {
-                boolean autoLockStatusChanged = InstantSend.canAutoLock() != config.getCanAutoLock();
-                if (autoLockStatusChanged) {
-                    config.setCanAutoLock(InstantSend.canAutoLock());
-                }
-            } else if (sporkMessage.getSporkID() == SporkManager.SPORK_20_INSTANTSEND_LLMQ_BASED) {
-                boolean autoLockStatusChanged = InstantSend.canAutoLock() != config.getCanAutoLock();
-                if (autoLockStatusChanged) {
-                    //activate InstantSendAutoLock if LLMQ InstantSend is ON
-                    config.setCanAutoLock(sporkMessage.getValue() != 0);
-                }
-            }
+            //do nothing
         }
     };
 }

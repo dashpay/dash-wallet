@@ -18,21 +18,16 @@
 package de.schildbach.wallet.ui.preference;
 
 import java.util.List;
-import java.util.ListIterator;
 
-import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet_test.R;
 
 import android.os.Bundle;
-import android.support.design.widget.AppBarLayout;
-import android.support.v7.widget.Toolbar;
-import android.support.v7.app.ActionBar;
+import com.google.android.material.appbar.AppBarLayout;
+import androidx.appcompat.widget.Toolbar;
+import androidx.appcompat.app.ActionBar;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.widget.LinearLayout;
-
-import org.bitcoinj.wallet.Wallet;
 
 /**
  * @author Andreas Schildbach
@@ -68,24 +63,6 @@ public final class PreferenceActivity extends AppCompatPreferenceActivity {
     @Override
     public void onBuildHeaders(final List<Header> target) {
         loadHeadersFromResource(R.xml.preference_headers, target);
-        hidePersonalSettingsIfLocked(target);
-    }
-
-    private void hidePersonalSettingsIfLocked(final List<Header> target) {
-        Wallet wallet = ((WalletApplication) getApplication()).getWallet();
-        boolean walletLocked = WalletLock.getInstance().isWalletLocked(wallet);
-        if(walletLocked) {
-            ListIterator<Header> iter = target.listIterator();
-            while(iter.hasNext()){
-                int headerTitleRes = iter.next().titleRes;
-                switch (headerTitleRes) {
-                    case R.string.preferences_activity_title:
-                    case R.string.preferences_category_diagnostics: {
-                        iter.remove();
-                    }
-                }
-            }
-        }
     }
 
     @Override

@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-
-    <string name="send_coins_auto_lock_feasible">تراکنش بدون هر نوع کارمزد اضافی صورت می‌گیرد.</string>
 	<string name="send_coins_auto_lock_not_feasible">انجام نهایی این تراکنش ممکن است چند دقیقه وقت بگیرد. آیا مایلید با پرداخت %1$s %2$s آن را به شکلی آنی به انجام رسانید؟ </string>
 	<string name="send_coins_instant_send_not_feasible">تکمیل این تراکنش ممکن است چند دقیقه طول بکشد.</string>
 
@@ -82,10 +80,6 @@
 	<string name="notification_transactions_channel_description">دریافت پیعام درباره تراکنش‌های دریافتی</string>
 	<string name="notification_synchronization_channel_name">همزمان‌سازی</string>
 	<string name="notification_synchronization_channel_description">وقتی اولیکیشن در حال همزمان‌سازی خود با شبکه است، پیغامی را نشان بده.</string>
-
-	<string name="fastest_payment_network_dialog_title">پول شما، به همان شکلی که می‌پسندید</string>
-	<string name="fastest_payment_network_dialog_message">ارسال و دریافت دش به صورت آنی بدون هزینه اضافی</string>
-	<string name="fastest_payment_network_dialog_button">متوجه شدم!</string>
 
 	<string name="unlock_with_fingerprint">از اثرانگشت برای باز کردن قفل استفاده کنید.</string>
 	<string name="unlock_with_fingerprint_error">اثرانگشت شناسایی نشد. لطفا دوباره امتحان کنید.</string>

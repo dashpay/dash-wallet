@@ -1,48 +1,27 @@
-<de.schildbach.wallet.ui.widget.KeyboardResponsiveCoordinatorLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    app:viewToHideWhenSoftKeyboardIsOpen="@+id/fab_scan_qr"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <LinearLayout
+    <include
+        layout="@layout/app_bar_general"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:layout_height="wrap_content" />
 
-        <include
-            layout="@layout/app_bar_main"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <ScrollView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@color/bg_form"
-            android:fillViewport="true"
-            android:scrollbars="none">
-
-            <fragment
-                android:id="@+id/send_coins_fragment"
-                android:name="de.schildbach.wallet.ui.send.SendCoinsFragment"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                tools:layout="@layout/address_book_row" />
-
-        </ScrollView>
-
-    </LinearLayout>
-
-    <android.support.design.widget.FloatingActionButton
-        android:id="@id/fab_scan_qr"
-        android:layout_width="wrap_content"
+    <fragment
+        android:id="@+id/send_coins_fragment"
+        android:name="de.schildbach.wallet.ui.send.SendCoinsFragment"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_marginBottom="80dp"
-        android:layout_marginRight="16dp"
-        android:src="@drawable/ic_qrcode"
-        app:backgroundTint="@color/colorPrimary" />
+        tools:layout="@layout/send_coins_fragment" />
 
-</de.schildbach.wallet.ui.widget.KeyboardResponsiveCoordinatorLayout>
+    <fragment
+        android:id="@+id/enter_amount_fragment"
+        android:name="de.schildbach.wallet.ui.EnterAmountFragment"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="4"
+        tools:layout="@layout/enter_amount_fragment" />
+
+</LinearLayout>

@@ -29,7 +29,6 @@
     <string name="wallet_transactions_fragment_empty_text_sent">尚未发送达世币.</string>
     <string name="wallet_transactions_fragment_empty_text_howto">如何获得达世币？\\n\\n用传统货币进行交易，\\n出售商品或服务，或者\\n通过劳动赚取。</string>
     <string name="wallet_transactions_row_warning_backup">恭喜，您收到了第一笔交易！您已经做好备份钱包以防丢失的准备了吗？</string>
-    <string name="wallet_transactions_row_warning_storage_encryption">提示：为了增加钱包的安全度，您可以 &lt;u&gt;加密您的设备&lt;/u&gt;. 这样也可以同样其他app的数据。</string>
     <string name="wallet_transactions_fragment_coinbase">挖矿所的</string>
     <string name="wallet_transactions_fragment_internal">内部</string>
     <string name="wallet_transactions_options_filter">过滤</string>

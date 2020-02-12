@@ -17,6 +17,14 @@
 
 package de.schildbach.wallet.service;
 
+import android.app.IntentService;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
+
+import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
+
 import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,16 +33,9 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet_test.R;
 
-import android.app.IntentService;
-import android.content.Context;
-import android.content.Intent;
-import android.os.Build;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.content.ContextCompat;
-
 /**
  * This service upgrades the wallet to an HD wallet. Use {@link #startUpgrade(Context)} to start the process.
- *
+ * <p>
  * It will upgrade and then hand over to {@Link BlockchainService} to pre-generate the look-ahead keys. If the
  * wallet is already upgraded, it will do nothing.
  *
@@ -77,18 +78,18 @@ public final class UpgradeWalletService extends IntentService {
         org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
 
         final Wallet wallet = application.getWallet();
+        if (wallet != null) {
+            if (wallet.isDeterministicUpgradeRequired()) {
+                log.info("detected non-HD wallet, upgrading");
 
-        if (wallet.isDeterministicUpgradeRequired()) {
-            log.info("detected non-HD wallet, upgrading");
+                // upgrade wallet to HD
+                wallet.upgradeToDeterministic(null);
 
-            // upgrade wallet to HD
-            wallet.upgradeToDeterministic(null);
-
-            // let other service pre-generate look-ahead keys
-            application.startBlockchainService(false);
+                // let other service pre-generate look-ahead keys
+                application.startBlockchainService(false);
+            }
+            maybeUpgradeToSecureChain(wallet);
         }
-
-        maybeUpgradeToSecureChain(wallet);
     }
 
     private void maybeUpgradeToSecureChain(final Wallet wallet) {

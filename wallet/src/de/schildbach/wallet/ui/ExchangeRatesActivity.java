@@ -26,6 +26,7 @@ import android.view.MenuItem;
  * @author Andreas Schildbach
  */
 public final class ExchangeRatesActivity extends AbstractBindServiceActivity {
+
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -43,4 +44,11 @@ public final class ExchangeRatesActivity extends AbstractBindServiceActivity {
 
         return super.onOptionsItemSelected(item);
     }
+
+    @Override
+    public void finish() {
+        super.finish();
+        overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_left);
+    }
+
 }
