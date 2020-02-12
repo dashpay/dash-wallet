@@ -2,7 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">Peňaženka bola resetovaná.\nObnova chvíľu potrvá.</string>
-    <string name="wallet_disclaimer_fragment_remind_safety">Použitie na vlastné riziko. Viac informácií v sekcii &lt;u&gt;Bezpečnosť&lt;/u&gt;.</string>
+    <string name="wallet_disclaimer_fragment_remind_safety">Použitie na vlastné riziko. Viac informácií v sekcii &lt;u&gt;o bezpečnosti&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">Je potrebné zálohovať peňaženku!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d hodín pozadu</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d dní pozadu</string>
@@ -15,7 +15,7 @@
     <string name="wallet_address_fragment_clipboard_msg">Dash adresa skopírovaná do schránky</string>
     <string name="wallet_address_dialog_fragment_hint">Pre ochranu súkromia sa vaša adresa zmení vždy po prijatí platby.</string>
     <string name="wallet_balance_fragment_too_much">Tato čiastka je pomerne vysoká na nosenie vo vrecku. Presuňte nejakú čiastku na bezpečnejšie miesto.</string>
-    <string name="wallet_balance_fragment_replaying">Zostatok je nedostupný počas synchronizácie.</string>
+    <string name="wallet_balance_fragment_replaying">Počas synchronizácie je zostatok nedostupný.</string>
     <string name="exchange_rates_activity_title">Výmenné kurzy</string>
     <string name="exchange_rates_fragment_empty_text">Nepodarilo sa načítať výmenné kurzy.</string>
     <string name="exchange_rates_fragment_empty_search">Nepodarilo sa nájsť výmenný kurz.</string>
@@ -25,9 +25,9 @@
     <string name="exchange_rates_fragment_source">Cena získaná z %s</string>
     <string name="exchange_rates_options_search">Vyhľadať výmenný kurz</string>
     <string name="exchange_rates_context_set_as_default_title">Nastaviť ako predvolené</string>
-    <string name="wallet_transactions_fragment_empty_text_received">Zatiaľ neboli prijaté žiadne Dash</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">Zatiaľ neboli odoslané žiadne Dash</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">Ako získať Dash?\n\nVýmenou za tradičné peniaze,\npredajom tovarov a služieb,\nalebo prácou.</string>
+    <string name="wallet_transactions_fragment_empty_text_received">Zatiaľ neboli prijaté žiadne Dashe</string>
+    <string name="wallet_transactions_fragment_empty_text_sent">Zatiaľ neboli odoslané žiadne Dashe</string>
+    <string name="wallet_transactions_fragment_empty_text_howto">Ako získať Dash?\n\nVýmenou za tradičné peniaze,\npredajom tovarov a služieb,\nalebo zarobené prácou.</string>
     <string name="wallet_transactions_row_warning_backup">Gratulujeme, obdržali ste svoju prvú platbu! Urobili ste zálohu peňaženky, aby ste ju ochránili pred stratou?</string>
     <string name="wallet_transactions_fragment_coinbase">vyťažené</string>
     <string name="wallet_transactions_fragment_internal">interná</string>
@@ -39,23 +39,23 @@
     <string name="wallet_options_encrypt_keys_set">Nastaviť PIN pre míňanie</string>
     <string name="wallet_options_encrypt_keys_change">Zmeniť PIN pre míňanie</string>
     <string name="wallet_options_safety">Bezpečnosť</string>
-    <string name="wallet_low_storage_dialog_title">Málo vnútornej pamäte!</string>
+    <string name="wallet_low_storage_dialog_title">Na zariadení je málo pamäťového miesta!</string>
     <string name="wallet_low_storage_dialog_msg">Peňaženka Dash používa internú pamäť pre uchovanie transakcií a blokov. Ak dôjde miesto, prestane pracovať and vaše Dashe budú v ohrození!\n\nChcete otvoriť správcu aplikácií a odinštalovať nepotrebné aplikácie?</string>
     <string name="wallet_low_storage_dialog_button_apps">Spravovať aplikácie</string>
     <string name="wallet_timeskew_dialog_title">Kontrola nastavenia času a dátumu</string>
     <string name="wallet_timeskew_dialog_msg">Čas na vašom zariadené je posunutý o %d minút. Kvôli tomuto problému pravdepodobne nemôžete odosielať alebo prijímať Dash.\n\nMali by ste skontrolovať a v prípade potreby opraviť dátum, čas a časové pásmo.</string>
     <string name="wallet_version_dialog_title">Je dostupná nová verzia!</string>
     <string name="wallet_version_dialog_msg">Táto verzia opravuje kritické chyby. Pre viac informácií navštívte Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Ak nevidíte aktualizáciu, znamená to, že verzia vášho Android operačného systému už nie je podporovaná.</string>
+    <string name="wallet_version_dialog_msg_deprecated">Ak nevidíte aktualizáciu, znamená to, že verzia vášho operačného systému Android už nie je podporovaná.</string>
     <string name="wallet_version_dialog_button_market">Google Play</string>
     <string name="wallet_version_dialog_button_binary">Stiahnuť</string>
     <string name="wallet_old_sdk_dialog_title">Verzia Vášho Androidu je zastaralá</string>
-    <string name="wallet_old_sdk_dialog_message">Je možné, že v novších verziách Dash peňaženky už nebude podporované vaše zariadenie. V určitých prípadoch môže byť obtiažne minúť Dash na tomto zariadení.\n\nJe odporúčané presunúť Dash z tohto zariadenia čo najskôr.</string>
+    <string name="wallet_old_sdk_dialog_message">Je možné, že v novších verziách Dash peňaženky už nebude podporované vaše zariadenie. V určitých prípadoch môže byť obtiažne minúť Dashe z tohoto zariadenia.\n\nJe odporúčané presunúť Dashe čo najskôr.</string>
     <string name="send_coins_activity_title">Poslať Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Získavanie podpisu z %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Získavanie podpisu zlyhalo</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Nesprávny podpis!</string>
-    <string name="send_coins_fragment_payee_verified_by">overené: %s</string>
+    <string name="send_coins_fragment_payee_verified_by">overené od: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">neznáme</string>
     <string name="send_coins_fragment_receiving_address_label">Zaplatiť</string>
     <string name="send_coins_fragment_receiving_address_hint">zadajte adresu alebo meno</string>
@@ -117,7 +117,7 @@
     <string name="request_coins_fragment_amount_label">Vyžadovaná suma (nepovinné)</string>
     <string name="request_coins_fragment_accept_bluetooth_payment">Akceptovať platbu cez Bluetooth pre lepšie spracovanie</string>
     <string name="request_coins_fragment_initiate_request_qr">Dajte odosielateľovi oskenovať tento kód.</string>
-    <string name="request_coins_fragment_initiate_request_nfc">Alebo stlačte, ak vaše zariadenie podporuje NFC.</string>
+    <string name="request_coins_fragment_initiate_request_nfc">Alebo sa dotknite zariadenia s podporou NFC.</string>
     <string name="request_coins_clipboard_msg">Požiadavok Dash skopírovaný do schránky</string>
     <string name="request_coins_share_dialog_title">Zdieľať požiadavku na Dash…</string>
     <string name="request_coins_no_local_app_msg">Nebola nájdená žiadna ďalšia Dash aplikácia</string>
@@ -197,7 +197,7 @@
     <string name="export_keys_dialog_mail_intent_failed">Archivácia peňaženky sa nepodarila.</string>
     <string name="import_export_keys_dialog_password">heslo</string>
     <string name="backup_wallet_dialog_password_again">znovu</string>
-    <string name="backup_wallet_dialog_password_mismatch">nesúlad!</string>
+    <string name="backup_wallet_dialog_password_mismatch">nezhoduje sa!</string>
     <string name="import_export_keys_dialog_show">Zobraziť heslo</string>
     <string name="import_export_keys_dialog_failure_title">Chyba</string>
     <string name="import_keys_intent_filter_action">Obnoviť peňaženku</string>
@@ -296,7 +296,8 @@
     <string name="notification_coins_received_msg">Prijaté %s</string>
     <string name="notification_peers_connected_msg">%d pripojených uzlov</string>
     <string name="notification_inactivity_title">Na tomto zariadení máte ešte Dash!</string>
-        <string name="notification_inactivity_action_dismiss">Pripomenúť neskôr </string>
+        <string name="notification_inactivity_message">Na tomto zariadení máte stále Dashe! Nezabudnite si pred odinštalovaním Dash peňaženky zapísať svoju frázu pre obnovenie, inak stratíte svoj zostatok %s.</string>
+    <string name="notification_inactivity_action_dismiss">Pripomenúť neskôr </string>
     <string name="notification_inactivity_action_dismiss_forever">Nepripomínať</string>
     <string name="appwidget_wallet_balance_title">Bilancia Dash</string>
 
@@ -312,6 +313,7 @@
     <string name="button_remove">Odobrať</string>
     <string name="button_edit">Zmeniť</string>
     <string name="button_copy">Kopírovať</string>
+    <string name="button_copy_request">Kopírovať požiadavok</string>
     <string name="button_paste">Vložiť</string>
     <string name="button_share">Zdieľať</string>
     <string name="button_set_as_default">Nastaviť ako predvolené</string>

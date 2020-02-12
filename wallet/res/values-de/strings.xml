@@ -94,7 +94,7 @@
     <string name="send_coins_options_fee_category_priority">Express</string>
     <string name="send_coins_options_empty">Wallet entleeren</string>
     <string name="sweep_wallet_activity_title">Paper-Wallet leeren</string>
-    <string name="sweep_wallet_fragment_intro">Du bist im Begriff eine Paper-Wallet oder einen Coupon einzulösen. Dadurch werden die betroffenen Dash in diese Wallet verschoben. Sobald die Transaktion bestätigt ist, wird das Papier wertlos und sollte aus Sicherheitsgründen nicht wiederverwendet werden.</string>
+    <string name="sweep_wallet_fragment_intro">Du bist im Begriff eine Paper-Wallet oder einen Coupon zu leeren. Dadurch werden die betroffenen Dash in deine Wallet verschoben. Sobald die Transaktion bestätigt ist, wird das Papier wertlos und sollte aus Sicherheitsgründen nicht wiederverwendet werden.</string>
     <string name="sweep_wallet_fragment_hint">Paper-Wallets werden meist als Cold Storage genutzt. Einige Geldautomaten drucken sie auf das Quittungspapier, anstatt die Dash direkt an das mobile Gerät zu versenden. Manchmal werden vorgeladene Paper-Wallets als Zahlungsmittel verwendet (nicht empfohlen).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Beginne bitte damit, dass Du den privaten Schlüssel eines Paper-Wallets scannst. Benutze dafür die Kamera-Schaltfläche.</string>
     <string name="sweep_wallet_fragment_encrypted">Dieser private Schlüssel ist mit einem Passwort geschützt.</string>

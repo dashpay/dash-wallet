@@ -1,12 +1,14 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-	<string name="send_coins_auto_lock_not_feasible">تکمیل این تراکنش ممکن است چند دقیقه طول بکشد. آیا مایلید به ازای پرداخت %1$s%2$s تراکنش خود را به صورت آنی انجام دهید؟ </string>
+	<string name="send_coins_auto_lock_not_feasible">انجام نهایی این تراکنش ممکن است چند دقیقه وقت بگیرد. آیا مایلید با پرداخت %1$s %2$s آن را به شکلی آنی به انجام رسانید؟ </string>
 	<string name="send_coins_instant_send_not_feasible">تکمیل این تراکنش ممکن است چند دقیقه طول بکشد.</string>
 
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">پرداخت با استفاده از «ارسال‌سریع» هنوز انجام نشده است.</string>
+	<string name="options_paste_from_clipboard_title">چسباندن</string>
+
+	<string name="transaction_row_message_own_instantx_lock_request_notsent">این پرداخت هنوز ارسال نشده است.</string>
 	<string name="transaction_row_message_sent_to_single_peer">این پرداخت ارسال شده است.</string>
 
-	<string name="regular_transaction_info_message">این تراکنش از طریق قابلیت «ارسال‌آنی» ارسال شده است. برای تکمیل آن، باید تایید بیشتری از سوی گره‌های شبکه صورت گیرد. </string>
+	<string name="regular_transaction_info_message">تراکنش به شکلی آنی به انجام نرسید.</string>
 
 	<string name="wallet_options_disconnect">عدم ارتباط با شبکه</string>
 
@@ -86,5 +88,8 @@
 	<string name="enable_fingerprint">فعال‌سازی باز کردن قفل با اثرانگشت</string>
 	<string name="touch_fingerprint_sensor">لطفا حسگر اثرانگشت را لمس کنید.</string>
 	<string name="touch_fingerprint_to_enable">برای باز کردن قفل با اثرانگشت، لطفا حسگر اثرانگشت را لمس کنید.</string>
+	<string name="exchange_rate_missing">این تراکنش بسیار قدیمی است ونمی‌توان ارزش معادل پول رسمی آن را تعیین کرد.</string>
 
+	<string name="preferences_enable_payment_request_summary">از پروتکل پرداخت برای پرداخت‌های صورت گرفته با کیوآر-کد استفاده کنید. </string>
+	<string name="preferences_enable_payment_request_title">بی‌آی‌پی۷۰  برای اسکن به منظور پرداخت</string>
 </resources>
