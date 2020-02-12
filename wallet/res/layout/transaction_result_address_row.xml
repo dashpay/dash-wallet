@@ -7,6 +7,7 @@
     android:layout_height="wrap_content"
     android:layout_marginBottom="4dp"
     android:ellipsize="middle"
+    android:includeFontPadding="false"
     android:singleLine="true"
     android:text="@string/transaction_result_sent_to"
     android:textSize="16sp"

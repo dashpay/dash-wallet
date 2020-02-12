@@ -1,49 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/transaction_details_dialog_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:layout_gravity="center"
     android:background="#66000000"
-    android:orientation="vertical">
+    android:padding="20dp">
 
     <FrameLayout
         android:id="@+id/transaction_details_dialog_content_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
-        android:layout_marginLeft="20dp"
-        android:layout_marginEnd="20dp"
-        android:layout_marginRight="20dp"
+        android:layout_centerInParent="true"
         android:background="@drawable/round_corners_white_bg"
-        android:paddingTop="72dp"
-        android:paddingBottom="8dp"
-        android:visibility="invisible"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        android:visibility="invisible">
 
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <androidx.constraintlayout.widget.ConstraintLayout
+            <LinearLayout
                 android:id="@+id/transaction_result_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@android:color/white"
+                android:clipToPadding="false"
+                android:gravity="center"
+                android:orientation="vertical"
                 android:paddingLeft="16dp"
+                android:paddingTop="@dimen/transaction_detail_dialog_content_vertical_padding"
                 android:paddingRight="16dp"
-                android:paddingBottom="24dp">
+                android:paddingBottom="@dimen/transaction_detail_dialog_content_vertical_padding">
 
                 <include layout="@layout/transaction_result_content" />
 
-            </androidx.constraintlayout.widget.ConstraintLayout>
+            </LinearLayout>
 
         </ScrollView>
 
     </FrameLayout>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
-
+</RelativeLayout>
