@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="uphold_account">บัญชี  Uphold</string>
+    <string name="uphold_account">Uphold</string>
     <string name="uphold_buy_dash_activity_title">ซื้อ / ขาย Dash กับ Uphold</string>
     <string name="uphold_buy_dash_with_uphold">ซื้อ Dash ด้วยบัญชี  Uphold</string>
     <string name="uphold_buy_dash_button">ซื้อ Dash </string>
@@ -16,5 +16,13 @@
     <string name="uphold_otp_dialog_title">ใส่รหัส 2FA ด้านล่าง:</string>
     <string name="uphold_transfer">โอน</string>
     <string name="uphold_see_on_uphold">ดูที่ Uphold</string>
+    <string name="uphold_logout_title">ออกจากระบบ Uphold</string>
+    <string name="uphold_logout">ออกจากระบบ</string>
+    <string name="uphold_logout_explanation_text">คุณจำเป็นต้องออกจากระบบเว็บไซต์ Uphold บนเบราว์เซอร์ของคุณ</string>
+    <string name="uphold_logout_go_to_website">ไปยังเว็บไซต์</string>
+    <string name="uphold_error">เกิดข้อผิดพลาด</string>
+    <string name="uphold_error_not_logged_in">Dash Wallet จะไม่เชื่อมโยงกับบัญชี Uphold ของคุณอีกต่อไป กด Link Uphold account ในหน้าจอถัดไป</string>
+    <string name="uphold_error_not_available">Uphold ไม่สามารถใช้งานได้ กรุณาลองใหม่อีกครั้งในภายหลัง</string>
+    <string name="uphold_error_report_issue">โปรดรายงานปัญหานี้ไปยังทีมสนับสนุน Dash Wallet โดยใช้ \"รายงานปัญหา\" จากเมนูหลัก</string>
 
 </resources>

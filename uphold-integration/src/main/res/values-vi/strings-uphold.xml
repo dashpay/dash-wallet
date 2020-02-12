@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="uphold_account">Tài khoản Uphold</string>
+    <string name="uphold_account">Uphold</string>
     <string name="uphold_buy_dash_activity_title">Mua/Bán Dash với Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Mua Dash với tài khoản Uphold</string>
     <string name="uphold_buy_dash_button">Mua Dash</string>
@@ -16,5 +16,13 @@
     <string name="uphold_otp_dialog_title">Nhập mã bảo mật 2 lớp</string>
     <string name="uphold_transfer">Chuyển</string>
     <string name="uphold_see_on_uphold">Xem trên Uphold</string>
+    <string name="uphold_logout_title">Thoát ra khỏi Uphold</string>
+    <string name="uphold_logout">Thoát</string>
+    <string name="uphold_logout_explanation_text">Bạn cần thoát khỏi trang web Uphold trên trình duyệt của bạn.</string>
+    <string name="uphold_logout_go_to_website">Đến website</string>
+    <string name="uphold_error">Lỗi Uphold </string>
+    <string name="uphold_error_not_logged_in">Ví Dash của bạn không còn liên kết với tài khoản Uphold. Ở màn hình tiếp theo bấm Link Uphold account để liên kết tài khoản.</string>
+    <string name="uphold_error_not_available">Dịch vụ của Uphold chưa sẵn sàng. Hãy thử lại sau đó xem sao.</string>
+    <string name="uphold_error_report_issue">Hãy báo vấn đề này với nhóm hỗ trợ của ví Dash Wallet bằng chức năng “Báo lỗi” trên menu chính.</string>
 
 </resources>

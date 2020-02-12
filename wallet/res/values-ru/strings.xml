@@ -51,7 +51,7 @@
     <string name="wallet_version_dialog_button_binary">Скачать</string>
     <string name="wallet_old_sdk_dialog_title">Версия Android устарела</string>
     <string name="wallet_old_sdk_dialog_message">Велики шансы того, что один из будущих релизов кошелька Dash уже не будет поддерживать это устройство. В ряде случаев возможны затруднения с использованием средств из этого кошелька.\n\nЕсли вы плохо понимаете связанные с этим риски, рекомендуется уже сейчас вывести ваши средства отсюда.</string>
-    <string name="send_coins_activity_title">Отправить средства</string>
+    <string name="send_coins_activity_title">Отправить Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Получение подписи %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Ошибка при получении подписи</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Неверная подпись!</string>
@@ -113,7 +113,7 @@
     <string name="maintenance_dialog_state_decrypting">Расшифровка…</string>
     <string name="maintenance_dialog_state_done">Готово.</string>
     <string name="maintenance_dialog_button_move">Переместить</string>
-    <string name="request_coins_activity_title">Запросить средства</string>
+    <string name="request_coins_activity_title">Получить Dash</string>
     <string name="request_coins_fragment_amount_label">Запрашиваемая сумма (необязательно)</string>
     <string name="request_coins_fragment_accept_bluetooth_payment">Приём платежей через Bluetooth для более надёжной обработки транзакции</string>
     <string name="request_coins_fragment_initiate_request_qr">Пусть отправитель отсканирует этот код.</string>
@@ -127,7 +127,7 @@
     <string name="address_book_list_receiving_random">Старые адреса</string>
     <string name="address_book_list_sending_title">Адреса отправки</string>
     <string name="address_book_empty_text">Адресная книга пуста</string>
-    <string name="address_book_context_send_title">Отправить средства на адрес</string>
+    <string name="address_book_context_send_title">Отправить Dash на адрес</string>
     <string name="address_book_context_edit_title">Изменить адрес</string>
     <string name="address_book_context_remove_title">Удалить адрес</string>
     <string name="address_book_context_copy_to_clipboard_title">Скопировать в буфер обмена</string>
@@ -317,8 +317,8 @@
     <string name="button_paste">Вставить</string>
     <string name="button_share">Поделиться</string>
     <string name="button_set_as_default">Установить по умолчанию</string>
-    <string name="button_request_coins">Запросить средства</string>
-    <string name="button_send_coins">Отправить средства</string>
+    <string name="button_request_coins">Получить Dash</string>
+    <string name="button_send_coins">Отправить Dash</string>
     <string name="button_scan">Сканировать</string>
     <string name="button_settings">Настройки</string>
     <string name="action_show_qr">Показать QR код</string>

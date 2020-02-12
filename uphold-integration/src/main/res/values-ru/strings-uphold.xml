@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="uphold_account">Uphold аккаунт</string>
+    <string name="uphold_account">Uphold</string>
     <string name="uphold_buy_dash_activity_title">Купить/продать Dash с помощью Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Купить Dash с помощью аккаунта Uphold</string>
     <string name="uphold_buy_dash_button">Купить Dash</string>
@@ -16,5 +16,13 @@
     <string name="uphold_otp_dialog_title">Введите ваш 2FA код ниже:</string>
     <string name="uphold_transfer">Перевести</string>
     <string name="uphold_see_on_uphold">Посмотреть на Uphold</string>
+    <string name="uphold_logout_title">Выйти из Uphold</string>
+    <string name="uphold_logout">Выйти</string>
+    <string name="uphold_logout_explanation_text">Вы также должны выйти из аккаунта на сайте Uphold в вашем браузере.</string>
+    <string name="uphold_logout_go_to_website">Перейти на сайт</string>
+    <string name="uphold_error">Ошибка Uphold </string>
+    <string name="uphold_error_not_logged_in">Dash Wallet больше не связан с вашим аккаунтом Uphold. На следующем экране нажмите Привязать Uphold аккаунт.</string>
+    <string name="uphold_error_not_available">Сервис Uphold недоступен. Пожалуйста, попробуйте позже.</string>
+    <string name="uphold_error_report_issue">Пожалуйста, сообщите об этой проблеме в службу поддержки Dash Wallet, используя пункт \"Сообщить о проблеме\" в главном меню.</string>
 
 </resources>
