@@ -340,4 +340,5 @@
     <string name="dash_wallet">Pitaka</string>
 
     <string name="activity_security_view_recovery_phrase">Ipakita ang parirala ng muling pagbawi</string>
+    <string name="activity_security_advanced">Masusing seguridad</string>
     </resources>

@@ -10,6 +10,7 @@
     <string name="uphold_account_dash_balance">Ang balanse ng iyong Uphold account Dash ay</string>
     <string name="uphold_transfer_to_this_wallet">Ilipat ang Dash mula sa iyong Uphold account patungong pitaka</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">Ang bayad ay ibabawas mula sa hiniling na halaga.</string>
+    <string name="uphold_withdrawal_instructions">Ilagay ang halaga na ipamamahagi</string>
     <string name="uphold_withdrawal_success_title">Tagumpay</string>
     <string name="uphold_withdrawal_success_message">Ang iyong transaksyon ay naipadala na at ang halaga ay dapat lumabas na sa iyong pitaka sa loob ng ilang minuto\n\nTransaksyon id: %s</string>
     <string name="uphold_otp_dialog_title">Ilagay ang iyong 2FA code sa ibaba</string>

@@ -61,6 +61,7 @@
     <string name="send_coins_fragment_receiving_address_own">Chystáte sa poslať Dash sami sebe.</string>
     <string name="send_coins_fragment_receiving_address_complex">komplexná\nadresa</string>
     <string name="send_coins_fragment_pending">(%s čaká na potvrdenie)</string>
+    <string name="send_coins_fragment_amount_label">Poslať sumu</string>
     <string name="send_coins_fragment_pin_label">Zadať PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Bude zaplatený sieťový poplatok %s.</string>
     <string name="send_coins_fragment_hint_fee_priority">Bude zaplatený prioritný poplatok %s. Ak Vám záleží na nízkych poplatkoch, používajte "prioritu" iba ak potrebujete rýchle potvrdenie.</string>
@@ -77,6 +78,7 @@
     <string name="send_coins_fragment_button_back">Späť</string>
     <string name="send_coins_fragment_insufficient_money_title">Nedostatočné množstvo dostupných Dashov</string>
     <string name="send_coins_fragment_insufficient_money_msg1">Chýba %s.</string>
+    <string name="send_coins_fragment_insufficient_money_msg2">Chcete poslať všetko čo máte?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">Vyprázdnenie peňaženky zlyhalo</string>
     <string name="send_coins_fragment_state_decrypting">Dešifrovanie…</string>
     <string name="send_coins_preparation_msg">Podpisujem…</string>
@@ -94,6 +96,7 @@
     <string name="sweep_wallet_fragment_wallet_unknown">Začnite načítaním privátneho kľúča z papierovej peňaženky. Použite tlačítko kamery.</string>
     <string name="sweep_wallet_fragment_encrypted">Tento súkromný kľúč je chránený heslom.</string>
     <string name="sweep_wallet_fragment_password">Heslo</string>
+    <string name="sweep_wallet_fragment_bad_password">Zlé heslo!</string>
     <string name="sweep_wallet_fragment_balance">Bilancia k načítaniu</string>
     <string name="sweep_wallet_fragment_button_decrypt">Dešifrovať</string>
     <string name="sweep_wallet_fragment_button_sweep">Načítať</string>
@@ -160,12 +163,26 @@
     <string name="transaction_row_status_processing">Spracováva sa</string>
     <string name="transaction_row_status_confirming">Potvrdzuje sa</string>
     <string name="transaction_row_status_locked">Uzamknuté</string>
+    <string name="transaction_row_status_error_sending">Chyba pri odosielaní</string>
     <string name="transaction_row_status_error_dead">Dvojité minutie</string>
+    <string name="transaction_row_status_error_conflicting">V konflikte</string>
+    <string name="transaction_row_status_error_insufficient_fee">Nedostatočný poplatok</string>
+    <string name="transaction_row_status_error_dust">Prach</string>
+    <string name="transaction_row_status_error_non_standard">Neštandardná</string>
+    <string name="transaction_row_status_error_malformed">Znehodnotená</string>
+    <string name="transaction_row_status_error_duplicate">Duplicitná</string>
+    <string name="transaction_row_status_error_obsolete">Zastaraná</string>
     <string name="transaction_row_status_error_invalid">Neplatná</string>
     <string name="transaction_row_status_error_other">Neznáme</string>
+    <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
+    <string name="transaction_row_time_text">Dňa %s o %s</string>
+    <string name="transaction_row_rate_not_available">Nie je k dispozícií</string>
     <string name="transaction_row_status_masternode_registration">Registracia masternódu</string>
     <string name="transaction_row_status_masternode_update_registrar">Aktualizácia masternódu</string>
     <string name="transaction_row_status_masternode_update_service">Aktualizácia masternódu</string>
+    <string name="transaction_row_status_masternode_revoke">Masternód odvolaný</string>
+    <string name="transaction_row_status_masternode_reward">Masternód odmena</string>
+    <string name="transaction_row_status_mining_reward">Odmena za ťažbu</string>
     <string name="network_monitor_activity_title">Stav siete</string>
     <string name="network_monitor_peer_list_title">Uzly</string>
     <string name="network_monitor_block_list_title">Bloky</string>
@@ -350,8 +367,10 @@
     <string name="dash_slogan">Rýchla - Súkromná - Bezpečená</string>
     <string name="dash_wallet">Peňaženka</string>
 
+    <string name="activity_security_backup_wallet">Zálohovať peňaženku do súboru</string>
     <string name="activity_security_view_recovery_phrase">Zobraziť frázu pre obnovenie</string>
     <string name="activity_security_advanced">Pokročilá bezpečnosť</string>
+    <string name="activity_security_biometric_auth">Overovanie odtlačkov prstov</string>
     <string name="activity_security_hide_balance">Automaticky skryť zostatok</string>
     <string name="reset_to_default">Obnoviť pôvodné nastavenia</string>
 

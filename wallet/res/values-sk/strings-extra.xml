@@ -2,10 +2,18 @@
 <resources>
 
     <string name="onboarding_create_wallet">Vytvoriť novú peňaženku</string>
+    <string name="onboarding_recover_wallet">Obnoviť peňaženku z frázy pre obnovenie</string>
+    <string name="onboarding_restore_wallet">Obnoviť peňaženku zo súboru</string>
+    <string name="onboarding_load_wallet_error">Peňaženku sa nepodarilo načítať!</string>
+
     <string name="set_pin_create_new_wallet">Vytvoriť novú peňaženku</string>
+    <string name="set_pin_restore_wallet">Obnoviť peňaženku</string>
     <string name="set_pin_enter_pin">Zadajte starý PIN</string>
     <string name="set_pin_set_pin">Nastaviť PIN</string>
     <string name="set_pin_confirm_pin">Potvrdiť PIN</string>
+    <string name="set_pin_encrypting">Šifrovanie peňaženky</string>
+    <string name="set_pin_decrypting">Dešifrovanie peňaženky</string>
+    <string name="set_pin_verifying_pin">Overuje sa PIN</string>
     <string name="set_pin_message">Tento PIN bude potrebný na odomknutie aplikácie pri každom použití.</string>
 
     <string name="home_pay">Poslať</string>
@@ -36,16 +44,25 @@
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Rýchlo prijať</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_pin">Prihlásiť sa PIN-om</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_fingerprint">Prihlásiť sa odtlačkom prsta</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_scan_to_pay">Skenovať pre poslanie</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
     <string name="lock_enter_pin">Zadať PIN</string>
     <string name="lock_unlock_with_fingerprint">Pre odomknutie použite otlačok prsta</string>
 
+    <string name="perm_lock_info">Peňaženka je trvalo zamknutá</string>
     <string name="perm_lock_wipe_wallet">Vymazať Peňaženku</string>
     <string name="perm_lock_close_app">Ukončiť</string>
 
     <string name="scan_to_pay_error_dialog_title">Skenovať pre poslanie</string>
+    <string name="scan_to_pay_error_dialog_message">V schránke nie je platná Dash adresa, alebo URL požiadavka:\n\n%s</string>
+    <string name="scan_to_pay_error_dialog_message_no_data">V schránke nie je platná Dash adresa, alebo URL požiadavka.</string>
+
     <string name="receive_title">Prijať</string>
+    <string name="receive_enter_amount_message">Zadajte čiastku, ktorú chcete prijať</string>
     <string name="receive_enter_amount_button">Zadať množstvo</string>
     <string name="receive_share_button">Zdieľať</string>
     <string name="receive_copied">Skopírované</string>
@@ -69,6 +86,12 @@
     <string name="payments_pay_to_clipboard_button">Poslať</string>
 
     <string name="forgot_pin_title">Zabudli ste PIN?</string>
+    <string name="forgot_pin_message">Pomocou frázy pre obnovenie môžete nastaviť nový PIN kód.</string>
+    <string name="forgot_pin_instruction_1">Ak chcete získať späť svoju peňaženku, zadajte frázu pre obnovenie</string>
+    <string name="forgot_pin_instruction_2">Nastaviť nový PIN kód</string>
+    <string name="forgot_pin_instruction_3">Pre prístup k vašej peňaženke sa prihláste pomocou nového PIN kódu</string>
+    <string name="forgot_pin_warning">Ak ste zabudli svoj PIN kód a stratili ste frázu pre obnovenie, nemôžete získať späť prístup k svojej peňaženke a finančným prostriedkom.</string>
+
     <string name="send_coins_auto_lock_feasible">Táto transakcia by sa mala okamžite vyrovnať bez ďalších poplatkov</string>
     <string name="send_coins_auto_lock_not_feasible">Táto transakcia môže trvať niekoľko minút. Potvrdiť ihneď za %1$s%2$s? </string>
     <string name="send_coins_instant_send_not_feasible">Táto transakcia môže trvať niekoľko minút.</string>
@@ -95,7 +118,11 @@
     <string name="button_copy_address">Kopírovať adresu</string>
     <string name="request_coins_clipboard_address_msg">Dash adresa skopírovaná do schránky</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Ukázať</string>
+    <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" nie je slovom obnovenia</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Fráza pre obnovenie musí mať 12 slov</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Zlá fráza pre obnovenie</string>
+    <string name="restore_wallet_from_invalid_seed_failure">Peňaženku nebolo možné obnoviť:\n\n%s\n\nZlá fráza pre obnovenie?</string>
+
     <string name="send_coins_options_fee_category_zero">Bez poplatku</string>
     <string name="send_coins_fragment_hint_fee_zero">Nebude zaplatený žiadny poplatok. Používajte "Bez poplatku", iba ak Vám nezáleží na čase potvrdenia.</string>
 
@@ -165,8 +192,11 @@
     <string name="unlock_with_fingerprint_error_max_attempts">Prekročený maximálny počet pokusov o odtlačok prsta. Skúste neskôr prosím.</string>
     <string name="or_unlock_with_fingerprint">Alebo na odomknutie použite odtlačok prsta.</string>
     <string name="enable_fingerprint">Povoliť odtlačok prsta</string>
+    <string name="touch_fingerprint_sensor">Dotknite sa snímača odtlačkov prstov</string>
     <string name="touch_fingerprint_to_enable">Pre povolenie odomknutia otlačkom prsta, sa dotknite snímača odtlačkov prstov.</string>
-    <string name="exchange_rate_missing">Táto platba je príliš stará na to, aby sa získala hodnota v klasickej mene.</string>
+    <string name="fingerprint_changed_title">Údaje o odtlačkoch prstov sa zmenili</string>
+	<string name="fingerprint_changed_message">Zistili sme zmenu v údajoch o overení odtlačkov prstov. Pre tentokrát musíte použiť PIN kód.</string>
+	<string name="exchange_rate_missing">Táto platba je príliš stará na to, aby sa získala hodnota v klasickej mene.</string>
 
     <string name="preferences_enable_payment_request_summary">Použiť platobný protokol pre platby iniciované pomocou QR kódu</string>
     <string name="preferences_enable_payment_request_title">BIP70 pre skenuj-a-plať</string>
@@ -176,6 +206,7 @@
     <string name="verify_backup_wallet">Zálohovať peňaženku</string>
     <string name="verify_show_recovery_phrase">Zobraziť frázu obnovenia</string>
     <string name="verify_secure_now">Zabezpečiť peňaženku teraz</string>
+    <string name="verify_it_is_important">Je to dôležité</string>
     <string name="verify_it_is_important_subtitle">Chystáme sa vám ukázať tajný kľúč k vašej peňaženke.</string>
     <string name="verify_info_text_1">Táto fráza pre obnovenie predstavuje váš prístup k finančným prostriedkom v tejto peňaženke.</string>
     <string name="verify_info_text_2">Túto frázu pre obnovenie neuchovávame.</string>
@@ -193,10 +224,18 @@
 	<string name="transaction_result_view_on_explorer">Zobraziť v prehliadači</string>
 	<string name="transaction_result_paid_successfully">Úspešne poslané</string>
 	<string name="transaction_result_sent_to">Poslané ku</string>
+	<string name="transaction_date_and_time">Dátum a čas</string>
 	<string name="transaction_close">Ukončiť</string>
 	<string name="transaction_details_amount_received">Prijatá suma</string>
 	<string name="transaction_details_amount_sent">Odoslaná suma</string>
 
+    <string name="authenticate_fingerprint_title">Overiť</string>
+    <string name="authenticate_fingerprint_message">Pre pokračovanie potvrďte odtlačok prsta</string>
+    <string name="authenticate_pin_message">Pokračujte zadaním PIN kódu</string>
+    <string name="authenticate_switch_to_fingerprint">Použiť odtlačok prsta</string>
+    <string name="authenticate_switch_to_pin">Použiť heslo</string>
+
+    <string name="menu_buy_and_sell_title">Kúpiť a predať Dash</string>
     <string name="menu_buy_and_sell_subtitle">Spojiť s burzami tretích strán</string>
     <string name="menu_security_title">Bezpečnosť</string>
     <string name="menu_security_subtitle">Zobraziť prístupové heslo, zálohovať peňaženku...</string>
@@ -207,13 +246,25 @@
     <string name="menu_local_currency">Miestna mena</string>
     <string name="menu_rescan_blockchain">Znova prehľadať blockchain</string>
 
+    <string name="tools_address_book">Adresár</string>
     <string name="tools_import_private_key">Importovať Privátny Kľúč</string>
     <string name="tools_network_monitor">Stav Siete</string>
 
     <string name="about_help_us_improve">Pomôžte nám vylepšiť váš zážitok</string>
+    <string name="about_review_and_rate">Ohodnotiť aplikáciu</string>
     <string name="about_contact_support">Kontaktovať Podporu</string>
+    <string name="about_fork_disclaimer">Toto je aplikácia s otvoreným zdrojovým kódom vytvorená z bitcoin peňaženky</string>
     <string name="about_copyright">Autorské práva © 2020 Dash Core</string>
+    <string name="about_license">Všeobecná verejná licencia GNU v3.0</string>
+    <string name="about_version_name">Dash Wallet %s</string>
+
+    <string name="block">Blok</string>
+    <string name="time">Čas</string>
+    <string name="hash">Hash</string>
+    <string name="block_info">Informácie o bloku</string>
+
     <string name="scan_private_key">Skenovať privátny kľúč</string>
+    <string name="scan_private_key_intro_1">Chystáte sa načítať finančné prostriedky z papierovej Dash peňaženky.</string>
     <string name="scan_private_key_intro_2">Týmto presuniete všetky mince z tej peňaženky do vašej peňaženky na tomto zariadení.</string>
     <string name="scan_private_key_intro_3">Po potvrdení transakcie bude druhá peňaženka bezcenná a z bezpečnostných dôvodov by sa nemala znovu používať.</string>
     <string name="confirm">Potvrdiť</string>
@@ -227,7 +278,11 @@
     <string name="one_minute">1 min.</string>
     <string name="five_minute">5 min.</string>
     <string name="one_hour">1 hodina</string>
+    <string name="one_day">1 deň</string>
+    <string name="biometric_limit">Biometrický limit</string>
     <string name="spending_confirmation_hint_zero">Na vykonanie platby je vždy potrebný PIN</string>
+    <string name="spending_confirmation_hint_above_zero">Platby uvedené nižšie môžete overiť pomocou biometrického overenia</string>
+
     <string name="security_none">Žiadne</string>
     <string name="security_low">Nízke</string>
     <string name="security_medium">Stredné</string>

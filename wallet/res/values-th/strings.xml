@@ -347,6 +347,7 @@
     <string name="dash_slogan">เร่งด่วน - ส่วนตัว - ปลอดภัย</string>
     <string name="dash_wallet">wallet</string>
 
+    <string name="activity_security_view_recovery_phrase">ดูวลีกู้คืน</string>
     <string name="activity_security_advanced">ความปลอดภัยขั้นสูง</string>
     <string name="activity_security_hide_balance">สมดุลอัตโนมัติ</string>
     <string name="reset_to_default">ตั้งค่าเป็นค่าเริ่มต้น</string>
