@@ -201,9 +201,10 @@ public class FingerprintHelper {
      * a new finger was added, as result, we clear previous authentication data and flag the change
      * so it can be reflected by the UI.
      */
+    @SuppressLint("ApplySharedPref")
     private void fingerprintKeyChanged() {
         clear();
-        getSharedPreferences().edit().putBoolean(FINGERPRINT_KEY_CHANGED, true).apply();
+        getSharedPreferences().edit().putBoolean(FINGERPRINT_KEY_CHANGED, true).commit();
     }
 
     public boolean hasFingerprintKeyChanged() {
@@ -430,8 +431,8 @@ public class FingerprintHelper {
         }
 
         public void onAuthenticationSucceeded(FingerprintManagerCompat.AuthenticationResult result) {
-            Cipher cipher = result.getCryptoObject().getCipher();
             try {
+                Cipher cipher = result.getCryptoObject().getCipher();
                 if (encryptPassword(cipher, password)) {
                     log.info("password encrypted successfully");
                     callback.onSuccess("Encrypted");
@@ -455,8 +456,9 @@ public class FingerprintHelper {
         }
 
         public void onAuthenticationSucceeded(FingerprintManagerCompat.AuthenticationResult result) {
-            Cipher cipher = result.getCryptoObject().getCipher();
+
             try {
+                Cipher cipher = result.getCryptoObject().getCipher();
                 String savedPass = decipher(cipher);
                 if (savedPass != null) {
                     log.info("password decrypted successfully");
