@@ -61,7 +61,7 @@ public class Configuration {
     public static final String PREFS_KEY_AUTO_LOGOUT_ENABLED = "auto_logout_enabled";
     public static final String PREFS_KEY_AUTO_LOGOUT_MINUTES = "auto_logout_minutes";
     private static final String PREFS_KEY_SPENDING_CONFIRMATION_ENABLED = "spending_confirmation_enabled";
-    private static final String PREFS_KEY_SPENDING_CONFIRMATION_LIMIT = "spending_confirmation_limit";
+    private static final String PREFS_KEY_BIOMETRIC_LIMIT = "biometric_limit";
 
     private static final String PREFS_KEY_LAST_VERSION = "last_version";
     private static final String PREFS_KEY_LAST_USED = "last_used";
@@ -211,12 +211,12 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_KEY_SPENDING_CONFIRMATION_ENABLED, enabled).apply();
     }
 
-    public float getSpendingConfirmationLimit() {
-        return prefs.getFloat(PREFS_KEY_SPENDING_CONFIRMATION_LIMIT, 0.5f);
+    public float getBiometricLimit() {
+        return prefs.getFloat(PREFS_KEY_BIOMETRIC_LIMIT, 0.5f);
     }
 
-    public void setSpendingConfirmationLimit(final float limit) {
-        prefs.edit().putFloat(PREFS_KEY_SPENDING_CONFIRMATION_LIMIT, limit).apply();
+    public void setBiometricLimit(final float limit) {
+        prefs.edit().putFloat(PREFS_KEY_BIOMETRIC_LIMIT, limit).apply();
     }
 
     public boolean remindBackup() {

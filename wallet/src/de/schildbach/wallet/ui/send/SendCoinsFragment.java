@@ -218,7 +218,7 @@ public final class SendCoinsFragment extends Fragment {
                 if (everythingPlausible()) {
                     if (!isUserAuthorized() || config.getSpendingConfirmationEnabled()) {
                         Coin thresholdAmount = Coin.parseCoin(
-                                Float.valueOf(config.getSpendingConfirmationLimit()).toString());
+                                Float.valueOf(config.getBiometricLimit()).toString());
                         if (enterAmountSharedViewModel.getDashAmount().isLessThan(thresholdAmount)) {
                             CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND);
                         } else {
@@ -569,9 +569,8 @@ public final class SendCoinsFragment extends Fragment {
             return;
         }
 
-        Address address = viewModel.paymentIntent.getAddress();
         Intent transactionResultIntent = TransactionResultActivity.createIntent(activity,
-                transaction, address, activity.isUserAuthorized());
+                transaction, activity.isUserAuthorized());
         startActivity(transactionResultIntent);
     }
 

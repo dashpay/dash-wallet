@@ -8,33 +8,35 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
-import de.schildbach.wallet.data.TransactionResult
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_successful_transaction.*
 import kotlinx.android.synthetic.main.transaction_details_dialog.*
+import kotlinx.android.synthetic.main.transaction_result_content.*
+import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.Transaction
+import org.slf4j.LoggerFactory
 
 /**
  * @author Samuel Barbosa
  */
 class TransactionDetailsDialogFragment : DialogFragment() {
 
-    private val transactionResult by lazy { arguments?.get(TRANSACTION_RESULT) as TransactionResult }
+    private val log = LoggerFactory.getLogger(javaClass.simpleName)
+    private val txId by lazy { arguments?.get(TX_ID) as Sha256Hash }
+    private var tx: Transaction? = null
+    private val wallet by lazy { WalletApplication.getInstance().wallet }
 
     companion object {
 
-        const val TRANSACTION_RESULT = "transaction_result"
-        private const val TRANSACTION_DIRECTION = "transaction_direction"
+        const val TX_ID = "tx_id"
 
         @JvmStatic
-        fun newInstance(transactionResult: TransactionResult,
-                        direction: WalletTransactionsFragment.Direction): TransactionDetailsDialogFragment {
+        fun newInstance(txId: Sha256Hash): TransactionDetailsDialogFragment {
             val fragment = TransactionDetailsDialogFragment()
             val args = Bundle()
-            args.putSerializable(TRANSACTION_RESULT, transactionResult)
-            args.putSerializable(TRANSACTION_DIRECTION, direction)
+            args.putSerializable(TX_ID, txId)
             fragment.arguments = args
             return fragment
         }
@@ -43,17 +45,18 @@ class TransactionDetailsDialogFragment : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        tx = wallet.getTransaction(txId)
         val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container)
-        transactionResultViewBinder.bind(transactionResult)
-
+        if (tx != null) {
+            transactionResultViewBinder.bind(tx!!)
+        } else {
+            log.error("Transaction not found. TxId:", txId)
+            dismiss()
+            return
+        }
         view_on_explorer.setOnClickListener { viewOnBlockExplorer() }
         transaction_close_btn.setOnClickListener { dismissAnimation() }
         showAnimation()
-        setTransactionDirection()
-
-        if (transactionResult.feeAmount == null) {
-            hideFeeRow()
-        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -101,43 +104,10 @@ class TransactionDetailsDialogFragment : DialogFragment() {
         })
     }
 
-    private fun setTransactionDirection() {
-        var color: Int
-        when (arguments?.get(TRANSACTION_DIRECTION)
-                as WalletTransactionsFragment.Direction) {
-            WalletTransactionsFragment.Direction.SENT -> {
-                check_icon.setImageResource(R.drawable.ic_transaction_sent)
-                transaction_title.text = getText(R.string.transaction_details_amount_sent)
-                transaction_amount_signal.text = "-"
-                color = ContextCompat.getColor(context!!, android.R.color.black)
-            }
-            WalletTransactionsFragment.Direction.RECEIVED -> {
-                check_icon.setImageResource(R.drawable.ic_transaction_received)
-                transaction_title.text = getText(R.string.transaction_details_amount_received)
-                transaction_amount_signal.text = "+"
-                color = ContextCompat.getColor(context!!, R.color.colorPrimary)
-                hideFeeRow()
-            }
-        }
-
-        transaction_amount_signal.setTextColor(color)
-        dash_amount_symbol.setColorFilter(color)
-        dash_amount.setTextColor(color)
-
-        check_icon.visibility = View.VISIBLE
-        transaction_amount_signal.visibility = View.VISIBLE
-    }
-
-    private fun hideFeeRow() {
-        fee_dash_icon.visibility = View.GONE
-        network_fee_label.visibility = View.GONE
-        transaction_fee.visibility = View.GONE
-        separator2.visibility = View.GONE
-    }
-
     private fun viewOnBlockExplorer() {
-        WalletUtils.viewOnBlockExplorer(activity, transactionResult.purpose,
-                transactionResult.transactionHash)
+        if (tx != null) {
+            WalletUtils.viewOnBlockExplorer(activity, tx!!.purpose, tx!!.txId.toString())
+        }
     }
 
 }
