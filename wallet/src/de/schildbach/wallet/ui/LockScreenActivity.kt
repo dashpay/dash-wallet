@@ -61,7 +61,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
     private lateinit var viewModel: LockScreenViewModel
     private lateinit var checkPinViewModel: CheckPinViewModel
     private lateinit var enableFingerprintViewModel: CheckPinSharedModel
-    private var pinLength = PinPreviewView.DEFAULT_PIN_LENGTH
+    private var pinLength = WalletApplication.getInstance().configuration.pinLength
 
     private val temporaryLockCheckHandler = Handler()
     private val temporaryLockCheckInterval = TimeUnit.SECONDS.toMillis(10)
@@ -90,7 +90,6 @@ class LockScreenActivity : SendCoinsQrActivity() {
         setContentView(R.layout.activity_lock_screen)
         setupKeyboardBottomMargin()
 
-        pinLength = walletApplication.configuration.pinLength
         pinRetryController = PinRetryController.getInstance()
         initView()
         initViewModel()

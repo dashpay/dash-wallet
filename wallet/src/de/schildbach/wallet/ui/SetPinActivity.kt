@@ -49,7 +49,7 @@ class SetPinActivity : AppCompatActivity() {
     private lateinit var pageMessageView: TextView
 
     private lateinit var pinRetryController: PinRetryController
-    private var pinLength = PinPreviewView.DEFAULT_PIN_LENGTH
+    private var pinLength = WalletApplication.getInstance().configuration.pinLength
 
     val pin = arrayListOf<Int>()
     var seed = listOf<String>()
@@ -106,7 +106,6 @@ class SetPinActivity : AppCompatActivity() {
         initViewModel()
 
         pinRetryController = PinRetryController.getInstance()
-        pinLength = WalletApplication.getInstance().configuration.pinLength
 
         walletApplication = application as WalletApplication
         if (walletApplication.wallet.isEncrypted) {
