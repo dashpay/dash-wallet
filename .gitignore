@@ -3,6 +3,8 @@ gradlew
 gradlew.bat
 build/
 local.properties
+local.properties.windows
+local.properties.osx
 .classpath
 .project
 .settings/
