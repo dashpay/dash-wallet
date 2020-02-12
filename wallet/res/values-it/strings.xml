@@ -61,7 +61,7 @@
     <string name="send_coins_fragment_receiving_address_hint">inserisci indirizzo o nome</string>
     <string name="send_coins_fragment_receiving_address_error">Indirizzo Dash errato!</string>
     <string name="send_coins_fragment_receiving_address_own">Stai per inviare a te stesso!</string>
-    <string name="send_coins_fragment_receiving_address_complex">completo\nindirizzo</string>
+    <string name="send_coins_fragment_receiving_address_complex">indirizzo\complesso</string>
     <string name="send_coins_fragment_pending">(%s in attesa di conferma)</string>
     <string name="send_coins_fragment_amount_label">Importo da pagare</string>
     <string name="send_coins_fragment_pin_label">Immetti il PIN</string>
@@ -125,7 +125,7 @@
     <string name="address_book_activity_title">Rubrica degli indirizzi </string>
     <string name="address_book_list_receiving_title">I tuoi indirizzi</string>
     <string name="address_book_list_receiving_random">Vecchi indirizzi</string>
-    <string name="address_book_list_sending_title">L\'indirizzi per inviare</string>
+    <string name="address_book_list_sending_title">Indirizzi destinatari</string>
     <string name="address_book_empty_text">Nessun indirizzo in rubrica</string>
     <string name="address_book_context_send_title">Invia Dash all\'indirizzo</string>
     <string name="address_book_context_edit_title">Modifica indirizzo</string>
@@ -139,8 +139,8 @@
     <string name="address_book_options_scan_invalid">Dati scansionati non riconoscibli</string>
     <string name="address_book_options_scan_own_address">L\'indirizzo scansionato è tuo.</string>
     <string name="address_book_row_message_compromised_key">Questo indirizzo potrebbe essere compromesso. Non dovresti usarlo più per ricevere monete.</string>
-    <string name="edit_address_book_entry_dialog_title_add">Aggiungi indirizzo inviante</string>
-    <string name="edit_address_book_entry_dialog_title_edit">Modifica etichetta dell\'indirizzo inviante</string>
+    <string name="edit_address_book_entry_dialog_title_add">Aggiungi indirizzo a rubrica</string>
+    <string name="edit_address_book_entry_dialog_title_edit">Modifica etichetta dell\'indirizzo in rubrica</string>
     <string name="edit_address_book_entry_dialog_title_add_receive">Aggiungi etichetta al tuo indirizzo</string>
     <string name="edit_address_book_entry_dialog_title_edit_receive">Modifica l\'etichetta del tuo indirizzo</string>
     <string name="edit_address_book_entry_dialog_address_label">Indirizzo</string>

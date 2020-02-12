@@ -1,4 +1,25 @@
 Dash Wallet
+v6.6.4
+* Revert: Large numbers have separators (e.g. 1,999.00 instead of 1999.00).
+  This caused many bugs on the Send and Request screens
+
+v6.6.3
+* Use DashJ 0.16.4
+    * Reduces memory usage
+    * Fixes several crashes
+* Fix several Fingerprint issues
+* Large numbers have separators (e.g. 1,999.00 instead of 1999.00)
+* Update Translations
+
+v6.6.2
+* Use DashJ 0.16.2
+    * Improves processing of ChainLocks and InstantSendLocks
+    * Fixes several crashes
+* Add Log out command to Uphold screen
+* Add ability to reset link to Uphold account if the password was changed
+* Display entire Uphold balance (not rounded to #.##)
+* Wallet will be locked if the phone is rebooted
+
 v6.6.1
 * Report store information in Report Issue
 

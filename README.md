@@ -4,12 +4,10 @@ This project contains several sub-projects:
 
  * __wallet__:
      The Android app itself. This is probably what you're searching for.
- * __native-scrypt__:
-     Native code implementation for Scrypt. The C files are copied from the
-     Java Scrypt project at [GitHub](https://github.com/wg/scrypt).
- * __native-x11__
-     Native code implementation for X11. The C files are copied from the
-     Java Scrypt project at [GitHub](https://github.com/hashengineering/dashj).
+ * __common__:
+     Contains common components used by integrations.
+ * __uphold-integration__
+     Contains the uphold integration
  * __market__:
      App description and promo material for the Google Play app store.
  * __integration-android__:
@@ -19,9 +17,9 @@ This project contains several sub-projects:
      A minimal example app to demonstrate integration of digital payments into
      your Android app.
 
-You can build all sub-projects at once using Gradle:
+You can build the production version using Gradle:
 
-`gradle clean build -x test`
+`./gradlew assembleProdRelease`
 
 The built apks will be in `wallet/build/outputs/apk`
 

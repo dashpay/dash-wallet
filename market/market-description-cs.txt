@@ -1,4 +1,4 @@
-﻿Use at your own risk! (Requires Android 4 or higher)
+Pužívejte na vlastní riziko! (Vyžaduje Android 4 nebo novější)
 
 <b>Mějte Dash neustále u sebe ve své kapse!</b> Oskenujte QR kód a zaplaťte rychle. Jako obchodník obdržíte platby téměř okamžitě a spolehlivě. Elektronická peněženka Dash je první mobilní aplikací Dash a pravděpodobně taky tou nejbezpečnější.
 
@@ -26,11 +26,11 @@ https://github.com/HashEngineering/dash-wallet
 Všechny překlady probíhají na stránkách Transifex:
 https://www.transifex.com/dash/dash-wallet/
 
-You can find more about Dash at
+Více o Dash naleznete na
 https://www.dash.org/
 
 <b>REFERENCE</b>
 
-• A recommended mobile wallet by https://www.dash.org
+• Mobilní peněženka doporučená od https://www.dash.org
 
 <i>Používejte na vlastní riziko!</i>

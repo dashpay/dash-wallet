@@ -80,7 +80,7 @@
 	<string name="leave_as">Оставить %s</string>
 
 	<string name="remind_later">Напомнить позже</string>
-	<string name="backup_now">Создать резервную копию сейчас</string>
+	<string name="backup_now">Восстановить сейчас</string>
 	
 	<string name="notification_transactions_channel_name">Транзакции</string>
 	<string name="notification_transactions_channel_description">Получать оповещения о входящих транзакциях.</string>

@@ -51,7 +51,7 @@
     <string name="wallet_version_dialog_button_binary">Télécharger</string>
     <string name="wallet_old_sdk_dialog_title">La version d\'Android est obsolète</string>
     <string name="wallet_old_sdk_dialog_message">Il y a de bonnes chances que votre appareil ne puisse accueillir les prochaines versions du portefeuille Dash. Dans certains cas, il pourra être difficile d\'envoyer de l\'argent depuis cet appareil.\n\nÀ moins que vous ne sachiez ce que vous faites, il vous est recommandé de sortir vos fonds rapidement de cet appareil.</string>
-    <string name="send_coins_activity_title">Envoyer des dashs</string>
+    <string name="send_coins_activity_title">Envoyer dashs</string>
     <string name="send_coins_fragment_request_payment_request_progress">Récupération de la signature de %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Échec lors de la récupération de la signature</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Signature erronée !</string>
@@ -113,7 +113,7 @@
     <string name="maintenance_dialog_state_decrypting">Déchiffrement…</string>
     <string name="maintenance_dialog_state_done">Terminé.</string>
     <string name="maintenance_dialog_button_move">Déplacer</string>
-    <string name="request_coins_activity_title">Demander des dashs</string>
+    <string name="request_coins_activity_title">Demander dashs</string>
     <string name="request_coins_fragment_amount_label">Montant demandé (optionnel)</string>
     <string name="request_coins_fragment_accept_bluetooth_payment">Accepter les paiements par Bluetooth pour un traitement plus fiable.</string>
     <string name="request_coins_fragment_initiate_request_qr">Demandez à l\'expéditeur de scanner ce code.</string>

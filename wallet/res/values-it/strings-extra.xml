@@ -73,7 +73,7 @@
 	<string name="change_to">cambiare a %s</string>
 	<string name="leave_as">Lasciare come %s</string>
 
-	<string name="remind_later">Ricordamelo più tardi</string>
+	<string name="remind_later">Ricorda dopo</string>
 	<string name="backup_now">Effettua il backup ora</string>
 	
 	<string name="notification_transactions_channel_name">Transazioni</string>
