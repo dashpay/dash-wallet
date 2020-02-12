@@ -103,7 +103,7 @@
     <string name="sweep_wallet_fragment_button_decrypt">Odszyfruj</string>
     <string name="sweep_wallet_fragment_button_sweep">Skanuj</string>
     <string name="sweep_wallet_fragment_decrypt_progress">Odszyfrowywanie…\\nPotrwa krócej niż 2 minuty.</string>
-    <string name="sweep_wallet_fragment_request_wallet_balance_progress">Ładuję balans...</string>
+    <string name="sweep_wallet_fragment_request_wallet_balance_progress">Ładuję saldo...</string>
     <string name="sweep_wallet_fragment_request_wallet_balance_failed_title">Ładowanie salda portfela nie powiodło się</string>
     <string name="sweep_wallet_fragment_insufficient_money_title">Brak wystarczających środków</string>
     <string name="sweep_wallet_fragment_insufficient_money_msg">Ilość monet w portfelu jest zbyt mała by przetransferować środki.</string>
@@ -113,7 +113,7 @@
     <string name="maintenance_dialog_state_decrypting">Odszyfrowywanie...</string>
     <string name="maintenance_dialog_state_done">Zrobione.</string>
     <string name="maintenance_dialog_button_move">Przenieś</string>
-    <string name="request_coins_activity_title">Poproś o Dashy</string>
+    <string name="request_coins_activity_title">Poproś o Dashe</string>
     <string name="request_coins_fragment_amount_label">Żądana kwota (opcjonalnie)</string>
     <string name="request_coins_fragment_accept_bluetooth_payment">Akceptuj płatności przez Bluetooth aby zwiększyć niezawodność</string>
     <string name="request_coins_fragment_initiate_request_qr">Niech nadawca zeskanuje ten kod QR</string>
@@ -127,7 +127,7 @@
     <string name="address_book_list_receiving_random">Stary adres</string>
     <string name="address_book_list_sending_title">Adresy nadawcze</string>
     <string name="address_book_empty_text">Brak wpisów w książce adresowej</string>
-    <string name="address_book_context_send_title">Wyślij Dashy na adres</string>
+    <string name="address_book_context_send_title">Wyślij Dashe na adres</string>
     <string name="address_book_context_edit_title">Zmień adres</string>
     <string name="address_book_context_remove_title">Usuń adres</string>
     <string name="address_book_context_copy_to_clipboard_title">Skopiuj do schowka</string>
@@ -276,7 +276,7 @@
     <string name="report_issue_dialog_collect_application_log">Dołącz dziennik aplikacji</string>
     <string name="report_issue_dialog_collect_wallet_dump">Dołącz zrzut portfela</string>
     <string name="report_issue_dialog_mail_intent_chooser">Wyślij zgłoszenie używając…</string>
-    <string name="report_issue_dialog_mail_intent_failed">Wysyłąnie raportu nie powiodło się.</string>
+    <string name="report_issue_dialog_mail_intent_failed">Wysyłanie raportu nie powiodło się.</string>
     <string name="about_title">O programie</string>
     <string name="about_version_title">Wersja</string>
     <string name="about_copyright_title">Prawa autorskie</string>

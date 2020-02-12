@@ -73,8 +73,8 @@
 	<string name="change_to">Changer en %s</string>
 	<string name="leave_as">Garder en %s</string>
 
-	<string name="remind_later">Le rappeler plus tard</string>
-	<string name="backup_now">Sauvegarder maintenant</string>
+	<string name="remind_later">Rappeler + tard</string>
+	<string name="backup_now">Sauv. maintenant</string>
 	
 	<string name="notification_transactions_channel_name">Transactions</string>
 	<string name="notification_transactions_channel_description">Recevoir des alertes sur les transactions entrantes.</string>

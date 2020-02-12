@@ -11,7 +11,7 @@ Der Benutzer trägt das volle Risiko! (Android 4 oder höher erforderlich)
 • Adressbuch für regelmäßig verwendete Dash-Adressen.
 • Auch offline kannst Du bequem per Bluetooth zahlen.
 • Systemnachrichten beim Empfang von Coins.
-• Papier-Wallets schablonieren (z.B. um diese als 'cold storage' zu verwenden).
+• Papier-Wallets leeren (z.B. eines, das als Cold Storage verwendet wird).
 • App-Widget zeigt Dash Guthaben an.
 
 

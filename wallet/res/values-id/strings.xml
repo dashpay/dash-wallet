@@ -296,7 +296,8 @@
     <string name="notification_coins_received_msg">Diterima %s</string>
     <string name="notification_peers_connected_msg">%d peer terhubung</string>
     <string name="notification_inactivity_title">Anda masih memiliki Dash di perangkat ini!</string>
-        <string name="notification_inactivity_action_dismiss">Ingatkan saya nanti</string>
+        <string name="notification_inactivity_message">Anda masih memiliki Dash di perangkat ini! Pastikan untuk menuliskan frasa pemulihan Anda sebelum Anda mencopot Dompet Dash atau Anda akan kehilangan saldo sebesar %s.</string>
+    <string name="notification_inactivity_action_dismiss">Ingatkan saya nanti</string>
     <string name="notification_inactivity_action_dismiss_forever">Jangan ingatkan saya</string>
     <string name="appwidget_wallet_balance_title">Saldo Dash</string>
 
@@ -312,6 +313,7 @@
     <string name="button_remove">Mengapus</string>
     <string name="button_edit">Ubah</string>
     <string name="button_copy">Salin</string>
+    <string name="button_copy_request">Salin permintaan</string>
     <string name="button_paste">Tempel</string>
     <string name="button_share">Berbagi</string>
     <string name="button_set_as_default">Tetapkan sebagai standar</string>

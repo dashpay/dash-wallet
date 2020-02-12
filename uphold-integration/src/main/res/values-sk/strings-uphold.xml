@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="uphold_account">Účet na Uphold</string>
+    <string name="uphold_account">Uphold</string>
     <string name="uphold_buy_dash_activity_title">Kúpiť/Predať Dash s Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Kúpiť Dash s Uphold účtom</string>
     <string name="uphold_buy_dash_button">Kúpiť Dash</string>
@@ -16,5 +16,13 @@
     <string name="uphold_otp_dialog_title">Zadajte váš 2FA kód:</string>
     <string name="uphold_transfer">Presun</string>
     <string name="uphold_see_on_uphold">Zobraziť na Uphold</string>
+    <string name="uphold_logout_title">Odhlásenie z Upholdu</string>
+    <string name="uphold_logout">Odhlásiť</string>
+    <string name="uphold_logout_explanation_text">Musíte sa tiež odhlásiť z webovej stránky Uphold vo vašom prehliadači.</string>
+    <string name="uphold_logout_go_to_website">Prejsť na webovú stránku</string>
+    <string name="uphold_error">Chyba Upholdu</string>
+    <string name="uphold_error_not_logged_in">Dash peňaženka už nie je prepojená s vaším účtom na Upholde. Na ďalšej obrazovke stlačte \"Prepojiť Uphold účet\".</string>
+    <string name="uphold_error_not_available">Služba Uphold nie je k dispozícii. Skúste neskôr prosím.</string>
+    <string name="uphold_error_report_issue">Nahláste tento problém tímu podpory Dash peňaženky pomocou položky \"Nahlásiť problém\" z hlavnej ponuky.</string>
 
 </resources>
