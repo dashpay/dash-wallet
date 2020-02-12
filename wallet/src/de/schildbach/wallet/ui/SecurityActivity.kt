@@ -82,6 +82,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
                 }
                 FINGERPRINT_ENABLED_REQUEST_CODE -> {
                     updateFingerprintSwitchSilently(fingerprintHelper.isFingerprintEnabled)
+                    configuration.enableFingerprint = fingerprintHelper.isFingerprintEnabled
                 }
                 AUTH_REQUEST_CODE_ADVANCED_SECURITY -> {
                     startActivity(Intent(this, AdvancedSecurityActivity::class.java))
@@ -104,8 +105,8 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
             fingerprint_auth_group.visibility = VISIBLE
             fingerprint_auth_switch.isChecked = fingerprintHelper.isFingerprintEnabled
             fingerprint_auth_switch.setOnCheckedChangeListener(fingerprintSwitchListener)
-            configuration.enableFingerprint = true
-        } else {
+            configuration.enableFingerprint = fingerprintHelper.isFingerprintEnabled
+    } else {
             fingerprint_auth_group.visibility = GONE
         }
     }
