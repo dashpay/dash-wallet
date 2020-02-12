@@ -24,6 +24,8 @@ import android.os.Handler
 import android.view.View
 import android.view.animation.AnimationUtils
 import androidx.annotation.RequiresApi
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.os.CancellationSignal
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
@@ -86,11 +88,28 @@ class LockScreenActivity : SendCoinsQrActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_lock_screen)
+        setupKeyboardBottomMargin()
 
         pinLength = walletApplication.configuration.pinLength
         pinRetryController = PinRetryController.getInstance()
         initView()
         initViewModel()
+    }
+
+    private fun setupKeyboardBottomMargin() {
+        if (!hasNavBar()) {
+            val set = ConstraintSet()
+            val layout = numeric_keyboard.parent as ConstraintLayout
+            set.clone(layout)
+            set.clear(R.id.numeric_keyboard, ConstraintSet.BOTTOM)
+            set.connect(R.id.numeric_keyboard, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM)
+            set.applyTo(layout)
+        }
+    }
+
+    private fun hasNavBar(): Boolean {
+        val id: Int = resources.getIdentifier("config_showNavigationBar", "bool", "android")
+        return id > 0 && resources.getBoolean(id)
     }
 
     override fun onStart() {
