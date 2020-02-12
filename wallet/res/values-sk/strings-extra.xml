@@ -80,7 +80,7 @@
 	<string name="leave_as">Ponechať %s</string>
 
 	<string name="remind_later">Pripomenúť neskôr </string>
-	<string name="backup_now">Teraz zálohovať</string>
+	<string name="backup_now">Zálohovať teraz</string>
 	
 	<string name="notification_transactions_channel_name">Transakcie</string>
 	<string name="notification_transactions_channel_description">Dostávať upozornenia o prichádzajúcich transakciách.</string>

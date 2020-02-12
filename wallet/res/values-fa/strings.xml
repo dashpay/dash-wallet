@@ -92,13 +92,6 @@
     <string name="send_coins_options_fee_category_economic">اقتصادی</string>
     <string name="send_coins_options_fee_category_priority">اولویت‌دار</string>
     <string name="send_coins_options_empty">کیف پول را خالی کنید</string>
-    <string name="raise_fee_dialog_title">کارمزد شبکه را افزایش دهید</string>
-    <string name="raise_fee_dialog_message">آیا مایلید کارمزد شبکه را به میزان %s افزایش دهید؟ این کار سبب می‌شود فرآیند تایید تراکنش با سرعت بیشتری انجام شود. </string>
-    <string name="raise_fee_dialog_determining_fee">در حال تعیین کارمزد شبکه...</string>
-    <string name="raise_fee_dialog_cant_raise">امکان افزایش کارمزد شبکه برای این پرداخت وجود ندارد.</string>
-    <string name="raise_fee_dialog_state_decrypting">در حال رمزگشایی...</string>
-    <string name="raise_fee_dialog_state_done">انجام شد.</string>
-    <string name="raise_fee_dialog_button_raise">افزایش</string>
     <string name="sweep_wallet_activity_title">خالی کردن کیف پول کاغذی</string>
     <string name="sweep_wallet_fragment_intro">اکنون قصد دارید موجودی دش یک کیف پول کاغذی و یا کوپن را خالی کنید. با این کار، موجودی آن به کیف پول‌تان بر روی این دستگاه منتقل خواهد شد. به محض تایید نهایی تراکنش، کیف پول کاغذی شما دیگر ارزشی نخواهد داشت و به دلایل امنیتی، بهتر است دوباره از آن استفاده نکنید. </string>
     <string name="sweep_wallet_fragment_hint">از کیف پول کاغذی معمولا برای ذخیره سرد استفاده می‌شود. برخی از دستگاه‌های خودپرداز ارز دیجیتال نیز به جای ارسال مستقیم مبلغ مورد نظر به دستگاه کاربر، آن را بر روی یک قطعه کاغذ پرینت می‌کنند. برخی افراد نیز از کاغذهایی که مقدار مشخصی ارز دیجیتال از پیش بر روی آن قرار گرفته برای تبادلات مالی استفاده می‌کنند (که البته این کار توصیه نمی‌شود).</string>
@@ -259,6 +252,8 @@
     <string name="preferences_data_usage_summary">گزینه‌ها برای محدودسازی مصرف داده بر روی شبکه‌های همراه را نشان بده.</string>
     <string name="preferences_remind_balance_title">یادآوری میزان موجودی</string>
     <string name="preferences_remind_balance_summary">در صورتی که دو هفته از این اپلیکیشن استفاده نکنید، به شما هشدار داده می‌شود که هنوز مقداری دش در کیف پول‌تان وجود دارد.</string>
+    <string name="preferences_show_disclaimer_title">نشان دادن هشدار</string>
+    <string name="preferences_show_disclaimer_summary">آیا واقعا مطالب مربوط به ایمنی را خوانده‌اید؟ آیا از کیف پول‌تان یک نسخه پشتیبان تهیه کرده و در جایی امن از آن نگهداری می‌کنید؟ </string>
     <string name="preferences_report_issue_title">گزارش مشکل</string>
     <string name="preferences_initiate_reset_title">بازنشانی بلاک چین</string>
     <string name="preferences_initiate_reset_summary">بازنشانی بلاک چین، تراکنش‌ها و موجودی کیف پول. این فرآیند اعتبارسنجی تراکنش‌ها در بلاک چین ممکن است مدتی طول بکشد. پس فقط در موارد ضروری دست به این کار بزنید.</string>
@@ -301,7 +296,7 @@
     <string name="notification_coins_received_msg">دریافتی %s</string>
     <string name="notification_peers_connected_msg">%d همتا متصل وجود دارد. </string>
     <string name="notification_inactivity_title">هنوز مقداری دش بر روی دستگاه خود دارید!</string>
-    <string name="notification_inactivity_message">به یاد داشته باشید که %s موجودd شما در صورت حذف اپلیکیشن دش والت از بین خواهد رفت، مگر اینکه این موجودی را ابتدا به جایی دیگر منتقل کنید.</string>
+        <string name="notification_inactivity_message">هنوزمقداری دش در کیف پول‌تان در این دستگاه قرار دارد! لطفا پیش از حذف دش والت، عبارت بازیابی را یادداشت کنید، در غیر این صورت، موجودی‌تان به مبلغ %s را از دست خواهید داد. </string>
     <string name="notification_inactivity_action_dismiss">بعدا یادآوری کن!</string>
     <string name="notification_inactivity_action_dismiss_forever">دیگر یادآوری نکن!</string>
     <string name="appwidget_wallet_balance_title">موجودی دش</string>
@@ -318,6 +313,7 @@
     <string name="button_remove">حذف کردن</string>
     <string name="button_edit">ویرایش</string>
     <string name="button_copy">کپی</string>
+    <string name="button_copy_request">درخواست کپی</string>
     <string name="button_paste">چسباندن</string>
     <string name="button_share">به اشتراک گذاری</string>
     <string name="button_set_as_default">به عنوان پیش‌فرض قرار بده</string>

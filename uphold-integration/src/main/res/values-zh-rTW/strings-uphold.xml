@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="uphold_account">Uphold 帳戶</string>
+    <string name="uphold_account">Uphold</string>
     <string name="uphold_buy_dash_activity_title">用Uphold帳戶來 購買/出售 達世幣</string>
     <string name="uphold_buy_dash_with_uphold">用Uphold帳戶來購買達世幣</string>
     <string name="uphold_buy_dash_button">購買達世幣</string>
@@ -16,5 +16,13 @@
     <string name="uphold_otp_dialog_title">請在下面輸入您的2FA代碼:</string>
     <string name="uphold_transfer">轉帳</string>
     <string name="uphold_see_on_uphold">參見Uphold</string>
+    <string name="uphold_logout_title">從Uphold帳戶中登出</string>
+    <string name="uphold_logout">登出</string>
+    <string name="uphold_logout_explanation_text">您還需要在瀏覽器上從Uphold網站登出。</string>
+    <string name="uphold_logout_go_to_website">轉到網站</string>
+    <string name="uphold_error">Uphold 錯誤</string>
+    <string name="uphold_error_not_logged_in">達世幣錢包不再與您的Uphold帳戶相關聯。 請在下一個屏幕上按Link Uphold帳戶。</string>
+    <string name="uphold_error_not_available">Uphold服務不可用。 請稍後再試。</string>
+    <string name="uphold_error_report_issue">請使用主菜單中的“報告問題”向達世幣支持團隊報告此問題。</string>
 
 </resources>

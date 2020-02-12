@@ -296,7 +296,8 @@
     <string name="notification_coins_received_msg">%s primit</string>
     <string name="notification_peers_connected_msg">%d peer-uri conectați </string>
     <string name="notification_inactivity_title">Încă ai Dash pe acest dispozitiv!</string>
-        <string name="notification_inactivity_action_dismiss">Amintește-mi mai târziu</string>
+        <string name="notification_inactivity_message">Mai ai Dash pe acest dispozitiv! Te rog să te asiguri că scrii fraza de recuperare înainte de a dezinstala portofelul Dash sau alfel vei pierde soldul %s.</string>
+    <string name="notification_inactivity_action_dismiss">Amintește-mi mai târziu</string>
     <string name="notification_inactivity_action_dismiss_forever">Nu-mi aminti</string>
     <string name="appwidget_wallet_balance_title">Sold Dash</string>
 
@@ -312,6 +313,7 @@
     <string name="button_remove">Elimină</string>
     <string name="button_edit">Editează</string>
     <string name="button_copy">Copiază</string>
+    <string name="button_copy_request">Copiază cererea</string>
     <string name="button_paste">Lipește</string>
     <string name="button_share">Distribuie</string>
     <string name="button_set_as_default">Setează ca si default</string>

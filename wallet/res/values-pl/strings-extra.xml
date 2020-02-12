@@ -8,16 +8,16 @@
 	<string name="transaction_row_message_own_instantx_lock_request_notsent">Ta płatność nie została jeszcze przesłana.</string>
 	<string name="transaction_row_message_sent_to_single_peer">Ta płatność została przesłana.</string>
 
-	<string name="regular_transaction_info_message">Ta transakcje nie została osadzona natychmiastowo.</string>
+	<string name="regular_transaction_info_message">Transakcje nie została rozliczona błyskawicznie.</string>
 
 	<string name="wallet_options_disconnect">Rozłącz</string>
 
 	<string name="network_monitor_masternodes_title">Masternody</string>
 	<string name="export_keys_dialog_title_to_seed">Pokaż frazę odzyskiwania portfela</string>
 	<string name="import_keys_dialog_title_from_seed">Przywróć z frazy odzyskiwania portfela.</string>
-	<string name="backup_to_seed_wallet_dialog_message">To jest twoja fraza odzyskiwania portfela. Proszę zapisz ją.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">Nie pozwól aby ktokolwiek zobaczył twoją frazę odzyskiwania portfela, gdyż umożliwi mu to przejęcie Twoich monet.</string>
-	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Twój portfel jest zabezpieczony przed wydaniem środków za pomocą PIN. Wpisz PIN i naciśnij Enter aby zobaczyć twoją frazę odzyskiwania portfela.</string>
+	<string name="backup_to_seed_wallet_dialog_message">To jest fraza odzyskiwania portfela. Zapisz ją.</string>
+	<string name="backup_wallet_to_seed_dialog_warning">Nie pozwól by ktoś zobaczył frazę odzyskiwania portfela, gdyż umożliwi mu to przejęcie Twoich monet.</string>
+	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Twój portfel jest zabezpieczony przed wydaniem środków za pomocą PIN. Wpisz PIN i naciśnij Enter aby zobaczyć frazę odzyskiwania portfela.</string>
     <string name="import_keys_from_seed_dialog_message">Tutaj wpisz frazę odzyskiwania portfela.</string>
 	<string name="import_export_keys_dialog_password_phrase">Miejsce na frazę odzyskiwania portfela.</string>
 	<string name="preferences_report_issue_summary">Zbierz informacje dotyczące twojego problemu i wyślij je do deweloperów.</string>
@@ -28,7 +28,7 @@
 	<string name="restore_wallet_from_invalid_seed_warning_message">%s jest nieprawidłowym słowem.</string>
 
 	<string name="send_coins_options_fee_category_zero">Bez opłaty</string>
-	<string name="send_coins_fragment_hint_fee_zero">Żadna opłata nie będzie uiszczona. Używaj tej opcji tylko wtedy kiedy nie zależy ci na czasie potwierdzenia transakcji.</string>
+	<string name="send_coins_fragment_hint_fee_zero">Żadna opłata nie będzie uiszczona. Używaj tej opcji jedynie, kiedy nie zależy ci na czasie potwierdzenia transakcji.</string>
 
 	<string name="wallet_uri_handler_public_key_request_dialog_msg">Aplikacja %schce otrzymać twój Główny Klucz Publiczny. Informacja ta może być użyta aby śledzić twój portfel, jednakże nie może zostać użyta aby przetransferować twoje monety Dash.</string>
 	<string name="wallet_uri_handler_address_request_dialog_msg">Aplikacja %s żąda adresu aby móc ci zapłacić. Czy zezwalasz na wysłanie adresu?</string>
@@ -43,7 +43,7 @@
 	<string name="wallet_lock_reset_wallet_message">Jesteś pewien? Twój portfel zostanie usunięty wszystkie twoje Dashe przepadną. \n\nJedynym sposobem na odzyskanie twoich Dashy będzie kopia zapasowa portfelu lub fraza odzysku.</string>
 
 	<string name="wallet_lock_wallet_disabled">Portfel zdezaktywowany</string>
-	<string name="wallet_lock_try_again">Spróbuj raz jeszcze w %1$d%2$s</string>
+	<string name="wallet_lock_try_again">Spróbuj raz jeszcze za %1$d%2$s</string>
 	<string name="wallet_lock_reset">Resetuj</string>
 	<string name="wallet_lock_wrong_pin">Zły PIN %s</string>
 
@@ -70,8 +70,8 @@
 
 	<string name="encrypt_new_key_chain_upgrade_button">Aktualizuj</string>
 	<string name="encrypt_new_key_chain_dialog_title">Aktualizuj swój portfel</string>
-	<string name="encrypt_new_key_chain_dialog_message">Twój portfel zostanie zaktualizowany aby wspomóc importowanie z oraz eksportowanie do innych aplikacji.</string>
-	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Musisz wpisac swój PIN aby dokończyć proces aktualizacji.</string>
+	<string name="encrypt_new_key_chain_dialog_message">Twój portfel zostanie zaktualizowany aby umożliwić importowanie z oraz eksportowanie do nowych aplikacji.</string>
+	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Musisz wpisać swój PIN aby dokończyć proces aktualizacji.</string>
 	<string name="pin_code_required_dialog_message">Ta aplikacja obecnie wymaga PIN aby móc wydawać oraz wyświetlić saldo konta i transakcji.</string>
     <string name="backup_wallet_seed_private_key_written_down_box">Zanotowałem frazę odzyskiwania portfela</string>
 	
@@ -80,18 +80,18 @@
 	<string name="leave_as">Pozostaw %s</string>
 
 	<string name="remind_later">Przypomnij później</string>
-	<string name="backup_now">Wykonaj kopie zapasową</string>
+	<string name="backup_now">Zrób kopię zapasową</string>
 	
 	<string name="notification_transactions_channel_name">Transakcje</string>
 	<string name="notification_transactions_channel_description">Otrzymuj powiadomienia o nadchodzących transakcjach.</string>
 	<string name="notification_synchronization_channel_name">Synchronizacja</string>
-	<string name="notification_synchronization_channel_description">Wyświetla powiadomienie gdy aplikacja sie synchronizuje z siecią.</string>
+	<string name="notification_synchronization_channel_description">Wyświetla powiadomienie, gdy aplikacja synchronizuje się z siecią.</string>
 
     <string name="net_type_indicator" />
 
 	<string name="unlock_with_fingerprint">Użyj odcisku palca by odblokować.</string>
-	<string name="unlock_with_fingerprint_error">Odczyt odcisku palca nie powiódł się, spróbuj ponownie.</string>
-	<string name="unlock_with_fingerprint_error_max_attempts">Osiągnięto maksymalna ilość prób odczytu odcisku palca. Proszę spróbować poźniej.</string>
+	<string name="unlock_with_fingerprint_error">Odczyt odcisku palca nieudany, spróbuj ponownie.</string>
+	<string name="unlock_with_fingerprint_error_max_attempts">Osiągnięto maksymalna ilość prób odczytu odcisku palca. Proszę spróbować później.</string>
 	<string name="or_unlock_with_fingerprint">Lub użyj odcisku palca by odblokować.</string>
 	<string name="enable_fingerprint">Aktywuj odcisk palca</string>
 	<string name="touch_fingerprint_sensor">Dotknij czytnik odcisku palca.</string>
