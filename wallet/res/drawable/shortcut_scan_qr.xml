@@ -15,7 +15,7 @@
         </shape>
     </item>
     <item
-        android:drawable="@drawable/ic_qrcode"
+        android:drawable="@drawable/ic_lock_scan_to_pay"
         android:gravity="center"
         android:height="@dimen/shortcut_icon_size"
         android:width="@dimen/shortcut_icon_size"/>
