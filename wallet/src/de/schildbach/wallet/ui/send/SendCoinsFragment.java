@@ -196,7 +196,11 @@ public final class SendCoinsFragment extends Fragment {
                         handleEmpty();
                         break;
                     case AUTH_REQUEST_CODE_SEND:
-                        showPaymentConfirmation();
+                        if (everythingPlausible() && viewModel.dryrunSendRequest != null) {
+                            showPaymentConfirmation();
+                        } else {
+                            updateView();
+                        }
                         break;
                 }
             }
