@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="70dp"
@@ -16,8 +17,8 @@
         android:layout_height="wrap_content"
         android:paddingLeft="10dp"
         android:paddingRight="6dp"
-        android:textSize="15sp"
         android:textColor="@color/primary_status"
+        android:textSize="15sp"
         tools:text="Receiving" />
 
     <TextView
@@ -37,7 +38,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/transaction_row_primary_status"
+        android:layout_alignParentLeft="true"
+        android:layout_marginRight="4dp"
         android:layout_marginBottom="5dp"
+        android:layout_toLeftOf="@id/rate_container"
+        android:ellipsize="end"
+        android:lines="1"
         android:paddingLeft="10dp"
         android:paddingRight="6dp"
         android:textColor="@color/dash_gray"
@@ -51,8 +57,8 @@
         android:layout_alignParentTop="true"
         android:layout_alignParentEnd="true"
         android:layout_alignParentRight="true"
-        android:gravity="center|right"
         android:layout_marginRight="11dp"
+        android:gravity="center|right"
         android:orientation="horizontal">
 
         <TextView
@@ -73,7 +79,7 @@
             android:layout_marginTop="1dp"
             android:layout_marginEnd="4dp"
             android:layout_marginRight="4dp"
-            android:src="@drawable/ic_dash_symbol_gray" />
+            app:srcCompat="@drawable/ic_dash_symbol_gray" />
 
         <org.dash.wallet.common.ui.CurrencyTextView
             android:id="@+id/transaction_row_value"
@@ -86,32 +92,36 @@
     </LinearLayout>
 
 
-    <org.dash.wallet.common.ui.CurrencyTextView
-        android:id="@+id/transaction_row_fiat"
-        style="@style/MontserratMedium.MG.12"
+    <FrameLayout
+        android:id="@+id/rate_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/dash_amount_container"
         android:layout_alignParentEnd="true"
         android:layout_alignParentRight="true"
+        android:paddingStart="0dp"
         android:paddingLeft="0dp"
-        android:paddingRight="15dp"
-        android:textColor="@color/dash_gray"
-        tools:text="350.98" />
+        android:paddingEnd="15dp"
+        android:paddingRight="15dp">
 
-    <TextView
-        android:id="@+id/transaction_row_rate_not_available"
-        style="@style/MontserratMedium.MG.12"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/dash_amount_container"
-        android:text="@string/transaction_row_rate_not_available"
-        android:paddingLeft="0dp"
-        android:paddingRight="15dp"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentRight="true"
-        android:textColor="@color/dash_gray"
-        tools:text="Not available"
-        tools:visibility="visible" />
+        <org.dash.wallet.common.ui.CurrencyTextView
+            android:id="@+id/transaction_row_fiat"
+            style="@style/MontserratMedium.MG.12"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/dash_gray"
+            tools:text="350.98" />
+
+        <TextView
+            android:id="@+id/transaction_row_rate_not_available"
+            style="@style/MontserratMedium.MG.12"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/transaction_row_rate_not_available"
+            android:textColor="@color/dash_gray"
+            tools:text="Not available"
+            tools:visibility="visible" />
+
+    </FrameLayout>
 
 </RelativeLayout>
