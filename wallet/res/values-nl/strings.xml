@@ -16,7 +16,7 @@
     <string name="wallet_address_dialog_fragment_hint">Om uw privacy te beschermen zal uw adres wijzigen zodra een betaling ontvangen is.</string>
     <string name="wallet_balance_fragment_too_much">Dit Dash-saldo is behoorlijk hoog om op zak te hebben. Advies: breng een deel van uw saldo onder op een veiliger plek.</string>
     <string name="wallet_balance_fragment_replaying">Het saldo is onbeschikbaar tijdens opnieuw spelen.</string>
-    <string name="exchange_rates_activity_title">Wisselkoersen</string>
+    <string name="exchange_rates_activity_title">Lokale munteenheid</string>
     <string name="exchange_rates_fragment_empty_text">Er is een probleem opgetreden tijdens het laden van de wisselkoersen.</string>
     <string name="exchange_rates_fragment_empty_search">De wisselkoers kon niet worden gevonden.</string>
     <string name="exchange_rates_fragment_default">(standaard)</string>
@@ -25,13 +25,11 @@
     <string name="exchange_rates_fragment_source">Kosten van %s</string>
     <string name="exchange_rates_options_search">Wisselkoers zoeken</string>
     <string name="exchange_rates_context_set_as_default_title">Stel in als standaard</string>
-    <string name="wallet_transactions_fragment_empty_text_received">Nog geen Dash ontvangen.</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">Nog geen Dash verzonden.</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">Hoe komt u aan Dash?\\n\\nWissel traditionele munteenheden om voor Dash,\\nverkoop goederen of diensten of\\nverdien ze door te werken.</string>
+    <string name="wallet_transactions_fragment_empty_text">Er zijn geen transacties om weer te geven</string>
     <string name="wallet_transactions_row_warning_backup">Gefeliciteerd! U heeft uw eerste betaling ontvangen. Heeft u al een back-up gemaakt van uw portemonnee, om verlies tegen te gaan?</string>
     <string name="wallet_transactions_fragment_coinbase">gegenereerd</string>
     <string name="wallet_transactions_fragment_internal">intern</string>
-    <string name="wallet_transactions_options_filter">Filteren</string>
+    <string name="wallet_transactions_options_filter">Transacties filteren</string>
     <string name="wallet_transactions_options_filter_all">Alle betalingen</string>
     <string name="wallet_transactions_options_filter_received">Ontvangen betalingen</string>
     <string name="wallet_transactions_options_filter_sent">Verstuurde betalingen</string>
@@ -57,18 +55,18 @@
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Onjuiste handtekening!</string>
     <string name="send_coins_fragment_payee_verified_by">geverifieerd door: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">onbekend</string>
-    <string name="send_coins_fragment_receiving_address_label">Betalen aan</string>
+    <string name="send_coins_fragment_receiving_address_label">Verstuur naar</string>
     <string name="send_coins_fragment_receiving_address_hint">typ adres of naam</string>
     <string name="send_coins_fragment_receiving_address_error">Ongeldig Dash-adres!</string>
     <string name="send_coins_fragment_receiving_address_own">U staat op het punt om naar uzelf te versturen!</string>
     <string name="send_coins_fragment_receiving_address_complex">complex\nadres</string>
     <string name="send_coins_fragment_pending">(%s bezig met wachten op bevestiging)</string>
-    <string name="send_coins_fragment_amount_label">Te betalen bedrag</string>
+    <string name="send_coins_fragment_amount_label">Te versturen bedrag</string>
     <string name="send_coins_fragment_pin_label">Voer pin in</string>
     <string name="send_coins_fragment_hint_fee_economic">Netwerkkosten %s worden betaald.</string>
     <string name="send_coins_fragment_hint_fee_priority">Een prioriteitstoeslag van %s wordt betaald. Als je een lage toeslag belangrijk vindt, gebruik \'prioriteit\' alleen als je zo spoedig mogelijk bevestiging nodig hebt.</string>
-    <string name="send_coins_fragment_hint_dusty_send">Het bedrag is te laag om verstuurd te kunnen worden.</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Er zijn onvoldoende beschikbare munten; u komt %s tekort.</string>
+    <string name="send_coins_fragment_hint_dusty_send">bedrag is te klein om te versturen</string>
+    <string name="send_coins_fragment_hint_insufficient_money">Ontoereikende fondsen</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Het saldo van kleine betalingen in uw Dash-portemonnee is bij elkaar niet hoog genoeg om te kunnen versturen.</string>
     <string name="send_coins_fragment_hint_replaying">Omdat een replay wordt gedaan zijn momenteel betalingen niet mogelijk.</string>
     <string name="send_coins_fragment_direct_payment_enable">Betaling direct versturen aan de begunstigde.</string>
@@ -92,13 +90,13 @@
     <string name="send_coins_options_fee_category_economic">Economisch</string>
     <string name="send_coins_options_fee_category_priority">Prioriteit</string>
     <string name="send_coins_options_empty">Leeg portemonnee</string>
-    <string name="sweep_wallet_activity_title">Opnemen vanuit papieren portemonnee</string>
+    <string name="sweep_wallet_activity_title">Importeer persoonlijke sleutel</string>
     <string name="sweep_wallet_fragment_intro">U staat op het punt geld op te nemen vanaf een papieren portemonnee of coupon. Hierbij worden alle Dash van dat papier overgebracht naar uw apparaat. Zodra deze transactie bevestigd wordt zal het papier zijn waarde verloren hebben en om veiligheidsredenen niet meer opnieuw gebruikt moeten worden.</string>
     <string name="sweep_wallet_fragment_hint">Papieren portemonnees worden gewoonlijk gebruikt als niet-apparaat gebonden, zogenaamd koude, opslag plaats. Sommige geldautomaten printen ze uit op een bon in plaats van de Dash direct naar uw mobiele apparaat te versturen. Van te voren met Dash opgewaardeerde papieren portemonnees worden door sommige mensen gebruikt om waarde aan elkaar door te geven (niet aanbevolen).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Begin met het scannen van de geheime sleutel van de papieren portemonnee. Gebruik de camera-actieknop.</string>
     <string name="sweep_wallet_fragment_encrypted">Deze privé-sleutel is beveiligd met een wachtwoord.</string>
-    <string name="sweep_wallet_fragment_password">wachtwoord</string>
-    <string name="sweep_wallet_fragment_bad_password">onjuist wachtwoord!</string>
+    <string name="sweep_wallet_fragment_password">Wachtwoord</string>
+    <string name="sweep_wallet_fragment_bad_password">Verkeerd wachtwoord!</string>
     <string name="sweep_wallet_fragment_balance">Over te dragen saldo</string>
     <string name="sweep_wallet_fragment_button_decrypt">Versleuteling ontgrendelen</string>
     <string name="sweep_wallet_fragment_button_sweep">Overdragen</string>
@@ -158,6 +156,33 @@
     <string name="transaction_row_message_received_dust">Dit kleine beetje kan waarschijnlijk nooit economisch worden besteed.</string>
     <string name="transaction_row_message_received_pay_to_many">Deze betaling wordt naar veel portemonnees - naast die van uzelf - tegelijkertijd gedaan, waardoor uw app af en toe traag kan worden. Indien mogelijk, ontvang dan bij voorkeur alleen transacties die uitsluitend aan u zelf gericht zijn.</string>
     <string name="transaction_row_message_received_rbf">Deze betaling is vertraagd, omdat de verzender een onveilig transactietype heeft gebruikt. </string>
+    <string name="transaction_row_status_received">Ontvangen</string>
+    <string name="transaction_row_status_sent">Verstuurd</string>
+    <string name="transaction_row_status_sending">Bezig met verzenden</string>
+    <string name="transaction_row_status_sent_interally">Intern</string>
+    <string name="transaction_row_status_processing">Verwerken</string>
+    <string name="transaction_row_status_confirming">Aan het bevestigen</string>
+    <string name="transaction_row_status_locked">Vergrendeld</string>
+    <string name="transaction_row_status_error_sending">Fout bij verzenden</string>
+    <string name="transaction_row_status_error_dead">Dubbel uitgegeven</string>
+    <string name="transaction_row_status_error_conflicting">In conflict</string>
+    <string name="transaction_row_status_error_insufficient_fee">Onvoldoende transactieverzoeking</string>
+    <string name="transaction_row_status_error_dust">\"stof\"</string>
+    <string name="transaction_row_status_error_non_standard">Niet standaard</string>
+    <string name="transaction_row_status_error_malformed">Misvormd</string>
+    <string name="transaction_row_status_error_duplicate">Duplicaat</string>
+    <string name="transaction_row_status_error_obsolete">Verouderd</string>
+    <string name="transaction_row_status_error_invalid">Ongeldig</string>
+    <string name="transaction_row_status_error_other">Onbekend</string>
+    <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
+    <string name="transaction_row_time_text">Op %ster hoogte van %s</string>
+    <string name="transaction_row_rate_not_available">Niet beschikbaar</string>
+    <string name="transaction_row_status_masternode_registration">Masternode registratie</string>
+    <string name="transaction_row_status_masternode_update_registrar">Masternode updaten</string>
+    <string name="transaction_row_status_masternode_update_service">Masternode updaten</string>
+    <string name="transaction_row_status_masternode_revoke">Masternode intrekken</string>
+    <string name="transaction_row_status_masternode_reward">Masternode beloning</string>
+    <string name="transaction_row_status_mining_reward">Mining beloning</string>
     <string name="network_monitor_activity_title">Netwerkmonitor</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Blokken</string>
@@ -201,7 +226,7 @@
     <string name="import_export_keys_dialog_show">Toon wachtwoord</string>
     <string name="import_export_keys_dialog_failure_title">Fout</string>
     <string name="import_keys_intent_filter_action">Herstel portemonnee</string>
-    <string name="encrypt_keys_dialog_title">Pincode voor betalen</string>
+    <string name="encrypt_keys_dialog_title">Wijzig PIN</string>
     <string name="encrypt_keys_dialog_message">Om te kunnen betalen met uw portemonnee zal als extra bescherming om uw gekozen pincode gevraagd worden.</string>
     <string name="encrypt_keys_dialog_warning">Belangrijk: gebruik geen makkelijk te raden nummers (zoals geboortedatum) in uw pincode.</string>
     <string name="encrypt_keys_dialog_password_old">Oude pincode</string>
@@ -212,7 +237,7 @@
     <string name="encrypt_keys_dialog_show">Laat pincode zien</string>
     <string name="encrypt_keys_dialog_state_encrypting">Versleutelen…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Versleuteling opheffen…</string>
-    <string name="encrypt_keys_dialog_state_done">Klaar.</string>
+    <string name="encrypt_keys_dialog_state_done">Klaar</string>
     <string name="scan_camera_problem_dialog_title">Sorry</string>
     <string name="scan_camera_problem_dialog_message">Er is een probleem met de camera. Waarschijnlijk moet je het apparaat herstarten.</string>
     <string name="scan_camera_permission_dialog_title">Toegang tot de camera</string>
@@ -296,7 +321,7 @@
     <string name="notification_coins_received_msg">Ontvangen %s</string>
     <string name="notification_peers_connected_msg">%d actieve verbindingen</string>
     <string name="notification_inactivity_title">U heeft nog Dash op dit apparaat!</string>
-        <string name="notification_inactivity_message">Je hebt nog steeds Dash op dit apparaat! Vergeet niet om uw herstelzin te noteren voordat u de Dash portemonnee app verwijdert, anders verliest u uw saldo van %s.</string>
+    <string name="notification_inactivity_message">Je hebt nog steeds Dash op dit apparaat! Vergeet niet om uw herstelzin te noteren voordat u de Dash portemonnee app verwijdert, anders verliest u uw saldo van %s.</string>
     <string name="notification_inactivity_action_dismiss">Herinner me later</string>
     <string name="notification_inactivity_action_dismiss_forever">Herinner me niet</string>
     <string name="appwidget_wallet_balance_title">Dash-saldo</string>
@@ -319,6 +344,7 @@
     <string name="button_set_as_default">Kies als standaard</string>
     <string name="button_request_coins">Dash verzoeken</string>
     <string name="button_send_coins">Dash versturen</string>
+    <string name="button_pay">Verzenden</string>
     <string name="button_scan">Zoeken</string>
     <string name="button_settings">Instellingen</string>
     <string name="action_show_qr">Toon QR-code</string>
@@ -338,10 +364,14 @@
 
     <string name="transaction_fragment_confirmations_label">Bevestigingen</string>
 
-    <string name="navigation_drawer_open">Navigatieschuif openen</string>
-    <string name="navigation_drawer_close">Navigatieschuif sluiten</string>
-
     <string name="dash_slogan">Direct - Privé - Veilig</string>
     <string name="dash_wallet">Portemonnee</string>
+
+    <string name="activity_security_backup_wallet">Back-up portemonnee naar bestand</string>
+    <string name="activity_security_view_recovery_phrase">Toon herstelzin</string>
+    <string name="activity_security_advanced">Geavanceerde Beveiliging</string>
+    <string name="activity_security_biometric_auth">Vingerafdrukauthenticatie</string>
+    <string name="activity_security_hide_balance">Automatisch saldo verbergen</string>
+    <string name="reset_to_default">Reset naar standaard</string>
 
 </resources>

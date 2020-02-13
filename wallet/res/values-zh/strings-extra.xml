@@ -1,94 +1,309 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-	<string name="send_coins_auto_lock_not_feasible">此项交易确认需要几分钟. 立刻完成需要 %1$s%2$s?</string>
-	<string name="send_coins_instant_send_not_feasible">此项交易确认需要几分钟.</string>
 
-	<string name="options_paste_from_clipboard_title">从剪贴板中粘贴</string>
+    <string name="onboarding_create_wallet">创建一个新钱包</string>
+    <string name="onboarding_recover_wallet">通过恢复密语还原钱包</string>
+    <string name="onboarding_restore_wallet">通过文件还原钱包</string>
+    <string name="onboarding_load_wallet_error">无法加载钱包!</string>
 
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">此项支付尚未传输。</string>
-	<string name="transaction_row_message_sent_to_single_peer">此项交易已被发送.</string>
+    <string name="set_pin_create_new_wallet">创建一个新钱包</string>
+    <string name="set_pin_restore_wallet">还原钱包</string>
+    <string name="set_pin_enter_pin">输入旧PIN</string>
+    <string name="set_pin_set_pin">设置PIN</string>
+    <string name="set_pin_confirm_pin">确认PIN</string>
+    <string name="set_pin_encrypting">正在加密钱包</string>
+    <string name="set_pin_decrypting">正在解密钱包</string>
+    <string name="set_pin_verifying_pin">验证PIN</string>
+    <string name="set_pin_message">每次使用时都需要输入PIN以解锁您的app。</string>
 
-	<string name="regular_transaction_info_message">此项交易未即时完成.</string>
+    <string name="home_pay">发送</string>
+    <string name="home_receive">接收</string>
+    <string name="home_available_balance">可用余额</string>
+    <string name="home_balance_hidden">余额已隐藏</string>
+    <string name="home_balance_show_hint">点击显示余额</string>
+    <string name="home_balance_hide_hint">点击隐藏余额</string>
 
-	<string name="wallet_options_disconnect">未连接</string>
+    <string name="dialog_confirm_confirm">确认</string>
+    <string name="dialog_confirm_pay_to">发送至</string>
+    <string name="dialog_confirm_fee">网络手续费</string>
+    <string name="dialog_confirm_total">总计</string>
 
-	<string name="network_monitor_masternodes_title">主节点</string>
-	<string name="export_keys_dialog_title_to_seed">查看恢复密语</string>
-	<string name="import_keys_dialog_title_from_seed">使用恢复密语复原</string>
-	<string name="backup_to_seed_wallet_dialog_message">这是您的恢复密语. 请记录下来.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">请不要让任何人看到您的恢复密语, 否则他们将可以使用您的达世币.</string>
-	<string name="backup_to_seed_wallet_dialog_enter_pin_message">资金密码可以保护您的钱包. 输入密码并点击显示, 浏览您的恢复密语.</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_secure_now">立刻保护钱包</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_scan_to_pay">扫描发送</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_pay_to_address">发送至地址</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_buy_sell">买 / 卖 达世币</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_import_key">导入私钥</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_add_shortcut">添加快捷方式</string>
+
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_quick_receive">快速接收</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_pin">以PIN登入</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_fingerprint">以指纹登入</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_scan_to_pay">扫描发送</string>
+    <!-- Lock Screen: Text above the PIN Entry area -->
+    <string name="lock_enter_pin">输入PIN</string>
+    <string name="lock_unlock_with_fingerprint">使用您的指纹解锁</string>
+
+    <string name="perm_lock_info">钱包永久锁定</string>
+    <string name="perm_lock_wipe_wallet">清空钱包</string>
+    <string name="perm_lock_close_app">关闭</string>
+
+    <string name="scan_to_pay_error_dialog_title">扫描发送</string>
+    <string name="scan_to_pay_error_dialog_message">剪切板没有包含有效的达世币地址或链接:\n\n%s</string>
+    <string name="scan_to_pay_error_dialog_message_no_data">剪切板没有包含有效的达世币地址或链接</string>
+
+    <string name="receive_title">接收</string>
+    <string name="receive_enter_amount_message">指定收款数额</string>
+    <string name="receive_enter_amount_button">指定数额</string>
+    <string name="receive_share_button">分享</string>
+    <string name="receive_copied">已复制</string>
+
+    <string name="pay_title">发送</string>
+    <string name="history_title">历史</string>
+    <string name="more_title">更多</string>
+    <string name="settings_title">设置</string>
+    <string name="security_title">安全</string>
+    <string name="recover_wallet_title">恢复钱包</string>
+    <string name="tools_title">工具</string>
+
+    <string name="payments_title">交易</string>
+    <string name="payments_tab_pay_label">发送</string>
+    <string name="payments_tab_receive_label">接收</string>
+    <string name="payments_pay_by_qr_title">发送者</string>
+    <string name="payments_pay_by_qr_sub_title">正在扫描二维码</string>
+    <string name="payments_pay_by_qr_button">扫描</string>
+    <string name="payments_pay_to_clipboard_title">发送至复制地址</string>
+    <string name="payments_pay_to_clipboard_sub_title">未复制地址</string>
+    <string name="payments_pay_to_clipboard_button">发送</string>
+
+    <string name="forgot_pin_title">忘记PIN？</string>
+    <string name="forgot_pin_message">您可以借助恢复密语来设置新的PIN</string>
+    <string name="forgot_pin_instruction_1">输入恢复密语来找回您的钱包</string>
+    <string name="forgot_pin_instruction_2">设置一个新PIN</string>
+    <string name="forgot_pin_instruction_3">通过您的新PIN来访问钱包</string>
+    <string name="forgot_pin_warning">如果您遗忘了PIN并丢失了恢复密语，就无法再访问您的钱包和资金。</string>
+
+    <string name="send_coins_auto_lock_feasible">此交易应即时确认并且无附加手续费</string>
+    <string name="send_coins_auto_lock_not_feasible">此项交易确认需要几分钟. 立刻完成需要 %1$s%2$s?</string>
+    <string name="send_coins_instant_send_not_feasible">此项交易确认需要几分钟.</string>
+
+    <string name="options_paste_from_clipboard_title">从剪贴板中粘贴</string>
+
+    <string name="transaction_row_message_own_instantx_lock_request_notsent">此项支付尚未传输。</string>
+    <string name="transaction_row_message_sent_to_single_peer">此项交易已被发送.</string>
+
+    <string name="regular_transaction_info_message">此项交易未即时完成.</string>
+
+    <string name="wallet_options_disconnect">未连接</string>
+
+    <string name="network_monitor_masternodes_title">主节点</string>
+    <string name="export_keys_dialog_title_to_seed">查看恢复密语</string>
+    <string name="import_keys_dialog_title_from_seed">使用恢复密语复原</string>
+    <string name="backup_to_seed_wallet_dialog_message">这是您的恢复密语. 请记录下来.</string>
+    <string name="backup_wallet_to_seed_dialog_warning">请不要让任何人看到您的恢复密语, 否则他们将可以使用您的达世币.</string>
+    <string name="backup_to_seed_wallet_dialog_enter_pin_message">资金密码可以保护您的钱包. 输入密码并点击显示, 浏览您的恢复密语.</string>
     <string name="import_keys_from_seed_dialog_message">在这里输入您的恢复密语.</string>
-	<string name="import_export_keys_dialog_password_phrase">这里是您的恢复密语.</string>
-	<string name="preferences_report_issue_summary">请描述您所遇到的问题并通过邮箱给开发者发送报告.</string>
-	<string name="navigation_configuration">恭喜</string>
+    <string name="import_export_keys_dialog_password_phrase">这里是您的恢复密语.</string>
+    <string name="preferences_report_issue_summary">请描述您所遇到的问题并通过邮箱给开发者发送报告.</string>
+    <string name="navigation_configuration">恭喜</string>
     <string name="button_copy_address">复制地址</string>
-	<string name="request_coins_clipboard_address_msg">达世币地址已复制</string>
-	<string name="backup_wallet_to_seed_show_recovery_phrase">显示</string>
-	<string name="restore_wallet_from_invalid_seed_warning_message">%s 是无效字.</string>
+    <string name="request_coins_clipboard_address_msg">达世币地址已复制</string>
+    <string name="backup_wallet_to_seed_show_recovery_phrase">显示</string>
+    <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" 不是一个恢复密语中的单词</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">恢复密语必须包括 12 个词</string>
+    <string name="restore_wallet_from_invalid_seed_bad_checksum">错误的恢復密语</string>
+    <string name="restore_wallet_from_invalid_seed_failure">无法恢复钱包：\n\n%s\n\n是否输入了错误的密码？</string>
 
-	<string name="send_coins_options_fee_category_zero">无手续费</string>
-	<string name="send_coins_fragment_hint_fee_zero">不支付任何交易手续费. 仅在您不在意确认时间长短的情况下使用此选项.</string>
+    <string name="send_coins_options_fee_category_zero">无手续费</string>
+    <string name="send_coins_fragment_hint_fee_zero">不支付任何交易手续费. 仅在您不在意确认时间长短的情况下使用此选项.</string>
 
-	<string name="wallet_uri_handler_public_key_request_dialog_msg">应用程序 %s 想要获取您的主公钥. 这可以被用来追踪您的钱包, 但无法支配您的达世币.</string>
-	<string name="wallet_uri_handler_address_request_dialog_msg">应用程序 %s 正在请求一个地址以用来向您发送交易.  您是否同意?</string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
+    <string name="wallet_uri_handler_public_key_request_dialog_msg">应用程序 %s 想要获取您的主公钥. 这可以被用来追踪您的钱包, 但无法支配您的达世币.</string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
+    <string name="wallet_uri_handler_address_request_dialog_msg">应用程序 %s 正在请求一个地址以用来向您发送交易.  您是否同意?</string>
 
-	<string name="wallet_lock_unlock">解锁</string>
-	<string name="wallet_lock_unlock_wallet">解锁钱包</string>
-	<string name="wallet_lock_unlock_to_see_txs_title">钱包已锁.</string>
-	<string name="wallet_lock_unlock_to_see_txs_txt">点击上方的锁定图标解锁您的钱包并查看交易记录.</string>
-	<string name="wallet_lock_unlock_dialog_title">解锁您的钱包</string>
-	<string name="wallet_lock_unlock_dialog_message">您的钱包受到密码保护. 输入您的PIN码并按解锁以继续.</string>
-	<string name="wallet_lock_reset_wallet_title">重置钱包</string>
-	<string name="wallet_lock_reset_wallet_message">您确定吗? 您的钱包将会被删除, 您所有的达世币将会丢失.\n\n找回您达世币的唯一途径是通过备份文件或恢复短语.</string>
+    <string name="wallet_lock_unlock">解锁</string>
+    <string name="wallet_lock_unlock_wallet">解锁钱包</string>
+    <string name="wallet_lock_unlock_to_see_txs_title">钱包已锁.</string>
+    <string name="wallet_lock_unlock_to_see_txs_txt">点击上方的锁定图标解锁您的钱包并查看交易记录.</string>
+    <string name="wallet_lock_unlock_dialog_title">解锁您的钱包</string>
+    <string name="wallet_lock_unlock_dialog_message">您的钱包受到密码保护. 输入您的PIN码并按解锁以继续.</string>
+    <string name="wallet_lock_reset_wallet_title">重置钱包</string>
+    <string name="wallet_lock_reset_wallet_message">您确定吗? 您的钱包将会被删除, 您所有的达世币将会丢失.\n\n找回您达世币的唯一途径是通过备份文件或恢复短语.</string>
 
-	<string name="wallet_lock_wallet_disabled">钱包被禁用</string>
-	<string name="wallet_lock_try_again">请在 %1$d %2$s 后再试</string>
-	<string name="wallet_lock_reset">重置</string>
-	<string name="wallet_lock_wrong_pin">PIN码错误! %s</string>
+    <string name="wallet_lock_wallet_disabled">钱包被禁用</string>
+    <string name="wallet_lock_try_again">请在 %1$d %2$s 后再试</string>
+    <string name="wallet_lock_reset">重置</string>
+    <string name="wallet_lock_wrong_pin">PIN码错误! %s</string>
 
-	<plurals name="wallet_lock_attempts_remaining">
-		<item quantity="other">剩余尝试次数 %d </item>
-	</plurals>
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="other">剩余尝试次数 %d </item>
+    </plurals>
 
-	<plurals name="minute">
-		<item quantity="other">分钟</item>
-	</plurals>
-	
-	<plurals name="hour">
-		<item quantity="other">小时</item>
-	</plurals>
+    <plurals name="minute">
+        <item quantity="other">分钟</item>
+    </plurals>
 
-	<string name="encrypt_new_key_chain_upgrade_button">升级</string>
-	<string name="encrypt_new_key_chain_dialog_title">升级您的钱包</string>
-	<string name="encrypt_new_key_chain_dialog_message">您的钱包将被升级, 以支持更多APP的导入导出功能.</string>
-	<string name="encrypt_new_key_chain_enter_pin_dialog_message">您必须输入PIN码才能完成升级过程.</string>
-	<string name="pin_code_required_dialog_message">这个应用程序需要PIN码来发送交易和查看交易余额.</string>
+    <plurals name="hour">
+        <item quantity="other">小时</item>
+    </plurals>
+
+    <string name="encrypt_new_key_chain_upgrade_button">升级</string>
+    <string name="encrypt_new_key_chain_dialog_title">升级您的钱包</string>
+    <string name="encrypt_new_key_chain_dialog_message">您的钱包将被升级, 以支持更多APP的导入导出功能.</string>
+    <string name="encrypt_new_key_chain_enter_pin_dialog_message">您必须输入PIN码才能完成升级过程.</string>
+    <string name="pin_code_required_dialog_message">这个应用程序需要PIN码来发送交易和查看交易余额.</string>
     <string name="backup_wallet_seed_private_key_written_down_box">我已经记下了恢复密语</string>
-	
-	<string name="change_exchange_currency_code_message">您的本地货币是%1$s, 但是在这个应用程序中默认货币设置为%2$s. 请问您想要改为%1$s 或保持%2$s?</string>
-	<string name="change_to">改为%s</string>
-	<string name="leave_as">保持%s</string>
 
-	<string name="remind_later">稍后提醒</string>
-	<string name="backup_now">立刻备份</string>
-	
-	<string name="notification_transactions_channel_name">交易</string>
-	<string name="notification_transactions_channel_description">接收关于新转入交易的提醒.</string>
-	<string name="notification_synchronization_channel_name">同步</string>
-	<string name="notification_synchronization_channel_description">当app正在同步网络时显示通知.</string>
+    <string name="change_exchange_currency_code_message">您的本地货币是%1$s, 但是在这个应用程序中默认货币设置为%2$s. 请问您想要改为%1$s 或保持%2$s?</string>
+    <string name="change_to">改为%s</string>
+    <string name="leave_as">保持%s</string>
+
+    <string name="remind_later">稍后提醒</string>
+    <string name="backup_now">立刻备份</string>
+
+    <string name="notification_transactions_channel_name">交易</string>
+    <string name="notification_transactions_channel_description">接收关于新转入交易的提醒.</string>
+    <string name="notification_synchronization_channel_name">同步</string>
+    <string name="notification_synchronization_channel_description">当app正在同步网络时显示通知.</string>
 
     <string name="net_type_indicator" />
 
-	<string name="unlock_with_fingerprint">使用您的指纹解锁.</string>
-	<string name="unlock_with_fingerprint_error">指纹验证失败, 请重试.</string>
-	<string name="unlock_with_fingerprint_error_max_attempts">超过最大指纹解锁次数. 请稍后再试.</string>
-	<string name="or_unlock_with_fingerprint">或使用您的指纹解锁.</string>
-	<string name="enable_fingerprint">开启指纹</string>
-	<string name="touch_fingerprint_sensor">触摸指纹传感器.</string>
-	<string name="touch_fingerprint_to_enable">触摸指纹传感器来解锁.</string>
+    <string name="unlock_with_fingerprint">使用您的指纹解锁.</string>
+    <string name="unlock_with_fingerprint_error">指纹验证失败, 请重试.</string>
+    <string name="unlock_with_fingerprint_error_max_attempts">超过最大指纹解锁次数. 请稍后再试.</string>
+    <string name="or_unlock_with_fingerprint">或使用您的指纹解锁.</string>
+    <string name="enable_fingerprint">开启指纹</string>
+    <string name="touch_fingerprint_sensor">触摸指纹传感器</string>
+    <string name="touch_fingerprint_to_enable">触摸指纹传感器来解锁.</string>
+    <string name="fingerprint_changed_title">指纹数据已变更</string>
+	<string name="fingerprint_changed_message">我们检测到您指纹认证数据发生了变化。这次您需要使用PIN。</string>
 	<string name="exchange_rate_missing">此项支付太旧了, 无法获取法币价值.</string>
 
-	<string name="preferences_enable_payment_request_summary">使用QR码支付协议以开始支付</string>
-	<string name="preferences_enable_payment_request_title">BIP70支持扫即付</string>
+    <string name="preferences_enable_payment_request_summary">使用QR码支付协议以开始支付</string>
+    <string name="preferences_enable_payment_request_title">BIP70支持扫即付</string>
+
+    <string name="verify_continue">继续</string>
+    <string name="verify">验证</string>
+    <string name="verify_backup_wallet">备份钱包</string>
+    <string name="verify_show_recovery_phrase">显示恢复密语</string>
+    <string name="verify_secure_now">立刻保护钱包</string>
+    <string name="verify_it_is_important">这很重要</string>
+    <string name="verify_it_is_important_subtitle">我们即将向您显示您钱包的私钥。</string>
+    <string name="verify_info_text_1">此恢复密语是您获取本钱包中资金的方法。</string>
+    <string name="verify_info_text_2">我们不会存储此恢复密语。</string>
+    <string name="verify_info_text_3">如果此设备丢失, 损坏或意外从该设备卸载了DASH钱包, 则需要此恢复密语来找回您的资金.</string>
+    <string name="verify_skip">跳过</string>
+    <string name="verify_secure_now_btn">立刻保护</string>
+    <string name="verify_secure_now_message">如果您丢失此设备，您将丢失您的资金。获取您恢复密语以便在其他设备能够恢复您的钱包。</string>
+    <string name="verify_seed_title">请将其写下来</string>
+    <string name="verify_seed_write_down_confirmation">我已将它写下来</string>
+    <string name="verify_seed_buttons_tip">请以正确顺序键入您的恢復密语</string>
+    <string name="verify_seed_success_title">验证成功</string>
+    <string name="verify_seed_success_message">您的钱包现已安全。您可以随时在其他设备通过您的恢复密语找回您的账户。</string>
+    <string name="view_seed_done">完成</string>
+    <string name="view_seed_title">恢复密语</string>
+	<string name="transaction_result_view_on_explorer">在浏览器中查看</string>
+	<string name="transaction_result_paid_successfully">发送成功</string>
+	<string name="transaction_result_sent_to">发送至</string>
+	<string name="transaction_date_and_time">日期 &amp; 时间</string>
+	<string name="transaction_close">关闭</string>
+	<string name="transaction_details_amount_received">接收数额</string>
+	<string name="transaction_details_amount_sent">发送数额</string>
+
+    <string name="authenticate_fingerprint_title">验证</string>
+    <string name="authenticate_fingerprint_message">确认指纹以继续</string>
+    <string name="authenticate_pin_message">输入PIN以继续</string>
+    <string name="authenticate_switch_to_fingerprint">使用指纹</string>
+    <string name="authenticate_switch_to_pin">使用密码</string>
+
+    <string name="menu_buy_and_sell_title">买 &amp; 卖 Dash</string>
+    <string name="menu_buy_and_sell_subtitle">与第三方交易所连接</string>
+    <string name="menu_security_title">安全</string>
+    <string name="menu_security_subtitle">查看密码，备份钱包...</string>
+    <string name="menu_settings_title">设置</string>
+    <string name="menu_settings_subtitle">默认货币，快捷方式，关于...</string>
+    <string name="menu_tools_title">工具</string>
+    <string name="menu_tools_subtitle">导入私钥...</string>
+    <string name="menu_local_currency">本地货币</string>
+    <string name="menu_rescan_blockchain">重新扫描区块链</string>
+
+    <string name="tools_address_book">地址簿</string>
+    <string name="tools_import_private_key">导入私钥</string>
+    <string name="tools_network_monitor">网络监视器</string>
+
+    <string name="about_help_us_improve">帮助我们改善您的体验</string>
+    <string name="about_review_and_rate">对app进行评论 &amp; 评分</string>
+    <string name="about_contact_support">联系支持</string>
+    <string name="about_fork_disclaimer">这是从比特币钱包分叉而来的开源应用程序</string>
+    <string name="about_copyright">版权 © 2020 Dash Core</string>
+    <string name="about_license">GNU 公共通用许可 v3.0</string>
+    <string name="about_version_name">达世币钱包 %s</string>
+
+    <string name="block">区块</string>
+    <string name="time">时间</string>
+    <string name="hash">哈希值</string>
+    <string name="block_info">区块信息</string>
+
+    <string name="scan_private_key">扫描私钥</string>
+    <string name="scan_private_key_intro_1">您即将从一个DASH纸钱包来清除资金.</string>
+    <string name="scan_private_key_intro_2">这会从另一钱包中将所有币移动到本设备的钱包中。</string>
+    <string name="scan_private_key_intro_3">当交易被确认后，另一个钱包将会分文不值，并且出于安全原因不应当再被使用。</string>
+    <string name="confirm">确认</string>
+
+    <string name="advanced_security_security_level">安全级别</string>
+    <string name="auto_logout">自动登出</string>
+    <string name="spending_confirmation">支出确认</string>
+    <string name="logout_after">登出后</string>
+    <string name="immediately">立即</string>
+    <string name="twenty_four_hours">24 小时</string>
+    <string name="one_minute">1 分钟</string>
+    <string name="five_minute">5 分钟</string>
+    <string name="one_hour">1 小时</string>
+    <string name="one_day">1 天</string>
+    <string name="biometric_limit">生物识别限制</string>
+    <string name="spending_confirmation_hint_zero">付款时始终需要输入PIN</string>
+    <string name="spending_confirmation_hint_above_zero">您可以使用生物特征识别来认证下方交易</string>
+
+    <string name="security_none">无</string>
+    <string name="security_low">低</string>
+    <string name="security_medium">中等</string>
+    <string name="security_high">高</string>
+    <string name="security_very_high">非常高</string>
+    <string name="max">最大</string>
+
+    <string name="enter_amount_available">可用</string>
+
+    <string name="skip">跳过</string>
+    <string name="get_started">开始使用</string>
+    <string name="welcome_screen_title_1_new_install">欢迎</string>
+    <string name="welcome_screen_title_1_upgrade">我们升级了</string>
+    <string name="welcome_screen_subtitle_1">所有设备上的直观熟悉体验</string>
+    <string name="welcome_screen_title_2">轻松付款</string>
+    <string name="welcome_screen_subtitle_2">易用的付款流程即时发送和接收交易</string>
+    <string name="welcome_screen_title_3">更多控制</string>
+    <string name="welcome_screen_subtitle_3">完全控制并根据需求定制您的钱包</string>
+
+    <string-array name="history_filter">
+        <item>所有</item>
+        <item>已接收</item>
+        <item>已发送</item>
+    </string-array>
+
+    <string name="sync_status_wait">请等待同步完成</string>
+    <string name="sync_status_syncing_title">正在同步</string>
+    <string name="sync_status_syncing_sub_title">以达世币区块链</string>
+    <string name="sync_status_unable_to_connect">无法连接</string>
+    <string name="sync_status_check_connection">检查您的连接</string>
+
+
 </resources>

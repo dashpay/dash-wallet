@@ -16,7 +16,7 @@
     <string name="wallet_address_dialog_fragment_hint">Z důvodu ochrany vašeho soukromí dojde ke změně vaší adresy pokaždé po přijetí platby.</string>
     <string name="wallet_balance_fragment_too_much">Tato částka je poměrně vysoká na nosení v kapse. Převeďte si ji na bezpečnější místo.</string>
     <string name="wallet_balance_fragment_replaying">Bilance je nedostupná během přehrávání.</string>
-    <string name="exchange_rates_activity_title">Směnné kurzy</string>
+    <string name="exchange_rates_activity_title">Místní Měna</string>
     <string name="exchange_rates_fragment_empty_text">Nepodařilo se nahrát směnné kurzy.</string>
     <string name="exchange_rates_fragment_empty_search">Nelze najít směnný kurz.</string>
     <string name="exchange_rates_fragment_default">(výchozí)</string>
@@ -25,13 +25,11 @@
     <string name="exchange_rates_fragment_source">Cena z %s</string>
     <string name="exchange_rates_options_search">Vyhledat směnný kurz</string>
     <string name="exchange_rates_context_set_as_default_title">Nastavit jako výchozí</string>
-    <string name="wallet_transactions_fragment_empty_text_received">Prozatím žádný Dash nebyl obdržen.</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">Prozatím žádný Dash nebyl odeslán.</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">Jak získat Dash?\n\nSměnou za klasické peníze,\nprodejem zboží nebo služeb\nnebo vyděláním prací.</string>
+    <string name="wallet_transactions_fragment_empty_text">Žádné transakce k zobrazení</string>
     <string name="wallet_transactions_row_warning_backup">Gratulujeme, obdrželi jste první platbu! Už máte zálohu své peněženky, abyste ji ochránili před ztrátou?</string>
     <string name="wallet_transactions_fragment_coinbase">vytěženo</string>
     <string name="wallet_transactions_fragment_internal">interní</string>
-    <string name="wallet_transactions_options_filter">Filtr</string>
+    <string name="wallet_transactions_options_filter">Filtrovat transakce</string>
     <string name="wallet_transactions_options_filter_all">Všechny platby</string>
     <string name="wallet_transactions_options_filter_received">Obdrženo</string>
     <string name="wallet_transactions_options_filter_sent">Zasláno</string>
@@ -57,18 +55,16 @@
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Špatný podpis!</string>
     <string name="send_coins_fragment_payee_verified_by">ověřeno: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">neznámý</string>
-    <string name="send_coins_fragment_receiving_address_label">Zaplatit</string>
+    <string name="send_coins_fragment_receiving_address_label">Odeslat prostřednictvím</string>
     <string name="send_coins_fragment_receiving_address_hint">napište adresu či jméno</string>
     <string name="send_coins_fragment_receiving_address_error">Neplatná Dash adresa!</string>
     <string name="send_coins_fragment_receiving_address_own">Chystáte se poslat Dash sami sobě!</string>
     <string name="send_coins_fragment_receiving_address_complex">komplex\nadresa</string>
     <string name="send_coins_fragment_pending">(%s čeká na konfirmaci)</string>
-    <string name="send_coins_fragment_amount_label">Částka k zaplacení</string>
     <string name="send_coins_fragment_pin_label">Zadejte PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Bude uhrazen poplatek síti ve výši %s.</string>
     <string name="send_coins_fragment_hint_fee_priority">Bude uhrazen prioritní poplatek %s. Pokud vám záleží na nízkých poplatcích, použijte ‚prioritu‘, pouze pokud potřebujete konfirmaci co nejdříve.</string>
-    <string name="send_coins_fragment_hint_dusty_send">Částka je příliš nízká pro odeslání.</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Nemáte dostatečbý zůstatek. Chybí vám %s.</string>
+    <string name="send_coins_fragment_hint_insufficient_money">Nedostatečný zůstatek</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Částka drobných plateb ve vaší peněžence nepřesahuje hodnotu, kterou lze odeslat.</string>
     <string name="send_coins_fragment_hint_replaying">Momentálně nejsou platby možné, protože probíhá přehrávání sítě.</string>
     <string name="send_coins_fragment_direct_payment_enable">Poslat platbu přímo příjemci.</string>
@@ -80,7 +76,6 @@
     <string name="send_coins_fragment_button_back">Zpět</string>
     <string name="send_coins_fragment_insufficient_money_title">Nedostatečný zůstatek</string>
     <string name="send_coins_fragment_insufficient_money_msg1">Chybí vám %s.</string>
-    <string name="send_coins_fragment_insufficient_money_msg2">Přejete si zaplatit vším co máte?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">Vyprázdnění peněženky selhalo</string>
     <string name="send_coins_fragment_state_decrypting">Dešifrování…</string>
     <string name="send_coins_preparation_msg">Podepisuji…</string>
@@ -92,13 +87,12 @@
     <string name="send_coins_options_fee_category_economic">Úsporný</string>
     <string name="send_coins_options_fee_category_priority">Prioritní</string>
     <string name="send_coins_options_empty">Prázdná peněženka</string>
-    <string name="sweep_wallet_activity_title">Načíst papírovou peněženku</string>
+    <string name="sweep_wallet_activity_title">Importovat Privátní Klíč</string>
     <string name="sweep_wallet_fragment_intro">Chystáte se načíst papírovou peněženku nebo kupón. Tato akce přemístí veškerý zústatek do vaší peněženky na tomto zařízení. Poté co bude transakce potvrzena už papír nebudete potřebovat a neměl by být z bezpečnostních důvodů dále používán.</string>
     <string name="sweep_wallet_fragment_hint">Papírové peněženky se nejčastěji používají jako cold storage. Některé Dashmaty je tisknou na lístcích, než aby je poslali přímo do vašeho zařízení. Lidé také někdy používají přednabité papírové peněženky pro směnu Dash (což ale není doporučeno).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Začněte načtením privátního klíče z papírové peněženky. Použijte tlačítko kamery z menu.</string>
     <string name="sweep_wallet_fragment_encrypted">Tento soukromý klíč je chráněn heslem.</string>
-    <string name="sweep_wallet_fragment_password">heslo</string>
-    <string name="sweep_wallet_fragment_bad_password">špatné heslo!</string>
+    <string name="sweep_wallet_fragment_password">Heslo</string>
     <string name="sweep_wallet_fragment_balance">Bilance k načtení</string>
     <string name="sweep_wallet_fragment_button_decrypt">Dešifrovat</string>
     <string name="sweep_wallet_fragment_button_sweep">Načtení</string>
@@ -158,6 +152,17 @@
     <string name="transaction_row_message_received_dust">Takto malou částku pravděpodobně nikdy nebude možné použít pro placení ekonomicky.</string>
     <string name="transaction_row_message_received_pay_to_many">Tato platba je pro více peněženek než jen pro vás. To může zpomalit běh této aplikace. Pokud to půjde pokuste se přijímat platby, které jsou pouze pro vás.</string>
     <string name="transaction_row_message_received_rbf">U této platby došlo ke zpoždění, protože odesílatel použil nezabezpečený způsob platby.</string>
+    <string name="transaction_row_status_received">Přijato</string>
+    <string name="transaction_row_status_sent">Odesláno</string>
+    <string name="transaction_row_status_sending">Posílám</string>
+    <string name="transaction_row_status_processing">Zpracovává se</string>
+    <string name="transaction_row_status_confirming">Konfirmace</string>
+    <string name="transaction_row_status_locked">Blokováno</string>
+    <string name="transaction_row_status_error_dead">Dvojí platba</string>
+    <string name="transaction_row_status_error_invalid">Neplatná</string>
+    <string name="transaction_row_status_masternode_registration">Registrace masternode</string>
+    <string name="transaction_row_status_masternode_update_registrar">Aktualizace masternode</string>
+    <string name="transaction_row_status_masternode_update_service">Aktualizace masternode</string>
     <string name="network_monitor_activity_title">Monitor sítě</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Bloky</string>
@@ -201,7 +206,7 @@
     <string name="import_export_keys_dialog_show">Ukázat heslo</string>
     <string name="import_export_keys_dialog_failure_title">Chyba</string>
     <string name="import_keys_intent_filter_action">Obnovit peněženku</string>
-    <string name="encrypt_keys_dialog_title">PIN pro placení</string>
+    <string name="encrypt_keys_dialog_title">Změnit PIN</string>
     <string name="encrypt_keys_dialog_message">Platby z vaší peněženky budou chráněny zvoleným PIN kódem.</string>
     <string name="encrypt_keys_dialog_warning">Důležité: Nepoužívejte běžná čísla (např. rok narození) jako váš PIN.</string>
     <string name="encrypt_keys_dialog_password_old">Starý PIN</string>
@@ -212,7 +217,7 @@
     <string name="encrypt_keys_dialog_show">Zobrazit PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">Šifruji…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Dešifruji…</string>
-    <string name="encrypt_keys_dialog_state_done">Hotovo.</string>
+    <string name="encrypt_keys_dialog_state_done">Hotovo</string>
     <string name="scan_camera_problem_dialog_title">Promiňte</string>
     <string name="scan_camera_problem_dialog_message">Problém s kamerou. Pravděpodobně je potřeba aby jste restartoval zařízení.</string>
     <string name="scan_camera_permission_dialog_title">Práva pro používání fotoaparátu</string>
@@ -296,7 +301,7 @@
     <string name="notification_coins_received_msg">Obdrženo %s</string>
     <string name="notification_peers_connected_msg">%d peerů připojeno</string>
     <string name="notification_inactivity_title">Stále ještě máte Dash na tomto zařízení! </string>
-        <string name="notification_inactivity_message">Stále ještě máte Dash na tomto zařízení! Než odinstalujete peněženku Dash, nezapomeňte si zapsat svou frázi pro obnovení, jinak přijdete o zůstatek %s.</string>
+    <string name="notification_inactivity_message">Stále ještě máte Dash na tomto zařízení! Než odinstalujete peněženku Dash, nezapomeňte si zapsat svou frázi pro obnovení, jinak přijdete o zůstatek %s.</string>
     <string name="notification_inactivity_action_dismiss">Připomenout později</string>
     <string name="notification_inactivity_action_dismiss_forever">Nepřipomínat</string>
     <string name="appwidget_wallet_balance_title">Dash bilance</string>
@@ -319,6 +324,7 @@
     <string name="button_set_as_default">Nastavit jako výchozí</string>
     <string name="button_request_coins">Vyžádat Dash</string>
     <string name="button_send_coins">Zaslat Dash</string>
+    <string name="button_pay">Poslat</string>
     <string name="button_scan">Skenovat</string>
     <string name="button_settings">Nastavení</string>
     <string name="action_show_qr">Zobrazit QR kód</string>
@@ -338,10 +344,12 @@
 
     <string name="transaction_fragment_confirmations_label">Potvrzení</string>
 
-    <string name="navigation_drawer_open">Otevřít navigační okno</string>
-    <string name="navigation_drawer_close">Zavřít navigační okno</string>
-
     <string name="dash_slogan">Rychle - Soukromě - Bezpečně</string>
     <string name="dash_wallet">Peněženka</string>
+
+    <string name="activity_security_view_recovery_phrase">Zobrazit Frázi Pro Obnovení</string>
+    <string name="activity_security_advanced">Pokročilé zabzpečení</string>
+    <string name="activity_security_hide_balance">Automaticky skrýt zůstatek</string>
+    <string name="reset_to_default">Obnovit výchozí nastavení</string>
 
 </resources>

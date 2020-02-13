@@ -16,7 +16,7 @@
     <string name="wallet_address_dialog_fragment_hint">Par souci de confidentialité, votre adresse changera après avoir reçu un paiement.</string>
     <string name="wallet_balance_fragment_too_much">Ce montant est un peu trop élevé pour être transporté dans votre poche. Veuillez en déplacer une partie dans un endroit plus sûr.</string>
     <string name="wallet_balance_fragment_replaying">Le solde n\'est pas disponible pendant la relecture.</string>
-    <string name="exchange_rates_activity_title">Taux de change</string>
+    <string name="exchange_rates_activity_title">Monnaie locale</string>
     <string name="exchange_rates_fragment_empty_text">Impossible de charger les taux de change.</string>
     <string name="exchange_rates_fragment_empty_search">Taux de change introuvables.</string>
     <string name="exchange_rates_fragment_default">(par défaut)</string>
@@ -25,13 +25,11 @@
     <string name="exchange_rates_fragment_source">Cours de %s</string>
     <string name="exchange_rates_options_search">Rechercher le taux de change</string>
     <string name="exchange_rates_context_set_as_default_title">Définir comme valeur défaut</string>
-    <string name="wallet_transactions_fragment_empty_text_received">Aucun dash reçu à ce jour</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">Aucun dash envoyé à ce jour</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">Comment obtenir des dashs ?\n\nÉchangez-en contre de l\'argent traditionnel,\nvendez des biens ou des services ou\ngagnez-en en travaillant.</string>
+    <string name="wallet_transactions_fragment_empty_text">Il n\'y a pas de transactions à afficher</string>
     <string name="wallet_transactions_row_warning_backup">Félicitations, vous avez reçu votre premier paiement  ! Avez-vous déjà sauvegardé votre portefeuille afin de le protéger de toute perte ?</string>
     <string name="wallet_transactions_fragment_coinbase">miné</string>
     <string name="wallet_transactions_fragment_internal">interne</string>
-    <string name="wallet_transactions_options_filter">Filtre</string>
+    <string name="wallet_transactions_options_filter">Filtrer les transactions</string>
     <string name="wallet_transactions_options_filter_all">Tous les paiements</string>
     <string name="wallet_transactions_options_filter_received">Paiements reçus</string>
     <string name="wallet_transactions_options_filter_sent">Paiements envoyés</string>
@@ -57,18 +55,18 @@
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Signature erronée !</string>
     <string name="send_coins_fragment_payee_verified_by">vérifié par : %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">inconnu</string>
-    <string name="send_coins_fragment_receiving_address_label">Payer à</string>
+    <string name="send_coins_fragment_receiving_address_label">Envoyer à</string>
     <string name="send_coins_fragment_receiving_address_hint">saisir l\'adresse ou le nom</string>
     <string name="send_coins_fragment_receiving_address_error">Adresse Dash invalide !</string>
     <string name="send_coins_fragment_receiving_address_own">Vous êtes sur le point d\'envoyer de l\'argent à vous-même !</string>
     <string name="send_coins_fragment_receiving_address_complex">adresse\ncomplexe</string>
     <string name="send_coins_fragment_pending">(%s en attente de confirmation)</string>
-    <string name="send_coins_fragment_amount_label">Montant à payer</string>
+    <string name="send_coins_fragment_amount_label">Montant à envoyer</string>
     <string name="send_coins_fragment_pin_label">Saisissez le code PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Des frais de réseau de %s seront appliqués.</string>
-    <string name="send_coins_fragment_hint_fee_priority">Des frais prioritaires de %s seront appliqués. Si vous préférez des frais plus bas, n\'utilisez l\'option \"prioritaire\" que s\'il vous faut une confirmation la plus rapide possible.</string>
-    <string name="send_coins_fragment_hint_dusty_send">Le montant est trop faible pour être envoyé.</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Pas assez de fonds disponibles. Il vous manque %s.</string>
+    <string name="send_coins_fragment_hint_fee_priority">Des frais prioritaires de %s seront appliqués. Si vous préférez des frais plus bas, n\'utilisez l\'option "prioritaire" que s\'il vous faut une confirmation la plus rapide possible.</string>
+    <string name="send_coins_fragment_hint_dusty_send">Le montant est trop faible pour être envoyé</string>
+    <string name="send_coins_fragment_hint_insufficient_money">Fonds insuffisants</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Le total des petits montants dans votre portefeuille ne forme pas une somme pouvant être envoyée.</string>
     <string name="send_coins_fragment_hint_replaying">Les paiements sont actuellement impossibles car un “replay” est en cours.</string>
     <string name="send_coins_fragment_direct_payment_enable">Envoyer le paiement directement au bénéficiaire.</string>
@@ -80,7 +78,7 @@
     <string name="send_coins_fragment_button_back">Retour</string>
     <string name="send_coins_fragment_insufficient_money_title">Pas assez de fonds disponibles</string>
     <string name="send_coins_fragment_insufficient_money_msg1">Il vous manque %s.</string>
-    <string name="send_coins_fragment_insufficient_money_msg2">Voulez-vous payer avec tout ce que vous avez ?</string>
+    <string name="send_coins_fragment_insufficient_money_msg2">Voulez-vous envoyer tout ce que vous avez ?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">Le vidage du portefeuille a échoué</string>
     <string name="send_coins_fragment_state_decrypting">Déchiffrement…</string>
     <string name="send_coins_preparation_msg">Signature…</string>
@@ -92,13 +90,13 @@
     <string name="send_coins_options_fee_category_economic">Économique</string>
     <string name="send_coins_options_fee_category_priority">Prioritaire</string>
     <string name="send_coins_options_empty">Vider le portefeuille</string>
-    <string name="sweep_wallet_activity_title">Récupérer entièrement un portefeuille papier</string>
+    <string name="sweep_wallet_activity_title">Importer une clé privée</string>
     <string name="sweep_wallet_fragment_intro">Vous vous apprêtez à récupérer entièrement un portefeuille papier ou un coupon. Ceci enverra tous les fonds de ce papier vers le portefeuille installé sur cet appareil. Quand la transaction sera confirmée, le papier ne contiendra plus de fonds, et il ne devra pas être réutilisé pour des raisons de sécurité.</string>
-    <string name="sweep_wallet_fragment_hint">Les portefeuilles papier sont habituellement utilisés pour le stockage \"à froid\". Certains distributeurs impriment les fonds sur le reçu papier plutôt que de les envoyer directement sur votre appareil mobile. Certaines personnes utilisent des portefeuilles papier préchargés pour transférer des fonds (ce n\'est pas recommandé).</string>
+    <string name="sweep_wallet_fragment_hint">Les portefeuilles papier sont habituellement utilisés pour le stockage "à froid". Certains distributeurs impriment les fonds sur le reçu papier plutôt que de les envoyer directement sur votre appareil mobile. Certaines personnes utilisent des portefeuilles papier préchargés pour transférer des fonds (ce n\'est pas recommandé).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Commencez en numérisant la clé privée d\'un portefeuille papier. Utilisez le bouton de l\'appareil photo.</string>
     <string name="sweep_wallet_fragment_encrypted">La clé privée est protégée par un mot de passe.</string>
-    <string name="sweep_wallet_fragment_password">mot de passe</string>
-    <string name="sweep_wallet_fragment_bad_password">mot de passe erroné !</string>
+    <string name="sweep_wallet_fragment_password">Mot de passe</string>
+    <string name="sweep_wallet_fragment_bad_password">Mot de passe erroné !</string>
     <string name="sweep_wallet_fragment_balance">Solde à récupérer</string>
     <string name="sweep_wallet_fragment_button_decrypt">Déchiffrer</string>
     <string name="sweep_wallet_fragment_button_sweep">Tout récupérer</string>
@@ -158,6 +156,33 @@
     <string name="transaction_row_message_received_dust">Ce faible montant ne pourra sans doute jamais être dépensé de façon économique.</string>
     <string name="transaction_row_message_received_pay_to_many">Ce paiement est distribué à de nombreux portefeuilles en plus du vôtre, ce qui ralentit l\'application avec le temps. Si vous le pouvez, essayez de recevoir des paiements qui ne soient adressés qu\'à vous.</string>
     <string name="transaction_row_message_received_rbf">Ce paiement a été retardé car l\'expéditeur a utilisé une transaction non sécurisée.</string>
+    <string name="transaction_row_status_received">Reçu</string>
+    <string name="transaction_row_status_sent">Envoyé</string>
+    <string name="transaction_row_status_sending">Envoi en cours</string>
+    <string name="transaction_row_status_sent_interally">Interne</string>
+    <string name="transaction_row_status_processing">En cours</string>
+    <string name="transaction_row_status_confirming">Confirmation…</string>
+    <string name="transaction_row_status_locked">Verrouillé</string>
+    <string name="transaction_row_status_error_sending">Erreur pendant l\'envoi</string>
+    <string name="transaction_row_status_error_dead">Double dépense</string>
+    <string name="transaction_row_status_error_conflicting">En conflit</string>
+    <string name="transaction_row_status_error_insufficient_fee">Frais insuffisants</string>
+    <string name="transaction_row_status_error_dust">Poussière</string>
+    <string name="transaction_row_status_error_non_standard">Non-standard</string>
+    <string name="transaction_row_status_error_malformed">Mal construit</string>
+    <string name="transaction_row_status_error_duplicate">Doublon</string>
+    <string name="transaction_row_status_error_obsolete">Obsolète</string>
+    <string name="transaction_row_status_error_invalid">Invalide</string>
+    <string name="transaction_row_status_error_other">Inconnu</string>
+    <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
+    <string name="transaction_row_time_text">Sur %s à %s</string>
+    <string name="transaction_row_rate_not_available">Non disponible</string>
+    <string name="transaction_row_status_masternode_registration">Enregistrement de masternode</string>
+    <string name="transaction_row_status_masternode_update_registrar">Mettre à jour un masternode</string>
+    <string name="transaction_row_status_masternode_update_service">Mettre à jour un masternode</string>
+    <string name="transaction_row_status_masternode_revoke">Révocation de masternode</string>
+    <string name="transaction_row_status_masternode_reward">Récompense de masternode</string>
+    <string name="transaction_row_status_mining_reward">Récompense de minage</string>
     <string name="network_monitor_activity_title">Surveillance du réseau</string>
     <string name="network_monitor_peer_list_title">Pairs</string>
     <string name="network_monitor_block_list_title">Blocs</string>
@@ -201,7 +226,7 @@
     <string name="import_export_keys_dialog_show">Montrer le mot de passe</string>
     <string name="import_export_keys_dialog_failure_title">Erreur</string>
     <string name="import_keys_intent_filter_action">Restaurer le portefeuille</string>
-    <string name="encrypt_keys_dialog_title">Code PIN de paiement</string>
+    <string name="encrypt_keys_dialog_title">Modifier le code PIN</string>
     <string name="encrypt_keys_dialog_message">Les paiements depuis votre portefeuille seront protégés par le code PIN choisi.</string>
     <string name="encrypt_keys_dialog_warning">Important : vous devez mémoriser votre code PIN ! N\'utilisez pas de nombre trop évident (comme une date de naissance).</string>
     <string name="encrypt_keys_dialog_password_old">Ancien code PIN</string>
@@ -212,7 +237,7 @@
     <string name="encrypt_keys_dialog_show">Afficher le code PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">Chiffrement…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Déchiffrement…</string>
-    <string name="encrypt_keys_dialog_state_done">Terminé.</string>
+    <string name="encrypt_keys_dialog_state_done">Terminé</string>
     <string name="scan_camera_problem_dialog_title">Désolé</string>
     <string name="scan_camera_problem_dialog_message">L\'appareil photo-vidéo a un problème. Vous devez probablement redémarrer votre appareil.</string>
     <string name="scan_camera_permission_dialog_title">Autorisation de l\'appareil photo-vidéo</string>
@@ -296,7 +321,7 @@
     <string name="notification_coins_received_msg">%s reçus</string>
     <string name="notification_peers_connected_msg">%d pairs connectés</string>
     <string name="notification_inactivity_title">Il vous reste des dashs sur cet appareil !</string>
-        <string name="notification_inactivity_message">Il vous reste des dashs sur cet appareil ! Assurez-vous d\'avoir noté votre phrase de récupération avant de désinstaller Dash Wallet, sinon vous perdrez votre solde de %s.</string>
+    <string name="notification_inactivity_message">Il vous reste des dashs sur cet appareil ! Assurez-vous d\'avoir noté votre phrase de récupération avant de désinstaller Dash Wallet, sinon vous perdrez votre solde de %s.</string>
     <string name="notification_inactivity_action_dismiss">Me le rappeler plus tard</string>
     <string name="notification_inactivity_action_dismiss_forever">Ne plus me le rappeler</string>
     <string name="appwidget_wallet_balance_title">Solde Dash</string>
@@ -319,6 +344,7 @@
     <string name="button_set_as_default">Définir par défaut</string>
     <string name="button_request_coins">Demander des dashs</string>
     <string name="button_send_coins">Envoyer des dashs</string>
+    <string name="button_pay">Envoyer</string>
     <string name="button_scan">Scanner</string>
     <string name="button_settings">Paramètres</string>
     <string name="action_show_qr">Afficher le QR-code</string>
@@ -338,10 +364,14 @@
 
     <string name="transaction_fragment_confirmations_label">Confirmations</string>
 
-    <string name="navigation_drawer_open">Ouvrir le tiroir de navigation</string>
-    <string name="navigation_drawer_close">Fermer le tiroir de navigation</string>
-
     <string name="dash_slogan">Instantané - Confidentiel - Sûr</string>
     <string name="dash_wallet">Portefeuille</string>
+
+    <string name="activity_security_backup_wallet">Sauvegarder le portefeuille dans un fichier</string>
+    <string name="activity_security_view_recovery_phrase">Voir la phrase de récupération</string>
+    <string name="activity_security_advanced">Sécurité avancée</string>
+    <string name="activity_security_biometric_auth">Authentification par empreinte digitale</string>
+    <string name="activity_security_hide_balance">Cacher autom. le solde</string>
+    <string name="reset_to_default">Retour aux valeurs par défaut</string>
 
 </resources>

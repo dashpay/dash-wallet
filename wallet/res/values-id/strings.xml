@@ -16,7 +16,7 @@
     <string name="wallet_address_dialog_fragment_hint">Untuk melindungi privasi, alamat anda tidak akan berubah sampai alamat tersebut menerima pembayaran.</string>
     <string name="wallet_balance_fragment_too_much">Jumlahnya terlalu besar untuk ditampung pada kantong anda. Silahkan allihkan sebagian ke tempat yang aman.</string>
     <string name="wallet_balance_fragment_replaying">Saldo tidak tersedia saat pengulangan.</string>
-    <string name="exchange_rates_activity_title">Nilai Tukar</string>
+    <string name="exchange_rates_activity_title">Mata uang lokal</string>
     <string name="exchange_rates_fragment_empty_text">Tidak dapat memuat nilai tukar</string>
     <string name="exchange_rates_fragment_empty_search">Tidak dapat menemukan nilai tukar. </string>
     <string name="exchange_rates_fragment_default">(standar)</string>
@@ -25,13 +25,11 @@
     <string name="exchange_rates_fragment_source">Harga diambil dari %s</string>
     <string name="exchange_rates_options_search">Cari nilai tukar</string>
     <string name="exchange_rates_context_set_as_default_title">Tetapkan sebagai standar</string>
-    <string name="wallet_transactions_fragment_empty_text_received">Tidak ada Dash yg diterima.</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">Tidak ada Dash yg dikirim.</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">Bagaimana mendapatkan Dash?\n\nTukar dgn uang tradisional,\njual barang atau jasa atau\ndengan bekerja.</string>
+    <string name="wallet_transactions_fragment_empty_text">Tidak ada transaksi untuk ditampilkan</string>
     <string name="wallet_transactions_row_warning_backup">Selamat, Anda menerima pembayaran pertama Anda! Sudahkah Anda mencadangkan dompet Anda, utk hindari kehilangan?</string>
     <string name="wallet_transactions_fragment_coinbase">ditambang</string>
     <string name="wallet_transactions_fragment_internal">Internal</string>
-    <string name="wallet_transactions_options_filter">Menyaring</string>
+    <string name="wallet_transactions_options_filter">Saring Transaksi</string>
     <string name="wallet_transactions_options_filter_all">Keduanya</string>
     <string name="wallet_transactions_options_filter_received">Diterima</string>
     <string name="wallet_transactions_options_filter_sent">Dikirim</string>
@@ -57,18 +55,18 @@
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Tanda tangan salah!</string>
     <string name="send_coins_fragment_payee_verified_by">diverifikasi oleh: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">tidak diketahui</string>
-    <string name="send_coins_fragment_receiving_address_label">Bayar ke</string>
+    <string name="send_coins_fragment_receiving_address_label">Kirim ke</string>
     <string name="send_coins_fragment_receiving_address_hint">masukkan alamat atau nama</string>
     <string name="send_coins_fragment_receiving_address_error">Alamat Dash Salah!</string>
     <string name="send_coins_fragment_receiving_address_own">Anda akan mengirim ke diri anda sendiri!</string>
     <string name="send_coins_fragment_receiving_address_complex">alamat\nyang rumit</string>
     <string name="send_coins_fragment_pending">(%s menunggu konfirmasi)</string>
-    <string name="send_coins_fragment_amount_label">Jumlah pembayaran</string>
+    <string name="send_coins_fragment_amount_label">Jumlah untuk dikirim</string>
     <string name="send_coins_fragment_pin_label">Masukkan pin</string>
     <string name="send_coins_fragment_hint_fee_economic">Biaya jaringan %s akan dibayarkan.</string>
     <string name="send_coins_fragment_hint_fee_priority">Biaya prioritas %s akan dibayarkan. Jika Anda peduli dengan biaya rendah, gunakan \'prioritas\' hanya jika Anda perlu konfirmasi sesegera mungkin.</string>
-    <string name="send_coins_fragment_hint_dusty_send">Jumlah yang terlalu kecil untuk dikirim.</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Tidak cukup koin yang tersedia. Anda kehilangan %s.</string>
+    <string name="send_coins_fragment_hint_dusty_send">Jumlah yang terlalu kecil untuk dikirim</string>
+    <string name="send_coins_fragment_hint_insufficient_money">Dana tidak mencukupi</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Jumlah pembayaran kecil di dompet Anda tidak menambah nilai yang dapat dikirim.</string>
     <string name="send_coins_fragment_hint_replaying">Pembayaran saat ini tidak dimungkinkan karena pemutaran ulang sedang berlangsung.</string>
     <string name="send_coins_fragment_direct_payment_enable">Kirim pembayaran langsung ke penerima pembayaran.</string>
@@ -92,13 +90,13 @@
     <string name="send_coins_options_fee_category_economic">Ekonomis</string>
     <string name="send_coins_options_fee_category_priority">prioritas</string>
     <string name="send_coins_options_empty">Dompet kosong</string>
-    <string name="sweep_wallet_activity_title">Bersihkan dompet kertas</string>
+    <string name="sweep_wallet_activity_title">Impor kunci pribadi</string>
     <string name="sweep_wallet_fragment_intro">Anda akan membersihkan dompet kertas atau kupon. Ini akan memindahkan semua koin dari kertas itu ke dompet Anda di perangkat ini. Ketika transaksi dikonfirmasi, kertas akan menjadi tidak berharga dan tidak boleh digunakan kembali untuk alasan keamanan.</string>
     <string name="sweep_wallet_fragment_hint">Kertas dompet paling sering digunakan untuk cold storage. Beberapa ATM mencetaknya di slip kertas mereka daripada mengirim koin ke perangkat seluler Anda secara langsung. Orang kadang-kadang menggunakan dompet kertas pra-dibebankan untuk memberikan nilai (tidak disarankan).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Mulai dengan memindai kunci pribadi dari dompet kertas. Gunakan tombol tangkap kamera.</string>
     <string name="sweep_wallet_fragment_encrypted">Kunci pribadi ini dilindungi oleh kata sandi.</string>
-    <string name="sweep_wallet_fragment_password">kata sandi</string>
-    <string name="sweep_wallet_fragment_bad_password">kata sandi salah!</string>
+    <string name="sweep_wallet_fragment_password">Kata sandi</string>
+    <string name="sweep_wallet_fragment_bad_password">Kata sandi yang buruk!</string>
     <string name="sweep_wallet_fragment_balance">Saldo yang akan dibersihkan</string>
     <string name="sweep_wallet_fragment_button_decrypt">mendekripsi</string>
     <string name="sweep_wallet_fragment_button_sweep">membersihkan</string>
@@ -158,6 +156,33 @@
     <string name="transaction_row_message_received_dust">Jumlah kecil ini tidak akan pernah bisa digunakan secara ekonomis.</string>
     <string name="transaction_row_message_received_pay_to_many">Pembayaran ini membayar ke banyak dompet selain milik Anda, yang membuat aplikasi melambat seiring waktu. Jika bisa, cobalah menerima pembayaran yang hanya membayar kepada Anda.</string>
     <string name="transaction_row_message_received_rbf">Pembayaran ini ditunda karena pengirim menggunakan jenis transaksi tidak aman.</string>
+    <string name="transaction_row_status_received">Diterima</string>
+    <string name="transaction_row_status_sent">Terkirim</string>
+    <string name="transaction_row_status_sending">Mengirim</string>
+    <string name="transaction_row_status_sent_interally">Internal</string>
+    <string name="transaction_row_status_processing">Sedang diproses</string>
+    <string name="transaction_row_status_confirming">Mengkonfirmasikan</string>
+    <string name="transaction_row_status_locked">Terkunci</string>
+    <string name="transaction_row_status_error_sending">Kesalahan Mengirim</string>
+    <string name="transaction_row_status_error_dead">Pengiriman ganda</string>
+    <string name="transaction_row_status_error_conflicting">Dalam konflik</string>
+    <string name="transaction_row_status_error_insufficient_fee">Biaya tidak mencukupi</string>
+    <string name="transaction_row_status_error_dust">Debu</string>
+    <string name="transaction_row_status_error_non_standard">Tidak standar</string>
+    <string name="transaction_row_status_error_malformed">Bentuknya salah</string>
+    <string name="transaction_row_status_error_duplicate">Duplikat</string>
+    <string name="transaction_row_status_error_obsolete">Usang</string>
+    <string name="transaction_row_status_error_invalid">Tidak valid</string>
+    <string name="transaction_row_status_error_other">Tidak diketahui</string>
+    <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
+    <string name="transaction_row_time_text">Di %s pada %s</string>
+    <string name="transaction_row_rate_not_available">Tak tersedia</string>
+    <string name="transaction_row_status_masternode_registration">Pendaftaran Masternode</string>
+    <string name="transaction_row_status_masternode_update_registrar">Pembaruan Masternode</string>
+    <string name="transaction_row_status_masternode_update_service">Pembaruan Masternode</string>
+    <string name="transaction_row_status_masternode_revoke">Cabut Masternode</string>
+    <string name="transaction_row_status_masternode_reward">Imbalan Masternode</string>
+    <string name="transaction_row_status_mining_reward">Imabalan penambang</string>
     <string name="network_monitor_activity_title">Monitor Jaringan</string>
     <string name="network_monitor_peer_list_title">Peer</string>
     <string name="network_monitor_block_list_title">Blok</string>
@@ -201,7 +226,7 @@
     <string name="import_export_keys_dialog_show">Tampilkan sandi</string>
     <string name="import_export_keys_dialog_failure_title">Kesalahan</string>
     <string name="import_keys_intent_filter_action">Pulihkan kunci pribadi</string>
-    <string name="encrypt_keys_dialog_title">PIN Pengiriman</string>
+    <string name="encrypt_keys_dialog_title">Ganti PIN</string>
     <string name="encrypt_keys_dialog_message">Pengiriman dari dompet Anda akan dilindungi dengan PIN yang dipilih.</string>
     <string name="encrypt_keys_dialog_warning">Penting: Anda perlu mengingat PIN Anda! Jangan gunakan nomor biasa (seperti tanggal lahir).</string>
     <string name="encrypt_keys_dialog_password_old">PIN Lama</string>
@@ -212,7 +237,7 @@
     <string name="encrypt_keys_dialog_show">Tampilkan pin</string>
     <string name="encrypt_keys_dialog_state_encrypting">Mengenkripsi...</string>
     <string name="encrypt_keys_dialog_state_decrypting">Mendekripsi ...</string>
-    <string name="encrypt_keys_dialog_state_done">Selesai.</string>
+    <string name="encrypt_keys_dialog_state_done">Selesai</string>
     <string name="scan_camera_problem_dialog_title">Maaf</string>
     <string name="scan_camera_problem_dialog_message">Kamera mengalami masalah. Anda mungkin harus menyalakan ulang ponsel.</string>
     <string name="scan_camera_permission_dialog_title">Izin kamera</string>
@@ -296,7 +321,7 @@
     <string name="notification_coins_received_msg">Diterima %s</string>
     <string name="notification_peers_connected_msg">%d peer terhubung</string>
     <string name="notification_inactivity_title">Anda masih memiliki Dash di perangkat ini!</string>
-        <string name="notification_inactivity_message">Anda masih memiliki Dash di perangkat ini! Pastikan untuk menuliskan frasa pemulihan Anda sebelum Anda mencopot Dompet Dash atau Anda akan kehilangan saldo sebesar %s.</string>
+    <string name="notification_inactivity_message">Anda masih memiliki Dash di perangkat ini! Pastikan untuk menuliskan frasa pemulihan Anda sebelum Anda mencopot Dompet Dash atau Anda akan kehilangan saldo sebesar %s.</string>
     <string name="notification_inactivity_action_dismiss">Ingatkan saya nanti</string>
     <string name="notification_inactivity_action_dismiss_forever">Jangan ingatkan saya</string>
     <string name="appwidget_wallet_balance_title">Saldo Dash</string>
@@ -319,6 +344,7 @@
     <string name="button_set_as_default">Tetapkan sebagai standar</string>
     <string name="button_request_coins">Meminta Dash</string>
     <string name="button_send_coins">Kirim Dash</string>
+    <string name="button_pay">Kirim</string>
     <string name="button_scan">Pindai</string>
     <string name="button_settings">Pengaturan</string>
     <string name="action_show_qr">Tampilkan kode QR</string>
@@ -338,10 +364,14 @@
 
     <string name="transaction_fragment_confirmations_label">Konfirmasi</string>
 
-    <string name="navigation_drawer_open">Buka panel navigasi</string>
-    <string name="navigation_drawer_close">Tutup panel navigasi</string>
-
     <string name="dash_slogan">Instan - Pribadi - Aman</string>
     <string name="dash_wallet">Dompet</string>
+
+    <string name="activity_security_backup_wallet">Cadangkan Dompet ke File</string>
+    <string name="activity_security_view_recovery_phrase">Lihat frasa pemulihan</string>
+    <string name="activity_security_advanced">Keamanan Tingkat Lanjut</string>
+    <string name="activity_security_biometric_auth">Otentikasi sidik jari</string>
+    <string name="activity_security_hide_balance">Otomatis sembunyikan saldo</string>
+    <string name="reset_to_default">Setel Ulang ke Default</string>
 
 </resources>
