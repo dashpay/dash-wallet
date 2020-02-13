@@ -1106,29 +1106,36 @@ public final class WalletActivity extends AbstractBindServiceActivity
         String countryCode = getCurrentCountry();
         log.info("Setting default currency:");
         if(countryCode != null) {
-            log.info("Local Country: " + countryCode);
-            Locale l = new Locale("", countryCode);
-            Currency currency = Currency.getInstance(l);
-            String newCurrencyCode = currency.getCurrencyCode();
-            if(CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
-                log.info("found obsolete currency: " + newCurrencyCode);
-                newCurrencyCode = CurrencyInfo.getUpdatedCurrency(newCurrencyCode);
-            }
-            log.info("Setting Local Currency: " + newCurrencyCode);
-            config.setExchangeCurrencyCode(newCurrencyCode);
+            try {
+                log.info("Local Country: " + countryCode);
+                Locale l = new Locale("", countryCode);
+                Currency currency = Currency.getInstance(l);
+                String newCurrencyCode = currency.getCurrencyCode();
+                if (CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
+                    log.info("found obsolete currency: " + newCurrencyCode);
+                    newCurrencyCode = CurrencyInfo.getUpdatedCurrency(newCurrencyCode);
+                }
+                log.info("Setting Local Currency: " + newCurrencyCode);
+                config.setExchangeCurrencyCode(newCurrencyCode);
 
-            //Fallback to default
-            if (config.getExchangeCurrencyCode() == null) {
-                log.info("Using default Country: US");
-                log.info("Using default currency: " + Constants.DEFAULT_EXCHANGE_CURRENCY);
-                config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
+                //Fallback to default
+                if (config.getExchangeCurrencyCode() == null) {
+                    setDefaultExchangeCurrencyCode();
+                }
+            } catch (IllegalArgumentException x) {
+                log.info("Cannot obtain currency for " + countryCode + ": ", x);
+                setDefaultExchangeCurrencyCode();
             }
 
         } else {
-            log.info("Using default Country: US");
-            log.info("Using default currency: " + Constants.DEFAULT_EXCHANGE_CURRENCY);
-            config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
+            setDefaultExchangeCurrencyCode();
         }
+    }
+
+    private void setDefaultExchangeCurrencyCode() {
+        log.info("Using default Country: US");
+        log.info("Using default currency: " + Constants.DEFAULT_EXCHANGE_CURRENCY);
+        config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
     }
 
     private String getCurrentCountry() {
@@ -1171,9 +1178,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         //Fallback to default
         if (config.getExchangeCurrencyCode() == null) {
-            log.info("Using default Country: US");
-            log.info("Using default currency: " + Constants.DEFAULT_EXCHANGE_CURRENCY);
-            config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
+            setDefaultExchangeCurrencyCode();
         }
     }
 
