@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tool="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tool:background="@drawable/splash_activity_background">
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/logo_guideline"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.10" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/v_center_guideline"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.50" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/h_center_guideline"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.50" />
+
+    <ImageView
+        android:id="@+id/dash_logo"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toTopOf="@id/logo_guideline"
+        app:layout_constraintEnd_toEndOf="@id/v_center_guideline"
+        app:layout_constraintStart_toStartOf="@id/v_center_guideline"
+        app:layout_constraintTop_toTopOf="@id/logo_guideline"
+        app:layout_constraintWidth_percent="0.4"
+        app:srcCompat="@drawable/ic_dash_logo_white"
+        tool:ignore="ContentDescription" />
+
+    <LinearLayout
+        android:id="@+id/title_pane"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="@dimen/lock_screen_content_margin_bottom"
+        android:gravity="center"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toTopOf="@id/h_center_guideline"
+        app:layout_constraintTop_toTopOf="@id/h_center_guideline">
+
+        <TextView
+            android:id="@+id/action_title"
+            style="@style/MontserratMedium.PageTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/lock_unlock_with_fingerprint"
+            android:textColor="@color/dash_white" />
+
+        <TextView
+            android:id="@+id/action_subtitle"
+            style="@style/MontserratMedium.BodyText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/wallet_lock_try_again"
+            android:textColor="@color/dash_white" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

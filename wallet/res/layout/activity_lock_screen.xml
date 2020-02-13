@@ -44,6 +44,7 @@
         app:layout_constraintGuide_percent="0.80" />
 
     <ImageView
+        android:id="@+id/dash_logo"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         app:layout_constraintBottom_toTopOf="@id/logo_guideline"
