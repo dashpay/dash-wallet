@@ -29,10 +29,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.schildbach.wallet.rates.ExchangeRate;
-import de.schildbach.wallet.ui.RequestCoinsActivity;
+import de.schildbach.wallet.ui.OnboardingActivity;
+import de.schildbach.wallet.ui.QuickReceiveActivity;
 import de.schildbach.wallet.ui.SendCoinsQrActivity;
-import de.schildbach.wallet.ui.WalletActivity;
-import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import org.dash.wallet.common.util.GenericUtils;
 import org.dash.wallet.common.util.MonetarySpannable;
 import de.schildbach.wallet_test.R;
@@ -42,7 +41,6 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -142,32 +140,20 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
 
                 final RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.wallet_balance_widget_content);
 
-                final String currencyCode = btcFormat.code();
-                if (MonetaryFormat.CODE_BTC.equals(currencyCode))
-                    views.setImageViewResource(R.id.widget_wallet_prefix, R.drawable.currency_symbol_dash);
-                else if (MonetaryFormat.CODE_MBTC.equals(currencyCode))
-                    views.setImageViewResource(R.id.widget_wallet_prefix, R.drawable.currency_symbol_mdash);
-                else if (MonetaryFormat.CODE_UBTC.equals(currencyCode))
-                    views.setImageViewResource(R.id.widget_wallet_prefix, R.drawable.currency_symbol_udash);
-
                 views.setTextViewText(R.id.widget_wallet_balance_btc, balanceStr);
                 views.setViewVisibility(R.id.widget_wallet_balance_local, localBalanceStr != null ? View.VISIBLE : View.GONE);
                 views.setTextViewText(R.id.widget_wallet_balance_local, localBalanceStr);
 
                 if (appWidgetOptions != null) {
                     final int minWidth = appWidgetOptions.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH);
-                    views.setViewVisibility(R.id.widget_app_icon, minWidth > 400 ? View.VISIBLE : View.GONE);
                     views.setViewVisibility(R.id.widget_button_request, minWidth > 300 ? View.VISIBLE : View.GONE);
-                    views.setViewVisibility(R.id.widget_button_send, minWidth > 300 ? View.VISIBLE : View.GONE);
                     views.setViewVisibility(R.id.widget_button_send_qr, minWidth > 200 ? View.VISIBLE : View.GONE);
                 }
 
                 views.setOnClickPendingIntent(R.id.widget_button_balance,
-                        PendingIntent.getActivity(context, 0, new Intent(context, WalletActivity.class), 0));
+                        PendingIntent.getActivity(context, 0, OnboardingActivity.createIntent(context), 0));
                 views.setOnClickPendingIntent(R.id.widget_button_request,
-                        PendingIntent.getActivity(context, 0, new Intent(context, RequestCoinsActivity.class), 0));
-                views.setOnClickPendingIntent(R.id.widget_button_send,
-                        PendingIntent.getActivity(context, 0, new Intent(context, SendCoinsActivity.class), 0));
+                        PendingIntent.getActivity(context, 0, QuickReceiveActivity.createIntent(context), 0));
                 views.setOnClickPendingIntent(R.id.widget_button_send_qr,
                         PendingIntent.getActivity(context, 0, SendCoinsQrActivity.createIntent(context, true), 0));
 

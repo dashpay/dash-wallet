@@ -159,7 +159,7 @@
     <string name="transaction_row_status_received">Received</string>
     <string name="transaction_row_status_sent">Sent</string>
     <string name="transaction_row_status_sending">Sending</string>
-    <string name="transaction_row_status_sent_interally">Internal</string>
+    <string name="transaction_row_status_sent_internally">Internal</string>
     <string name="transaction_row_status_processing">Processing</string>
     <string name="transaction_row_status_confirming">Confirming</string>
     <string name="transaction_row_status_locked">Locked</string>
@@ -371,7 +371,7 @@
     <string name="activity_security_view_recovery_phrase">View Recovery Phrase</string>
     <string name="activity_security_advanced">Advanced Security</string>
     <string name="activity_security_biometric_auth">Fingerprint Authentication</string>
-    <string name="activity_security_hide_balance">Hide Balance on Launch</string>
+    <string name="activity_security_hide_balance">Autohide Balance</string>
     <string name="reset_to_default">Reset to Default</string>
 
 </resources>

@@ -16,7 +16,7 @@
     <string name="wallet_address_dialog_fragment_hint">Để bảo vệ tính riêng tư của bạn, địa chỉ của bạn sẽ được thay đổi mỗi khi nhận tiền.</string>
     <string name="wallet_balance_fragment_too_much">Số tiền này là khá lớn để mang theo trong túi bạn. Hãy chuyển bớt một ít sang nơi an toàn hơn.</string>
     <string name="wallet_balance_fragment_replaying">Tính năng cân bằng tài khoản không thể được thao tác trong quá trình replay.</string>
-    <string name="exchange_rates_activity_title">Tỉ lệ hoán đổi</string>
+    <string name="exchange_rates_activity_title">Tiền địa phương</string>
     <string name="exchange_rates_fragment_empty_text">Không thể tải tỉ lệ hoán đổi</string>
     <string name="exchange_rates_fragment_empty_search">Không thể tìm thấy tỷ giáo giao dịch.</string>
     <string name="exchange_rates_fragment_default">(mặc định)</string>
@@ -25,13 +25,11 @@
     <string name="exchange_rates_fragment_source">Giá được tải về từ %s</string>
     <string name="exchange_rates_options_search">Tìm tỷ giá giao dịch</string>
     <string name="exchange_rates_context_set_as_default_title">Đặt làm ngầm định</string>
-    <string name="wallet_transactions_fragment_empty_text_received">Hiện vẫn chưa nhận được Dash nào.</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">Hiện vẫn chưa gửi Dash nào.</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">Làm cách nào để nhận được Dash?\n\nSử dụng cho các giao dịch bằng tiền như truyền thống,\nbán các sản phẩm hoặc dịch vụ hoặc\ndùng cho việc nhận thanh toán.</string>
+    <string name="wallet_transactions_fragment_empty_text">Không có giao dịch nào để hiển thị</string>
     <string name="wallet_transactions_row_warning_backup">Chúc mừng, bạn đã nhận được phần thanh toán đầu tiên của mình! Bạn đã sao lưu ví tiền của mình, để tránh việc thất thoát hay chưa?</string>
     <string name="wallet_transactions_fragment_coinbase">đã khai thác</string>
     <string name="wallet_transactions_fragment_internal">nội bộ</string>
-    <string name="wallet_transactions_options_filter">Lọc</string>
+    <string name="wallet_transactions_options_filter">Lọc các giao dịch</string>
     <string name="wallet_transactions_options_filter_all">Cả hai</string>
     <string name="wallet_transactions_options_filter_received">Đã nhận</string>
     <string name="wallet_transactions_options_filter_sent">Đã gửi</string>
@@ -57,18 +55,18 @@
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Sai chữ ký!</string>
     <string name="send_coins_fragment_payee_verified_by">đã được xác thực bởi: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">không biết</string>
-    <string name="send_coins_fragment_receiving_address_label">Trả cho</string>
+    <string name="send_coins_fragment_receiving_address_label">Gửi đến</string>
     <string name="send_coins_fragment_receiving_address_hint">loại địa chỉ hoặc tên</string>
     <string name="send_coins_fragment_receiving_address_error">Địa chỉ không hợp lệ</string>
     <string name="send_coins_fragment_receiving_address_own">Bạn đang định gửi cho chính mình!</string>
     <string name="send_coins_fragment_receiving_address_complex">phức tạp\\nđịa chỉ</string>
     <string name="send_coins_fragment_pending">(%s đợi xác nhận)</string>
-    <string name="send_coins_fragment_amount_label">Số lượng chi trả</string>
+    <string name="send_coins_fragment_amount_label">Số tiền cần gửi</string>
     <string name="send_coins_fragment_pin_label">Nhập mã PIN!</string>
     <string name="send_coins_fragment_hint_fee_economic">Một phần phí giao dịch của %s sẽ được trả.</string>
     <string name="send_coins_fragment_hint_fee_priority">Một mức phí ưu tiên %s sẽ được trả. Nếu bạn quan tâm đến mức phí thấp, hãy sử dụng \'ưu tiên\' chỉ khi bạn cần xác thực càng nhanh càng tốt.</string>
-    <string name="send_coins_fragment_hint_dusty_send">Khoản này quá nhỏ để có thể gửi.</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Số tiền hiện tại không đủ. Bạn đang thiếu %s.</string>
+    <string name="send_coins_fragment_hint_dusty_send">Khoản này quá nhỏ để có thể gửi</string>
+    <string name="send_coins_fragment_hint_insufficient_money">Không đủ tiền</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Một khoản thanh toán nhỏ xíu trong ví của bạn không làm tăng thêm giá trị có thể tiêu được.</string>
     <string name="send_coins_fragment_hint_replaying">Giao dịch hiện tại không thực hiện được bởi vì một chuyển tiếp đang trong quá trình thực hiện.</string>
     <string name="send_coins_fragment_direct_payment_enable">Gửi thanh toán trực tiếp cho người trả.</string>
@@ -80,7 +78,7 @@
     <string name="send_coins_fragment_button_back">Quay lại</string>
     <string name="send_coins_fragment_insufficient_money_title">Số tiền hiện tại không đủ</string>
     <string name="send_coins_fragment_insufficient_money_msg1">Bạn đang thiếu %s.</string>
-    <string name="send_coins_fragment_insufficient_money_msg2">Bạn có muốn thanh toán tất cả những gì bạn có?</string>
+    <string name="send_coins_fragment_insufficient_money_msg2">Bạn có muốn gửi tất cả những gì bạn có?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">Làm trống ví không thành công</string>
     <string name="send_coins_fragment_state_decrypting">Đang giải mã...</string>
     <string name="send_coins_preparation_msg">Đang đăng nhập…</string>
@@ -92,13 +90,13 @@
     <string name="send_coins_options_fee_category_economic">Kinh tế</string>
     <string name="send_coins_options_fee_category_priority">Ưu tiên</string>
     <string name="send_coins_options_empty">Ví rỗng</string>
-    <string name="sweep_wallet_activity_title">Hãy xoá ví giấy</string>
+    <string name="sweep_wallet_activity_title">Nhập khoá riêng</string>
     <string name="sweep_wallet_fragment_intro">Bạn đang định quét ví giấy hoặc phiếu tặng quà Dash. Nó sẽ chuyển tất cả số tiền trên giấy đó vào ví trên thiết bị này. Khi giao dịch được xác nhận, ví giấy sẽ không còn giá trị nữa và bạn sẽ không còn dùng được nó với lý do an toàn nữa.</string>
     <string name="sweep_wallet_fragment_hint">Ví giấy thường được sử dụng nhiều nhất cho việc lưu trữ. Một số máy ATM in chúng từ cuộn giấy in trong máy thay vì gửi tiền đến ví di động của bạn một cách trực tiếp. Nhiều người thường sử dụng các ví giấy nạp tiền sẵn để chuyển tiền (điều này không khuyến khích).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Bắt đầu quét chia khoá từ một ví giấy. Hãy dùng nút chụp ảnh.</string>
     <string name="sweep_wallet_fragment_encrypted">Chìa khoá được bảo vệ bởi một mật khẩu.</string>
-    <string name="sweep_wallet_fragment_password">mật khẩu</string>
-    <string name="sweep_wallet_fragment_bad_password">mật khẩu sai!</string>
+    <string name="sweep_wallet_fragment_password">Mật khẩu</string>
+    <string name="sweep_wallet_fragment_bad_password">Sai mật khẩu!</string>
     <string name="sweep_wallet_fragment_balance">Số dư để quét</string>
     <string name="sweep_wallet_fragment_button_decrypt">Giải mã</string>
     <string name="sweep_wallet_fragment_button_sweep">Quét sạch</string>
@@ -158,6 +156,33 @@
     <string name="transaction_row_message_received_dust">Số lượng nhỏ này có thể không mang tính kinh tế cho lắm khi dành cho chi tiêu.</string>
     <string name="transaction_row_message_received_pay_to_many">Giao dịch này thanh toán cho rất nhiều địa chỉ ngoài ví của bạn, điều này có thể làm cho ứng dụng trở nên chậm chạp sau một thời gian. Nếu có thể, hãy chỉ nhận những khoản mà nó chỉ trả riêng cho bạn.</string>
     <string name="transaction_row_message_received_rbf">Giao dịch này bị trễ lại bởi vì người gửi đã sử dụng kiểu giao dịch không an toàn.</string>
+    <string name="transaction_row_status_received">Đã nhận</string>
+    <string name="transaction_row_status_sent">Đã gửi</string>
+    <string name="transaction_row_status_sending">Đang gửi</string>
+    <string name="transaction_row_status_sent_interally">Nội bộ</string>
+    <string name="transaction_row_status_processing">Đang xử lý</string>
+    <string name="transaction_row_status_confirming">Xác nhận</string>
+    <string name="transaction_row_status_locked">Đã khoá</string>
+    <string name="transaction_row_status_error_sending">Lỗi khi gửi</string>
+    <string name="transaction_row_status_error_dead">Tiêu lặp</string>
+    <string name="transaction_row_status_error_conflicting">Đang xung đột</string>
+    <string name="transaction_row_status_error_insufficient_fee">Không đủ phí</string>
+    <string name="transaction_row_status_error_dust">Bụi</string>
+    <string name="transaction_row_status_error_non_standard">Không chuẩn</string>
+    <string name="transaction_row_status_error_malformed">Dị dạng</string>
+    <string name="transaction_row_status_error_duplicate">Trùng lặp</string>
+    <string name="transaction_row_status_error_obsolete">Lỗi thời</string>
+    <string name="transaction_row_status_error_invalid">Không hợp lệ</string>
+    <string name="transaction_row_status_error_other">Không biết</string>
+    <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
+    <string name="transaction_row_time_text">Vào%slúc %s</string>
+    <string name="transaction_row_rate_not_available">Không sẵn sàng</string>
+    <string name="transaction_row_status_masternode_registration">Đăng ký Masternode</string>
+    <string name="transaction_row_status_masternode_update_registrar">Cập nhật Masternode</string>
+    <string name="transaction_row_status_masternode_update_service">Cập nhật Masternode</string>
+    <string name="transaction_row_status_masternode_revoke">Thu hồi Masternode</string>
+    <string name="transaction_row_status_masternode_reward">Phần thưởng Masternode</string>
+    <string name="transaction_row_status_mining_reward">Phần thưởng khai thác</string>
     <string name="network_monitor_activity_title">Giám sát mạng</string>
     <string name="network_monitor_peer_list_title">Ngang hàn</string>
     <string name="network_monitor_block_list_title">Block</string>
@@ -201,7 +226,7 @@
     <string name="import_export_keys_dialog_show">Hiển thị mật khẩu</string>
     <string name="import_export_keys_dialog_failure_title">Lỗi</string>
     <string name="import_keys_intent_filter_action">Nhập dữ liệu từ khóa Dash</string>
-    <string name="encrypt_keys_dialog_title">Mã PIN chuyển tiền</string>
+    <string name="encrypt_keys_dialog_title">Đổi mã PIN</string>
     <string name="encrypt_keys_dialog_message">Chi tiêu từ ví của bạn sẽ được bảo vệ với mã PIN bạn chọn.</string>
     <string name="encrypt_keys_dialog_warning">Chú ý quan trọng: Bạn cần phải nhớ mã PIN của bạn. Đừng dùng những số thông dụng (như ngày sinh chẳng hạn).</string>
     <string name="encrypt_keys_dialog_password_old">Mã PIN cũ</string>
@@ -212,7 +237,7 @@
     <string name="encrypt_keys_dialog_show">Hiển thị PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">Đang mã hoá...</string>
     <string name="encrypt_keys_dialog_state_decrypting">Đang giải mã...</string>
-    <string name="encrypt_keys_dialog_state_done">Xong.</string>
+    <string name="encrypt_keys_dialog_state_done">Xong</string>
     <string name="scan_camera_problem_dialog_title">Rất tiếc</string>
     <string name="scan_camera_problem_dialog_message">Phần camera gặp vấn đề. Bạn nên khởi động lại thiết bị này.</string>
     <string name="scan_camera_permission_dialog_title">Quyền truy cập máy ảnh</string>
@@ -296,7 +321,7 @@
     <string name="notification_coins_received_msg">đã nhận %s</string>
     <string name="notification_peers_connected_msg">%d mạng ngang hàng đã kết nối</string>
     <string name="notification_inactivity_title">Bạn vẫn còn Dash trong thiết bị này!</string>
-        <string name="notification_inactivity_message">Bạn vẫn có Dash trên thiết bị này! Hãy chắc chắn rằng bạn viết xuống dòng chữ dùng để phục hồi trước khi gỡ bỏ ví Dash Wallet nếu không bạn sẽ mất hết số dư này %s.</string>
+    <string name="notification_inactivity_message">Bạn vẫn có Dash trên thiết bị này! Hãy chắc chắn rằng bạn viết xuống dòng chữ dùng để phục hồi trước khi gỡ bỏ ví Dash Wallet nếu không bạn sẽ mất hết số dư này %s.</string>
     <string name="notification_inactivity_action_dismiss">Hãy nhắc tôi sau</string>
     <string name="notification_inactivity_action_dismiss_forever">Đừng nhắc tôi nữa</string>
     <string name="appwidget_wallet_balance_title">Số dư Dash</string>
@@ -319,6 +344,7 @@
     <string name="button_set_as_default">Đặt làm mặc định</string>
     <string name="button_request_coins">Yêu cầu Dash</string>
     <string name="button_send_coins">Gửi Dash</string>
+    <string name="button_pay">Gửi</string>
     <string name="button_scan">Quét</string>
     <string name="button_settings">Thiết lập</string>
     <string name="action_show_qr">Hiển thị mã QR</string>
@@ -338,10 +364,14 @@
 
     <string name="transaction_fragment_confirmations_label">Các xác thực</string>
 
-    <string name="navigation_drawer_open">Mở ngăn điều hướng</string>
-    <string name="navigation_drawer_close">Đóng ngăn điều hướng</string>
-
     <string name="dash_slogan">Tức thời - Riêng tư - An toàn</string>
     <string name="dash_wallet">Ví</string>
+
+    <string name="activity_security_backup_wallet">Sao lưu ví về file</string>
+    <string name="activity_security_view_recovery_phrase">Hiển thị câu phục hồi</string>
+    <string name="activity_security_advanced">Bảo mật nâng cao</string>
+    <string name="activity_security_biometric_auth">Xác thực vân tay</string>
+    <string name="activity_security_hide_balance">Tự ẩn số dư</string>
+    <string name="reset_to_default">Thiết lập lại về giá trị ngầm định</string>
 
 </resources>

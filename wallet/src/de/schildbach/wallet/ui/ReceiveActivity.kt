@@ -42,7 +42,7 @@ class ReceiveActivity : AppCompatActivity() {
         enterAmountSharedViewModel.messageTextData.value = R.string.receive_enter_amount_message
         enterAmountSharedViewModel.buttonClickEvent.observe(this, Observer {
             val dashAmount = enterAmountSharedViewModel.dashAmount
-            val fiatAmount = enterAmountSharedViewModel.exchangeRate!!.coinToFiat(dashAmount)
+            val fiatAmount = enterAmountSharedViewModel.exchangeRate?.coinToFiat(dashAmount)
             val dialog = ReceiveDetailsDialog.createDialog(dashAmount, fiatAmount)
             dialog.show(supportFragmentManager, "ReceiveDetailsDialog")
         })

@@ -1,103 +1,318 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-	<string name="send_coins_auto_lock_not_feasible">Ta transakcja może zająć kilka minut. Zatwierdzić natychmias za dodatkowe %1$s%2$s?</string>
-	<string name="send_coins_instant_send_not_feasible">Ta transakcja może zająć kilka minut zanim zostanie uregulowana.</string>
 
-	<string name="options_paste_from_clipboard_title">Wklej ze schowka</string>
+    <string name="onboarding_create_wallet">Stwórz Nowy Portfel</string>
+    <string name="onboarding_recover_wallet">Przywróć Portfel Z Fraz Odzyskiwania</string>
+    <string name="onboarding_restore_wallet">Przywróć Portfel Z Pliku</string>
+    <string name="onboarding_load_wallet_error">Nie można załadować portfela!</string>
 
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">Ta płatność nie została jeszcze przesłana.</string>
-	<string name="transaction_row_message_sent_to_single_peer">Ta płatność została przesłana.</string>
+    <string name="set_pin_create_new_wallet">Stwórz Nowy Portfel</string>
+    <string name="set_pin_restore_wallet">Przywróć Portfel</string>
+    <string name="set_pin_enter_pin">Wprowadź Stary PIN</string>
+    <string name="set_pin_set_pin">Ustaw PIN</string>
+    <string name="set_pin_confirm_pin">Potwierdź PIN</string>
+    <string name="set_pin_encrypting">Szyfruje portfel</string>
+    <string name="set_pin_decrypting">Odszyfrowywanie portfela</string>
+    <string name="set_pin_verifying_pin">Zweryfikuj PIN</string>
+    <string name="set_pin_message">Ten kod PIN będzie wymagany do odblokowania Twojej aplikacji za każdym razem, gdy z niej korzystasz.</string>
 
-	<string name="regular_transaction_info_message">Transakcje nie została rozliczona błyskawicznie.</string>
+    <string name="home_pay">Wyślij</string>
+    <string name="home_receive">Otrzymaj</string>
+    <string name="home_available_balance">Dostępne saldo</string>
+    <string name="home_balance_hidden">Saldo ukryte</string>
+    <string name="home_balance_show_hint">Stuknij by odkryć saldo</string>
+    <string name="home_balance_hide_hint">Stuknij by ukryć saldo</string>
 
-	<string name="wallet_options_disconnect">Rozłącz</string>
+    <string name="dialog_confirm_confirm">Potwierdź</string>
+    <string name="dialog_confirm_pay_to">Wyślij do</string>
+    <string name="dialog_confirm_fee">Opłata sieci</string>
+    <string name="dialog_confirm_total">Całkowite</string>
 
-	<string name="network_monitor_masternodes_title">Masternody</string>
-	<string name="export_keys_dialog_title_to_seed">Pokaż frazę odzyskiwania portfela</string>
-	<string name="import_keys_dialog_title_from_seed">Przywróć z frazy odzyskiwania portfela.</string>
-	<string name="backup_to_seed_wallet_dialog_message">To jest fraza odzyskiwania portfela. Zapisz ją.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">Nie pozwól by ktoś zobaczył frazę odzyskiwania portfela, gdyż umożliwi mu to przejęcie Twoich monet.</string>
-	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Twój portfel jest zabezpieczony przed wydaniem środków za pomocą PIN. Wpisz PIN i naciśnij Enter aby zobaczyć frazę odzyskiwania portfela.</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_secure_now">Zabezpiecz Portfel Teraz</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_scan_to_pay">Skanuj by Wysłać</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_pay_to_address">Zapłać na Adres</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_buy_sell">Kupuj / Sprzedawaj Dash</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_import_key">Zaimportuj Klucz Prywatny</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_add_shortcut">Dodaj skrót</string>
+
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_quick_receive">Szybki Odbierz</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_pin">Zaloguj się za pomocą kodu PIN</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_fingerprint">Zaloguj się za pomocą odcisku palca</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_scan_to_pay">Skanuj by Wysłać</string>
+    <!-- Lock Screen: Text above the PIN Entry area -->
+    <string name="lock_enter_pin">Wpisz PIN</string>
+    <string name="lock_unlock_with_fingerprint">Użyj odcisku palca by odblokować</string>
+
+    <string name="perm_lock_info">Portfel zablokowany na stałe</string>
+    <string name="perm_lock_wipe_wallet">Wyczyść Portfel</string>
+    <string name="perm_lock_close_app">Zamknij</string>
+
+    <string name="scan_to_pay_error_dialog_title">Skanuj by Wysłać</string>
+    <string name="scan_to_pay_error_dialog_message">Niepoprawny adres Dash lub URL zażądany w schowku:\n\n%s</string>
+    <string name="scan_to_pay_error_dialog_message_no_data">Niepoprawny adres Dash lub URL zażądany w schowku.</string>
+
+    <string name="receive_title">Odbierz</string>
+    <string name="receive_enter_amount_message">Podaj kwotę do otrzymania</string>
+    <string name="receive_enter_amount_button">Określ Kwotę</string>
+    <string name="receive_share_button">Udostępnij</string>
+    <string name="receive_copied">Skopiowano</string>
+
+    <string name="pay_title">Wyślij</string>
+    <string name="history_title">Historia</string>
+    <string name="more_title">Więcej</string>
+    <string name="settings_title">Ustawienia</string>
+    <string name="security_title">Bezpieczeństwo</string>
+    <string name="recover_wallet_title">Odzyskaj portfel</string>
+    <string name="tools_title">Narzędzia</string>
+
+    <string name="payments_title">Płatności</string>
+    <string name="payments_tab_pay_label">Wyślij</string>
+    <string name="payments_tab_receive_label">Odbierz</string>
+    <string name="payments_pay_by_qr_title">Wyślij przez</string>
+    <string name="payments_pay_by_qr_sub_title">Zeskanuj QR Kod</string>
+    <string name="payments_pay_by_qr_button">Zeskanuj</string>
+    <string name="payments_pay_to_clipboard_title">Wyślij do skopiowanego adresu</string>
+    <string name="payments_pay_to_clipboard_sub_title">Brak skopiowanego adresu</string>
+    <string name="payments_pay_to_clipboard_button">Wyślij</string>
+
+    <string name="forgot_pin_title">Zapomniałeś kodu PIN?</string>
+    <string name="forgot_pin_message">Możesz ustawić nowy kod PIN za pomocą frazy odzyskiwania danych</string>
+    <string name="forgot_pin_instruction_1">Wpisz frazę odzyskiwania danych aby odzyskać swój portfel</string>
+    <string name="forgot_pin_instruction_2">Ustaw nowy PIN</string>
+    <string name="forgot_pin_instruction_3">Zaloguj się z nowym PINem by mieć dostęp do portfela</string>
+    <string name="forgot_pin_warning">Jeśli zapomniałeś kodu PIN i zgubiłeś frazy odzyskiwania, nie będziesz w stanie odzyskać dostępu do portfela i środków.</string>
+
+    <string name="send_coins_auto_lock_feasible">Ta transakcja powinna się usadowić natychmiast bez braku dodatkowych opłat</string>
+    <string name="send_coins_auto_lock_not_feasible">Rozliczenie transakcji może potrwać dłuższą chwilę. Wykonać natychmiast za dodatkowe %1$s%2$s?</string>
+    <string name="send_coins_instant_send_not_feasible">Rozliczenie transakcji może potrwać dłuższą chwilę.</string>
+
+    <string name="options_paste_from_clipboard_title">Wklej ze schowka</string>
+
+    <string name="transaction_row_message_own_instantx_lock_request_notsent">Ta płatność nie została jeszcze przesłana.</string>
+    <string name="transaction_row_message_sent_to_single_peer">Ta płatność została przesłana.</string>
+
+    <string name="regular_transaction_info_message">Transakcje nie została rozliczona błyskawicznie.</string>
+
+    <string name="wallet_options_disconnect">Rozłącz</string>
+
+    <string name="network_monitor_masternodes_title">Masternody</string>
+    <string name="export_keys_dialog_title_to_seed">Pokaż Frazę Odzyskiwania Portfela</string>
+    <string name="import_keys_dialog_title_from_seed">Przywróć z frazy odzyskiwania portfela.</string>
+    <string name="backup_to_seed_wallet_dialog_message">To jest fraza odzyskiwania portfela. Zapisz ją.</string>
+    <string name="backup_wallet_to_seed_dialog_warning">Nie pozwól by ktoś zobaczył frazę odzyskiwania portfela, gdyż umożliwi mu to przejęcie Twoich monet.</string>
+    <string name="backup_to_seed_wallet_dialog_enter_pin_message">Twój portfel jest zabezpieczony przed wydaniem środków za pomocą PIN. Wpisz PIN i naciśnij Enter aby zobaczyć frazę odzyskiwania portfela.</string>
     <string name="import_keys_from_seed_dialog_message">Tutaj wpisz frazę odzyskiwania portfela.</string>
-	<string name="import_export_keys_dialog_password_phrase">Miejsce na frazę odzyskiwania portfela.</string>
-	<string name="preferences_report_issue_summary">Zbierz informacje dotyczące twojego problemu i wyślij je do deweloperów.</string>
-	<string name="navigation_configuration">Konfiguracja</string>
+    <string name="import_export_keys_dialog_password_phrase">Miejsce na frazę odzyskiwania portfela.</string>
+    <string name="preferences_report_issue_summary">Zbierz informacje dotyczące twojego problemu i wyślij je do deweloperów.</string>
+    <string name="navigation_configuration">Konfiguracja</string>
     <string name="button_copy_address">Kopiuj adres</string>
-	<string name="request_coins_clipboard_address_msg">Adres Dash został skopiowany do schowka</string>
-	<string name="backup_wallet_to_seed_show_recovery_phrase">Pokaż</string>
-	<string name="restore_wallet_from_invalid_seed_warning_message">%s jest nieprawidłowym słowem.</string>
+    <string name="request_coins_clipboard_address_msg">Adres Dash został skopiowany do schowka</string>
+    <string name="backup_wallet_to_seed_show_recovery_phrase">Pokaż</string>
+    <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" nie jest jednym ze słów frazy odzyskiwania danych</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Fraza odzysku danych musi zawierać 12 słów</string>
+    <string name="restore_wallet_from_invalid_seed_bad_checksum">Złe hasło odzyskiwania</string>
+    <string name="restore_wallet_from_invalid_seed_failure">Nie udało się odtworzyć portfela:\n\n%s\n\nBłędna fraza odzysku danych?</string>
 
-	<string name="send_coins_options_fee_category_zero">Bez opłaty</string>
-	<string name="send_coins_fragment_hint_fee_zero">Żadna opłata nie będzie uiszczona. Używaj tej opcji jedynie, kiedy nie zależy ci na czasie potwierdzenia transakcji.</string>
+    <string name="send_coins_options_fee_category_zero">Bez opłaty</string>
+    <string name="send_coins_fragment_hint_fee_zero">Żadna opłata nie będzie uiszczona. Używaj tej opcji jedynie, kiedy nie zależy ci na czasie potwierdzenia transakcji.</string>
 
-	<string name="wallet_uri_handler_public_key_request_dialog_msg">Aplikacja %schce otrzymać twój Główny Klucz Publiczny. Informacja ta może być użyta aby śledzić twój portfel, jednakże nie może zostać użyta aby przetransferować twoje monety Dash.</string>
-	<string name="wallet_uri_handler_address_request_dialog_msg">Aplikacja %s żąda adresu aby móc ci zapłacić. Czy zezwalasz na wysłanie adresu?</string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
+    <string name="wallet_uri_handler_public_key_request_dialog_msg">Aplikacja %schce otrzymać twój Główny Klucz Publiczny. Informacja ta może być użyta aby śledzić twój portfel, jednakże nie może zostać użyta aby przetransferować twoje monety Dash.</string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
+    <string name="wallet_uri_handler_address_request_dialog_msg">Aplikacja %s żąda adresu aby móc ci zapłacić. Czy zezwalasz na wysłanie adresu?</string>
 
-	<string name="wallet_lock_unlock">Odblokuj</string>
-	<string name="wallet_lock_unlock_wallet">Odblokuj portfel</string>
-	<string name="wallet_lock_unlock_to_see_txs_title">Portfel zablokowany</string>
-	<string name="wallet_lock_unlock_to_see_txs_txt">Dotknij ikonę kłódki aby odblokować twój portfel i zobaczyć historię transakcji.</string>
-	<string name="wallet_lock_unlock_dialog_title">Odblokuj swój portfel</string>
-	<string name="wallet_lock_unlock_dialog_message">Twój portfel jest chroniony za pomocą PIN. Wpisz swój PIN i wciśnij Odblokuj aby kontynuować. </string>
-	<string name="wallet_lock_reset_wallet_title">Resetuj portfel</string>
-	<string name="wallet_lock_reset_wallet_message">Jesteś pewien? Twój portfel zostanie usunięty wszystkie twoje Dashe przepadną. \n\nJedynym sposobem na odzyskanie twoich Dashy będzie kopia zapasowa portfelu lub fraza odzysku.</string>
+    <string name="wallet_lock_unlock">Odblokuj</string>
+    <string name="wallet_lock_unlock_wallet">Odblokuj portfel</string>
+    <string name="wallet_lock_unlock_to_see_txs_title">Portfel zablokowany</string>
+    <string name="wallet_lock_unlock_to_see_txs_txt">Dotknij ikonę kłódki aby odblokować twój portfel i zobaczyć historię transakcji.</string>
+    <string name="wallet_lock_unlock_dialog_title">Odblokuj swój portfel</string>
+    <string name="wallet_lock_unlock_dialog_message">Twój portfel jest chroniony za pomocą PIN. Wpisz swój PIN i wciśnij Odblokuj aby kontynuować. </string>
+    <string name="wallet_lock_reset_wallet_title">Resetuj portfel</string>
+    <string name="wallet_lock_reset_wallet_message">Jesteś pewien? Twój portfel zostanie usunięty wszystkie twoje Dashe przepadną. \n\nJedynym sposobem na odzyskanie twoich Dashy będzie kopia zapasowa portfelu lub fraza odzysku.</string>
 
-	<string name="wallet_lock_wallet_disabled">Portfel zdezaktywowany</string>
-	<string name="wallet_lock_try_again">Spróbuj raz jeszcze za %1$d%2$s</string>
-	<string name="wallet_lock_reset">Resetuj</string>
-	<string name="wallet_lock_wrong_pin">Zły PIN %s</string>
+    <string name="wallet_lock_wallet_disabled">Portfel zdezaktywowany</string>
+    <string name="wallet_lock_try_again">Spróbuj raz jeszcze za %1$d%2$s</string>
+    <string name="wallet_lock_reset">Resetuj</string>
+    <string name="wallet_lock_wrong_pin">Zły PIN %s</string>
 
-	<plurals name="wallet_lock_attempts_remaining">
-		<item quantity="one">pozostała %d próba</item>
-		<item quantity="few">pozostały %d próby</item>
-		<item quantity="many">pozostało %d prób</item>
-		<item quantity="other">pozostało %d prób</item>
-	</plurals>
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="one">pozostała %d próba</item>
+        <item quantity="few">pozostały %d próby</item>
+        <item quantity="many">pozostało %d prób</item>
+        <item quantity="other">pozostało %d prób</item>
+    </plurals>
 
-	<plurals name="minute">
-		<item quantity="one">minuta</item>
-		<item quantity="few">minuty</item>
-		<item quantity="many">minut</item>
-		<item quantity="other">minut</item>
-	</plurals>
-	
-	<plurals name="hour">
-		<item quantity="one">godzina</item>
-		<item quantity="few">godziny</item>
-		<item quantity="many">godzin</item>
-		<item quantity="other">godzin</item>
-	</plurals>
+    <plurals name="minute">
+        <item quantity="one">minuta</item>
+        <item quantity="few">minuty</item>
+        <item quantity="many">minut</item>
+        <item quantity="other">minut</item>
+    </plurals>
 
-	<string name="encrypt_new_key_chain_upgrade_button">Aktualizuj</string>
-	<string name="encrypt_new_key_chain_dialog_title">Aktualizuj swój portfel</string>
-	<string name="encrypt_new_key_chain_dialog_message">Twój portfel zostanie zaktualizowany aby umożliwić importowanie z oraz eksportowanie do nowych aplikacji.</string>
-	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Musisz wpisać swój PIN aby dokończyć proces aktualizacji.</string>
-	<string name="pin_code_required_dialog_message">Ta aplikacja obecnie wymaga PIN aby móc wydawać oraz wyświetlić saldo konta i transakcji.</string>
+    <plurals name="hour">
+        <item quantity="one">godzina</item>
+        <item quantity="few">godziny</item>
+        <item quantity="many">godzin</item>
+        <item quantity="other">godzin</item>
+    </plurals>
+
+    <string name="encrypt_new_key_chain_upgrade_button">Aktualizuj</string>
+    <string name="encrypt_new_key_chain_dialog_title">Aktualizuj swój portfel</string>
+    <string name="encrypt_new_key_chain_dialog_message">Twój portfel zostanie zaktualizowany aby umożliwić importowanie z oraz eksportowanie do nowych aplikacji.</string>
+    <string name="encrypt_new_key_chain_enter_pin_dialog_message">Musisz wpisać swój PIN aby dokończyć proces aktualizacji.</string>
+    <string name="pin_code_required_dialog_message">Ta aplikacja obecnie wymaga PIN aby móc wydawać oraz wyświetlić saldo konta i transakcji.</string>
     <string name="backup_wallet_seed_private_key_written_down_box">Zanotowałem frazę odzyskiwania portfela</string>
-	
-	<string name="change_exchange_currency_code_message">Twoja lokalna waluta to %1$s, lecz w tej aplikacji domyślna waluta ustawiona jest jako %2$s. Czy chcesz zmienić domyślną walutę na %1$s czy pozostawić %2$s?</string>
-	<string name="change_to">Zmień na %s</string>
-	<string name="leave_as">Pozostaw %s</string>
 
-	<string name="remind_later">Przypomnij później</string>
-	<string name="backup_now">Zrób kopię zapasową</string>
-	
-	<string name="notification_transactions_channel_name">Transakcje</string>
-	<string name="notification_transactions_channel_description">Otrzymuj powiadomienia o nadchodzących transakcjach.</string>
-	<string name="notification_synchronization_channel_name">Synchronizacja</string>
-	<string name="notification_synchronization_channel_description">Wyświetla powiadomienie, gdy aplikacja synchronizuje się z siecią.</string>
+    <string name="change_exchange_currency_code_message">Twoja lokalna waluta to %1$s, lecz w tej aplikacji domyślna waluta ustawiona jest jako %2$s. Czy chcesz zmienić domyślną walutę na %1$s czy pozostawić %2$s?</string>
+    <string name="change_to">Zmień na %s</string>
+    <string name="leave_as">Pozostaw %s</string>
+
+    <string name="remind_later">Przypomnij później</string>
+    <string name="backup_now">Zrób kopię zapasową</string>
+
+    <string name="notification_transactions_channel_name">Transakcje</string>
+    <string name="notification_transactions_channel_description">Otrzymuj powiadomienia o nadchodzących transakcjach.</string>
+    <string name="notification_synchronization_channel_name">Synchronizacja</string>
+    <string name="notification_synchronization_channel_description">Wyświetla powiadomienie, gdy aplikacja synchronizuje się z siecią.</string>
 
     <string name="net_type_indicator" />
 
-	<string name="unlock_with_fingerprint">Użyj odcisku palca by odblokować.</string>
-	<string name="unlock_with_fingerprint_error">Odczyt odcisku palca nieudany, spróbuj ponownie.</string>
-	<string name="unlock_with_fingerprint_error_max_attempts">Osiągnięto maksymalna ilość prób odczytu odcisku palca. Proszę spróbować później.</string>
-	<string name="or_unlock_with_fingerprint">Lub użyj odcisku palca by odblokować.</string>
-	<string name="enable_fingerprint">Aktywuj odcisk palca</string>
-	<string name="touch_fingerprint_sensor">Dotknij czytnik odcisku palca.</string>
-	<string name="touch_fingerprint_to_enable">Dotknij czytnik odcisku palca aby aktywować odblokowywanie za jego pomocą.</string>
+    <string name="unlock_with_fingerprint">Użyj odcisku palca by odblokować.</string>
+    <string name="unlock_with_fingerprint_error">Odczyt odcisku palca nieudany, spróbuj ponownie.</string>
+    <string name="unlock_with_fingerprint_error_max_attempts">Osiągnięto maksymalna ilość prób odczytu odcisku palca. Proszę spróbować później.</string>
+    <string name="or_unlock_with_fingerprint">Lub użyj odcisku palca by odblokować.</string>
+    <string name="enable_fingerprint">Aktywuj odcisk palca</string>
+    <string name="touch_fingerprint_sensor">Dotykowy czujnik linii papilarnych</string>
+    <string name="touch_fingerprint_to_enable">Dotknij czytnik odcisku palca aby aktywować odblokowywanie za jego pomocą.</string>
+    <string name="fingerprint_changed_title">Dane linii papilarnych zostały zmienione</string>
+	<string name="fingerprint_changed_message">Wykryliśmy zmianę danych uwierzytelniających odcisk palca. Tym razem musisz użyć kodu PIN.</string>
 	<string name="exchange_rate_missing">Ta płatność jest zbyt stara aby otrzymać jej wartość w walucie fiducjarnej.</string>
 
-	<string name="preferences_enable_payment_request_summary">Użyj protokołu płatności dla płatności inicjowanych kodem QR</string>
-	<string name="preferences_enable_payment_request_title">BIP70 dla scan-by-zapłacić</string>
+    <string name="preferences_enable_payment_request_summary">Użyj protokołu płatności dla płatności inicjowanych kodem QR</string>
+    <string name="preferences_enable_payment_request_title">BIP70 dla scan-by-zapłacić</string>
+
+    <string name="verify_continue">Kontynuuj</string>
+    <string name="verify">Zweryfikuj</string>
+    <string name="verify_backup_wallet">Utwórz Kopie Zapasową Portfela</string>
+    <string name="verify_show_recovery_phrase">Pokaż Frazy Odzyskiwania Portfela</string>
+    <string name="verify_secure_now">Zabezpiecz Portfel Teraz</string>
+    <string name="verify_it_is_important">To ważne!</string>
+    <string name="verify_it_is_important_subtitle">Za chwilę pokażemy Ci tajny klucz do twojego portfela.</string>
+    <string name="verify_info_text_1">Ta fraza odzyskiwania jest dostępem do środków w tym portfelu.</string>
+    <string name="verify_info_text_2">Nie przechowujemy tej frazy odzyskiwania.</string>
+    <string name="verify_info_text_3">Fraza odzysku danych będzie potrzebna aby mieć dostęp do funduszy w wypadku utraty tego urządzenia lub jeśli Dash Wallet zostanie przypadkowo odinstalowany. </string>
+    <string name="verify_skip">Pomiń</string>
+    <string name="verify_secure_now_btn">Zabezpiecz Teraz</string>
+    <string name="verify_secure_now_message">Jeśli zgubisz to urządzenie, stracisz swoje fundusze. Zapisz słowa odzyskiwania, aby móc przywrócić portfel na innym urządzeniu.</string>
+    <string name="verify_seed_title">Proszę to zapisać</string>
+    <string name="verify_seed_write_down_confirmation">Zapisałem to</string>
+    <string name="verify_seed_buttons_tip">Wskaź słowa z frazy odzyskiwania w odpowiedniej kolejności</string>
+    <string name="verify_seed_success_title">Zweryfikowano Pomyślnie</string>
+    <string name="verify_seed_success_message">Twój portfel jest teraz zabezpieczony. Możesz użyć swojej frazy odzyskiwania w dowolnym momencie, aby odzyskać konto na innym urządzeniu.</string>
+    <string name="view_seed_done">Zrobione</string>
+    <string name="view_seed_title">Fraza Odzyskiwania</string>
+	<string name="transaction_result_view_on_explorer">Zobacz na Eksplorerze</string>
+	<string name="transaction_result_paid_successfully">Wysłane pomyślnie</string>
+	<string name="transaction_result_sent_to">Wysłane do</string>
+	<string name="transaction_date_and_time">Data &amp; Czas</string>
+	<string name="transaction_close">Zamknij</string>
+	<string name="transaction_details_amount_received">Ilość otrzymana</string>
+	<string name="transaction_details_amount_sent">Ilość wysłana</string>
+
+    <string name="authenticate_fingerprint_title">Uwierzytelnij się</string>
+    <string name="authenticate_fingerprint_message">Potwierdź odciskiem palca by kontynuować</string>
+    <string name="authenticate_pin_message">Wprowadź kod PIN by kontynuować </string>
+    <string name="authenticate_switch_to_fingerprint">Użyj Odcisku Palca</string>
+    <string name="authenticate_switch_to_pin">Użyj Hasło</string>
+
+    <string name="menu_buy_and_sell_title">Kupuj &amp; Sprzedawaj Dash</string>
+    <string name="menu_buy_and_sell_subtitle">Połącz się z giełdą stron trzecich</string>
+    <string name="menu_security_title">Bezpieczeństwo</string>
+    <string name="menu_security_subtitle">Wyświetl hasło, kopia zapasowa portfela…</string>
+    <string name="menu_settings_title">Ustawienia</string>
+    <string name="menu_settings_subtitle">Domyślna waluta, skróty, o…</string>
+    <string name="menu_tools_title">Narzędzia</string>
+    <string name="menu_tools_subtitle">Importuj klucz prywatny...</string>
+    <string name="menu_local_currency">Lokalna Waluta</string>
+    <string name="menu_rescan_blockchain">Przeskanuj Blockchain Ponownie</string>
+
+    <string name="tools_address_book">Książka Adresowa</string>
+    <string name="tools_import_private_key">Zaimportuj Klucz Prywatny</string>
+    <string name="tools_network_monitor">Monitor Sieci</string>
+
+    <string name="about_help_us_improve">Pomóż nam poprawić Twoje wrażenia</string>
+    <string name="about_review_and_rate">Wyraź swoją opinię o Aplikacj &amp;i Oceń ją</string>
+    <string name="about_contact_support">Skontaktuj się z pomocą techniczną</string>
+    <string name="about_fork_disclaimer">Jest to aplikacja typu open source opracowana na podstawie portfela Bitcoin</string>
+    <string name="about_copyright">Prawa autorskie © 2020 Dash Core</string>
+    <string name="about_license">GNU General Public License v3.0</string>
+    <string name="about_version_name">Portfel Dash %s</string>
+
+    <string name="block">Blok</string>
+    <string name="time">Czas</string>
+    <string name="hash">Hash</string>
+    <string name="block_info">Blok Info</string>
+
+    <string name="scan_private_key">Skanuj Klucz Prywatny</string>
+    <string name="scan_private_key_intro_1">Zamierzasz załadować fundusze z papierowego portfela Dash.</string>
+    <string name="scan_private_key_intro_2">Spowoduje to przeniesienie wszystkich monet z tego portfela do portfela na tym urządzeniu.</string>
+    <string name="scan_private_key_intro_3">Po potwierdzeniu transakcji, drugi portfel będzie bezwartościowy i nie powinien być ponownie wykorzystywany ze względów bezpieczeństwa.</string>
+    <string name="confirm">Potwierdź</string>
+
+    <string name="advanced_security_security_level">Poziom Bezpieczeństwa</string>
+    <string name="auto_logout">Automatyczne wylogowanie</string>
+    <string name="spending_confirmation">Potwierdzenie Wysłania</string>
+    <string name="logout_after">Wyloguj po</string>
+    <string name="immediately">Natychmiast</string>
+    <string name="twenty_four_hours">24 godziny</string>
+    <string name="one_minute">1 minuta</string>
+    <string name="five_minute">5 minut</string>
+    <string name="one_hour">1 godzina</string>
+    <string name="one_day">1 dzień</string>
+    <string name="biometric_limit">Limit Biometryczny</string>
+    <string name="spending_confirmation_hint_zero">PIN jest zawsze wymagany by dokonać płatności</string>
+    <string name="spending_confirmation_hint_above_zero">Możesz dokonać uwierzytelnienia za pomocą Autentykacji Biometrycznej dla płatności poniżej</string>
+
+    <string name="security_none">Żaden</string>
+    <string name="security_low">Niski</string>
+    <string name="security_medium">Średni</string>
+    <string name="security_high">Wysoki</string>
+    <string name="security_very_high">Bardzo Wysoki</string>
+    <string name="max">Max</string>
+
+    <string name="enter_amount_available">dostępne</string>
+
+    <string name="skip">pomiń</string>
+    <string name="get_started">Zacznij</string>
+    <string name="welcome_screen_title_1_new_install">Witaj</string>
+    <string name="welcome_screen_title_1_upgrade">My zaktualizowaliśmy</string>
+    <string name="welcome_screen_subtitle_1">Intuicyjne i znane doświadczenie na wszystkich urządzeniach</string>
+    <string name="welcome_screen_title_2">Płać z Łatwością</string>
+    <string name="welcome_screen_subtitle_2">Płać i otrzymuj natychmiastowe płatności dzięki łatwym w użyciu przepływom płatności</string>
+    <string name="welcome_screen_title_3">Więcej Kontroli</string>
+    <string name="welcome_screen_subtitle_3">Miej pełną kontrolę oraz dostosuj swój portfel w zależności od potrzeb</string>
+
+    <string-array name="history_filter">
+        <item>Wszystko</item>
+        <item>Otrzymane</item>
+        <item>Wysłane</item>
+    </string-array>
+
+    <string name="sync_status_wait">Proszę poczekaj aż synchronizacja się zakończy</string>
+    <string name="sync_status_syncing_title">Synchronizowanie</string>
+    <string name="sync_status_syncing_sub_title">z łańcuchem bloków Dash</string>
+    <string name="sync_status_unable_to_connect">Połączenie jest niemożliwe</string>
+    <string name="sync_status_check_connection">Sprawdź swoje połączenie</string>
+
+
 </resources>

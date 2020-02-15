@@ -1,36 +1,39 @@
-Gebruik op eigen risico! (Vereist Android 4 of hoger)
+ALGEMENE BESCHRIJVING
 
-<b>Heb uw Dash altijd in uw zak!</b> U kunt betalen door simpelweg een QR-code te scannen. En als verkoper kunt u betalingen betrouwbaar en razendsnel ontvangen. Dash portemonnee is de eerste mobiele Dash app, en misschien wel de meest veilige!
+Dash Wallet is de referentie Android portemonnee die wordt onderhouden door Dash Core Group voor Dash - Digital Cash -, een innovatief alternatief voor Bitcoin dat expliciet is ontworpen voor betalingen.
 
-<b>KENMERKEN</b>
+Dash is een cryptomunt die probeert de fouten op te lossen waar andere cryptomunten aan lijden. Het vertrouwt op een netwerk van Masternodes voor zaken zoals optionele privacy en directe transacties, maar ook voor een financieringsmechanisme om de groei van het netwerk te bevorderen.
 
-• Er is geen registratie, webservice of clouddienst benodigd. Deze portemonnee werkt decentraal en peer to peer. 
-• Toon de hoeveelheid Dash in DASH, mDASH of µDASH.
-• Conversie van en naar nationale munteenheden.
-• Verzenden en ontvangen van Dash via NFC, QR-codes of Dash-URL's.
-• Adresboek voor vaak gebruikte Dash-adressen.
-• Als je offline bent, kan je via bluetooth nog steeds betalen.
-• Ssyteemnotificaties bij het ontvangen van munten.
-• Importeren van papieren portemonnees (die gebruikt worden voor koude opslag).
-• Widget met uw Dash-saldo.
+Dash Wallet geeft je intuïtief en veilig volledige controle over je digitale cash. Verstuur en ontvang Dash-betalingen direct met de veiligste mobiele portemonnee die er is.
 
+Dash Portemonnee maakt rechtstreeks verbinding met het Dash netwerk. Dit betekent dat er geen servers zijn om gehackt of offline te gaan - uw saldo is altijd veilig. Zelfs als u uw telefoon verloren bent , beschadigd of gestolen is, kunt u uw saldo gemakkelijk herstellen met uw persoonlijke herstelzin.
 
-<b>DRAAG BIJ</b>
+Features:
 
-Dash-portemonnee is <b>open source</b> en <b>gratis software</b>. GPLv3-licentie
+* Verstuur en ontvang Dash-betalingen binnen seconden, online of persoonlijk
+* Betalingen naar Dash-acceptanten  en -website met een druk op de knop
+* Betaal snel met biometrische authenticatie
+* Importeren van papieren portemonnees (die gebruikt worden voor koude opslag)
+* Integraties van derden zodat gebruikers Dash kunnen kopen en verkopen
+* Met de herstelzin kunt u uw saldo herstellen wanneer u uw apparaat verloren bent of gewijzigd is
+* Flexibele instellingen om te voldoen aan een reeks aangepaste beveiligingsvoorkeuren
+* Directe Dash netwerkclient - geen centrale server om gehackt te worden of om offline te gaan
+
+Dash Wallet is open source en gratis. Transactiekosten zijn lager dan de meeste cryptomunten en er zijn geen extra gecentraliseerde kosten. Stuur binnen een paar seconden een willekeurig bedrag naar wie dan ook ter wereld. Accepteer betalingen direct en betrouwbaar voor uw bedrijf. Dit is hoe geld zou moeten zijn.
+
+DRAAG BIJ
+
+Dash Portemonnee is open source en gratis software. Licentie: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 De broncode is beschikbaar op GitHub:
-https://github.com/HashEngineering/dash-wallet
+https://github.com/dashevo/dash-wallet
 
 Alle vertalingen worden beheerd via Transifex:
-https://www.transifex.com/dash/dash-wallet/
+https://www.transifex.com/dash/dash-mobile-wallets/
 
 Meer informatie over Dash op
 https://www.dash.org/
 
-<b>TESTIMONIALS</b>
-
-• Een aanbevolen mobile portemonnee van https://www.dash.org
-
-<i>Gebruik op eigen risico!</i>
+v7.0.0 Upgrade
+Dash Portemonnee v7.0 brengt een volledig opnieuw ontworpen ervaring met zich mee die het gebruiksgemak op een intuïtieve en vertrouwde manier op al uw apparaten wil verbeteren. We hebben ons herstelproces voor herstelzinnen opnieuw bedacht om het belang van het beveiligen van deze informatie te benadrukken. Gebruikers kunnen nu beslissen wanneer ze de tijd willen nemen om hun herstelzin van 12 woorden op te schrijven. We hebben ook snelkoppelingen toegevoegd aan het startscherm voor snellere toegang tot veelgebruikte functies, en ons menu is verplaatst en beter georganiseerd om gebruikers te helpen hun portemonnee sneller en efficiënter te configureren. Gebruikers hebben nu veel bredere controle over hun beveiligingsinstellingen en hebben nu ook de mogelijkheid om te beslissen hoe vaak ze hun pincode moeten invoeren.

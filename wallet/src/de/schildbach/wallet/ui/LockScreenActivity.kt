@@ -37,6 +37,7 @@ import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_lock_screen.*
+import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.ui.DialogBuilder
 import java.util.concurrent.TimeUnit
 
@@ -198,7 +199,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
         pinRetryController.clearPinFailPrefs()
         walletApplication.maybeStartAutoLogoutTimer()
         val intent: Intent
-        if (shouldShowBackupReminder) {
+        if (shouldShowBackupReminder()) {
             intent = VerifySeedActivity.createIntent(this, pin)
             walletApplication.configuration.disarmBackupSeedReminder()
         } else {
@@ -339,6 +340,11 @@ class LockScreenActivity : SendCoinsQrActivity() {
         dialogBuilder.show()
     }
 
-    private val shouldShowBackupReminder =
-            walletApplication.configuration.remindBackupSeed() && walletApplication.configuration.lastDismissedReminderMoreThan24hAgo()
+    private fun shouldShowBackupReminder(): Boolean {
+        if (walletApplication.wallet.getBalance(BalanceType.ESTIMATED).isZero) {
+            walletApplication.configuration.setBackupSeedLastDismissedReminderOnce(true)
+        }
+        return walletApplication.configuration.remindBackupSeed()
+                && walletApplication.configuration.lastDismissedReminderMoreThan24hAgo()
+    }
 }

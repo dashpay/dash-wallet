@@ -22,54 +22,32 @@ import android.content.Intent
 import android.graphics.drawable.Animatable
 import android.os.Bundle
 import android.view.View
+import androidx.core.content.ContextCompat
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.TransactionResult
-import de.schildbach.wallet.util.TransactionUtil
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_successful_transaction.*
-import org.bitcoinj.core.Address
+import kotlinx.android.synthetic.main.transaction_result_content.*
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-
+import org.slf4j.LoggerFactory
 
 /**
  * @author Samuel Barbosa
  */
 class TransactionResultActivity : AbstractWalletActivity() {
 
-    private lateinit var transactionResult: TransactionResult
+    private val log = LoggerFactory.getLogger(javaClass.simpleName)
 
     companion object {
-        const val TRANSACTION_RESULT_EXTRA = "transaction_result_extra"
+        const val TX_ID = "tx_id"
         const val USER_AUTHORIZED_RESULT_EXTRA = "user_authorized_result_extra"
 
         @JvmStatic
-        fun createIntent(context: Context, transaction: Transaction, address: Address, userAuthorized: Boolean): Intent {
-            val wallet = WalletApplication.getInstance().wallet
-
-            // obtain the transaction status
-            val primaryStatus = TransactionUtil.getTransactionTypeName(transaction, wallet)
-            val secondaryStatus = TransactionUtil.getReceivedStatusString(transaction, wallet)
-            val errorStatus = TransactionUtil.getErrorName(transaction)
-            var primaryStatusStr = if (transaction.type != Transaction.Type.TRANSACTION_NORMAL || transaction.isCoinBase) context.getString(primaryStatus) else ""
-            var secondaryStatusStr = if (secondaryStatus != -1) context.getString(secondaryStatus) else ""
-            val errorStatusStr = if (errorStatus != -1) context.getString(errorStatus) else ""
-
-            // handle sending
-            if(TransactionUtil.isSending(transaction, wallet)) {
-                primaryStatusStr = context.getString(R.string.transaction_row_status_sending)
-                secondaryStatusStr = ""
-            }
-
-            val transactionResult = TransactionResult(
-                    transaction.getValue(wallet), transaction.exchangeRate, address.toString(),
-                    transaction.fee, transaction.txId.toString(), transaction.updateTime,
-                    transaction.purpose, primaryStatusStr, secondaryStatusStr, errorStatusStr)
-
+        fun createIntent(context: Context, transaction: Transaction, userAuthorized: Boolean): Intent {
             val transactionResultIntent = Intent(context, TransactionResultActivity::class.java)
-            transactionResultIntent.putExtra(TRANSACTION_RESULT_EXTRA, transactionResult)
+            transactionResultIntent.putExtra(TX_ID, transaction.txId)
             transactionResultIntent.putExtra(USER_AUTHORIZED_RESULT_EXTRA, userAuthorized)
-
             return transactionResultIntent
         }
     }
@@ -78,30 +56,37 @@ class TransactionResultActivity : AbstractWalletActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        transactionResult = intent.getSerializableExtra(TRANSACTION_RESULT_EXTRA) as TransactionResult
-
+        val txId = intent.getSerializableExtra(TX_ID) as Sha256Hash
         setContentView(R.layout.activity_successful_transaction)
 
-        view_on_explorer.setOnClickListener { viewOnExplorer(transactionResult.transactionHash) }
-        transaction_close_btn.setOnClickListener {
-            if (intent.getBooleanExtra(USER_AUTHORIZED_RESULT_EXTRA, false)) {
-                startActivity(WalletActivity.createIntent(this))
-            } else {
-                startActivity(LockScreenActivity.createIntentAsNewTask(this))
+        val transactionResultViewBinder = TransactionResultViewBinder(container)
+        val tx = WalletApplication.getInstance().wallet.getTransaction(txId)
+        if (tx != null) {
+            transactionResultViewBinder.bind(tx)
+            view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
+            transaction_close_btn.setOnClickListener {
+                if (intent.getBooleanExtra(USER_AUTHORIZED_RESULT_EXTRA, false)) {
+                    startActivity(WalletActivity.createIntent(this))
+                } else {
+                    startActivity(LockScreenActivity.createIntentAsNewTask(this))
+                }
             }
+        } else {
+            log.error("Transaction not found. TxId:", txId)
+            finish()
+            return
         }
 
-        val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container)
-        transactionResultViewBinder.bind(transactionResult)
-
+        check_icon.setImageDrawable(ContextCompat.getDrawable(this,
+                R.drawable.check_animated))
         check_icon.postDelayed({
             check_icon.visibility = View.VISIBLE
             (check_icon.drawable as Animatable).start()
         }, 400)
     }
 
-    private fun viewOnExplorer(txHash: String) {
-        WalletUtils.viewOnBlockExplorer(this, transactionResult.purpose, txHash)
+    private fun viewOnExplorer(tx: Transaction) {
+        WalletUtils.viewOnBlockExplorer(this, tx.purpose, tx.txId.toString())
     }
 
 }

@@ -1,36 +1,39 @@
-Hãy sử dụng và tự chấp nhận rủi ro (Cần Android 4 hoặc cao hơn)
+MÔ TẢ CHÍNH
 
-<b>Có Dash luôn luôn bên bạn, ngay trong túi bạn!</b> Bạn thanh toán bằng cách quét mã QR một cách nhanh chóng. Cũng như một thương nhân bạn có thể nhận thanh toán một cách tin cậy và tức thời. Ví Dash là ứng dụng di động đầu tiên của Dash, và được cho là an toàn nhất!
+Ví Dash Wallet là ví tham khảo trên Android được duy trì bởi Dash Core Group cho tiền số Dash - một giải pháp sáng tạo để thay thế cho Bitcoin được thiêt kế đặc biệt cho mục đích làm phương tiện thanh toán.
 
-<b>CÁC TÍNH NĂNG</b>
+Dash là một loại tiền số để khắc phục những khuyết điểm mà các loại tiền số khác phải chịu. Nó nhờ vào một mạng lưới các Masternode để cho phép những thứ như là tính năng riêng tư tuỳ chọn, giao dịch tức thời và một cơ chế cấp vốn trực tiếp để phát triển mạng lưới.
 
-• Không cần đăng ký, cần sử dụng đến dịch vụ web hoặc dịch vụ đám mây! Ví này là phi tập trung và kết nối ngang hàng.
-• Hiển thị số Dash theo các đơn vị DASH, mDASH và µDASH.
-• Chuyển đổi theo các đơn vị tiền tệ quốc gia.
-• Gửi và nhận Dash thông qua NFC, mã QR hoặc địa chỉ URL Dash.
-• Sổ địa chỉ cho những địa chỉ Dash được dùng thường xuyên.
-• Khi bạn ngừng kết nối, bạn vẫn có thể thanh toán qua Bluetooth.
-• Thông báo hệ thống khi nhận được tiền.
-• Quét ví giấy (e.g. những thứ được dùng để lưu trữ lạnh).
-• App widget cho số dư Dash.
+Trực quan và bảo mật, ví Dash cho bạn toàn quyền kiểm soát ví tiền kỹ thuật số của mình. Gửi và nhận Dash một cách tức thời, với ví trên di động an toàn nhất này.
 
+Ví Dash kết nối trực tiếp với mạng lưới Dash. Điều này có nghĩa là sẽ không có máy chủ để mà bị hack hoặc bị sập - khoản tiền của bạn luôn luôn được an toàn. Thậm chí nếu điện thoại của bạn bị mất, hỏng, hoặc bị ăn trộm thì bạn vẫn có thể dễ dàng khôi phục lại số tiền của mình bằng dòng chữ phục hồi của cá nhân bạn.
 
-<b>ĐÓNG GÓP</b>
+Các tính năng:
 
-Ví Dash là <b>mã nguồn mở</b> và <b>phần mềm dùng tự do</b>. Theo giấy phép: GPLv3
+* Gửi và nhận giao dịch dash trong vòng vài giây, trực tuyến hoặc trực tiếp
+* Thanh toán chỉ bằng một nút bấm để trả tiền cho các website và cửa hàng chấp nhận Dash
+* Gửi tiền nhanh chóng với xác thực sinh trắc học
+* Quét ví giấy (ví dụ: từ ví giấy hay ví lưu trữ lạnh)
+* Tích hợp giải pháp của bên thứ 3 để cho phép người dùng mua và bán Dash
+* Dòng chữ phục hồi đơn giản giúp bạn khôi phục lại số tiền của mình khi thiết bị bị mất, hỏng hoặc cần thay thế
+* Các thiết lập linh hoạt để thoả mãn nhiều mức độ tuỳ chọn bảo mật khác nhau
+* Phần mềm truy cập trực tiếp mạng lưới Dash - không có máy chủ trung tâm hoặc bị sập
+
+Ví Dash là mã nguồn mở và miễn phí. Phí dịch vụ thấp hơn các mạng lưới tiền số khác và không phải mất thêm chi phí cho các dịch vụ bổ sung tập trung nào. Có thể gửi bất cứ khoản tiền bao nhiêu cho bấy cứ ai ở mọi nơi trên thế giới chỉ trong vài giây. Chấp nhận thanh toán một cách tin cậy và tức thời tại doanh nghiệp của bạn. Đây chính là điều mà bất cứ đồng tiền nào cũng nên đạt được như vậy.
+
+ĐÓNG GÓP
+
+Ví Dash là mã nguồn mở và miễn phí. Giấy phép: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Mã nguồn có thể tìm thấy ở GitHub:
-https://github.com/HashEngineering/dash-wallet
+https://github.com/dashevo/dash-wallet
 
 Tất cả các bản dịch được thực hiện thông qua Transifex:
-https://www.transifex.com/dash/dash-wallet/
+https://www.transifex.com/dash/dash-mobile-wallets/
 
 Bạn có thể tìm thêm thông tin về Dash tại
 https://www.dash.org/
 
-<b>NHỮNG LỜI CHỨNG</b>
-
-• Ví di động được gợi ý bởi https://www.dash.org
-
-<i>Hãy dùng và tự chịu rủi ro!</i>
+v7.0.0 Nâng cấp
+Ví Dash Wallet v7.0 mang đến với một trải nghiệm được thiết kế lại hoàn toàn để nâng cao sự dễ sử dụng theo một cách trực quan và tương tự như cách trên mọi loại thiết bị của bạn. Chúng tôi tái tưởng tượng quy trình kiểm tra câu phục hồi để làm nổi bật sự quan trọng của việc bảo đảm thông tin này cho việc khôi phục ví về sau, và người dùng bây giờ có thể quyết định khi nào họ muốn dành thời gian để ghi xuống 12 từ khoá cho câu phục hồi. Chúng tôi cũng đã thêm các lối tắt vào màn hình chính để truy cập những tính năng thường dùng đươci nhanh hơn và menu bây giờ được đặt lại vị trí trong ứng dụng và được tổ chức để giúp người dùng cấu hình ví của họ nhanh hơn và hiệu quả hơn. Người dùng giờ đây có nhiều quyền kiểm soát hơn cho các thiết lập bảo mật và khả năng quyết định họ nên thường xuyên nhập mã pin ra sao.

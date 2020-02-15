@@ -39,7 +39,7 @@ class ReceiveDetailsDialog : BaseBottomSheetDialogFragment() {
     companion object {
 
         @JvmStatic
-        fun createDialog(dashAmount: Coin, fiatAmount: Fiat): DialogFragment {
+        fun createDialog(dashAmount: Coin, fiatAmount: Fiat?): DialogFragment {
             val dialog = ReceiveDetailsDialog()
             val bundle = Bundle()
             bundle.putSerializable(ARG_DASH_AMOUNT, dashAmount)
@@ -57,12 +57,17 @@ class ReceiveDetailsDialog : BaseBottomSheetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
         arguments!!.apply {
             val dashAmount = getSerializable(ARG_DASH_AMOUNT) as Coin
-            val fiatAmount = getSerializable(ARG_FIAT_AMOUNT) as Fiat
+            val fiatAmount = getSerializable(ARG_FIAT_AMOUNT) as Fiat?
 
             receive_info.amount = dashAmount
             input_value.text = MonetaryFormat.BTC.noCode().format(dashAmount).toString()
-            fiat_symbol.text = GenericUtils.currencySymbol(fiatAmount.currencyCode)
-            fiat_value.text = fiatAmount.toPlainString()
+            if (fiatAmount != null) {
+                fiat_symbol.text = GenericUtils.currencySymbol(fiatAmount.currencyCode)
+                fiat_value.text = fiatAmount.toPlainString()
+            } else {
+                fiat_symbol.visibility = View.GONE
+                fiat_value.visibility = View.GONE
+            }
         }
     }
 }

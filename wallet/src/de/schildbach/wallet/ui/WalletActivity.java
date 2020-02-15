@@ -1044,13 +1044,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
             syncPercentageView.setText(percentage + "%");
             if (percentage == 100) {
                 syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
-                syncStatusTitle.setText("Sync");
-                syncStatusMessage.setText("Completed");
+                syncStatusTitle.setText(R.string.sync_status_sync_title);
+                syncStatusMessage.setText(R.string.sync_status_sync_completed);
                 showSyncPane(R.id.sync_status_pane, false);
             } else {
                 syncPercentageView.setTextColor(getResources().getColor(R.color.dash_gray));
-                syncStatusTitle.setText("Syncing");
-                syncStatusMessage.setText("with Dash Blockchain");
+                syncStatusTitle.setText(R.string.sync_status_syncing_title);
+                syncStatusMessage.setText(R.string.sync_status_syncing_sub_title);
                 showSyncPane(R.id.sync_status_pane, true);
             }
         }
@@ -1106,29 +1106,36 @@ public final class WalletActivity extends AbstractBindServiceActivity
         String countryCode = getCurrentCountry();
         log.info("Setting default currency:");
         if(countryCode != null) {
-            log.info("Local Country: " + countryCode);
-            Locale l = new Locale("", countryCode);
-            Currency currency = Currency.getInstance(l);
-            String newCurrencyCode = currency.getCurrencyCode();
-            if(CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
-                log.info("found obsolete currency: " + newCurrencyCode);
-                newCurrencyCode = CurrencyInfo.getUpdatedCurrency(newCurrencyCode);
-            }
-            log.info("Setting Local Currency: " + newCurrencyCode);
-            config.setExchangeCurrencyCode(newCurrencyCode);
+            try {
+                log.info("Local Country: " + countryCode);
+                Locale l = new Locale("", countryCode);
+                Currency currency = Currency.getInstance(l);
+                String newCurrencyCode = currency.getCurrencyCode();
+                if (CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
+                    log.info("found obsolete currency: " + newCurrencyCode);
+                    newCurrencyCode = CurrencyInfo.getUpdatedCurrency(newCurrencyCode);
+                }
+                log.info("Setting Local Currency: " + newCurrencyCode);
+                config.setExchangeCurrencyCode(newCurrencyCode);
 
-            //Fallback to default
-            if (config.getExchangeCurrencyCode() == null) {
-                log.info("Using default Country: US");
-                log.info("Using default currency: " + Constants.DEFAULT_EXCHANGE_CURRENCY);
-                config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
+                //Fallback to default
+                if (config.getExchangeCurrencyCode() == null) {
+                    setDefaultExchangeCurrencyCode();
+                }
+            } catch (IllegalArgumentException x) {
+                log.info("Cannot obtain currency for " + countryCode + ": ", x);
+                setDefaultExchangeCurrencyCode();
             }
 
         } else {
-            log.info("Using default Country: US");
-            log.info("Using default currency: " + Constants.DEFAULT_EXCHANGE_CURRENCY);
-            config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
+            setDefaultExchangeCurrencyCode();
         }
+    }
+
+    private void setDefaultExchangeCurrencyCode() {
+        log.info("Using default Country: US");
+        log.info("Using default currency: " + Constants.DEFAULT_EXCHANGE_CURRENCY);
+        config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
     }
 
     private String getCurrentCountry() {
@@ -1171,9 +1178,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         //Fallback to default
         if (config.getExchangeCurrencyCode() == null) {
-            log.info("Using default Country: US");
-            log.info("Using default currency: " + Constants.DEFAULT_EXCHANGE_CURRENCY);
-            config.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
+            setDefaultExchangeCurrencyCode();
         }
     }
 
