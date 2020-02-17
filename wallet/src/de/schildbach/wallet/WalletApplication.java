@@ -107,8 +107,6 @@ public class WalletApplication extends MultiDexApplication {
     private Wallet wallet;
     private PackageInfo packageInfo;
 
-    private boolean backupDisclaimerDismissed = false;
-
     public static final String ACTION_WALLET_REFERENCE_CHANGED = WalletApplication.class.getPackage().getName()
             + ".wallet_reference_changed";
 
@@ -727,14 +725,6 @@ public class WalletApplication extends MultiDexApplication {
             walletBackupFile.delete();
         }
         ProcessPhoenix.triggerRebirth(this);
-    }
-
-    public boolean isBackupDisclaimerDismissed() {
-        return backupDisclaimerDismissed;
-    }
-
-    public void setBackupDisclaimerDismissed(boolean backupDisclaimerDismissed) {
-        this.backupDisclaimerDismissed = backupDisclaimerDismissed;
     }
 
     public static WalletApplication getInstance() {

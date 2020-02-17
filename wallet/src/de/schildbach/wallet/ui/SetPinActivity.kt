@@ -431,7 +431,7 @@ class SetPinActivity : AppCompatActivity() {
     }
 
     private fun startVerifySeedActivity() {
-        val intent = VerifySeedActivity.createIntent(this, seed.toTypedArray(), true)
+        val intent = VerifySeedActivity.createIntent(this, seed.toTypedArray())
         startActivityNewTask(intent)
     }
 
