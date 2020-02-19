@@ -31,7 +31,7 @@ import org.dash.wallet.common.Configuration
  * @author Samuel Barbosa
  */
 @SuppressLint("Registered")
-abstract class BaseMenuActivity : AppCompatActivity() {
+abstract class BaseMenuActivity : InteractionAwareActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,8 +74,4 @@ abstract class BaseMenuActivity : AppCompatActivity() {
 
     protected val configuration: Configuration
         get() = walletApplication.configuration
-
-    override fun onUserInteraction() {
-        (application as WalletApplication).resetAutoLogoutTimer()
-    }
 }
