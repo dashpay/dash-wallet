@@ -22,7 +22,6 @@ import android.os.Bundle
 import android.text.SpannableStringBuilder
 import android.text.style.ImageSpan
 import android.view.MenuItem
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.text.toSpannable
@@ -41,7 +40,7 @@ import org.dash.wallet.integration.uphold.ui.UpholdWithdrawalHelper
 import org.dash.wallet.integration.uphold.ui.UpholdWithdrawalHelper.OnTransferListener
 import java.math.BigDecimal
 
-class UpholdTransferActivity : AppCompatActivity() {
+class UpholdTransferActivity : InteractionAwareActivity() {
 
     companion object {
 
@@ -154,9 +153,5 @@ class UpholdTransferActivity : AppCompatActivity() {
         }
 
         return super.onOptionsItemSelected(item)
-    }
-
-    override fun onUserInteraction() {
-        (application as WalletApplication).resetAutoLogoutTimer()
     }
 }

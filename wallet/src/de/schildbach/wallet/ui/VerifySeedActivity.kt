@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
@@ -30,7 +29,7 @@ import de.schildbach.wallet_test.R
 /**
  * @author Samuel Barbosa
  */
-class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
+class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
 
     companion object {
 
@@ -127,10 +126,6 @@ class VerifySeedActivity : AppCompatActivity(), VerifySeedActions {
     private fun goHome() {
         startActivity(Intent(this, WalletActivity::class.java))
         finish()
-    }
-
-    override fun onUserInteraction() {
-        (application as WalletApplication).resetAutoLogoutTimer()
     }
 
     override fun finish() {

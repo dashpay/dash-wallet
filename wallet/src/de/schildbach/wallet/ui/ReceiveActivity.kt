@@ -1,9 +1,7 @@
 package de.schildbach.wallet.ui
 
-import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
@@ -12,7 +10,7 @@ import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Coin
 
-class ReceiveActivity : AppCompatActivity() {
+class ReceiveActivity : InteractionAwareActivity() {
 
     private lateinit var enterAmountSharedViewModel: EnterAmountSharedViewModel
 

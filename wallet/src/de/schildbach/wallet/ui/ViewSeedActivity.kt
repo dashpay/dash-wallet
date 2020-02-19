@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_view_seed.*
 
@@ -69,10 +68,6 @@ class ViewSeedActivity : BaseMenuActivity() {
 
     override fun onBackPressed() {
         finish()
-    }
-
-    override fun onUserInteraction() {
-        (application as WalletApplication).resetAutoLogoutTimer()
     }
 
     //override fun finish() {
