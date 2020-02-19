@@ -289,6 +289,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         viewDrawer = findViewById(R.id.drawer_layout);
         viewDrawer.addView(viewFakeForSafetySubmenu);
         registerForContextMenu(viewFakeForSafetySubmenu);
+        viewDrawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
     }
 
     @Override
