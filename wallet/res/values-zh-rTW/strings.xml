@@ -16,7 +16,7 @@
     <string name="wallet_address_dialog_fragment_hint">為了保護您的私隱，每當你收到一筆交易後你的錢包地址將會改變。</string>
     <string name="wallet_balance_fragment_too_much">存放在流動錢包的餘額相當大。請將部份資金存放到一些比較安全的地方。</string>
     <string name="wallet_balance_fragment_replaying">重播中餘額無法展示</string>
-    <string name="exchange_rates_activity_title">匯率</string>
+    <string name="exchange_rates_activity_title">本地貨幣</string>
     <string name="exchange_rates_fragment_empty_text">無法讀取匯率</string>
     <string name="exchange_rates_fragment_empty_search">無法找到匯率</string>
     <string name="exchange_rates_fragment_default">(預設)</string>
@@ -25,13 +25,11 @@
     <string name="exchange_rates_fragment_source">價格由 %s 起</string>
     <string name="exchange_rates_options_search">搜尋匯率</string>
     <string name="exchange_rates_context_set_as_default_title">設為預設值</string>
-    <string name="wallet_transactions_fragment_empty_text_received">尚未收到達世幣</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">尚未付出達世幣</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">如何獲得達世幣?\\n\\n用傳統貨幣交易,\\n賣物品或是服務或\\n線上挖掘。</string>
+    <string name="wallet_transactions_fragment_empty_text">沒有交易能夠顯示</string>
     <string name="wallet_transactions_row_warning_backup">恭喜你收到第一筆付款! 你是否已經備份好你的錢包來防止意外發生?</string>
     <string name="wallet_transactions_fragment_coinbase">已採礦</string>
     <string name="wallet_transactions_fragment_internal">內部</string>
-    <string name="wallet_transactions_options_filter">篩選</string>
+    <string name="wallet_transactions_options_filter">過濾交易</string>
     <string name="wallet_transactions_options_filter_all">全部</string>
     <string name="wallet_transactions_options_filter_received">收到</string>
     <string name="wallet_transactions_options_filter_sent">付出</string>
@@ -57,18 +55,18 @@
     <string name="send_coins_fragment_request_payment_request_wrong_signature">簽名錯誤!</string>
     <string name="send_coins_fragment_payee_verified_by">由 %s 驗證</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">不知名</string>
-    <string name="send_coins_fragment_receiving_address_label">付給</string>
+    <string name="send_coins_fragment_receiving_address_label">發給</string>
     <string name="send_coins_fragment_receiving_address_hint">輸入地址或是名稱</string>
     <string name="send_coins_fragment_receiving_address_error">無效的達世幣位址!</string>
     <string name="send_coins_fragment_receiving_address_own">您即將發送交易給自己！</string>
     <string name="send_coins_fragment_receiving_address_complex">複雜\n地址</string>
     <string name="send_coins_fragment_pending">(%s 等候確認)</string>
-    <string name="send_coins_fragment_amount_label">總金額</string>
+    <string name="send_coins_fragment_amount_label">發送金額</string>
     <string name="send_coins_fragment_pin_label">輸入 PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">將收取%s作為網絡費用。</string>
     <string name="send_coins_fragment_hint_fee_priority">將支付%s優先級的手續費。如果您希望支付較低的費用，則您只有在需要盡快確認時才使用“優先級”。</string>
     <string name="send_coins_fragment_hint_dusty_send">這個金額太小，無法發送。</string>
-    <string name="send_coins_fragment_hint_insufficient_money">餘額不足。你還差 %s 的達世幣才能發送。</string>
+    <string name="send_coins_fragment_hint_insufficient_money">餘額不足</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">在你的錢包微小金額加起來不足以發送。</string>
     <string name="send_coins_fragment_hint_replaying">目前付款是不可能的，正在進行重播。</string>
     <string name="send_coins_fragment_direct_payment_enable">直接付款給收款人</string>
@@ -80,7 +78,7 @@
     <string name="send_coins_fragment_button_back">退回</string>
     <string name="send_coins_fragment_insufficient_money_title">餘額不足</string>
     <string name="send_coins_fragment_insufficient_money_msg1">你少了 %s.</string>
-    <string name="send_coins_fragment_insufficient_money_msg2">你打算全額付款？</string>
+    <string name="send_coins_fragment_insufficient_money_msg2">你打算發送所有的餘額嗎?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">清空錢包失敗</string>
     <string name="send_coins_fragment_state_decrypting">正在解密...</string>
     <string name="send_coins_preparation_msg">簽署中…</string>
@@ -92,13 +90,13 @@
     <string name="send_coins_options_fee_category_economic">經濟的</string>
     <string name="send_coins_options_fee_category_priority">優先處理</string>
     <string name="send_coins_options_empty">空錢包</string>
-    <string name="sweep_wallet_activity_title">移轉只錢包</string>
+    <string name="sweep_wallet_activity_title">導入私鑰</string>
     <string name="sweep_wallet_fragment_intro">你將移轉一個紙錢包或點卷，這將把紙錢包裡的所有幣一次轉到目前裝置錢包裡，當交易完成確認，該紙錢包變無價值，同時為了安全性，請勿再次使用。</string>
     <string name="sweep_wallet_fragment_hint">紙錢包常用於冷存放，一些達世幣提款機印出紙錢包而不是直接轉帳到你手機，人們有時用預付紙錢包方式來傳遞達世幣(不建議)。</string>
     <string name="sweep_wallet_fragment_wallet_unknown">開始掃描紙錢包的私鑰，使用鏡頭的動作按鈕。</string>
     <string name="sweep_wallet_fragment_encrypted">該私鑰受密碼保護。</string>
     <string name="sweep_wallet_fragment_password">密碼</string>
-    <string name="sweep_wallet_fragment_bad_password">密碼錯誤！</string>
+    <string name="sweep_wallet_fragment_bad_password">密碼錯誤!</string>
     <string name="sweep_wallet_fragment_balance">要轉換的餘額</string>
     <string name="sweep_wallet_fragment_button_decrypt">解密</string>
     <string name="sweep_wallet_fragment_button_sweep">移轉</string>
@@ -158,6 +156,33 @@
     <string name="transaction_row_message_received_dust">極小額付款可能無法有效支付</string>
     <string name="transaction_row_message_received_pay_to_many">這個交易除了支付給你外，還支付給其他錢包，這會令應用程序逐漸變慢。如果可以的話，盡量接受只支付給你的付款。</string>
     <string name="transaction_row_message_received_rbf">由於發件人使用了不安全的交易類型，此款項被延遲。</string>
+    <string name="transaction_row_status_received">己收到</string>
+    <string name="transaction_row_status_sent">發送</string>
+    <string name="transaction_row_status_sending">付款中</string>
+    <string name="transaction_row_status_sent_interally">內部</string>
+    <string name="transaction_row_status_processing">正在處理</string>
+    <string name="transaction_row_status_confirming">確認中</string>
+    <string name="transaction_row_status_locked">己鎖定</string>
+    <string name="transaction_row_status_error_sending">發送錯誤</string>
+    <string name="transaction_row_status_error_dead">雙花</string>
+    <string name="transaction_row_status_error_conflicting">發生衝突</string>
+    <string name="transaction_row_status_error_insufficient_fee">費用不足</string>
+    <string name="transaction_row_status_error_dust">粉塵金額</string>
+    <string name="transaction_row_status_error_non_standard">非標準</string>
+    <string name="transaction_row_status_error_malformed">格式錯誤</string>
+    <string name="transaction_row_status_error_duplicate">重複的</string>
+    <string name="transaction_row_status_error_obsolete">過時的</string>
+    <string name="transaction_row_status_error_invalid">無效</string>
+    <string name="transaction_row_status_error_other">未知的</string>
+    <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
+    <string name="transaction_row_time_text">在 %s 的 %s</string>
+    <string name="transaction_row_rate_not_available">無法使用</string>
+    <string name="transaction_row_status_masternode_registration">主節點註冊</string>
+    <string name="transaction_row_status_masternode_update_registrar">主節點更新</string>
+    <string name="transaction_row_status_masternode_update_service">主節點更新</string>
+    <string name="transaction_row_status_masternode_revoke">撤銷主節點</string>
+    <string name="transaction_row_status_masternode_reward">主節點報酬</string>
+    <string name="transaction_row_status_mining_reward">採礦獎勵</string>
     <string name="network_monitor_activity_title">網路監視器</string>
     <string name="network_monitor_peer_list_title">節點</string>
     <string name="network_monitor_block_list_title">區塊</string>
@@ -201,7 +226,7 @@
     <string name="import_export_keys_dialog_show">顯示密碼</string>
     <string name="import_export_keys_dialog_failure_title">錯誤</string>
     <string name="import_keys_intent_filter_action">回復錢包</string>
-    <string name="encrypt_keys_dialog_title">支付PIN碼</string>
+    <string name="encrypt_keys_dialog_title">更改密碼</string>
     <string name="encrypt_keys_dialog_message">從你錢包發出的支付項目將會受所選擇的PIN碼保護。</string>
     <string name="encrypt_keys_dialog_warning">重要：請不要使用簡單數字 (比如生日) 作為PIN碼。</string>
     <string name="encrypt_keys_dialog_password_old">舊的 PIN 碼</string>
@@ -212,7 +237,7 @@
     <string name="encrypt_keys_dialog_show">顯示 PIN 碼</string>
     <string name="encrypt_keys_dialog_state_encrypting">正在加密…</string>
     <string name="encrypt_keys_dialog_state_decrypting">正在解密…</string>
-    <string name="encrypt_keys_dialog_state_done">已完成。</string>
+    <string name="encrypt_keys_dialog_state_done">完成</string>
     <string name="scan_camera_problem_dialog_title">抱歉</string>
     <string name="scan_camera_problem_dialog_message">照相機有問題，你可能需要重新啟動裝置</string>
     <string name="scan_camera_permission_dialog_title">相機權限</string>
@@ -296,7 +321,7 @@
     <string name="notification_coins_received_msg">收到 %s</string>
     <string name="notification_peers_connected_msg">%d 節點連線</string>
     <string name="notification_inactivity_title">你在這個裝置上還存放有達世幣!</string>
-        <string name="notification_inactivity_message">你仍然有達世幣在此設備上! 在卸載達世幣錢包之前，請務必記下您的恢復詞組，否則您將失去 %s的結餘。</string>
+    <string name="notification_inactivity_message">你仍然有達世幣在此設備上! 在卸載達世幣錢包之前，請務必記下您的恢復詞組，否則您將失去 %s的結餘。</string>
     <string name="notification_inactivity_action_dismiss">稍後提醒我</string>
     <string name="notification_inactivity_action_dismiss_forever">不要提醒我</string>
     <string name="appwidget_wallet_balance_title">達世幣結餘</string>
@@ -319,6 +344,7 @@
     <string name="button_set_as_default">設為預設</string>
     <string name="button_request_coins">索取達世幣</string>
     <string name="button_send_coins">達世幣付款</string>
+    <string name="button_pay">付款</string>
     <string name="button_scan">掃描</string>
     <string name="button_settings">設定</string>
     <string name="action_show_qr">展示QR二維條碼</string>
@@ -338,10 +364,14 @@
 
     <string name="transaction_fragment_confirmations_label">確認</string>
 
-    <string name="navigation_drawer_open">打開導覽列</string>
-    <string name="navigation_drawer_close">關閉導覽列</string>
-
     <string name="dash_slogan">即時 - 私隱 - 安全</string>
     <string name="dash_wallet">錢包</string>
+
+    <string name="activity_security_backup_wallet">備份錢包到文件</string>
+    <string name="activity_security_view_recovery_phrase">查看恢復詞組</string>
+    <string name="activity_security_advanced">進階的安全性</string>
+    <string name="activity_security_biometric_auth">指紋認證</string>
+    <string name="activity_security_hide_balance">自動隱藏結餘</string>
+    <string name="reset_to_default">重置為預設值</string>
 
 </resources>

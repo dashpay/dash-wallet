@@ -10,19 +10,19 @@
     <string name="uphold_account_dash_balance">Vaša Dash bilancia na Uphold je</string>
     <string name="uphold_transfer_to_this_wallet">Presunúť Dash z Uphold účtu do tejto peňaženky</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">Poplatok bude odpočítaný z požadovanej sumy.</string>
-    <string name="uphold_withdrawal_instructions">Nižšie zadajte sumu, ktorú chcete previesť </string>
+    <string name="uphold_withdrawal_instructions">Zadajte sumu, ktorú chcete previesť</string>
     <string name="uphold_withdrawal_success_title">Úspešné</string>
     <string name="uphold_withdrawal_success_message">Vaša transakcia bola odoslaná a suma by sa mala objaviť v peňaženke o niekoľko minút.\n\nId transakcie: %s</string>
-    <string name="uphold_otp_dialog_title">Zadajte váš 2FA kód:</string>
+    <string name="uphold_otp_dialog_title">Nižšie zadajte váš 2FA kód</string>
     <string name="uphold_transfer">Presun</string>
     <string name="uphold_see_on_uphold">Zobraziť na Uphold</string>
-    <string name="uphold_logout_title">Odhlásenie z Upholdu</string>
+    <string name="uphold_logout_title">Odhlásiť s Upholdu</string>
     <string name="uphold_logout">Odhlásiť</string>
-    <string name="uphold_logout_explanation_text">Musíte sa tiež odhlásiť z webovej stránky Uphold vo vašom prehliadači.</string>
+    <string name="uphold_logout_explanation_text">Budete sa tiež musieť odhlásiť z webovej stránky Upholdu pomocou svojho prehliadača</string>
     <string name="uphold_logout_go_to_website">Prejsť na webovú stránku</string>
     <string name="uphold_error">Chyba Upholdu</string>
-    <string name="uphold_error_not_logged_in">Dash peňaženka už nie je prepojená s vaším účtom na Upholde. Na ďalšej obrazovke stlačte \"Prepojiť Uphold účet\".</string>
+    <string name="uphold_error_not_logged_in">Dash peňaženka už nie je prepojená s vaším účtom na Upholde. Na ďalšej obrazovke stlačte "Prepojiť Uphold účet".</string>
     <string name="uphold_error_not_available">Služba Uphold nie je k dispozícii. Skúste neskôr prosím.</string>
-    <string name="uphold_error_report_issue">Nahláste tento problém tímu podpory Dash peňaženky pomocou položky \"Nahlásiť problém\" z hlavnej ponuky.</string>
+    <string name="uphold_error_report_issue">Nahláste tento problém tímu podpory Dash peňaženky pomocou položky "Nahlásiť problém" z hlavnej ponuky.</string>
 
 </resources>

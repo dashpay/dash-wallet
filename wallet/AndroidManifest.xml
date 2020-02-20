@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="de.schildbach.wallet_test"
     android:installLocation="internalOnly"
-    android:versionCode="70000"
-    android:versionName="7.0.0-redesign">
+    android:versionCode="70004"
+    android:versionName="7.0.0">
 
     <!-- normal permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -276,6 +276,10 @@
         <activity android:name="de.schildbach.wallet.ui.UpholdTransferActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
+
+        <activity android:name="de.schildbach.wallet.ui.AppUpgradeActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/LockScreenActivity.Theme" />
 
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"

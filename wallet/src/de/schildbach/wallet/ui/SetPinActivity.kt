@@ -49,6 +49,7 @@ class SetPinActivity : AppCompatActivity() {
     private lateinit var pageMessageView: TextView
 
     private lateinit var pinRetryController: PinRetryController
+    private var pinLength = WalletApplication.getInstance().configuration.pinLength
 
     val pin = arrayListOf<Int>()
     var seed = listOf<String>()
@@ -143,11 +144,11 @@ class SetPinActivity : AppCompatActivity() {
         numericKeyboardView.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
             override fun onNumber(number: Int) {
-                if (pinRetryController.isLocked) {
+                if (changePin && pinRetryController.isLocked) {
                     return
                 }
 
-                if (pin.size < 4 || state == State.DECRYPT) {
+                if (pin.size < pinLength || state == State.DECRYPT) {
                     pin.add(number)
                     pinPreviewView.next()
                 }
@@ -157,7 +158,7 @@ class SetPinActivity : AppCompatActivity() {
                         nextStep()
                     }
                 } else {
-                    if (pin.size == 4) {
+                    if (pin.size == pinLength) {
                         nextStep()
                     }
                 }
@@ -214,7 +215,7 @@ class SetPinActivity : AppCompatActivity() {
     private fun setState(newState: State) {
         when (newState) {
             State.DECRYPT -> {
-                pinPreviewView.mode = PinPreviewView.PinType.EXTENDED
+                pinPreviewView.mode = PinPreviewView.PinType.CUSTOM
                 pageTitleView.setText(R.string.set_pin_enter_pin)
                 if (pinProgressSwitcherView.currentView.id == R.id.progress) {
                     pinProgressSwitcherView.showPrevious()
@@ -227,7 +228,11 @@ class SetPinActivity : AppCompatActivity() {
                 pin.clear()
             }
             State.CHANGE_PIN, State.INVALID_PIN -> {
-                pinPreviewView.mode = PinPreviewView.PinType.STANDARD
+                if (pinLength != PinPreviewView.DEFAULT_PIN_LENGTH) {
+                    pinPreviewView.mode = PinPreviewView.PinType.CUSTOM
+                } else {
+                    pinPreviewView.mode = PinPreviewView.PinType.STANDARD
+                }
                 pageTitleView.setText(R.string.set_pin_enter_pin)
                 if (pinProgressSwitcherView.currentView.id == R.id.progress) {
                     pinProgressSwitcherView.showPrevious()
@@ -247,6 +252,7 @@ class SetPinActivity : AppCompatActivity() {
             }
             State.SET_PIN -> {
                 pinPreviewView.mode = PinPreviewView.PinType.STANDARD
+                pinLength = PinPreviewView.DEFAULT_PIN_LENGTH
                 pinPreviewView.clearBadPin()
                 pageTitleView.setText(R.string.set_pin_set_pin)
                 if (pinProgressSwitcherView.currentView.id == R.id.progress) {
@@ -314,9 +320,11 @@ class SetPinActivity : AppCompatActivity() {
         viewModel.encryptWalletLiveData.observe(this, Observer {
             when (it.status) {
                 Status.ERROR -> {
-                    pinRetryController.failedAttempt(viewModel.getPinAsString())
-                    if (pinRetryController.isLocked) {
-                        setState(State.LOCKED)
+                    if (changePin) {
+                        pinRetryController.failedAttempt(viewModel.getPinAsString())
+                        if (pinRetryController.isLocked) {
+                            setState(State.LOCKED)
+                        }
                     } else {
                         if (state == State.DECRYPTING) {
                             setState(if (changePin) State.INVALID_PIN else State.DECRYPT)
@@ -338,6 +346,7 @@ class SetPinActivity : AppCompatActivity() {
                         setState(State.SET_PIN)
                     } else {
                         if (changePin) {
+                            WalletApplication.getInstance().configuration.pinLength = PinPreviewView.DEFAULT_PIN_LENGTH
                             val enableFingerprint = walletApplication.configuration.enableFingerprint
                             if (EnableFingerprintDialog.shouldBeShown(this@SetPinActivity) && enableFingerprint) {
                                 EnableFingerprintDialog.show(viewModel.getPinAsString(), supportFragmentManager)

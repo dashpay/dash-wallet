@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package de.schildbach.wallet.ui
 
 import android.app.AlertDialog
@@ -20,22 +36,23 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.widget.NumericKeyboardView
+import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_enter_pin.*
-
 
 open class CheckPinDialog : DialogFragment() {
 
     companion object {
 
-        private val FRAGMENT_TAG = CheckPinDialog::class.java.simpleName
+        internal val FRAGMENT_TAG = CheckPinDialog::class.java.simpleName
 
-        private const val ARG_REQUEST_CODE = "arg_request_code"
-        private const val ARG_PIN_ONLY = "arg_pin_only"
+        internal const val ARG_REQUEST_CODE = "arg_request_code"
+        internal const val ARG_PIN_ONLY = "arg_pin_only"
 
         @JvmStatic
         fun show(activity: AppCompatActivity, requestCode: Int = 0, pinOnly: Boolean = false) {
@@ -55,7 +72,6 @@ open class CheckPinDialog : DialogFragment() {
         fun show(activity: AppCompatActivity, requestCode: Int = 0) {
             show(activity, requestCode, false)
         }
-
     }
 
     private lateinit var state: State
@@ -67,6 +83,8 @@ open class CheckPinDialog : DialogFragment() {
     protected var fingerprintHelper: FingerprintHelper? = null
     protected lateinit var fingerprintCancellationSignal: CancellationSignal
 
+    private var pinLength = WalletApplication.getInstance().configuration.pinLength
+
     protected enum class State {
         ENTER_PIN,
         INVALID_PIN,
@@ -76,6 +94,7 @@ open class CheckPinDialog : DialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState)
         dialog.window?.requestFeature(Window.FEATURE_NO_TITLE)
+
         return dialog
     }
 
@@ -101,11 +120,11 @@ open class CheckPinDialog : DialogFragment() {
         numeric_keyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
             override fun onNumber(number: Int) {
-                if (viewModel.pin.length < 4) {
+                if (viewModel.pin.length < pinLength) {
                     viewModel.pin.append(number)
                     pin_preview.next()
                 }
-                if (viewModel.pin.length == 4) {
+                if (viewModel.pin.length == pinLength) {
                     Handler().postDelayed({
                         viewModel.checkPin(viewModel.pin)
                     }, 200)
@@ -194,6 +213,9 @@ open class CheckPinDialog : DialogFragment() {
     protected fun setState(newState: State) {
         when (newState) {
             State.ENTER_PIN -> {
+                if (pinLength != PinPreviewView.DEFAULT_PIN_LENGTH) {
+                    pin_preview.mode = PinPreviewView.PinType.CUSTOM
+                }
                 if (pin_progress_switcher.currentView.id == R.id.progress) {
                     pin_progress_switcher.showPrevious()
                 }
@@ -283,7 +305,7 @@ open class CheckPinDialog : DialogFragment() {
         dismiss(savedPass)
     }
 
-    protected fun showLockedAlert(context: Context) {
+    protected open fun showLockedAlert(context: Context) {
         val dialogBuilder = AlertDialog.Builder(context)
         dialogBuilder.setTitle(R.string.wallet_lock_wallet_disabled)
         dialogBuilder.setMessage(pinRetryController.getWalletTemporaryLockedMessage(context))

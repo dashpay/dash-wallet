@@ -17,11 +17,10 @@
 package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
-import androidx.appcompat.app.AppCompatActivity
 import de.schildbach.wallet.WalletApplication
 
 @SuppressLint("Registered")
-open class ShortcutComponentActivity : AppCompatActivity() {
+open class ShortcutComponentActivity : InteractionAwareActivity() {
 
     open fun finishIfNotInitialized(): Boolean {
         if (WalletApplication.getInstance().wallet == null) {

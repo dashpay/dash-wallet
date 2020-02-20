@@ -1,97 +1,312 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-	<string name="send_coins_auto_lock_not_feasible">Ще отнеме няколко минути тази транзакция да бъде наредена. Завършете я мигновено за %1$s%2$s?</string>
-	<string name="send_coins_instant_send_not_feasible">Тази транзакция ще отнеме няколко минути.</string>
 
-	<string name="options_paste_from_clipboard_title">Постави от клипборда</string>
+    <string name="onboarding_create_wallet">Създай нов портфейл</string>
+    <string name="onboarding_recover_wallet">Възстановяване на портфейл чрез фразата за възстановяване</string>
+    <string name="onboarding_restore_wallet">Възстановяване на портфейл от файл</string>
+    <string name="onboarding_load_wallet_error">Не може да се зареди портфейла!</string>
 
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">Това плащане все още не е предадено.</string>
-	<string name="transaction_row_message_sent_to_single_peer">Плащането е изпратено.</string>
+    <string name="set_pin_create_new_wallet">Създай нов портфейл</string>
+    <string name="set_pin_restore_wallet">Възстанови портфейл</string>
+    <string name="set_pin_enter_pin">Въведи стар ПИН</string>
+    <string name="set_pin_set_pin">Постави ПИН</string>
+    <string name="set_pin_confirm_pin">Потвърди ПИН</string>
+    <string name="set_pin_encrypting">Криптиране на портфейла</string>
+    <string name="set_pin_decrypting">Декриптиране на портфейла</string>
+    <string name="set_pin_verifying_pin">Потвърждаване на ПИН</string>
+    <string name="set_pin_message">Този ПИН ще бъде необходим за отключване на приложението ви всеки път, когато го използвате.</string>
 
-	<string name="regular_transaction_info_message">Тази транзакция не беше наредена мигновено.</string>
+    <string name="home_pay">Изпрати</string>
+    <string name="home_receive">Получени</string>
+    <string name="home_available_balance">Наличен баланс</string>
+    <string name="home_balance_hidden">Скрит баланс</string>
+    <string name="home_balance_show_hint">Докоснете, за да покажете баланса</string>
+    <string name="home_balance_hide_hint">Докоснете, за да скриете баланса</string>
 
-	<string name="wallet_options_disconnect">Прекъсване </string>
+    <string name="dialog_confirm_confirm">Потвърди</string>
+    <string name="dialog_confirm_pay_to">Изпрати на</string>
+    <string name="dialog_confirm_fee">Мрежова такса</string>
+    <string name="dialog_confirm_total">Общо</string>
 
-	<string name="network_monitor_masternodes_title">Masternodes</string>
-	<string name="export_keys_dialog_title_to_seed">Преглед на фраза за възстановяване</string>
-	<string name="import_keys_dialog_title_from_seed">Възстановяване от фразата за възстановяване</string>
-	<string name="backup_to_seed_wallet_dialog_message">Това е вашата фраза за възстановяване. Моля, напишете я.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">НЕ позволявайте на никого да види фразата Ви за възстановяване тъй като в възможно да похарчи вашите Dash.</string>
-	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Портфейлът Ви е защитен от ПИН . Въведете своя ПИН и натиснете Покажи, за да видите фразата си за възстановяване.</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_secure_now">Подсигури портфейл сега</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_scan_to_pay">Сканиране за изпращане</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_pay_to_address">Изпрати до адрес</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_buy_sell">Купи/Продай Dash</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_import_key">Импортиране на частен ключ.</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_add_shortcut">Добави пряк път</string>
+
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_quick_receive">Бързо получаване</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_pin">Влизане с ПИН</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_fingerprint">Влизане с пръстов отпечатък</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_scan_to_pay">Сканиране за изпращане</string>
+    <!-- Lock Screen: Text above the PIN Entry area -->
+    <string name="lock_enter_pin">Въведи ПИН</string>
+    <string name="lock_unlock_with_fingerprint">Използвайте вашият пръстов отпечатък за отключване.</string>
+
+    <string name="perm_lock_info">Портфейлът е постоянно заключен</string>
+    <string name="perm_lock_wipe_wallet">Изпразни портфейла</string>
+    <string name="perm_lock_close_app">Затвори</string>
+
+    <string name="scan_to_pay_error_dialog_title">Сканиране за изпращане</string>
+    <string name="scan_to_pay_error_dialog_message">Не валиден Dash адреса или URL заявка в клипборда:\n\n%s</string>
+    <string name="scan_to_pay_error_dialog_message_no_data">Не валиден Dash адреса или URL заявка в клипборда.</string>
+
+    <string name="receive_title">Получаване</string>
+    <string name="receive_enter_amount_message">Посочете  сумата за получаване</string>
+    <string name="receive_enter_amount_button">Сума за получаване</string>
+    <string name="receive_share_button">Сподели</string>
+    <string name="receive_copied">Копирано</string>
+
+    <string name="pay_title">Изпрати</string>
+    <string name="history_title">История</string>
+    <string name="more_title">Още</string>
+    <string name="settings_title">Настройки</string>
+    <string name="security_title">Сигурност</string>
+    <string name="recover_wallet_title">Възстанови портфейл</string>
+    <string name="tools_title">Инструменти</string>
+
+    <string name="payments_title">Плащания</string>
+    <string name="payments_tab_pay_label">Изпращане</string>
+    <string name="payments_tab_receive_label">Получаване</string>
+    <string name="payments_pay_by_qr_title">Изпращане от</string>
+    <string name="payments_pay_by_qr_sub_title">Сканиране на QR код</string>
+    <string name="payments_pay_by_qr_button">Сканирай</string>
+    <string name="payments_pay_to_clipboard_title">Изпрати до копираният адрес</string>
+    <string name="payments_pay_to_clipboard_sub_title">Няма копиран адрес</string>
+    <string name="payments_pay_to_clipboard_button">Изпрати</string>
+
+    <string name="forgot_pin_title">Забравен ПИН?</string>
+    <string name="forgot_pin_message">Можете да зададете нов ПИН с помощта на вашата фраза за възстановяване.</string>
+    <string name="forgot_pin_instruction_1">Въведете фразата си за възстановяване, за да възстановите  вашият портфейл.</string>
+    <string name="forgot_pin_instruction_2">Задайте нов ПИН</string>
+    <string name="forgot_pin_instruction_3">Влезте с новият си ПИН код, за да получите достъп до портфейла си</string>
+    <string name="forgot_pin_warning">Ако сте забравили вашият ПИН и сте загубили фразата за възстановяване, няма да можете да получите обратно достъп до портфейла и средствата си.</string>
+
+    <string name="send_coins_auto_lock_feasible">Тази транзакция ще бъде уредена мигновено без допълнителна такса</string>
+    <string name="send_coins_auto_lock_not_feasible">Ще отнеме няколко минути тази транзакция да бъде наредена. Завършете я мигновено за %1$s%2$s?</string>
+    <string name="send_coins_instant_send_not_feasible">Тази транзакция ще отнеме няколко минути.</string>
+
+    <string name="options_paste_from_clipboard_title">Постави от клипборда</string>
+
+    <string name="transaction_row_message_own_instantx_lock_request_notsent">Това плащане все още не е предадено.</string>
+    <string name="transaction_row_message_sent_to_single_peer">Плащането е изпратено.</string>
+
+    <string name="regular_transaction_info_message">Тази транзакция не беше наредена мигновено.</string>
+
+    <string name="wallet_options_disconnect">Прекъсване </string>
+
+    <string name="network_monitor_masternodes_title">Masternodes</string>
+    <string name="export_keys_dialog_title_to_seed">Виж фразата за възстановяване</string>
+    <string name="import_keys_dialog_title_from_seed">Възстановяване от фразата за възстановяване</string>
+    <string name="backup_to_seed_wallet_dialog_message">Това е вашата фраза за възстановяване. Моля, напишете я.</string>
+    <string name="backup_wallet_to_seed_dialog_warning">НЕ позволявайте на никого да види фразата Ви за възстановяване тъй като в възможно да похарчи вашите Dash.</string>
+    <string name="backup_to_seed_wallet_dialog_enter_pin_message">Портфейлът Ви е защитен от ПИН . Въведете своя ПИН и натиснете Покажи, за да видите фразата си за възстановяване.</string>
     <string name="import_keys_from_seed_dialog_message">Въведете фразата си за възстановяване тук.</string>
-	<string name="import_export_keys_dialog_password_phrase">Фразата за възстановяване отива тук.</string>
-	<string name="preferences_report_issue_summary">Съберете информацията за проблема си и я изпратете  до разработчиците.</string>
-	<string name="navigation_configuration">Конфигурация</string>
+    <string name="import_export_keys_dialog_password_phrase">Фразата за възстановяване отива тук.</string>
+    <string name="preferences_report_issue_summary">Съберете информацията за проблема си и я изпратете  до разработчиците.</string>
+    <string name="navigation_configuration">Конфигурация</string>
     <string name="button_copy_address">Копирай адрес</string>
-	<string name="request_coins_clipboard_address_msg">Dash е копиран в клипборда</string>
-	<string name="backup_wallet_to_seed_show_recovery_phrase">Покажи</string>
-	<string name="restore_wallet_from_invalid_seed_warning_message">%sе невалидна дума.</string>
+    <string name="request_coins_clipboard_address_msg">Dash е копиран в клипборда</string>
+    <string name="backup_wallet_to_seed_show_recovery_phrase">Покажи</string>
+    <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" не е фраза за възстановяване</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Фразата за възстановяване трябва да има 12 думи</string>
+    <string name="restore_wallet_from_invalid_seed_bad_checksum">Грешна възстановяваща фраза</string>
+    <string name="restore_wallet_from_invalid_seed_failure">Портфейлът не може да бъде възстановен:\n\n%s\n\nГрешна фраза за възстановяване?</string>
 
-	<string name="send_coins_options_fee_category_zero">Без такса</string>
-	<string name="send_coins_fragment_hint_fee_zero">Няма да бъде платена такса. Използвайте \"без такса\" само ако не ви е грижа за времето за потвърждение.</string>
+    <string name="send_coins_options_fee_category_zero">Без такса</string>
+    <string name="send_coins_fragment_hint_fee_zero">Няма да бъде платена такса. Използвайте "без такса" само ако не ви е грижа за времето за потвърждение.</string>
 
-	<string name="wallet_uri_handler_public_key_request_dialog_msg">Приложението %s би желало да получи вашият Главен публичен ключ.  Той може да бъде използвано за да проследи вашият портфейл, но не може да бъде използван за преместването на вашите  Dash.</string>
-	<string name="wallet_uri_handler_address_request_dialog_msg">Приложението %s изисква адрес за да Ви бъде платено.  Бихте ли желали да позволите това?</string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
+    <string name="wallet_uri_handler_public_key_request_dialog_msg">Приложението %s би желало да получи вашият Главен публичен ключ.  Той може да бъде използвано за да проследи вашият портфейл, но не може да бъде използван за преместването на вашите  Dash.</string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
+    <string name="wallet_uri_handler_address_request_dialog_msg">Приложението %s изисква адрес за да Ви бъде платено.  Бихте ли желали да позволите това?</string>
 
-	<string name="wallet_lock_unlock">Отключи</string>
-	<string name="wallet_lock_unlock_wallet">Отключи портфейла</string>
-	<string name="wallet_lock_unlock_to_see_txs_title">Портфейлът е заключен.</string>
-	<string name="wallet_lock_unlock_to_see_txs_txt">Докоснете иконата за заключване по-горе, за да отключите портфейла си и да видите историята на транзакциите.</string>
-	<string name="wallet_lock_unlock_dialog_title">Отключете портфейла си</string>
-	<string name="wallet_lock_unlock_dialog_message">Портфейлът Ви е защитен от ПИН за  похарчване. Въведете своя ПИН и натиснете Отключи за да продължите.</string>
-	<string name="wallet_lock_reset_wallet_title">Нулиране на портфейла</string>
-	<string name="wallet_lock_reset_wallet_message">Сигурен ли си? Твоят портфейл ще бъде изтрит и всичкият Dash ще бъдат изгубен.\n\nЕдинственият начин да възстановиш твоят Dash е, чрез резервен архив или възстановяваща фраза.</string>
+    <string name="wallet_lock_unlock">Отключи</string>
+    <string name="wallet_lock_unlock_wallet">Отключи портфейла</string>
+    <string name="wallet_lock_unlock_to_see_txs_title">Портфейлът е заключен.</string>
+    <string name="wallet_lock_unlock_to_see_txs_txt">Докоснете иконата за заключване по-горе, за да отключите портфейла си и да видите историята на транзакциите.</string>
+    <string name="wallet_lock_unlock_dialog_title">Отключете портфейла си</string>
+    <string name="wallet_lock_unlock_dialog_message">Портфейлът Ви е защитен от ПИН за  похарчване. Въведете своя ПИН и натиснете Отключи за да продължите.</string>
+    <string name="wallet_lock_reset_wallet_title">Нулиране на портфейла</string>
+    <string name="wallet_lock_reset_wallet_message">Сигурен ли си? Твоят портфейл ще бъде изтрит и всичкият Dash ще бъдат изгубен.\n\nЕдинственият начин да възстановиш твоят Dash е, чрез резервен архив или възстановяваща фраза.</string>
 
-	<string name="wallet_lock_wallet_disabled">Портфейлът е изключен</string>
-	<string name="wallet_lock_try_again">Опитай отново след %1$d %2$s</string>
-	<string name="wallet_lock_reset">Нулиране</string>
-	<string name="wallet_lock_wrong_pin">Грешен ПИН! %s</string>
+    <string name="wallet_lock_wallet_disabled">Портфейлът е изключен</string>
+    <string name="wallet_lock_try_again">Опитай отново след %1$d %2$s</string>
+    <string name="wallet_lock_reset">Нулиране</string>
+    <string name="wallet_lock_wrong_pin">Грешен ПИН! %s</string>
 
-	<plurals name="wallet_lock_attempts_remaining">
-		<item quantity="one">%d оставащи опита</item>
-		<item quantity="other">%d оставащи опита</item>
-	</plurals>
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="one">%d оставащи опита</item>
+        <item quantity="other">%d оставащи опита</item>
+    </plurals>
 
-	<plurals name="minute">
-		<item quantity="one">минута</item>
-		<item quantity="other">минути</item>
-	</plurals>
-	
-	<plurals name="hour">
-		<item quantity="one">час</item>
-		<item quantity="other">часа</item>
-	</plurals>
+    <plurals name="minute">
+        <item quantity="one">минута</item>
+        <item quantity="other">минути</item>
+    </plurals>
 
-	<string name="encrypt_new_key_chain_upgrade_button">Надграждане</string>
-	<string name="encrypt_new_key_chain_dialog_title">Надгради своят портфейл</string>
-	<string name="encrypt_new_key_chain_dialog_message">Вашият портфейл ще бъде надграден, за да поддържа импортирането и експортирането в още приложения.</string>
-	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Трябва да въведете вашият ПИН за да завършите процесът на надграждане.</string>
-	<string name="pin_code_required_dialog_message">Това приложение вече изисква ПИН за похарчване и разглеждане историята на транзакциите.</string>
+    <plurals name="hour">
+        <item quantity="one">час</item>
+        <item quantity="other">часа</item>
+    </plurals>
+
+    <string name="encrypt_new_key_chain_upgrade_button">Надграждане</string>
+    <string name="encrypt_new_key_chain_dialog_title">Надгради своят портфейл</string>
+    <string name="encrypt_new_key_chain_dialog_message">Вашият портфейл ще бъде надграден, за да поддържа импортирането и експортирането в още приложения.</string>
+    <string name="encrypt_new_key_chain_enter_pin_dialog_message">Трябва да въведете вашият ПИН за да завършите процесът на надграждане.</string>
+    <string name="pin_code_required_dialog_message">Това приложение вече изисква ПИН за похарчване и разглеждане историята на транзакциите.</string>
     <string name="backup_wallet_seed_private_key_written_down_box">Записах фразата за възстановяване</string>
-	
-	<string name="change_exchange_currency_code_message">Вашата местна валута е %1$s, но в приложението е зададено по подразбиране %2$s. Бихте ли желали да се промени в %1$s или да остане в %2$s?</string>
-	<string name="change_to">Промени в %s</string>
-	<string name="leave_as">Остави в %s</string>
 
-	<string name="remind_later">Напомни по-късно</string>
-	<string name="backup_now">Архивирай сега</string>
-	
-	<string name="notification_transactions_channel_name">Транзакции</string>
-	<string name="notification_transactions_channel_description">Получаване на известия при входящи транзакции.</string>
-	<string name="notification_synchronization_channel_name">Синхронизация</string>
-	<string name="notification_synchronization_channel_description">Показване на известие, когато приложението е синхронизирано с мрежата.</string>
+    <string name="change_exchange_currency_code_message">Вашата местна валута е %1$s, но в приложението е зададено по подразбиране %2$s. Бихте ли желали да се промени в %1$s или да остане в %2$s?</string>
+    <string name="change_to">Промени в %s</string>
+    <string name="leave_as">Остави в %s</string>
+
+    <string name="remind_later">Напомни по-късно</string>
+    <string name="backup_now">Архивирай сега</string>
+
+    <string name="notification_transactions_channel_name">Транзакции</string>
+    <string name="notification_transactions_channel_description">Получаване на известия при входящи транзакции.</string>
+    <string name="notification_synchronization_channel_name">Синхронизация</string>
+    <string name="notification_synchronization_channel_description">Показване на известие, когато приложението е синхронизирано с мрежата.</string>
 
     <string name="net_type_indicator" />
 
-	<string name="unlock_with_fingerprint">Използвайте пръстов отпечатък за отключване.</string>
-	<string name="unlock_with_fingerprint_error">Неуспешно разпознаване на пръстов отпечатък, моля опитайте отново.</string>
-	<string name="unlock_with_fingerprint_error_max_attempts">Максималните опити с пръстов отпечатък са достигнати. Моля опитайте отново по-късно.</string>
-	<string name="or_unlock_with_fingerprint">Или използвайте пръстов отпечатък за отключване.</string>
-	<string name="enable_fingerprint">Активиране на пръстов отпечатък.</string>
-	<string name="touch_fingerprint_sensor">Докоснете сензора за пръстов отпечатък.</string>
-	<string name="touch_fingerprint_to_enable">Докоснете сензора за да активиране отключване с пръстов отпечатък.</string>
+    <string name="unlock_with_fingerprint">Използвайте пръстов отпечатък за отключване.</string>
+    <string name="unlock_with_fingerprint_error">Неуспешно разпознаване на пръстов отпечатък, моля опитайте отново.</string>
+    <string name="unlock_with_fingerprint_error_max_attempts">Максималните опити с пръстов отпечатък са достигнати. Моля опитайте отново по-късно.</string>
+    <string name="or_unlock_with_fingerprint">Или използвайте пръстов отпечатък за отключване.</string>
+    <string name="enable_fingerprint">Активиране на пръстов отпечатък.</string>
+    <string name="touch_fingerprint_sensor">Докоснете сензора за пръстов отпечатък.</string>
+    <string name="touch_fingerprint_to_enable">Докоснете сензора за да активиране отключване с пръстов отпечатък.</string>
+    <string name="fingerprint_changed_title">Данни за пръстовият отпечатък са променени</string>
+	<string name="fingerprint_changed_message">Установихме промяна във вашите данни за удостоверяване с пръстов отпечатък. Този път трябва да използвате ПИН.</string>
 	<string name="exchange_rate_missing">Това плащане е прекалено старо, за да се получи стойността му във фиат.</string>
 
-	<string name="preferences_enable_payment_request_summary">Използвайте платежен протокол за инициираните на плащане с  QR-код </string>
-	<string name="preferences_enable_payment_request_title">BIP70 за сканиране и плащане</string>
+    <string name="preferences_enable_payment_request_summary">Използвайте платежен протокол за инициираните на плащане с  QR-код </string>
+    <string name="preferences_enable_payment_request_title">BIP70 за сканиране и плащане</string>
+
+    <string name="verify_continue">Продължи</string>
+    <string name="verify">Провери</string>
+    <string name="verify_backup_wallet">Архивиране на портфейла</string>
+    <string name="verify_show_recovery_phrase">Покажи фраза за възстановяване</string>
+    <string name="verify_secure_now">Подсигури портфейл сега</string>
+    <string name="verify_it_is_important">Важно е</string>
+    <string name="verify_it_is_important_subtitle">Предстои да Ви покажем секретния ключ на портфейла ви.</string>
+    <string name="verify_info_text_1">Тази фраза за възстановяване е Ви дава достъп до средствата в този портфейл.</string>
+    <string name="verify_info_text_2">Ние не съхраняваме тази фраза за възстановяване.</string>
+    <string name="verify_info_text_3">Тази фраза за възстановяване ще ви трябва за достъп до вашите средства, ако това устройство е загубено, повредено или ако Dash Wallet някога случайно бъде деинсталиран от това устройство.</string>
+    <string name="verify_skip">Пропусни</string>
+    <string name="verify_secure_now_btn">Подсигури сега</string>
+    <string name="verify_secure_now_message">Ако загубите това устройство, ще загубите средствата си. Вземете своята фраза за възстановяване, така че да можете да възстановите портфейла си на друго устройство.</string>
+    <string name="verify_seed_title">Моля запишете го долу</string>
+    <string name="verify_seed_write_down_confirmation">Написах го долу</string>
+    <string name="verify_seed_buttons_tip">Моля, докоснете думите от фразата за възстановяване в правилния ред</string>
+    <string name="verify_seed_success_title">Проверено успешно</string>
+    <string name="verify_seed_success_message">Вашият портфейл сега е защитен. Можете да използвате вашата фраза за възстановяване по всяко време, за да възстановите акаунта си на друго устройство.</string>
+    <string name="view_seed_done">Завършено</string>
+    <string name="view_seed_title">Фраза за възстановяване</string>
+	<string name="transaction_result_view_on_explorer">Преглед в Explorer</string>
+	<string name="transaction_result_paid_successfully">Изпратено успешно</string>
+	<string name="transaction_result_sent_to">Изпратени на</string>
+	<string name="transaction_date_and_time">Дата &amp; Час</string>
+	<string name="transaction_close">Затвори</string>
+	<string name="transaction_details_amount_received">Получена сума</string>
+	<string name="transaction_details_amount_sent">Изпратена сума</string>
+
+    <string name="authenticate_fingerprint_title">Удостоверяване</string>
+    <string name="authenticate_fingerprint_message">Потвърдете пръстовият отпечатък, за да продължите</string>
+    <string name="authenticate_pin_message">Въведете вашият ПИН, за да продължите</string>
+    <string name="authenticate_switch_to_fingerprint">Използвайте пръстов отпечатък</string>
+    <string name="authenticate_switch_to_pin">Използвайте парола</string>
+
+    <string name="menu_buy_and_sell_title">Купи &amp; Продай Dash</string>
+    <string name="menu_buy_and_sell_subtitle">Свържете се с борси от трета страна</string>
+    <string name="menu_security_title">Сигурност</string>
+    <string name="menu_security_subtitle">Преглед на парола, резервен портфейл ...</string>
+    <string name="menu_settings_title">Настройки</string>
+    <string name="menu_settings_subtitle">Валута по подразбиране, преки пътища, относно ...</string>
+    <string name="menu_tools_title">Инструменти</string>
+    <string name="menu_tools_subtitle">Импортиране на частен ключ...</string>
+    <string name="menu_local_currency">Местна валута</string>
+    <string name="menu_rescan_blockchain">Повторно сканиране на блок-веригата</string>
+
+    <string name="tools_address_book">Адресна книга</string>
+    <string name="tools_import_private_key">Импортиране на частен ключ.</string>
+    <string name="tools_network_monitor">Наблюдение на мрежата</string>
+
+    <string name="about_help_us_improve">Помогнете ни да подобрим вашето преживяване</string>
+    <string name="about_review_and_rate">Ревю &amp; Оценка на приложението</string>
+    <string name="about_contact_support">Връзка с поддръжката</string>
+    <string name="about_fork_disclaimer">Това е приложение с отворен код, разклонено от Bitcoin Wallet</string>
+    <string name="about_copyright">Copyright © 2020 Dash Core</string>
+    <string name="about_license">GNU General Public License v3.0</string>
+    <string name="about_version_name">Dash Wallet %s</string>
+
+    <string name="block">Блок</string>
+    <string name="time">Време</string>
+    <string name="hash">Хеш</string>
+    <string name="block_info">Информация за блока</string>
+
+    <string name="scan_private_key">Сканирай частен ключ</string>
+    <string name="scan_private_key_intro_1">На път сте да усвоите средства от хартиен Dash портфейл.</string>
+    <string name="scan_private_key_intro_2">Това ще премести всички монети от него в портфейлът Ви на това устройство.</string>
+    <string name="scan_private_key_intro_3">Когато транзакцията бъде потвърдена, другият портфейл ще бъде безполезен и не бива да се използва повторно от съображения за безопасност.</string>
+    <string name="confirm">Потвърди</string>
+
+    <string name="advanced_security_security_level">Ниво на сигурност</string>
+    <string name="auto_logout">Автоматично излизане</string>
+    <string name="spending_confirmation">Потвърждение за похарчване</string>
+    <string name="logout_after">Излизане след</string>
+    <string name="immediately">Незабавно</string>
+    <string name="twenty_four_hours">24 часа</string>
+    <string name="one_minute">1 мин</string>
+    <string name="five_minute">5 мин</string>
+    <string name="one_hour">1 час</string>
+    <string name="one_day">1 ден</string>
+    <string name="biometric_limit">Биометричен лимит</string>
+    <string name="spending_confirmation_hint_zero">ПИН се изисква винаги при правене на плащания</string>
+    <string name="spending_confirmation_hint_above_zero">Можете да потвърдите с  биометрично удостоверяване при плащанията по-долу</string>
+
+    <string name="security_none">Никакъв</string>
+    <string name="security_low">Ниско</string>
+    <string name="security_medium">Средно</string>
+    <string name="security_high">Високо</string>
+    <string name="security_very_high">Много високо</string>
+    <string name="max">Максимум</string>
+
+    <string name="enter_amount_available">налично</string>
+
+    <string name="skip">пропусни</string>
+    <string name="get_started">Първи стъпки</string>
+    <string name="welcome_screen_title_1_new_install">Добре дошли</string>
+    <string name="welcome_screen_title_1_upgrade">Надградихме</string>
+    <string name="welcome_screen_subtitle_1">Интуитивно и познато преживяване на всичките Ви устройства</string>
+    <string name="welcome_screen_title_2">Платете с лекота</string>
+    <string name="welcome_screen_subtitle_2">Платете и вземете плащане незабавно с лесни за използване потоци на плащане</string>
+    <string name="welcome_screen_title_3">Повече контрол</string>
+    <string name="welcome_screen_subtitle_3">Имате пълен контрол и персонализиране на портфейла според  нужди Ви</string>
+
+    <string-array name="history_filter">
+        <item>Всички</item>
+        <item>Получени</item>
+        <item>Изпратено</item>
+    </string-array>
+
+    <string name="sync_status_wait">Моля изчакайте синхронизирането да приключи</string>
+    <string name="sync_status_syncing_title">Синхронизиране</string>
+    <string name="sync_status_syncing_sub_title">с Dash блок верига</string>
+    <string name="sync_status_unable_to_connect">Не може да се свърже</string>
+    <string name="sync_status_check_connection">Проверете връзката</string>
+
+
 </resources>

@@ -24,6 +24,8 @@ import android.os.Handler
 import android.view.View
 import android.view.animation.AnimationUtils
 import androidx.annotation.RequiresApi
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.os.CancellationSignal
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
@@ -31,6 +33,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.widget.NumericKeyboardView
+import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
@@ -60,6 +63,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
     private lateinit var viewModel: LockScreenViewModel
     private lateinit var checkPinViewModel: CheckPinViewModel
     private lateinit var enableFingerprintViewModel: CheckPinSharedModel
+    private var pinLength = WalletApplication.getInstance().configuration.pinLength
 
     private val temporaryLockCheckHandler = Handler()
     private val temporaryLockCheckInterval = TimeUnit.SECONDS.toMillis(10)
@@ -87,6 +91,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_lock_screen)
+        setupKeyboardBottomMargin()
 
         blockchainStateViewModel = ViewModelProviders.of(this)
                 .get(BlockchainStateViewModel::class.java)
@@ -95,6 +100,22 @@ class LockScreenActivity : SendCoinsQrActivity() {
         pinRetryController = PinRetryController.getInstance()
         initView()
         initViewModel()
+    }
+
+    private fun setupKeyboardBottomMargin() {
+        if (!hasNavBar()) {
+            val set = ConstraintSet()
+            val layout = numeric_keyboard.parent as ConstraintLayout
+            set.clone(layout)
+            set.clear(R.id.numeric_keyboard, ConstraintSet.BOTTOM)
+            set.connect(R.id.numeric_keyboard, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM)
+            set.applyTo(layout)
+        }
+    }
+
+    private fun hasNavBar(): Boolean {
+        val id: Int = resources.getIdentifier("config_showNavigationBar", "bool", "android")
+        return id > 0 && resources.getBoolean(id)
     }
 
     override fun onStart() {
@@ -128,11 +149,11 @@ class LockScreenActivity : SendCoinsQrActivity() {
                 if (pinRetryController.isLocked) {
                     return
                 }
-                if (checkPinViewModel.pin.length < 4) {
+                if (checkPinViewModel.pin.length < pinLength) {
                     checkPinViewModel.pin.append(number)
                     pin_preview.next()
                 }
-                if (checkPinViewModel.pin.length == 4) {
+                if (checkPinViewModel.pin.length == pinLength) {
                     Handler().postDelayed({
                         checkPinViewModel.checkPin(checkPinViewModel.pin)
                     }, 200)
@@ -206,6 +227,9 @@ class LockScreenActivity : SendCoinsQrActivity() {
 
         when (state) {
             State.ENTER_PIN, State.INVALID_PIN -> {
+                if (pinLength != PinPreviewView.DEFAULT_PIN_LENGTH) {
+                    pin_preview.mode = PinPreviewView.PinType.CUSTOM
+                }
                 view_flipper.displayedChild = 0
 
                 action_title.setText(R.string.lock_enter_pin)

@@ -77,7 +77,7 @@ public class Configuration {
     private static final String PREFS_ENABLE_FINGERPRINT = "enable_fingerprint";
     public static final String PREFS_RESTORING_BACKUP = "restoring_backup";
     public static final String PREFS_V7_REDESIGN_TUTORIAL_COMPLETED = "v7_tutorial_completed";
-
+    public static final String PREFS_PIN_LENGTH = "pin_length";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 4;
@@ -415,5 +415,12 @@ public class Configuration {
     public void setEnableFingerprint(boolean remind) {
         prefs.edit().putBoolean(PREFS_ENABLE_FINGERPRINT, remind).apply();
     }
-    
+
+    public int getPinLength() {
+        return prefs.getInt(PREFS_PIN_LENGTH, 4);
+    }
+
+    public void setPinLength(int pinLength) {
+        prefs.edit().putInt(PREFS_PIN_LENGTH, pinLength).apply();
+    }
 }

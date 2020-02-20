@@ -16,7 +16,7 @@
     <string name="wallet_address_dialog_fragment_hint">Para proteger tu privacidad, tu dirección cambiará una vez reciba un pago.</string>
     <string name="wallet_balance_fragment_too_much">Esta cantidad es muy grande para llevar en tu bolsillo, por favor, muévela a un lugar más seguro.</string>
     <string name="wallet_balance_fragment_replaying">Saldo no disponible durante la reevaluación.</string>
-    <string name="exchange_rates_activity_title">Tasas de cambio</string>
+    <string name="exchange_rates_activity_title">Moneda local</string>
     <string name="exchange_rates_fragment_empty_text">No se pueden cargar las tasas de cambio.</string>
     <string name="exchange_rates_fragment_empty_search">No se encuentra la tasa de cambio.</string>
     <string name="exchange_rates_fragment_default">(predeterminado)</string>
@@ -25,13 +25,11 @@
     <string name="exchange_rates_fragment_source">Precio extraído de %s</string>
     <string name="exchange_rates_options_search">Buscar tasa de cambio</string>
     <string name="exchange_rates_context_set_as_default_title">Establecer por defecto</string>
-    <string name="wallet_transactions_fragment_empty_text_received">Aún no se han recibido Dash.</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">Aún no se han enviado Dash.</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">¿Cómo obtener Dash?\n\nCámbialos por dinero tradicional,\nvende bienes o servicios o\ngánalos trabajando</string>
+    <string name="wallet_transactions_fragment_empty_text">No hay transacciones para mostrar</string>
     <string name="wallet_transactions_row_warning_backup">Felicitaciones, recibiste tu primer pago! ¿Ya hiciste backup de tu billetera para protegerse contra pérdidas?</string>
     <string name="wallet_transactions_fragment_coinbase">extraído</string>
     <string name="wallet_transactions_fragment_internal">interno</string>
-    <string name="wallet_transactions_options_filter">Filtrar</string>
+    <string name="wallet_transactions_options_filter">Filtrar Transacciones</string>
     <string name="wallet_transactions_options_filter_all">Todos los pagos</string>
     <string name="wallet_transactions_options_filter_received">Pagos recibidos</string>
     <string name="wallet_transactions_options_filter_sent">Pagos enviados</string>
@@ -57,18 +55,18 @@
     <string name="send_coins_fragment_request_payment_request_wrong_signature">¡Firma incorrecta!</string>
     <string name="send_coins_fragment_payee_verified_by">verificado por: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">desconocido</string>
-    <string name="send_coins_fragment_receiving_address_label">Pagar a</string>
+    <string name="send_coins_fragment_receiving_address_label">Enviar a</string>
     <string name="send_coins_fragment_receiving_address_hint">escriba dirección o nombre</string>
     <string name="send_coins_fragment_receiving_address_error">Dirección Dash invalida!</string>
     <string name="send_coins_fragment_receiving_address_own">¡Estás a punto de enviartelo a tí mismo!</string>
     <string name="send_coins_fragment_receiving_address_complex">dirección\ncompleja</string>
     <string name="send_coins_fragment_pending">(%s esperando confirmación)</string>
-    <string name="send_coins_fragment_amount_label">Cantidad a pagar</string>
+    <string name="send_coins_fragment_amount_label">Cantidad a enviar</string>
     <string name="send_coins_fragment_pin_label">Ingresar PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Una comisión de red de %s será pagada.</string>
-    <string name="send_coins_fragment_hint_fee_priority">Una comisión prioritaria de %s será pagada. Si te importan las comisiones bajas, usa \"Prioritaria\" solo si necesitas confirmación lo más pronto posible.</string>
-    <string name="send_coins_fragment_hint_dusty_send">La cantidad es demasiado baja para enviar.</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Dash insuficientes. Te faltan %s.</string>
+    <string name="send_coins_fragment_hint_fee_priority">Una comisión prioritaria de %s será pagada. Si te importan las comisiones bajas, usa "Prioritaria" solo si necesitas confirmación lo más pronto posible.</string>
+    <string name="send_coins_fragment_hint_dusty_send">La cantidad es demasiado pequeña para ser enviada</string>
+    <string name="send_coins_fragment_hint_insufficient_money">Fondos insuficientes</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">La cantidad de pequeños pagos en tu billetera no es suficiente para poder enviarlos.</string>
     <string name="send_coins_fragment_hint_replaying">Actualmente los pagos no están disponibles por proceso de reinicio en progreso</string>
     <string name="send_coins_fragment_direct_payment_enable">Enviar pago directamente al receptor.</string>
@@ -80,7 +78,7 @@
     <string name="send_coins_fragment_button_back">Atrás</string>
     <string name="send_coins_fragment_insufficient_money_title">No hay suficientes monedas disponibles</string>
     <string name="send_coins_fragment_insufficient_money_msg1">Te faltan %s.</string>
-    <string name="send_coins_fragment_insufficient_money_msg2">¿Deseas pagar con todo lo que tienes?</string>
+    <string name="send_coins_fragment_insufficient_money_msg2">¿Quieres enviar con todo lo que tienes?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">Falla al vaciar billetera</string>
     <string name="send_coins_fragment_state_decrypting">Descifrando…</string>
     <string name="send_coins_preparation_msg">Firmando…</string>
@@ -92,7 +90,7 @@
     <string name="send_coins_options_fee_category_economic">Económica</string>
     <string name="send_coins_options_fee_category_priority">Prioritaria</string>
     <string name="send_coins_options_empty">Vaciar billetera</string>
-    <string name="sweep_wallet_activity_title">Barrer billetera de papel</string>
+    <string name="sweep_wallet_activity_title">Importar llave privada</string>
     <string name="sweep_wallet_fragment_intro">Vas a barrer una billetera de papel. Esto transferirá todas las monedas del papel a tu billetera en este dispositivo. Cuando la transacción esté confirmada, el papel ya no tendrá valor y, por razones de seguridad, no debería ser reutilizado.</string>
     <string name="sweep_wallet_fragment_hint">Las billeteras de papel normalmente se utilizan para la el depósito offline. Algunos cajeros ATM los imprimen en el recibo de papel en lugar de enviar los Dash directamente al dispositivo móvil. A veces se usan billeteras de papel prepago para enviar valores a otras personas (no recomendado).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Empieza escaneando la clave de una billetera de papel. Usa el botón de la cámara.</string>
@@ -158,6 +156,33 @@
     <string name="transaction_row_message_received_dust">Esta cantidad podría ser demasiado pequeña para ser gastada.</string>
     <string name="transaction_row_message_received_pay_to_many">Este pago llega a muchas billeteras además de la tuya, lo que hace que la aplicación se ralentice. Si puedes, intenta recibir pagos que sólo le lleguen a ti.</string>
     <string name="transaction_row_message_received_rbf">Este pago fue retrazado por que el emisor usaba un tipo de transacción insegura.</string>
+    <string name="transaction_row_status_received">Recibido</string>
+    <string name="transaction_row_status_sent">Enviado</string>
+    <string name="transaction_row_status_sending">Enviando</string>
+    <string name="transaction_row_status_sent_interally">Interno</string>
+    <string name="transaction_row_status_processing">Procesando</string>
+    <string name="transaction_row_status_confirming">Confirmando</string>
+    <string name="transaction_row_status_locked">Bloqueado</string>
+    <string name="transaction_row_status_error_sending">Error al enviar</string>
+    <string name="transaction_row_status_error_dead">Gasto doble</string>
+    <string name="transaction_row_status_error_conflicting">En conflicto</string>
+    <string name="transaction_row_status_error_insufficient_fee">Comisión insuficiente</string>
+    <string name="transaction_row_status_error_dust">Polvo</string>
+    <string name="transaction_row_status_error_non_standard">No estándar</string>
+    <string name="transaction_row_status_error_malformed">Malformado</string>
+    <string name="transaction_row_status_error_duplicate">Duplicado</string>
+    <string name="transaction_row_status_error_obsolete">Obsoleto</string>
+    <string name="transaction_row_status_error_invalid">Inválido</string>
+    <string name="transaction_row_status_error_other">Desconocido</string>
+    <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
+    <string name="transaction_row_time_text">sobre %s a las%s</string>
+    <string name="transaction_row_rate_not_available">No disponible</string>
+    <string name="transaction_row_status_masternode_registration">Registro de masternode</string>
+    <string name="transaction_row_status_masternode_update_registrar">Actualizar Masternodo</string>
+    <string name="transaction_row_status_masternode_update_service">Actualizar Masternodo</string>
+    <string name="transaction_row_status_masternode_revoke">Revocar masternode</string>
+    <string name="transaction_row_status_masternode_reward">Recompensa de masternode</string>
+    <string name="transaction_row_status_mining_reward">Minando recompensa</string>
     <string name="network_monitor_activity_title">Monitor de red</string>
     <string name="network_monitor_peer_list_title">Pares</string>
     <string name="network_monitor_block_list_title">Bloques</string>
@@ -201,7 +226,7 @@
     <string name="import_export_keys_dialog_show">Mostrar contraseña</string>
     <string name="import_export_keys_dialog_failure_title">Error</string>
     <string name="import_keys_intent_filter_action">Restaurar billetera</string>
-    <string name="encrypt_keys_dialog_title">PIN de pagos</string>
+    <string name="encrypt_keys_dialog_title">Cambiar PIN</string>
     <string name="encrypt_keys_dialog_message">La función de efectuar pagos desde tu billetera estará protegido con el PIN que elijas.</string>
     <string name="encrypt_keys_dialog_warning">Importante: no uses números comunes (como fechas de cumpleaños) en su PIN.</string>
     <string name="encrypt_keys_dialog_password_old">Antiguo PIN</string>
@@ -212,7 +237,7 @@
     <string name="encrypt_keys_dialog_show">Mostrar PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">Encriptando…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Desencriptando…</string>
-    <string name="encrypt_keys_dialog_state_done">Hecho.</string>
+    <string name="encrypt_keys_dialog_state_done">Hecho</string>
     <string name="scan_camera_problem_dialog_title">Lo sentimos</string>
     <string name="scan_camera_problem_dialog_message">La cámara ha sufrido un problema. Probablemente necesites reiniciar el dispositivo.</string>
     <string name="scan_camera_permission_dialog_title">Permisos de la camara</string>
@@ -296,7 +321,7 @@
     <string name="notification_coins_received_msg">%s Recibidos</string>
     <string name="notification_peers_connected_msg">%d pares conectados</string>
     <string name="notification_inactivity_title">¡Aún tienes Dash en este dispositivo!</string>
-        <string name="notification_inactivity_message">Aún tienes Dash en este dispositivo! Por favor escriba la frase de recuperación en un lugar seguro antes de desinstalar la Billetera Dash o perderás el saldo de %s.</string>
+    <string name="notification_inactivity_message">Aún tienes Dash en este dispositivo! Por favor escriba la frase de recuperación en un lugar seguro antes de desinstalar la Billetera Dash o perderás el saldo de %s.</string>
     <string name="notification_inactivity_action_dismiss">Recuerdame despues</string>
     <string name="notification_inactivity_action_dismiss_forever">No me recuerdes</string>
     <string name="appwidget_wallet_balance_title">Saldo en Dash</string>
@@ -319,6 +344,7 @@
     <string name="button_set_as_default">Establecer como predeterminado</string>
     <string name="button_request_coins">Recibir Dash</string>
     <string name="button_send_coins">Enviar Dash</string>
+    <string name="button_pay">Enviar</string>
     <string name="button_scan">Explorar</string>
     <string name="button_settings">Ajustes</string>
     <string name="action_show_qr">Mostrar código QR</string>
@@ -338,10 +364,14 @@
 
     <string name="transaction_fragment_confirmations_label">Confirmaciones</string>
 
-    <string name="navigation_drawer_open">Abrir menú deslizante</string>
-    <string name="navigation_drawer_close">Cerrar menú deslizante</string>
-
     <string name="dash_slogan">Instantáneo - Privado - Seguro</string>
     <string name="dash_wallet">Billetera</string>
+
+    <string name="activity_security_backup_wallet">Respaldar billetera en un archivo</string>
+    <string name="activity_security_view_recovery_phrase">Ver frase de recuperación</string>
+    <string name="activity_security_advanced">Seguridad avanzada</string>
+    <string name="activity_security_biometric_auth">Autenticación por huella dactilar</string>
+    <string name="activity_security_hide_balance">Esconder Saldo Automáticamente</string>
+    <string name="reset_to_default">Restablecer a los valores predeterminados</string>
 
 </resources>

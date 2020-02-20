@@ -1,36 +1,39 @@
-Utilisation à vos risques et périls ! (Nécessite Android 4 ou ultérieur)
+DESCRIPTION GÉNÉRALE
 
-<b>Vos dashs toujours avec vous, dans votre poche !</b> Payez en scannant simplement un QR-code. Si vous êtes un vendeur, recevez vos paiements de manière sûre et instantanée. Le portefeuille Dash est la première application Dash mobile, et sans doute la mieux sécurisée !
+Dash Wallet est le portefeuille Android de référence maintenu par Dash Core Group pour la cryptomonnaie Dash, une alternative à Bitcoin, innovante et dédiée spécifiquement aux paiements.
 
-<b>CARACTÉRISTIQUES</b>
+Dash est une cryptomonnaie dont l'objectif est de résoudre les défauts dont souffrent les autres cryptomonnaies. Dash s'appuie sur un réseau de masternodes pour permettre des fonctionnalités telles que l'anonymat (facultatif), les transactions instantanées et un système budgétaire pour financer directement les idées d'amélioration les plus innovantes.
 
-• Pas d'enregistrement, de service web ni de réseau centralisé ! Ce portefeuille est décentralisé et entièrement pair-à-pair.
-• Affichage des sommes en DASH, mDASH ou µDASH.
-• Conversion depuis et vers les monnaies nationales.
-• Envoi et réception de dashs par NFC, QR-codes ou adresses URL Dash.
-• Carnet d'adresses pour conserver les adresses Dash les plus utilisées.
-• Si vous n'êtes pas en ligne, vous pouvez quand même payer via Bluetooth.
-• Notification système en cas de réception d'argent.
-• Récupération de portefeuilles papier (<i>paper wallets</i>, utilisés pour le stockage sécurisé).
-• Widget pour connaître votre solde Dash.
+Intuitive et sûre, l'application Dash Wallet vous donne le contrôle complet sur votre argent numérique. Envoyez et recevez des paiements Dash instantanément, avec le portefeuille mobile le plus sécurisé qui soit.
 
+Dash Wallet se connecte directement au réseau Dash. Cela signifie qu'il n'utilise pas de serveurs intermédiaires susceptibles de tomber en panne ou d'être piratés — vos fonds sont toujours en sécurité. Même si votre téléphone et perdu, endommagé ou volé, vous pouvez facilement récupérer vos fonds au moyen de votre phrase de récupération personnelle.
 
-<b>CONTRIBUEZ !</b>
+Fonctionnalités :
 
-Dash Wallet est un <b>logiciel libre open source</b>. Licence : GPLv3
+• Envoyez et recevez des paiements Dash en quelques secondes, en ligne ou en personne.
+• Paiements en un seul clic sur les sites web et chez les vendeurs qui acceptent Dash.
+• Payez rapidement avec l'authentification biométrique.
+• Récupération de portefeuilles papier ("paper wallets", utilisés pour le stockage sécurisé).
+• Intégration de services de tierce partie, pour permettre aux utilisateurs d'acheter et de vendre des dashs.
+• Une simple phrase de récupération vous permet de retrouver vos fonds si votre appareil est perdu ou remplacé.
+• Des réglages souples vous permettent de personnaliser vos préférences de sécurité.
+• Connexion directe au réseau Dash — pas de serveurs intermédiaires pouvant tomber en panne ou être piratés.
+
+Dash Wallet est une application gratuite et open source. Les frais de transaction du réseau sont inférieurs à ceux de la plupart des autres cryptomonnaies, et il n'y a pas de coûts supplémentaires. Envoyez n'importe quelle somme d'argent à n'importe qui dans le monde, instantanément. Acceptez des paiements en toute confiance et instantanément pour votre entreprise. Dash, c'est l'argent tel qu'il aurait toujours dû être.
+
+CONTRIBUEZ
+
+Dash Wallet est un logiciel libre et open source. Licence : GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Notre code source est disponible sur GitHub :
-https://github.com/HashEngineering/dash-wallet
+https://github.com/dashevo/dash-wallet
 
 Les traductions sont gérées par Transifex :
-https://www.transifex.com/dash/dash-wallet/
+https://www.transifex.com/dash/dash-mobile-wallets/
 
 Plus d'informations sur Dash sur le site
-https://www.dash.org/
+https://www.dash.org/fr
 
-<b>TÉMOIGNAGES</b>
-
-• Portefeuille mobile recommandé par https://www.dash.org
-
-<i>Utilisation à vos risques et périls !</i>
+v. 7.0.0 mise à jour
+Dash Wallet v. 7.0 vous offre une expérience utilisateur entièrement revue, afin de rendre son utilisation encore plus simple, familière et intuitive sur tous vos appareils. Nous avons repensé notre procédure de vérification de phrase de passe pour mieux souligner son importance dans le cas d'une éventuelle récupération ultérieure, tout en permettant aux nouveaux utilisateurs de noter leur phrase de récupération de 12 mots plus tard. Nous avons également ajouté des raccourcis sur l'écran de démarrage, pour un accès plus rapide aux fonctions les plus fréquemment utilisées. Notre menu de réglages a été également repositionné dans l'application, et organisé de manière à aider les utilisateurs à configurer leur portefeuille plus vite et plus facilement. Les utilisateurs ont désormais un contrôle bien plus grand sur leurs réglages de sécurité, ainsi que la possibilité de décider à quelle fréquence est demandée la saisie du code PIN.

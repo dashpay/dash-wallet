@@ -10,19 +10,19 @@
     <string name="uphold_account_dash_balance">El balance de tu cuenta de Uphold es</string>
     <string name="uphold_transfer_to_this_wallet">Transfiere Dash desde tu cuenta de Uphold a esta billetera</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">La comisión se deducirá de la cantidad solicitada.</string>
-    <string name="uphold_withdrawal_instructions">Ingresa abajo la cantidad a transferir </string>
+    <string name="uphold_withdrawal_instructions">Ingresa la cantidad a transferir</string>
     <string name="uphold_withdrawal_success_title">Éxito</string>
     <string name="uphold_withdrawal_success_message">Tu transacción se envió y el monto debe aparecer en tu billetera en unos minutos.\n\n ID de transacción: %s</string>
-    <string name="uphold_otp_dialog_title">Ingresa abajo tu código 2FA</string>
+    <string name="uphold_otp_dialog_title">Ingresa tu código 2FA debajo</string>
     <string name="uphold_transfer">Transferir</string>
     <string name="uphold_see_on_uphold">Ver en Uphold</string>
-    <string name="uphold_logout_title">Salir de Uphold</string>
+    <string name="uphold_logout_title">Cerrar sesión desde Uphold</string>
     <string name="uphold_logout">Cerrar sesión</string>
-    <string name="uphold_logout_explanation_text">También necesitas cerrar la sesión del sitio de Uphold en el navegador.</string>
-    <string name="uphold_logout_go_to_website">Ir al sitio web</string>
+    <string name="uphold_logout_explanation_text">También deberás cerrar sesión en el sitio web de Uphold utilizando tu navegador</string>
+    <string name="uphold_logout_go_to_website">Ir a la página web</string>
     <string name="uphold_error">Error de Uphold</string>
     <string name="uphold_error_not_logged_in">Su cuenta de Uphold ya no está asociada a Dash Wallet. En la próxima pantalla presione Asociar cuenta de Uphold. </string>
     <string name="uphold_error_not_available">El servicio de Uphold no está disponible. Intente nuevamente más tarde por favor. </string>
-    <string name="uphold_error_report_issue">Favor hacer reporte de este problema a través de la opción \"Reportar Problema\" del menú principal. </string>
+    <string name="uphold_error_report_issue">Favor hacer reporte de este problema a través de la opción "Reportar Problema" del menú principal. </string>
 
 </resources>

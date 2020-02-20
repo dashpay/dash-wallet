@@ -1,36 +1,39 @@
-Usare a proprio rischio! (Richiede Android 4 o successive versioni )
+DESCRIZIONE PRINCIPALE
 
-<b>Porta i tuoi Dash sempre con te nella tua tasca </b> Paga semplicemente scansionando un codice QR. In qualità di commerciante, ricevi pagamenti in modo affidabile e istantaneo. Dash Wallet è la prima app mobile di Dash, e probabilmente anche la più sicura!
+Dash Wallet è il portafoglio Android di riferimento gestito da Dash Core Group per Dash - Digital Cash - un'alternativa innovativa a Bitcoin,  esplicitamente progettata per i pagamenti.
 
-<b>CARATTERISTICHE</b>
+Dash è una criptovaluta che cerca di correggere i difetti di cui soffrono altre criptovalute. Si basa su una rete di Masternodes per consentire cose come privacy opzionale, transazioni istantanee e un meccanismo di finanziamento diretto per promuovere la crescita della rete.
 
-• Nessuna registrazione , a servizio cloud Web  necessario! Questo portafoglio è decentralizzato  e da persona a persona "p2p".
-• Visualizza l'ammontare di Dash in DASH, mDASH e µDASH.
-• Conversione in e da valute nazionali.
-• Manda e ricevi DASH via NFC, codici QR o collegamenti URLs DASH.
-• Rubrica indirizzi per indirizzi DASH di uso corrente o abituale.
-Quando sei offline, puoi comunque pagare via Bluetooth.
-• Sistema di notifiche di ricezione monete
-• Importazione di wallet cartacei (e.g. quelli usati per il congelamento dei fondi "cold storage")
-• App widget per bilancio Dash.
+Intuitivo e sicuro, Dash Wallet ti dà il controllo completo sulla tua moneta digitale. Invia e ricevi pagamenti in Dash istantaneamente, con il portafoglio mobile più sicuro disponibile.
 
+Dash Wallet si collega direttamente alla rete Dash. Ciò significa che non ci sono server per essere hackerati o da attaccare - i tuoi fondi sono sempre al sicuro. Anche se il telefono viene smarrito, danneggiato o rubato, è possibile recuperare facilmente i fondi utilizzando la frase di recupero personale.
 
-<b>CONTRIBUIRE</b>
+Caratteristiche:
 
-Il portafoglio Dash è<b>open source</b>e<b>free software</b>. Licenza: GPLv3
+* Invia e ricevi pagamenti di Dash in pochi secondi, online o fisicamente
+* Pagamenti con un pulsante pagamenti per commercianti e siti web
+* Paga rapidamente con l'autenticazione biometrica
+* Importazione di wallet cartacei (e.g. quelli usati per il congelamento dei fondi "cold storage")
+* 3rd party integrata che permette agli utenti di comprare e vendere  Dash più agevolmente
+* La semplice frase di recupero consente di recuperare fondi in caso di smarrimento o modifica del dispositivo
+* Impostazioni flessibili per soddisfare una vasta gamma di preferenze di sicurezza personalizzate
+* Client Dash di rete diretto - nessun server centrale da violare o disconnettere da parte di hacker
+
+Dash Wallet è open source e gratuito. Le commissioni di rete sono inferiori alla maggior parte delle criptovalute e non ci sono costi centralizzati aggiuntivi. Invia qualsiasi somma di denaro a chiunque nel Mondo in pochi secondi. Accetta pagamenti in modo affidabile e immediato presso la tua azienda. Semplicemente cosi come dovrebbe essere il denaro .
+
+CONTRIBUIRE
+
+Dash Wallet è un software open source e gratuito. Licenza: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Il nostro codice sorgente è disponibile su GitHub:
-https://github.com/HashEngineering/dash-wallet
+https://github.com/dashevo/dash-wallet
 
 Tutte le traduzioni sono gestite via Transifex:
-https://www.transifex.com/dash/dash-wallet/
+https://www.transifex.com/dash/dash-mobile-wallets/
 
 Per ulteriori informazioni su Dash visita:
 https://www.dash.org/
 
-<b>TESTIMONIAL</b>
-
-Un portafoglio per dispositivi mobili raccomandato da https://www.dash.org
-
-<i>Usare a proprio rischio!</i>
+v7.0.0 Upgrade
+Dash Wallet v7.0 porta con sé un'esperienza completamente riprogettata che cerca di migliorare la facilità d'uso in modo intuitivo e familiare su tutti i tuoi dispositivi. Abbiamo reinventato il nostro processo di verifica della frase di recupero per evidenziare l'importanza di salvaguardare queste informazioni per il successivo recupero del portafoglio e gli utenti possono ora decidere in autonomia e senza fretta quando  scrivere la loro frase di recupero di 12 parole. Abbiamo anche aggiunto scorciatoie alla schermata principale per un accesso più rapido alle funzionalità di uso comune e il nostro menu è stato riposizionato nell'app e organizzato per aiutare gli utenti a configurare il portafoglio in modo più rapido ed efficiente. Gli utenti ora hanno un controllo molto più ampio sulle loro impostazioni di sicurezza e la possibilità di decidere con quale frequenza inserire il loro codice PIN.

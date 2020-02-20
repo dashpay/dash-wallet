@@ -1,94 +1,316 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-	<string name="send_coins_auto_lock_not_feasible">このトランザクションは決済に数分かかるかもしれません。 %1$s%2$sの追加で即時に完了させますか ？</string>
-	<string name="send_coins_instant_send_not_feasible">このトランザクションは決済に数分がかかります。</string>
 
-	<string name="options_paste_from_clipboard_title">クリップボードから貼付け</string>
+    <string name="onboarding_create_wallet">新しいウォレットを作成する</string>
+    <string name="onboarding_recover_wallet">復元フレーズからウォレットを復元する</string>
+    <string name="onboarding_restore_wallet">ファイルからウォレットを復元する</string>
+    <string name="onboarding_load_wallet_error">ウォレットをロードできません</string>
 
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">この支払はまだ送信されていません。</string>
-	<string name="transaction_row_message_sent_to_single_peer">この支払いは送信されました。</string>
+    <string name="set_pin_create_new_wallet">新しいウォレットを作成する</string>
+    <string name="set_pin_restore_wallet">ウォレットを復元する</string>
+    <string name="set_pin_enter_pin">古いPINを入力してください</string>
+    <string name="set_pin_set_pin">PINを設定する</string>
+    <string name="set_pin_confirm_pin">PINを確認する</string>
+    <string name="set_pin_encrypting">ウォレットを暗号化しています</string>
+    <string name="set_pin_decrypting">ウォレットを復号しています</string>
+    <string name="set_pin_verifying_pin">PINを検証中</string>
+    <string name="set_pin_message">このアプリをアンロックして使用するときは必ずこのPINが必要となります</string>
 
-	<string name="regular_transaction_info_message">このトランザクションは即時に決済されます。</string>
+    <string name="home_pay">送金</string>
+    <string name="home_receive">入金</string>
+    <string name="home_available_balance">ご利用可能な残高</string>
+    <string name="home_balance_hidden">非表示にされた残高</string>
+    <string name="home_balance_show_hint">タップして残高を表示させる</string>
+    <string name="home_balance_hide_hint">タップして残高を非表示にする</string>
 
-	<string name="wallet_options_disconnect">切断</string>
+    <string name="dialog_confirm_confirm">承認</string>
+    <string name="dialog_confirm_pay_to">へ送金する</string>
+    <string name="dialog_confirm_fee">ネットワーク手数料</string>
+    <string name="dialog_confirm_total">総計</string>
 
-	<string name="network_monitor_masternodes_title">マスターノード</string>
-	<string name="export_keys_dialog_title_to_seed">復元フレーズを表示する</string>
-	<string name="import_keys_dialog_title_from_seed">復元フレーズでウォレットを復元する</string>
-	<string name="backup_to_seed_wallet_dialog_message">これはあなたの復元フレーズです。ペンで書き留めてください。</string>
-	<string name="backup_wallet_to_seed_dialog_warning">復元フレーズは絶対に誰にも見せないで下さい！復元フレーズを知られると、あなたのDashは簡単に盗まれます。</string>
-	<string name="backup_to_seed_wallet_dialog_enter_pin_message">あなたのウォレットは送金用PINコードで保護されています。 PINを入力して［表示］を押すと、復元フレーズが表示されます。</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_secure_now">ウォレットをすぐに安全な状態にする</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_scan_to_pay">スキャンして送金する</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_pay_to_address">アドレスへ送金する</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_buy_sell">Dashを買う/売る</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_import_key">秘密鍵をインポート</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_add_shortcut">ショートカットを追加する</string>
+
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_quick_receive">クイック入金</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_pin">PINを使ってログインする</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_fingerprint">指紋認証を使ってログインする</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_scan_to_pay">スキャンして送金する</string>
+    <!-- Lock Screen: Text above the PIN Entry area -->
+    <string name="lock_enter_pin">PINを入力</string>
+    <string name="lock_unlock_with_fingerprint">指紋認証を使ってアンロックする</string>
+
+    <string name="perm_lock_info">ウォレットは永久にロックされました</string>
+    <string name="perm_lock_wipe_wallet">ウォレットを削除する</string>
+    <string name="perm_lock_close_app">閉じる</string>
+
+    <string name="scan_to_pay_error_dialog_title">スキャンして送金する</string>
+    <string name="scan_to_pay_error_dialog_message">クリップボードのDashアドレスやURLリクエストは無効です:\n\n%s</string>
+    <string name="scan_to_pay_error_dialog_message_no_data">クリップボードのDashアドレスやURLリクエストは無効です</string>
+
+    <string name="receive_title">入金</string>
+    <string name="receive_enter_amount_message">受け取る金額を指定してください</string>
+    <string name="receive_enter_amount_button">金額を指定する</string>
+    <string name="receive_share_button">共有</string>
+    <string name="receive_copied">コピーされた</string>
+
+    <string name="pay_title">送金</string>
+    <string name="history_title">履歴</string>
+    <string name="more_title">追加</string>
+    <string name="settings_title">設定</string>
+    <string name="security_title">セキュリティ</string>
+    <string name="recover_wallet_title">ウォレットを復元</string>
+    <string name="tools_title">ツール</string>
+
+    <string name="payments_title">支払い</string>
+    <string name="payments_tab_pay_label">送金</string>
+    <string name="payments_tab_receive_label">入金</string>
+    <string name="payments_pay_by_qr_title">で送金する</string>
+    <string name="payments_pay_by_qr_sub_title">QRコードをスキャン中</string>
+    <string name="payments_pay_by_qr_button">スキャン</string>
+    <string name="payments_pay_to_clipboard_title">コピーしたアドレスへ送金する</string>
+    <string name="payments_pay_to_clipboard_sub_title">アドレスがコピーされていません</string>
+    <string name="payments_pay_to_clipboard_button">送金</string>
+
+    <string name="forgot_pin_title">PINを忘れましたか?</string>
+    <string name="forgot_pin_message">復元フレーズを用いて新しいPINを設定することができます。</string>
+    <string name="forgot_pin_instruction_1">ウォレットを復元するために復元フレーズを入力してください</string>
+    <string name="forgot_pin_instruction_2">新しいPINを設定する</string>
+    <string name="forgot_pin_instruction_3">新しいPINでログインしてウォレットにアクセスする</string>
+    <string name="forgot_pin_warning">自分のPINを忘れたり、復元フレーズを紛失した場合は、あなたのウォレットと資金にアクセスできなくなります。</string>
+
+    <string name="send_coins_auto_lock_feasible">この取引は追加手数料なしで即座に完了するはずです</string>
+    <string name="send_coins_auto_lock_not_feasible">このトランザクションは決済に数分かかるかもしれません。 %1$s%2$sの追加で即時に完了させますか ？</string>
+    <string name="send_coins_instant_send_not_feasible">このトランザクションは決済に数分がかかります。</string>
+
+    <string name="options_paste_from_clipboard_title">クリップボードから貼付け</string>
+
+    <string name="transaction_row_message_own_instantx_lock_request_notsent">この支払はまだ送信されていません。</string>
+    <string name="transaction_row_message_sent_to_single_peer">この支払いは送信されました。</string>
+
+    <string name="regular_transaction_info_message">このトランザクションは即時に決済されます。</string>
+
+    <string name="wallet_options_disconnect">切断</string>
+
+    <string name="network_monitor_masternodes_title">マスターノード</string>
+    <string name="export_keys_dialog_title_to_seed">復元フレーズを表示する</string>
+    <string name="import_keys_dialog_title_from_seed">復元フレーズでウォレットを復元する</string>
+    <string name="backup_to_seed_wallet_dialog_message">これはあなたの復元フレーズです。ペンで書き留めてください。</string>
+    <string name="backup_wallet_to_seed_dialog_warning">復元フレーズは絶対に誰にも見せないで下さい！復元フレーズを知られると、あなたのDashは簡単に盗まれます。</string>
+    <string name="backup_to_seed_wallet_dialog_enter_pin_message">あなたのウォレットは送金用PINコードで保護されています。 PINを入力して［表示］を押すと、復元フレーズが表示されます。</string>
     <string name="import_keys_from_seed_dialog_message">あなたの復元フレーズをここに入力して下さい。</string>
-	<string name="import_export_keys_dialog_password_phrase">ここに復元フレーズを入力</string>
-	<string name="preferences_report_issue_summary">問題に関する情報を収集し、開発者へメールで報告する。</string>
-	<string name="navigation_configuration">設定</string>
+    <string name="import_export_keys_dialog_password_phrase">ここに復元フレーズを入力</string>
+    <string name="preferences_report_issue_summary">問題に関する情報を収集し、開発者へメールで報告する。</string>
+    <string name="navigation_configuration">設定</string>
     <string name="button_copy_address">アドレスをコピーする</string>
-	<string name="request_coins_clipboard_address_msg">Dashアドレスがクリップボードにコピーされました</string>
-	<string name="backup_wallet_to_seed_show_recovery_phrase">表示</string>
-	<string name="restore_wallet_from_invalid_seed_warning_message">%sは無効な単語です。</string>
+    <string name="request_coins_clipboard_address_msg">Dashアドレスがクリップボードにコピーされました</string>
+    <string name="backup_wallet_to_seed_show_recovery_phrase">表示</string>
+    <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" は復元フレーズのワードではありません</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">復元フレーズは12ワードなくてはいけません。</string>
+    <string name="restore_wallet_from_invalid_seed_bad_checksum">正しくない復元フレーズ</string>
+    <string name="restore_wallet_from_invalid_seed_failure">ウォレットは復元できませんでした:\n\n%s\n\n復元フレーズが間違っていますか?</string>
 
-	<string name="send_coins_options_fee_category_zero">手数料無料</string>
-	<string name="send_coins_fragment_hint_fee_zero">手数料は支払われません。承認時間を気にされない場合のみ「手数料無料」をお使いください。</string>
+    <string name="send_coins_options_fee_category_zero">手数料無料</string>
+    <string name="send_coins_fragment_hint_fee_zero">手数料は支払われません。承認時間を気にされない場合のみ「手数料無料」をお使いください。</string>
 
-	<string name="wallet_uri_handler_public_key_request_dialog_msg"> %sというアプリがあなたのマスターパブリックキーを要求しています。これはあなたのウォレットの記録を取るために使用されます。あなたのDashが勝手に送金されることはありません。</string>
-	<string name="wallet_uri_handler_address_request_dialog_msg">%sというアプリがあなたに支払いをするためにアドレスを要求していますが、認可しますか？ </string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
+    <string name="wallet_uri_handler_public_key_request_dialog_msg"> %sというアプリがあなたのマスターパブリックキーを要求しています。これはあなたのウォレットの記録を取るために使用されます。あなたのDashが勝手に送金されることはありません。</string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
+    <string name="wallet_uri_handler_address_request_dialog_msg">%sというアプリがあなたに支払いをするためにアドレスを要求していますが、認可しますか？ </string>
 
-	<string name="wallet_lock_unlock">ロック解除する</string>
-	<string name="wallet_lock_unlock_wallet">ウォレットのロックを解除する</string>
-	<string name="wallet_lock_unlock_to_see_txs_title">ウォレットはロックされています。</string>
-	<string name="wallet_lock_unlock_to_see_txs_txt">上のロックのアイコンをタップすると、あなたのウォレットがロック解除されて取引履歴が表示されます。</string>
-	<string name="wallet_lock_unlock_dialog_title">あなたのウォレットのロックを解除する</string>
-	<string name="wallet_lock_unlock_dialog_message">あなたのウォレットは送金用PINコードで保護されています。 PINを入力してロック解除を押すと次へ進めます。</string>
-	<string name="wallet_lock_reset_wallet_title">ウォレットをリセットする</string>
-	<string name="wallet_lock_reset_wallet_message">本気ですか？ウォレットは削除され全てのDashが失われます。\n\nDashを復元する唯一の方法はバックアップファイル又は復元フレーズの使用です。</string>
+    <string name="wallet_lock_unlock">ロック解除する</string>
+    <string name="wallet_lock_unlock_wallet">ウォレットのロックを解除する</string>
+    <string name="wallet_lock_unlock_to_see_txs_title">ウォレットはロックされています。</string>
+    <string name="wallet_lock_unlock_to_see_txs_txt">上のロックのアイコンをタップすると、あなたのウォレットがロック解除されて取引履歴が表示されます。</string>
+    <string name="wallet_lock_unlock_dialog_title">あなたのウォレットのロックを解除する</string>
+    <string name="wallet_lock_unlock_dialog_message">あなたのウォレットは送金用PINコードで保護されています。 PINを入力してロック解除を押すと次へ進めます。</string>
+    <string name="wallet_lock_reset_wallet_title">ウォレットをリセットする</string>
+    <string name="wallet_lock_reset_wallet_message">本気ですか？ウォレットは削除され全てのDashが失われます。\n\nDashを復元する唯一の方法はバックアップファイル又は復元フレーズの使用です。</string>
 
-	<string name="wallet_lock_wallet_disabled">ウォレットは機能停止しています</string>
-	<string name="wallet_lock_try_again">もう一度 %1$d %2$sにてお試しください。</string>
-	<string name="wallet_lock_reset">リセット</string>
-	<string name="wallet_lock_wrong_pin">PINコードが間違っています! %s</string>
+    <string name="wallet_lock_wallet_disabled">ウォレットは機能停止しています</string>
+    <string name="wallet_lock_try_again">もう一度 %1$d %2$sにてお試しください。</string>
+    <string name="wallet_lock_reset">リセット</string>
+    <string name="wallet_lock_wrong_pin">PINコードが間違っています! %s</string>
 
-	<plurals name="wallet_lock_attempts_remaining">
-		<item quantity="other">あと%d 回試みることができます。</item>
-	</plurals>
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="other">あと%d 回試みることができます。</item>
+    </plurals>
 
-	<plurals name="minute">
-		<item quantity="other">分</item>
-	</plurals>
-	
-	<plurals name="hour">
-		<item quantity="other">時間</item>
-	</plurals>
+    <plurals name="minute">
+        <item quantity="other">分</item>
+    </plurals>
 
-	<string name="encrypt_new_key_chain_upgrade_button">アップグレード</string>
-	<string name="encrypt_new_key_chain_dialog_title">あなたのウォレットをアップグレードします。</string>
-	<string name="encrypt_new_key_chain_dialog_message">あなたのウォレットはより多くのアプリにインポートとエクスポートをサポートするようにアップグレードされます。</string>
-	<string name="encrypt_new_key_chain_enter_pin_dialog_message">アップグレードを完了するために、あなたのPINコードを入力してください。</string>
-	<string name="pin_code_required_dialog_message">このアプリは取引を行ったり、取引や取引履歴を表示するためにはPINコードが必要です。</string>
+    <plurals name="hour">
+        <item quantity="other">時間</item>
+    </plurals>
+
+    <string name="encrypt_new_key_chain_upgrade_button">アップグレード</string>
+    <string name="encrypt_new_key_chain_dialog_title">あなたのウォレットをアップグレードします。</string>
+    <string name="encrypt_new_key_chain_dialog_message">あなたのウォレットはより多くのアプリにインポートとエクスポートをサポートするようにアップグレードされます。</string>
+    <string name="encrypt_new_key_chain_enter_pin_dialog_message">アップグレードを完了するために、あなたのPINコードを入力してください。</string>
+    <string name="pin_code_required_dialog_message">このアプリは取引を行ったり、取引や取引履歴を表示するためにはPINコードが必要です。</string>
     <string name="backup_wallet_seed_private_key_written_down_box">私はすでに復元フレーズを書き留めました</string>
-	
-	<string name="change_exchange_currency_code_message">あなたの現地通貨は %1$sですが、このアプリではあなたのデフォルトの通貨は %2$sに設定されています。%1$s に変更しますか？そのまま%2$sを使いますか?</string>
-	<string name="change_to"> %sに変更する</string>
-	<string name="leave_as"> そのまま%sを使う</string>
 
-	<string name="remind_later">後で通知する</string>
-	<string name="backup_now">今すぐバックアップを行う</string>
-	
-	<string name="notification_transactions_channel_name">トランザクション</string>
-	<string name="notification_transactions_channel_description">着金時にアラートを受信する。</string>
-	<string name="notification_synchronization_channel_name">同期</string>
-	<string name="notification_synchronization_channel_description">アプリがネットワークと同期している時に通知を表示する。</string>
+    <string name="change_exchange_currency_code_message">あなたの現地通貨は %1$sですが、このアプリではあなたのデフォルトの通貨は %2$sに設定されています。%1$s に変更しますか？そのまま%2$sを使いますか?</string>
+    <string name="change_to"> %sに変更する</string>
+    <string name="leave_as"> そのまま%sを使う</string>
+
+    <string name="remind_later">後で通知する</string>
+    <string name="backup_now">今すぐバックアップを行う</string>
+
+    <string name="notification_transactions_channel_name">トランザクション</string>
+    <string name="notification_transactions_channel_description">着金時にアラートを受信する。</string>
+    <string name="notification_synchronization_channel_name">同期</string>
+    <string name="notification_synchronization_channel_description">アプリがネットワークと同期している時に通知を表示する。</string>
 
     <string name="net_type_indicator" />
 
-	<string name="unlock_with_fingerprint">ロック解除に指紋認証を使う。</string>
-	<string name="unlock_with_fingerprint_error">指紋を認識できませんでした。もう一度やり直してください。</string>
-	<string name="unlock_with_fingerprint_error_max_attempts">指紋認証の最大試行回数を超えました。 後でもう一度やり直してください。</string>
-	<string name="or_unlock_with_fingerprint">またはロック解除に指紋認証を使う。</string>
-	<string name="enable_fingerprint">指紋認証を有効にする</string>
-	<string name="touch_fingerprint_sensor">指紋認証センサーに触れて下さい。</string>
-	<string name="touch_fingerprint_to_enable">指紋認証センサーに触れて、指紋によるロック解除を有効にします。</string>
+    <string name="unlock_with_fingerprint">ロック解除に指紋認証を使う。</string>
+    <string name="unlock_with_fingerprint_error">指紋を認識できませんでした。もう一度やり直してください。</string>
+    <string name="unlock_with_fingerprint_error_max_attempts">指紋認証の最大試行回数を超えました。 後でもう一度やり直してください。</string>
+    <string name="or_unlock_with_fingerprint">またはロック解除に指紋認証を使う。</string>
+    <string name="enable_fingerprint">指紋認証を有効にする</string>
+    <string name="touch_fingerprint_sensor">指紋認証センサーに触れて下さい。</string>
+    <string name="touch_fingerprint_to_enable">指紋認証センサーに触れて、指紋によるロック解除を有効にします。</string>
+    <string name="fingerprint_changed_title">指紋認証データが変更されました</string>
+	<string name="fingerprint_changed_message">指紋認証データの変更を検知しました。今回はPINを使用する必要があります。</string>
 	<string name="exchange_rate_missing">この支払いは古すぎるため額面価値を得ることができません。</string>
 
-	<string name="preferences_enable_payment_request_summary">QRコードで開始された支払いに支払いプロトコルを使用する</string>
-	<string name="preferences_enable_payment_request_title">BIP70 for scan-to-pay</string>
+    <string name="preferences_enable_payment_request_summary">QRコードで開始された支払いに支払いプロトコルを使用する</string>
+    <string name="preferences_enable_payment_request_title">BIP70 for scan-to-pay</string>
+
+    <string name="verify_continue">続ける</string>
+    <string name="verify">検証する</string>
+    <string name="verify_backup_wallet">ウォレットをバックアップする</string>
+    <string name="verify_show_recovery_phrase">復元フレーズを表示する</string>
+    <string name="verify_secure_now">ウォレットをすぐに安全な状態にする</string>
+    <string name="verify_it_is_important">それは大切です</string>
+    <string name="verify_it_is_important_subtitle">これからあなたのウォレットの秘密鍵を表示します</string>
+    <string name="verify_info_text_1">この復元フレーズがあれば、このウォレットの中の資金へのアクセスできます</string>
+    <string name="verify_info_text_2">この復元フレーズは保存されません</string>
+    <string name="verify_info_text_3">この端末を紛失したり故障した場合やこの端末からDashウォレットを
+誤まってアンインストールしてしまった場合に、あなたの資金にアクセス
+するためには、この復元フレーズが必要となります。</string>
+    <string name="verify_skip">スキップする</string>
+    <string name="verify_secure_now_btn">すぐに安全な状態にする</string>
+    <string name="verify_secure_now_message">もしこの端末をなくすと、あなたの資金も失われてしまいます。
+復元フレーズを取得すれば、他のデバイスでも自分のウォレットを復元できます。</string>
+    <string name="verify_seed_title">紙に書き留めて下さい</string>
+    <string name="verify_seed_write_down_confirmation">紙に書き留めました</string>
+    <string name="verify_seed_buttons_tip">復元フレーズの言葉を正しい順番にタップしてください</string>
+    <string name="verify_seed_success_title">IPアドレスで使用済みです
+</string>
+    <string name="verify_seed_success_message">現在あなたのウォレットは安全です。復元フレーズを使えばいつでも
+他の端末であなたのアカウントを復元できます。</string>
+    <string name="view_seed_done">完了</string>
+    <string name="view_seed_title">復元フレーズ</string>
+	<string name="transaction_result_view_on_explorer">エクスプローラーで表示</string>
+	<string name="transaction_result_paid_successfully">送金が成功しました</string>
+	<string name="transaction_result_sent_to">へ送金済み</string>
+	<string name="transaction_date_and_time">日付 &amp; 時間</string>
+	<string name="transaction_close">閉じる</string>
+	<string name="transaction_details_amount_received">入金総額</string>
+	<string name="transaction_details_amount_sent">総額送金</string>
+
+    <string name="authenticate_fingerprint_title">認証する</string>
+    <string name="authenticate_fingerprint_message">指紋を確認して続ける</string>
+    <string name="authenticate_pin_message">PINを入力して続ける</string>
+    <string name="authenticate_switch_to_fingerprint">指紋認証を使う</string>
+    <string name="authenticate_switch_to_pin">パスワードを使う</string>
+
+    <string name="menu_buy_and_sell_title">Dashを買う &amp; 売る</string>
+    <string name="menu_buy_and_sell_subtitle">サードパーティーの取引所に接続する</string>
+    <string name="menu_security_title">セキュリティ</string>
+    <string name="menu_security_subtitle">パスフレーズを表示して、ウォレットをバックアップ ...</string>
+    <string name="menu_settings_title">設定</string>
+    <string name="menu_settings_subtitle">初期設定の通貨、ショートカット、...について</string>
+    <string name="menu_tools_title">ツール</string>
+    <string name="menu_tools_subtitle">秘密鍵をインポート…</string>
+    <string name="menu_local_currency">通貨表示</string>
+    <string name="menu_rescan_blockchain">ブロックチェーンの再スキャン</string>
+
+    <string name="tools_address_book">アドレスブック</string>
+    <string name="tools_import_private_key">秘密鍵をインポート</string>
+    <string name="tools_network_monitor">ネットワークモニター</string>
+
+    <string name="about_help_us_improve">品質を向上させるためにご協力ください</string>
+    <string name="about_review_and_rate">レビュー &amp; アプリを評価する</string>
+    <string name="about_contact_support">サポートへ連絡する</string>
+    <string name="about_fork_disclaimer">これはビットコインウォレットからフォークしたオープンソースのアプリです</string>
+    <string name="about_copyright">Copyright © 2020 Dash Core</string>
+    <string name="about_license">GNU General Public License v3.0</string>
+    <string name="about_version_name">Dashウォレット %s</string>
+
+    <string name="block">ブロック</string>
+    <string name="time">時間</string>
+    <string name="hash">ハッシュ</string>
+    <string name="block_info">ブロック情報</string>
+
+    <string name="scan_private_key">プライベートキーをスキャンする</string>
+    <string name="scan_private_key_intro_1">これからDashのペーパーウォレットから残高を全て送金します</string>
+    <string name="scan_private_key_intro_2">これによって全てのコインがそのウォレットからこの端末のウォレットに移動します</string>
+    <string name="scan_private_key_intro_3">この取引が確定したら、他のウォレットは
+無価値となり、安全上の理由から再び
+使用しないようにしてください。</string>
+    <string name="confirm">承認</string>
+
+    <string name="advanced_security_security_level">セキュリティレベル</string>
+    <string name="auto_logout">自動ログアウト</string>
+    <string name="spending_confirmation">支出の確認</string>
+    <string name="logout_after">の後にログアウト</string>
+    <string name="immediately">直ちに</string>
+    <string name="twenty_four_hours">24時間</string>
+    <string name="one_minute">1分</string>
+    <string name="five_minute">5分</string>
+    <string name="one_hour">１時間</string>
+    <string name="one_day">1日</string>
+    <string name="biometric_limit">生体認証の制限</string>
+    <string name="spending_confirmation_hint_zero">お支払いにはPINが必要です</string>
+    <string name="spending_confirmation_hint_above_zero">以下の支払いは生体認証を使って認証できます</string>
+
+    <string name="security_none">無し</string>
+    <string name="security_low">低</string>
+    <string name="security_medium">中間</string>
+    <string name="security_high">高</string>
+    <string name="security_very_high"> 非常に高い</string>
+    <string name="max">最大</string>
+
+    <string name="enter_amount_available">ご利用できます</string>
+
+    <string name="skip">スキップする</string>
+    <string name="get_started">始める</string>
+    <string name="welcome_screen_title_1_new_install">ようこそ</string>
+    <string name="welcome_screen_title_1_upgrade">アップグレード済み</string>
+    <string name="welcome_screen_subtitle_1">全てのデバイスで直感的かつ使いやすい使用感</string>
+    <string name="welcome_screen_title_2">簡単支払い</string>
+    <string name="welcome_screen_subtitle_2">簡単な支払い手順で速やかに送金と入金</string>
+    <string name="welcome_screen_title_3">コントロールの追加</string>
+    <string name="welcome_screen_subtitle_3">自分のウォレットを完全に制御していて、ニーズに基づいてカスタマイズする</string>
+
+    <string-array name="history_filter">
+        <item>全て</item>
+        <item>受取済み</item>
+        <item>送信済み</item>
+    </string-array>
+
+    <string name="sync_status_wait">同期が完了するまでお待ちください</string>
+    <string name="sync_status_syncing_title">同期中</string>
+    <string name="sync_status_syncing_sub_title">Dashのブロックチェーンで</string>
+    <string name="sync_status_unable_to_connect">接続できません</string>
+    <string name="sync_status_check_connection">接続を確認してください</string>
+
+
 </resources>

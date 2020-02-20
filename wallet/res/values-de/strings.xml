@@ -16,7 +16,7 @@
     <string name="wallet_address_dialog_fragment_hint">Um deine Privatsphäre zu schützen, ändert sich deine Adresse sobald sie eine Zahlung empfängt.</string>
     <string name="wallet_balance_fragment_too_much">Dieser Wert scheint recht hoch dafür zu sein, dass er in der Tasche herum getragen wird. Bitte verschiebe etwas an einen sichereren Ort.</string>
     <string name="wallet_balance_fragment_replaying">Guthaben ist während des Replays nicht verfügbar.</string>
-    <string name="exchange_rates_activity_title">Wechselkurse</string>
+    <string name="exchange_rates_activity_title">Lokale Währung</string>
     <string name="exchange_rates_fragment_empty_text">Kann Wechselkurse nicht laden.</string>
     <string name="exchange_rates_fragment_empty_search">Kann Wechselkurs nicht finden.</string>
     <string name="exchange_rates_fragment_default">(Standard)</string>
@@ -25,13 +25,11 @@
     <string name="exchange_rates_fragment_source">Kurs von %s</string>
     <string name="exchange_rates_options_search">Wechselkurs suchen</string>
     <string name="exchange_rates_context_set_as_default_title">Als Standard festsetzen</string>
-    <string name="wallet_transactions_fragment_empty_text_received">Noch keine Dash empfangen.</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">Noch keine Dash gesendet.</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">Wie komme ich an Dash?\n\nHandle gegen traditionelles Geld,\nverkaufe Güter oder Dienstleistungen oder\nverdiene durch Arbeit.</string>
+    <string name="wallet_transactions_fragment_empty_text">Es existieren keine anzuzeigenden Transaktionen</string>
     <string name="wallet_transactions_row_warning_backup">Gratulation, du hast deine erste Zahlung erhalten! Hast du deine Wallet bereits gesichert, um dich gegen einen möglichen Verlust zu schützen?</string>
     <string name="wallet_transactions_fragment_coinbase">geschürft</string>
     <string name="wallet_transactions_fragment_internal">intern</string>
-    <string name="wallet_transactions_options_filter">Filter</string>
+    <string name="wallet_transactions_options_filter">Transaktionen filtern</string>
     <string name="wallet_transactions_options_filter_all">Alle Zahlungen</string>
     <string name="wallet_transactions_options_filter_received">Empfangene Zahlungen</string>
     <string name="wallet_transactions_options_filter_sent">Gesendete Zahlungen</string>
@@ -58,18 +56,18 @@
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Falsche Signatur!</string>
     <string name="send_coins_fragment_payee_verified_by">verifiziert durch: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">unbekannt</string>
-    <string name="send_coins_fragment_receiving_address_label">Empfänger</string>
+    <string name="send_coins_fragment_receiving_address_label">Senden an</string>
     <string name="send_coins_fragment_receiving_address_hint">Adresse oder Namen</string>
     <string name="send_coins_fragment_receiving_address_error">Ungültige Dash-Adresse!</string>
     <string name="send_coins_fragment_receiving_address_own">Du bist im Begriff Dir selber eine Zahlung zu senden!</string>
     <string name="send_coins_fragment_receiving_address_complex">komplexe\nAdresse</string>
     <string name="send_coins_fragment_pending">(%s warten auf Bestätigung)</string>
-    <string name="send_coins_fragment_amount_label">Betrag</string>
+    <string name="send_coins_fragment_amount_label">Zu sendender Betrag</string>
     <string name="send_coins_fragment_pin_label">PIN eingeben</string>
     <string name="send_coins_fragment_hint_fee_economic">Eine Netzwerk-Gebühr von %szahlen.</string>
     <string name="send_coins_fragment_hint_fee_priority">Eine Vorzugs-Gebühr von %s zahlen. Wenn Dir eine geringe Gebühr wichtig ist, verwende diese Einstellung nur, wenn Du sehr schnell eine Bestätigung brauchst.</string>
-    <string name="send_coins_fragment_hint_dusty_send">Der Betrag ist zu klein zum Senden.</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Nicht genug Dash verfügbar. Dir fehlen %s.</string>
+    <string name="send_coins_fragment_hint_dusty_send">Der Betrag ist zu klein zum Senden</string>
+    <string name="send_coins_fragment_hint_insufficient_money">Guthaben nicht ausreichend</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Die Summe an winzigen Zahlungen in Deiner Wallet ist zu klein, um verschickt zu werden.</string>
     <string name="send_coins_fragment_hint_replaying">Da momentan ein Replay verarbeitet wird, kann keine Zahlung durchgeführt werden.</string>
     <string name="send_coins_fragment_direct_payment_enable">Zahlung direkt an den Empfänger senden.</string>
@@ -81,7 +79,7 @@
     <string name="send_coins_fragment_button_back">Zurück</string>
     <string name="send_coins_fragment_insufficient_money_title">Nicht genug verfügbare Dash</string>
     <string name="send_coins_fragment_insufficient_money_msg1">Ihnen fehlen %s.</string>
-    <string name="send_coins_fragment_insufficient_money_msg2">Möchtest Du mit deinem gesamten Guthaben bezahlen?</string>
+    <string name="send_coins_fragment_insufficient_money_msg2">Möchtest Du dein gesamtes Guthaben versenden?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">Entleerung der Wallet fehlgeschlagen</string>
     <string name="send_coins_fragment_state_decrypting">Entschlüsselung…</string>
     <string name="send_coins_preparation_msg">Signierung…</string>
@@ -93,13 +91,13 @@
     <string name="send_coins_options_fee_category_economic">Kostengünstig</string>
     <string name="send_coins_options_fee_category_priority">Express</string>
     <string name="send_coins_options_empty">Wallet entleeren</string>
-    <string name="sweep_wallet_activity_title">Paper-Wallet leeren</string>
+    <string name="sweep_wallet_activity_title">Privaten Schlüssel importieren</string>
     <string name="sweep_wallet_fragment_intro">Du bist im Begriff eine Paper-Wallet oder einen Coupon zu leeren. Dadurch werden die betroffenen Dash in deine Wallet verschoben. Sobald die Transaktion bestätigt ist, wird das Papier wertlos und sollte aus Sicherheitsgründen nicht wiederverwendet werden.</string>
     <string name="sweep_wallet_fragment_hint">Paper-Wallets werden meist als Cold Storage genutzt. Einige Geldautomaten drucken sie auf das Quittungspapier, anstatt die Dash direkt an das mobile Gerät zu versenden. Manchmal werden vorgeladene Paper-Wallets als Zahlungsmittel verwendet (nicht empfohlen).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Beginne bitte damit, dass Du den privaten Schlüssel eines Paper-Wallets scannst. Benutze dafür die Kamera-Schaltfläche.</string>
     <string name="sweep_wallet_fragment_encrypted">Dieser private Schlüssel ist mit einem Passwort geschützt.</string>
     <string name="sweep_wallet_fragment_password">Passwort</string>
-    <string name="sweep_wallet_fragment_bad_password">falsches Passwort!</string>
+    <string name="sweep_wallet_fragment_bad_password">Falsches Passwort!</string>
     <string name="sweep_wallet_fragment_balance">Zu leerendes Guthaben</string>
     <string name="sweep_wallet_fragment_button_decrypt">Entschlüsseln</string>
     <string name="sweep_wallet_fragment_button_sweep">Leeren</string>
@@ -159,6 +157,33 @@
     <string name="transaction_row_message_received_dust">Dieser kleine Betrag kann vermutlich nie wirtschaftlich ausgegeben werden.</string>
     <string name="transaction_row_message_received_pay_to_many">Diese Zahlung war neben Dir auch an andere gerichtet gewesen, was die App im Laufe der Zeit verlangsamen kann. Versuche wenn möglich Zahlungen zu empfangen, die nur an Dich gerichtet sind.</string>
     <string name="transaction_row_message_received_rbf">Die Zahlung verzögert sich, da der Sender eine unsichere Transaktionsmethode verwendet hat.</string>
+    <string name="transaction_row_status_received">Empfangen</string>
+    <string name="transaction_row_status_sent">Gesendet</string>
+    <string name="transaction_row_status_sending">Versenden</string>
+    <string name="transaction_row_status_sent_interally">Intern</string>
+    <string name="transaction_row_status_processing">Verarbeite</string>
+    <string name="transaction_row_status_confirming">Bestätige</string>
+    <string name="transaction_row_status_locked">Gesichert</string>
+    <string name="transaction_row_status_error_sending">Fehler beim Versenden</string>
+    <string name="transaction_row_status_error_dead">Doppelt ausgegeben</string>
+    <string name="transaction_row_status_error_conflicting">Steht im Konflikt</string>
+    <string name="transaction_row_status_error_insufficient_fee">Gebühr nicht ausreichend</string>
+    <string name="transaction_row_status_error_dust">Staub</string>
+    <string name="transaction_row_status_error_non_standard">Nicht-Standard</string>
+    <string name="transaction_row_status_error_malformed">Fehlgebildet</string>
+    <string name="transaction_row_status_error_duplicate">Dupliziert</string>
+    <string name="transaction_row_status_error_obsolete">Obsolet</string>
+    <string name="transaction_row_status_error_invalid">Ungültig</string>
+    <string name="transaction_row_status_error_other">Unbekannt</string>
+    <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
+    <string name="transaction_row_time_text">Auf %s bei %s</string>
+    <string name="transaction_row_rate_not_available">Nicht verfügbar</string>
+    <string name="transaction_row_status_masternode_registration">Masternode-Registrierung</string>
+    <string name="transaction_row_status_masternode_update_registrar">Masternode-Update</string>
+    <string name="transaction_row_status_masternode_update_service">Masternode-Update</string>
+    <string name="transaction_row_status_masternode_revoke">Masternode-Rücknahme</string>
+    <string name="transaction_row_status_masternode_reward">Masternode-Belohnung</string>
+    <string name="transaction_row_status_mining_reward">Mining-Belohnung</string>
     <string name="network_monitor_activity_title">Netzwerk-Monitor</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Blöcke</string>
@@ -202,7 +227,7 @@
     <string name="import_export_keys_dialog_show">Passwort zeigen</string>
     <string name="import_export_keys_dialog_failure_title">Fehler</string>
     <string name="import_keys_intent_filter_action">Wallet wiederherstellen</string>
-    <string name="encrypt_keys_dialog_title">Ausgabe-PIN</string>
+    <string name="encrypt_keys_dialog_title">PIN ändern</string>
     <string name="encrypt_keys_dialog_message">Zahlungen mit Deiner Wallet werden durch die gewählte PIN geschützt.</string>
     <string name="encrypt_keys_dialog_warning">Wichtig: Vergiss Deine PIN bitte nicht! Verwende keine häufig gebrauchte Nummer (z.B. Geburtstage).</string>
     <string name="encrypt_keys_dialog_password_old">Alte PIN</string>
@@ -213,7 +238,7 @@
     <string name="encrypt_keys_dialog_show">PIN zeigen</string>
     <string name="encrypt_keys_dialog_state_encrypting">Verschlüsselung…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Entschlüsselung…</string>
-    <string name="encrypt_keys_dialog_state_done">Fertig.</string>
+    <string name="encrypt_keys_dialog_state_done">Fertig</string>
     <string name="scan_camera_problem_dialog_title">Sorry</string>
     <string name="scan_camera_problem_dialog_message">Die Kamera scheint ein Problem zu haben. Bitte starte Dein Gerät neu.</string>
     <string name="scan_camera_permission_dialog_title">Kamera genehmigen</string>
@@ -297,7 +322,7 @@
     <string name="notification_coins_received_msg">%s empfangen</string>
     <string name="notification_peers_connected_msg">%d Peers verbunden</string>
     <string name="notification_inactivity_title">Es befinden sich immer noch Dash auf Ihrem Gerät.</string>
-        <string name="notification_inactivity_message">Auf dem Gerät befinden sich noch immer Dash! Versichere dich, dass du deine Wiederherstellungsphrase aufgeschrieben hast, bevor du die Dash Wallet deinstallierst, oder du wirst den Zugang zu deinem Guthaben in Höhe von %s verlieren.</string>
+    <string name="notification_inactivity_message">Auf dem Gerät befinden sich noch immer Dash! Versichere dich, dass du deine Wiederherstellungsphrase aufgeschrieben hast, bevor du die Dash Wallet deinstallierst, oder du wirst den Zugang zu deinem Guthaben in Höhe von %s verlieren.</string>
     <string name="notification_inactivity_action_dismiss">Später erinnern</string>
     <string name="notification_inactivity_action_dismiss_forever">Nicht weiter erinnern</string>
     <string name="appwidget_wallet_balance_title">Dash-Guthaben</string>
@@ -320,6 +345,7 @@
     <string name="button_set_as_default">Als Standard setzen</string>
     <string name="button_request_coins">Dash anfordern</string>
     <string name="button_send_coins">Dash senden</string>
+    <string name="button_pay">Senden</string>
     <string name="button_scan">Scannen</string>
     <string name="button_settings">Einstellungen</string>
     <string name="action_show_qr">QR-Code zeigen</string>
@@ -339,10 +365,14 @@
 
     <string name="transaction_fragment_confirmations_label">Bestätigungen</string>
 
-    <string name="navigation_drawer_open">Navigation Drawer öffnen</string>
-    <string name="navigation_drawer_close">Navigation Drawer schließen</string>
-
     <string name="dash_slogan">Sofort - Vertraulich - Sicher</string>
     <string name="dash_wallet">Wallet</string>
+
+    <string name="activity_security_backup_wallet">Wallet-Backup als Datei</string>
+    <string name="activity_security_view_recovery_phrase">Wiederherstellungsphrase ansehen</string>
+    <string name="activity_security_advanced">Erweiterte Sicherheit</string>
+    <string name="activity_security_biometric_auth">Authentifizierung per Fingerabdruck</string>
+    <string name="activity_security_hide_balance">Guthaben automatisch verstecken</string>
+    <string name="reset_to_default">Auf Standard setzen</string>
 
 </resources>
