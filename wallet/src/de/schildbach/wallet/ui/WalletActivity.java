@@ -39,6 +39,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.LocaleList;
 import android.telephony.TelephonyManager;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -83,6 +84,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.livedata.BlockchainStateRepository;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
@@ -138,22 +140,21 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private ClipboardManager clipboardManager;
 
     private boolean showBackupWalletDialog = false;
-    private BlockchainStateViewModel blockchainStateViewModel;
     private BlockchainState blockchainState;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        Log.d("blockchainState", "walletActivity onCreate");
         application = getWalletApplication();
         config = application.getConfiguration();
         wallet = application.getWallet();
 
-        blockchainStateViewModel = ViewModelProviders.of(this)
-                .get(BlockchainStateViewModel.class);
-        blockchainStateViewModel.getBlockchainStateLiveData().observe(this, new Observer<BlockchainState>() {
+        BlockchainStateRepository.INSTANCE.getBlockchainStateLiveData().observe(this, new Observer<BlockchainState>() {
             @Override
             public void onChanged(BlockchainState blockchainState) {
+                Log.d("blockchainState", "walletActivity viewModel onChanged");
                 WalletActivity.this.blockchainState = blockchainState;
                 updateSyncState();
             }
@@ -344,7 +345,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         showBackupWalletDialogIfNeeded();
         showHideSecureAction();
 
-        BlockchainState blockchainState = blockchainStateViewModel.getBlockchainStateLiveData().getValue();
+        blockchainState = BlockchainStateRepository.INSTANCE.getBlockchainState();
         if (blockchainState != null) {
             updateSyncState();
         }
@@ -1060,8 +1061,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void updateSyncState() {
-        BlockchainState blockchainState = blockchainStateViewModel
-                .getBlockchainStateLiveData().getValue();
         ProgressBar syncProgressView = findViewById(R.id.sync_status_progress);
         if (blockchainState.syncFailed()) {
             findViewById(R.id.sync_progress_pane).setVisibility(View.GONE);

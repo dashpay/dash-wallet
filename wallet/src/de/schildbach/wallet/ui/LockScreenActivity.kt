@@ -30,6 +30,7 @@ import androidx.core.os.CancellationSignal
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.livedata.BlockchainStateRepository
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.widget.NumericKeyboardView
@@ -86,16 +87,11 @@ class LockScreenActivity : SendCoinsQrActivity() {
     private var fingerprintHelper: FingerprintHelper? = null
     private lateinit var fingerprintCancellationSignal: CancellationSignal
     private lateinit var pinRetryController: PinRetryController
-    private lateinit var blockchainStateViewModel: BlockchainStateViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_lock_screen)
         setupKeyboardBottomMargin()
-
-        blockchainStateViewModel = ViewModelProviders.of(this)
-                .get(BlockchainStateViewModel::class.java)
-        blockchainStateViewModel.blockchainStateLiveData.observe(this, Observer{})
 
         pinRetryController = PinRetryController.getInstance()
         initView()
@@ -135,7 +131,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
             startActivity(QuickReceiveActivity.createIntent(this))
         }
         action_scan_to_pay.setOnClickListener {
-            val blockchainState = blockchainStateViewModel.blockchainStateLiveData.value
+            val blockchainState = BlockchainStateRepository.blockchainState
             if (blockchainState!= null && blockchainState.replaying) {
                 showBlockchainSyncingMessage()
             } else {

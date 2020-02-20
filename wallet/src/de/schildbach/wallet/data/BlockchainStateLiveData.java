@@ -24,6 +24,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.IBinder;
+import android.util.Log;
 
 import androidx.lifecycle.LiveData;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -42,35 +43,41 @@ public class BlockchainStateLiveData extends LiveData<BlockchainState> implement
     private final LocalBroadcastManager broadcastManager;
 
     public BlockchainStateLiveData(final WalletApplication application) {
+        Log.d("blockchainState", "livedata constructor");
         this.application = application;
         this.broadcastManager = LocalBroadcastManager.getInstance(application);
     }
 
     @Override
     protected void onActive() {
+        Log.d("blockchainState", "livedata onActive");
         broadcastManager.registerReceiver(receiver, new IntentFilter(BlockchainService.ACTION_BLOCKCHAIN_STATE));
         application.bindService(new Intent(application, BlockchainService.class), this, Context.BIND_AUTO_CREATE);
     }
 
     @Override
     protected void onInactive() {
+        Log.d("blockchainState", "livedata onInactive");
         application.unbindService(this);
         broadcastManager.unregisterReceiver(receiver);
     }
 
     @Override
     public void onServiceConnected(final ComponentName name, final IBinder service) {
+        Log.d("blockchainState", "livedata onServiceConnected");
         final BlockchainService blockchainService = ((BlockchainServiceImpl.LocalBinder) service).getService();
         setValue(blockchainService.getBlockchainState());
     }
 
     @Override
     public void onServiceDisconnected(final ComponentName name) {
+        Log.d("blockchainState", "livedata onServiceDisconnected");
     }
 
     private final BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
         public void onReceive(final Context context, final Intent broadcast) {
+            Log.d("blockchainState", "livedata onReceive");
             setValue(BlockchainState.fromIntent(broadcast));
         }
     };

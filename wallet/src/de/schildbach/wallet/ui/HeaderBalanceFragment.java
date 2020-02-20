@@ -44,6 +44,7 @@ import javax.annotation.Nullable;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.livedata.BlockchainStateRepository;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.service.BlockchainState;
@@ -82,7 +83,6 @@ public final class HeaderBalanceFragment extends Fragment {
     private boolean initComplete = false;
 
     private Handler autoLockHandler = new Handler();
-    private BlockchainStateViewModel blockchainStateViewModel;
 
     @Override
     public void onAttach(final Activity activity) {
@@ -133,8 +133,7 @@ public final class HeaderBalanceFragment extends Fragment {
             }
         });
 
-        blockchainStateViewModel = ViewModelProviders.of(activity).get(BlockchainStateViewModel.class);
-        blockchainStateViewModel.getBlockchainStateLiveData().observe(getViewLifecycleOwner(),
+        BlockchainStateRepository.INSTANCE.getBlockchainStateLiveData().observe(getViewLifecycleOwner(),
                 new Observer<BlockchainState>() {
                     @Override
                     public void onChanged(BlockchainState blockchainState) {
@@ -171,8 +170,8 @@ public final class HeaderBalanceFragment extends Fragment {
             hideBalance = true;
         }
 
-        BlockchainState blockchainState = blockchainStateViewModel.getBlockchainStateLiveData()
-                .getValue();
+        BlockchainState blockchainState = BlockchainStateRepository.INSTANCE
+                .getBlockchainStateLiveData().getValue();
         if (blockchainState != null) {
             isSynced = !blockchainState.replaying && blockchainState.percentageSync == 100;
         }

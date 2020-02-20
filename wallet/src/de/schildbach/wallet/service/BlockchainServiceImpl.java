@@ -39,6 +39,7 @@ import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.text.format.DateUtils;
+import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -54,7 +55,6 @@ import org.bitcoinj.core.FilteredBlock;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.SporkMessage;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
@@ -63,7 +63,6 @@ import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
-import org.bitcoinj.core.listeners.SporkUpdatedEventListener;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.net.discovery.DnsDiscovery;
@@ -106,6 +105,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.AddressBookProvider;
+import de.schildbach.wallet.livedata.BlockchainStateRepository;
 import de.schildbach.wallet.service.BlockchainState.Impediment;
 import de.schildbach.wallet.ui.WalletActivity;
 import de.schildbach.wallet.util.BlockchainStateUtils;
@@ -642,6 +642,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         super.onBind(intent);
         log.debug(".onBind()");
 
+        Log.d("blockchainState", "service onBind");
         broadcastBlockchainState();
         return mBinder;
     }
@@ -650,12 +651,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     public boolean onUnbind(final Intent intent) {
         log.debug(".onUnbind()");
 
+        Log.d("blockchainState", "service onUnbind");
         return super.onUnbind(intent);
     }
 
     @Override
     public void onCreate() {
         serviceCreatedAt = System.currentTimeMillis();
+        Log.d("blockchainState", "service onCreate");
         log.debug(".onCreate()");
 
         super.onCreate();
@@ -750,11 +753,15 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         wallet.getContext().initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
 
         peerDiscoveryList.add(dnsDiscovery);
+
+        broadcastBlockchainState();
     }
 
     @Override
     public int onStartCommand(final Intent intent, final int flags, final int startId) {
         super.onStartCommand(intent, flags, startId);
+        Log.d("blockchainState", "service onStartCommand");
+        broadcastBlockchainState();
 
         if (intent != null) {
             //Restart service as a Foreground Service if it's synchronizing the blockchain
@@ -822,6 +829,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     @Override
     public void onDestroy() {
+        Log.d("blockchainState", "service onDestroy");
         log.debug(".onDestroy()");
 
         WalletApplication.scheduleStartBlockchainService(this);  //disconnect feature
@@ -976,11 +984,13 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     }
 
     private void broadcastBlockchainState() {
+        Log.d("blockchainState", "service broadcastState");
         final Intent broadcast = new Intent(ACTION_BLOCKCHAIN_STATE);
         broadcast.setPackage(getPackageName());
         BlockchainState blockchainState = getBlockchainState();
         blockchainState.putExtras(broadcast);
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
+        BlockchainStateRepository.INSTANCE.setBlockchainState(blockchainState);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             //Handle Ongoing notification state
