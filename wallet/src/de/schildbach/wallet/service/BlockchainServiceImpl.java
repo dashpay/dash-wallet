@@ -80,7 +80,6 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
-import org.greenrobot.eventbus.EventBus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,7 +107,6 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.service.BlockchainState.Impediment;
-import de.schildbach.wallet.ui.SyncProgressEvent;
 import de.schildbach.wallet.ui.WalletActivity;
 import de.schildbach.wallet.util.BlockchainStateUtils;
 import de.schildbach.wallet.util.CrashReporter;
@@ -378,22 +376,13 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         @Override
         protected void progress(double pct, int blocksLeft, Date date) {
             super.progress(pct, blocksLeft, date);
-            if (pct < 0) {
-                pct = 0;
-            }
-            final SyncProgressEvent event = new SyncProgressEvent(pct);
-            log.info(event.toString());
-            EventBus.getDefault().postSticky(event);
-
+            broadcastBlockchainState();
         }
 
         @Override
         protected void doneDownload() {
             super.doneDownload();
-            final SyncProgressEvent event = new SyncProgressEvent(100);
-            log.info(event.toString());
-            EventBus.getDefault().postSticky(event);
-
+            broadcastBlockchainState();
         }
     };
 
@@ -444,12 +433,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         @SuppressLint("Wakelock")
         private void check() {
             final Wallet wallet = application.getWallet();
-
-            if (impediments.contains(Impediment.NETWORK)) {
-                final SyncProgressEvent event = new SyncProgressEvent(0, true);
-                log.info(event.toString());
-                EventBus.getDefault().postSticky(event);
-            }
 
             if (impediments.isEmpty() && peerGroup == null) {
                 log.debug("acquiring wakelock");
@@ -659,6 +642,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         super.onBind(intent);
         log.debug(".onBind()");
 
+        broadcastBlockchainState();
         return mBinder;
     }
 

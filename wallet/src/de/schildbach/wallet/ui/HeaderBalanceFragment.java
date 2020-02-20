@@ -39,9 +39,6 @@ import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.util.GenericUtils;
-import org.greenrobot.eventbus.EventBus;
-import org.greenrobot.eventbus.Subscribe;
-import org.greenrobot.eventbus.ThreadMode;
 
 import javax.annotation.Nullable;
 
@@ -85,18 +82,7 @@ public final class HeaderBalanceFragment extends Fragment {
     private boolean initComplete = false;
 
     private Handler autoLockHandler = new Handler();
-
-    @Override
-    public void onStart() {
-        super.onStart();
-        EventBus.getDefault().register(this);
-    }
-
-    @Override
-    public void onStop() {
-        EventBus.getDefault().unregister(this);
-        super.onStop();
-    }
+    private BlockchainStateViewModel blockchainStateViewModel;
 
     @Override
     public void onAttach(final Activity activity) {
@@ -146,6 +132,16 @@ public final class HeaderBalanceFragment extends Fragment {
                 updateView();
             }
         });
+
+        blockchainStateViewModel = ViewModelProviders.of(activity).get(BlockchainStateViewModel.class);
+        blockchainStateViewModel.getBlockchainStateLiveData().observe(getViewLifecycleOwner(),
+                new Observer<BlockchainState>() {
+                    @Override
+                    public void onChanged(BlockchainState blockchainState) {
+                        isSynced = !blockchainState.replaying && blockchainState.percentageSync == 100;
+                        updateView();
+                    }
+                });
     }
 
     @Override
@@ -175,6 +171,11 @@ public final class HeaderBalanceFragment extends Fragment {
             hideBalance = true;
         }
 
+        BlockchainState blockchainState = blockchainStateViewModel.getBlockchainStateLiveData()
+                .getValue();
+        if (blockchainState != null) {
+            isSynced = !blockchainState.replaying && blockchainState.percentageSync == 100;
+        }
         updateView();
     }
 
@@ -185,13 +186,6 @@ public final class HeaderBalanceFragment extends Fragment {
 
         autoLockHandler.removeCallbacksAndMessages(null);
         super.onPause();
-    }
-
-    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
-    public void onEvent(SyncProgressEvent event) {
-        int percentage = (int) event.getPct();
-        isSynced = percentage == 100;
-        updateView();
     }
 
     private void updateView() {

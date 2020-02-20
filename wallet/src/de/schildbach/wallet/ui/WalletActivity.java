@@ -74,9 +74,6 @@ import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
-import org.greenrobot.eventbus.EventBus;
-import org.greenrobot.eventbus.Subscribe;
-import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.IOException;
 import java.util.Currency;
@@ -86,6 +83,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.preference.PreferenceActivity;
@@ -93,6 +91,7 @@ import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
+import de.schildbach.wallet.util.ActivityExtensionsKt;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.Nfc;
@@ -126,6 +125,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private DrawerLayout viewDrawer;
     private View viewFakeForSafetySubmenu;
+    private View payBtn;
 
     private Handler handler = new Handler();
 
@@ -138,6 +138,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private ClipboardManager clipboardManager;
 
     private boolean showBackupWalletDialog = false;
+    private BlockchainStateViewModel blockchainStateViewModel;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -146,6 +147,15 @@ public final class WalletActivity extends AbstractBindServiceActivity
         application = getWalletApplication();
         config = application.getConfiguration();
         wallet = application.getWallet();
+
+        blockchainStateViewModel = ViewModelProviders.of(this)
+                .get(BlockchainStateViewModel.class);
+        blockchainStateViewModel.getBlockchainStateLiveData().observe(this, new Observer<BlockchainState>() {
+            @Override
+            public void onChanged(BlockchainState blockchainState) {
+                updateSyncState();
+            }
+        });
 
         setContentViewFooter(R.layout.home_activity);
         setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
@@ -188,6 +198,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 return walletTransactionsFragment != null && !walletTransactionsFragment.isHistoryEmpty();
             }
         });
+
     }
 
     private void initFingerprintHelper() {
@@ -219,10 +230,18 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 viewDrawer.closeDrawer(GravityCompat.START);
             }
         });
-        findViewById(R.id.pay_btn).setOnClickListener(new View.OnClickListener() {
+        payBtn = findViewById(R.id.pay_btn);
+        payBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startActivity(PaymentsActivity.createIntent(WalletActivity.this, PaymentsActivity.ACTIVE_TAB_PAY));
+                BlockchainState blockchainState = blockchainStateViewModel.
+                        getBlockchainStateLiveData().getValue();
+                if (blockchainState != null && blockchainState.replaying) {
+                    ActivityExtensionsKt.showBlockchainSyncingMessage(WalletActivity.this);
+                } else {
+                    startActivity(PaymentsActivity.createIntent(WalletActivity.this,
+                            PaymentsActivity.ACTIVE_TAB_PAY));
+                }
             }
         });
         findViewById(R.id.receive_btn).setOnClickListener(new View.OnClickListener() {
@@ -234,6 +253,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void initQuickActions() {
+        final BlockchainState blockchainState = blockchainStateViewModel.
+                getBlockchainStateLiveData().getValue();
         showHideSecureAction();
         findViewById(R.id.secure_action).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -248,25 +269,41 @@ public final class WalletActivity extends AbstractBindServiceActivity
         findViewById(R.id.scan_to_pay_action).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                handleScan(v);
+                if (blockchainState != null && blockchainState.replaying) {
+                    ActivityExtensionsKt.showBlockchainSyncingMessage(WalletActivity.this);
+                } else {
+                    handleScan(v);
+                }
             }
         });
         findViewById(R.id.buy_sell_action).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startUpholdActivity();
+                if (blockchainState != null && blockchainState.replaying) {
+                    ActivityExtensionsKt.showBlockchainSyncingMessage(WalletActivity.this);
+                } else {
+                    startUpholdActivity();
+                }
             }
         });
         findViewById(R.id.pay_to_address_action).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                handlePaste();
+                if (blockchainState != null && blockchainState.replaying) {
+                    ActivityExtensionsKt.showBlockchainSyncingMessage(WalletActivity.this);
+                } else {
+                    handlePaste();
+                }
             }
         });
         findViewById(R.id.import_key_action).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                SweepWalletActivity.start(WalletActivity.this, true);
+                if (blockchainState != null && blockchainState.replaying) {
+                    ActivityExtensionsKt.showBlockchainSyncingMessage(WalletActivity.this);
+                } else {
+                    SweepWalletActivity.start(WalletActivity.this, true);
+                }
             }
         });
     }
@@ -307,6 +344,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
         detectUserCountry();
         showBackupWalletDialogIfNeeded();
         showHideSecureAction();
+
+        BlockchainState blockchainState = blockchainStateViewModel.getBlockchainStateLiveData().getValue();
+        if (blockchainState != null) {
+            updateSyncState();
+        }
     }
 
     private void showBackupWalletDialogIfNeeded() {
@@ -1018,48 +1060,36 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-        EventBus.getDefault().register(this);
-    }
-
-    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
-    public void onEvent(SyncProgressEvent event) {
+    private void updateSyncState() {
+        BlockchainState blockchainState = blockchainStateViewModel
+                .getBlockchainStateLiveData().getValue();
         ProgressBar syncProgressView = findViewById(R.id.sync_status_progress);
-        if (event.getFailed()) {
+        if (blockchainState.syncFailed()) {
             findViewById(R.id.sync_progress_pane).setVisibility(View.GONE);
             findViewById(R.id.sync_error_pane).setVisibility(View.VISIBLE);
             return;
         }
-        showSyncPane(R.id.sync_error_pane, false);
-        showSyncPane(R.id.sync_progress_pane, true);
-        int percentage = (int) event.getPct();
+        updateSyncPaneVisibility(R.id.sync_error_pane, false);
+        updateSyncPaneVisibility(R.id.sync_progress_pane, true);
         TextView syncStatusTitle = findViewById(R.id.sync_status_title);
         TextView syncStatusMessage = findViewById(R.id.sync_status_message);
-        if (percentage != syncProgressView.getProgress()) {
-            syncProgressView.setProgress(percentage);
+        if (blockchainState.percentageSync != syncProgressView.getProgress()) {
+            syncProgressView.setProgress(blockchainState.percentageSync);
             TextView syncPercentageView = findViewById(R.id.sync_status_percentage);
 
-            syncPercentageView.setText(percentage + "%");
-            if (percentage == 100) {
+            syncPercentageView.setText(blockchainState.percentageSync + "%");
+            if (blockchainState.percentageSync == 100) {
                 syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
                 syncStatusTitle.setText("Sync");
                 syncStatusMessage.setText("Completed");
-                showSyncPane(R.id.sync_status_pane, false);
+                updateSyncPaneVisibility(R.id.sync_status_pane, false);
             } else {
                 syncPercentageView.setTextColor(getResources().getColor(R.color.dash_gray));
                 syncStatusTitle.setText("Syncing");
                 syncStatusMessage.setText("with Dash Blockchain");
-                showSyncPane(R.id.sync_status_pane, true);
+                updateSyncPaneVisibility(R.id.sync_status_pane, true);
             }
         }
-    }
-
-    @Override
-    public void onStop() {
-        EventBus.getDefault().unregister(this);
-        super.onStop();
     }
 
     /**
@@ -1205,7 +1235,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         dialogBuilder.show();
     }
 
-    private void showSyncPane(int id, boolean show) {
-        findViewById(id).setVisibility(show ? View.VISIBLE : View.GONE);
+    private void updateSyncPaneVisibility(int id, boolean visible) {
+        findViewById(id).setVisibility(visible ? View.VISIBLE : View.GONE);
     }
 }

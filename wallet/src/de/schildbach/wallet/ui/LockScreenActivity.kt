@@ -32,6 +32,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.widget.NumericKeyboardView
 import de.schildbach.wallet.util.FingerprintHelper
+import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_lock_screen.*
 import org.bitcoinj.wallet.Wallet.BalanceType
@@ -81,10 +82,15 @@ class LockScreenActivity : SendCoinsQrActivity() {
     private var fingerprintHelper: FingerprintHelper? = null
     private lateinit var fingerprintCancellationSignal: CancellationSignal
     private lateinit var pinRetryController: PinRetryController
+    private lateinit var blockchainStateViewModel: BlockchainStateViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_lock_screen)
+
+        blockchainStateViewModel = ViewModelProviders.of(this)
+                .get(BlockchainStateViewModel::class.java)
+        blockchainStateViewModel.blockchainStateLiveData.observe(this, Observer{})
 
         pinRetryController = PinRetryController.getInstance()
         initView()
@@ -108,7 +114,12 @@ class LockScreenActivity : SendCoinsQrActivity() {
             startActivity(QuickReceiveActivity.createIntent(this))
         }
         action_scan_to_pay.setOnClickListener {
-            performScanning(it)
+            val blockchainState = blockchainStateViewModel.blockchainStateLiveData.value
+            if (blockchainState!= null && blockchainState.replaying) {
+                showBlockchainSyncingMessage()
+            } else {
+                performScanning(it)
+            }
         }
         numeric_keyboard.setFunctionEnabled(false)
         numeric_keyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {

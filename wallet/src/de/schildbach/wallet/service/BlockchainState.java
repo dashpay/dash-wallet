@@ -80,4 +80,9 @@ public class BlockchainState {
         intent.putExtra(EXTRA_MASTERNODE_LIST_HEIGHT, mnlistHeight);
         intent.putExtra(EXTRA_PERCENTAGE_SYNC, percentageSync);
     }
+
+    public boolean syncFailed() {
+        return impediments != null && impediments.contains(Impediment.NETWORK);
+    }
+
 }
