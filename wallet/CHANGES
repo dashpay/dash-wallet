@@ -1,4 +1,8 @@
 Dash Wallet
+v7.0.1
+* Disable old navigation menu access
+* Reset auto logout  timer on any UI action
+
 v7.0.0
 * Beta Release
 * Complete app redesign
