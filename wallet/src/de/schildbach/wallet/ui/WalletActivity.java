@@ -139,6 +139,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private boolean showBackupWalletDialog = false;
     private BlockchainStateViewModel blockchainStateViewModel;
+    private BlockchainState blockchainState;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -153,6 +154,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         blockchainStateViewModel.getBlockchainStateLiveData().observe(this, new Observer<BlockchainState>() {
             @Override
             public void onChanged(BlockchainState blockchainState) {
+                WalletActivity.this.blockchainState = blockchainState;
                 updateSyncState();
             }
         });
@@ -234,8 +236,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         payBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                BlockchainState blockchainState = blockchainStateViewModel.
-                        getBlockchainStateLiveData().getValue();
                 if (blockchainState != null && blockchainState.replaying) {
                     ActivityExtensionsKt.showBlockchainSyncingMessage(WalletActivity.this);
                 } else {
@@ -253,8 +253,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void initQuickActions() {
-        final BlockchainState blockchainState = blockchainStateViewModel.
-                getBlockchainStateLiveData().getValue();
         showHideSecureAction();
         findViewById(R.id.secure_action).setOnClickListener(new View.OnClickListener() {
             @Override

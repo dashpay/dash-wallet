@@ -40,7 +40,6 @@
                     android:layout_gravity="center_horizontal"
                     tools:layout="@layout/header_balance_fragment" />
 
-
                 <FrameLayout
                     android:id="@+id/buttons_anchor"
                     android:layout_width="match_parent"
