@@ -1052,6 +1052,14 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (blockchainState == null) {
             return;
         }
+
+        int percentage = blockchainState.percentageSync;
+        if (blockchainState.replaying && blockchainState.percentageSync == 100) {
+            //This is to prevent showing 100% when using the Rescan blockchain function.
+            //The first few broadcasted blockchainStates are with percentage sync at 100%
+            percentage = 0;
+        }
+
         ProgressBar syncProgressView = findViewById(R.id.sync_status_progress);
         if (blockchainState != null && blockchainState.syncFailed()) {
             updateSyncPaneVisibility(R.id.sync_status_pane, true);
@@ -1059,14 +1067,15 @@ public final class WalletActivity extends AbstractBindServiceActivity
             findViewById(R.id.sync_error_pane).setVisibility(View.VISIBLE);
             return;
         }
+
         updateSyncPaneVisibility(R.id.sync_error_pane, false);
         updateSyncPaneVisibility(R.id.sync_progress_pane, true);
         TextView syncStatusTitle = findViewById(R.id.sync_status_title);
         TextView syncStatusMessage = findViewById(R.id.sync_status_message);
-        syncProgressView.setProgress(blockchainState.percentageSync);
+        syncProgressView.setProgress(percentage);
         TextView syncPercentageView = findViewById(R.id.sync_status_percentage);
+        syncPercentageView.setText(percentage + "%");
 
-        syncPercentageView.setText(blockchainState.percentageSync + "%");
         if (blockchainState.isSynced()) {
             syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
             syncStatusTitle.setText(R.string.sync_status_sync_title);
