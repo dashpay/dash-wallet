@@ -318,5 +318,5 @@
     <string name="sync_status_sync_title">Sync</string>
     <string name="sync_status_sync_completed">Completed</string>
 
-
+    <string name="appwidget_wallet_not_ready">Please setup your wallet</string>
 </resources>
