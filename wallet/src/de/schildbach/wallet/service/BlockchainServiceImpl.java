@@ -39,7 +39,6 @@ import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.text.format.DateUtils;
-import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -369,7 +368,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     if(timeAgo < DateUtils.DAY_IN_MILLIS)
                         config.setRestoringBackup(false);
                 }
-                broadcastBlockchainState();
             }
         };
 
@@ -642,8 +640,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         super.onBind(intent);
         log.debug(".onBind()");
 
-        Log.d("blockchainState", "service onBind");
-        broadcastBlockchainState();
         return mBinder;
     }
 
@@ -651,14 +647,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     public boolean onUnbind(final Intent intent) {
         log.debug(".onUnbind()");
 
-        Log.d("blockchainState", "service onUnbind");
         return super.onUnbind(intent);
     }
 
     @Override
     public void onCreate() {
         serviceCreatedAt = System.currentTimeMillis();
-        Log.d("blockchainState", "service onCreate");
         log.debug(".onCreate()");
 
         super.onCreate();
@@ -753,15 +747,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         wallet.getContext().initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
 
         peerDiscoveryList.add(dnsDiscovery);
-
-        broadcastBlockchainState();
     }
 
     @Override
     public int onStartCommand(final Intent intent, final int flags, final int startId) {
         super.onStartCommand(intent, flags, startId);
-        Log.d("blockchainState", "service onStartCommand");
-        broadcastBlockchainState();
 
         if (intent != null) {
             //Restart service as a Foreground Service if it's synchronizing the blockchain
@@ -829,7 +819,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     @Override
     public void onDestroy() {
-        Log.d("blockchainState", "service onDestroy");
         log.debug(".onDestroy()");
 
         WalletApplication.scheduleStartBlockchainService(this);  //disconnect feature
@@ -984,7 +973,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     }
 
     private void broadcastBlockchainState() {
-        Log.d("blockchainState", "service broadcastState");
         final Intent broadcast = new Intent(ACTION_BLOCKCHAIN_STATE);
         broadcast.setPackage(getPackageName());
         BlockchainState blockchainState = getBlockchainState();

@@ -85,4 +85,8 @@ public class BlockchainState {
         return impediments != null && impediments.contains(Impediment.NETWORK);
     }
 
+    public boolean isSynced() {
+        return !replaying && percentageSync == 100 && !syncFailed();
+    }
+
 }

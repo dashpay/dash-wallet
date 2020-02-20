@@ -67,7 +67,6 @@ public final class HeaderBalanceFragment extends Fragment {
     private CurrencyTextView viewBalanceDash;
     private CurrencyTextView viewBalanceLocal;
 
-    private boolean isSynced;
     private boolean showLocalBalance;
 
     private ExchangeRatesViewModel exchangeRatesViewModel;
@@ -137,7 +136,6 @@ public final class HeaderBalanceFragment extends Fragment {
                 new Observer<BlockchainState>() {
                     @Override
                     public void onChanged(BlockchainState blockchainState) {
-                        isSynced = !blockchainState.replaying && blockchainState.percentageSync == 100;
                         updateView();
                     }
                 });
@@ -170,11 +168,6 @@ public final class HeaderBalanceFragment extends Fragment {
             hideBalance = true;
         }
 
-        BlockchainState blockchainState = BlockchainStateRepository.INSTANCE
-                .getBlockchainStateLiveData().getValue();
-        if (blockchainState != null) {
-            isSynced = !blockchainState.replaying && blockchainState.percentageSync == 100;
-        }
         updateView();
     }
 
@@ -188,7 +181,8 @@ public final class HeaderBalanceFragment extends Fragment {
     }
 
     private void updateView() {
-        View balances = view.findViewById(R.id.balances);
+        BlockchainState blockchainState = BlockchainStateRepository.INSTANCE.getBlockchainState();
+        View balances = view.findViewById(R.id.balances_layout);
         TextView walletBalanceSyncMessage = view.findViewById(R.id.wallet_balance_sync_message);
         View balancesLayout = view.findViewById(R.id.balances_layout);
 
@@ -210,13 +204,13 @@ public final class HeaderBalanceFragment extends Fragment {
             return;
         }
 
-        if (!isSynced) {
-            balances.setVisibility(View.GONE);
-            walletBalanceSyncMessage.setVisibility(View.VISIBLE);
-            return;
-        } else {
+        if (blockchainState != null && blockchainState.isSynced()) {
             balances.setVisibility(View.VISIBLE);
             walletBalanceSyncMessage.setVisibility(View.GONE);
+        } else {
+            balances.setVisibility(View.INVISIBLE);
+            walletBalanceSyncMessage.setVisibility(View.VISIBLE);
+            return;
         }
 
         if (!showLocalBalance)
