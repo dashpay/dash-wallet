@@ -79,12 +79,11 @@ import java.io.IOException;
 import java.util.Currency;
 import java.util.Locale;
 
+import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.livedata.BlockchainStateRepository;
-import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.preference.PreferenceActivity;
@@ -139,7 +138,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private ClipboardManager clipboardManager;
 
     private boolean showBackupWalletDialog = false;
-    private BlockchainState blockchainState;
+    private de.schildbach.wallet.data.BlockchainState blockchainState;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -191,9 +190,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
         });
 
-        BlockchainStateRepository.INSTANCE.getBlockchainStateLiveData().observe(this, new Observer<BlockchainState>() {
+        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(this, new Observer<de.schildbach.wallet.data.BlockchainState>() {
             @Override
-            public void onChanged(BlockchainState blockchainState) {
+            public void onChanged(de.schildbach.wallet.data.BlockchainState blockchainState) {
                 WalletActivity.this.blockchainState = blockchainState;
                 updateSyncState();
             }
@@ -334,9 +333,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         detectUserCountry();
         showBackupWalletDialogIfNeeded();
         showHideSecureAction();
-
-        blockchainState = BlockchainStateRepository.INSTANCE.getBlockchainState();
-        updateSyncState();
     }
 
     private void showBackupWalletDialogIfNeeded() {
@@ -1053,8 +1049,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
             return;
         }
 
-        int percentage = blockchainState.percentageSync;
-        if (blockchainState.replaying && blockchainState.percentageSync == 100) {
+        int percentage = blockchainState.getPercentageSync();
+        if (blockchainState.getReplaying() && blockchainState.getPercentageSync() == 100) {
             //This is to prevent showing 100% when using the Rescan blockchain function.
             //The first few broadcasted blockchainStates are with percentage sync at 100%
             percentage = 0;

@@ -25,8 +25,7 @@ import javax.annotation.Nullable;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.StoredBlock;
 
-import javax.annotation.CheckForNull;
-import java.util.List;
+import de.schildbach.wallet.data.BlockchainState;
 
 /**
  * @author Andreas Schildbach

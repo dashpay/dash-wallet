@@ -42,13 +42,12 @@ import org.dash.wallet.common.util.GenericUtils;
 
 import javax.annotation.Nullable;
 
+import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.livedata.BlockchainStateRepository;
+import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
-import de.schildbach.wallet.service.BlockchainState;
-import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet_test.R;
 
 public final class HeaderBalanceFragment extends Fragment {
@@ -82,6 +81,7 @@ public final class HeaderBalanceFragment extends Fragment {
     private boolean initComplete = false;
 
     private Handler autoLockHandler = new Handler();
+    private BlockchainState blockchainState;
 
     @Override
     public void onAttach(final Activity activity) {
@@ -132,13 +132,13 @@ public final class HeaderBalanceFragment extends Fragment {
             }
         });
 
-        BlockchainStateRepository.INSTANCE.getBlockchainStateLiveData().observe(getViewLifecycleOwner(),
-                new Observer<BlockchainState>() {
-                    @Override
-                    public void onChanged(BlockchainState blockchainState) {
-                        updateView();
-                    }
-                });
+        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(getViewLifecycleOwner(), new Observer<de.schildbach.wallet.data.BlockchainState>() {
+            @Override
+            public void onChanged(de.schildbach.wallet.data.BlockchainState blockchainState) {
+                HeaderBalanceFragment.this.blockchainState = blockchainState;
+                updateView();
+            }
+        });
     }
 
     @Override
@@ -146,13 +146,6 @@ public final class HeaderBalanceFragment extends Fragment {
         super.onResume();
 
         loaderManager.initLoader(ID_BALANCE_LOADER, null, balanceLoaderCallbacks);
-        if (!initComplete) {
-            loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
-            initComplete = true;
-        } else {
-            loaderManager.restartLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
-        }
-
         exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this,
                 new Observer<ExchangeRate>() {
                     @Override
@@ -181,7 +174,6 @@ public final class HeaderBalanceFragment extends Fragment {
     }
 
     private void updateView() {
-        BlockchainState blockchainState = BlockchainStateRepository.INSTANCE.getBlockchainState();
         View balances = view.findViewById(R.id.balances_layout);
         TextView walletBalanceSyncMessage = view.findViewById(R.id.wallet_balance_sync_message);
         View balancesLayout = view.findViewById(R.id.balances_layout);
@@ -245,22 +237,6 @@ public final class HeaderBalanceFragment extends Fragment {
         Intent intent = new Intent(getActivity(), ExchangeRatesActivity.class);
         getActivity().startActivity(intent);
     }
-
-    private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>() {
-        @Override
-        public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args) {
-            return new BlockchainStateLoader(activity);
-        }
-
-        @Override
-        public void onLoadFinished(@NonNull final Loader<BlockchainState> loader, final BlockchainState blockchainState) {
-            updateView();
-        }
-
-        @Override
-        public void onLoaderReset(@NonNull final Loader<BlockchainState> loader) {
-        }
-    };
 
     private final LoaderManager.LoaderCallbacks<Coin> balanceLoaderCallbacks = new LoaderManager.LoaderCallbacks<Coin>() {
         @Override

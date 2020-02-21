@@ -17,32 +17,26 @@
 
 package de.schildbach.wallet.ui;
 
-import java.util.List;
+import android.app.Activity;
+import android.os.Bundle;
+
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+
+import com.google.common.util.concurrent.ListenableFuture;
 
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.wallet.DeterministicUpgradeRequiresPassword;
 import org.bitcoinj.wallet.Wallet;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import java.util.List;
 
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.service.BlockchainService;
-import de.schildbach.wallet.service.BlockchainState;
-import de.schildbach.wallet.ui.send.MaintenanceDialogFragment;
-
-import android.app.Activity;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.os.Bundle;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 /**
  * @author Andreas Schildbach
  */
+//TODO: This class is not needed and will be removed in a future PR
 public class MaybeMaintenanceFragment extends Fragment {
     private static final String FRAGMENT_TAG = MaybeMaintenanceFragment.class.getName();
 
@@ -55,7 +49,6 @@ public class MaybeMaintenanceFragment extends Fragment {
     }
 
     private Wallet wallet;
-    private LocalBroadcastManager broadcastManager;
     private boolean dialogWasShown = false;
 
     @Override
@@ -64,7 +57,6 @@ public class MaybeMaintenanceFragment extends Fragment {
 
         final WalletApplication application = ((AbstractWalletActivity) activity).getWalletApplication();
         this.wallet = application.getWallet();
-        this.broadcastManager = LocalBroadcastManager.getInstance(activity);
     }
 
     @Override
@@ -73,33 +65,6 @@ public class MaybeMaintenanceFragment extends Fragment {
 
         setRetainInstance(true);
     }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-
-        broadcastManager.registerReceiver(broadcastReceiver,
-                new IntentFilter(BlockchainService.ACTION_BLOCKCHAIN_STATE));
-    }
-
-    @Override
-    public void onPause() {
-        broadcastManager.unregisterReceiver(broadcastReceiver);
-
-        super.onPause();
-    }
-
-    private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(final Context context, final Intent broadcast) {
-            final BlockchainState blockchainState = BlockchainState.fromIntent(broadcast);
-
-            if (!dialogWasShown && !blockchainState.replaying && maintenanceRecommended()) {
-                MaintenanceDialogFragment.show(getFragmentManager());
-                dialogWasShown = true;
-            }
-        }
-    };
 
     private boolean maintenanceRecommended() {
         try {
