@@ -95,7 +95,7 @@ public final class InactivityNotificationService extends Service {
     private void handleMaybeShowNotification() {
         final Coin estimatedBalance = wallet.getBalance(BalanceType.ESTIMATED_SPENDABLE);
 
-        if (estimatedBalance.isPositive() && config.remindBackupSeed()) {
+        if (estimatedBalance.isPositive() && config.getRemindBackupSeed()) {
             log.info("detected balance, showing inactivity notification");
             final MonetaryFormat btcFormat = config.getFormat();
             final String title = getString(R.string.notification_inactivity_title);

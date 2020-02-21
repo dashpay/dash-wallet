@@ -258,7 +258,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
         List<String> mnemonicCode = seed.getMnemonicCode();
         String[] seedArr = new String[mnemonicCode.size()];
         seedArr = mnemonicCode.toArray(seedArr);
-        Intent intent = VerifySeedActivity.Companion.createIntent(activity, seedArr, false);
+        Intent intent = VerifySeedActivity.Companion.createIntent(activity, seedArr);
         startActivity(intent);
     }
 
@@ -356,7 +356,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
     }
 
     private void updateView(boolean isUnlocked) {
-        if(!config.remindBackupSeed() || getArguments().getBoolean(ARGS_IS_UPGRADING, false))
+        if(!config.getRemindBackupSeed() || getArguments().getBoolean(ARGS_IS_UPGRADING, false))
             writtenDown.setVisibility(View.GONE);
         else writtenDown.setVisibility(isUnlocked ? View.VISIBLE : View.GONE);
     }
