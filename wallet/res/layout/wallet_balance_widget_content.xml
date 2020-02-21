@@ -5,6 +5,7 @@
     android:layout_height="match_parent">
 
     <LinearLayout
+        android:id="@+id/main_pane"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginTop="16dp"
@@ -84,6 +85,20 @@
             tools:ignore="VectorDrawableCompat" />
 
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/wallet_not_initialized_message"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/appwidget_dark_bg_clickable"
+        android:gravity="center"
+        android:padding="16dp"
+        android:src="@drawable/splash_activity_slogan"
+        android:text="@string/appwidget_wallet_not_ready"
+        android:textColor="@color/dash_white"
+        android:textSize="@dimen/font_size_normal"
+        tools:visibility="gone" />
 
     <ImageView
         android:id="@+id/widget_app_icon"

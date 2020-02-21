@@ -17,25 +17,6 @@
 
 package de.schildbach.wallet;
 
-import java.lang.reflect.Method;
-
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.utils.Fiat;
-import org.bitcoinj.utils.MonetaryFormat;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.Wallet.BalanceType;
-import org.dash.wallet.common.Configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import de.schildbach.wallet.rates.ExchangeRate;
-import de.schildbach.wallet.ui.OnboardingActivity;
-import de.schildbach.wallet.ui.QuickReceiveActivity;
-import de.schildbach.wallet.ui.SendCoinsQrActivity;
-import org.dash.wallet.common.util.GenericUtils;
-import org.dash.wallet.common.util.MonetarySpannable;
-import de.schildbach.wallet_test.R;
-
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
@@ -49,54 +30,70 @@ import android.text.style.ForegroundColorSpan;
 import android.view.View;
 import android.widget.RemoteViews;
 
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.utils.Fiat;
+import org.bitcoinj.utils.MonetaryFormat;
+import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.Wallet.BalanceType;
+import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.util.GenericUtils;
+import org.dash.wallet.common.util.MonetarySpannable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.Method;
+
+import de.schildbach.wallet.rates.ExchangeRate;
+import de.schildbach.wallet.ui.OnboardingActivity;
+import de.schildbach.wallet.ui.QuickReceiveActivity;
+import de.schildbach.wallet.ui.SendCoinsQrActivity;
+import de.schildbach.wallet_test.R;
+
 import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 
 /**
  * @author Andreas Schildbach
  */
 public class WalletBalanceWidgetProvider extends AppWidgetProvider {
+
     private static final Logger log = LoggerFactory.getLogger(WalletBalanceWidgetProvider.class);
+
+    private Coin getBalance(Context context) {
+        final WalletApplication application = (WalletApplication) context.getApplicationContext();
+        return application.getWallet().getBalance(BalanceType.ESTIMATED);
+    }
 
     @Override
     public void onUpdate(final Context context, final AppWidgetManager appWidgetManager, final int[] appWidgetIds) {
-        final WalletApplication application = (WalletApplication) context.getApplicationContext();
-        final Coin balance = application.getWallet().getBalance(BalanceType.ESTIMATED);
-
-        updateWidgets(context, appWidgetManager, appWidgetIds, balance);
+        if (!walletNotReady(context)) {
+            updateWidgets(context, appWidgetManager, appWidgetIds, getBalance(context));
+        }
     }
 
     @Override
     public void onAppWidgetOptionsChanged(final Context context, final AppWidgetManager appWidgetManager,
-            final int appWidgetId, final Bundle newOptions) {
-        if (newOptions != null)
-            log.info("app widget {} options changed: minWidth={}", appWidgetId,
-                    newOptions.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH));
-
-        final WalletApplication application = (WalletApplication) context.getApplicationContext();
-        final Coin balance = application.getWallet().getBalance(BalanceType.ESTIMATED);
-
-        updateWidget(context, appWidgetManager, appWidgetId, newOptions, balance);
+                                          final int appWidgetId, final Bundle newOptions) {
+        if (!walletNotReady(context)) {
+            updateWidget(context, appWidgetManager, appWidgetId, newOptions, getBalance(context));
+        }
     }
 
     public static void updateWidgets(final Context context, final Wallet wallet) {
         final AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
         final ComponentName providerName = new ComponentName(context, WalletBalanceWidgetProvider.class);
-
         try {
             final int[] appWidgetIds = appWidgetManager.getAppWidgetIds(providerName);
-
             if (appWidgetIds.length > 0) {
                 final Coin balance = wallet.getBalance(BalanceType.ESTIMATED);
-                WalletBalanceWidgetProvider.updateWidgets(context, appWidgetManager, appWidgetIds, balance);
+                updateWidgets(context, appWidgetManager, appWidgetIds, balance);
             }
-        } catch (final RuntimeException x) // system server dead?
-        {
+        } catch (final RuntimeException x) {// system server dead?
             log.warn("cannot update app widgets", x);
         }
     }
 
     private static void updateWidgets(final Context context, final AppWidgetManager appWidgetManager,
-            final int[] appWidgetIds, final Coin balance) {
+                                      final int[] appWidgetIds, final Coin balance) {
         for (final int appWidgetId : appWidgetIds) {
             final Bundle options = getAppWidgetOptions(appWidgetManager, appWidgetId);
             updateWidget(context, appWidgetManager, appWidgetId, options, balance);
@@ -104,7 +101,20 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
     }
 
     private static void updateWidget(final Context context, final AppWidgetManager appWidgetManager,
-            final int appWidgetId, final Bundle appWidgetOptions, final Coin balance) {
+                                     final int appWidgetId, final Bundle appWidgetOptions, final Coin balance) {
+
+        final RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.wallet_balance_widget_content);
+        boolean walletNotReady = walletNotReady(context);
+        views.setViewVisibility(R.id.main_pane, walletNotReady ? View.GONE : View.VISIBLE);
+        views.setViewVisibility(R.id.wallet_not_initialized_message, walletNotReady ? View.VISIBLE : View.GONE);
+        views.setOnClickPendingIntent(R.id.widget_button_balance,
+                PendingIntent.getActivity(context, 0, OnboardingActivity.createIntent(context), 0));
+
+        if (walletNotReady) {
+            appWidgetManager.updateAppWidget(appWidgetId, views);
+            return;
+        }
+
         final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context),
                 context.getResources());
         final MonetaryFormat btcFormat = config.getFormat();
@@ -130,15 +140,13 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
                     final Fiat localBalance = rate.coinToFiat(balance);
                     final MonetaryFormat localFormat = Constants.LOCAL_FORMAT.code(0,
                             PREFIX_ALMOST_EQUAL_TO + GenericUtils.currencySymbol(exchangeRate.getCurrencyCode()));
-                    final Object[] prefixSpans = new Object[] { MonetarySpannable.SMALLER_SPAN,
-                            new ForegroundColorSpan(context.getResources().getColor(R.color.fg_less_significant)) };
+                    final Object[] prefixSpans = new Object[]{MonetarySpannable.SMALLER_SPAN,
+                            new ForegroundColorSpan(context.getResources().getColor(R.color.fg_less_significant))};
                     localBalanceStr = new MonetarySpannable(localFormat, localBalance).applyMarkup(prefixSpans,
                             MonetarySpannable.STANDARD_INSIGNIFICANT_SPANS);
                 } else {
                     localBalanceStr = null;
                 }
-
-                final RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.wallet_balance_widget_content);
 
                 views.setTextViewText(R.id.widget_wallet_balance_btc, balanceStr);
                 views.setViewVisibility(R.id.widget_wallet_balance_local, localBalanceStr != null ? View.VISIBLE : View.GONE);
@@ -146,8 +154,8 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
 
                 if (appWidgetOptions != null) {
                     final int minWidth = appWidgetOptions.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH);
-                    views.setViewVisibility(R.id.widget_button_request, minWidth > 300 ? View.VISIBLE : View.GONE);
-                    views.setViewVisibility(R.id.widget_button_send_qr, minWidth > 200 ? View.VISIBLE : View.GONE);
+                    views.setViewVisibility(R.id.widget_button_request, minWidth > 200 ? View.VISIBLE : View.GONE);
+                    views.setViewVisibility(R.id.widget_button_send_qr, minWidth > 100 ? View.VISIBLE : View.GONE);
                 }
 
                 views.setOnClickPendingIntent(R.id.widget_button_balance,
@@ -170,5 +178,9 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
         } catch (final Exception x) {
             return null;
         }
+    }
+
+    private static boolean walletNotReady(Context context) {
+        return ((WalletApplication) context.getApplicationContext()).getWallet() == null;
     }
 }
