@@ -62,10 +62,11 @@ class LockScreenActivity : SendCoinsQrActivity() {
     }
 
     private val walletApplication = WalletApplication.getInstance()
+    private val configuration = walletApplication.configuration
     private lateinit var viewModel: LockScreenViewModel
     private lateinit var checkPinViewModel: CheckPinViewModel
     private lateinit var enableFingerprintViewModel: CheckPinSharedModel
-    private var pinLength = WalletApplication.getInstance().configuration.pinLength
+    private var pinLength = configuration.pinLength
 
     private val temporaryLockCheckHandler = Handler()
     private val temporaryLockCheckInterval = TimeUnit.SECONDS.toMillis(10)
@@ -98,9 +99,18 @@ class LockScreenActivity : SendCoinsQrActivity() {
         pinRetryController = PinRetryController.getInstance()
         initView()
         initViewModel()
+        setupBackupSeedReminder()
+
         AppDatabase.getAppDatabase().blockchainStateDao().load().observe(this, Observer{
             blockchainState = it
         })
+    }
+
+    private fun setupBackupSeedReminder() {
+        val hasBalance = walletApplication.wallet.getBalance(BalanceType.ESTIMATED).isPositive
+        if (hasBalance && configuration.lastBackupSeedTime == 0L) {
+            configuration.setLastBackupSeedTime()
+        }
     }
 
     private fun setupKeyboardBottomMargin() {
@@ -210,9 +220,9 @@ class LockScreenActivity : SendCoinsQrActivity() {
         pinRetryController.clearPinFailPrefs()
         walletApplication.maybeStartAutoLogoutTimer()
         val intent: Intent
-        if (shouldShowBackupReminder()) {
+        if (shouldShowBackupReminder) {
             intent = VerifySeedActivity.createIntent(this, pin)
-            walletApplication.configuration.disarmBackupSeedReminder()
+            configuration.resetBackupSeedReminderTimer()
         } else {
             intent = WalletActivity.createIntent(this)
         }
@@ -351,11 +361,6 @@ class LockScreenActivity : SendCoinsQrActivity() {
         dialogBuilder.show()
     }
 
-    private fun shouldShowBackupReminder(): Boolean {
-        if (walletApplication.wallet.getBalance(BalanceType.ESTIMATED).isZero) {
-            walletApplication.configuration.setBackupSeedLastDismissedReminderOnce(true)
-        }
-        return walletApplication.configuration.remindBackupSeed()
-                && walletApplication.configuration.lastDismissedReminderMoreThan24hAgo()
-    }
+    private val shouldShowBackupReminder = configuration.getRemindBackupSeed()
+            && configuration.lastBackupSeedReminderMoreThan24hAgo()
 }

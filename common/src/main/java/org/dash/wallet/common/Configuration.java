@@ -71,8 +71,7 @@ public class Configuration {
     public static final String PREFS_KEY_REMIND_BACKUP = "remind_backup";
     private static final String PREFS_KEY_LAST_BACKUP = "last_backup";
     public static final String PREFS_KEY_REMIND_BACKUP_SEED = "remind_backup_seed";
-    public static final String PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER = "backup_seed_last_dismissed_reminder";
-    private static final String PREFS_KEY_LAST_BACKUP_SEED = "last_backup_seed";
+    private static final String PREFS_KEY_LAST_BACKUP_SEED_TIME = "last_backup_seed_time";
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
     private static final String PREFS_ENABLE_FINGERPRINT = "enable_fingerprint";
     public static final String PREFS_RESTORING_BACKUP = "restoring_backup";
@@ -223,20 +222,6 @@ public class Configuration {
         return prefs.getBoolean(PREFS_KEY_REMIND_BACKUP, true);
     }
 
-    public boolean remindBackupSeed() {
-        return prefs.getBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true);
-    }
-
-    public boolean lastDismissedReminderMoreThan24hAgo() {
-        long lastReminder = prefs.getLong(PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER, -1);
-        if (lastReminder == -1) {
-            return false;
-        } else {
-            long now = System.currentTimeMillis();
-            return now - lastReminder > TimeUnit.HOURS.toMillis(24);
-        }
-    }
-
     public long getLastBackupTime() {
         return prefs.getLong(PREFS_KEY_LAST_BACKUP, 0);
     }
@@ -250,27 +235,43 @@ public class Configuration {
                 .putLong(PREFS_KEY_LAST_BACKUP, System.currentTimeMillis()).apply();
     }
 
-    public long getLastBackupSeedTime() {
-        return prefs.getLong(PREFS_KEY_LAST_BACKUP_SEED, 0);
-    }
-
     public void armBackupSeedReminder() {
-        prefs.edit().putBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true).apply();
-    }
-
-    public void setBackupSeedLastDismissedReminderOnce(boolean forceReset) {
-        long value;
-        if (prefs.contains(PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER) && !forceReset){
-            value = -1;
-        } else {
-            value = System.currentTimeMillis();
-        }
-        prefs.edit().putLong(PREFS_KEY_BACKUP_SEED_LAST_DISMISSED_REMINDER, value).apply();
+        prefs.edit()
+                .putBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true)
+                .apply();
     }
 
     public void disarmBackupSeedReminder() {
-        prefs.edit().putBoolean(PREFS_KEY_REMIND_BACKUP_SEED, false)
-                .putLong(PREFS_KEY_LAST_BACKUP_SEED, System.currentTimeMillis()).apply();
+        prefs.edit()
+                .putBoolean(PREFS_KEY_REMIND_BACKUP_SEED, false)
+                .apply();
+    }
+
+    public boolean getRemindBackupSeed() {
+        return prefs.getBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true);
+    }
+
+    public boolean lastBackupSeedReminderMoreThan24hAgo() {
+        long lastReminder = prefs.getLong(PREFS_KEY_LAST_BACKUP_SEED_TIME, 0);
+        if (lastReminder > 0) {
+            long now = System.currentTimeMillis();
+            return now - lastReminder > TimeUnit.HOURS.toMillis(24);
+        }
+        return false;
+    }
+
+    public long getLastBackupSeedTime() {
+        return prefs.getLong(PREFS_KEY_LAST_BACKUP_SEED_TIME, 0);
+    }
+
+    public void setLastBackupSeedTime() {
+        prefs.edit()
+                .putLong(PREFS_KEY_LAST_BACKUP_SEED_TIME, System.currentTimeMillis())
+                .apply();
+    }
+
+    public void resetBackupSeedReminderTimer() {
+        prefs.edit().putLong(PREFS_KEY_LAST_BACKUP_SEED_TIME, -1).apply();
     }
 
     public boolean getDisclaimerEnabled() {

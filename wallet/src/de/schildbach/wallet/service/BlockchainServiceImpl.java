@@ -172,7 +172,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             APPWIDGET_THROTTLE_MS) {
         @Override
         public void onThrottledWalletChanged() {
-            WalletBalanceWidgetProvider.updateWidgets(BlockchainServiceImpl.this, application.getWallet());
+            updateAppWidget();
         }
 
         @Override
@@ -218,12 +218,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                         notifyCoinsReceived(address, amount, tx.getExchangeRate());
                 }
             });
+            updateAppWidget();
         }
 
         @Override
         public void onCoinsSent(final Wallet wallet, final Transaction tx, final Coin prevBalance,
                 final Coin newBalance) {
             transactionsReceived.incrementAndGet();
+            updateAppWidget();
         }
     };
 
@@ -753,6 +755,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         wallet.getContext().initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
 
         peerDiscoveryList.add(dnsDiscovery);
+        updateAppWidget();
     }
 
     @Override
@@ -1038,5 +1041,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         float percentage = ((float) chainHeadHeight / (float) mostCommonChainHeight) * 100;
         log.info("mostCommonChainHeight: " + mostCommonChainHeight + "\tchainHeadHeight: " + chainHeadHeight + "\t" + percentage + "%\t" + config.getBestChainHeightEver());
         return (int) percentage;
+    }
+
+    private void updateAppWidget() {
+        WalletBalanceWidgetProvider.updateWidgets(BlockchainServiceImpl.this, application.getWallet());
     }
 }

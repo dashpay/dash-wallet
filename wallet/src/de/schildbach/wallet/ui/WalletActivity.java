@@ -253,11 +253,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         findViewById(R.id.secure_action).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (config.remindBackupSeed()) {
-                    handleBackupWalletToSeed();
-                } else if (Constants.SUPPORT_BOTH_BACKUP_WARNINGS && config.remindBackup()) {
-                    handleBackupWallet();
-                }
+                handleBackupWalletToSeed();
             }
         });
         findViewById(R.id.scan_to_pay_action).setOnClickListener(new View.OnClickListener() {
@@ -304,10 +300,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void showHideSecureAction() {
         View secureActionView = findViewById(R.id.secure_action);
-        boolean showBackupDisclaimer = (config.remindBackupSeed()
-                || (Constants.SUPPORT_BOTH_BACKUP_WARNINGS && config.remindBackup()))
-                && !WalletApplication.getInstance().isBackupDisclaimerDismissed();
-        secureActionView.setVisibility(showBackupDisclaimer ? View.VISIBLE : View.GONE);
+        secureActionView.setVisibility(config.getRemindBackupSeed() ? View.VISIBLE : View.GONE);
         findViewById(R.id.secure_action_space).setVisibility(secureActionView.getVisibility());
     }
 
