@@ -36,4 +36,5 @@
     <dimen name="transaction_fee_text_size">16sp</dimen>
     <dimen name="transaction_detail_dialog_content_vertical_padding">32dp</dimen>
 
+    <dimen name="create_username_orbits_translation_x">140dp</dimen>
 </resources>
