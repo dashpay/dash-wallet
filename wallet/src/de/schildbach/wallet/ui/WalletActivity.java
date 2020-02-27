@@ -46,6 +46,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -235,10 +236,17 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void initQuickActions() {
         showHideSecureAction();
+        showHideJoinDashPayAction();
         findViewById(R.id.secure_action).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 handleBackupWalletToSeed();
+            }
+        });
+        findViewById(R.id.join_dashpay_action).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Toast.makeText(WalletActivity.this, "Not yet implemented", Toast.LENGTH_LONG).show();
             }
         });
         findViewById(R.id.scan_to_pay_action).setOnClickListener(new View.OnClickListener() {
@@ -271,6 +279,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
         View secureActionView = findViewById(R.id.secure_action);
         secureActionView.setVisibility(config.getRemindBackupSeed() ? View.VISIBLE : View.GONE);
         findViewById(R.id.secure_action_space).setVisibility(secureActionView.getVisibility());
+    }
+
+    private void showHideJoinDashPayAction() {
+        View joinDashPayAction = findViewById(R.id.join_dashpay_action);
+        joinDashPayAction.setVisibility(config.getShowJoinDashPay() ? View.VISIBLE : View.GONE);
+
+        findViewById(R.id.join_dashpay_action_space).setVisibility(joinDashPayAction.getVisibility());
     }
 
     private void initNavigationDrawer() {
