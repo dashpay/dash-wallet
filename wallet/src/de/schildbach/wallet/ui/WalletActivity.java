@@ -46,7 +46,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -246,7 +245,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         findViewById(R.id.join_dashpay_action).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(WalletActivity.this, "Not yet implemented", Toast.LENGTH_LONG).show();
+                startActivity(FundNewAccountActivity.createIntent(WalletActivity.this));
             }
         });
         findViewById(R.id.scan_to_pay_action).setOnClickListener(new View.OnClickListener() {
@@ -1114,7 +1113,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private void setDefaultCurrency() {
         String countryCode = getCurrentCountry();
         log.info("Setting default currency:");
-        if(countryCode != null) {
+        if (countryCode != null) {
             try {
                 log.info("Local Country: " + countryCode);
                 Locale l = new Locale("", countryCode);
@@ -1148,9 +1147,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private String getCurrentCountry() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             return LocaleList.getDefault().get(0).getCountry();
-        } else{
+        } else {
             return Locale.getDefault().getCountry();
         }
     }
@@ -1175,7 +1174,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             if (config.wasUpgraded()) {
                 showFiatCurrencyChangeDetectedDialog(currentCurrencyCode, newCurrencyCode);
             } else {
-                if(CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
+                if (CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
                     log.info("found obsolete currency: " + newCurrencyCode);
                     newCurrencyCode = CurrencyInfo.getUpdatedCurrency(newCurrencyCode);
                 }
