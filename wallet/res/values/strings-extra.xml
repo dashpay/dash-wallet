@@ -321,4 +321,11 @@
     <string name="sync_status_sync_completed">Completed</string>
 
     <string name="appwidget_wallet_not_ready">Please setup your wallet</string>
+
+    <string name="new_account_register">Register</string>
+
+    <string name="new_account_confirm_message_prefix">It costs</string>
+    <string name="new_account_confirm_message_suffix">to create your Evolution account.</string>
+    <string name="new_account_confirm_button_text">Confirm &amp; Pay</string>
+    <string name="new_account_confirm_accept">I Accept</string>
 </resources>

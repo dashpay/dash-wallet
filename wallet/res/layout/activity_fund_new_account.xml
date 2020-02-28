@@ -22,4 +22,13 @@
         app:theme="@style/ThemeOverlay.AppCompat.ActionBar"
         app:titleTextColor="@color/dash_black" />
 
+    <Button
+        android:id="@+id/register"
+        style="@style/DashButton.Blue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_margin="16dp"
+        android:text="@string/new_account_register" />
+
 </FrameLayout>

@@ -20,6 +20,10 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
+import android.widget.Toast
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProviders
+import de.schildbach.wallet.ui.dashpay.NewAccountConfirmDialog
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_fund_new_account.*
 
@@ -45,6 +49,16 @@ class FundNewAccountActivity : InteractionAwareActivity() {
         }
 
         title = null
+
+        register.setOnClickListener {
+            val dialog = NewAccountConfirmDialog.createDialog()
+            dialog.show(supportFragmentManager, "NewAccountConfirmDialog")
+        }
+
+        val confirmTransactionSharedViewModel: SingleActionSharedViewModel = ViewModelProviders.of(this).get(SingleActionSharedViewModel::class.java)
+        confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
+            Toast.makeText(this, "Not yet implemented", Toast.LENGTH_LONG).show()
+        })
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
