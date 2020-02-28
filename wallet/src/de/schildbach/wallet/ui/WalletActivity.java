@@ -63,12 +63,15 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.common.collect.ImmutableList;
 import com.squareup.okhttp.HttpUrl;
 
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
+import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.ui.DialogBuilder;
@@ -81,6 +84,7 @@ import org.greenrobot.eventbus.ThreadMode;
 import java.io.IOException;
 import java.util.Currency;
 import java.util.Locale;
+import java.util.concurrent.Executor;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
@@ -139,6 +143,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private boolean showBackupWalletDialog = false;
 
+    private boolean syncComplete = false;
+    private View joinDashPayAction;
+    private OnCoinsSentReceivedListener coinsSendReceivedListener = new OnCoinsSentReceivedListener();
+
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -188,6 +196,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 return walletTransactionsFragment != null && !walletTransactionsFragment.isHistoryEmpty();
             }
         });
+
+        registerOnCoinsSentReceivedListener();
     }
 
     private void initFingerprintHelper() {
@@ -235,19 +245,20 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void initQuickActions() {
         showHideSecureAction();
-        showHideJoinDashPayAction();
         findViewById(R.id.secure_action).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 handleBackupWalletToSeed();
             }
         });
-        findViewById(R.id.join_dashpay_action).setOnClickListener(new View.OnClickListener() {
+        joinDashPayAction = findViewById(R.id.join_dashpay_action);
+        joinDashPayAction.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 startActivity(FundNewAccountActivity.createIntent(WalletActivity.this));
             }
         });
+        showHideJoinDashPayAction();
         findViewById(R.id.scan_to_pay_action).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -281,8 +292,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void showHideJoinDashPayAction() {
-        View joinDashPayAction = findViewById(R.id.join_dashpay_action);
-        joinDashPayAction.setVisibility(config.getShowJoinDashPay() ? View.VISIBLE : View.GONE);
+        final Coin walletBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED);
+        boolean canAffordIt = walletBalance.isGreaterThan(Constants.DASH_PAY_FEE)
+                || walletBalance.equals(Constants.DASH_PAY_FEE);
+        boolean visible = syncComplete && canAffordIt && config.getShowJoinDashPay();
+        joinDashPayAction.setVisibility(visible ? View.VISIBLE : View.GONE);
 
         findViewById(R.id.join_dashpay_action_space).setVisibility(joinDashPayAction.getVisibility());
     }
@@ -1050,11 +1064,14 @@ public final class WalletActivity extends AbstractBindServiceActivity
             TextView syncPercentageView = findViewById(R.id.sync_status_percentage);
 
             syncPercentageView.setText(percentage + "%");
-            if (percentage == 100) {
+            syncComplete = (percentage == 100);
+            if (syncComplete) {
                 syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
                 syncStatusTitle.setText(R.string.sync_status_sync_title);
                 syncStatusMessage.setText(R.string.sync_status_sync_completed);
                 showSyncPane(R.id.sync_status_pane, false);
+                syncComplete = true;
+                showHideJoinDashPayAction();
             } else {
                 syncPercentageView.setTextColor(getResources().getColor(R.color.dash_gray));
                 syncStatusTitle.setText(R.string.sync_status_syncing_title);
@@ -1220,5 +1237,39 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void showSyncPane(int id, boolean show) {
         findViewById(id).setVisibility(show ? View.VISIBLE : View.GONE);
+    }
+
+    @Override
+    protected void onDestroy() {
+        unregisterWalletListener();
+        super.onDestroy();
+    }
+
+    private void registerOnCoinsSentReceivedListener() {
+        Executor mainThreadExecutor = ContextCompat.getMainExecutor(this);
+        wallet.addCoinsReceivedEventListener(mainThreadExecutor, coinsSendReceivedListener);
+        wallet.addCoinsSentEventListener(mainThreadExecutor, coinsSendReceivedListener);
+    }
+
+    private void unregisterWalletListener() {
+        wallet.removeCoinsReceivedEventListener(coinsSendReceivedListener);
+        wallet.removeCoinsSentEventListener(coinsSendReceivedListener);
+    }
+
+    private class OnCoinsSentReceivedListener implements WalletCoinsReceivedEventListener, WalletCoinsSentEventListener {
+
+        @Override
+        public void onCoinsReceived(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
+            onCoinsSentReceived();
+        }
+
+        @Override
+        public void onCoinsSent(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
+            onCoinsSentReceived();
+        }
+
+        private void onCoinsSentReceived() {
+            showHideJoinDashPayAction();
+        }
     }
 }
