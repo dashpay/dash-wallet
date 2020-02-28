@@ -51,14 +51,14 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <CheckBox
+    <de.schildbach.wallet.ui.widget.MontserratCheckBox
         android:id="@+id/agree_check"
-        style="@style/TextViewStyle.Body"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
+        android:layout_margin="10dp"
         android:button="@drawable/round_checkbox"
-        android:padding="16dp"
+        android:padding="6dp"
         android:text="@string/new_account_confirm_accept" />
 
     <Button
