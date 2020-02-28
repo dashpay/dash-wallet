@@ -295,7 +295,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         final Coin walletBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED);
         boolean canAffordIt = walletBalance.isGreaterThan(Constants.DASH_PAY_FEE)
                 || walletBalance.equals(Constants.DASH_PAY_FEE);
-        boolean visible = syncComplete && canAffordIt && config.getShowJoinDashPay();
+        //FIXME to be fixed after review
+        boolean visible = true ;//syncComplete && canAffordIt && config.getShowJoinDashPay();
         joinDashPayAction.setVisibility(visible ? View.VISIBLE : View.GONE);
 
         findViewById(R.id.join_dashpay_action_space).setVisibility(joinDashPayAction.getVisibility());
