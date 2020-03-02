@@ -176,18 +176,16 @@ public final class HeaderBalanceFragment extends Fragment {
     private void updateView() {
         View balances = view.findViewById(R.id.balances_layout);
         TextView walletBalanceSyncMessage = view.findViewById(R.id.wallet_balance_sync_message);
-        View balancesLayout = view.findViewById(R.id.balances_layout);
 
         if (hideBalance) {
-            balancesLayout.setVisibility(View.GONE);
             caption.setText(R.string.home_balance_hidden);
             hideShowBalanceHint.setText(R.string.home_balance_show_hint);
-            balances.setVisibility(View.GONE);
+            balances.setVisibility(View.INVISIBLE);
             walletBalanceSyncMessage.setVisibility(View.GONE);
             showBalanceButton.setVisibility(View.VISIBLE);
             return;
         }
-        balancesLayout.setVisibility(View.VISIBLE);
+        balances.setVisibility(View.VISIBLE);
         caption.setText(R.string.home_available_balance);
         hideShowBalanceHint.setText(R.string.home_balance_hide_hint);
         showBalanceButton.setVisibility(View.GONE);
