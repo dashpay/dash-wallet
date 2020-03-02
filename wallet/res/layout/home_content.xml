@@ -35,7 +35,7 @@
                 <fragment
                     android:id="@+id/wallet_balance_fragment"
                     android:name="de.schildbach.wallet.ui.HeaderBalanceFragment"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_horizontal"
                     tools:layout="@layout/header_balance_fragment" />
