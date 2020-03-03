@@ -20,10 +20,6 @@ package de.schildbach.wallet.data
 import androidx.room.TypeConverter
 import java.util.*
 
-
-/**
- * @author Samuel Barbosa
- */
 class RoomConverters {
 
     @TypeConverter

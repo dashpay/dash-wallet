@@ -187,6 +187,7 @@ public final class SendCoinsFragment extends Fragment {
             @Override
             public void onChanged(BlockchainState blockchainState) {
                 SendCoinsFragment.this.blockchainState = blockchainState;
+                updateView();
             }
         });
 
@@ -697,22 +698,26 @@ public final class SendCoinsFragment extends Fragment {
         enterAmountSharedViewModel.getMessageTextStringData().setValue(null);
         if (viewModel.state == SendCoinsViewModel.State.INPUT) {
             CharSequence message = null;
-            if (Coin.ZERO.equals(enterAmountSharedViewModel.getDashAmount()) && wasAmountChangedByTheUser)
-                message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
-            else if (viewModel.dryrunException != null) {
-                if (viewModel.dryrunException instanceof DustySendRequested)
-                    message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
-                else if (viewModel.dryrunException instanceof InsufficientMoneyException) {
-                    message = coloredString(getString(R.string.send_coins_fragment_hint_insufficient_money), R.color.dash_red, true);
-                } else if (viewModel.dryrunException instanceof CouldNotAdjustDownwards)
-                    message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
-                else
-                    message = coloredString(viewModel.dryrunException.toString(), R.color.dash_red, true);
-            } else if (blockchainState != null && blockchainState.getReplaying()) {
+            if (blockchainState != null && blockchainState.getReplaying()) {
                 message = coloredString(getString(R.string.send_coins_fragment_hint_replaying), R.color.dash_red, true);
-            }
-            if (isUserAuthorized()) {
                 enterAmountSharedViewModel.getMessageTextStringData().setValue(message);
+            } else {
+                if (Coin.ZERO.equals(enterAmountSharedViewModel.getDashAmount()) && wasAmountChangedByTheUser) {
+                    message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
+                } else if (viewModel.dryrunException != null) {
+                    if (viewModel.dryrunException instanceof DustySendRequested)
+                        message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
+                    else if (viewModel.dryrunException instanceof InsufficientMoneyException) {
+                        message = coloredString(getString(R.string.send_coins_fragment_hint_insufficient_money), R.color.dash_red, true);
+                    } else if (viewModel.dryrunException instanceof CouldNotAdjustDownwards) {
+                        message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
+                    } else {
+                        message = coloredString(viewModel.dryrunException.toString(), R.color.dash_red, true);
+                    }
+                }
+                if (isUserAuthorized()) {
+                    enterAmountSharedViewModel.getMessageTextStringData().setValue(message);
+                }
             }
         }
 
