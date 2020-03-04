@@ -21,12 +21,11 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.res.ResourcesCompat
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.create_username.*
 
-class CreateUsernameActivity : AppCompatActivity(), TextWatcher {
+class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
     private val regularTypeFace by lazy { ResourcesCompat.getFont(this, R.font.montserrat_regular) }
     private val mediumTypeFace by lazy { ResourcesCompat.getFont(this, R.font.montserrat_medium) }

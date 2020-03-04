@@ -255,7 +255,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         joinDashPayAction.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startActivity(FundNewAccountActivity.createIntent(WalletActivity.this));
+                startActivity(new Intent(WalletActivity.this, CreateUsernameActivity.class));
             }
         });
         showHideJoinDashPayAction();
