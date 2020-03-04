@@ -228,16 +228,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 viewDrawer.closeDrawer(GravityCompat.START);
             }
         });
-        payBtn = findViewById(R.id.pay_btn);
-        payBtn.setOnClickListener(new View.OnClickListener() {
+        findViewById(R.id.pay_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (blockchainState != null && !blockchainState.isSynced()) {
-                    ActivityExtensionsKt.showBlockchainSyncingMessage(WalletActivity.this);
-                } else {
-                    startActivity(PaymentsActivity.createIntent(WalletActivity.this,
-                            PaymentsActivity.ACTIVE_TAB_PAY));
-                }
+                startActivity(PaymentsActivity.createIntent(WalletActivity.this, PaymentsActivity.ACTIVE_TAB_PAY));
             }
         });
         findViewById(R.id.receive_btn).setOnClickListener(new View.OnClickListener() {
@@ -259,41 +253,25 @@ public final class WalletActivity extends AbstractBindServiceActivity
         findViewById(R.id.scan_to_pay_action).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (blockchainState != null && !blockchainState.isSynced()) {
-                    ActivityExtensionsKt.showBlockchainSyncingMessage(WalletActivity.this);
-                } else {
-                    handleScan(v);
-                }
+                handleScan(v);
             }
         });
         findViewById(R.id.buy_sell_action).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (blockchainState != null && !blockchainState.isSynced()) {
-                    ActivityExtensionsKt.showBlockchainSyncingMessage(WalletActivity.this);
-                } else {
-                    startUpholdActivity();
-                }
+                startUpholdActivity();
             }
         });
         findViewById(R.id.pay_to_address_action).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (blockchainState != null && !blockchainState.isSynced()) {
-                    ActivityExtensionsKt.showBlockchainSyncingMessage(WalletActivity.this);
-                } else {
-                    handlePaste();
-                }
+                handlePaste();
             }
         });
         findViewById(R.id.import_key_action).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (blockchainState != null && !blockchainState.isSynced()) {
-                    ActivityExtensionsKt.showBlockchainSyncingMessage(WalletActivity.this);
-                } else {
-                    SweepWalletActivity.start(WalletActivity.this, true);
-                }
+                SweepWalletActivity.start(WalletActivity.this, true);
             }
         });
     }
