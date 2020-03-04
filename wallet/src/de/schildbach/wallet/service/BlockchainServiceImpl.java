@@ -54,8 +54,6 @@ import org.bitcoinj.core.FilteredBlock;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.SporkManager;
-import org.bitcoinj.core.SporkMessage;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
@@ -64,7 +62,6 @@ import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
-import org.bitcoinj.core.listeners.SporkUpdatedEventListener;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.net.discovery.DnsDiscovery;
@@ -764,8 +761,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         application.getWallet().addCoinsSentEventListener(Threading.SAME_THREAD, walletEventListener);
         application.getWallet().addChangeEventListener(Threading.SAME_THREAD, walletEventListener);
 
-        application.getWallet().getContext().sporkManager.addEventListener(sporkUpdatedEventListener, Threading.SAME_THREAD);
-
         registerReceiver(tickReceiver, new IntentFilter(Intent.ACTION_TIME_TICK));
 
         wallet.getContext().initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
@@ -853,8 +848,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         application.getWallet().removeChangeEventListener(walletEventListener);
         application.getWallet().removeCoinsSentEventListener(walletEventListener);
         application.getWallet().removeCoinsReceivedEventListener(walletEventListener);
-
-        application.getWallet().getContext().sporkManager.removeEventListener(sporkUpdatedEventListener);
 
         unregisterReceiver(connectivityReceiver);
 
@@ -1042,14 +1035,4 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private void updateAppWidget() {
         WalletBalanceWidgetProvider.updateWidgets(BlockchainServiceImpl.this, application.getWallet());
     }
-
-    private SporkUpdatedEventListener sporkUpdatedEventListener = new SporkUpdatedEventListener() {
-
-        @Override
-        public void onSporkUpdated(final SporkMessage sporkMessage) {
-//            if (sporkMessage.getSporkID() == SporkManager.SPORK_22_PLATFORM_ENABLED) {
-//                config.setShowJoinDashPay(true);
-//            }
-        }
-    };
 }
