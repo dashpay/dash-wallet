@@ -141,7 +141,7 @@
         app:layout_constraintStart_toStartOf="@id/left_guideline"
         app:layout_constraintWidth_default="percent"
         app:layout_constraintWidth_percent="0.24"
-        app:text="@string/lock_action_quick_receive" />
+        app:label="@string/lock_action_quick_receive" />
 
     <org.dash.wallet.ui.widget.LockScreenButton
         android:id="@+id/action_login_with_pin"
@@ -156,7 +156,7 @@
         app:layout_constraintStart_toStartOf="@id/v_center_guideline"
         app:layout_constraintWidth_default="percent"
         app:layout_constraintWidth_percent="0.24"
-        app:text="@string/lock_action_login_with_pin" />
+        app:label="@string/lock_action_login_with_pin" />
 
     <org.dash.wallet.ui.widget.LockScreenButton
         android:id="@+id/action_login_with_fingerprint"
@@ -171,7 +171,7 @@
         app:layout_constraintStart_toStartOf="@id/v_center_guideline"
         app:layout_constraintWidth_default="percent"
         app:layout_constraintWidth_percent="0.24"
-        app:text="@string/lock_action_login_with_fingerprint" />
+        app:label="@string/lock_action_login_with_fingerprint" />
 
     <org.dash.wallet.ui.widget.LockScreenButton
         android:id="@+id/action_scan_to_pay"
@@ -186,7 +186,7 @@
         app:layout_constraintStart_toStartOf="@id/right_guideline"
         app:layout_constraintWidth_default="percent"
         app:layout_constraintWidth_percent="0.24"
-        app:text="@string/lock_action_scan_to_pay" />
+        app:label="@string/lock_action_scan_to_pay" />
 
     <de.schildbach.wallet.ui.widget.NumericKeyboardView
         android:id="@+id/numeric_keyboard"

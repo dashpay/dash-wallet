@@ -21,7 +21,7 @@ class LockScreenButton(context: Context, attrs: AttributeSet) : LinearLayout(con
             if (actionIconDrawable != null) {
                 action_icon.setImageDrawable(actionIconDrawable)
             }
-            val actionText = attrsArray.getString(R.styleable.LockScreenButton_text)
+            val actionText = attrsArray.getString(R.styleable.LockScreenButton_label)
             if (actionText != null) {
                 findViewById<TextView>(R.id.action_text).text = actionText
             }
