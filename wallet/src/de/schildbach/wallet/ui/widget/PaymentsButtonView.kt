@@ -73,6 +73,7 @@ class PaymentsButtonView(context: Context, attrs: AttributeSet?) : ConstraintLay
             sub_title_view.textSize = convertPixelsToDp(defaultSybTitleSize) * 0.8f
         }
         button_view.isEnabled = active
+        this.isEnabled = active
     }
 
     fun setTitle(textResId: Int) {
