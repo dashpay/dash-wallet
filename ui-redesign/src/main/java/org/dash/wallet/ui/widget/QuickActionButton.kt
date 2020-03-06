@@ -3,6 +3,7 @@ package org.dash.wallet.ui.widget
 import android.content.Context
 import android.util.AttributeSet
 import android.widget.TextView
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.res.ResourcesCompat
@@ -20,9 +21,12 @@ class QuickActionButton(context: Context, attrs: AttributeSet) : ConstraintLayou
 
         val attrsArray = context.obtainStyledAttributes(attrs, R.styleable.QuickActionButton)
         try {
-            val actionIconDrawable = attrsArray.getDrawable(R.styleable.QuickActionButton_action_icon)
-            if (actionIconDrawable != null) {
-                action_icon.setImageDrawable(actionIconDrawable)
+            val drawableResId = attrsArray.getResourceId(R.styleable.QuickActionButton_action_icon, -1)
+            if (drawableResId > -1) {
+                val actionIconDrawable = AppCompatResources.getDrawable(context, drawableResId)
+                if (actionIconDrawable != null) {
+                    action_icon.setImageDrawable(actionIconDrawable)
+                }
             }
             val actionIconSize = attrsArray.getFloat(R.styleable.QuickActionButton_action_icon_size_percent, 0.4f)
             if (actionIconSize > 0) {

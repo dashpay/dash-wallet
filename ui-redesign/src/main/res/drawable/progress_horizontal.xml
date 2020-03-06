@@ -11,7 +11,7 @@
                 android:topLeftRadius="0dp"
                 android:topRightRadius="0dp" />
             <size android:height="6dp" />
-            <solid android:color="@android:color/white" />
+            <solid android:color="@color/dash_light_gray" />
         </shape>
     </item>
     <item
@@ -27,7 +27,7 @@
                     android:topLeftRadius="0dp"
                     android:topRightRadius="0dp" />
                 <size android:height="6dp" />
-                <solid android:color="@android:color/white" />
+                <solid android:color="@color/dash_deep_blue" />
             </shape>
         </scale>
     </item>
@@ -44,7 +44,7 @@
                     android:topLeftRadius="0dp"
                     android:topRightRadius="0dp" />
                 <size android:height="6dp" />
-                <solid android:color="@android:color/white" />
+                <solid android:color="@color/dash_blue" />
             </shape>
         </scale>
     </item>

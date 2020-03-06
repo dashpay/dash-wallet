@@ -25,7 +25,7 @@
             android:id="@+id/uphold_logo"
             android:layout_width="22.77dp"
             android:layout_height="32dp"
-            android:src="@drawable/uphold_logo"
+            app:srcCompat="@drawable/uphold_logo"
             android:layout_marginLeft="20dp"
             android:layout_marginStart="20dp"
             android:layout_marginTop="18dp"
