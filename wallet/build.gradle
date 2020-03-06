@@ -40,8 +40,9 @@ dependencies {
     implementation 'com.google.protobuf:protobuf-java:3.4.0'
     implementation 'com.google.guava:guava:27.0.1-android'
     implementation 'com.google.zxing:core:3.3.3'
-    implementation 'com.squareup.okhttp3:okhttp:4.3.1'
-    implementation 'com.squareup.okhttp3:logging-interceptor:4.3.1'
+    implementation "com.squareup.okhttp3:okhttp:$ok_http_version"
+    implementation "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
+
     implementation 'com.squareup.moshi:moshi:1.9.2'
     implementation 'org.slf4j:slf4j-api:1.7.25'
     implementation('com.github.tony19:logback-android-classic:1.1.1-6') {

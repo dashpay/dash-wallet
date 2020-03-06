@@ -2,7 +2,8 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <LinearLayout
         android:id="@+id/main_pane"
@@ -71,7 +72,7 @@
             android:layout_gravity="center_vertical"
             android:background="@drawable/appwidget_button_center"
             android:contentDescription="@string/lock_action_quick_receive"
-            android:src="@drawable/ic_lock_quick_receive"
+            app:srcCompat="@drawable/ic_lock_quick_receive"
             tools:ignore="VectorDrawableCompat" />
 
         <ImageButton
@@ -81,7 +82,7 @@
             android:layout_gravity="center_vertical"
             android:background="@drawable/appwidget_button_right"
             android:contentDescription="@string/lock_action_scan_to_pay"
-            android:src="@drawable/ic_lock_scan_to_pay"
+            app:srcCompat="@drawable/ic_lock_scan_to_pay"
             tools:ignore="VectorDrawableCompat" />
 
     </LinearLayout>
@@ -94,7 +95,7 @@
         android:background="@drawable/appwidget_dark_bg_clickable"
         android:gravity="center"
         android:padding="16dp"
-        android:src="@drawable/splash_activity_slogan"
+        app:srcCompat="@drawable/splash_activity_slogan"
         android:text="@string/appwidget_wallet_not_ready"
         android:textColor="@color/dash_white"
         android:textSize="@dimen/font_size_normal"
@@ -106,6 +107,6 @@
         android:layout_height="32dp"
         android:layout_gravity="center_horizontal"
         android:contentDescription="@string/app_name"
-        android:src="@mipmap/ic_launcher" />
+        app:srcCompat="@mipmap/ic_launcher" />
 
 </FrameLayout>
