@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.widget
 import android.content.Context
 import android.util.AttributeSet
 import android.util.DisplayMetrics
+import android.util.TypedValue
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.res.ResourcesCompat
@@ -33,6 +34,10 @@ class PaymentsButtonView(context: Context, attrs: AttributeSet?) : ConstraintLay
     init {
         inflate(context, R.layout.payments_button_view, this)
         defaultSybTitleSize = title_view.textSize
+        // allow for a larger selection ripple when this row is selected
+        setBackgroundResource(R.drawable.selectable_background_dark)
+        val paddingPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16f, resources.displayMetrics).toInt()
+        setPadding(paddingPx, paddingPx, paddingPx, paddingPx)
 
         val attrsArray = context.obtainStyledAttributes(attrs, R.styleable.PaymentsButtonView)
         try {
@@ -73,6 +78,7 @@ class PaymentsButtonView(context: Context, attrs: AttributeSet?) : ConstraintLay
             sub_title_view.textSize = convertPixelsToDp(defaultSybTitleSize) * 0.8f
         }
         button_view.isEnabled = active
+        this.isEnabled = active
     }
 
     fun setTitle(textResId: Int) {

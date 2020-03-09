@@ -41,6 +41,10 @@ class PaymentsPayFragment : Fragment() {
         pay_to_address.setOnButtonClickListener(View.OnClickListener {
             handlePaste(true)
         })
+        //Make the whole row clickable
+        pay_by_qr_button.setOnClickListener { handleScan(it) }
+        pay_to_address.setOnClickListener { handlePaste(true) }
+
     }
 
     override fun onResume() {

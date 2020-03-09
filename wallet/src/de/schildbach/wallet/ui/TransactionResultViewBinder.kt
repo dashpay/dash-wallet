@@ -63,8 +63,7 @@ class TransactionResultViewBinder(private val containerView: View) {
     private val feeRow by lazy { containerView.findViewById<View>(R.id.fee_container) }
 
     fun bind(tx: Transaction) {
-        val noCodeFormat = MonetaryFormat().noCode()
-                .minDecimals(MonetaryFormat.MAX_DECIMALS)
+        val noCodeFormat = WalletApplication.getInstance().configuration.format.noCode()
         val wallet = WalletApplication.getInstance().wallet
         val primaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet)
         val secondaryStatus = TransactionUtil.getReceivedStatusString(tx, wallet)
