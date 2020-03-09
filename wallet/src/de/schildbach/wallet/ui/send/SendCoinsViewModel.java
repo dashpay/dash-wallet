@@ -52,8 +52,6 @@ public class SendCoinsViewModel extends AndroidViewModel {
     @Nullable
     public Transaction sentTransaction = null;
     @Nullable
-    public Boolean directPaymentAck = null;
-    @Nullable
     public SendRequest dryrunSendRequest = null;
     @Nullable
     public Exception dryrunException = null;
