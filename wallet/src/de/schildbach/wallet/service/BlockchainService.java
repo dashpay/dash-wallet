@@ -18,14 +18,12 @@
 package de.schildbach.wallet.service;
 
 
-import java.util.List;
-
-import javax.annotation.Nullable;
-
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.StoredBlock;
 
-import de.schildbach.wallet.data.BlockchainState;
+import java.util.List;
+
+import javax.annotation.Nullable;
 
 /**
  * @author Andreas Schildbach
@@ -46,8 +44,6 @@ public interface BlockchainService {
     public static final String ACTION_BROADCAST_TRANSACTION = BlockchainService.class.getPackage().getName()
             + ".broadcast_transaction";
     public static final String ACTION_BROADCAST_TRANSACTION_HASH = "hash";
-
-    BlockchainState getBlockchainState();
 
     @Nullable
     List<Peer> getConnectedPeers();

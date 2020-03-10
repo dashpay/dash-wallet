@@ -22,13 +22,17 @@ import androidx.room.PrimaryKey
 import java.util.*
 
 @Entity(tableName = "blockchain_state")
-data class BlockchainState(val bestChainDate: Date?,
-                           val bestChainHeight: Int,
-                           val replaying: Boolean,
-                           val impediments: Set<Impediment>,
-                           val chainlockHeight: Int,
-                           val mnlistHeight: Int,
-                           val percentageSync: Int) {
+data class BlockchainState(var bestChainDate: Date?,
+                           var bestChainHeight: Int,
+                           var replaying: Boolean,
+                           var impediments: Set<Impediment>,
+                           var chainlockHeight: Int,
+                           var mnlistHeight: Int,
+                           var percentageSync: Int) {
+
+    @JvmOverloads
+    constructor(replaying: Boolean = false) : this(null, 0, replaying,
+            EnumSet.noneOf(Impediment::class.java), 0, 0, 0)
 
     @PrimaryKey
     var id = 1

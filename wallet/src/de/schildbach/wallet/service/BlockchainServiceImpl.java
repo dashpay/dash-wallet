@@ -41,6 +41,7 @@ import android.os.PowerManager.WakeLock;
 import android.text.format.DateUtils;
 
 import androidx.core.app.NotificationCompat;
+import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.common.base.Stopwatch;
@@ -114,7 +115,9 @@ import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
+
 import androidx.lifecycle.LifecycleService;
+
 import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 
 /**
@@ -380,13 +383,13 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         @Override
         protected void progress(double pct, int blocksLeft, Date date) {
             super.progress(pct, blocksLeft, date);
-            broadcastBlockchainState();
+            updateBlockchainState();
         }
 
         @Override
         protected void doneDownload() {
             super.doneDownload();
-            broadcastBlockchainState();
+            updateBlockchainState();
         }
     };
 
@@ -756,6 +759,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         peerDiscoveryList.add(dnsDiscovery);
         updateAppWidget();
+        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(this, new Observer<BlockchainState>() {
+            @Override
+            public void onChanged(BlockchainState blockchainState) {
+                handleBlockchainStateNotification(blockchainState);
+            }
+        });
     }
 
     @Override
@@ -820,10 +829,16 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private void startForeground() {
         //Shows ongoing notification promoting service to foreground service and
         //preventing it from being killed in Android 26 or later
-        Notification notification = createNetworkSyncNotification(getBlockchainState());
-        if (notification != null) {
-            startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
-        }
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                BlockchainState blockchainState = AppDatabase.getAppDatabase().blockchainStateDao().loadSync();
+                Notification notification = createNetworkSyncNotification(blockchainState);
+                if (notification != null) {
+                    startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+                }
+            }
+        });
     }
 
     @Override
@@ -914,7 +929,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private Notification createNetworkSyncNotification(BlockchainState blockchainState) {
         Intent notificationIntent = new Intent(this, WalletActivity.class);
-        PendingIntent pendingIntent=PendingIntent.getActivity(this, 0,
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
                 notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
         String message = BlockchainStateUtils.getSyncStateString(blockchainState, this);
@@ -936,12 +951,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             public void run() {
                 BlockchainStateDao dao = AppDatabase.getAppDatabase().blockchainStateDao();
                 BlockchainState blockchainState = dao.loadSync();
-                if (blockchainState == null) {
-                    blockchainState = getBlockchainState();
+                if (blockchainState != null) {
+                    blockchainState.getImpediments().clear();
+                    blockchainState.getImpediments().addAll(impediments);
+                    dao.save(blockchainState);
                 }
-                blockchainState.getImpediments().clear();
-                blockchainState.getImpediments().addAll(impediments);
-                dao.save(blockchainState);
             }
         });
     }
@@ -950,22 +964,27 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         executor.execute(new Runnable() {
             @Override
             public void run() {
-                AppDatabase.getAppDatabase().blockchainStateDao().save(getBlockchainState());
+                BlockchainStateDao blockchainStateDao = AppDatabase.getAppDatabase().blockchainStateDao();
+                BlockchainState blockchainState = blockchainStateDao.loadSync();
+                if (blockchainState == null) {
+                    blockchainState = new BlockchainState();
+                }
+
+                StoredBlock chainHead = blockChain.getChainHead();
+                StoredBlock block = application.getWallet().getContext().chainLockHandler.getBestChainLockBlock();
+                int chainLockHeight = block != null ? block.getHeight() : 0;
+                int mnListHeight = (int) application.getWallet().getContext().masternodeListManager.getListAtChainTip().getHeight();
+
+                blockchainState.setBestChainDate(chainHead.getHeader().getTime());
+                blockchainState.setBestChainHeight(chainHead.getHeight());
+                blockchainState.setImpediments(EnumSet.copyOf(impediments));
+                blockchainState.setChainlockHeight(chainLockHeight);
+                blockchainState.setMnlistHeight(mnListHeight);
+                blockchainState.setPercentageSync(percentageSync());
+
+                AppDatabase.getAppDatabase().blockchainStateDao().save(blockchainState);
             }
         });
-    }
-
-    @Override
-    public BlockchainState getBlockchainState() {
-        final StoredBlock chainHead = blockChain.getChainHead();
-        final boolean replaying = chainHead.getHeight() < config.getBestChainHeightEver();
-        StoredBlock block = application.getWallet().getContext().chainLockHandler.getBestChainLockBlock();
-        final int chainLockHeight = block != null ? block.getHeight() : 0;
-        final int mnListHeight = (int)application.getWallet().getContext().masternodeListManager.getListAtChainTip().getHeight();
-
-        return new BlockchainState(chainHead.getHeader().getTime(),
-                chainHead.getHeight(), replaying, EnumSet.copyOf(impediments), chainLockHeight,
-                mnListHeight, percentageSync());
     }
 
     @Override
@@ -1006,11 +1025,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
     }
 
-    private void broadcastBlockchainState() {
-        BlockchainState blockchainState = getBlockchainState();
-        updateBlockchainState();
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+    private void handleBlockchainStateNotification(BlockchainState blockchainState) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && blockchainState != null
+                && blockchainState.getBestChainDate() != null) {
             //Handle Ongoing notification state
             boolean syncing = blockchainState.getBestChainDate().getTime() < (Utils.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS); //1 hour
             if (!syncing && blockchainState.getBestChainHeight() == config.getBestChainHeightEver()) {

@@ -27,15 +27,22 @@ import androidx.room.Query
  * @author Samuel Barbosa
  */
 @Dao
-interface BlockchainStateDao {
+abstract class BlockchainStateDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun save(blockchainState: BlockchainState)
+    abstract fun insert(blockchainState: BlockchainState)
+
+    fun save(blockchainState: BlockchainState) {
+        if (blockchainState.replaying && blockchainState.percentageSync == 100) {
+            blockchainState.replaying = false
+        }
+        insert(blockchainState)
+    }
 
     @Query("SELECT * FROM blockchain_state LIMIT 1")
-    fun load(): LiveData<BlockchainState>
+    abstract fun load(): LiveData<BlockchainState?>
 
     @Query("SELECT * FROM blockchain_state LIMIT 1")
-    fun loadSync(): BlockchainState
+    abstract fun loadSync(): BlockchainState?
 
 }
