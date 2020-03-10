@@ -28,16 +28,16 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation "androidx.appcompat:appcompat:$appcompat_version"
-    api 'androidx.browser:browser:1.0.0'
+    api 'androidx.browser:browser:1.2.0'
     implementation "org.dashj:dashj-core:$dashjVersion"
 
     //Retrofit + OkHttp
-    api "com.squareup.okhttp3:okhttp:$ok_http_version"
-    api "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
-    api 'com.squareup.moshi:moshi:1.9.2'
-    api "com.squareup.retrofit2:retrofit:$retrofit_version"
-    api "com.squareup.retrofit2:converter-moshi:$retrofit_version"
-    api "com.squareup.retrofit2:converter-scalars:$retrofit_version"
+    api okhttp3.okhttp
+    api okhttp3.logging_interceptor
+    api retrofit2.retrofit
+    api retrofit2.converter_moshi
+    api retrofit2.converter_scalars
+    api moshi.moshi
 
     //Android Arch
     api 'androidx.lifecycle:lifecycle-extensions:2.0.0'
