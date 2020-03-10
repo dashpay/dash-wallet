@@ -62,7 +62,6 @@ class LockScreenActivity : SendCoinsQrActivity() {
     private val walletApplication = WalletApplication.getInstance()
     private val configuration = walletApplication.configuration
     private lateinit var viewModel: LockScreenViewModel
-    private lateinit var simplifiedPaymentViewModel: SimplifiedPaymentViewModel
     private lateinit var checkPinViewModel: CheckPinViewModel
     private lateinit var enableFingerprintViewModel: CheckPinSharedModel
     private var pinLength = configuration.pinLength

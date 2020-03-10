@@ -26,7 +26,7 @@ class SimplifiedPaymentViewModel : ViewModel() {
 
     private val paymentRequestUrl = MutableLiveData<String>()
 
-    private val lightPaymentRepo: LightPaymentRepo = LightPaymentRepo()
+    var lightPaymentRepo: LightPaymentRepo = LightPaymentRepo()
 
 //    fun paymentRequest(requestId: String) = liveData(Dispatchers.IO) {
 //        emit(Resource.loading(null))
