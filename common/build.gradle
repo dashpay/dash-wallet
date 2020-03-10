@@ -27,7 +27,7 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation 'androidx.appcompat:appcompat:1.0.2'
+    implementation "androidx.appcompat:appcompat:$appcompat_version"
     api 'androidx.browser:browser:1.0.0'
     implementation "org.dashj:dashj-core:$dashjVersion"
 
@@ -35,9 +35,9 @@ dependencies {
     api "com.squareup.okhttp3:okhttp:$ok_http_version"
     api "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
     api 'com.squareup.moshi:moshi:1.9.2'
-    api 'com.squareup.retrofit2:retrofit:2.6.4'
-    api 'com.squareup.retrofit2:converter-moshi:2.6.4'
-    api 'com.squareup.retrofit2:converter-scalars:2.6.4'
+    api "com.squareup.retrofit2:retrofit:$retrofit_version"
+    api "com.squareup.retrofit2:converter-moshi:$retrofit_version"
+    api "com.squareup.retrofit2:converter-scalars:$retrofit_version"
 
     //Android Arch
     api 'androidx.lifecycle:lifecycle-extensions:2.0.0'

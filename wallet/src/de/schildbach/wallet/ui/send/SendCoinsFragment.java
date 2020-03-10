@@ -581,7 +581,6 @@ public class SendCoinsFragment extends Fragment {
 
     private SendRequest createSendRequest(PaymentIntent paymentIntent, boolean signInputs, boolean forceEnsureMinRequiredFee) {
 
-        paymentIntent.setInstantX(false); //to make sure the correct instance of Transaction class is used in toSendRequest() method
         final SendRequest sendRequest = paymentIntent.toSendRequest();
         sendRequest.coinSelector = ZeroConfCoinSelector.get();
         sendRequest.useInstantSend = false;

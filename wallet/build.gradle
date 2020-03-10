@@ -19,7 +19,7 @@ repositories {
 
 dependencies {
     implementation 'com.google.android.material:material:1.0.0'
-    implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation "androidx.appcompat:appcompat:$appcompat_version"
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
@@ -60,10 +60,12 @@ dependencies {
     //Uphold Integration
     implementation project(path: ':uphold-integration')
 
+    implementation project(path: ':light-payment-protocol')
+
     implementation 'androidx.multidex:multidex:2.0.1'
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation 'androidx.core:core-ktx:1.1.0'
+    implementation "androidx.core:core-ktx:$core_ktx_version"
 
     implementation 'com.google.firebase:firebase-analytics:17.2.0'
 
@@ -101,7 +103,12 @@ ext {
 }
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 29
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
 
     lintOptions {
         abortOnError false
@@ -109,7 +116,7 @@ android {
     }
     defaultConfig {
         minSdkVersion 19
-        targetSdkVersion 28
+        targetSdkVersion 29
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true

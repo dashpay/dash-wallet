@@ -62,7 +62,7 @@ class VerifySeedConfirmFragment : Fragment() {
         view.findViewById<Toolbar>(R.id.toolbar).title = getString(R.string.verify_backup_wallet)
 
         if (arguments?.containsKey("seed")!!) {
-            words.addAll(arguments!!.getStringArray("seed"))
+            words.addAll(arguments!!.getStringArray("seed")!!)
         } else {
             throw IllegalStateException("This fragment needs to receive a String[] containing " +
                     "the recovery seed")

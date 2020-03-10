@@ -38,6 +38,7 @@ import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_lock_screen.*
 import org.bitcoinj.wallet.Wallet.BalanceType
+import org.dash.android.lightpayprot.SimplifiedPaymentViewModel
 import org.dash.wallet.common.ui.DialogBuilder
 import java.util.concurrent.TimeUnit
 
@@ -61,6 +62,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
     private val walletApplication = WalletApplication.getInstance()
     private val configuration = walletApplication.configuration
     private lateinit var viewModel: LockScreenViewModel
+    private lateinit var simplifiedPaymentViewModel: SimplifiedPaymentViewModel
     private lateinit var checkPinViewModel: CheckPinViewModel
     private lateinit var enableFingerprintViewModel: CheckPinSharedModel
     private var pinLength = configuration.pinLength
@@ -203,6 +205,47 @@ class LockScreenActivity : SendCoinsQrActivity() {
             val pin = it.second
             onCorrectPin(pin)
         })
+//        paymentViewModel = ViewModelProviders.of(this).get(PaymentViewModel::class.java)
+//        paymentViewModel.paymentRequest("05271023-ff23-45ff-9fc9-446d0c69ecb9").observe(this, Observer {
+//            when (it.status) {
+//                org.dash.android.spp.Status.LOADING -> {
+//                    println("paymentRequest: LOADING")
+//                }
+//                org.dash.android.spp.Status.SUCCESS -> {
+//                    println("paymentRequest: SUCCESS\t$it")
+//                    val data = it.data!!
+//                    val rawScript = data.outputs[0].script//.replace(" 20 ", " 0x14 ")
+//                    try {
+//                        val outputs = arrayListOf<PaymentIntent.Output>()
+//                        for (output in data.outputs) {
+//                            val amount = Coin.valueOf(output.amount)
+//                            val script = ScriptUtil.parseScriptString(output.script)
+//                            val address = Address.fromBase58(Constants.NETWORK_PARAMETERS, output.address)
+//                            outputs.add(PaymentIntent.Output(amount, script, address))
+//                        }
+//                        val script = ScriptUtil.parseScriptString(rawScript)
+//                        println("paymentRequest: rawScript\t$rawScript")
+//                        println("paymentRequest: script\t$script")
+//                        val paymentIntent = PaymentIntent(PaymentIntent.Standard.BIP270, "payeeName", "payeeVerifiedBy", outputs.toTypedArray(), data.memo, data.paymentUrl, null, null, null)
+//                        SendCoinsActivity.start(this@LockScreenActivity, paymentIntent, false)
+////                        val data = Utils.HEX.decode(it.data!!.outputs[0].script);
+////                        val tx = Transaction(Constants.NETWORK_PARAMETERS, data); // might need a 0 as the last parameter
+////                        println("tx:\t$tx")
+//
+//
+////                        val script = Script(it.data!!.outputs[0].script.toByteArray())
+////                        PaymentIntent.Output(Coin.valueOf(it.data!!.outputs[0].amount), script)
+//                    } catch (x: ScriptException) {
+//                        throw InvalidOutputs(
+//                                "unparseable script in output: " + rawScript)
+////                        Constants.HEX.encode(output.scriptData)
+//                    }
+//                }
+//                org.dash.android.spp.Status.ERROR -> {
+//                    println("paymentRequest: ERROR\t$it")
+//                }
+//            }
+//        })
     }
 
     private fun onCorrectPin(pin: String) {

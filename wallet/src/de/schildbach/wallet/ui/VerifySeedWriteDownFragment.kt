@@ -55,7 +55,7 @@ class VerifySeedWriteDownFragment private constructor() : Fragment() {
         if (arguments?.containsKey("seed")!!) {
             val seed = arguments!!.getStringArray("seed")
             val sb = StringBuilder(12)
-            seed.forEach {
+            seed!!.forEach {
                 sb.append("$it  ")
             }
             recoverySeedTextView.text = sb.toString().trim()

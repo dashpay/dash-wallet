@@ -21,6 +21,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.BitmapDrawable
+import android.text.SpannableString
 import android.text.style.ImageSpan
 import android.util.AttributeSet
 import android.view.View
@@ -102,7 +103,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
         qr_preview.setImageDrawable(qrCodeBitmap)
         address_preview.text = address.toBase58() + "  "
 
-        val addressSpannable = address_preview.text.toSpannable()
+        val addressSpannable = SpannableString.valueOf(address_preview.text)
         val copyIconDrawable = ContextCompat.getDrawable(context, R.drawable.ic_copy_addres)!!
         val iconSize = address_preview.lineHeight
         copyIconDrawable.setBounds(0, 0, iconSize, iconSize)
@@ -122,9 +123,9 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
         try {
             val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             if (amount != null) {
-                clipboardManager.primaryClip = ClipData.newPlainText("Dash payment request", paymentRequestUri)
+                clipboardManager.setPrimaryClip(ClipData.newPlainText("Dash payment request", paymentRequestUri))
             } else {
-                clipboardManager.primaryClip = ClipData.newPlainText("Dash address", address.toBase58())
+                clipboardManager.setPrimaryClip(ClipData.newPlainText("Dash address", address.toBase58()))
             }
             Toast(context).toast(R.string.receive_copied)
             log.info("address copied to clipboard: {}", address)

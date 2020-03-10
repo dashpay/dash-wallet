@@ -30,13 +30,19 @@ import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.core.content.res.ResourcesCompat;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
 import org.bitcoin.protocols.payments.Protos;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
+import org.bitcoinj.protocols.payments.PaymentProtocolException;
+import org.dash.android.lightpayprot.Resource;
+import org.dash.android.lightpayprot.SimplifiedPaymentViewModel;
+import org.dash.android.lightpayprot.data.SimplifiedPaymentRequest;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -49,13 +55,14 @@ import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.offline.DirectPaymentTask;
 import de.schildbach.wallet.ui.InputParser;
 import de.schildbach.wallet.ui.ProgressDialogFragment;
+import de.schildbach.wallet.ui.SimplifiedPaymentRequestUtil;
 import de.schildbach.wallet.util.Bluetooth;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
 
 import static org.dash.wallet.common.Constants.CHAR_CHECKMARK;
 
-public final class PaymentRequestFragment extends SendCoinsFragment {
+public final class PaymentProtocolFragment extends SendCoinsFragment {
 
     private static final int REQUEST_CODE_ENABLE_BLUETOOTH_FOR_PAYMENT_REQUEST = 0;
     private static final int REQUEST_CODE_ENABLE_BLUETOOTH_FOR_DIRECT_PAYMENT = 1;
@@ -71,11 +78,32 @@ public final class PaymentRequestFragment extends SendCoinsFragment {
     private TextView directPaymentMessageView;
 
     private PaymentRequestViewModel paymentRequestViewModel;
+    private SimplifiedPaymentViewModel simplifiedPaymentViewModel;
 
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         paymentRequestViewModel = ViewModelProviders.of(this).get(PaymentRequestViewModel.class);
+        simplifiedPaymentViewModel = ViewModelProviders.of(this).get(SimplifiedPaymentViewModel.class);
+        simplifiedPaymentViewModel.getPaymentRequest().observe(this, new Observer<Resource<SimplifiedPaymentRequest>>() {
+            @Override
+            public void onChanged(Resource<SimplifiedPaymentRequest> paymentRequestResource) {
+                switch (paymentRequestResource.getStatus()) {
+                    case SUCCESS: {
+                        handleRequest(paymentRequestResource.getData());
+                        break;
+                    }
+                    case ERROR: {
+                        Toast.makeText(getActivity(), "ERROR", Toast.LENGTH_LONG).show();
+                        break;
+                    }
+                    case LOADING: {
+                        showRequestFetchingProgress();
+                        break;
+                    }
+                }
+            }
+        });
     }
 
     @Override
@@ -156,7 +184,7 @@ public final class PaymentRequestFragment extends SendCoinsFragment {
     private void onActivityResultResumed(final int requestCode, final int resultCode, final Intent intent) {
         if (requestCode == REQUEST_CODE_ENABLE_BLUETOOTH_FOR_PAYMENT_REQUEST) {
             if (getPaymentIntent().isBluetoothPaymentRequestUrl())
-                requestPaymentRequest();
+                requestPaymentRequest(getPaymentIntent());
         } else if (requestCode == REQUEST_CODE_ENABLE_BLUETOOTH_FOR_DIRECT_PAYMENT) {
             if (getPaymentIntent().isBluetoothPaymentUrl())
                 directPaymentEnableView.setChecked(resultCode == Activity.RESULT_OK);
@@ -238,7 +266,7 @@ public final class PaymentRequestFragment extends SendCoinsFragment {
         if (paymentIntent.hasPaymentRequestUrl() && paymentIntent.isBluetoothPaymentRequestUrl()) {
 
             if (bluetoothAdapter.isEnabled()) {
-                requestPaymentRequest();
+                handlePaymentRequest(paymentIntent);
             } else {
                 // ask for permission to enable bluetooth
                 startActivityForResult(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE), REQUEST_CODE_ENABLE_BLUETOOTH_FOR_PAYMENT_REQUEST);
@@ -246,7 +274,7 @@ public final class PaymentRequestFragment extends SendCoinsFragment {
 
         } else if (paymentIntent.hasPaymentRequestUrl() && paymentIntent.isHttpPaymentRequestUrl()) {
 
-            requestPaymentRequest();
+            handlePaymentRequest(paymentIntent);
 
         } else {
 
@@ -265,31 +293,58 @@ public final class PaymentRequestFragment extends SendCoinsFragment {
         }
     }
 
-    private void requestPaymentRequest() {
-        final String host;
-        final PaymentIntent paymentIntent = getPaymentIntent();
-
-        if (Bluetooth.isBluetoothUrl(paymentIntent.paymentRequestUrl)) {
-            host = Bluetooth.decompressMac(Bluetooth.getBluetoothMac(paymentIntent.paymentRequestUrl));
+    private void handlePaymentRequest(PaymentIntent paymentIntent) {
+        if (paymentIntent.standard == PaymentIntent.Standard.BIP272) {
+            String paymentRequestUrl = Objects.requireNonNull(paymentIntent.paymentRequestUrl);
+            simplifiedPaymentViewModel.getPaymentRequest(paymentRequestUrl);
         } else {
-            host = Uri.parse(paymentIntent.paymentRequestUrl).getHost();
+            requestPaymentRequest(paymentIntent);
         }
+    }
 
+    private void handleRequest(SimplifiedPaymentRequest data) {
+        if (data == null) {
+            return;
+        }
+        try {
+            PaymentIntent paymentIntent = SimplifiedPaymentRequestUtil.convert(data);
+            updatePaymentRequest(paymentIntent);
+        } catch (PaymentProtocolException.InvalidOutputs ex) {
+            Toast.makeText(getActivity(), "InvalidOutputs", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    protected void showRequestFetchingProgress() {
+        PaymentIntent paymentIntent = getPaymentIntent();
+        final String host;
+        if (!Bluetooth.isBluetoothUrl(paymentIntent.paymentRequestUrl)) {
+            host = Uri.parse(paymentIntent.paymentRequestUrl).getHost();
+        } else {
+            host = Bluetooth.decompressMac(Bluetooth.getBluetoothMac(paymentIntent.paymentRequestUrl));
+        }
         ProgressDialogFragment.showProgress(fragmentManager, getString(R.string.send_coins_fragment_request_payment_request_progress, host));
         setState(SendCoinsViewModel.State.REQUEST_PAYMENT_REQUEST);
+    }
+
+    private void updatePaymentRequest(PaymentIntent paymentIntent) {
+        ProgressDialogFragment.dismissProgress(fragmentManager);
+        setState(SendCoinsViewModel.State.INPUT);
+        updateStateFrom(paymentIntent);
+        updateView();
+        handler.post(dryrunRunnable);
+    }
+
+    private void requestPaymentRequest(final PaymentIntent paymentIntent) {
+        showRequestFetchingProgress();
 
         final RequestPaymentRequestTask.ResultCallback callback = new RequestPaymentRequestTask.ResultCallback() {
             @Override
             public void onPaymentIntent(final PaymentIntent paymentIntent) {
-                ProgressDialogFragment.dismissProgress(fragmentManager);
-
                 if (paymentIntent.isExtendedBy(paymentIntent)) {
                     // success
-                    setState(SendCoinsViewModel.State.INPUT);
-                    updateStateFrom(paymentIntent);
-                    updateView();
-                    handler.post(dryrunRunnable);
+                    updatePaymentRequest(paymentIntent);
                 } else {
+                    ProgressDialogFragment.dismissProgress(fragmentManager);
                     final StringBuilder reasons = new StringBuilder();
                     if (!paymentIntent.equalsAddress(paymentIntent))
                         reasons.append("address");
@@ -321,7 +376,7 @@ public final class PaymentRequestFragment extends SendCoinsFragment {
                 dialog.setPositiveButton(R.string.button_retry, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(final DialogInterface dialog, final int which) {
-                        requestPaymentRequest();
+                        requestPaymentRequest(paymentIntent);
                     }
                 });
                 dialog.setNegativeButton(R.string.button_dismiss, new DialogInterface.OnClickListener() {

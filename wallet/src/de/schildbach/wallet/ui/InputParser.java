@@ -42,12 +42,14 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.crypto.BIP38PrivateKey;
 import org.bitcoinj.crypto.TrustStoreLoader;
+import org.bitcoinj.params.AbstractBitcoinNetParams;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.protocols.payments.PaymentProtocol.PkiVerificationData;
 import org.bitcoinj.protocols.payments.PaymentProtocolException;
 import org.bitcoinj.protocols.payments.PaymentSession;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
+import org.dash.android.lightpayprot.SimplifiedPaymentProtocol;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,6 +110,20 @@ public abstract class InputParser {
                         throw new BitcoinURIParseException("mismatched network");
 
                     handlePaymentIntent(PaymentIntent.fromBitcoinUri(bitcoinUri));
+                } catch (final BitcoinURIParseException x) {
+                    log.info("got invalid bitcoin uri: '" + input + "'", x);
+
+                    error(R.string.input_parser_invalid_bitcoin_uri, input);
+                }
+            } else if (input.startsWith(SimplifiedPaymentProtocol.PAY_URI_SCHEME + ":")) {
+                try {
+                    String paymentUri = input.replaceFirst(SimplifiedPaymentProtocol.PAY_URI_SCHEME, AbstractBitcoinNetParams.BITCOIN_SCHEME);
+                    final BitcoinURI bitcoinUri = new BitcoinURI(null, paymentUri);
+                    final Address address = AddressUtil.getCorrectAddress(bitcoinUri);
+                    if (address != null && !Constants.NETWORK_PARAMETERS.equals(address.getParameters()))
+                        throw new BitcoinURIParseException("mismatched network");
+
+                    handlePaymentIntent(PaymentIntent.fromBitcoinUri(bitcoinUri, PaymentIntent.Standard.BIP272));
                 } catch (final BitcoinURIParseException x) {
                     log.info("got invalid bitcoin uri: '" + input + "'", x);
 
