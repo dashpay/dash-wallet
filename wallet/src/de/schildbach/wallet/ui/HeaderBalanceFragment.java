@@ -39,18 +39,15 @@ import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.util.GenericUtils;
-import org.greenrobot.eventbus.EventBus;
-import org.greenrobot.eventbus.Subscribe;
-import org.greenrobot.eventbus.ThreadMode;
 
 import javax.annotation.Nullable;
 
+import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
-import de.schildbach.wallet.service.BlockchainState;
-import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet_test.R;
 
 public final class HeaderBalanceFragment extends Fragment {
@@ -69,7 +66,6 @@ public final class HeaderBalanceFragment extends Fragment {
     private CurrencyTextView viewBalanceDash;
     private CurrencyTextView viewBalanceLocal;
 
-    private boolean isSynced;
     private boolean showLocalBalance;
 
     private ExchangeRatesViewModel exchangeRatesViewModel;
@@ -85,18 +81,7 @@ public final class HeaderBalanceFragment extends Fragment {
     private boolean initComplete = false;
 
     private Handler autoLockHandler = new Handler();
-
-    @Override
-    public void onStart() {
-        super.onStart();
-        EventBus.getDefault().register(this);
-    }
-
-    @Override
-    public void onStop() {
-        EventBus.getDefault().unregister(this);
-        super.onStop();
-    }
+    private BlockchainState blockchainState;
 
     @Override
     public void onAttach(final Activity activity) {
@@ -146,6 +131,14 @@ public final class HeaderBalanceFragment extends Fragment {
                 updateView();
             }
         });
+
+        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(getViewLifecycleOwner(), new Observer<de.schildbach.wallet.data.BlockchainState>() {
+            @Override
+            public void onChanged(de.schildbach.wallet.data.BlockchainState blockchainState) {
+                HeaderBalanceFragment.this.blockchainState = blockchainState;
+                updateView();
+            }
+        });
     }
 
     @Override
@@ -153,13 +146,6 @@ public final class HeaderBalanceFragment extends Fragment {
         super.onResume();
 
         loaderManager.initLoader(ID_BALANCE_LOADER, null, balanceLoaderCallbacks);
-        if (!initComplete) {
-            loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
-            initComplete = true;
-        } else {
-            loaderManager.restartLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
-        }
-
         exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this,
                 new Observer<ExchangeRate>() {
                     @Override
@@ -187,15 +173,8 @@ public final class HeaderBalanceFragment extends Fragment {
         super.onPause();
     }
 
-    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
-    public void onEvent(SyncProgressEvent event) {
-        int percentage = (int) event.getPct();
-        isSynced = percentage == 100;
-        updateView();
-    }
-
     private void updateView() {
-        View balances = view.findViewById(R.id.balances);
+        View balances = view.findViewById(R.id.balances_layout);
         TextView walletBalanceSyncMessage = view.findViewById(R.id.wallet_balance_sync_message);
         View balancesLayout = view.findViewById(R.id.balances_layout);
 
@@ -217,13 +196,13 @@ public final class HeaderBalanceFragment extends Fragment {
             return;
         }
 
-        if (!isSynced) {
-            balances.setVisibility(View.GONE);
-            walletBalanceSyncMessage.setVisibility(View.VISIBLE);
-            return;
-        } else {
+        if (blockchainState != null && blockchainState.isSynced()) {
             balances.setVisibility(View.VISIBLE);
             walletBalanceSyncMessage.setVisibility(View.GONE);
+        } else {
+            balances.setVisibility(View.INVISIBLE);
+            walletBalanceSyncMessage.setVisibility(View.VISIBLE);
+            return;
         }
 
         if (!showLocalBalance)
@@ -258,22 +237,6 @@ public final class HeaderBalanceFragment extends Fragment {
         Intent intent = new Intent(getActivity(), ExchangeRatesActivity.class);
         getActivity().startActivity(intent);
     }
-
-    private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>() {
-        @Override
-        public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args) {
-            return new BlockchainStateLoader(activity);
-        }
-
-        @Override
-        public void onLoadFinished(@NonNull final Loader<BlockchainState> loader, final BlockchainState blockchainState) {
-            updateView();
-        }
-
-        @Override
-        public void onLoaderReset(@NonNull final Loader<BlockchainState> loader) {
-        }
-    };
 
     private final LoaderManager.LoaderCallbacks<Coin> balanceLoaderCallbacks = new LoaderManager.LoaderCallbacks<Coin>() {
         @Override
