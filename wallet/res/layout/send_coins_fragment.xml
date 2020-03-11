@@ -8,24 +8,6 @@
     android:paddingEnd="16dp">
 
     <TextView
-        android:id="@+id/send_coins_payee_name"
-        style="@style/MontserratRegular.DB.12"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:gravity="center_horizontal"
-        android:singleLine="true" />
-
-    <TextView
-        android:id="@+id/send_coins_payee_verified_by"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:singleLine="true"
-        android:textColor="@color/fg_less_significant"
-        android:textSize="@dimen/font_size_small"
-        tools:text="@string/send_coins_fragment_payee_verified_by" />
-
-    <TextView
         android:id="@+id/send_coins_receiving_static_address"
         style="@style/MontserratMedium.MG.14"
         android:layout_width="match_parent"

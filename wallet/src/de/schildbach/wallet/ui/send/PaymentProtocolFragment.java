@@ -77,8 +77,6 @@ public final class PaymentProtocolFragment extends SendCoinsFragment {
 
     private BluetoothAdapter bluetoothAdapter;
 
-    private TextView payeeNameView;
-    private TextView payeeVerifiedByView;
     private TextView receivingStaticAddressView;
     private CheckBox directPaymentEnableView;
     private TextView directPaymentMessageView;
@@ -156,9 +154,6 @@ public final class PaymentProtocolFragment extends SendCoinsFragment {
                              final Bundle savedInstanceState) {
         final View view = Objects.requireNonNull(super.onCreateView(inflater, container, savedInstanceState));
 
-        payeeNameView = view.findViewById(R.id.send_coins_payee_name);
-        payeeVerifiedByView = view.findViewById(R.id.send_coins_payee_verified_by);
-
         receivingStaticAddressView = view.findViewById(R.id.send_coins_receiving_static_address);
 
         directPaymentEnableView = view.findViewById(R.id.send_coins_direct_payment_enable);
@@ -204,18 +199,6 @@ public final class PaymentProtocolFragment extends SendCoinsFragment {
 
         PaymentIntent paymentIntent = getPaymentIntent();
         SendCoinsViewModel.State state = getState();
-
-        if (paymentIntent.hasPayee()) {
-            payeeNameView.setVisibility(View.VISIBLE);
-            payeeNameView.setText(paymentIntent.payeeName);
-
-            payeeVerifiedByView.setVisibility(View.VISIBLE);
-            final String verifiedBy = paymentIntent.payeeVerifiedBy != null ? paymentIntent.payeeVerifiedBy : getString(R.string.send_coins_fragment_payee_verified_by_unknown);
-            payeeVerifiedByView.setText(CHAR_CHECKMARK + String.format(getString(R.string.send_coins_fragment_payee_verified_by), verifiedBy));
-        } else {
-            payeeNameView.setVisibility(View.GONE);
-            payeeVerifiedByView.setVisibility(View.GONE);
-        }
 
         if (paymentIntent.hasOutputs()) {
             if (paymentIntent.hasAddress()) {

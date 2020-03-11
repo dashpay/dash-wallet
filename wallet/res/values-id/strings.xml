@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Mengambil tanda tangan dari %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Gagal mengambil tanda tangan</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Tanda tangan salah!</string>
-    <string name="send_coins_fragment_payee_verified_by">diverifikasi oleh: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">tidak diketahui</string>
     <string name="send_coins_fragment_receiving_address_label">Kirim ke</string>
     <string name="send_coins_fragment_receiving_address_hint">masukkan alamat atau nama</string>

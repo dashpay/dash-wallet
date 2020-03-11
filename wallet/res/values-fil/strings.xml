@@ -51,7 +51,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Nakakuha ng pansin ang lagda mula %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Ang pagkuha ng pansin ng lagda ay hindi nagtagumpay</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Maling lagda!</string>
-    <string name="send_coins_fragment_payee_verified_by">beripikado ni: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">lingid</string>
     <string name="send_coins_fragment_receiving_address_hint">I-type ang address o pangalan</string>
     <string name="send_coins_fragment_receiving_address_error">Hindi wasto ang iyong Dash address!</string>
