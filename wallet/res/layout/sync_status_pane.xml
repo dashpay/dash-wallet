@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/sync_status_pane"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
@@ -68,7 +69,9 @@
         style="@style/Panel.Red"
         android:layout_width="match_parent"
         android:layout_height="80dp"
-        android:layout_margin="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
+        tools:visibility="visible"
         android:visibility="gone">
 
         <LinearLayout

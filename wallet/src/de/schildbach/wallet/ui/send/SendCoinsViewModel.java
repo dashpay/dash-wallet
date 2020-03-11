@@ -28,7 +28,6 @@ import org.bitcoinj.wallet.Wallet;
 import javax.annotation.Nullable;
 
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.BlockchainStateLiveData;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesRepository;
@@ -42,7 +41,6 @@ public class SendCoinsViewModel extends AndroidViewModel {
     }
 
     public final Wallet wallet;
-    public final BlockchainStateLiveData blockchainState;
     public final LiveData<ExchangeRate> exchangeRate;
 
     public PaymentIntent paymentIntent = null;
@@ -60,7 +58,6 @@ public class SendCoinsViewModel extends AndroidViewModel {
         super(application);
         WalletApplication walletApplication = (WalletApplication) application;
         wallet = walletApplication.getWallet();
-        blockchainState = new BlockchainStateLiveData(walletApplication);
         String currencyCode = walletApplication.getConfiguration().getExchangeCurrencyCode();
         exchangeRate = ExchangeRatesRepository.getInstance().getRate(currencyCode);
     }
