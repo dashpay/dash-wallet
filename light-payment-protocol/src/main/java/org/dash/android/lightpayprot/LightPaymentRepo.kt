@@ -2,6 +2,8 @@ package org.dash.android.lightpayprot
 
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.dash.android.lightpayprot.data.SimplifiedPayment
@@ -46,13 +48,20 @@ class LightPaymentRepo {
     suspend fun getPaymentRequest(paymentRequestUrl: String): Resource<SimplifiedPaymentRequest> {
         return try {
             val response = paymentApi.getPaymentRequest(paymentRequestUrl)
-            val headers = response.headers()
-            val payeeVerifiedBy = headers[SupportInterceptor.EXT_HEADER_PAYEE_VERIFIED_BY]
-            val payeeName = headers[SupportInterceptor.EXT_HEADER_PAYEE_NAME]
-            val responseData = response.body()!!
-            responseData.payeeVerifiedBy = payeeVerifiedBy
-            responseData.payeeName = payeeName
-            responseHandler.handleSuccess(responseData)
+            if (response.isSuccessful) {
+                val headers = response.headers()
+                val payeeVerifiedBy = headers[SupportInterceptor.EXT_HEADER_PAYEE_VERIFIED_BY]
+                val payeeName = headers[SupportInterceptor.EXT_HEADER_PAYEE_NAME]
+                val responseData = response.body()!!
+                responseData.payeeVerifiedBy = payeeVerifiedBy
+                responseData.payeeName = payeeName
+                responseHandler.handleSuccess(responseData)
+            } else {
+                withContext(Dispatchers.IO) {
+                    val errorBody = response.errorBody()!!
+                    Resource.error(errorBody.string(), null)
+                }
+            }
         } catch (ex: Exception) {
             responseHandler.handleException(ex)
         }
@@ -61,8 +70,15 @@ class LightPaymentRepo {
     suspend fun postPayment(paymentUrl: String, payment: SimplifiedPayment): Resource<SimplifiedPaymentAck> {
         return try {
             val response = paymentApi.postPayment(paymentUrl, payment)
-            val responseData = response.body()!!
-            responseHandler.handleSuccess(responseData)
+            if (response.isSuccessful) {
+                val responseData = response.body()!!
+                responseHandler.handleSuccess(responseData)
+            } else {
+                withContext(Dispatchers.IO) {
+                    val errorBody = response.errorBody()!!
+                    Resource.error(errorBody.string(), null)
+                }
+            }
         } catch (ex: Exception) {
             responseHandler.handleException(ex)
         }

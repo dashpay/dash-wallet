@@ -416,7 +416,7 @@ public final class PaymentProtocolFragment extends SendCoinsFragment {
         simplifiedPaymentViewModel.postPayment(paymentUrl, simplifiedPayment).observe(this, new Observer<Resource<SimplifiedPaymentAck>>() {
             @Override
             public void onChanged(Resource<SimplifiedPaymentAck> simplifiedPaymentAckResource) {
-                System.out.println("simplifiedPaymentViewModel.postPayment:\t" + simplifiedPaymentAckResource.getStatus());
+                System.out.println("simplifiedPaymentViewModel.postPayment:\t" + simplifiedPaymentAckResource);
                 activity.finish();
             }
         });
