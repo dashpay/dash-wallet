@@ -4,10 +4,7 @@ import org.dash.android.lightpayprot.data.SimplifiedPayment
 import org.dash.android.lightpayprot.data.SimplifiedPaymentAck
 import org.dash.android.lightpayprot.data.SimplifiedPaymentRequest
 import retrofit2.Response
-import retrofit2.http.GET
-import retrofit2.http.Headers
-import retrofit2.http.POST
-import retrofit2.http.Url
+import retrofit2.http.*
 
 interface PaymentApi {
     /**
@@ -26,5 +23,5 @@ interface PaymentApi {
      */
     @Headers("Accept: " + SimplifiedPaymentProtocol.MIME_TYPE_PAYMENT)
     @POST
-    suspend fun postPayment(@Url paymentUrl: String, payment: SimplifiedPayment): Response<SimplifiedPaymentAck>
+    suspend fun postPayment(@Url paymentUrl: String, @Body payment: SimplifiedPayment): Response<SimplifiedPaymentAck>
 }

@@ -21,12 +21,16 @@ import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.liveData
 import kotlinx.coroutines.Dispatchers
+import org.dash.android.lightpayprot.data.SimplifiedPayment
+import org.dash.android.lightpayprot.data.SimplifiedPaymentRequest
 
 class SimplifiedPaymentViewModel : ViewModel() {
 
     private val paymentRequestUrl = MutableLiveData<String>()
 
     var lightPaymentRepo: LightPaymentRepo = LightPaymentRepo()
+
+    var paymentRequestData: SimplifiedPaymentRequest? = null
 
 //    fun paymentRequest(requestId: String) = liveData(Dispatchers.IO) {
 //        emit(Resource.loading(null))
@@ -43,4 +47,10 @@ class SimplifiedPaymentViewModel : ViewModel() {
     fun getPaymentRequest(requestUrl: String) {
         paymentRequestUrl.value = requestUrl
     }
+
+    fun postPayment(paymentUrl: String, payment: SimplifiedPayment) = liveData(Dispatchers.IO) {
+        emit(Resource.loading(null))
+        emit(lightPaymentRepo.postPayment(paymentUrl, payment))
+    }
+
 }

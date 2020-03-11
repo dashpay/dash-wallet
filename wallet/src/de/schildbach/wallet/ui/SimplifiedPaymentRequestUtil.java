@@ -8,6 +8,7 @@ import org.bitcoinj.protocols.payments.PaymentProtocolException;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptOpCodes;
 import org.dash.android.lightpayprot.Output;
+import org.dash.android.lightpayprot.data.SimplifiedPayment;
 import org.dash.android.lightpayprot.data.SimplifiedPaymentRequest;
 
 import java.io.IOException;
@@ -83,10 +84,15 @@ public class SimplifiedPaymentRequestUtil {
             }
             PaymentIntent.Output[] outputsArr = outputs.toArray(new PaymentIntent.Output[0]);
             return new PaymentIntent(PaymentIntent.Standard.BIP270, data.getPayeeName(), data.getPayeeVerifiedBy(),
-                    outputsArr, data.getMemo(), data.getPaymentUrl(), null, null, null);
+                    outputsArr, data.getMemo(), data.getPaymentUrl(), null, data.getMerchantData(), null);
 
         } catch (IOException ex) {
             throw new PaymentProtocolException.InvalidOutputs("unparseable script in output: " + rawScript);
         }
+    }
+
+    public static SimplifiedPayment createSimplifiedPayment(String merchantData, String transaction, String refundTo, String memo) {
+
+        return new SimplifiedPayment("merchantData", transaction, refundTo, memo);
     }
 }

@@ -38,10 +38,16 @@ import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
 import org.bitcoin.protocols.payments.Protos;
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.protocols.payments.PaymentProtocolException;
+import org.bitcoinj.wallet.KeyChain;
 import org.dash.android.lightpayprot.Resource;
 import org.dash.android.lightpayprot.SimplifiedPaymentViewModel;
+import org.dash.android.lightpayprot.data.SimplifiedPayment;
+import org.dash.android.lightpayprot.data.SimplifiedPaymentAck;
 import org.dash.android.lightpayprot.data.SimplifiedPaymentRequest;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.jetbrains.annotations.NotNull;
@@ -90,6 +96,7 @@ public final class PaymentProtocolFragment extends SendCoinsFragment {
             public void onChanged(Resource<SimplifiedPaymentRequest> paymentRequestResource) {
                 switch (paymentRequestResource.getStatus()) {
                     case SUCCESS: {
+                        simplifiedPaymentViewModel.setPaymentRequestData(paymentRequestResource.getData());
                         handleRequest(paymentRequestResource.getData());
                         break;
                     }
@@ -403,13 +410,33 @@ public final class PaymentProtocolFragment extends SendCoinsFragment {
     @Override
     void onSendCoinsOfflineTaskSuccess(Protos.Payment payment, Intent resultIntent) {
         super.onSendCoinsOfflineTaskSuccess(payment, resultIntent);
-        if (directPaymentEnableView.isChecked()) {
-            directPay(payment);
-        }
+//        if (directPaymentEnableView.isChecked()) {
+//            directPay(payment);
+//        }
 
         if (getPaymentIntent().standard == PaymentIntent.Standard.BIP70) {
             BitcoinIntegration.paymentToResult(resultIntent, payment.toByteArray());
         }
+
+        if (getPaymentIntent().standard != PaymentIntent.Standard.BIP270) {
+            return;
+        }
+
+        SimplifiedPaymentRequest paymentRequestData = simplifiedPaymentViewModel.getPaymentRequestData();
+        String merchantData = paymentRequestData.getMerchantData();
+        String paymentUrl = paymentRequestData.getPaymentUrl();
+        final Address refundAddress = getWallet().freshAddress(KeyChain.KeyPurpose.REFUND);
+        Transaction transaction = getSentTransaction();
+        byte[] data = transaction.unsafeBitcoinSerialize();
+        String signedTransaction = Utils.HEX.encode(data);
+        SimplifiedPayment simplifiedPayment = SimplifiedPaymentRequestUtil.createSimplifiedPayment(merchantData, signedTransaction, refundAddress.toBase58(), "Hello World");
+        simplifiedPaymentViewModel.postPayment(paymentUrl, simplifiedPayment).observe(this, new Observer<Resource<SimplifiedPaymentAck>>() {
+            @Override
+            public void onChanged(Resource<SimplifiedPaymentAck> simplifiedPaymentAckResource) {
+                System.out.println("simplifiedPaymentViewModel.postPayment:\t" + simplifiedPaymentAckResource.getStatus());
+                activity.finish();
+            }
+        });
     }
 
     private void directPay(final Protos.Payment payment) {

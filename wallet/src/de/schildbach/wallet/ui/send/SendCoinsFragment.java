@@ -363,6 +363,14 @@ public class SendCoinsFragment extends Fragment {
         enterAmountSharedViewModel.getChangeDashAmountEvent().setValue(amount);
     }
 
+    Transaction getSentTransaction() {
+        return viewModel.sentTransaction;
+    }
+
+    Wallet getWallet() {
+        return viewModel.wallet;
+    }
+
     PaymentIntent getPaymentIntent() {
         return viewModel.paymentIntent;
     }
@@ -486,7 +494,7 @@ public class SendCoinsFragment extends Fragment {
         }
         showTransactionResult(viewModel.sentTransaction, wallet);
         playSentSound();
-        activity.finish();
+//        activity.finish();
     }
 
     private void showInsufficientMoneyDialog(Coin missing) {
@@ -716,7 +724,7 @@ public class SendCoinsFragment extends Fragment {
             total = amount.add(txFee).toPlainString();
         }
 
-        String address = viewModel.paymentIntent.getAddress().toBase58();
+        String address = "bip270";//viewModel.paymentIntent.getAddress().toBase58();
         ExchangeRate rate = enterAmountSharedViewModel.getExchangeRate();
         // prevent crash if the exchange rate is null
         Fiat fiatAmount = rate != null ? rate.coinToFiat(amount) : null;

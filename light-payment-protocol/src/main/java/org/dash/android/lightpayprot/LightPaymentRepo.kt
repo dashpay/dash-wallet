@@ -4,6 +4,8 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import org.dash.android.lightpayprot.data.SimplifiedPayment
+import org.dash.android.lightpayprot.data.SimplifiedPaymentAck
 import org.dash.android.lightpayprot.data.SimplifiedPaymentRequest
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
@@ -56,4 +58,13 @@ class LightPaymentRepo {
         }
     }
 
+    suspend fun postPayment(paymentUrl: String, payment: SimplifiedPayment): Resource<SimplifiedPaymentAck> {
+        return try {
+            val response = paymentApi.postPayment(paymentUrl, payment)
+            val responseData = response.body()!!
+            responseHandler.handleSuccess(responseData)
+        } catch (ex: Exception) {
+            responseHandler.handleException(ex)
+        }
+    }
 }
