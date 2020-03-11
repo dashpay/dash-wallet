@@ -17,10 +17,14 @@
 package de.schildbach.wallet.ui.send;
 
 import android.app.Application;
+import android.os.Handler;
+import android.util.Pair;
 
+import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
-import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
@@ -29,8 +33,6 @@ import javax.annotation.Nullable;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.rates.ExchangeRate;
-import de.schildbach.wallet.rates.ExchangeRatesRepository;
 
 public class SendCoinsViewModel extends AndroidViewModel {
 
@@ -40,13 +42,23 @@ public class SendCoinsViewModel extends AndroidViewModel {
         DECRYPTING, SIGNING, SENDING, SENT, FAILED // sending states
     }
 
+    public enum SendCoinsOfflineStatus {
+        SUCCESS,
+        INSUFFICIENT_MONEY,
+        INVALID_ENCRYPTION_KEY,
+        EMPTY_WALLET_FAILED,
+        FAILURE
+    }
+
     public final Wallet wallet;
-    public final LiveData<ExchangeRate> exchangeRate;
+
+    public final MutableLiveData<State> state = new MutableLiveData<>();
+    public MutableLiveData<Pair<SendCoinsOfflineStatus, Object>> onSendCoinsOffline = new MutableLiveData<>();
 
     public PaymentIntent paymentIntent = null;
 
-    @Nullable
-    public State state = null;
+    PaymentIntent finalPaymentIntent = null;
+
     @Nullable
     public Transaction sentTransaction = null;
     @Nullable
@@ -54,11 +66,59 @@ public class SendCoinsViewModel extends AndroidViewModel {
     @Nullable
     public Exception dryrunException = null;
 
+
     public SendCoinsViewModel(final Application application) {
         super(application);
         WalletApplication walletApplication = (WalletApplication) application;
         wallet = walletApplication.getWallet();
-        String currencyCode = walletApplication.getConfiguration().getExchangeCurrencyCode();
-        exchangeRate = ExchangeRatesRepository.getInstance().getRate(currencyCode);
+    }
+
+    void signAndSendPayment(final SendRequest sendRequest, final Handler backgroundHandler, PaymentIntent finalPaymentIntent) {
+        state.setValue(State.SIGNING);
+        this.finalPaymentIntent = finalPaymentIntent;
+
+        new SendCoinsOfflineTask(wallet, backgroundHandler) {
+
+            @Override
+            protected void onSuccess(@NonNull final Transaction transaction) {
+                state.setValue(State.SENDING);
+                onSendCoinsOffline.setValue(
+                        new Pair<>(SendCoinsOfflineStatus.SUCCESS, (Object) transaction)
+                );
+            }
+
+            @Override
+            protected void onInsufficientMoney(final Coin missing) {
+                state.setValue(State.INPUT);
+                onSendCoinsOffline.setValue(
+                        new Pair<>(SendCoinsOfflineStatus.INSUFFICIENT_MONEY, (Object) missing)
+                );
+            }
+
+            @Override
+            protected void onInvalidEncryptionKey() {
+                state.setValue(State.INPUT);
+                onSendCoinsOffline.setValue(
+                        new Pair<>(SendCoinsOfflineStatus.INVALID_ENCRYPTION_KEY, null)
+                );
+            }
+
+            @Override
+            protected void onEmptyWalletFailed() {
+                state.setValue(State.INPUT);
+                onSendCoinsOffline.setValue(
+                        new Pair<>(SendCoinsOfflineStatus.EMPTY_WALLET_FAILED, null)
+                );
+            }
+
+            @Override
+            protected void onFailure(Exception exception) {
+                state.setValue(State.FAILED);
+                onSendCoinsOffline.setValue(
+                        new Pair<>(SendCoinsOfflineStatus.FAILURE, (Object) exception)
+                );
+            }
+
+        }.sendCoinsOffline(sendRequest); // send asynchronously
     }
 }
