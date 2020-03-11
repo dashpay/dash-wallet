@@ -69,6 +69,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import ch.qos.logback.classic.Level;
@@ -78,6 +80,7 @@ import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
+import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.ui.LockScreenActivity;
@@ -566,8 +569,18 @@ public class WalletApplication extends MultiDexApplication {
         stopService(blockchainServiceIntent);
     }
 
+    public void resetBlockchainState() {
+        Executors.newSingleThreadExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                AppDatabase.getAppDatabase().blockchainStateDao().save(new BlockchainState(true));
+            }
+        });
+    }
+
     public void resetBlockchain() {
         // implicitly stops blockchain service
+        resetBlockchainState();
         Intent blockchainServiceResetBlockchainIntent = new Intent(BlockchainService.ACTION_RESET_BLOCKCHAIN, null, this,
                 BlockchainServiceImpl.class);
         startService(blockchainServiceResetBlockchainIntent);

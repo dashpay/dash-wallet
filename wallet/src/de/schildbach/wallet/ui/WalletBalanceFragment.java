@@ -25,11 +25,12 @@ import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.CurrencyTextView;
 
 import org.dash.wallet.common.Configuration;
+
+import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
-import de.schildbach.wallet.service.BlockchainState;
-import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
@@ -74,7 +75,7 @@ public final class WalletBalanceFragment extends Fragment {
     @Nullable
     private de.schildbach.wallet.rates.ExchangeRate exchangeRate = null;
     @Nullable
-    private BlockchainState blockchainState = null;
+    private de.schildbach.wallet.data.BlockchainState blockchainState = null;
 
     private static final int ID_BALANCE_LOADER = 0;
     private static final int ID_RATE_LOADER = 1;
@@ -141,6 +142,14 @@ public final class WalletBalanceFragment extends Fragment {
 
         viewProgress = (TextView) view.findViewById(R.id.wallet_balance_progress);
         exchangeRatesViewModel = ViewModelProviders.of(this).get(ExchangeRatesViewModel.class);
+
+        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(getViewLifecycleOwner(),
+                new Observer<BlockchainState>() {
+                    @Override
+                    public void onChanged(BlockchainState blockchainState) {
+                        WalletBalanceFragment.this.blockchainState = blockchainState;
+                    }
+                });
     }
 
     @Override
@@ -148,8 +157,6 @@ public final class WalletBalanceFragment extends Fragment {
         super.onResume();
 
         loaderManager.initLoader(ID_BALANCE_LOADER, null, balanceLoaderCallbacks);
-        loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
-
 
         exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this,
                 new Observer<de.schildbach.wallet.rates.ExchangeRate>() {
@@ -181,12 +188,12 @@ public final class WalletBalanceFragment extends Fragment {
 
         final boolean showProgress;
 
-        if (blockchainState != null && blockchainState.bestChainDate != null) {
-            final long blockchainLag = System.currentTimeMillis() - blockchainState.bestChainDate.getTime();
+        if (blockchainState != null && blockchainState.getBestChainDate() != null) {
+            final long blockchainLag = System.currentTimeMillis() - blockchainState.getBestChainDate().getTime();
             final boolean blockchainUptodate = blockchainLag < BLOCKCHAIN_UPTODATE_THRESHOLD_MS;
-            final boolean noImpediments = blockchainState.impediments.isEmpty();
+            final boolean noImpediments = blockchainState.getImpediments().isEmpty();
 
-            showProgress = !(blockchainUptodate || !blockchainState.replaying);
+            showProgress = !(blockchainUptodate || !blockchainState.getReplaying());
 
             final String downloading = getString(noImpediments ? R.string.blockchain_state_progress_downloading
                     : R.string.blockchain_state_progress_stalled);
@@ -247,24 +254,6 @@ public final class WalletBalanceFragment extends Fragment {
             viewBalance.setVisibility(View.INVISIBLE);
         }
     }
-
-    private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>() {
-        @Override
-        public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args) {
-            return new BlockchainStateLoader(activity);
-        }
-
-        @Override
-        public void onLoadFinished(final Loader<BlockchainState> loader, final BlockchainState blockchainState) {
-            WalletBalanceFragment.this.blockchainState = blockchainState;
-
-            updateView();
-        }
-
-        @Override
-        public void onLoaderReset(final Loader<BlockchainState> loader) {
-        }
-    };
 
     private final LoaderManager.LoaderCallbacks<Coin> balanceLoaderCallbacks = new LoaderManager.LoaderCallbacks<Coin>() {
         @Override
