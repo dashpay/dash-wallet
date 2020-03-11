@@ -34,8 +34,8 @@
     <string name="wallet_transactions_options_filter_received">Prijaté</string>
     <string name="wallet_transactions_options_filter_sent">Odoslané</string>
     <string name="wallet_options_safety_menu">Bezpečnosť</string>
-    <string name="wallet_options_encrypt_keys_set">Nastaviť PIN pre míňanie</string>
-    <string name="wallet_options_encrypt_keys_change">Zmeniť PIN pre míňanie</string>
+    <string name="wallet_options_encrypt_keys_set">Nastaviť PIN</string>
+    <string name="wallet_options_encrypt_keys_change">Zmeniť PIN</string>
     <string name="wallet_options_safety">Bezpečnosť</string>
     <string name="wallet_low_storage_dialog_title">Na zariadení je málo pamäťového miesta!</string>
     <string name="wallet_low_storage_dialog_msg">Peňaženka Dash používa internú pamäť pre uchovanie transakcií a blokov. Ak dôjde miesto, prestane pracovať and vaše Dashe budú v ohrození!\n\nChcete otvoriť správcu aplikácií a odinštalovať nepotrebné aplikácie?</string>
@@ -68,7 +68,7 @@
     <string name="send_coins_fragment_hint_dusty_send">Čiastka je príliš nízka pre odoslanie</string>
     <string name="send_coins_fragment_hint_insufficient_money">Nedostatok prostriedkov</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Súčet malých platieb vo vašej peňaženke neumožňuje v súčte zaslanie platby.</string>
-    <string name="send_coins_fragment_hint_replaying">Platby nie sú momentálne možne, pretože prebieha opakovanie.</string>
+    <string name="send_coins_fragment_hint_replaying">Platby nie sú momentálne možne, pretože peňaženka nie je plne synchronizovaná so sieťou </string>
     <string name="send_coins_fragment_direct_payment_enable">Odoslať platbu priamo príjemcovi.</string>
     <string name="send_coins_fragment_direct_payment_ack">Platba bola úspešne odoslaná priamo príjemcovi.</string>
     <string name="send_coins_fragment_direct_payment_nack">Platba cez priame spojenie bola zamietnutá.</string>
@@ -159,7 +159,7 @@
     <string name="transaction_row_status_received">Prijté</string>
     <string name="transaction_row_status_sent">Poslané</string>
     <string name="transaction_row_status_sending">Odosielam</string>
-    <string name="transaction_row_status_sent_interally">Interná</string>
+    <string name="transaction_row_status_sent_internally">Interná</string>
     <string name="transaction_row_status_processing">Spracováva sa</string>
     <string name="transaction_row_status_confirming">Potvrdzuje sa</string>
     <string name="transaction_row_status_locked">Uzamknuté</string>

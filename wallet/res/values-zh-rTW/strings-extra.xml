@@ -212,13 +212,18 @@
     <string name="verify_seed_success_message">您的錢包現在已經安全了。 您可以隨時使用恢復詞組在另一台設備上恢復帳戶。</string>
     <string name="view_seed_done">完成</string>
     <string name="view_seed_title">恢復詞組</string>
-	<string name="transaction_result_view_on_explorer">在瀏覽器中查看</string>
+	<string name="transaction_result_view_on_explorer">在區塊瀏覽器中查看</string>
 	<string name="transaction_result_paid_successfully">發送成功</string>
 	<string name="transaction_result_sent_to">發給</string>
-	<string name="transaction_date_and_time">日期 &amp; 時間</string>
+	<string name="transaction_date_and_time">日期</string>
 	<string name="transaction_close">關閉</string>
 	<string name="transaction_details_amount_received">收到的金額</string>
 	<string name="transaction_details_amount_sent">發送金額</string>
+    <string name="transaction_details_sent_from">來自</string>
+    <string name="transaction_details_sent_to">發給</string>
+    <string name="transaction_details_received_at">在......收到</string>
+    <string name="transaction_details_moved_from">從移動</string>
+    <string name="transaction_details_moved_internally_to">內部移至</string>
 
     <string name="authenticate_fingerprint_title">認證</string>
     <string name="authenticate_fingerprint_message">確認指紋以繼續</string>
@@ -269,7 +274,6 @@
     <string name="one_minute">1分鐘</string>
     <string name="five_minute">5分鐘</string>
     <string name="one_hour">1小時</string>
-    <string name="one_day">1天</string>
     <string name="biometric_limit">生物識別限制</string>
     <string name="spending_confirmation_hint_zero">總是需要輸入密碼才能進行付款</string>
     <string name="spending_confirmation_hint_above_zero">您可以使用生物特徵認證對以下付款進行認證</string>
@@ -304,6 +308,8 @@
     <string name="sync_status_syncing_sub_title">與達世幣區塊鏈</string>
     <string name="sync_status_unable_to_connect">無法連接</string>
     <string name="sync_status_check_connection">Check your connection</string>
+    <string name="sync_status_sync_title">同步</string>
+    <string name="sync_status_sync_completed">完成</string>
 
-
+    <string name="appwidget_wallet_not_ready">請設置您的錢包</string>
 </resources>

@@ -1,36 +1,39 @@
-Use por sua conta e risco! (Requer o Android 4 ou superior)
+DESCRIÇÃO PRINCIPAL
 
-<b>Tenha seu Dash sempre com você, no seu bolso!</b> Pague rapidamente apenas escaneando um QR code. Como um comerciante, você recebe pagamentos de uma forma confiável e instantaneamente. Dash Wallet é o primeiro app móvel de Dash e sem dúvida também o mais segura!
+Dash Wallet é a carteira referência de Dash - Digital Cash para Android mantida por Dash Core Group. Dash - Digital Cash é uma inovadora alternativa a Bitcoin que é explicitamente projetada para pagamentos.
 
-<b>CARACTERÍSTICAS</b>
+Dash é uma criptomoeda que busca corrigir as falhas que outras criptomoedas sofrem. Se baseia em uma rede de Masternodes para permitir coisas como transações instantâneas, recursos de privacidade opcional e um mecanismo de financiamento direto para promover o crescimento da rede.
 
-• Nenhum registo, serviço web ou nuvem necessários! Esta carteira é descentralizada e peer to peer.
-• Mostra quantidade de Dash em mDASH e µDASH.
-• Conversão de e para outras moedas nacionais.
-• Envio e recebimento de Dash através de NFC, códigos QR ou URLs de Dash.
-• Livro de endereços Dash usados regularmente.
-• Quando estiver offline, você pode pagar via Bluetooth.
-• Sistema de notificação para moedas recebidas.
-• Varrer carteiras de papel (por exemplo, aquelas usadas para armazenagem offline).
-• Widget de app para o saldo de Dash.
+Intuitiva e segura, Dash Wallet lhe dá total controle sobre o seu dinheiro digital. Envie e receba pagamentos em Dash de forma instantânea com a carteira mobile mais segura disponível.
 
+Dash Wallet se conecta diretamente à rede Dash. Isso siginifica que não há servidores para que sejam hackeados ou derrubados - seus fundos estão sempre protegidos. Mesmo que seu telefone se perca, danifique ou seja roubado, você pode recuperar seus fundos facilmente usando sua frase de recuperação pessoal.
 
-<b>CONTRIBUIR</b>
+Características:
 
-Carteira Dash é <b>open source</b> e um <b>software livre</b>. Licença: GPLv3
+* Envie e receba pagamentos em Dash em segundos, online ou pessoalmente
+* Pagamentos com um botão para comércios e websites que aceitam Dash
+* Pague rapidamente com autenticação biométrica
+* Varredura de carteiras de papel (ex: aquelas usadas para armazenamento a frio)
+* Integrações com terceiros que permite os usuários a comprar e vender Dash
+* Frase de recuperação simples que permite recuperar seus fundos quando seu dispositivo for perdido ou trocado
+* Ajustes flexíveis para atender a uma variedade de preferências de segurança personalizadas
+* Cliente direto à rede de Dash - nenhum servidor central para ser hackeado ou derrubado
+
+Dash Wallet é de código aberto e gratuito. As taxas de rede são mais baixas que a maioria de criptomoedas e não há custos centralizados adicionais. Envie qualquer quantia de dinheiro para qualquer pessoa no mundo em segundos. Assim como o dinheiro deve ser.
+
+CONTRIBUA
+
+Dash Wallet é open source e um software livre. Licença: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Nosso código fonte está disponível no GitHub:
-https://github.com/HashEngineering/dash-wallet
+https://github.com/dashevo/dash-wallet
 
 Todas as traduções são gerenciadas por meio do Transifex:
-https://www.transifex.com/dash/dash-wallet/
+https://www.transifex.com/dash/dash-mobile-wallets/
 
 Você pode encontrar mais sobre Dash em
 https://www.dash.org/
 
-<b>DEPOIMENTOS</b>
-
-Uma carteira móvel recomendada por https://www.dash.org
-
-<i>Use por sua conta em risco!</i>
+v7.0.0 Upgrade
+Dash Wallet v7.0 traz uma experiência completamente redesenhada que busca aprimorar a facilidade de uso de maneira intuitiva e familiar em todos os seus dispositivos. Reimaginamos nosso processo de verificação de frase de recuperação para destacar a importância de protegê-la para recuperação posterior da carteira, além de permitir que novos usuários adiem esse processo; por exemplo, se o local em que instalaram o aplicativo não for adequado para anotar a senha de 12 palavras. Também adicionamos atalhos à tela inicial para acesso mais rápido aos recursos comumente usados. Nosso menu de configurações também foi reposicionado no aplicativo e organizado para ajudar os usuários a configurar sua carteira de forma mais rápida e fácil. Os usuários agora têm um controle muito mais amplo sobre suas configurações de segurança e a capacidade de decidir com que frequência é necessário inserir seu PIN.

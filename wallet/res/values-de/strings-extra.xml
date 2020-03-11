@@ -215,14 +215,16 @@
     <string name="verify_seed_success_message">Deine Wallet ist jetzt gesichert. Du kannst die Phrase jederzeit nutzen, um die Wallet auf einem anderen Gerät wiederherzustellen.</string>
     <string name="view_seed_done">Fertig</string>
     <string name="view_seed_title">Wiederherstellungs-Wortfolge</string>
-	<string name="transaction_result_view_on_explorer">Im Explorer ansehen</string>
 	<string name="transaction_result_paid_successfully">Erfolgreich gesendet</string>
 	<string name="transaction_result_sent_to">Senden an</string>
-	<string name="transaction_date_and_time">Datum &amp; Zeit</string>
+	<string name="transaction_date_and_time">Datum</string>
 	<string name="transaction_close">Schließen</string>
 	<string name="transaction_details_amount_received">Guthaben empfangen</string>
 	<string name="transaction_details_amount_sent">Guthaben gesendet</string>
-
+    <string name="transaction_details_sent_from">Senden von</string>
+    <string name="transaction_details_sent_to">Senden an</string>
+    <string name="transaction_details_received_at">Empfangen bei</string>
+    <string name="transaction_details_moved_from">Verschoben von</string>
     <string name="authenticate_fingerprint_title">Authentifizieren</string>
     <string name="authenticate_fingerprint_message">Fingerabdruck zum Fortfahren bestätigen</string>
     <string name="authenticate_pin_message">PIN zum Fortfahren eingeben</string>
@@ -272,7 +274,6 @@
     <string name="one_minute">1 Min</string>
     <string name="five_minute">5 Min</string>
     <string name="one_hour">1 Stunde</string>
-    <string name="one_day">1 Tag</string>
     <string name="biometric_limit">Biometrisches Limit</string>
     <string name="spending_confirmation_hint_zero">PIN ist für jede Zahlung notwendig</string>
     <string name="spending_confirmation_hint_above_zero">Du kannst Zahlungen weiter unten über die biometrische Authentifizierung bestätigen</string>
@@ -307,6 +308,4 @@
     <string name="sync_status_syncing_sub_title">mit der Dash-Blockchain</string>
     <string name="sync_status_unable_to_connect">Verbindung fehlgeschlagen</string>
     <string name="sync_status_check_connection">Verbindung überprüfen</string>
-
-
-</resources>
+    </resources>

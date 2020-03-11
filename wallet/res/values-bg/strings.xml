@@ -34,8 +34,8 @@
     <string name="wallet_transactions_options_filter_received">Получени плащания</string>
     <string name="wallet_transactions_options_filter_sent">Изпратени плащания</string>
     <string name="wallet_options_safety_menu">Сигурност</string>
-    <string name="wallet_options_encrypt_keys_set">Въведи PIN за плащане</string>
-    <string name="wallet_options_encrypt_keys_change">Промени PIN за плащане</string>
+    <string name="wallet_options_encrypt_keys_set">Постави ПИН</string>
+    <string name="wallet_options_encrypt_keys_change">Промяна ПИН</string>
     <string name="wallet_options_safety">Бележки за безопастност</string>
     <string name="wallet_low_storage_dialog_title">Няма достатъчно място на вътрешното устройство за съхранение!</string>
     <string name="wallet_low_storage_dialog_msg">Dash портфейла използва вътрешната памет за запомняне на транзакциите и блоковете. Ако няма достатъчно свободно пространство ще спре да работи и вашите Dash ще са в риск!\n\nЖелаете ли да отворите Мениджъра за приложенията за да деинсталирате ненужните?</string>
@@ -68,7 +68,7 @@
     <string name="send_coins_fragment_hint_dusty_send">Тази сума е прекалено малка за да бъде изпратена.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Недостатъчно средства</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Сумата на малките плащания във вашият портфейл не може да се добави към стойността за изпращане.</string>
-    <string name="send_coins_fragment_hint_replaying">В момента плащанията не са възможни, защото се извършва повторение.</string>
+    <string name="send_coins_fragment_hint_replaying">В момента плащанията не са възможни, защото портфейлът не е напълно синхронизиран с мрежата</string>
     <string name="send_coins_fragment_direct_payment_enable">Изпратете плащането директно до получателя.</string>
     <string name="send_coins_fragment_direct_payment_ack">Вашето плащане беше успешно изпратено директно.</string>
     <string name="send_coins_fragment_direct_payment_nack">Вашето плащане беше отказано посредством директна връзка.</string>
@@ -159,7 +159,7 @@
     <string name="transaction_row_status_received">Получени</string>
     <string name="transaction_row_status_sent">Изпратено</string>
     <string name="transaction_row_status_sending">Изпраща</string>
-    <string name="transaction_row_status_sent_interally">Вътрешен</string>
+    <string name="transaction_row_status_sent_internally">Вътрешен</string>
     <string name="transaction_row_status_processing">Обработване</string>
     <string name="transaction_row_status_confirming">Потвърждаване</string>
     <string name="transaction_row_status_locked">Заключена</string>

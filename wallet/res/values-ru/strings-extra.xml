@@ -221,13 +221,18 @@
     <string name="verify_seed_success_message">Сейчас Ваш кошелёк защищён. Вы можете использовать фразу восстановления в любое время, чтобы получить доступ к Вашему аккаунту на другом устройстве.</string>
     <string name="view_seed_done">Готово</string>
     <string name="view_seed_title">Фраза восстановления</string>
-	<string name="transaction_result_view_on_explorer">Посмотреть в Explorer</string>
+	<string name="transaction_result_view_on_explorer">Посмотреть в Block Explorer</string>
 	<string name="transaction_result_paid_successfully">Успешно отправлено</string>
 	<string name="transaction_result_sent_to">Отправить</string>
-	<string name="transaction_date_and_time">Дата &amp; Время</string>
+	<string name="transaction_date_and_time">Дата</string>
 	<string name="transaction_close">Закрыть</string>
 	<string name="transaction_details_amount_received">Полученная сумма</string>
 	<string name="transaction_details_amount_sent">Отправленная сумма</string>
+    <string name="transaction_details_sent_from">Отправлено с</string>
+    <string name="transaction_details_sent_to">Отправлено</string>
+    <string name="transaction_details_received_at">Получено на</string>
+    <string name="transaction_details_moved_from">Перемещено из</string>
+    <string name="transaction_details_moved_internally_to">Перемещено в </string>
 
     <string name="authenticate_fingerprint_title">Аутентифицировать</string>
     <string name="authenticate_fingerprint_message">Подтвердите отпечаток пальца, чтобы продолжить</string>
@@ -278,7 +283,6 @@
     <string name="one_minute">1 мин</string>
     <string name="five_minute">5 мин</string>
     <string name="one_hour">1 час</string>
-    <string name="one_day">1 день</string>
     <string name="biometric_limit">Лимит для биометрической аутентификации</string>
     <string name="spending_confirmation_hint_zero">Всегда требовать PIN для совершения платежа</string>
     <string name="spending_confirmation_hint_above_zero">Ниже вы можете пройти биометрическую аутентификацию для перевода средств</string>
@@ -313,6 +317,8 @@
     <string name="sync_status_syncing_sub_title">с Dash блокчейн</string>
     <string name="sync_status_unable_to_connect">Не удалось подключиться</string>
     <string name="sync_status_check_connection">Проверьте ваше интернет-соединение</string>
+    <string name="sync_status_sync_title">Синхронизация</string>
+    <string name="sync_status_sync_completed">Завершено</string>
 
-
+    <string name="appwidget_wallet_not_ready">Пожалуйста, настройте свой кошелек</string>
 </resources>

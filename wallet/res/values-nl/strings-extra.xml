@@ -215,13 +215,18 @@
     <string name="verify_seed_success_message">Uw portemonnee is nu beveiligd. U kunt uw herstelzin op elk gewenst moment gebruiken om uw account op een ander apparaat te herstellen.</string>
     <string name="view_seed_done">Klaar</string>
     <string name="view_seed_title">Herstelzin</string>
-	<string name="transaction_result_view_on_explorer">Bekijk in Explorer</string>
+	<string name="transaction_result_view_on_explorer">Bekijk in Block Explorer</string>
 	<string name="transaction_result_paid_successfully">Succesvol verzonden</string>
 	<string name="transaction_result_sent_to">Verzonden naar</string>
-	<string name="transaction_date_and_time">Datum &amp; Tijd</string>
+	<string name="transaction_date_and_time">Datum</string>
 	<string name="transaction_close">Sluiten</string>
 	<string name="transaction_details_amount_received">Ontvangen bedrag</string>
 	<string name="transaction_details_amount_sent">Verzonden bedrag</string>
+    <string name="transaction_details_sent_from">Verzonden vanaf</string>
+    <string name="transaction_details_sent_to">Verzonden naar</string>
+    <string name="transaction_details_received_at">Ontvangen met</string>
+    <string name="transaction_details_moved_from">Verplaatst van</string>
+    <string name="transaction_details_moved_internally_to">Intern verplaatst naar</string>
 
     <string name="authenticate_fingerprint_title">Verifieer</string>
     <string name="authenticate_fingerprint_message">Bevestig vingerafdruk om door te gaan</string>
@@ -272,7 +277,6 @@
     <string name="one_minute">1 min</string>
     <string name="five_minute">5 min</string>
     <string name="one_hour">1 uur</string>
-    <string name="one_day">1 dag</string>
     <string name="biometric_limit">Biometrische limiet</string>
     <string name="spending_confirmation_hint_zero">De PIN is altijd vereist om een betaling uit te voeren</string>
     <string name="spending_confirmation_hint_above_zero">Je kan hieronder authenticeren met Biometrische authenticatie voor betalingen</string>
@@ -307,6 +311,8 @@
     <string name="sync_status_syncing_sub_title">met Dash blockchain</string>
     <string name="sync_status_unable_to_connect">Kan geen verbinding maken</string>
     <string name="sync_status_check_connection">Controleer je verbinding</string>
+    <string name="sync_status_sync_title">Sync</string>
+    <string name="sync_status_sync_completed">Voltooid</string>
 
-
+    <string name="appwidget_wallet_not_ready">Stel uw portemonnee in</string>
 </resources>
