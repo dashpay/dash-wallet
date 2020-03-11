@@ -51,7 +51,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Preluare semnătura de la %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Preluarea semnăturii a eșuat</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Semnătura greșită!</string>
-    <string name="send_coins_fragment_payee_verified_by">Verificat de: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">necunoscut</string>
     <string name="send_coins_fragment_receiving_address_hint">introdu adresa sau numele</string>
     <string name="send_coins_fragment_receiving_address_error">Adresă Dash invalidă</string>

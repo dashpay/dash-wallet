@@ -53,7 +53,6 @@
 	<string name="send_coins_fragment_request_payment_request_progress">Hämtar signatur från %s</string>
 	<string name="send_coins_fragment_request_payment_request_failed_title">Hämtning av signatur misslyckades</string>
 	<string name="send_coins_fragment_request_payment_request_wrong_signature">Felaktig signatur!</string>
-	<string name="send_coins_fragment_payee_verified_by">Verifierad av: %s</string>
 	<string name="send_coins_fragment_payee_verified_by_unknown">okänd</string>
 	<string name="send_coins_fragment_receiving_address_label">Skicka till</string>
 	<string name="send_coins_fragment_receiving_address_hint">skriv adress eller namn</string>

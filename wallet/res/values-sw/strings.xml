@@ -51,7 +51,6 @@
   <string name="send_coins_fragment_request_payment_request_progress">Kupata sahihi ya %s…</string>
   <string name="send_coins_fragment_request_payment_request_failed_title">Kupata sahihi alishindwa.</string>
   <string name="send_coins_fragment_request_payment_request_wrong_signature">Sahihi mbaya!</string>
-  <string name="send_coins_fragment_payee_verified_by">Kucheki na: %s</string>
   <string name="send_coins_fragment_payee_verified_by_unknown">haijulikani</string>
   <string name="send_coins_fragment_receiving_address_label">Lipa</string>
   <string name="send_coins_fragment_receiving_address_hint">Kutoa anwani au jina</string>

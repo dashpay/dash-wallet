@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Adquiriendo firma de %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Ha fallado la adquisición de firma</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">¡Firma incorrecta!</string>
-    <string name="send_coins_fragment_payee_verified_by">verificado por: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">desconocido</string>
     <string name="send_coins_fragment_receiving_address_label">Enviar a</string>
     <string name="send_coins_fragment_receiving_address_hint">escriba dirección o nombre</string>

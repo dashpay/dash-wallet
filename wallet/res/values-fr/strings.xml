@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Récupération de la signature de %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Échec lors de la récupération de la signature</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Signature erronée !</string>
-    <string name="send_coins_fragment_payee_verified_by">vérifié par : %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">inconnu</string>
     <string name="send_coins_fragment_receiving_address_label">Envoyer à</string>
     <string name="send_coins_fragment_receiving_address_hint">saisir l\'adresse ou le nom</string>

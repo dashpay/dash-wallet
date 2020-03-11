@@ -119,6 +119,8 @@ public class SendCoinsFragment extends Fragment {
     private SecurityGuard securityGuard;
     private BlockchainState blockchainState;
 
+    private boolean handlePaymentRequest = false;
+
     private boolean isUserAuthorized() {
         return activity.isUserAuthorized() || userAuthorizedDuring;
     }
@@ -195,20 +197,7 @@ public class SendCoinsFragment extends Fragment {
         enterAmountSharedViewModel.getButtonClickEvent().observe(getViewLifecycleOwner(), new Observer<Coin>() {
             @Override
             public void onChanged(Coin coin) {
-                if (everythingPlausible()) {
-                    if (!isUserAuthorized() || config.getSpendingConfirmationEnabled()) {
-                        Coin thresholdAmount = Coin.parseCoin(
-                                Float.valueOf(config.getBiometricLimit()).toString());
-                        if (enterAmountSharedViewModel.getDashAmount().isLessThan(thresholdAmount)) {
-                            CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND);
-                        } else {
-                            CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND, true);
-                        }
-                    } else {
-                        showPaymentConfirmation();
-                    }
-                }
-                updateView();
+                authenticateOrConfirm();
             }
         });
         enterAmountSharedViewModel.getMaxButtonClickEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
@@ -350,6 +339,23 @@ public class SendCoinsFragment extends Fragment {
         viewModel.paymentIntent = paymentIntent;
     }
 
+    private void authenticateOrConfirm() {
+        if (everythingPlausible()) {
+            if (!isUserAuthorized() || config.getSpendingConfirmationEnabled()) {
+                Coin thresholdAmount = Coin.parseCoin(
+                        Float.valueOf(config.getBiometricLimit()).toString());
+                if (enterAmountSharedViewModel.getDashAmount().isLessThan(thresholdAmount)) {
+                    CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND);
+                } else {
+                    CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND, true);
+                }
+            } else if (viewModel.dryrunException == null) {
+                showPaymentConfirmation();
+            }
+        }
+        updateView();
+    }
+
     @Override
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -410,9 +416,7 @@ public class SendCoinsFragment extends Fragment {
     }
 
     private boolean isAmountPlausible() {
-        if (viewModel.dryrunSendRequest != null) {
-            return viewModel.dryrunException == null;
-        } else if (viewModel.paymentIntent.mayEditAmount()) {
+        if (viewModel.paymentIntent.mayEditAmount()) {
             return enterAmountSharedViewModel.hasAmount();
         } else {
             return viewModel.paymentIntent.hasAmount();
@@ -597,6 +601,16 @@ public class SendCoinsFragment extends Fragment {
             } catch (final Exception x) {
                 viewModel.dryrunException = x;
             }
+
+            if (handlePaymentRequest) {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        handlePaymentRequest = false;
+                        authenticateOrConfirm();
+                    }
+                });
+            }
         }
     };
 
@@ -728,7 +742,15 @@ public class SendCoinsFragment extends Fragment {
         String fiatSymbol = fiatAmount != null ? GenericUtils.currencySymbol(fiatAmount.currencyCode) : "";
         String fee = txFee.toPlainString();
 
-        DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat, fiatSymbol, fee, total, null);
+        String payeeName = null;
+        String payeeVerifiedBy = null;
+        if (viewModel.paymentIntent.hasPayee()) {
+            payeeName = viewModel.paymentIntent.payeeName;
+            payeeVerifiedBy = viewModel.paymentIntent.payeeVerifiedBy != null ? viewModel.paymentIntent.payeeVerifiedBy : getString(R.string.send_coins_fragment_payee_verified_by_unknown);
+        }
+
+        DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat,
+                fiatSymbol, fee, total, payeeName, payeeVerifiedBy, null);
         dialog.show(Objects.requireNonNull(getFragmentManager()), "ConfirmTransactionDialog");
     }
 

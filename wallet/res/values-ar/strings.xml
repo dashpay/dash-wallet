@@ -50,7 +50,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">جلب التوقيع من %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">فشل جلب التوقيع</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">التوقيع غير صحيح!</string>
-    <string name="send_coins_fragment_payee_verified_by">تمت التدقيق من قبل: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">مجهول</string>
     <string name="send_coins_fragment_receiving_address_hint">أكتب العنوان أو الاسم</string>
     <string name="send_coins_fragment_receiving_address_error">عنوان داش غير صحيح!</string>

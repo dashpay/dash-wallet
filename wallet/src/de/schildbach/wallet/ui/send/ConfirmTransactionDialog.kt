@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui.send
 
 
 import android.os.Bundle
+import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -44,9 +45,12 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
         private const val ARG_FEE = "arg_fee"
         private const val ARG_TOTAL = "arg_total"
         private const val ARG_BUTTON_TEXT = "arg_button_text"
+        private const val ARG_PAYEE_NAME = "arg_payee_name"
+        private const val ARG_PAYEE_VERIFIED_BY = "arg_payee_verified_by"
 
         @JvmStatic
-        fun createDialog(address: String, amount: String, amountFiat: String, fiatSymbol: String, fee: String, total: String, buttonText: String? = null): DialogFragment {
+        fun createDialog(address: String, amount: String, amountFiat: String, fiatSymbol: String, fee: String, total: String,
+                         payeeName: String? = null, payeeVerifiedBy: String? = null, buttonText: String? = null): DialogFragment {
             val dialog = ConfirmTransactionDialog()
             val bundle = Bundle()
             bundle.putString(ARG_ADDRESS, address)
@@ -55,6 +59,8 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
             bundle.putString(ARG_FIAT_SYMBOL, fiatSymbol)
             bundle.putString(ARG_FEE, fee)
             bundle.putString(ARG_TOTAL, total)
+            bundle.putString(ARG_PAYEE_NAME, payeeName)
+            bundle.putString(ARG_PAYEE_VERIFIED_BY, payeeVerifiedBy)
             bundle.putString(ARG_BUTTON_TEXT, buttonText)
             dialog.arguments = bundle
             return dialog
@@ -73,9 +79,24 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
             input_value.text = getString(ARG_AMOUNT)
             fiat_symbol.text = getString(ARG_FIAT_SYMBOL)
             fiat_value.text = getString(ARG_AMOUNT_FIAT)
-            address.text = getString(ARG_ADDRESS)
             transaction_fee.text = getString(ARG_FEE)
             total_amount.text = getString(ARG_TOTAL)
+            val payeeName = getString(ARG_PAYEE_NAME)
+            val payeeVerifiedBy = getString(ARG_PAYEE_VERIFIED_BY)
+            if (payeeName != null && payeeVerifiedBy != null) {
+                address.text = payeeName
+                payee_verified_by.text = payeeVerifiedBy
+                payee_verified_by_pane.visibility = View.VISIBLE
+                val forceMarqueeOnClickListener = View.OnClickListener {
+                    it.isSelected = false
+                    it.isSelected = true
+                }
+                address.setOnClickListener(forceMarqueeOnClickListener)
+                payee_verified_by.setOnClickListener(forceMarqueeOnClickListener)
+            } else {
+                address.ellipsize = TextUtils.TruncateAt.MIDDLE
+                address.text = getString(ARG_ADDRESS)
+            }
             getString(ARG_BUTTON_TEXT)?.run {
                 confirm_payment.text = this
             }
