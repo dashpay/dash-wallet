@@ -1070,7 +1070,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 syncStatusTitle.setText(R.string.sync_status_sync_title);
                 syncStatusMessage.setText(R.string.sync_status_sync_completed);
                 showSyncPane(R.id.sync_status_pane, false);
-                syncComplete = true;
                 showHideJoinDashPayAction();
             } else {
                 syncPercentageView.setTextColor(getResources().getColor(R.color.dash_gray));
