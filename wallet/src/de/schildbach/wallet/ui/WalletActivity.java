@@ -202,6 +202,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             public void onChanged(de.schildbach.wallet.data.BlockchainState blockchainState) {
                 WalletActivity.this.blockchainState = blockchainState;
                 updateSyncState();
+                showHideJoinDashPayAction();
             }
         });
 
@@ -1079,7 +1080,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             syncStatusTitle.setText(R.string.sync_status_sync_title);
             syncStatusMessage.setText(R.string.sync_status_sync_completed);
             updateSyncPaneVisibility(R.id.sync_status_pane, false);
-            showHideJoinDashPayAction();
         } else {
             syncPercentageView.setTextColor(getResources().getColor(R.color.dash_gray));
             updateSyncPaneVisibility(R.id.sync_status_pane, true);
