@@ -20,12 +20,18 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
 import androidx.appcompat.widget.Toolbar
+import androidx.lifecycle.Observer
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.BlockchainState
+import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
 class MoreActivity : GlobalFooterActivity() {
+
+    private var blockchainState: BlockchainState? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,7 +48,17 @@ class MoreActivity : GlobalFooterActivity() {
 
         setTitle(R.string.more_title)
 
-        buy_and_sell.setOnClickListener { startBuyAndSellActivity() }
+        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(this, Observer {
+            blockchainState = it
+        })
+
+        buy_and_sell.setOnClickListener {
+            if (blockchainState != null && blockchainState?.replaying!!) {
+                showBlockchainSyncingMessage()
+            } else {
+                startBuyAndSellActivity()
+            }
+        }
         security.setOnClickListener {
             startActivity(Intent(this, SecurityActivity::class.java))
         }

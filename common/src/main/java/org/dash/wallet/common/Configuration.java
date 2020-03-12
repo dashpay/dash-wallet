@@ -80,7 +80,7 @@ public class Configuration {
     private static final String PREFS_SHOW_JOIN_DASH_PAY = "show_join_dashpay";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
-    private static final int PREFS_DEFAULT_BTC_PRECISION = 4;
+    private static final int PREFS_DEFAULT_BTC_PRECISION = 8;
 
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
@@ -130,10 +130,11 @@ public class Configuration {
     }
 
     public MonetaryFormat getFormat() {
-        final int shift = getBtcShift();
-        final int minPrecision = shift <= 3 ? 2 : 0;
-        final int decimalRepetitions = (getBtcPrecision() - minPrecision) / 2;
-        return new MonetaryFormat().shift(shift).minDecimals(minPrecision).repeatOptionalDecimals(2,
+        final int shift = PREFS_DEFAULT_BTC_SHIFT;
+        final int minPrecision = 2;
+        final int numberToRepeat = 1;
+        final int decimalRepetitions = (PREFS_DEFAULT_BTC_PRECISION - minPrecision) / numberToRepeat;
+        return new MonetaryFormat().shift(shift).minDecimals(minPrecision).repeatOptionalDecimals(numberToRepeat,
                 decimalRepetitions);
     }
 
