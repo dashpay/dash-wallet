@@ -30,7 +30,6 @@ import android.view.View;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.content.ContextCompat;
@@ -38,6 +37,7 @@ import androidx.core.content.ContextCompat;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.ui.DialogBuilder;
@@ -49,7 +49,7 @@ import org.dash.wallet.integration.uphold.data.UpholdException;
 
 import java.math.BigDecimal;
 
-public class UpholdAccountActivity extends AppCompatActivity {
+public class UpholdAccountActivity extends InteractionAwareActivity {
 
     public static final String WALLET_RECEIVING_ADDRESS_EXTRA = "uphold_receiving_address_extra";
 
@@ -159,6 +159,9 @@ public class UpholdAccountActivity extends AppCompatActivity {
         UpholdClient.getInstance().getDashBalance(new UpholdClient.Callback<BigDecimal>() {
             @Override
             public void onSuccess(BigDecimal data) {
+                if (isFinishing()) {
+                    return;
+                }
                 balance = data;
                 balanceView.setAmount(Coin.parseCoin(balance.toString()));
                 loadingDialog.cancel();
@@ -166,6 +169,9 @@ public class UpholdAccountActivity extends AppCompatActivity {
 
             @Override
             public void onError(Exception e, boolean otpRequired) {
+                if (isFinishing()) {
+                    return;
+                }
                 loadingDialog.cancel();
 
                 if(e instanceof UpholdException) {
@@ -236,12 +242,18 @@ public class UpholdAccountActivity extends AppCompatActivity {
                 UpholdClient.getInstance().revokeAccessToken(new UpholdClient.Callback<String>() {
                     @Override
                     public void onSuccess(String result) {
+                        if (isFinishing()) {
+                            return;
+                        }
                         startUpholdSplashActivity();
                         openUpholdToLogout();
                     }
 
                     @Override
                     public void onError(Exception e, boolean otpRequired) {
+                        if (isFinishing()) {
+                            return;
+                        }
                         if(e instanceof UpholdException) {
                             UpholdException ue = (UpholdException)e;
                             showErrorAlert(ue.getCode());

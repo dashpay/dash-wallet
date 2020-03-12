@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Dash Core Group
+ * Copyright 2020 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,9 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui
+package org.dash.wallet.common;
 
-import android.annotation.SuppressLint
-import de.schildbach.wallet.WalletApplication
-import org.dash.wallet.common.InteractionAwareActivity
+public interface ResetAutoLogoutTimerHandler {
 
-@SuppressLint("Registered")
-open class ShortcutComponentActivity : InteractionAwareActivity() {
-
-    open fun finishIfNotInitialized(): Boolean {
-        if (WalletApplication.getInstance().wallet == null) {
-            startActivity(OnboardingActivity.createIntent(this))
-            finish()
-            return true
-        }
-        return false
-    }
+    void resetAutoLogoutTimer();
 }

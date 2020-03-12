@@ -9,6 +9,7 @@ import de.schildbach.wallet.ui.receive.ReceiveDetailsDialog
 import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Coin
+import org.dash.wallet.common.InteractionAwareActivity
 
 class ReceiveActivity : InteractionAwareActivity() {
 
