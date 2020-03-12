@@ -95,7 +95,6 @@ import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
-import de.schildbach.wallet.util.ActivityExtensionsKt;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.Nfc;
@@ -301,12 +300,15 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void showHideJoinDashPayAction() {
-        final Coin walletBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED);
-        boolean canAffordIt = walletBalance.isGreaterThan(Constants.DASH_PAY_FEE)
-                || walletBalance.equals(Constants.DASH_PAY_FEE);
-        boolean visible = syncComplete && canAffordIt && config.getShowJoinDashPay();
-        joinDashPayAction.setVisibility(visible ? View.VISIBLE : View.GONE);
-
+        if (syncComplete) {
+            final Coin walletBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED);
+            boolean canAffordIt = walletBalance.isGreaterThan(Constants.DASH_PAY_FEE)
+                    || walletBalance.equals(Constants.DASH_PAY_FEE);
+            boolean visible = canAffordIt && config.getShowJoinDashPay();
+            joinDashPayAction.setVisibility(visible ? View.VISIBLE : View.GONE);
+        } else {
+            joinDashPayAction.setVisibility(View.GONE);
+        }
         findViewById(R.id.join_dashpay_action_space).setVisibility(joinDashPayAction.getVisibility());
     }
 
@@ -1072,12 +1074,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
         syncPercentageView.setText(percentage + "%");
 
         syncComplete = (blockchainState.isSynced());
-            if (syncComplete) {
+        if (syncComplete) {
             syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
             syncStatusTitle.setText(R.string.sync_status_sync_title);
             syncStatusMessage.setText(R.string.sync_status_sync_completed);
             updateSyncPaneVisibility(R.id.sync_status_pane, false);
-                showHideJoinDashPayAction();
+            showHideJoinDashPayAction();
         } else {
             syncPercentageView.setTextColor(getResources().getColor(R.color.dash_gray));
             updateSyncPaneVisibility(R.id.sync_status_pane, true);
