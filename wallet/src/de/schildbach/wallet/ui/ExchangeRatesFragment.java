@@ -38,6 +38,8 @@ import de.schildbach.wallet_test.R;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+
+import androidx.annotation.NonNull;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import android.content.SharedPreferences;
@@ -109,16 +111,21 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
         adapter = new ExchangeRatesAdapter();
         adapter.setRateBase(config.getBtcBase());
         adapter.setDefaultCurrency(config.getExchangeCurrencyCode());
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @androidx.annotation.Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
 
         exchangeRatesViewModel = ViewModelProviders.of(this)
                 .get(ExchangeRatesViewModel.class);
-        exchangeRatesViewModel.isLoading().observe(this, new Observer<Boolean>() {
+        exchangeRatesViewModel.isLoading().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean isLoading) {
                 loading.setVisibility(Boolean.TRUE.equals(isLoading) ? View.VISIBLE : View.GONE);
             }
         });
-        exchangeRatesViewModel.hasError().observe(this, new Observer<Boolean>() {
+        exchangeRatesViewModel.hasError().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean hasError) {
                 if (Boolean.TRUE.equals(hasError)) {
@@ -126,7 +133,7 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
                 }
             }
         });
-        exchangeRatesViewModel.getRates().observe(this,
+        exchangeRatesViewModel.getRates().observe(getViewLifecycleOwner(),
                 new Observer<List<de.schildbach.wallet.rates.ExchangeRate>>() {
                     @Override
                     public void onChanged(List<de.schildbach.wallet.rates.ExchangeRate> exchangeRates) {
