@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-package org.dash.wallet.common
+package org.dash.wallet.common;
 
-import android.annotation.SuppressLint
-import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatActivity;
 
+public class InteractionAwareActivity extends AppCompatActivity {
 
-@SuppressLint("Registered")
-open class InteractionAwareActivity : AppCompatActivity() {
-
-    override fun onUserInteraction() {
-        (application as ResetAutoLogoutTimerHandler).resetAutoLogoutTimer()
+    @Override
+    public void onUserInteraction() {
+        super.onUserInteraction();
+        ((ResetAutoLogoutTimerHandler) getApplication()).resetAutoLogoutTimer();
     }
 }
