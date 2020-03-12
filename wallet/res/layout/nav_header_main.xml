@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:background="@color/colorPrimary"
     android:orientation="vertical"
     android:paddingTop="24dp"
@@ -35,6 +36,6 @@
         android:layout_toLeftOf="@id/wallet_address_fragment"
         android:layout_toStartOf="@id/wallet_address_fragment"
         android:layout_alignBottom="@id/wallet_address_fragment"
-        android:src="@drawable/dash_logo_white"/>
+        app:srcCompat="@drawable/dash_logo_white"/>
 
 </RelativeLayout>
