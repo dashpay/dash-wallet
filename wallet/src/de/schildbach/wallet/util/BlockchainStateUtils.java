@@ -33,6 +33,10 @@ public class BlockchainStateUtils {
 
     @Nullable
     public static String getSyncStateString(BlockchainState blockchainState, Context context) {
+        if (blockchainState == null || blockchainState.getBestChainDate() == null) {
+            return null;
+        }
+
         final long blockchainLag = System.currentTimeMillis() - blockchainState.getBestChainDate().getTime();
         final boolean blockchainUptodate = blockchainLag < BLOCKCHAIN_UPTODATE_THRESHOLD_MS;
         final boolean noImpediments = blockchainState.getImpediments().isEmpty();
