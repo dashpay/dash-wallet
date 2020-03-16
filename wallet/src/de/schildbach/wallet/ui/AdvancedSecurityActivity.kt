@@ -126,7 +126,7 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
                 1 -> R.string.one_minute
                 5 -> R.string.five_minute
                 60 -> R.string.one_hour
-                else -> R.string.one_day
+                else -> R.string.twenty_four_hours
             })
             auto_logout_seekbar.progress = when(configuration.autoLogoutMinutes) {
                 0 -> 0

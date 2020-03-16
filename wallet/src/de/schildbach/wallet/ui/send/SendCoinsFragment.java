@@ -84,13 +84,14 @@ import java.util.Arrays;
 
 import javax.annotation.Nullable;
 
+import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.data.PaymentIntent.Standard;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.offline.DirectPaymentTask;
-import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.ui.CheckPinDialog;
 import de.schildbach.wallet.ui.CheckPinSharedModel;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
@@ -145,6 +146,7 @@ public final class SendCoinsFragment extends Fragment {
     private boolean userAuthorizedDuring = false;
 
     private SecurityGuard securityGuard;
+    private BlockchainState blockchainState;
 
     private boolean isUserAuthorized() {
         return activity.isUserAuthorized() || userAuthorizedDuring;
@@ -180,12 +182,15 @@ public final class SendCoinsFragment extends Fragment {
         }
 
         viewModel = ViewModelProviders.of(this).get(SendCoinsViewModel.class);
-        viewModel.blockchainState.observe(getViewLifecycleOwner(), new Observer<BlockchainState>() {
+
+        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(this, new Observer<BlockchainState>() {
             @Override
-            public void onChanged(final BlockchainState blockchainState) {
+            public void onChanged(BlockchainState blockchainState) {
+                SendCoinsFragment.this.blockchainState = blockchainState;
                 updateView();
             }
         });
+
         CheckPinSharedModel checkPinSharedModel = ViewModelProviders.of(activity).get(CheckPinSharedModel.class);
         checkPinSharedModel.getOnCorrectPinCallback().observe(activity, new Observer<Pair<Integer, String>>() {
             @Override
@@ -690,26 +695,29 @@ public final class SendCoinsFragment extends Fragment {
         directPaymentEnableView.setVisibility(directPaymentVisible ? View.VISIBLE : View.GONE);
         directPaymentEnableView.setEnabled(viewModel.state == SendCoinsViewModel.State.INPUT);
 
-        final BlockchainState blockchainState = viewModel.blockchainState.getValue();
         enterAmountSharedViewModel.getMessageTextStringData().setValue(null);
         if (viewModel.state == SendCoinsViewModel.State.INPUT) {
             CharSequence message = null;
-            if (Coin.ZERO.equals(enterAmountSharedViewModel.getDashAmount()) && wasAmountChangedByTheUser)
-                message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
-            else if (viewModel.dryrunException != null) {
-                if (viewModel.dryrunException instanceof DustySendRequested)
-                    message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
-                else if (viewModel.dryrunException instanceof InsufficientMoneyException) {
-                    message = coloredString(getString(R.string.send_coins_fragment_hint_insufficient_money), R.color.dash_red, true);
-                } else if (viewModel.dryrunException instanceof CouldNotAdjustDownwards)
-                    message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
-                else
-                    message = coloredString(viewModel.dryrunException.toString(), R.color.dash_red, true);
-            } else if (blockchainState != null && blockchainState.replaying) {
+            if (blockchainState != null && blockchainState.getReplaying()) {
                 message = coloredString(getString(R.string.send_coins_fragment_hint_replaying), R.color.dash_red, true);
-            }
-            if (isUserAuthorized()) {
                 enterAmountSharedViewModel.getMessageTextStringData().setValue(message);
+            } else {
+                if (Coin.ZERO.equals(enterAmountSharedViewModel.getDashAmount()) && wasAmountChangedByTheUser) {
+                    message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
+                } else if (viewModel.dryrunException != null) {
+                    if (viewModel.dryrunException instanceof DustySendRequested)
+                        message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
+                    else if (viewModel.dryrunException instanceof InsufficientMoneyException) {
+                        message = coloredString(getString(R.string.send_coins_fragment_hint_insufficient_money), R.color.dash_red, true);
+                    } else if (viewModel.dryrunException instanceof CouldNotAdjustDownwards) {
+                        message = coloredString(getString(R.string.send_coins_fragment_hint_dusty_send), R.color.dash_red, true);
+                    } else {
+                        message = coloredString(viewModel.dryrunException.toString(), R.color.dash_red, true);
+                    }
+                }
+                if (isUserAuthorized()) {
+                    enterAmountSharedViewModel.getMessageTextStringData().setValue(message);
+                }
             }
         }
 
@@ -723,7 +731,7 @@ public final class SendCoinsFragment extends Fragment {
 
         enterAmountSharedViewModel.getButtonEnabledData().setValue(everythingPlausible()
                 && (!isUserAuthorized() || viewModel.dryrunSendRequest != null)
-                && (blockchainState == null || !blockchainState.replaying));
+                && (blockchainState == null || !blockchainState.getReplaying()));
 
         if (viewModel.state == null || viewModel.state == SendCoinsViewModel.State.REQUEST_PAYMENT_REQUEST) {
             enterAmountSharedViewModel.getButtonTextData().call(0);

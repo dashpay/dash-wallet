@@ -27,12 +27,13 @@ import org.dash.wallet.common.ui.CurrencyTextView;
 import com.google.common.base.Strings;
 
 import org.dash.wallet.common.Configuration;
+
+import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
+import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
-import de.schildbach.wallet.service.BlockchainState;
-import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet_test.R;
 
 import android.annotation.SuppressLint;
@@ -82,8 +83,6 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
     private ExchangeRatesViewModel exchangeRatesViewModel;
 
     private String query = null;
-    @Nullable
-    private BlockchainState blockchainState = null;
 
     private static final int ID_BALANCE_LOADER = 0;
     private static final int ID_RATE_LOADER = 1;
@@ -135,6 +134,14 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
                     }
                 });
         config.registerOnSharedPreferenceChangeListener(this);
+
+        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(getViewLifecycleOwner(),
+                new Observer<de.schildbach.wallet.data.BlockchainState>() {
+                    @Override
+                    public void onChanged(de.schildbach.wallet.data.BlockchainState blockchainState) {
+                        adapter.setBlockchainState(blockchainState);
+                    }
+                });
     }
 
     @Override
@@ -159,7 +166,6 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
 
         exchangeRatesViewModel.getRates();
         loaderManager.initLoader(ID_BALANCE_LOADER, null, balanceLoaderCallbacks);
-        loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
     }
 
     @Override
@@ -270,22 +276,6 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
         }
     };
 
-    private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>() {
-        @Override
-        public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args) {
-            return new BlockchainStateLoader(activity);
-        }
-
-        @Override
-        public void onLoadFinished(final Loader<BlockchainState> loader, final BlockchainState blockchainState) {
-            adapter.setBlockchainState(blockchainState);
-        }
-
-        @Override
-        public void onLoaderReset(final Loader<BlockchainState> loader) {
-        }
-    };
-
     private final class ExchangeRatesAdapter extends RecyclerView.Adapter<ExchangeRateViewHolder> {
         private final LayoutInflater inflater = LayoutInflater.from(activity);
 
@@ -319,6 +309,7 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
         }
 
         public void setBlockchainState(final BlockchainState blockchainState) {
+            //TODO: What's the relation between exchange rates and the blockchain state?
             this.blockchainState = blockchainState;
             notifyDataSetChanged();
         }

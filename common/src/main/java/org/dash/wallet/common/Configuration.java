@@ -77,9 +77,10 @@ public class Configuration {
     public static final String PREFS_RESTORING_BACKUP = "restoring_backup";
     public static final String PREFS_V7_REDESIGN_TUTORIAL_COMPLETED = "v7_tutorial_completed";
     public static final String PREFS_PIN_LENGTH = "pin_length";
+    private static final String PREFS_SHOW_JOIN_DASH_PAY = "show_join_dashpay";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
-    private static final int PREFS_DEFAULT_BTC_PRECISION = 4;
+    private static final int PREFS_DEFAULT_BTC_PRECISION = 8;
 
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
@@ -129,10 +130,11 @@ public class Configuration {
     }
 
     public MonetaryFormat getFormat() {
-        final int shift = getBtcShift();
-        final int minPrecision = shift <= 3 ? 2 : 0;
-        final int decimalRepetitions = (getBtcPrecision() - minPrecision) / 2;
-        return new MonetaryFormat().shift(shift).minDecimals(minPrecision).repeatOptionalDecimals(2,
+        final int shift = PREFS_DEFAULT_BTC_SHIFT;
+        final int minPrecision = 2;
+        final int numberToRepeat = 1;
+        final int decimalRepetitions = (PREFS_DEFAULT_BTC_PRECISION - minPrecision) / numberToRepeat;
+        return new MonetaryFormat().shift(shift).minDecimals(minPrecision).repeatOptionalDecimals(numberToRepeat,
                 decimalRepetitions);
     }
 
@@ -423,5 +425,13 @@ public class Configuration {
 
     public void setPinLength(int pinLength) {
         prefs.edit().putInt(PREFS_PIN_LENGTH, pinLength).apply();
+    }
+
+    public boolean getShowJoinDashPay() {
+        return prefs.getBoolean(PREFS_SHOW_JOIN_DASH_PAY, true);
+    }
+
+    public void setShowJoinDashPay(boolean showJoinDashPay) {
+        prefs.edit().putBoolean(PREFS_SHOW_JOIN_DASH_PAY, showJoinDashPay).apply();
     }
 }

@@ -34,8 +34,8 @@
     <string name="wallet_transactions_options_filter_received">Received payments</string>
     <string name="wallet_transactions_options_filter_sent">Sent payments</string>
     <string name="wallet_options_safety_menu">Safety</string>
-    <string name="wallet_options_encrypt_keys_set">Set spending PIN</string>
-    <string name="wallet_options_encrypt_keys_change">Change spending PIN</string>
+    <string name="wallet_options_encrypt_keys_set">Set PIN</string>
+    <string name="wallet_options_encrypt_keys_change">Change PIN</string>
     <string name="wallet_options_safety">Safety notes</string>
     <string name="wallet_low_storage_dialog_title">Internal device storage space low!</string>
     <string name="wallet_low_storage_dialog_msg">Dash Wallet uses internal storage for remembering transactions and blocks. If it runs out of space, it will stop working and your Dash will be at risk!\n\nDo you want to open the Application Manager to uninstall unneeded apps?</string>
@@ -68,7 +68,7 @@
     <string name="send_coins_fragment_hint_dusty_send">The amount is too small to send</string>
     <string name="send_coins_fragment_hint_insufficient_money">Insufficient funds</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">The amount of tiny payments in your wallet doesn\'t add up to a sendable value.</string>
-    <string name="send_coins_fragment_hint_replaying">Currently payments are not possible because a replay is in progress.</string>
+    <string name="send_coins_fragment_hint_replaying">Currently payments are not possible because the wallet is not fully synced with the network</string>
     <string name="send_coins_fragment_direct_payment_enable">Send payment directly to the payee.</string>
     <string name="send_coins_fragment_direct_payment_ack">Your payment was successfully sent directly.</string>
     <string name="send_coins_fragment_direct_payment_nack">Your payment was rejected via direct connection.</string>
