@@ -72,6 +72,10 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+
         </activity>
 
         <activity android:name="de.schildbach.wallet.ui.VerifySeedActivity"
@@ -101,10 +105,6 @@
                 <data android:mimeType="application/x-dashtx" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
-
-            <meta-data
-                android:name="android.app.shortcuts"
-                android:resource="@xml/shortcuts" />
         </activity-alias>
 
         <activity
@@ -135,7 +135,7 @@
             android:name="de.schildbach.wallet.ui.SendCoinsQrActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:screenOrientation="portrait"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" >
+            android:theme="@style/My.Theme.Transparent" >
         </activity>
         <activity
             android:name="de.schildbach.wallet.ui.RequestCoinsActivity"
@@ -274,6 +274,14 @@
             android:theme="@style/LockScreenActivity.Theme" />
 
         <activity android:name="de.schildbach.wallet.ui.UpholdTransferActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity" />
+
+        <activity android:name="de.schildbach.wallet.ui.AppUpgradeActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/LockScreenActivity.Theme" />
+
+        <activity android:name="de.schildbach.wallet.ui.FundNewAccountActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 

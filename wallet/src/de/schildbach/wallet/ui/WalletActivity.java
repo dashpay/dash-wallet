@@ -63,12 +63,15 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.common.collect.ImmutableList;
 import com.squareup.okhttp.HttpUrl;
 
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
+import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.ui.DialogBuilder;
@@ -78,6 +81,7 @@ import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
 import java.io.IOException;
 import java.util.Currency;
 import java.util.Locale;
+import java.util.concurrent.Executor;
 
 import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
@@ -140,6 +144,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private boolean showBackupWalletDialog = false;
     private de.schildbach.wallet.data.BlockchainState blockchainState;
 
+    private boolean syncComplete = false;
+    private View joinDashPayAction;
+    private OnCoinsSentReceivedListener coinsSendReceivedListener = new OnCoinsSentReceivedListener();
+
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -195,8 +203,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
             public void onChanged(de.schildbach.wallet.data.BlockchainState blockchainState) {
                 WalletActivity.this.blockchainState = blockchainState;
                 updateSyncState();
+                showHideJoinDashPayAction();
             }
         });
+
+        registerOnCoinsSentReceivedListener();
     }
 
     private void initFingerprintHelper() {
@@ -250,6 +261,14 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 handleBackupWalletToSeed();
             }
         });
+        joinDashPayAction = findViewById(R.id.join_dashpay_action);
+        joinDashPayAction.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(FundNewAccountActivity.createIntent(WalletActivity.this));
+            }
+        });
+        showHideJoinDashPayAction();
         findViewById(R.id.scan_to_pay_action).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -280,6 +299,19 @@ public final class WalletActivity extends AbstractBindServiceActivity
         View secureActionView = findViewById(R.id.secure_action);
         secureActionView.setVisibility(config.getRemindBackupSeed() ? View.VISIBLE : View.GONE);
         findViewById(R.id.secure_action_space).setVisibility(secureActionView.getVisibility());
+    }
+
+    private void showHideJoinDashPayAction() {
+        if (syncComplete) {
+            final Coin walletBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED);
+            boolean canAffordIt = walletBalance.isGreaterThan(Constants.DASH_PAY_FEE)
+                    || walletBalance.equals(Constants.DASH_PAY_FEE);
+            boolean visible = canAffordIt && config.getShowJoinDashPay();
+            joinDashPayAction.setVisibility(visible ? View.VISIBLE : View.GONE);
+        } else {
+            joinDashPayAction.setVisibility(View.GONE);
+        }
+        findViewById(R.id.join_dashpay_action_space).setVisibility(joinDashPayAction.getVisibility());
     }
 
     private void initNavigationDrawer() {
@@ -1043,6 +1075,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         TextView syncPercentageView = findViewById(R.id.sync_status_percentage);
         syncPercentageView.setText(percentage + "%");
 
+
         if (blockchainState.isSynced()) {
             syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
             syncStatusTitle.setText(R.string.sync_status_sync_title);
@@ -1099,7 +1132,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private void setDefaultCurrency() {
         String countryCode = getCurrentCountry();
         log.info("Setting default currency:");
-        if(countryCode != null) {
+        if (countryCode != null) {
             try {
                 log.info("Local Country: " + countryCode);
                 Locale l = new Locale("", countryCode);
@@ -1133,9 +1166,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private String getCurrentCountry() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             return LocaleList.getDefault().get(0).getCountry();
-        } else{
+        } else {
             return Locale.getDefault().getCountry();
         }
     }
@@ -1160,7 +1193,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             if (config.wasUpgraded()) {
                 showFiatCurrencyChangeDetectedDialog(currentCurrencyCode, newCurrencyCode);
             } else {
-                if(CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
+                if (CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
                     log.info("found obsolete currency: " + newCurrencyCode);
                     newCurrencyCode = CurrencyInfo.getUpdatedCurrency(newCurrencyCode);
                 }
@@ -1206,5 +1239,39 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void updateSyncPaneVisibility(int id, boolean visible) {
         findViewById(id).setVisibility(visible ? View.VISIBLE : View.GONE);
+    }
+
+    @Override
+    protected void onDestroy() {
+        unregisterWalletListener();
+        super.onDestroy();
+    }
+
+    private void registerOnCoinsSentReceivedListener() {
+        Executor mainThreadExecutor = ContextCompat.getMainExecutor(this);
+        wallet.addCoinsReceivedEventListener(mainThreadExecutor, coinsSendReceivedListener);
+        wallet.addCoinsSentEventListener(mainThreadExecutor, coinsSendReceivedListener);
+    }
+
+    private void unregisterWalletListener() {
+        wallet.removeCoinsReceivedEventListener(coinsSendReceivedListener);
+        wallet.removeCoinsSentEventListener(coinsSendReceivedListener);
+    }
+
+    private class OnCoinsSentReceivedListener implements WalletCoinsReceivedEventListener, WalletCoinsSentEventListener {
+
+        @Override
+        public void onCoinsReceived(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
+            onCoinsSentReceived();
+        }
+
+        @Override
+        public void onCoinsSent(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
+            onCoinsSentReceived();
+        }
+
+        private void onCoinsSentReceived() {
+            showHideJoinDashPayAction();
+        }
     }
 }
