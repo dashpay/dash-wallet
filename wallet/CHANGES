@@ -1,4 +1,7 @@
 Dash Wallet
+v7.0.3
+* Fix start up crash in Blockchain Service
+
 v7.0.2
 * Fix Uphold send crash
 * Fix Uphold logout timer
