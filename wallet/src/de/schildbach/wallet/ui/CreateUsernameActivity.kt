@@ -24,6 +24,7 @@ import android.view.View
 import androidx.core.content.res.ResourcesCompat
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.create_username.*
+import org.dash.wallet.common.InteractionAwareActivity
 
 class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
