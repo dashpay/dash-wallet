@@ -34,8 +34,8 @@
     <string name="wallet_transactions_options_filter_received">Gelen ödemeler</string>
     <string name="wallet_transactions_options_filter_sent">Gönderilen ödemeler</string>
     <string name="wallet_options_safety_menu">Güvenlik</string>
-    <string name="wallet_options_encrypt_keys_set">Harcama PİN\'i ayarla</string>
-    <string name="wallet_options_encrypt_keys_change">Harcama PİN\'ini değiştir</string>
+    <string name="wallet_options_encrypt_keys_set">PİN Oluştur</string>
+    <string name="wallet_options_encrypt_keys_change">PİN Değiştir</string>
     <string name="wallet_options_safety">Güvenlik notları</string>
     <string name="wallet_low_storage_dialog_title">Cihazın dahili depolama alanı düşük!</string>
     <string name="wallet_low_storage_dialog_msg">Dash Wallet, cihazınızdaki dahili belleği işlemleri ve blokları hatırlamak için kullanır. Eğer cihazınızda boş alan kalmazsa, çalışmayı keser ve böylece Dash\'leriniz riskte altında kalır!\n\nGereksiz uygulamaları kaldırmak için Uygulama Yöneticisi\'ni açmak ister misiniz?</string>
@@ -68,7 +68,6 @@
     <string name="send_coins_fragment_hint_dusty_send">Bu miktar göndermek için çok düşüktür</string>
     <string name="send_coins_fragment_hint_insufficient_money">Yetersiz bakiye</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Cüzdanınıza gelen küçük ödemelerin toplamı göndermek için yetersiz kalıyor.</string>
-    <string name="send_coins_fragment_hint_replaying">Bir yeniden oynatma devrede olduğu için şu anda ödeme yapmak mümkün değil.</string>
     <string name="send_coins_fragment_direct_payment_enable">Ödemeyi doğrudan alıcıya gönder.</string>
     <string name="send_coins_fragment_direct_payment_ack">Ödemeniz başarıyla doğrudan gönderilmiştir.</string>
     <string name="send_coins_fragment_direct_payment_nack">Ödemeniz doğrudan bağlantı tarafından reddedilmiştir.</string>
@@ -159,7 +158,7 @@
     <string name="transaction_row_status_received">Alındı</string>
     <string name="transaction_row_status_sent">Gönderildi</string>
     <string name="transaction_row_status_sending">Gönderiliyor</string>
-    <string name="transaction_row_status_sent_interally">Dahili</string>
+    <string name="transaction_row_status_sent_internally">Dahili</string>
     <string name="transaction_row_status_processing">İşleniyor</string>
     <string name="transaction_row_status_confirming">Onaylanıyor</string>
     <string name="transaction_row_status_locked">Kilitlendi</string>

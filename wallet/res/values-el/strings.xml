@@ -34,8 +34,8 @@
     <string name="wallet_transactions_options_filter_received">Ληφθείσες πληρωμές</string>
     <string name="wallet_transactions_options_filter_sent">Απεσταλμένες πληρωμές</string>
     <string name="wallet_options_safety_menu">Ασφάλεια</string>
-    <string name="wallet_options_encrypt_keys_set">Ορίστε το PIN ξοδέματος</string>
-    <string name="wallet_options_encrypt_keys_change">Αλλάξτε το PIN ξοδέματος</string>
+    <string name="wallet_options_encrypt_keys_set">Ορίστε PIN</string>
+    <string name="wallet_options_encrypt_keys_change">Αλλαγή PIN</string>
     <string name="wallet_options_safety">Οδηγίες ασφαλείας</string>
     <string name="wallet_low_storage_dialog_title">Ο εσωτερικός χώρος αποθήκευσης της συσκευής είναι πολύ χαμηλός!</string>
     <string name="wallet_low_storage_dialog_msg">Το πορτοφόλι Dash χρησιμοποιεί τον εσωτερικό χώρο αποθήκευσης για να θυμάται τις συναλλαγές και τα blocks. Εάν δεν έχει χώρο, θα σταματήσει να λειτουργεί και τα χρήματά σας θα βρεθούν σε κίνδυνο!\n\nΘέλετε να ανοίξετε τον διαχειριστή εφαρμογών και να απεγκαταστήσετε κάποιες εφαρμογές που δεν χρησιμοποιείτε;</string>
@@ -61,13 +61,14 @@
     <string name="send_coins_fragment_receiving_address_own">Πρόκειται να στείλετε στον εαυτό σας!</string>
     <string name="send_coins_fragment_receiving_address_complex">complex\naddress</string>
     <string name="send_coins_fragment_pending">(%s αναμονή για επιβεβαίωση)</string>
+    <string name="send_coins_fragment_amount_label">Ποσό για πληρωμή</string>
     <string name="send_coins_fragment_pin_label">Εισάγετε PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Θα πληρώσετε %s για το δίκτυο.</string>
     <string name="send_coins_fragment_hint_fee_priority">Θα πληρώσετε τέλη προτεραιότητας %s. Αν σας ενδιαφέρουν χαμηλά τέλη, χρησιμοποιήστε την επιλογή "προτεραιότητα" μόνο αν χρειάζεστε επιβεβαίωση το συντομότερο δυνατόν.</string>
     <string name="send_coins_fragment_hint_dusty_send">Το ποσό είναι πολύ μικρό για να σταλθεί</string>
     <string name="send_coins_fragment_hint_insufficient_money">Ανεπαρκή χρήματα</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Το ποσό των μικρών πληρωμών στο πορτοφόλι σας δεν επαρκεί για το ποσό που είναι προς αποστολή.</string>
-    <string name="send_coins_fragment_hint_replaying">Αυτή την στιγμή δεν διεκπεραιώνονται πληρωμές γιατί βρίσκεται σε εξέλιξη ένα replay.</string>
+    <string name="send_coins_fragment_hint_replaying">Αυτή την στιγμή δεν διεκπεραιώνονται πληρωμές γιατί το πορτοφόλι δεν έχει συγχρονιστεί πλήρως με το δίκτυο</string>
     <string name="send_coins_fragment_direct_payment_enable">Στείλτε πληρωμή απευθείας στον δικαιούχο διακομιστή.</string>
     <string name="send_coins_fragment_direct_payment_ack">Η πληρωμή σας στάλθηκε απευθείας επιτυχώς.</string>
     <string name="send_coins_fragment_direct_payment_nack">Η πληρωμή μέσω απευθείας σύνδεσης απορρίφθηκε.</string>
@@ -77,6 +78,7 @@
     <string name="send_coins_fragment_button_back">Πίσω</string>
     <string name="send_coins_fragment_insufficient_money_title">Ανεπαρκή διαθέσιμα νομίσματα</string>
     <string name="send_coins_fragment_insufficient_money_msg1">Υπολείπονται %s.</string>
+    <string name="send_coins_fragment_insufficient_money_msg2">Θα θέλατε να πληρώσετε με όλα όσα διαθέτετε;</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">Το άδειασμα του πορτοφολιού απέτυχε</string>
     <string name="send_coins_fragment_state_decrypting">Αποκρυπτογράφηση…</string>
     <string name="send_coins_preparation_msg">Είσοδος…</string>
@@ -94,6 +96,7 @@
     <string name="sweep_wallet_fragment_wallet_unknown">Ξεκινήστε με τη σάρωση του ιδιωτικού κλειδιού ενός χάρτινου πορτοφολιού. Χρησιμοποιήστε το κουμπί της κάμερας.</string>
     <string name="sweep_wallet_fragment_encrypted">Αυτό το ιδιωτικό κλειδί προστατεύεται με κωδικό πρόσβασης.</string>
     <string name="sweep_wallet_fragment_password">Κωδικός</string>
+    <string name="sweep_wallet_fragment_bad_password">Λάθος κωδικός!</string>
     <string name="sweep_wallet_fragment_balance">Υπόλοιπο για σάρωση</string>
     <string name="sweep_wallet_fragment_button_decrypt">Αποκρυπτογράφηση</string>
     <string name="sweep_wallet_fragment_button_sweep">Σάρωση</string>
@@ -156,15 +159,30 @@
     <string name="transaction_row_status_received">Ελήφθησαν</string>
     <string name="transaction_row_status_sent">Εστάλη</string>
     <string name="transaction_row_status_sending">Αποστολή</string>
-    <string name="transaction_row_status_sent_interally">Εσωτερικός</string>
+    <string name="transaction_row_status_sent_internally">Εσωτερικός</string>
     <string name="transaction_row_status_processing">Επεξεργασία</string>
     <string name="transaction_row_status_confirming">Επιβεβαίωση</string>
     <string name="transaction_row_status_locked">Κλείδωσε</string>
+    <string name="transaction_row_status_error_sending">Σφάλμα στην Αποστολή</string>
     <string name="transaction_row_status_error_dead">Διπλό ξόδεμα</string>
+    <string name="transaction_row_status_error_conflicting">Σε διένεξη</string>
+    <string name="transaction_row_status_error_insufficient_fee">Ανεπαρκή προμήθεια</string>
+    <string name="transaction_row_status_error_dust">Σκόνη</string>
+    <string name="transaction_row_status_error_non_standard">Μη κανονικό</string>
+    <string name="transaction_row_status_error_malformed">Κακή Μορφή</string>
+    <string name="transaction_row_status_error_duplicate">Αντιγραφή</string>
+    <string name="transaction_row_status_error_obsolete">Απαρχαιωμένο</string>
     <string name="transaction_row_status_error_invalid">Μη έγκυρο</string>
+    <string name="transaction_row_status_error_other">Άγνωστο</string>
+    <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
+    <string name="transaction_row_time_text">Σε %s στο %s</string>
+    <string name="transaction_row_rate_not_available">Μη διαθέσιμο</string>
     <string name="transaction_row_status_masternode_registration">Εγγραφή Masternode</string>
     <string name="transaction_row_status_masternode_update_registrar">Ανανέωση Masternode</string>
     <string name="transaction_row_status_masternode_update_service">Ανανέωση Masternode</string>
+    <string name="transaction_row_status_masternode_revoke">Ανάκληση Masternode</string>
+    <string name="transaction_row_status_masternode_reward">Ανταμοιβή για Masternode</string>
+    <string name="transaction_row_status_mining_reward">Ανταμοιβή για Mining</string>
     <string name="network_monitor_activity_title">Παρακολούθηση δικτύου</string>
     <string name="network_monitor_peer_list_title">Ομότιμοι</string>
     <string name="network_monitor_block_list_title">Τμήματα</string>
@@ -349,8 +367,10 @@
     <string name="dash_slogan">Άμεσο - Ιδιωτικό - Ασφαλές</string>
     <string name="dash_wallet">Πορτοφόλι</string>
 
+    <string name="activity_security_backup_wallet">Αντίγραφο ασφαλείας πορτοφολιού σε Αρχείο</string>
     <string name="activity_security_view_recovery_phrase">Προβολή Φράσης Ανάκτησης</string>
     <string name="activity_security_advanced">Ενισχυμένη Ασφάλεια</string>
+    <string name="activity_security_biometric_auth">Ταυτοποίηση Δακτυλικού Αποτυπώματος</string>
     <string name="activity_security_hide_balance">Αυτόματη απόκρυψη Υπολοίπου</string>
     <string name="reset_to_default">Επαναφορά στα Προεπιλεγμένα</string>
 

@@ -1074,6 +1074,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         TextView syncPercentageView = findViewById(R.id.sync_status_percentage);
         syncPercentageView.setText(percentage + "%");
 
+
         syncComplete = (blockchainState.isSynced());
         if (syncComplete) {
             syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));

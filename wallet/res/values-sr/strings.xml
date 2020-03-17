@@ -32,8 +32,6 @@
     <string name="wallet_transactions_options_filter_received">Primljene uplate</string>
     <string name="wallet_transactions_options_filter_sent">Poslate uplate</string>
     <string name="wallet_options_safety_menu">Sigurnost</string>
-    <string name="wallet_options_encrypt_keys_set">Postavi PIN za potrošnju</string>
-    <string name="wallet_options_encrypt_keys_change">Promeni PIN za potrošnju</string>
     <string name="wallet_options_safety">Sigurnosne preporuke</string>
     <string name="wallet_low_storage_dialog_title">Unutrašnja memorija uređaja je na izmaku!</string>
     <string name="wallet_low_storage_dialog_msg">Dash Wallet koristi internu memoriju kako bi pamtio transakcije i blokove. Ako ponestane memorijskog prostora, Dash Wallet će prestati da radi i vaš Dash će biti u opasnosti!\n\nDa li želite da otvorite Menadžer Aplikacija kako biste obrisali nepotrebne aplikacije?</string>
@@ -63,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_priority">Prioritetna provizija od %s će biti plaćena. Ako vam je bitna mala provizija koristite "prioritet" samo ukoliko vam je bitno da dobijete potvrdu što pre.</string>
     <string name="send_coins_fragment_hint_dusty_send">Iznos je suviše mali da bi bio poslat</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Iznos zbira malih uplata u vašem novčaniku ne odgovara vrednosti koja se može poslati.</string>
-    <string name="send_coins_fragment_hint_replaying">Plaćanja trenutno nisu moguća jer je u toku napad duplog trošenja.</string>
     <string name="send_coins_fragment_direct_payment_enable">Pošalji uplatu primaocu direktno.</string>
     <string name="send_coins_fragment_direct_payment_ack">Direktno slanje vaše uplate je uspešno izvršeno.</string>
     <string name="send_coins_fragment_direct_payment_nack">Vaša uplata kroz direktnu konekciju je odbijena.</string>
@@ -150,7 +147,7 @@
     <string name="transaction_row_message_received_rbf">Ova uplata kasni jer je pošiljalac iskoristio nesiguran tip transakcije.</string>
     <string name="transaction_row_status_received">Primljeno</string>
     <string name="transaction_row_status_sent">Poslato</string>
-    <string name="transaction_row_status_sent_interally">Unutrašnje</string>
+    <string name="transaction_row_status_sent_internally">Unutrašnje</string>
     <string name="transaction_row_status_error_dead">Duplo potroši</string>
     <string name="transaction_row_status_error_other">Nepoznato</string>
     <string name="network_monitor_activity_title">Mrežni nadzor</string>

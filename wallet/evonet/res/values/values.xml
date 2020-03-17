@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="app_name">Dash [Evonet]</string>
+	<string name="app_name_short">Dash [Evonet]</string>
+
+	<string-array name="preferences_precision_values">
+		<item>8</item>
+		<item>6</item>
+		<item>4</item>
+		<item>2/3</item>
+		<item>0/6</item>
+	</string-array>
+	<string-array name="preferences_precision_labels">
+		<item>tDASH, 8 decimal places</item>
+		<item>tDASH, 6 decimal places</item>
+		<item>tDASH, 4 decimal places</item>
+		<item>mtDASH, 2 decimal places</item>
+		<item>µtDASH, no decimal places</item>
+	</string-array>
+	<string-array name="preferences_block_explorer_values">
+		<item>http://devnet-evonet-1117662964.us-west-2.elb.amazonaws.com:3001/insight</item>
+	</string-array>
+	<string-array name="preferences_block_explorer_labels">
+		<item>Insight Evonet Block Explorer</item>
+	</string-array>
+
+</resources>

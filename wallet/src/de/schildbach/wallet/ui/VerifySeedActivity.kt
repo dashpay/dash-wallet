@@ -25,6 +25,7 @@ import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.InteractionAwareActivity
 
 /**
  * @author Samuel Barbosa
