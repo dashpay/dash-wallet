@@ -21,7 +21,7 @@ import android.content.Context;
 import androidx.annotation.Nullable;
 import android.text.format.DateUtils;
 
-import de.schildbach.wallet.service.BlockchainState;
+import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet_test.R;
 
 /**
@@ -33,11 +33,11 @@ public class BlockchainStateUtils {
 
     @Nullable
     public static String getSyncStateString(BlockchainState blockchainState, Context context) {
-        final long blockchainLag = System.currentTimeMillis() - blockchainState.bestChainDate.getTime();
+        final long blockchainLag = System.currentTimeMillis() - blockchainState.getBestChainDate().getTime();
         final boolean blockchainUptodate = blockchainLag < BLOCKCHAIN_UPTODATE_THRESHOLD_MS;
-        final boolean noImpediments = blockchainState.impediments.isEmpty();
+        final boolean noImpediments = blockchainState.getImpediments().isEmpty();
 
-        if (!blockchainUptodate || blockchainState.replaying) {
+        if (!blockchainUptodate || blockchainState.getReplaying()) {
             String progressMessage;
             final String downloading = context.getString(noImpediments ? R.string.blockchain_state_progress_downloading
                     : R.string.blockchain_state_progress_stalled);

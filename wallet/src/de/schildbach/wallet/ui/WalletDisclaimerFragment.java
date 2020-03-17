@@ -23,9 +23,6 @@ import javax.annotation.Nullable;
 
 import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.service.BlockchainState;
-import de.schildbach.wallet.service.BlockchainState.Impediment;
-import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
@@ -34,12 +31,10 @@ import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
 import androidx.fragment.app.Fragment;
 import androidx.loader.app.LoaderManager;
-import androidx.loader.content.Loader;
 import android.text.Html;
 import android.text.SpannableStringBuilder;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.widget.FrameLayout;
@@ -52,9 +47,6 @@ public final class WalletDisclaimerFragment extends Fragment implements OnShared
     private AbstractBindServiceActivity activity;
     private Configuration config;
     private LoaderManager loaderManager;
-
-    @Nullable
-    private BlockchainState blockchainState = null;
 
     private TextView messageView;
     private View closeSafetyDisclaimerView;
@@ -91,9 +83,6 @@ public final class WalletDisclaimerFragment extends Fragment implements OnShared
         super.onResume();
 
         config.registerOnSharedPreferenceChangeListener(this);
-
-        loaderManager.initLoader(ID_BLOCKCHAIN_STATE_LOADER, null, blockchainStateLoaderCallbacks);
-
         updateView();
     }
 
@@ -119,20 +108,7 @@ public final class WalletDisclaimerFragment extends Fragment implements OnShared
         final boolean showDisclaimer = config.getDisclaimerEnabled();
         closeSafetyDisclaimerView.setVisibility(showDisclaimer ? View.VISIBLE : View.GONE);
 
-        int progressResId = 0;
-        if (blockchainState != null) {
-            final Set<Impediment> impediments = blockchainState.impediments;
-            if (impediments.contains(Impediment.STORAGE))
-                progressResId = R.string.blockchain_state_progress_problem_storage;
-            else if (impediments.contains(Impediment.NETWORK))
-                progressResId = R.string.blockchain_state_progress_problem_network;
-        }
-
         final SpannableStringBuilder text = new SpannableStringBuilder();
-        if (progressResId != 0)
-            text.append(Html.fromHtml("<b>" + getString(progressResId) + "</b>"));
-        if (progressResId != 0 && showDisclaimer)
-            text.append('\n');
         if (showDisclaimer)
             text.append(Html.fromHtml(getString(R.string.wallet_disclaimer_fragment_remind_safety)));
         messageView.setText(text);
@@ -143,21 +119,4 @@ public final class WalletDisclaimerFragment extends Fragment implements OnShared
         fragment.setVisibility(text.length() > 0 ? View.VISIBLE : View.GONE);
     }
 
-    private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>() {
-        @Override
-        public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args) {
-            return new BlockchainStateLoader(activity);
-        }
-
-        @Override
-        public void onLoadFinished(final Loader<BlockchainState> loader, final BlockchainState blockchainState) {
-            WalletDisclaimerFragment.this.blockchainState = blockchainState;
-
-            updateView();
-        }
-
-        @Override
-        public void onLoaderReset(final Loader<BlockchainState> loader) {
-        }
-    };
 }
