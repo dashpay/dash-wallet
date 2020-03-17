@@ -34,8 +34,8 @@
     <string name="wallet_transactions_options_filter_received">收到的交易</string>
     <string name="wallet_transactions_options_filter_sent">发送的交易</string>
     <string name="wallet_options_safety_menu">安全</string>
-    <string name="wallet_options_encrypt_keys_set">设置支付 PIN 码</string>
-    <string name="wallet_options_encrypt_keys_change">更改支付 PIN 码</string>
+    <string name="wallet_options_encrypt_keys_set">设置PIN</string>
+    <string name="wallet_options_encrypt_keys_change">更改PIN</string>
     <string name="wallet_options_safety">安全及风险提示</string>
     <string name="wallet_low_storage_dialog_title">内部设备存储空间不足！</string>
     <string name="wallet_low_storage_dialog_msg">达世币钱包会使用内置存储空间来保存交易记录, 及区块. 如果存储空间不足, 达世币将停止工作, 您的达世币将会面临问题!/n/n您想要打开应用管理工具卸载不需要的应用么?</string>
@@ -68,7 +68,7 @@
     <string name="send_coins_fragment_hint_dusty_send">该金额太小了，无法支付</string>
     <string name="send_coins_fragment_hint_insufficient_money">资金不足</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">您钱包中的微小付款金额无法达到可支付的金额。</string>
-    <string name="send_coins_fragment_hint_replaying">因正在进行重播, 当前交易不可用.</string>
+    <string name="send_coins_fragment_hint_replaying">因钱包与网络还未完成同步, 当前交易不可用.</string>
     <string name="send_coins_fragment_direct_payment_enable">直接向收款人付款。</string>
     <string name="send_coins_fragment_direct_payment_ack">您的直接付款已经成功发送。</string>
     <string name="send_coins_fragment_direct_payment_nack">您的直接付款已被拒绝。</string>
@@ -159,7 +159,7 @@
     <string name="transaction_row_status_received">已接收</string>
     <string name="transaction_row_status_sent">已发送</string>
     <string name="transaction_row_status_sending">正在发送</string>
-    <string name="transaction_row_status_sent_interally">内部</string>
+    <string name="transaction_row_status_sent_internally">内部</string>
     <string name="transaction_row_status_processing">处理中</string>
     <string name="transaction_row_status_confirming">确认中</string>
     <string name="transaction_row_status_locked">已锁定</string>

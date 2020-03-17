@@ -212,14 +212,16 @@
     <string name="verify_seed_success_message">이제 당신의 지갑은 안전합니다. 언제든 당신의 복원 문구를 사용하셔서 당신의 계정을 다른 기기에서 복원하실 수 있습니다.</string>
     <string name="view_seed_done">완료</string>
     <string name="view_seed_title">복원 문구</string>
-	<string name="transaction_result_view_on_explorer">탐색기에서 보기</string>
 	<string name="transaction_result_paid_successfully">성공적으로 전송되었습니다</string>
 	<string name="transaction_result_sent_to">다음에 전송하였습니다</string>
-	<string name="transaction_date_and_time">날짜 &amp; 시간</string>
+	<string name="transaction_date_and_time">날짜</string>
 	<string name="transaction_close">닫기</string>
 	<string name="transaction_details_amount_received">받은 금액</string>
 	<string name="transaction_details_amount_sent">보낸 금액</string>
-
+    <string name="transaction_details_sent_from">다음으로부터 전송되었습니다</string>
+    <string name="transaction_details_sent_to">다음에 전송하였습니다</string>
+    <string name="transaction_details_received_at">다음의 수신하였습니다</string>
+    <string name="transaction_details_moved_from">다음에서 이동</string>
     <string name="authenticate_fingerprint_title">인증하기</string>
     <string name="authenticate_fingerprint_message">계속하시려면 지문을 확인하세요</string>
     <string name="authenticate_pin_message">계속하시려면 PIN을 입력하세요</string>
@@ -269,7 +271,6 @@
     <string name="one_minute">1분</string>
     <string name="five_minute">5분</string>
     <string name="one_hour">1시간</string>
-    <string name="one_day">1일</string>
     <string name="biometric_limit">생체 제한</string>
     <string name="spending_confirmation_hint_zero">지불을 처리하기 위해서는 언제나 PIN이 필요합니다</string>
     <string name="spending_confirmation_hint_above_zero">아래의 지불을 위해 생체 인식을 통해 인증할 수 있습니다.</string>
@@ -304,6 +305,4 @@
     <string name="sync_status_syncing_sub_title">대시 블록체인을 통해</string>
     <string name="sync_status_unable_to_connect">연결할 수 없습니다</string>
     <string name="sync_status_check_connection">연결을 확인하세요</string>
-
-
-</resources>
+    </resources>

@@ -34,8 +34,8 @@
     <string name="wallet_transactions_options_filter_received">Empfangene Zahlungen</string>
     <string name="wallet_transactions_options_filter_sent">Gesendete Zahlungen</string>
     <string name="wallet_options_safety_menu">Sicherheit</string>
-    <string name="wallet_options_encrypt_keys_set">Ausgabe-PIN setzen</string>
-    <string name="wallet_options_encrypt_keys_change">Ausgabe-PIN ändern</string>
+    <string name="wallet_options_encrypt_keys_set">PIN festsetzen</string>
+    <string name="wallet_options_encrypt_keys_change">PIN ändern</string>
     <string name="wallet_options_safety">Sicherheitshinweise</string>
     <string name="wallet_low_storage_dialog_title">Interner Speicher wird knapp!</string>
     <string name="wallet_low_storage_dialog_msg">Dash Wallet verwendet internen Speicher um sich Transaktionen und Blöcke zu merken. Sollte kein freier Speicher mehr verfügbar sein, kann die Wallet nicht mehr funktionieren und die enthaltenen Dash befinden sich in Gefahr!\n\nMöchtest du den App-Manager öffnen um nicht benötigte Apps zu deinstallieren? </string>
@@ -69,7 +69,7 @@
     <string name="send_coins_fragment_hint_dusty_send">Der Betrag ist zu klein zum Senden</string>
     <string name="send_coins_fragment_hint_insufficient_money">Guthaben nicht ausreichend</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Die Summe an winzigen Zahlungen in Deiner Wallet ist zu klein, um verschickt zu werden.</string>
-    <string name="send_coins_fragment_hint_replaying">Da momentan ein Replay verarbeitet wird, kann keine Zahlung durchgeführt werden.</string>
+    <string name="send_coins_fragment_hint_replaying">Da die Wallet momentan nicht mit dem Netzwerk synchronisiert ist, kann keine Zahlung durchgeführt werden.</string>
     <string name="send_coins_fragment_direct_payment_enable">Zahlung direkt an den Empfänger senden.</string>
     <string name="send_coins_fragment_direct_payment_ack">Die Zahlung wurde erfolgreich direkt gesendet.</string>
     <string name="send_coins_fragment_direct_payment_nack">Die Zahlung wurde über die direkte Verbindung abgelehnt.</string>
@@ -160,7 +160,7 @@
     <string name="transaction_row_status_received">Empfangen</string>
     <string name="transaction_row_status_sent">Gesendet</string>
     <string name="transaction_row_status_sending">Versenden</string>
-    <string name="transaction_row_status_sent_interally">Intern</string>
+    <string name="transaction_row_status_sent_internally">Intern</string>
     <string name="transaction_row_status_processing">Verarbeite</string>
     <string name="transaction_row_status_confirming">Bestätige</string>
     <string name="transaction_row_status_locked">Gesichert</string>

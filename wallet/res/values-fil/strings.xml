@@ -25,15 +25,17 @@
     <string name="exchange_rates_fragment_source">Presyo mula %s</string>
     <string name="exchange_rates_options_search">Magsisiyasat ng halaga ng palitan</string>
     <string name="exchange_rates_context_set_as_default_title">Itakda bilang default</string>
+    <string name="wallet_transactions_fragment_empty_text">Walang transaksyon na maipapakita</string>
     <string name="wallet_transactions_row_warning_backup">Pagbati, natanggap mo na ang iyong paunang bayad! Na-backed up mo na ba ang iyong pitaka, para maprotektahan sa pagkawala?</string>
     <string name="wallet_transactions_fragment_coinbase">namina</string>
     <string name="wallet_transactions_fragment_internal">internal</string>
+    <string name="wallet_transactions_options_filter">Salain ang transaksyon</string>
     <string name="wallet_transactions_options_filter_all">Lahat ng bayad</string>
     <string name="wallet_transactions_options_filter_received">Natanggap na bayad</string>
     <string name="wallet_transactions_options_filter_sent">Naipadalang bayad</string>
     <string name="wallet_options_safety_menu">Panseguridad</string>
-    <string name="wallet_options_encrypt_keys_set">Magtalaga ng spending PIN</string>
-    <string name="wallet_options_encrypt_keys_change">Palitan ang spending PIN</string>
+    <string name="wallet_options_encrypt_keys_set">Mag-set ng PIN</string>
+    <string name="wallet_options_encrypt_keys_change">Baguhin ang PIN</string>
     <string name="wallet_options_safety">Talaang pangkaligtasan</string>
     <string name="wallet_low_storage_dialog_title">Ang internal device storage ay mababa na!</string>
     <string name="wallet_low_storage_dialog_msg">Ang Dash Wallet ay gumagamit ng internal storage para alalahanin ang transaksyon at blocks. Kung ito ay mawalan ng espasyo, hihinto ang paggawa at ang iyong Dash ay posibleng manganib!\n\nGusto mo bang buksan ang Application Manager para i-uninstall ang hindi kailangang apps?</string>
@@ -53,6 +55,7 @@
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Maling lagda!</string>
     <string name="send_coins_fragment_payee_verified_by">beripikado ni: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">lingid</string>
+    <string name="send_coins_fragment_receiving_address_label">Pinadala kay</string>
     <string name="send_coins_fragment_receiving_address_hint">I-type ang address o pangalan</string>
     <string name="send_coins_fragment_receiving_address_error">Hindi wasto ang iyong Dash address!</string>
     <string name="send_coins_fragment_receiving_address_own">Ikaw ay magsesend na sa iyong sarili!</string>
@@ -64,7 +67,6 @@
     <string name="send_coins_fragment_hint_dusty_send">Ang halaga ay sobrang liit para maipadala</string>
     <string name="send_coins_fragment_hint_insufficient_money">Hindi sapat na pondo</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Ang halaga ng maliit na bayad sa iyong pitaka ay hindi dumagdag sa ipinadalang halaga.</string>
-    <string name="send_coins_fragment_hint_replaying">Ang kasalukuyang bayad ay hindi posible dahil ang replay ay umuusad.</string>
     <string name="send_coins_fragment_direct_payment_enable">Magbayad ng direkta sa binabayaran.</string>
     <string name="send_coins_fragment_direct_payment_ack">Matagumpay na naipadala ang iyong bayad.</string>
     <string name="send_coins_fragment_direct_payment_nack">Ang iyong bayad ay tinanggihan ng direct connection.</string>
@@ -154,8 +156,13 @@
     <string name="transaction_row_status_sent">Ipinadala</string>
     <string name="transaction_row_status_sending">Ipinapadala</string>
     <string name="transaction_row_status_processing">Pinoproseso</string>
+    <string name="transaction_row_status_confirming">Kinukumpirma</string>
     <string name="transaction_row_status_locked">Naka-lock</string>
     <string name="transaction_row_status_error_dead">Dobleng spend</string>
+    <string name="transaction_row_status_error_invalid">Hindi wasto</string>
+    <string name="transaction_row_status_masternode_registration">Pagpaparehistro ng Masternode</string>
+    <string name="transaction_row_status_masternode_update_registrar">Pag-update ng Masternode</string>
+    <string name="transaction_row_status_masternode_update_service">Pag-update ng Masternode</string>
     <string name="network_monitor_activity_title">Network monitor</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Blocks</string>
@@ -199,6 +206,7 @@
     <string name="import_export_keys_dialog_show">Ipakita ang password</string>
     <string name="import_export_keys_dialog_failure_title">Mali</string>
     <string name="import_keys_intent_filter_action">Ibalik ang pitaka</string>
+    <string name="encrypt_keys_dialog_title">Baguhin ang PIN</string>
     <string name="encrypt_keys_dialog_message">Ang paggastos mula sa iyong wallet ay protektado ng piniling PIN.</string>
     <string name="encrypt_keys_dialog_warning">Mahalaga: Kailangan mong alalahanin ang iyong PIN! Wag gumamit ng karaniwang numero (tulad ng kaarawan).</string>
     <string name="encrypt_keys_dialog_password_old">Lumang PIN</string>
@@ -341,4 +349,7 @@
 
     <string name="activity_security_view_recovery_phrase">Ipakita ang parirala ng muling pagbawi</string>
     <string name="activity_security_advanced">Masusing seguridad</string>
-    </resources>
+    <string name="activity_security_hide_balance">Awtimatikong Pagtago ng Balanse</string>
+    <string name="reset_to_default">I-reset sa Default</string>
+
+</resources>

@@ -212,13 +212,18 @@
     <string name="verify_seed_success_message">您的钱包现已安全。您可以随时在其他设备通过您的恢复密语找回您的账户。</string>
     <string name="view_seed_done">完成</string>
     <string name="view_seed_title">恢复密语</string>
-	<string name="transaction_result_view_on_explorer">在浏览器中查看</string>
+	<string name="transaction_result_view_on_explorer">在区块浏览器中查看</string>
 	<string name="transaction_result_paid_successfully">发送成功</string>
 	<string name="transaction_result_sent_to">发送至</string>
-	<string name="transaction_date_and_time">日期 &amp; 时间</string>
+	<string name="transaction_date_and_time">日期</string>
 	<string name="transaction_close">关闭</string>
 	<string name="transaction_details_amount_received">接收数额</string>
 	<string name="transaction_details_amount_sent">发送数额</string>
+    <string name="transaction_details_sent_from">来自</string>
+    <string name="transaction_details_sent_to">发送至</string>
+    <string name="transaction_details_received_at">接收于</string>
+    <string name="transaction_details_moved_from">移动于</string>
+    <string name="transaction_details_moved_internally_to">内部移动至</string>
 
     <string name="authenticate_fingerprint_title">验证</string>
     <string name="authenticate_fingerprint_message">确认指纹以继续</string>
@@ -269,7 +274,6 @@
     <string name="one_minute">1 分钟</string>
     <string name="five_minute">5 分钟</string>
     <string name="one_hour">1 小时</string>
-    <string name="one_day">1 天</string>
     <string name="biometric_limit">生物识别限制</string>
     <string name="spending_confirmation_hint_zero">付款时始终需要输入PIN</string>
     <string name="spending_confirmation_hint_above_zero">您可以使用生物特征识别来认证下方交易</string>
@@ -304,6 +308,8 @@
     <string name="sync_status_syncing_sub_title">以达世币区块链</string>
     <string name="sync_status_unable_to_connect">无法连接</string>
     <string name="sync_status_check_connection">检查您的连接</string>
+    <string name="sync_status_sync_title">同步</string>
+    <string name="sync_status_sync_completed">完成</string>
 
-
+    <string name="appwidget_wallet_not_ready">请设置您的钱包</string>
 </resources>

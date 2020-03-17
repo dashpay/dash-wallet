@@ -20,12 +20,13 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
+import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.activity_fund_new_account.*
+import org.dash.wallet.common.InteractionAwareActivity
 import android.widget.Toast
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.ui.dashpay.NewAccountConfirmDialog
-import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_fund_new_account.*
 
 class FundNewAccountActivity : InteractionAwareActivity() {
 

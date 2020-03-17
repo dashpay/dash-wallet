@@ -215,10 +215,15 @@
 	<string name="transaction_result_view_on_explorer">Xem trên công cụ khám phá khối</string>
 	<string name="transaction_result_paid_successfully">Đã gửi thành công</string>
 	<string name="transaction_result_sent_to">Gửi đến</string>
-	<string name="transaction_date_and_time">Ngày &amp; giờ</string>
+	<string name="transaction_date_and_time">Ngày</string>
 	<string name="transaction_close">Đóng</string>
 	<string name="transaction_details_amount_received">Số tiền nhận được</string>
 	<string name="transaction_details_amount_sent">Số tiền đã gửi</string>
+    <string name="transaction_details_sent_from">Gửi đến từ</string>
+    <string name="transaction_details_sent_to">Gửi đến</string>
+    <string name="transaction_details_received_at">Nhận được tại</string>
+    <string name="transaction_details_moved_from">Được di chuyển từ</string>
+    <string name="transaction_details_moved_internally_to">Được di chuyển nội bộ đến</string>
 
     <string name="authenticate_fingerprint_title">Xác thực</string>
     <string name="authenticate_fingerprint_message">Xác nhận vân tay để tiếp tục</string>
@@ -269,7 +274,6 @@
     <string name="one_minute">1 phút</string>
     <string name="five_minute">5 phút</string>
     <string name="one_hour">1 giờ</string>
-    <string name="one_day">1 ngày</string>
     <string name="biometric_limit">Giới hạn sinh trắc học</string>
     <string name="spending_confirmation_hint_zero">Mã PIN luôn được cần đến khi thực hiện giao dịch</string>
     <string name="spending_confirmation_hint_above_zero">Bạn có thể xác thực với Xác thực Sinh trắc học cho các giao dịch dưới đây</string>
@@ -304,6 +308,8 @@
     <string name="sync_status_syncing_sub_title">với blockchain của Dash</string>
     <string name="sync_status_unable_to_connect">Không thể kết nối</string>
     <string name="sync_status_check_connection">Kiểm tra kết nối của bạn</string>
+    <string name="sync_status_sync_title">Đồng bộ</string>
+    <string name="sync_status_sync_completed">Đã xong</string>
 
-
+    <string name="appwidget_wallet_not_ready">Hãy vui lòng thiết lập ví của bạn</string>
 </resources>

@@ -221,13 +221,18 @@
     <string name="verify_seed_success_message">Vaša peňaženka je zabezpečená. Frázu pre obnovenie môžete kedykoľvek použiť na obnovenie svojho účtu na inom zariadení.</string>
     <string name="view_seed_done">Hotovo</string>
     <string name="view_seed_title">Fráza pre obnovenie</string>
-	<string name="transaction_result_view_on_explorer">Zobraziť v prehliadači</string>
+	<string name="transaction_result_view_on_explorer">Zobraziť v prehliadači blokov</string>
 	<string name="transaction_result_paid_successfully">Úspešne poslané</string>
 	<string name="transaction_result_sent_to">Poslané ku</string>
-	<string name="transaction_date_and_time">Dátum a čas</string>
+	<string name="transaction_date_and_time">Dátum</string>
 	<string name="transaction_close">Ukončiť</string>
 	<string name="transaction_details_amount_received">Prijatá suma</string>
 	<string name="transaction_details_amount_sent">Odoslaná suma</string>
+    <string name="transaction_details_sent_from">Poslané od</string>
+    <string name="transaction_details_sent_to">Poslané ku</string>
+    <string name="transaction_details_received_at">Prijaté o</string>
+    <string name="transaction_details_moved_from">Presunuté z</string>
+    <string name="transaction_details_moved_internally_to">Interne presunuté do</string>
 
     <string name="authenticate_fingerprint_title">Overiť</string>
     <string name="authenticate_fingerprint_message">Pre pokračovanie potvrďte odtlačok prsta</string>
@@ -278,7 +283,6 @@
     <string name="one_minute">1 min.</string>
     <string name="five_minute">5 min.</string>
     <string name="one_hour">1 hodina</string>
-    <string name="one_day">1 deň</string>
     <string name="biometric_limit">Biometrický limit</string>
     <string name="spending_confirmation_hint_zero">Na vykonanie platby je vždy potrebný PIN</string>
     <string name="spending_confirmation_hint_above_zero">Platby uvedené nižšie môžete overiť pomocou biometrického overenia</string>
@@ -313,6 +317,8 @@
     <string name="sync_status_syncing_sub_title">s Dash blockchainom</string>
     <string name="sync_status_unable_to_connect">Nedá sa pripojiť</string>
     <string name="sync_status_check_connection">Skontrolujte pripojenie</string>
+    <string name="sync_status_sync_title">Synchronizovať</string>
+    <string name="sync_status_sync_completed">Dokončené</string>
 
-
+    <string name="appwidget_wallet_not_ready">Nastavte si svoju peňaženku</string>
 </resources>

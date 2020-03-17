@@ -1,94 +1,315 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-	<string name="send_coins_auto_lock_not_feasible">ธุรกรรมนี้อาจจะใช้เวลาในการชำระหลายนาที  ทำให้เสร็จสมบูรณ์ทันทีสำหรับ%1$s%2$s หรือไม่?</string>
-	<string name="send_coins_instant_send_not_feasible">ธุรกรรมนี้อาจใช้เวลาหลายนาทีในการชำระ</string>
 
-	<string name="options_paste_from_clipboard_title">วางจากคลิปบอร์ด</string>
+    <string name="onboarding_create_wallet">สร้างกระเป๋าสตางค์ใหม่</string>
+    <string name="onboarding_recover_wallet">การกู้คืนกระเป๋าสตางค์จากวลีรหัสผ่าน</string>
+    <string name="onboarding_restore_wallet">การกู้คืนกระเป๋าสตางค์จากแฟ้มเอกสาร</string>
+    <string name="onboarding_load_wallet_error">ไม่สามารถเข้าถึงกระเป๋าสตางค์</string>
 
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">การชำระเงินนี้ยังไม่ได้รับการส่ง</string>
-	<string name="transaction_row_message_sent_to_single_peer">การชำระเงินนี้ถูกส่งแล้ว</string>
+    <string name="set_pin_create_new_wallet">สร้าง wallet ใหม่</string>
+    <string name="set_pin_restore_wallet">การกู้คืนกระเป๋าสตางค์</string>
+    <string name="set_pin_enter_pin">ใส่รหัสเก่า</string>
+    <string name="set_pin_set_pin">ตั้งค่า PIN</string>
+    <string name="set_pin_confirm_pin">ยืนยัน PIN</string>
+    <string name="set_pin_encrypting">เข้ารหัสกระเป๋าสตางค์</string>
+    <string name="set_pin_decrypting">ถอดรหัสกระเป๋าสตางค์</string>
+    <string name="set_pin_verifying_pin">กำลังตรวจสอบเลขรหัสส่วนตัว</string>
+    <string name="set_pin_message">ต้องใช้ PIN นี้เพื่อปลดล็อคแอพของคุณทุกครั้งที่ใช้</string>
 
-	<string name="regular_transaction_info_message">ธุรกรรมนี้ไม่ได้ถูกชำระโดยทันที</string>
+    <string name="home_pay">ส่ง</string>
+    <string name="home_receive">ได้รับ</string>
+    <string name="home_available_balance">ยอดเงินคงเหลือ</string>
+    <string name="home_balance_hidden">ยอดคงเหลือถูกซ่อน</string>
+    <string name="home_balance_show_hint">กดเพื่อเลิกซ่อนยอดคงเหลือ</string>
+    <string name="home_balance_hide_hint">กดเพื่อซ่อนยอดคงเหลือ</string>
 
-	<string name="wallet_options_disconnect">ไม่เชื่อมต่อ</string>
+    <string name="dialog_confirm_confirm">ยืนยัน</string>
+    <string name="dialog_confirm_pay_to">ส่งไปยัง</string>
+    <string name="dialog_confirm_fee">ค่าธรรมเนียมเครือข่าย</string>
+    <string name="dialog_confirm_total">ทั้งหมด</string>
 
-	<string name="network_monitor_masternodes_title">Masternodes</string>
-	<string name="export_keys_dialog_title_to_seed">ดูวลีการกู้คืน</string>
-	<string name="import_keys_dialog_title_from_seed">กู้คืนจากวลีกู้คืน</string>
-	<string name="backup_to_seed_wallet_dialog_message">นี่คือวลีกู้คืนของคุณ โปรดเขียนมันลงไป</string>
-	<string name="backup_wallet_to_seed_dialog_warning">ห้ามให้บุคคลอื่นเห็นวลีการกู้คืนของคุณหรือพวกเขาสามารถใช้เงิน Dash ของคุณได้</string>
-	<string name="backup_to_seed_wallet_dialog_enter_pin_message">wallet  ของคุณถูกป้องกันโดยการใช้รหัส PIN.  ป้อน PIN ของคุณ และกดปุ่มแสดง เพื่อดูวลีกู้คืนของคุณ</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_secure_now">ทำให้ Wallet ปลอดภัยตอนนี้</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_scan_to_pay">สแกนเพื่อส่ง</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_pay_to_address">ส่งไปยังที่อยู่</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_buy_sell">ซื้อ / ขาย Dash</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_import_key">นำเข้าคีย์ส่วนตัว</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_add_shortcut">ใส่ทางลัด</string>
+
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_quick_receive">ได้รับอย่างรวดเร็ว</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_pin">เข้าสู่ระบบด้วยเลขรหัสส่วนตัว</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_fingerprint">เข้าสู่ระบบด้วยการสแกนลายนิ้วมือ</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_scan_to_pay">สแกนเพื่อส่ง</string>
+    <!-- Lock Screen: Text above the PIN Entry area -->
+    <string name="lock_enter_pin">ใส่รหัส PIN</string>
+    <string name="lock_unlock_with_fingerprint">ใช้ลายนิ้วมือของคุณเพื่อปลดล็อค</string>
+
+    <string name="perm_lock_info">กระเป๋าสตางค์ถูกล็อคอย่างถาวร</string>
+    <string name="perm_lock_wipe_wallet">รีเซ็ตกระเป๋าสตางค์</string>
+    <string name="perm_lock_close_app">ปิด</string>
+
+    <string name="scan_to_pay_error_dialog_title">สแกนเพื่อส่ง</string>
+    <string name="scan_to_pay_error_dialog_message">ที่อยู่ของ Dash ไม่ถูกต้อง หรือคำขอ URL ในคลิปบอร์ด:\n\n%s</string>
+    <string name="scan_to_pay_error_dialog_message_no_data">ที่อยู่ของ Dash ไม่ถูกต้อง หรือคำขอ URL ในคลิปบอร์ด</string>
+
+    <string name="receive_title">ได้รับ</string>
+    <string name="receive_enter_amount_message">ระบุจำนวนที่ได้รับ</string>
+    <string name="receive_enter_amount_button">ระบุจำนวน</string>
+    <string name="receive_share_button">แบ่งปัน</string>
+    <string name="receive_copied">คัดลอก</string>
+
+    <string name="pay_title">ส่ง</string>
+    <string name="history_title">ประวัติ</string>
+    <string name="more_title">มากขึ้น</string>
+    <string name="settings_title">ตั้งค่า</string>
+    <string name="security_title">ความปลอดภัย</string>
+    <string name="recover_wallet_title">กู้คืน wallet</string>
+    <string name="tools_title">เครื่องมือ</string>
+
+    <string name="payments_title">การชำระเงิน</string>
+    <string name="payments_tab_pay_label">ส่ง</string>
+    <string name="payments_tab_receive_label">ได้รับ</string>
+    <string name="payments_pay_by_qr_title">ส่งจาก</string>
+    <string name="payments_pay_by_qr_sub_title">สแกนโค้ด QR</string>
+    <string name="payments_pay_by_qr_button">สแกน</string>
+    <string name="payments_pay_to_clipboard_title">ส่งไปยังที่อยู่ที่คัดลอก</string>
+    <string name="payments_pay_to_clipboard_sub_title">ไม่มีที่อยู่คัดลอก</string>
+    <string name="payments_pay_to_clipboard_button">ส่ง</string>
+
+    <string name="forgot_pin_title">ลืม PIN?</string>
+    <string name="forgot_pin_message">คุณสามารถตั้งเลขรหัสส่วนตัวใหม่ได้ด้วยกลไกการข่วยเหลือของการกู้คืนวลีรหัสผ่านของคุณ</string>
+    <string name="forgot_pin_instruction_1">ป้อนวลีรหัสผ่านของคุณเพื่อกู้คืนกระเป๋าสตางค์ของคุณ</string>
+    <string name="forgot_pin_instruction_2">ตั้งเลขรหัสผ่านใหม่</string>
+    <string name="forgot_pin_instruction_3">เข้าสู่ระบบด้วยเลขรหัสผ่านใหม่ของคุณเพื่อการเข้าถึงกระเป๋าสตางค์ของคุณ</string>
+    <string name="forgot_pin_warning">หากคุณลืมเลขรหัสผ่านของคุณ และวลีรหัสผ่านการกู้คืนสูญหาย คุณจะไม่สามารถเข้าถึงกระเป๋าสตางค์และกองทุนเงินสะสมของคุณได้อีกต่อไป</string>
+
+    <string name="send_coins_auto_lock_feasible">ธุรกรรมนี้ชำระทันทีโดยไม่มีค่าธรรมเนียมเพิ่มเติม</string>
+    <string name="send_coins_auto_lock_not_feasible">ธุรกรรมนี้อาจจะใช้เวลาในการชำระหลายนาที  ทำให้เสร็จสมบูรณ์ทันทีสำหรับ%1$s%2$s หรือไม่?</string>
+    <string name="send_coins_instant_send_not_feasible">ธุรกรรมนี้อาจใช้เวลาหลายนาทีในการชำระ</string>
+
+    <string name="options_paste_from_clipboard_title">วางจากคลิปบอร์ด</string>
+
+    <string name="transaction_row_message_own_instantx_lock_request_notsent">การชำระเงินนี้ยังไม่ได้รับการส่ง</string>
+    <string name="transaction_row_message_sent_to_single_peer">การชำระเงินนี้ถูกส่งแล้ว</string>
+
+    <string name="regular_transaction_info_message">ธุรกรรมนี้ไม่ได้ถูกชำระโดยทันที</string>
+
+    <string name="wallet_options_disconnect">ไม่เชื่อมต่อ</string>
+
+    <string name="network_monitor_masternodes_title">Masternodes</string>
+    <string name="export_keys_dialog_title_to_seed">ดูวลีกู้คืน</string>
+    <string name="import_keys_dialog_title_from_seed">กู้คืนจากวลีกู้คืน</string>
+    <string name="backup_to_seed_wallet_dialog_message">นี่คือวลีกู้คืนของคุณ โปรดเขียนมันลงไป</string>
+    <string name="backup_wallet_to_seed_dialog_warning">ห้ามให้บุคคลอื่นเห็นวลีการกู้คืนของคุณหรือพวกเขาสามารถใช้เงิน Dash ของคุณได้</string>
+    <string name="backup_to_seed_wallet_dialog_enter_pin_message">wallet  ของคุณถูกป้องกันโดยการใช้รหัส PIN.  ป้อน PIN ของคุณ และกดปุ่มแสดง เพื่อดูวลีกู้คืนของคุณ</string>
     <string name="import_keys_from_seed_dialog_message">ป้อนวลีกู้คืนของคุณที่นี่</string>
-	<string name="import_export_keys_dialog_password_phrase">วลีกู้คืนไปที่นี่</string>
-	<string name="preferences_report_issue_summary">รวบรวมข้อมูลเกี่ยวกับปัญหาของคุณและส่งอีเมลรายงานของคุณไปยังนักพัฒนาซอฟต์แวร์</string>
-	<string name="navigation_configuration">องค์ประกอบ</string>
+    <string name="import_export_keys_dialog_password_phrase">วลีกู้คืนไปที่นี่</string>
+    <string name="preferences_report_issue_summary">รวบรวมข้อมูลเกี่ยวกับปัญหาของคุณและส่งอีเมลรายงานของคุณไปยังนักพัฒนาซอฟต์แวร์</string>
+    <string name="navigation_configuration">องค์ประกอบ</string>
     <string name="button_copy_address">คัดลอกที่อยู่</string>
-	<string name="request_coins_clipboard_address_msg">คัดลอกที่อยู่ Dash ไปยัง คลิปบอร์ด</string>
-	<string name="backup_wallet_to_seed_show_recovery_phrase">แสดง</string>
-	<string name="restore_wallet_from_invalid_seed_warning_message">%s เป็นคำที่ไม่ถูกต้อง </string>
+    <string name="request_coins_clipboard_address_msg">คัดลอกที่อยู่ Dash ไปยัง คลิปบอร์ด</string>
+    <string name="backup_wallet_to_seed_show_recovery_phrase">แสดง</string>
+    <string name="restore_wallet_from_invalid_seed_warning_message">%sไม่ใช่วลีกู้คืน</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">การกู้คืนวลีต้องมี 12 คำ</string>
+    <string name="restore_wallet_from_invalid_seed_bad_checksum">วลีกู้คืนไม่ดี</string>
+    <string name="restore_wallet_from_invalid_seed_failure">ไม่สามารถทำการกู้คืนกระเป๋าสตางค์ได้: \n\n%s\n\n วลีรหัสผ่านถูกต้องหรือไม่</string>
 
-	<string name="send_coins_options_fee_category_zero">ไม่มีค่าธรรมเนียม</string>
-	<string name="send_coins_fragment_hint_fee_zero">จะไม่มีการชำระค่าธรรมเนียม. ใช้ No fee เท่านั้นถ้าคุณไม่สนใจเกี่ยวกับเวลายืนยัน</string>
+    <string name="send_coins_options_fee_category_zero">ไม่มีค่าธรรมเนียม</string>
+    <string name="send_coins_fragment_hint_fee_zero">จะไม่มีการชำระค่าธรรมเนียม. ใช้ No fee เท่านั้นถ้าคุณไม่สนใจเกี่ยวกับเวลายืนยัน</string>
 
-	<string name="wallet_uri_handler_public_key_request_dialog_msg">แอพพลิเคชั่น %s ต้องการรับ Master Public Key ของคุณ  สิ่งนี้สามารถใช้เพื่อติดตาม wallet  ของคุณได้  แต่ไม่สามารถใช้ย้าย Dash ของคุณได้</string>
-	<string name="wallet_uri_handler_address_request_dialog_msg">แอพพลิเคชั่น %sกำลังขอที่อยู่เพื่อให้สามารถชำระเงินให้คุณได้ คุณต้องการให้สิทธิ์นี้หรือไม่ </string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
+    <string name="wallet_uri_handler_public_key_request_dialog_msg">แอพพลิเคชั่น %s ต้องการรับ Master Public Key ของคุณ  สิ่งนี้สามารถใช้เพื่อติดตาม wallet  ของคุณได้  แต่ไม่สามารถใช้ย้าย Dash ของคุณได้</string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
+    <string name="wallet_uri_handler_address_request_dialog_msg">แอพพลิเคชั่น %sกำลังขอที่อยู่เพื่อให้สามารถชำระเงินให้คุณได้ คุณต้องการให้สิทธิ์นี้หรือไม่ </string>
 
-	<string name="wallet_lock_unlock">ปลดล็อค</string>
-	<string name="wallet_lock_unlock_wallet">ปลดล็อค wallet ของคุณ</string>
-	<string name="wallet_lock_unlock_to_see_txs_title">wallet ถูกล็อค</string>
-	<string name="wallet_lock_unlock_to_see_txs_txt">แตะไอคอนด้านบนเพื่อปลดล็อค wallet ของคุณและดูประวัติการทำธุรกรรม</string>
-	<string name="wallet_lock_unlock_dialog_title">ปลดล็อค  wallet  ของคุณ </string>
-	<string name="wallet_lock_unlock_dialog_message">wallet ของคุณถูกป้องกันโดยการใช้รหัส PIN  ป้อนรหัส PIN และกดปุ่มปลดล็อคเพื่อทำต่อ</string>
-	<string name="wallet_lock_reset_wallet_title">ตั้งค่า wallet</string>
-	<string name="wallet_lock_reset_wallet_message">คุณแน่ใจหรือไม่?  Wallet ของคุณจะถูกลบและ Dash ทั้งหมดจะหายไป \n\n วิธีเดียวที่จะกู้คืน Dash ของคุณได้คือไฟล์สำรองหรือวลีกู้คืน</string>
+    <string name="wallet_lock_unlock">ปลดล็อค</string>
+    <string name="wallet_lock_unlock_wallet">ปลดล็อค wallet ของคุณ</string>
+    <string name="wallet_lock_unlock_to_see_txs_title">wallet ถูกล็อค</string>
+    <string name="wallet_lock_unlock_to_see_txs_txt">แตะไอคอนด้านบนเพื่อปลดล็อค wallet ของคุณและดูประวัติการทำธุรกรรม</string>
+    <string name="wallet_lock_unlock_dialog_title">ปลดล็อค  wallet  ของคุณ </string>
+    <string name="wallet_lock_unlock_dialog_message">wallet ของคุณถูกป้องกันโดยการใช้รหัส PIN  ป้อนรหัส PIN และกดปุ่มปลดล็อคเพื่อทำต่อ</string>
+    <string name="wallet_lock_reset_wallet_title">ตั้งค่า wallet</string>
+    <string name="wallet_lock_reset_wallet_message">คุณแน่ใจหรือไม่?  Wallet ของคุณจะถูกลบและ Dash ทั้งหมดจะหายไป \n\n วิธีเดียวที่จะกู้คืน Dash ของคุณได้คือไฟล์สำรองหรือวลีกู้คืน</string>
 
-	<string name="wallet_lock_wallet_disabled">wallet ถูกปิดการใช้งาน</string>
-	<string name="wallet_lock_try_again">ลองอีกครั้ง ใน %1$d%2$s</string>
-	<string name="wallet_lock_reset">ตั้งค่า</string>
-	<string name="wallet_lock_wrong_pin">รหัสผิด %s</string>
+    <string name="wallet_lock_wallet_disabled">wallet ถูกปิดการใช้งาน</string>
+    <string name="wallet_lock_try_again">ลองอีกครั้ง ใน %1$d%2$s</string>
+    <string name="wallet_lock_reset">ตั้งค่า</string>
+    <string name="wallet_lock_wrong_pin">รหัสผิด %s</string>
 
-	<plurals name="wallet_lock_attempts_remaining">
-		<item quantity="other">พยายามได้อีก %d</item>
-	</plurals>
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="other">พยายามได้อีก %d</item>
+    </plurals>
 
-	<plurals name="minute">
-		<item quantity="other">นาที</item>
-	</plurals>
-	
-	<plurals name="hour">
-		<item quantity="other">ชั่วโมง</item>
-	</plurals>
+    <plurals name="minute">
+        <item quantity="other">นาที</item>
+    </plurals>
 
-	<string name="encrypt_new_key_chain_upgrade_button">อัพเกรด</string>
-	<string name="encrypt_new_key_chain_dialog_title">อัพเกรด wallet ของคุณ</string>
-	<string name="encrypt_new_key_chain_dialog_message">wallet ของคุณจะได้รับการอัพเกรดเพื่อรองรับการนำเข้าและส่งออกไปยังแอปพลิเคชันอื่น ๆ</string>
-	<string name="encrypt_new_key_chain_enter_pin_dialog_message">คุณต้องป้อนรหัส PIN เพื่อดำเนินการขั้นตอนการอัพเกรดให้สำเร็จ</string>
-	<string name="pin_code_required_dialog_message">แอพพลิเคชั่นนี้ต้องการ PIN เพื่อใช้จ่ายและดูยอดคงเหลือและธุรกรรม</string>
+    <plurals name="hour">
+        <item quantity="other">ชั่วโมง</item>
+    </plurals>
+
+    <string name="encrypt_new_key_chain_upgrade_button">อัพเกรด</string>
+    <string name="encrypt_new_key_chain_dialog_title">อัพเกรด wallet ของคุณ</string>
+    <string name="encrypt_new_key_chain_dialog_message">wallet ของคุณจะได้รับการอัพเกรดเพื่อรองรับการนำเข้าและส่งออกไปยังแอปพลิเคชันอื่น ๆ</string>
+    <string name="encrypt_new_key_chain_enter_pin_dialog_message">คุณต้องป้อนรหัส PIN เพื่อดำเนินการขั้นตอนการอัพเกรดให้สำเร็จ</string>
+    <string name="pin_code_required_dialog_message">แอพพลิเคชั่นนี้ต้องการ PIN เพื่อใช้จ่ายและดูยอดคงเหลือและธุรกรรม</string>
     <string name="backup_wallet_seed_private_key_written_down_box">ฉันได้เขียนวลีกู้คืนแล้ว</string>
-	
-	<string name="change_exchange_currency_code_message">สกุลเงินท้องถิ่นของคุณคือ %1$s แต่ในแอพนี้สกุลเงินเริ่มต้นของคุณถูกตั้งไว้ที่%2$s   คุณต้องการเปลี่ยนเป็น %1$s หรือปล่อยให้เป็น%2$s?</string>
-	<string name="change_to">เปลี่ยนเป็น%s</string>
-	<string name="leave_as">%sปล่อยให้เป็น </string>
 
-	<string name="remind_later">เตือนภายหลัง</string>
-	<string name="backup_now">สำรองข้อมูลตอนนี้</string>
-	
-	<string name="notification_transactions_channel_name">ธุรกรรม</string>
-	<string name="notification_transactions_channel_description">รับการแจ้งเตือนเกี่ยวกับการทำธุรกรรมที่เข้ามา</string>
-	<string name="notification_synchronization_channel_name">ซิงโครไนซ์</string>
-	<string name="notification_synchronization_channel_description">แสดงการแจ้งเตือนเมื่อแอพพลิเคชั่นกำลังซิงโครไนซ์กับเครือข่าย</string>
+    <string name="change_exchange_currency_code_message">สกุลเงินท้องถิ่นของคุณคือ %1$s แต่ในแอพนี้สกุลเงินเริ่มต้นของคุณถูกตั้งไว้ที่%2$s   คุณต้องการเปลี่ยนเป็น %1$s หรือปล่อยให้เป็น%2$s?</string>
+    <string name="change_to">เปลี่ยนเป็น%s</string>
+    <string name="leave_as">%sปล่อยให้เป็น </string>
+
+    <string name="remind_later">เตือนภายหลัง</string>
+    <string name="backup_now">สำรองข้อมูลตอนนี้</string>
+
+    <string name="notification_transactions_channel_name">ธุรกรรม</string>
+    <string name="notification_transactions_channel_description">รับการแจ้งเตือนเกี่ยวกับการทำธุรกรรมที่เข้ามา</string>
+    <string name="notification_synchronization_channel_name">ซิงโครไนซ์</string>
+    <string name="notification_synchronization_channel_description">แสดงการแจ้งเตือนเมื่อแอพพลิเคชั่นกำลังซิงโครไนซ์กับเครือข่าย</string>
 
     <string name="net_type_indicator" />
 
-	<string name="unlock_with_fingerprint">ใช้ลายนิ้วมือของคุณเพื่อปลดล็อค</string>
-	<string name="unlock_with_fingerprint_error">ลายนิ้วมือไม่ตรงกัน โปรดลองอีกครั้ง</string>
-	<string name="unlock_with_fingerprint_error_max_attempts">ความพยายามใช้ลายนิ้วมือเกินขีดจำกัด กรุณาลองใหม่อีกครั้งในภายหลัง.</string>
-	<string name="or_unlock_with_fingerprint">หรือใช้ลายนิ้วมือเพื่อปลดล็อก</string>
-	<string name="enable_fingerprint">เปิดใช้งานลายนิ้วมือ</string>
-	<string name="touch_fingerprint_sensor">แตะเซ็นเซอร์ลายนิ้วมือ</string>
-	<string name="touch_fingerprint_to_enable">แตะเซ็นเซอร์ลายนิ้วมือเพื่อเปิดใช้งานการปลดล็อคด้วยลายนิ้วมือ</string>
+    <string name="unlock_with_fingerprint">ใช้ลายนิ้วมือของคุณเพื่อปลดล็อค</string>
+    <string name="unlock_with_fingerprint_error">ลายนิ้วมือไม่ตรงกัน โปรดลองอีกครั้ง</string>
+    <string name="unlock_with_fingerprint_error_max_attempts">ความพยายามใช้ลายนิ้วมือเกินขีดจำกัด กรุณาลองใหม่อีกครั้งในภายหลัง.</string>
+    <string name="or_unlock_with_fingerprint">หรือใช้ลายนิ้วมือเพื่อปลดล็อก</string>
+    <string name="enable_fingerprint">เปิดใช้งานลายนิ้วมือ</string>
+    <string name="touch_fingerprint_sensor">แตะเซ็นเซอร์ลายนิ้วมือ</string>
+    <string name="touch_fingerprint_to_enable">แตะเซ็นเซอร์ลายนิ้วมือเพื่อเปิดใช้งานการปลดล็อคด้วยลายนิ้วมือ</string>
+    <string name="fingerprint_changed_title">เปลี่ยนแปลงข้อมูลลายนิ้วมือเรียบร้อยแล้ว</string>
+	<string name="fingerprint_changed_message">เราตรวจพบข้อมูลการเปลี่ยนแปลงการสแกนลายนิ้วมือของคุณ คุณต้องใช้เลขรหัสส่วนตัวในครั้งนี้</string>
 	<string name="exchange_rate_missing">การชำระเงินนี้เก่าเกินไปที่จะรับ fiat value</string>
 
-	<string name="preferences_enable_payment_request_summary">ใช้โปรโตคอลการชำระเงินสำหรับการชำระเงินที่ใช้รหัส QR-code</string>
-	<string name="preferences_enable_payment_request_title">BIP70 สำหรับสแกนเพื่อจ่าย</string>
+    <string name="preferences_enable_payment_request_summary">ใช้โปรโตคอลการชำระเงินสำหรับการชำระเงินที่ใช้รหัส QR-code</string>
+    <string name="preferences_enable_payment_request_title">BIP70 สำหรับสแกนเพื่อจ่าย</string>
+
+    <string name="verify_continue">ดำเนินการต่อ</string>
+    <string name="verify">ตรวจสอบ</string>
+    <string name="verify_backup_wallet">Wallet สำรอง</string>
+    <string name="verify_show_recovery_phrase">แสดงวลีกู้คืน</string>
+    <string name="verify_secure_now">ทำให้ Wallet ปลอดภัยตอนนี้</string>
+    <string name="verify_it_is_important">สำคัญ</string>
+    <string name="verify_it_is_important_subtitle">เรากำลังจะแสดงให้คุณเห็นถึง การเข้ารหัสและถอดรหัสโดยใช้กุญแจรหัสตัวเดียวกันในการเข้าถึงกระเป๋าสตางค์ของคุณ</string>
+    <string name="verify_info_text_1">วลีกู้คืนนี้จะทำให้คุณเข้าถึงจำนวนเงินในวอลเล็ท</string>
+    <string name="verify_info_text_2">เราไม่เก็บรักษาวลีนี้</string>
+    <string name="verify_info_text_3">คุณจะต้องใช้วลีกู้คืนนี้เพื่อเข้าถึงเงินทุนของคุณหากอุปกรณ์นี้สูญหายได้รับความเสียหายหรือหาก Dash Wallet เคยถอนการติดตั้งโดยไม่ได้ตั้งใจจากอุปกรณ์นี้</string>
+    <string name="verify_skip">ข้าม</string>
+    <string name="verify_secure_now_btn">ปลอดภัย</string>
+    <string name="verify_secure_now_message">หากคุณทำอุปกรณ์นี้หาย เงินก็จะสูญหาย รับวลีการกู้คืนเพื่อให้คุณสามารถกู้คืนกระเป๋าเงินของคุณบนอุปกรณ์อื่น</string>
+    <string name="verify_seed_title">กรุณาเขียนลงไป</string>
+    <string name="verify_seed_write_down_confirmation">ฉันได้เขียนลงไปแล้ว</string>
+    <string name="verify_seed_buttons_tip">โปรดแตะที่คำจากวลีการกู้คืนของคุณในลำดับที่ถูกต้อง</string>
+    <string name="verify_seed_success_title">้ตรวจสอบสำเร็จ</string>
+    <string name="verify_seed_success_message">กระเป๋าเงินของคุณปลอดภัยแล้ว คุณสามารถใช้วลีกู้คืนได้ทุกเวลาเพื่อกู้คืนบัญชีของคุณบนอุปกรณ์อื่น</string>
+    <string name="view_seed_done">เสร็จแล้ว</string>
+    <string name="view_seed_title">วลีกู้คืน</string>
+	<string name="transaction_result_view_on_explorer">ดูใน Block Explorer</string>
+	<string name="transaction_result_paid_successfully">ส่งสำเร็จแล้ว</string>
+	<string name="transaction_result_sent_to">ส่งไปยัง</string>
+	<string name="transaction_date_and_time">วันที่</string>
+	<string name="transaction_close">ปิด</string>
+	<string name="transaction_details_amount_received">จำนวนเงินที่ได้รับ</string>
+	<string name="transaction_details_amount_sent">จำนวนเงินที่ส่ง</string>
+    <string name="transaction_details_sent_from">ส่งจาก</string>
+    <string name="transaction_details_sent_to">ส่งไปยัง</string>
+    <string name="transaction_details_received_at">ได้รับที่</string>
+    <string name="transaction_details_moved_from">เคลื่อนย้ายจาก</string>
+    <string name="transaction_details_moved_internally_to">ย้ายไปภายแล้ว</string>
+
+    <string name="authenticate_fingerprint_title">รับรองความน่าเชื่อถือ</string>
+    <string name="authenticate_fingerprint_message">ยืนยันลายนิ้วมือเพื่อดำเนินการต่อไป</string>
+    <string name="authenticate_pin_message">ป้อนเลขรหัสผ่านของคุณเพื่อดำเนินการต่อไป</string>
+    <string name="authenticate_switch_to_fingerprint">ใช้ลายนิ้วมือ</string>
+    <string name="authenticate_switch_to_pin">ใช้รหัสผ่าน</string>
+
+    <string name="menu_buy_and_sell_title">ซื้อ &amp; ขาย Dash</string>
+    <string name="menu_buy_and_sell_subtitle">เชื่อมต่อกับการแลกเปลี่ยนบุคคลที่สาม</string>
+    <string name="menu_security_title">ความปลอดภัย</string>
+    <string name="menu_security_subtitle">ดูวลี, สำรองวอลเล็ท...</string>
+    <string name="menu_settings_title">ตั้งค่า</string>
+    <string name="menu_settings_subtitle">สกุลเงินเริ่มต้น, ทางลัด, เกี่ยวกับ...</string>
+    <string name="menu_tools_title">เครื่องมือ</string>
+    <string name="menu_tools_subtitle">นำเข้าคีย์ส่วนตัว...</string>
+    <string name="menu_local_currency">สกุลเงินท้องถิ่น</string>
+    <string name="menu_rescan_blockchain">สแกน blockchain อีกครั้ง</string>
+
+    <string name="tools_address_book">สมุดที่อยู่</string>
+    <string name="tools_import_private_key">นำเข้าคีย์ส่วนตัว</string>
+    <string name="tools_network_monitor">จอภาพเครือข่าย</string>
+
+    <string name="about_help_us_improve">ช่วยเราเพื่อพัฒนาประการณ์ของคุณ</string>
+    <string name="about_review_and_rate">วิจารณ์และให้คะแนนแอพพลิเคชั่นนี้</string>
+    <string name="about_contact_support">ติดต่อฝ่ายสนับสนุน</string>
+    <string name="about_fork_disclaimer">นี่คือซอฟต์แวร์โอเพนซอร์ซ แอพพลิเคชั่นที่แยกสาขาออกมาจากกระเป๋าสตางค์บิทคอยน์</string>
+    <string name="about_copyright">Copyright © 2020 Dash Core</string>
+    <string name="about_license">สัญญาอนุญาตให้ใช้ซอฟต์แวร์ หรือไลเซนส์ แบบหนึ่ง ซึ่งสงวนลิขสิทธิ์ของซอฟต์แวร์นั้น แต่อนุญาตให้บุคคลใดๆทำซ้ำ เผยแพร่ และ/หรือดัดแปลงซอฟต์แวร์นั้นได้อย่างถูกต้องตามกฎหมาย และโดยเสรี เวอร์ชั่น3.0</string>
+    <string name="about_version_name">กระเป๋าสตางค์ Dash%s</string>
+
+    <string name="block">บล็อก</string>
+    <string name="time">เวลา</string>
+    <string name="hash">การแบ่งย่อยข้อมูลและการผสมข้อมูลย่อยทั้งหมดเข้าด้วยกัน</string>
+    <string name="block_info">การบล็อกข้อมูล</string>
+
+    <string name="scan_private_key">สแกนคีย์ส่วนตัว</string>
+    <string name="scan_private_key_intro_1">คุณกำลังจะเคลื่อนย้ายเงินทุนสะสมจากกระเป๋าสตางค์ Dash Paper</string>
+    <string name="scan_private_key_intro_2">จะทำการย้ายเหรียญทั้งหมดของมายังวอลเล็ทบนอุปกรณ์นี้</string>
+    <string name="scan_private_key_intro_3">เมื่อธุรกรรมถูกยืนยัน วอลเล็ทอื่นๆจะไม่มีจราคาและไม่ควรนำมาใช้อีกครั้งเพื่อความปลอดภัย</string>
+    <string name="confirm">ยืนยัน</string>
+
+    <string name="advanced_security_security_level">เลเวลความปลอดภัย</string>
+    <string name="auto_logout">ออกจากระแบบอัตโนมัติ</string>
+    <string name="spending_confirmation">การยืนยันการใช้จ่าย</string>
+    <string name="logout_after">ออกจากระบบหลังจาก</string>
+    <string name="immediately">ทันที</string>
+    <string name="twenty_four_hours">24 ชั่วโมง</string>
+    <string name="one_minute">1 นาที</string>
+    <string name="five_minute">5 นาที</string>
+    <string name="one_hour">1 ชั่วโมง</string>
+    <string name="biometric_limit">ข้อกำหนดวิธีการยืนยันตัวตนด้วยไบโอแมทริกซ์ เช่นการจดจำใบหน้าและดวงตา</string>
+    <string name="spending_confirmation_hint_zero">ต้องระบุ PIN ทุกครั้งเพื่อชำระเงิน</string>
+    <string name="spending_confirmation_hint_above_zero">คุณสามารถยืนยันตัวตนด้วยระบบไบโอแมทริกซ์สำหรับการจ่ายเงินด้านล่าง</string>
+
+    <string name="security_none">ไม่มี</string>
+    <string name="security_low">ต่ำ</string>
+    <string name="security_medium">ปานกลาง</string>
+    <string name="security_high">สูง</string>
+    <string name="security_very_high">สูงมาก</string>
+    <string name="max">สูงสุด</string>
+
+    <string name="enter_amount_available">ที่สามารถใช้ได้</string>
+
+    <string name="skip">ข้าม</string>
+    <string name="get_started">เริ่มต้น</string>
+    <string name="welcome_screen_title_1_new_install">ยินดีต้อนรับ</string>
+    <string name="welcome_screen_title_1_upgrade">อัพเกรด</string>
+    <string name="welcome_screen_subtitle_1">ประสบการณ์ที่ใช้งานง่ายและคุ้นเคย</string>
+    <string name="welcome_screen_title_2">ชำระเงินได้อย่างง่ายดาย</string>
+    <string name="welcome_screen_subtitle_2">ชำระเงินและรับเงินทันทีด้วยกระบวนการชำระเงินที่ใช้งานง่าย</string>
+    <string name="welcome_screen_title_3">ควบคุมมากขึ้น</string>
+    <string name="welcome_screen_subtitle_3">มีการควบคุมที่สมบูรณ์และกำหนดกระเป๋าเงินของคุณตามความต้องการของคุณ</string>
+
+    <string-array name="history_filter">
+        <item>ทั้งหมด</item>
+        <item>ได้รับ</item>
+        <item>ส่ง</item>
+    </string-array>
+
+    <string name="sync_status_wait">โปรดรอจนกว่าการซิงค์จะเสร็จสมบูรณ์</string>
+    <string name="sync_status_syncing_title">กำลังซิงค์</string>
+    <string name="sync_status_syncing_sub_title">กับ Dash Blockchain</string>
+    <string name="sync_status_unable_to_connect">ไม่สามารถเชื่อมต่อ</string>
+    <string name="sync_status_check_connection">ตรวจสอบการเชื่อมต่อ</string>
+    <string name="sync_status_sync_title">ซิงค์</string>
+    <string name="sync_status_sync_completed">สำเร็จ</string>
+
+    <string name="appwidget_wallet_not_ready">กรุณาตั้งค่ากระเป๋าสตางค์ของคุณ</string>
 </resources>

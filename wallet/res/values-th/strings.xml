@@ -34,8 +34,8 @@
     <string name="wallet_transactions_options_filter_received">การชำระเงินที่ได้รับ</string>
     <string name="wallet_transactions_options_filter_sent">การชำระเงินที่ส่ง</string>
     <string name="wallet_options_safety_menu">ปลอดภัย</string>
-    <string name="wallet_options_encrypt_keys_set">ตั้งค่า PIN การใช้จ่าย</string>
-    <string name="wallet_options_encrypt_keys_change">เปลี่ยน PIN การใช้จ่าย</string>
+    <string name="wallet_options_encrypt_keys_set">ตั้งค่า PIN</string>
+    <string name="wallet_options_encrypt_keys_change">เปลี่ยนแปลง PIN</string>
     <string name="wallet_options_safety">บันทึกความปลอดภัย</string>
     <string name="wallet_low_storage_dialog_title">พื้นที่จัดเก็บข้อมูลภายในอุปกรณ์ต่ำ!</string>
     <string name="wallet_low_storage_dialog_msg">Wallet Dash ใช้พื้นที่เก็บข้อมูลภายในสำหรับการบันทึกการทำธุรกรรมและการบล็อก  ถ้าหากพื้นที่ไม่เพียงพอ มันจะหยุดทำงานและทำให้ Dash ของคุณจะอยู่ในความเสี่ยง คุณต้องการเปิด Application Manager เพื่อถอนการติดตั้งแอพพลิเคชั่นที่ไม่จำเป็นหรือไม่?</string>
@@ -61,12 +61,14 @@
     <string name="send_coins_fragment_receiving_address_own">คุณกำลังส่งให้ตัวเอง!</string>
     <string name="send_coins_fragment_receiving_address_complex">ที่อยู่ \n ซับซ้อน</string>
     <string name="send_coins_fragment_pending">(%sกำลังรอการยืนยัน​)</string>
+    <string name="send_coins_fragment_amount_label">จำนวนเงินที่ส่ง</string>
     <string name="send_coins_fragment_pin_label">ใส่รหัส PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">ค่าธรรมเนียมระบบเครือข่ายของ %s จะถูกจ่าย</string>
     <string name="send_coins_fragment_hint_fee_priority">ค่าธรรมเนียมพิเศษของ %s จะถูกจ่าย หากคุณสนใจค่าธรรมเนียมพิเศษนี้ โปรดใช้ \'priority\' เมื่อต้องการการยืนยันอย่างรวดเร็ว</string>
+    <string name="send_coins_fragment_hint_dusty_send">จำนวนเงินน้อยเกินไปที่จะส่ง</string>
     <string name="send_coins_fragment_hint_insufficient_money">ยอดเงินไม่เพียงพอ</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">จำนวนเงินในการชำระเงิน wallet ของคุณ ไม่เพิ่มขึ้นที่จะสามารถส่งได้</string>
-    <string name="send_coins_fragment_hint_replaying">ขณะนี้ยังไม่มีการชำระเงินเนื่องจากการเล่นซ้ำอยู่ระหว่างดำเนินการ</string>
+    <string name="send_coins_fragment_hint_replaying">ขณะนี้ยังไม่สามารถทำการชำระเงินได้เนื่องกระเป๋าสตางค์ยังไม่เชื่อมต่อกับเครือข่าย</string>
     <string name="send_coins_fragment_direct_payment_enable">ส่งการชำระเงินโดยตรงไปยังผู้รับเงิน</string>
     <string name="send_coins_fragment_direct_payment_ack">การชำระเงินของคุณได้ถูกส่งโดยตรงแล้ว</string>
     <string name="send_coins_fragment_direct_payment_nack">การชำระเงินถูกปฏิเสธผ่านเครือข่ายโดยตรง</string>
@@ -76,6 +78,7 @@
     <string name="send_coins_fragment_button_back">ย้อนกลับ</string>
     <string name="send_coins_fragment_insufficient_money_title">เหรียญไม่เพียงพอ</string>
     <string name="send_coins_fragment_insufficient_money_msg1">คุณขาดอีก %s</string>
+    <string name="send_coins_fragment_insufficient_money_msg2">คุณแน่ใจหรือว่าต้องการจะส่งด้วยจำนวนทั้งหมดที่คุณมี</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">การว่างเปล่าของ wallet  ล้มเหลว</string>
     <string name="send_coins_fragment_state_decrypting">กำลังถอดรหัส...</string>
     <string name="send_coins_preparation_msg">กำลังลงชื่อ...</string>
@@ -93,6 +96,7 @@
     <string name="sweep_wallet_fragment_wallet_unknown">เริ่มต้นสแกน private key ของ paper wallet   ใช้ปุ่มการทำงานกล้องถ่ายรูป</string>
     <string name="sweep_wallet_fragment_encrypted">private key นี้ จะถูกป้องกันจากรหัสผ่าน</string>
     <string name="sweep_wallet_fragment_password">รหัสผ่าน</string>
+    <string name="sweep_wallet_fragment_bad_password">รหัสผ่านไม่ถูกต้อง</string>
     <string name="sweep_wallet_fragment_balance">ยอดคงเหลือที่จะปัดกวาด</string>
     <string name="sweep_wallet_fragment_button_decrypt">ถอดรหัส </string>
     <string name="sweep_wallet_fragment_button_sweep">ปัดกวาด</string>
@@ -155,14 +159,30 @@
     <string name="transaction_row_status_received">ได้รับ</string>
     <string name="transaction_row_status_sent">ส่ง</string>
     <string name="transaction_row_status_sending">กำลังส่ง</string>
+    <string name="transaction_row_status_sent_internally">ภายใน</string>
     <string name="transaction_row_status_processing">กำลังประมวลผล</string>
     <string name="transaction_row_status_confirming">กำลังยืนยัน</string>
     <string name="transaction_row_status_locked">ล็อค</string>
+    <string name="transaction_row_status_error_sending">การส่งผิดพลาด</string>
     <string name="transaction_row_status_error_dead">จ่ายเงินสองเท่า</string>
+    <string name="transaction_row_status_error_conflicting">ขัดข้อง</string>
+    <string name="transaction_row_status_error_insufficient_fee">ค่าธรรมเนียมไม่เพียงพอ</string>
+    <string name="transaction_row_status_error_dust">จำนวนคริปโตที่น้อยที่สุดในการทำธุรกรรมแต่มากกว่าค่าธรรมเนียมในการโอนเงินของคริปโตนั้น ๆ</string>
+    <string name="transaction_row_status_error_non_standard">ซึ่งไม่ได้มาตรฐาน</string>
+    <string name="transaction_row_status_error_malformed">ซึ่งถูกสร้างขึ้นอย่างผิดปกติ</string>
+    <string name="transaction_row_status_error_duplicate">ทำซ้ำ</string>
+    <string name="transaction_row_status_error_obsolete">ล้าสมัย เลิกใช้แล้ว</string>
     <string name="transaction_row_status_error_invalid">ไม่ถูกต้อง</string>
+    <string name="transaction_row_status_error_other">ซึ่งเป็นไม่เป็นที่รู้จัก</string>
+    <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
+    <string name="transaction_row_time_text">บน %s ที่ %s</string>
+    <string name="transaction_row_rate_not_available">ที่ไม่สามารถใช้ประโยชน์ได้</string>
     <string name="transaction_row_status_masternode_registration">การลงทะเบียน Masternode </string>
     <string name="transaction_row_status_masternode_update_registrar">อัพเดต Masternode</string>
     <string name="transaction_row_status_masternode_update_service">อัพเดต Masternode</string>
+    <string name="transaction_row_status_masternode_revoke">การเพิกถอน Masternode</string>
+    <string name="transaction_row_status_masternode_reward">ผลตอบแทนจากการลงทุน Masternode</string>
+    <string name="transaction_row_status_mining_reward">ผลตอบแทนจากการขุด การขุด หมายถึง การแก้ โจทย์สมการทางคณิตศาสตร์โดยใช้เครื่องคอมพิวเตอร์ ประมวลผลเพื่อยืนยันธุรกรรมบนบล็อกเชน</string>
     <string name="network_monitor_activity_title">จอภาพเครือข่าย</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">บล็อค</string>
@@ -347,8 +367,10 @@
     <string name="dash_slogan">เร่งด่วน - ส่วนตัว - ปลอดภัย</string>
     <string name="dash_wallet">wallet</string>
 
+    <string name="activity_security_backup_wallet">การสำรองข้อมูลในกระเป๋าสตางค์ไปยังแฟ้มเอกสาร</string>
     <string name="activity_security_view_recovery_phrase">ดูวลีกู้คืน</string>
     <string name="activity_security_advanced">ความปลอดภัยขั้นสูง</string>
+    <string name="activity_security_biometric_auth">การยืนยันตัวตนโดยใช้การสแกนลายนิ้วมือ</string>
     <string name="activity_security_hide_balance">สมดุลอัตโนมัติ</string>
     <string name="reset_to_default">ตั้งค่าเป็นค่าเริ่มต้น</string>
 

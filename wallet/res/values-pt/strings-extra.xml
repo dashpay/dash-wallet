@@ -4,6 +4,8 @@
     <string name="onboarding_create_wallet">Criar uma Nova Carteira</string>
     <string name="onboarding_recover_wallet">Restaurar a partir da frase de recuperação</string>
     <string name="onboarding_restore_wallet">Restaurar carteira a partir de um arquivo</string>
+    <string name="onboarding_load_wallet_error">Não foi possível carregar a carteira!</string>
+
     <string name="set_pin_create_new_wallet">Criar uma Nova Carteira</string>
     <string name="set_pin_restore_wallet">Restaurar carteira</string>
     <string name="set_pin_enter_pin">Inserir PIN antigo</string>
@@ -11,6 +13,7 @@
     <string name="set_pin_confirm_pin">Confirmar PIN</string>
     <string name="set_pin_encrypting">Encriptando carteira</string>
     <string name="set_pin_decrypting">Desencriptando carteira</string>
+    <string name="set_pin_verifying_pin">Verificando PIN</string>
     <string name="set_pin_message">Este PIN será requerido para desbloquear o seu app toda vez que o utilize</string>
 
     <string name="home_pay">Enviar</string>
@@ -40,6 +43,10 @@
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Receber Rapidamente</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_pin">Entrar com PIN</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_fingerprint">Entrar com Digital</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_scan_to_pay">Scanear para Enviar</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
@@ -79,6 +86,9 @@
     <string name="payments_pay_to_clipboard_button">Enviar</string>
 
     <string name="forgot_pin_title">Esqueceu o PIN?</string>
+    <string name="forgot_pin_message">Você pode definir um novo PIN com a ajuda da sua frase de recuperação.</string>
+    <string name="forgot_pin_instruction_1">Insira a Frase de Recuperação para recuperar a sua carteira.</string>
+    <string name="forgot_pin_instruction_2">Definir um novo PIN</string>
     <string name="forgot_pin_instruction_3">Entre com o seu PIN para acessar a sua carteira</string>
     <string name="forgot_pin_warning">Se você esqueceu o seu PIN e perdeu a sua frase de recuperação, você não pode recuperar sua carteira e fundos.</string>
 
@@ -108,7 +118,11 @@
     <string name="button_copy_address">Copiar endereço</string>
     <string name="request_coins_clipboard_address_msg">Endereço Dash copiado para a área de transferência</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Mostrar</string>
+    <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" não é uma frase de recuperação </string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Frase de recuperação deve ter 12 palavras</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Frase de recuperação incorreta</string>
+    <string name="restore_wallet_from_invalid_seed_failure">A carteira não pôde ser restaurada:\n\n%s\n\nSenha incorreta?</string>
+
     <string name="send_coins_options_fee_category_zero">Sem Taxa</string>
     <string name="send_coins_fragment_hint_fee_zero">Nenhuma taxa será paga. Use \'sem taxa\' somente se você não se importa com o tempo de confirmação.</string>
 
@@ -172,6 +186,7 @@
     <string name="unlock_with_fingerprint_error_max_attempts">Numero máximo de tentativas de digital excedido. Por favor tente novamente mais tarde.</string>
     <string name="or_unlock_with_fingerprint">Ou use sua digital para desbloquear.</string>
     <string name="enable_fingerprint">Habilitar digital</string>
+    <string name="touch_fingerprint_sensor">Toque o sensor de digital</string>
     <string name="touch_fingerprint_to_enable">Toque o sensor de digital para habilitar o desbloqueio por digital.</string>
     <string name="fingerprint_changed_title">Dados de Impressão Digital mudaram</string>
 	<string name="fingerprint_changed_message">Detectamos uma mudança nos dados de autenticação por digital. Você precisa usar o seu PIN essa vez.</string>
@@ -200,13 +215,18 @@
     <string name="verify_seed_success_message"> Sua carteira está segura agora. Você pode usar sua frase de recuperação em qualquer momento para recuperar sua conta em outro dispositivo.</string>
     <string name="view_seed_done">Feito</string>
     <string name="view_seed_title">Frase de Recuperação</string>
-	<string name="transaction_result_view_on_explorer">Ver no Explorador</string>
+	<string name="transaction_result_view_on_explorer">Ver no Explorador de Blocos</string>
 	<string name="transaction_result_paid_successfully">Enviado com sucesso</string>
 	<string name="transaction_result_sent_to">Enviado para</string>
-	<string name="transaction_date_and_time">Data &amp; Hora</string>
+	<string name="transaction_date_and_time">Data</string>
 	<string name="transaction_close">Fechar</string>
 	<string name="transaction_details_amount_received">Valor Recebido</string>
 	<string name="transaction_details_amount_sent">Valor Enviado</string>
+    <string name="transaction_details_sent_from">Enviar para</string>
+    <string name="transaction_details_sent_to">Enviado para</string>
+    <string name="transaction_details_received_at">Recebido em</string>
+    <string name="transaction_details_moved_from">Movido de</string>
+    <string name="transaction_details_moved_internally_to">Movido internamente para</string>
 
     <string name="authenticate_fingerprint_title">Autenticar</string>
     <string name="authenticate_fingerprint_message">Confirmar digital para continuar</string>
@@ -214,6 +234,7 @@
     <string name="authenticate_switch_to_fingerprint">Usar Digital</string>
     <string name="authenticate_switch_to_pin">Usar Senha</string>
 
+    <string name="menu_buy_and_sell_title">Comprar &amp; Vender Dash</string>
     <string name="menu_buy_and_sell_subtitle">Conectar com exchange de terceiros</string>
     <string name="menu_security_title">Segurança</string>
     <string name="menu_security_subtitle">Ver frase de recuperação, fazer backup...</string>
@@ -242,6 +263,7 @@
     <string name="block_info">Informação de Bloco</string>
 
     <string name="scan_private_key">Scanear Chave Privada</string>
+    <string name="scan_private_key_intro_1">Você está prestes a varrer os fundos de uma carteira Dash de papel.</string>
     <string name="scan_private_key_intro_2">Isso moverá todas as moedas daquela carteira para a carteira nesse dispositivo.</string>
     <string name="scan_private_key_intro_3">Quando a transação esteja confirmada, a outra carteira será inutilizada e não deve ser utilizada por razões de segurança.</string>
     <string name="confirm">Confirmar</string>
@@ -255,7 +277,10 @@
     <string name="one_minute">1 min</string>
     <string name="five_minute">5 min</string>
     <string name="one_hour">1 hora</string>
+    <string name="biometric_limit">Limite Biométrico</string>
     <string name="spending_confirmation_hint_zero">PIN é sempre necessário para realizar um pagamento</string>
+    <string name="spending_confirmation_hint_above_zero">Você pode autenticar com Autenticação Biométrica para pagamentos abaixo de</string>
+
     <string name="security_none">Nenhuma</string>
     <string name="security_low">Baixo</string>
     <string name="security_medium">Média</string>
@@ -286,6 +311,8 @@
     <string name="sync_status_syncing_sub_title">com a blockchain de Dash</string>
     <string name="sync_status_unable_to_connect">Não foi possível conectar</string>
     <string name="sync_status_check_connection">Verifique sua conexão</string>
+    <string name="sync_status_sync_title">Sincronização</string>
+    <string name="sync_status_sync_completed">Completa</string>
 
-
+    <string name="appwidget_wallet_not_ready">Configure sua carteira por favor</string>
 </resources>
