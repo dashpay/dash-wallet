@@ -215,13 +215,18 @@
     <string name="verify_seed_success_message">Вашият портфейл сега е защитен. Можете да използвате вашата фраза за възстановяване по всяко време, за да възстановите акаунта си на друго устройство.</string>
     <string name="view_seed_done">Завършено</string>
     <string name="view_seed_title">Фраза за възстановяване</string>
-	<string name="transaction_result_view_on_explorer">Преглед в Explorer</string>
+	<string name="transaction_result_view_on_explorer">Преглед в Block Explorer</string>
 	<string name="transaction_result_paid_successfully">Изпратено успешно</string>
 	<string name="transaction_result_sent_to">Изпратени на</string>
-	<string name="transaction_date_and_time">Дата &amp; Час</string>
+	<string name="transaction_date_and_time">Дата</string>
 	<string name="transaction_close">Затвори</string>
 	<string name="transaction_details_amount_received">Получена сума</string>
 	<string name="transaction_details_amount_sent">Изпратена сума</string>
+    <string name="transaction_details_sent_from">Изпрати от</string>
+    <string name="transaction_details_sent_to">Изпратени на</string>
+    <string name="transaction_details_received_at">Получени в</string>
+    <string name="transaction_details_moved_from">Преместено от</string>
+    <string name="transaction_details_moved_internally_to">Вътрешно преместени към</string>
 
     <string name="authenticate_fingerprint_title">Удостоверяване</string>
     <string name="authenticate_fingerprint_message">Потвърдете пръстовият отпечатък, за да продължите</string>
@@ -272,7 +277,6 @@
     <string name="one_minute">1 мин</string>
     <string name="five_minute">5 мин</string>
     <string name="one_hour">1 час</string>
-    <string name="one_day">1 ден</string>
     <string name="biometric_limit">Биометричен лимит</string>
     <string name="spending_confirmation_hint_zero">ПИН се изисква винаги при правене на плащания</string>
     <string name="spending_confirmation_hint_above_zero">Можете да потвърдите с  биометрично удостоверяване при плащанията по-долу</string>
@@ -307,6 +311,8 @@
     <string name="sync_status_syncing_sub_title">с Dash блок верига</string>
     <string name="sync_status_unable_to_connect">Не може да се свърже</string>
     <string name="sync_status_check_connection">Проверете връзката</string>
+    <string name="sync_status_sync_title">Синхронизиране</string>
+    <string name="sync_status_sync_completed">Завършен</string>
 
-
+    <string name="appwidget_wallet_not_ready">Моля, настройте вашият портфейл</string>
 </resources>

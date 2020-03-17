@@ -212,13 +212,18 @@
     <string name="verify_seed_success_message">Dompet Anda aman sekarang. Anda dapat menggunakan frasa pemulihan kapan saja untuk memulihkan akun di perangkat lain.</string>
     <string name="view_seed_done">Selesai</string>
     <string name="view_seed_title">Frasa pemulihan</string>
-	<string name="transaction_result_view_on_explorer">Lihat di Explorer</string>
+	<string name="transaction_result_view_on_explorer">Lihat di Blok Explorer</string>
 	<string name="transaction_result_paid_successfully">Pengiriman berhasil</string>
 	<string name="transaction_result_sent_to">Terkirim ke</string>
-	<string name="transaction_date_and_time">Tanggal &amp; waktu</string>
+	<string name="transaction_date_and_time">Tanggal</string>
 	<string name="transaction_close">Tutup</string>
 	<string name="transaction_details_amount_received">Jumlah Diterima</string>
 	<string name="transaction_details_amount_sent">Jumlah Dikirim</string>
+    <string name="transaction_details_sent_from">Terkirim dari</string>
+    <string name="transaction_details_sent_to">Terkirim ke</string>
+    <string name="transaction_details_received_at">Diterima di</string>
+    <string name="transaction_details_moved_from">Pindah dari</string>
+    <string name="transaction_details_moved_internally_to">Pindah ke internal</string>
 
     <string name="authenticate_fingerprint_title">Membuktikan</string>
     <string name="authenticate_fingerprint_message">Konfirmasikan sidik jari untuk melanjutkan</string>
@@ -269,7 +274,6 @@
     <string name="one_minute">1 menit</string>
     <string name="five_minute">5 menit</string>
     <string name="one_hour">1 jam</string>
-    <string name="one_day">1 hari</string>
     <string name="biometric_limit">Batas biometrik</string>
     <string name="spending_confirmation_hint_zero">PIN selalu diperlukan untuk melakukan pembayaran</string>
     <string name="spending_confirmation_hint_above_zero">Anda dapat mengautentikasi dengan Otentikasi Biometrik untuk pembayaran di bawah ini</string>
@@ -304,6 +308,8 @@
     <string name="sync_status_syncing_sub_title">dengan Dash blockchain</string>
     <string name="sync_status_unable_to_connect">Tidak dapat terhubung</string>
     <string name="sync_status_check_connection">Periksa koneksi anda</string>
+    <string name="sync_status_sync_title">Sync</string>
+    <string name="sync_status_sync_completed">Lengkap</string>
 
-
+    <string name="appwidget_wallet_not_ready">Harap siapkan dompet Anda</string>
 </resources>

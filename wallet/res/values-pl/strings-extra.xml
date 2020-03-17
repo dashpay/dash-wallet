@@ -221,13 +221,18 @@
     <string name="verify_seed_success_message">Twój portfel jest teraz zabezpieczony. Możesz użyć swojej frazy odzyskiwania w dowolnym momencie, aby odzyskać konto na innym urządzeniu.</string>
     <string name="view_seed_done">Zrobione</string>
     <string name="view_seed_title">Fraza Odzyskiwania</string>
-	<string name="transaction_result_view_on_explorer">Zobacz na Eksplorerze</string>
+	<string name="transaction_result_view_on_explorer">Zobacz na eksplorerze bloków</string>
 	<string name="transaction_result_paid_successfully">Wysłane pomyślnie</string>
 	<string name="transaction_result_sent_to">Wysłane do</string>
-	<string name="transaction_date_and_time">Data &amp; Czas</string>
+	<string name="transaction_date_and_time">Data</string>
 	<string name="transaction_close">Zamknij</string>
 	<string name="transaction_details_amount_received">Ilość otrzymana</string>
 	<string name="transaction_details_amount_sent">Ilość wysłana</string>
+    <string name="transaction_details_sent_from">Wysłane z</string>
+    <string name="transaction_details_sent_to">Wysłane do</string>
+    <string name="transaction_details_received_at">Odebrane przez</string>
+    <string name="transaction_details_moved_from">Przeniesiony z</string>
+    <string name="transaction_details_moved_internally_to">Wewnętrznie przeniesiony do</string>
 
     <string name="authenticate_fingerprint_title">Uwierzytelnij się</string>
     <string name="authenticate_fingerprint_message">Potwierdź odciskiem palca by kontynuować</string>
@@ -278,7 +283,6 @@
     <string name="one_minute">1 minuta</string>
     <string name="five_minute">5 minut</string>
     <string name="one_hour">1 godzina</string>
-    <string name="one_day">1 dzień</string>
     <string name="biometric_limit">Limit Biometryczny</string>
     <string name="spending_confirmation_hint_zero">PIN jest zawsze wymagany by dokonać płatności</string>
     <string name="spending_confirmation_hint_above_zero">Możesz dokonać uwierzytelnienia za pomocą Autentykacji Biometrycznej dla płatności poniżej</string>
@@ -313,6 +317,8 @@
     <string name="sync_status_syncing_sub_title">z łańcuchem bloków Dash</string>
     <string name="sync_status_unable_to_connect">Połączenie jest niemożliwe</string>
     <string name="sync_status_check_connection">Sprawdź swoje połączenie</string>
+    <string name="sync_status_sync_title">Synchronizacja</string>
+    <string name="sync_status_sync_completed">Ukończona</string>
 
-
+    <string name="appwidget_wallet_not_ready">Stwórz swój potfel</string>
 </resources>

@@ -59,6 +59,7 @@ import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.ResetAutoLogoutTimerHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,7 +99,7 @@ import de.schildbach.wallet_test.R;
 /**
  * @author Andreas Schildbach
  */
-public class WalletApplication extends MultiDexApplication {
+public class WalletApplication extends MultiDexApplication implements ResetAutoLogoutTimerHandler {
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
@@ -271,6 +272,7 @@ public class WalletApplication extends MultiDexApplication {
         autoLogout.setup();
     }
 
+    @Override
     public void resetAutoLogoutTimer() {
         autoLogout.resetTimerIfActive();
     }

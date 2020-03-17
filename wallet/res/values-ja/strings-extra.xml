@@ -217,13 +217,18 @@
 他の端末であなたのアカウントを復元できます。</string>
     <string name="view_seed_done">完了</string>
     <string name="view_seed_title">復元フレーズ</string>
-	<string name="transaction_result_view_on_explorer">エクスプローラーで表示</string>
+	<string name="transaction_result_view_on_explorer">ブロックエクスプローラーで見る</string>
 	<string name="transaction_result_paid_successfully">送金が成功しました</string>
 	<string name="transaction_result_sent_to">へ送金済み</string>
-	<string name="transaction_date_and_time">日付 &amp; 時間</string>
+	<string name="transaction_date_and_time">日付け</string>
 	<string name="transaction_close">閉じる</string>
 	<string name="transaction_details_amount_received">入金総額</string>
 	<string name="transaction_details_amount_sent">総額送金</string>
+    <string name="transaction_details_sent_from">から送金済み</string>
+    <string name="transaction_details_sent_to">へ送金済み</string>
+    <string name="transaction_details_received_at">で入金済み</string>
+    <string name="transaction_details_moved_from">から移動した</string>
+    <string name="transaction_details_moved_internally_to">内部で移転</string>
 
     <string name="authenticate_fingerprint_title">認証する</string>
     <string name="authenticate_fingerprint_message">指紋を確認して続ける</string>
@@ -276,7 +281,6 @@
     <string name="one_minute">1分</string>
     <string name="five_minute">5分</string>
     <string name="one_hour">１時間</string>
-    <string name="one_day">1日</string>
     <string name="biometric_limit">生体認証の制限</string>
     <string name="spending_confirmation_hint_zero">お支払いにはPINが必要です</string>
     <string name="spending_confirmation_hint_above_zero">以下の支払いは生体認証を使って認証できます</string>
@@ -311,6 +315,8 @@
     <string name="sync_status_syncing_sub_title">Dashのブロックチェーンで</string>
     <string name="sync_status_unable_to_connect">接続できません</string>
     <string name="sync_status_check_connection">接続を確認してください</string>
+    <string name="sync_status_sync_title">同期</string>
+    <string name="sync_status_sync_completed">完了</string>
 
-
+    <string name="appwidget_wallet_not_ready">あなたのウォレットをセットアップしてください</string>
 </resources>
