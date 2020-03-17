@@ -21,7 +21,11 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.widget.Toast
 import androidx.core.content.res.ResourcesCompat
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProviders
+import de.schildbach.wallet.ui.dashpay.NewAccountConfirmDialog
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.create_username.*
 import org.dash.wallet.common.InteractionAwareActivity
@@ -39,6 +43,16 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         choose_username_title.text = getText(R.string.choose_your_username)
         close_btn.setOnClickListener { finish() }
         username.addTextChangedListener(this)
+
+        register_btn.setOnClickListener {
+            val dialog = NewAccountConfirmDialog.createDialog()
+            dialog.show(supportFragmentManager, "NewAccountConfirmDialog")
+        }
+
+        val confirmTransactionSharedViewModel: SingleActionSharedViewModel = ViewModelProviders.of(this).get(SingleActionSharedViewModel::class.java)
+        confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
+            Toast.makeText(this, "Not yet implemented", Toast.LENGTH_LONG).show()
+        })
     }
 
     private fun validateUsernameSize(uname: String): Boolean {

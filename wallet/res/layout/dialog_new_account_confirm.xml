@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:ignore="ContentDescription,HardcodedText">
+
+    <ImageView
+        android:id="@+id/collapse_button"
+        android:layout_width="48dp"
+        android:layout_height="14dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="16dp"
+        app:srcCompat="@drawable/ic_expand_less" />
+
+    <TextView
+        style="@style/TextViewStyle.Title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center_horizontal"
+        android:text="@string/dialog_confirm_confirm"
+        android:textColor="@color/dash_black"
+        android:textSize="18sp" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_margin="16dp"
+        android:background="#c7c7c7" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/message"
+            style="@style/TextViewStyle.Body"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:gravity="center"
+            android:text="It costs D0.01 to create your Evolution account."
+            android:textColor="@color/dash_black"
+            app:layout_constraintDimensionRatio="3:1"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <de.schildbach.wallet.ui.widget.MontserratCheckBox
+        android:id="@+id/agree_check"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_margin="10dp"
+        android:button="@drawable/round_checkbox"
+        android:padding="6dp"
+        android:text="@string/new_account_confirm_accept" />
+
+    <Button
+        android:id="@+id/confirm"
+        style="@style/DashButton.Blue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:enabled="false"
+        android:text="@string/new_account_confirm_button_text" />
+
+</LinearLayout>
