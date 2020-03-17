@@ -281,9 +281,11 @@
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Theme" />
 
-        <activity android:name="de.schildbach.wallet.ui.FundNewAccountActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.CreateUsernameActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity" />
+            android:theme="@style/My.Theme.ChildActivity"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
 
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"

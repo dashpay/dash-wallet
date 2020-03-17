@@ -320,4 +320,14 @@
     <string name="sync_status_sync_completed">Completed</string>
 
     <string name="appwidget_wallet_not_ready">Please setup your wallet</string>
+
+    <string name="choose_your_username">Choose your <b>Dash\nUsername</b></string>
+    <string name="min_3_chars">Between 4 and 23 characters</string>
+    <string name="alphanum_only">Alphabets and Numbers only</string>
+    <string name="register">Register</string>
+
+    <string name="new_account_confirm_message_prefix">It costs</string>
+    <string name="new_account_confirm_message_suffix">to create your Evolution account.</string>
+    <string name="new_account_confirm_button_text">Confirm &amp; Pay</string>
+    <string name="new_account_confirm_accept">I Accept</string>
 </resources>

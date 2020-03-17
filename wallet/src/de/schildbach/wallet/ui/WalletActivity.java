@@ -95,7 +95,6 @@ import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
-import de.schildbach.wallet.util.ActivityExtensionsKt;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.Nfc;
@@ -265,7 +264,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         joinDashPayAction.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startActivity(FundNewAccountActivity.createIntent(WalletActivity.this));
+                startActivity(new Intent(WalletActivity.this, CreateUsernameActivity.class));
             }
         });
         showHideJoinDashPayAction();
@@ -1076,7 +1075,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         syncPercentageView.setText(percentage + "%");
 
 
-        if (blockchainState.isSynced()) {
+        syncComplete = (blockchainState.isSynced());
+        if (syncComplete) {
             syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
             syncStatusTitle.setText(R.string.sync_status_sync_title);
             syncStatusMessage.setText(R.string.sync_status_sync_completed);
