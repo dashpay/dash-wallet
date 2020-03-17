@@ -215,14 +215,16 @@
     <string name="verify_seed_success_message">Cüzdanınız artık güvende. Hesabınızı başka bir cihaza aktarmak için kurtarma sözcük grubunuzu istediğiniz zaman kullanabilirsiniz.</string>
     <string name="view_seed_done">Bitti</string>
     <string name="view_seed_title">Kurtarma Sözcük Grubu</string>
-	<string name="transaction_result_view_on_explorer">Gezginde görüntüle</string>
 	<string name="transaction_result_paid_successfully">Başarıyla gönderildi</string>
 	<string name="transaction_result_sent_to">Gönder</string>
-	<string name="transaction_date_and_time">Tarih &amp; Zaman</string>
+	<string name="transaction_date_and_time">Tarih</string>
 	<string name="transaction_close">Kapat</string>
 	<string name="transaction_details_amount_received">Alınan Tutar</string>
 	<string name="transaction_details_amount_sent">Gönderilen Tutar</string>
-
+    <string name="transaction_details_sent_from">Tarafından Gönderildi</string>
+    <string name="transaction_details_sent_to">Gönderildi</string>
+    <string name="transaction_details_received_at">Alındı</string>
+    <string name="transaction_details_moved_from">Taşındı</string>
     <string name="authenticate_fingerprint_title">Doğrulama</string>
     <string name="authenticate_fingerprint_message">Devam etmek için parmak iziyle onaylayın</string>
     <string name="authenticate_pin_message">Devam etmek için PİN\'inizi girin</string>
@@ -272,7 +274,6 @@
     <string name="one_minute">1 dk</string>
     <string name="five_minute">5 dk</string>
     <string name="one_hour">1 saat</string>
-    <string name="one_day">1 gün</string>
     <string name="biometric_limit">Biyometrik Limit</string>
     <string name="spending_confirmation_hint_zero">Ödeme yapmak için her zaman PIN gereklidir</string>
     <string name="spending_confirmation_hint_above_zero">Aşağıdaki ödemeleri Biyometrik Kimlik Doğrulaması ile onaylayabilirsin</string>
@@ -307,6 +308,4 @@
     <string name="sync_status_syncing_sub_title">Dash blok zinciri ile</string>
     <string name="sync_status_unable_to_connect">Bağlanılamıyor</string>
     <string name="sync_status_check_connection">Bağlantınızı kontrol edin</string>
-
-
-</resources>
+    </resources>

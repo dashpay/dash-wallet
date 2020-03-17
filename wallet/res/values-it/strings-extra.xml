@@ -215,13 +215,18 @@
     <string name="verify_seed_success_message">Il tuo Wallet ora è protetto. Puoi utilizzare la frase di recupero in qualsiasi momento per ripristinare il tuo account su un altro dispositivo.</string>
     <string name="view_seed_done">Fatto</string>
     <string name="view_seed_title">Frase di recupero</string>
-	<string name="transaction_result_view_on_explorer">Visualizza su Explorer</string>
+	<string name="transaction_result_view_on_explorer">Visualizza in Block Explorer</string>
 	<string name="transaction_result_paid_successfully">Correttamente Inviato</string>
 	<string name="transaction_result_sent_to">Inviato a</string>
-	<string name="transaction_date_and_time">Data &amp; Ora</string>
+	<string name="transaction_date_and_time">Data</string>
 	<string name="transaction_close">Vicino</string>
 	<string name="transaction_details_amount_received">Importo Ricevuto</string>
 	<string name="transaction_details_amount_sent">Importo Inviato</string>
+    <string name="transaction_details_sent_from">Inviato da</string>
+    <string name="transaction_details_sent_to">Inviato a</string>
+    <string name="transaction_details_received_at">Ricevuto a</string>
+    <string name="transaction_details_moved_from">Trasferito da</string>
+    <string name="transaction_details_moved_internally_to">Trasferito internamente a</string>
 
     <string name="authenticate_fingerprint_title">Autenticare</string>
     <string name="authenticate_fingerprint_message">Conferma dell\'impronta digitale per continuare</string>
@@ -272,7 +277,6 @@
     <string name="one_minute">1 minuto</string>
     <string name="five_minute">5 minuti</string>
     <string name="one_hour">1 ora</string>
-    <string name="one_day">1 giorno</string>
     <string name="biometric_limit">Limite Biometrico</string>
     <string name="spending_confirmation_hint_zero">Il PIN è sempre richiesto per effettuare un pagamento</string>
     <string name="spending_confirmation_hint_above_zero">Puoi eseguire l\'Autenticazione Biometrica per i pagamenti di seguito</string>
@@ -307,6 +311,8 @@
     <string name="sync_status_syncing_sub_title">con blockchain Dash</string>
     <string name="sync_status_unable_to_connect">Impossibile connetersi</string>
     <string name="sync_status_check_connection">Controlla la connessione</string>
+    <string name="sync_status_sync_title">Sync</string>
+    <string name="sync_status_sync_completed">Completato</string>
 
-
+    <string name="appwidget_wallet_not_ready">Si prega di eseguire le impostazioni del portafoglio</string>
 </resources>

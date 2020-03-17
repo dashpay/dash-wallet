@@ -35,7 +35,7 @@
     <string name="wallet_transactions_options_filter_sent">Wysłane</string>
     <string name="wallet_options_safety_menu">Bezpieczeństwo</string>
     <string name="wallet_options_encrypt_keys_set">Ustaw PIN</string>
-    <string name="wallet_options_encrypt_keys_change">Zmień PIN do wydawania</string>
+    <string name="wallet_options_encrypt_keys_change">Zmień PIN</string>
     <string name="wallet_options_safety">Wskazówki bezpieczeństwa</string>
     <string name="wallet_low_storage_dialog_title">Mało przestrzeni w pamięci wewnętrznej!</string>
     <string name="wallet_low_storage_dialog_msg">Portfel Dash używa wewnętrznej pamięci do przechowywania transakcji i bloków. Jeśli zabraknie miejsca na twoim urządzeniu, portfel przestanie pracować i twoje monety będą zagrożone!\n\n Czy chcesz otworzyć Menadżer Aplikacji w celu odinstalowania niepotrzebnych programów?</string>
@@ -67,7 +67,7 @@
     <string name="send_coins_fragment_hint_dusty_send">Kwota jest zbyt mała, aby wysłać</string>
     <string name="send_coins_fragment_hint_insufficient_money">Niewystarczająca ilość funduszy</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Ilość małych płatności w twoim portfelu nie dodaje się do wartości możliwej do wysyłki.</string>
-    <string name="send_coins_fragment_hint_replaying">Obecnie, płatności nie są możliwe, ponieważ trwa proces replay.</string>
+    <string name="send_coins_fragment_hint_replaying">Obecnie, płatności nie są możliwe, ponieważ portfel nie jest w pełni zsynchronizowany z siecią. </string>
     <string name="send_coins_fragment_direct_payment_enable">Wyślij płatność bezpośrednio do odbiorcy.</string>
     <string name="send_coins_fragment_direct_payment_ack">Twoja płatność bezpośrednia została pomyślnie zrealizowana.</string>
     <string name="send_coins_fragment_direct_payment_nack">Twoja płatność bezpośrednia została odrzucona.</string>
@@ -158,7 +158,7 @@
     <string name="transaction_row_status_received">Otrzymano</string>
     <string name="transaction_row_status_sent">Wysłano</string>
     <string name="transaction_row_status_sending">Wysyłam</string>
-    <string name="transaction_row_status_sent_interally">Wewnętrzny</string>
+    <string name="transaction_row_status_sent_internally">Wewnętrzny</string>
     <string name="transaction_row_status_processing">Przetwarzam</string>
     <string name="transaction_row_status_confirming">Potwierdzam</string>
     <string name="transaction_row_status_locked">Zablokowane</string>

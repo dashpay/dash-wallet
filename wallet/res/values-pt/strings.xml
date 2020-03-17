@@ -67,7 +67,7 @@
     <string name="send_coins_fragment_hint_dusty_send">O valor é muito baixo para ser enviado</string>
     <string name="send_coins_fragment_hint_insufficient_money">Fundos insuficientes</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">A quantidade de pequenos pagamentos em sua carteira não somam um valor para envio.</string>
-    <string name="send_coins_fragment_hint_replaying">Não é possível realizar pagamentos no momento porque um replay está em progresso.</string>
+    <string name="send_coins_fragment_hint_replaying">Pagamentos não são possíveis no momento porque a carteira não está totalmente sincronizada com a rede</string>
     <string name="send_coins_fragment_direct_payment_enable">Enviar pagamento diretamente ao destinatário.</string>
     <string name="send_coins_fragment_direct_payment_ack">Seu pagamento foi enviado diretamente com sucesso.</string>
     <string name="send_coins_fragment_direct_payment_nack">Seu pagamento foi rejeitado utilizando a conexão direta.</string>
@@ -95,6 +95,7 @@
     <string name="sweep_wallet_fragment_wallet_unknown">Comece varrendo a chave privada de uma carteira de papel. Use o botão de ação da câmera.</string>
     <string name="sweep_wallet_fragment_encrypted">Essa chave privada está protegida com uma senha.</string>
     <string name="sweep_wallet_fragment_password">Senha</string>
+    <string name="sweep_wallet_fragment_bad_password">Senha inválida!</string>
     <string name="sweep_wallet_fragment_balance">Saldo a varrer</string>
     <string name="sweep_wallet_fragment_button_decrypt">Desencriptar</string>
     <string name="sweep_wallet_fragment_button_sweep">Varrer</string>
@@ -157,7 +158,7 @@
     <string name="transaction_row_status_received">Recebido</string>
     <string name="transaction_row_status_sent">Enviado</string>
     <string name="transaction_row_status_sending">Enviando</string>
-    <string name="transaction_row_status_sent_interally">Interna</string>
+    <string name="transaction_row_status_sent_internally">Interna</string>
     <string name="transaction_row_status_processing">Processando</string>
     <string name="transaction_row_status_confirming">Confirmando</string>
     <string name="transaction_row_status_locked">Trancado</string>
@@ -365,8 +366,10 @@
     <string name="dash_slogan">Rapido - Privado - Seguro</string>
     <string name="dash_wallet">Carteira</string>
 
+    <string name="activity_security_backup_wallet">Fazer Backup da Carteira a um Arquivo</string>
     <string name="activity_security_view_recovery_phrase">Ver Frase de Recuperação</string>
     <string name="activity_security_advanced">Segurança Avançada</string>
+    <string name="activity_security_biometric_auth">Autenticação por Digital</string>
     <string name="activity_security_hide_balance">Auto-esconder Saldo</string>
     <string name="reset_to_default">Restaurar ao Padrão</string>
 

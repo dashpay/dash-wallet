@@ -34,8 +34,8 @@
     <string name="wallet_transactions_options_filter_received">Obdrženo</string>
     <string name="wallet_transactions_options_filter_sent">Zasláno</string>
     <string name="wallet_options_safety_menu">Bezpečnost</string>
-    <string name="wallet_options_encrypt_keys_set">Nastavit PIN pro placení</string>
-    <string name="wallet_options_encrypt_keys_change">Změnit PIN pro placení.</string>
+    <string name="wallet_options_encrypt_keys_set">Nastavit PIN</string>
+    <string name="wallet_options_encrypt_keys_change">Změnit PIN</string>
     <string name="wallet_options_safety">Bezpečnostní instrukce</string>
     <string name="wallet_low_storage_dialog_title">Na vnitřním úložišti není dostatek místa!</string>
     <string name="wallet_low_storage_dialog_msg">Dash peněženka používá vnitřní úložiště pro ukládání transakcí a bloků. Pokud dojde místo v úložišti, přestane fungovat a váš Dash bude vystaven riziku ztráty!\n\nChcete otevřít Správu Aplikací a odinstalovat nepotřebné aplikace?</string>
@@ -63,9 +63,9 @@
     <string name="send_coins_fragment_pin_label">Zadejte PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Bude uhrazen poplatek síti ve výši %s.</string>
     <string name="send_coins_fragment_hint_fee_priority">Bude uhrazen prioritní poplatek %s. Pokud vám záleží na nízkých poplatcích, použijte ‚prioritu‘, pouze pokud potřebujete konfirmaci co nejdříve.</string>
+    <string name="send_coins_fragment_hint_dusty_send">Částka je příliš nízká pro odeslání</string>
     <string name="send_coins_fragment_hint_insufficient_money">Nedostatečný zůstatek</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Částka drobných plateb ve vaší peněžence nepřesahuje hodnotu, kterou lze odeslat.</string>
-    <string name="send_coins_fragment_hint_replaying">Momentálně nejsou platby možné, protože probíhá přehrávání sítě.</string>
     <string name="send_coins_fragment_direct_payment_enable">Poslat platbu přímo příjemci.</string>
     <string name="send_coins_fragment_direct_payment_ack">Vaše platba byla úspěšně zaslána přímo.</string>
     <string name="send_coins_fragment_direct_payment_nack">Vaše platba byla odmítnuta přímým spojením.</string>
@@ -92,6 +92,7 @@
     <string name="sweep_wallet_fragment_wallet_unknown">Začněte načtením privátního klíče z papírové peněženky. Použijte tlačítko kamery z menu.</string>
     <string name="sweep_wallet_fragment_encrypted">Tento soukromý klíč je chráněn heslem.</string>
     <string name="sweep_wallet_fragment_password">Heslo</string>
+    <string name="sweep_wallet_fragment_bad_password">Špátné heslo!</string>
     <string name="sweep_wallet_fragment_balance">Bilance k načtení</string>
     <string name="sweep_wallet_fragment_button_decrypt">Dešifrovat</string>
     <string name="sweep_wallet_fragment_button_sweep">Načtení</string>
@@ -154,6 +155,7 @@
     <string name="transaction_row_status_received">Přijato</string>
     <string name="transaction_row_status_sent">Odesláno</string>
     <string name="transaction_row_status_sending">Posílám</string>
+    <string name="transaction_row_status_sent_internally">Interní</string>
     <string name="transaction_row_status_processing">Zpracovává se</string>
     <string name="transaction_row_status_confirming">Konfirmace</string>
     <string name="transaction_row_status_locked">Blokováno</string>

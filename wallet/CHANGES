@@ -1,4 +1,18 @@
 Dash Wallet
+v7.0.3
+* Fix start up crash in Blockchain Service
+
+v7.0.2
+* Fix Uphold send crash
+* Fix Uphold logout timer
+* Fix Local Currency Screen Crash
+* Fix various UI issues
+* Update translations
+* Fix UI issue with hide balance on Home Screen
+* Prevent sending while syncing
+* Support Android 4.4 (fixed related crashes)
+
+
 v7.0.1
 * Disable old navigation menu access
 * Reset auto logout  timer on any UI action
