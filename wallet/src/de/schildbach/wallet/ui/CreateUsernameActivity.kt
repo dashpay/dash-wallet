@@ -95,6 +95,22 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         }
     }
 
+    private fun showProcessingState() {
+        val username = username.text.toString()
+        val text = getString(R.string.username_being_created, username)
+
+        processing_identity.visibility = View.VISIBLE
+        choose_username_title.startAnimation(fadeOutAnimation)
+        processing_identity.startAnimation(slideInAnimation)
+        (processing_identity_loading_image.drawable as AnimationDrawable).start()
+
+        val spannableContent = SpannableString(text)
+        val start = text.indexOf(username)
+        val end = start + username.length
+        spannableContent.setSpan(StyleSpan(Typeface.BOLD), start, end, 0)
+        processing_identity_message.text = spannableContent
+    }
+
     private fun showConfirmationDialog() {
         val dialog = NewAccountConfirmDialog.createDialog()
         dialog.show(supportFragmentManager, "NewAccountConfirmDialog")
@@ -102,19 +118,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         val confirmTransactionSharedViewModel = ViewModelProviders.of(this)
                 .get(SingleActionSharedViewModel::class.java)
         confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
-            val username = username.text.toString()
-            val text = getString(R.string.username_being_created, username)
-
-            processing_identity.visibility = View.VISIBLE
-            choose_username_title.startAnimation(fadeOutAnimation)
-            processing_identity.startAnimation(slideInAnimation)
-            (processing_identity_loading_image.drawable as AnimationDrawable).start()
-
-            val spannableContent = SpannableString(text)
-            val start = text.indexOf(username)
-            val end = start + username.length
-            spannableContent.setSpan(StyleSpan(Typeface.BOLD), start, end, 0)
-            processing_identity_message.text = spannableContent
+            showProcessingState()
         })
     }
 
