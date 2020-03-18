@@ -93,7 +93,7 @@
             app:duration="500"
             app:fromAngle="50"
             app:interpolator="decelerate"
-            app:toAngle="110" />
+            app:toAngle="115" />
 
     </com.sambarboza.orbitview.OrbitView>
 
