@@ -73,7 +73,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
     private fun validateUsernameCharacters(uname: String): Boolean {
         val isValid: Boolean
-        val alphaNumValid = !Regex("[^a-z0-9._]").containsMatchIn(uname)
+        val alphaNumValid = !Regex("[^a-z0-9]").containsMatchIn(uname)
 
         alphanum_req_img.visibility = if (uname.isNotEmpty() && alphaNumValid) {
             isValid = true
