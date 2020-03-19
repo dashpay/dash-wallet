@@ -29,7 +29,6 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
-import com.jakewharton.processphoenix.ProcessPhoenix
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.security.SecurityGuard
@@ -106,13 +105,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
         if (SecurityGuard.isConfiguredQuickCheck()) {
             startMainActivity()
         } else {
-            if (walletApplication.wallet.isEncrypted) {
-                startActivity(AppUpgradeActivity.createIntent(this))
-            } else {
-                // this can happen if the wallet was created in old version and PIN wasn't set
-                walletApplication.shutdownAndDeleteWallet();
-                ProcessPhoenix.triggerRebirth(this)
-            }
+            startActivity(AppUpgradeActivity.createIntent(this))
         }
     }
 

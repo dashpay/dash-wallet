@@ -22,21 +22,37 @@ import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProviders
+import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_enter_pin.*
+import kotlin.system.exitProcess
 
-open class CheckPinDuringUpgradeDialog : CheckPinDialog() {
+open class SetupPinDuringUpgradeDialog : CheckPinDialog() {
 
     companion object {
-
         @JvmStatic
         fun show(activity: AppCompatActivity, requestCode: Int = 0) {
-            val checkPinDialogExt = CheckPinDuringUpgradeDialog()
+            val checkPinDialogExt = SetupPinDuringUpgradeDialog()
             val args = Bundle()
             args.putInt(ARG_REQUEST_CODE, requestCode)
             args.putBoolean(ARG_PIN_ONLY, true)
             checkPinDialogExt.arguments = args
             checkPinDialogExt.show(activity.supportFragmentManager, FRAGMENT_TAG)
+        }
+    }
+
+    protected lateinit var setPinViewModel: SetPinViewModel
+
+    private val walletNotEncrypted = !WalletApplication.getInstance().wallet.isEncrypted
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (walletNotEncrypted) {
+            pinLength = PinPreviewView.DEFAULT_PIN_LENGTH
         }
     }
 
@@ -52,12 +68,33 @@ open class CheckPinDuringUpgradeDialog : CheckPinDialog() {
         isCancelable = false
         pin_or_fingerprint_button.visibility = View.GONE
 
-        cancel_button.setText(R.string.wallet_lock_unlock)
-        cancel_button.setOnClickListener {
-            if (viewModel.pin.isNotEmpty()) {
-                viewModel.checkPin(viewModel.pin)
+        if (walletNotEncrypted) {
+            title.setText(R.string.forgot_pin_instruction_2)
+            message.setText(R.string.lock_enter_pin)
+            cancel_button.setText(R.string.button_cancel)
+            cancel_button.isEnabled = false
+        } else {
+            cancel_button.setText(R.string.wallet_lock_unlock)
+            cancel_button.setOnClickListener {
+                if (viewModel.pin.isNotEmpty()) {
+                    viewModel.checkPin(viewModel.pin)
+                }
             }
         }
+        setPinViewModel = ViewModelProviders.of(this).get(SetPinViewModel::class.java)
+        setPinViewModel.encryptWalletLiveData.observe(viewLifecycleOwner, Observer {
+            when (it.status) {
+                Status.SUCCESS -> {
+                    sharedModel.onWalletEncryptedCallback.value = viewModel.pin.toString()
+                }
+                Status.ERROR -> {
+                    sharedModel.onWalletEncryptedCallback.value = null
+                }
+                Status.LOADING -> {
+                    setState(State.DECRYPTING)
+                }
+            }
+        })
     }
 
     override fun onStart() {
@@ -69,6 +106,10 @@ open class CheckPinDuringUpgradeDialog : CheckPinDialog() {
             windowParams.flags = windowParams.flags or WindowManager.LayoutParams.FLAG_DIM_BEHIND
             attributes = windowParams
         }
+    }
+
+    override fun checkPin(pin: String) {
+        setPinViewModel.savePinAndEncrypt(pin, false)
     }
 
     override fun showLockedAlert(context: Context) {

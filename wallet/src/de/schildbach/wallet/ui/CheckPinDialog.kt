@@ -83,7 +83,7 @@ open class CheckPinDialog : DialogFragment() {
     protected var fingerprintHelper: FingerprintHelper? = null
     protected lateinit var fingerprintCancellationSignal: CancellationSignal
 
-    private var pinLength = WalletApplication.getInstance().configuration.pinLength
+    protected var pinLength = WalletApplication.getInstance().configuration.pinLength
 
     protected enum class State {
         ENTER_PIN,
@@ -126,7 +126,7 @@ open class CheckPinDialog : DialogFragment() {
                 }
                 if (viewModel.pin.length == pinLength) {
                     Handler().postDelayed({
-                        viewModel.checkPin(viewModel.pin)
+                        checkPin(viewModel.pin.toString())
                     }, 200)
                 }
             }
@@ -152,6 +152,10 @@ open class CheckPinDialog : DialogFragment() {
                 pin_or_fingerprint_button.isEnabled = false
             } else initFingerprint()
         }
+    }
+
+    open fun checkPin(pin: String) {
+        viewModel.checkPin(pin)
     }
 
     /*
