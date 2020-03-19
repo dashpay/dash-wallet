@@ -718,15 +718,15 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    public void finalizeWipe() {
+    public void shutdownAndDeleteWallet() {
         if (walletFile.exists()) {
             wallet.shutdownAutosaveAndWait();
             walletFile.delete();
         }
-        System.out.println("walletFile.exists(): " + walletFile.exists());
-        if (walletFile.exists()) {
-            walletFile.delete();
-        }
+    }
+
+    public void finalizeWipe() {
+        shutdownAndDeleteWallet();
         cleanupFiles();
         config.clear();
         PinRetryController.getInstance().clearPinFailPrefs();
