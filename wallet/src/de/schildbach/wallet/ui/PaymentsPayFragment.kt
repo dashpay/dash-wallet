@@ -9,15 +9,16 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import androidx.fragment.app.Fragment
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_payments_pay.*
+import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
-import org.bitcoinj.core.PrefixedChecksummedBytes
 
 class PaymentsPayFragment : Fragment() {
 
@@ -44,11 +45,32 @@ class PaymentsPayFragment : Fragment() {
         //Make the whole row clickable
         pay_by_qr_button.setOnClickListener { handleScan(it) }
         pay_to_address.setOnClickListener { handlePaste(true) }
-
+        handlePaste(false)
     }
 
     override fun onResume() {
         super.onResume()
+        view!!.viewTreeObserver?.addOnWindowFocusChangeListener(onWindowFocusChangeListener)
+        getClipboardManager().addPrimaryClipChangedListener(onPrimaryClipChangedListener)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        view!!.viewTreeObserver?.removeOnWindowFocusChangeListener(onWindowFocusChangeListener)
+        getClipboardManager().removePrimaryClipChangedListener(onPrimaryClipChangedListener)
+    }
+
+    private fun getClipboardManager(): ClipboardManager {
+        return context?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager;
+    }
+
+    private val onWindowFocusChangeListener = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
+        if (hasFocus) {
+            handlePaste(false)
+        }
+    }
+
+    private val onPrimaryClipChangedListener = ClipboardManager.OnPrimaryClipChangedListener {
         handlePaste(false)
     }
 
@@ -73,7 +95,7 @@ class PaymentsPayFragment : Fragment() {
     }
 
     private fun clipboardData(): String? {
-        val clipboardManager = context!!.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clipboardManager = getClipboardManager()
         if (clipboardManager.hasPrimaryClip()) {
             clipboardManager.primaryClip?.run {
                 return when {
