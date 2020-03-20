@@ -70,7 +70,8 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/header">
+            app:layout_constraintTop_toBottomOf="@id/header"
+            tools:visibility="gone">
 
             <EditText
                 android:id="@+id/username"
@@ -168,7 +169,8 @@
             android:background="@color/dash_blue"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/header">
+            app:layout_constraintTop_toBottomOf="@id/header"
+            tools:visibility="visible">
 
             <ImageView
                 android:id="@+id/processing_identity_loading_image"
@@ -198,13 +200,12 @@
 
             <Button
                 android:id="@+id/processing_identity_dismiss_btn"
-                style="@style/DashButton.Blue"
+                style="@style/DashButton.White.BlueText"
                 android:layout_width="match_parent"
                 android:layout_height="50dp"
                 android:layout_marginLeft="15dp"
                 android:layout_marginRight="15dp"
                 android:layout_marginBottom="25dp"
-                android:enabled="false"
                 android:text="@string/processing_let_me_know"
                 android:textSize="18sp"
                 app:layout_constraintBottom_toBottomOf="parent" />

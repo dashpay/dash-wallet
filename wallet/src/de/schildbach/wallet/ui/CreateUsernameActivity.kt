@@ -51,6 +51,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         close_btn.setOnClickListener { finish() }
         username.addTextChangedListener(this)
         register_btn.setOnClickListener { showConfirmationDialog() }
+        processing_identity_dismiss_btn.setOnClickListener { finish() }
     }
 
     private fun validateUsernameSize(uname: String): Boolean {
