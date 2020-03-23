@@ -48,6 +48,7 @@ class AppUpgradeActivity : AppCompatActivity() {
     private val temporaryLockCheckHandler = Handler()
     private val temporaryLockCheckInterval = TimeUnit.SECONDS.toMillis(10)
     private val temporaryLockCheckRunnable = Runnable {
+        println("temporaryLockCheckRunnable")
         if (pinRetryController.isLocked) {
             walletLocked()
         } else {
@@ -61,10 +62,20 @@ class AppUpgradeActivity : AppCompatActivity() {
 
         configuration = WalletApplication.getInstance().configuration
         configuration.pinLength = PinPreviewView.CUSTOM_PIN_LENGTH
-        
-        pinRetryController = PinRetryController.getInstance()
 
+        pinRetryController = PinRetryController.getInstance()
+    }
+
+    override fun onStart() {
+        super.onStart()
         temporaryLockCheckRunnable.run()
+        println("onStart()")
+    }
+
+    override fun onStop() {
+        super.onStop()
+        println("onStop()")
+        temporaryLockCheckHandler.removeCallbacks(temporaryLockCheckRunnable)
     }
 
     private fun askForPin() {
