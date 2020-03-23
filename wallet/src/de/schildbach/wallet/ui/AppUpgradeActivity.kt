@@ -89,9 +89,6 @@ class AppUpgradeActivity : AppCompatActivity() {
     }
 
     private fun onCorrectPin(pin: String) {
-        val securityGuard = SecurityGuard()
-        securityGuard.savePin(pin)
-        securityGuard.savePassword(pin)
         configuration.pinLength = pin.length
         startActivity(WalletActivity.createIntent(this))
     }
