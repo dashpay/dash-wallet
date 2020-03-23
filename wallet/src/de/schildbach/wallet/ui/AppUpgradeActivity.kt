@@ -48,6 +48,9 @@ class AppUpgradeActivity : AppCompatActivity() {
     private val temporaryLockCheckHandler = Handler()
     private val temporaryLockCheckInterval = TimeUnit.SECONDS.toMillis(10)
     private val temporaryLockCheckRunnable = Runnable {
+        if(isFinishing) {
+            return@Runnable
+        }
         if (pinRetryController.isLocked) {
             walletLocked()
         } else {
@@ -99,5 +102,10 @@ class AppUpgradeActivity : AppCompatActivity() {
     override fun finish() {
         super.finish()
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+    }
+
+    override fun onDestroy() {
+        temporaryLockCheckHandler.removeCallbacksAndMessages(null)
+        super.onDestroy()
     }
 }
