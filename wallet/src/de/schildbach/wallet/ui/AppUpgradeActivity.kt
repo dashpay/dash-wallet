@@ -64,8 +64,16 @@ class AppUpgradeActivity : AppCompatActivity() {
         configuration.pinLength = PinPreviewView.CUSTOM_PIN_LENGTH
 
         pinRetryController = PinRetryController.getInstance()
+    }
 
+    override fun onStart() {
+        super.onStart()
         temporaryLockCheckRunnable.run()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        temporaryLockCheckHandler.removeCallbacks(temporaryLockCheckRunnable)
     }
 
     private fun askForPin() {
