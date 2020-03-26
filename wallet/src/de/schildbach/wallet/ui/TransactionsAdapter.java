@@ -17,15 +17,20 @@
 
 package de.schildbach.wallet.ui;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Executors;
+import android.content.Context;
+import android.content.res.Resources;
+import android.graphics.drawable.AnimationDrawable;
+import android.text.format.DateUtils;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
-import javax.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
+import androidx.recyclerview.widget.RecyclerView;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
@@ -38,29 +43,23 @@ import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.util.GenericUtils;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Executors;
+
+import javax.annotation.Nullable;
+
 import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.AddressBookProvider;
-
 import de.schildbach.wallet.data.IdentityCreationState;
 import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
-
-import android.content.Context;
-import android.content.res.Resources;
-
-import androidx.annotation.NonNull;
-import androidx.cardview.widget.CardView;
-import androidx.recyclerview.widget.RecyclerView;
-
-import android.text.format.DateUtils;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 
 /**
  * @author Andreas Schildbach
@@ -274,6 +273,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         private TextView title;
         private TextView subTitle;
         private ProgressBar progress;
+        private ImageView forwardIcon;
 
         public ProcessingIdentityViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -281,6 +281,9 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             title = itemView.findViewById(R.id.processing_title);
             subTitle = itemView.findViewById(R.id.processing_subtitle);
             progress = itemView.findViewById(R.id.processing_progress);
+            forwardIcon = itemView.findViewById(R.id.processing_forward_arrow);
+
+            ((AnimationDrawable) animatedIcon.getDrawable()).start();
             itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -299,6 +302,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         public void bind(IdentityCreationState identityCreationState) {
             switch (identityCreationState.getState()) {
                 case PROCESSING_PAYMENT:
+                    animatedIcon.setVisibility(View.VISIBLE);
+                    forwardIcon.setVisibility(View.GONE);
                     progress.setProgress(25);
                     subTitle.setText(R.string.processing_home_step_1);
                     break;
@@ -311,6 +316,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                     subTitle.setText(R.string.processing_home_step_3);
                     break;
                 case DONE:
+                    animatedIcon.setVisibility(View.GONE);
+                    forwardIcon.setVisibility(View.VISIBLE);
                     progress.setProgress(100);
                     title.setText(itemView.getContext().getString(R.string.processing_done_title,
                             identityCreationState.getUsername()));
