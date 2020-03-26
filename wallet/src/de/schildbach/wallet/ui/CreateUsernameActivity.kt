@@ -29,10 +29,13 @@ import android.view.animation.AnimationUtils
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
+import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.data.IdentityCreationState
 import de.schildbach.wallet.ui.dashpay.NewAccountConfirmDialog
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.create_username.*
 import org.dash.wallet.common.InteractionAwareActivity
+import java.util.concurrent.Executors
 
 class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
@@ -110,6 +113,12 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         val end = start + username.length
         spannableContent.setSpan(StyleSpan(Typeface.BOLD), start, end, 0)
         processing_identity_message.text = spannableContent
+
+        Executors.newSingleThreadExecutor().execute {
+            val identityCreationState = IdentityCreationState(IdentityCreationState
+                    .State.PROCESSING_PAYMENT, username)
+            AppDatabase.getAppDatabase().identityCreationStateDao().insert(identityCreationState)
+        }
     }
 
     private fun showConfirmationDialog() {
