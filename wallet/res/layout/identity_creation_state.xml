@@ -8,6 +8,7 @@
     android:layout_marginLeft="15dp"
     android:layout_marginRight="15dp"
     android:layout_marginBottom="10dp"
+    android:animateLayoutChanges="true"
     android:orientation="vertical">
 
     <ImageView
@@ -55,5 +56,18 @@
         android:progress="25"
         android:visibility="visible"
         app:layout_constraintBottom_toBottomOf="parent" />
+
+    <ImageView
+        android:id="@+id/processing_forward_arrow"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginEnd="10dp"
+        android:layout_marginRight="10dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@drawable/ic_circle_forward_arrow"
+        tools:visibility="visible" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
