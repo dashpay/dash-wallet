@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="onboarding_create_wallet">Create a New Wallet</string>
     <string name="onboarding_recover_wallet">Restore Wallet From Recovery Phrase</string>
@@ -333,5 +333,11 @@
 
     <string name="username_being_created">Your username %s is being created on the Dash Network</string>
     <string name="processing_let_me_know">Let me know when it\'s done</string>
+    <string name="processing_home_title">Upgrading to DashPay</string>
+    <string name="processing_home_step_1" tools:ignore="TypographyFractions">(1/3) Processing Payment</string>
+    <string name="processing_home_step_2">(2/3) Creating ID</string>
+    <string name="processing_home_step_3">(3/3) Registering Username</string>
+    <string name="processing_done_title">Hello %s,</string>
+    <string name="processing_done_subtitle">Your DashPay Username is ready to use</string>
 
 </resources>

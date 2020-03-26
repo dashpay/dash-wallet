@@ -33,7 +33,7 @@ class RoomConverters {
     }
 
     @TypeConverter
-    fun fromImpedimentsEnumSet(value: String?): Set<BlockchainState.Impediment> {
+    fun fromImpedimentsString(value: String?): Set<BlockchainState.Impediment> {
         val impedimentSet = EnumSet.noneOf(BlockchainState.Impediment::class.java)
         if (value == null || value.isEmpty()) {
             return impedimentSet
@@ -55,6 +55,16 @@ class RoomConverters {
             sb.append(it.ordinal)
         }
         return sb.toString()
+    }
+
+    @TypeConverter
+    fun toIdentityCreationState(value: Int): IdentityCreationState.State {
+        return IdentityCreationState.State.values()[value]
+    }
+
+    @TypeConverter
+    fun fromIdentityCreationState(identityCreationState: IdentityCreationState.State): Int {
+        return identityCreationState.ordinal
     }
 
 }
