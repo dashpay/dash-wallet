@@ -59,7 +59,13 @@ public class ExchangeRate {
 
     private Currency getCurrency() {
         if (currency == null) {
-            currency = Currency.getInstance(currencyCode.toUpperCase());
+            try {
+                currency = Currency.getInstance(currencyCode.toUpperCase());
+            } catch (IllegalArgumentException x) {
+                // if the device doesn't have the currency code it is list of
+                // ISO 4217 codes, then return the code as the name
+                return currency;
+            }
         }
         return currency;
     }
