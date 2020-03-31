@@ -59,13 +59,7 @@ public class ExchangeRate {
 
     private Currency getCurrency() {
         if (currency == null) {
-            try {
-                currency = Currency.getInstance(currencyCode.toUpperCase());
-            } catch (IllegalArgumentException x) {
-                // if the device doesn't have the currency code it is list of
-                // ISO 4217 codes, then return the code as the name
-                return currency;
-            }
+            currency = Currency.getInstance(currencyCode.toUpperCase());
         }
         return currency;
     }
@@ -79,9 +73,16 @@ public class ExchangeRate {
         if (currencyName == null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 // currency codes must be 3 letters before calling getCurrency()
-                if(currencyCode.length() == 3)
-                    currencyName = getCurrency().getDisplayName();
-                else currencyName = currencyCode;
+                // If the currency is not a valid ISO 4217 code, then set the
+                // currency name to be equal to the currency code
+                // exchanges often have "invalid" currency codes like USDT and CNH
+                if(currencyCode.length() == 3) {
+                    try {
+                        currencyName = getCurrency().getDisplayName();
+                    } catch (IllegalArgumentException x) {
+                        currencyName = currencyCode;
+                    }
+                } else currencyName = currencyCode;
 
                 if(currencyCode.toUpperCase().equals(currencyName.toUpperCase())) {
                     currencyName = CurrencyInfo.getOtherCurrencyName(currencyCode);
