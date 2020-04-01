@@ -1,10 +1,7 @@
 package de.schildbach.wallet.data
 
 import androidx.lifecycle.LiveData
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
+import androidx.room.*
 
 @Dao
 interface IdentityCreationStateDao {
@@ -14,5 +11,8 @@ interface IdentityCreationStateDao {
 
     @Query("SELECT * FROM identity_creation_state LIMIT 1")
     fun load(): LiveData<IdentityCreationState?>
+
+    @Query("DELETE FROM identity_creation_state")
+    fun clear()
 
 }

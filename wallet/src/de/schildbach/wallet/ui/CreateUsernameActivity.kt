@@ -43,6 +43,12 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private val mediumTypeFace by lazy { ResourcesCompat.getFont(this, R.font.montserrat_medium) }
     private val slideInAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.slide_in_bottom) }
     private val fadeOutAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.fade_out) }
+    private var completeUsername: String? = null
+
+    companion object {
+        @JvmStatic
+        public val COMPLETE_USERNAME = "complete_username"
+    }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,6 +61,28 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         username.addTextChangedListener(this)
         register_btn.setOnClickListener { showConfirmationDialog() }
         processing_identity_dismiss_btn.setOnClickListener { finish() }
+
+        val intentUsername = intent?.extras?.getString(COMPLETE_USERNAME)
+        if (intentUsername != null) {
+            this.completeUsername = intentUsername
+            showCompleteState()
+        }
+    }
+
+    private fun showCompleteState() {
+        registration_content.visibility = View.GONE
+        processing_identity.visibility = View.GONE
+        choose_username_title.visibility = View.GONE
+        identity_complete.visibility = View.VISIBLE
+
+        val text = getString(R.string.identity_complete_message, completeUsername!!)
+
+        val spannableContent = SpannableString(text)
+        val start = text.indexOf(completeUsername!!)
+        val end = start + completeUsername!!.length
+        spannableContent.setSpan(StyleSpan(Typeface.BOLD), start, end, 0)
+        identity_complete_text.text = spannableContent
+        identity_complete_button.setOnClickListener { finish() }
     }
 
     private fun validateUsernameSize(uname: String): Boolean {

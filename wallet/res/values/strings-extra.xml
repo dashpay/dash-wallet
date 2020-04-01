@@ -340,4 +340,6 @@
     <string name="processing_done_title">Hello %s,</string>
     <string name="processing_done_subtitle">Your DashPay Username is ready to use</string>
 
+    <string name="identity_complete_message">Your username %s has been successfully created on the Dash Network</string>
+
 </resources>

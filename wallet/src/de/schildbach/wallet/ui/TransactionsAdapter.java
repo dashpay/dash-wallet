@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.drawable.AnimationDrawable;
 import android.text.format.DateUtils;
@@ -287,14 +288,21 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    Executors.newSingleThreadExecutor().execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            identityCreationState.nextState();
-                            AppDatabase.getAppDatabase()
-                                    .identityCreationStateDao().insert(identityCreationState);
-                        }
-                    });
+                    if (identityCreationState.getState() == IdentityCreationState.State.DONE) {
+                        Intent intent = new Intent(v.getContext(), CreateUsernameActivity.class);
+                        intent.putExtra(CreateUsernameActivity.Companion.getCOMPLETE_USERNAME(),
+                                identityCreationState.getUsername());
+                        v.getContext().startActivity(intent);
+                    } else {
+                        Executors.newSingleThreadExecutor().execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                identityCreationState.nextState();
+                                AppDatabase.getAppDatabase()
+                                        .identityCreationStateDao().insert(identityCreationState);
+                            }
+                        });
+                    }
                 }
             });
         }

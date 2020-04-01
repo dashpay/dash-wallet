@@ -82,6 +82,7 @@ import java.io.IOException;
 import java.util.Currency;
 import java.util.Locale;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
@@ -207,6 +208,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
         });
 
         registerOnCoinsSentReceivedListener();
+
+        Executors.newSingleThreadExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                //AppDatabase.getAppDatabase().identityCreationStateDao().clear();
+            }
+        });
     }
 
     private void initFingerprintHelper() {

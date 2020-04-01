@@ -161,6 +161,7 @@
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
+        <!-- Processing -->
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/processing_identity"
             android:layout_width="match_parent"
@@ -168,8 +169,7 @@
             android:background="@color/dash_blue"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/header"
-            tools:visibility="visible">
+            app:layout_constraintTop_toBottomOf="@id/header">
 
             <ImageView
                 android:id="@+id/processing_identity_loading_image"
@@ -206,6 +206,55 @@
                 android:layout_marginRight="15dp"
                 android:layout_marginBottom="25dp"
                 android:text="@string/processing_let_me_know"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- Complete -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/identity_complete"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:visibility="gone"
+            android:background="@android:color/white"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/header"
+            tools:visibility="visible">
+
+            <ImageView
+                android:id="@+id/identity_complete_icon"
+                android:layout_width="125dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="22dp"
+                android:layout_marginLeft="22dp"
+                android:layout_marginTop="14dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:srcCompat="@drawable/identity_complete_icon" />
+
+            <TextView
+                android:id="@+id/identity_complete_text"
+                style="@style/MontserratRegular"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="26dp"
+                android:layout_marginEnd="10dp"
+                android:layout_marginRight="10dp"
+                android:textSize="26sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="@id/identity_complete_icon"
+                app:layout_constraintTop_toBottomOf="@id/identity_complete_icon" />
+
+            <Button
+                android:id="@+id/identity_complete_button"
+                style="@style/DashButton.Blue"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginLeft="15dp"
+                android:layout_marginRight="15dp"
+                android:layout_marginBottom="25dp"
+                android:text="@string/verify_continue"
+                android:textSize="18sp"
                 app:layout_constraintBottom_toBottomOf="parent" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
