@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="483dp"
     android:layout_height="match_parent"
     android:clipChildren="false"
@@ -18,11 +19,17 @@
             android:layout_height="36dp"
             android:clipToPadding="false"
             app:animStartDelay="600"
-            app:drawable="@drawable/user1"
             app:fromAngle="70"
             app:interpolator="decelerate"
             app:orbitDuration="300"
-            app:toAngle="135" />
+            app:toAngle="135">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:srcCompat="@drawable/user1" />
+
+        </com.sambarboza.orbitview.PlanetView>
 
     </com.sambarboza.orbitview.OrbitView>
 
@@ -38,11 +45,17 @@
             android:layout_height="36dp"
             android:clipToPadding="false"
             app:animStartDelay="600"
-            app:drawable="@drawable/user2"
             app:fromAngle="55"
             app:interpolator="decelerate"
             app:orbitDuration="350"
-            app:toAngle="110" />
+            app:toAngle="110">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:srcCompat="@drawable/user2" />
+
+        </com.sambarboza.orbitview.PlanetView>
 
     </com.sambarboza.orbitview.OrbitView>
 
@@ -58,11 +71,17 @@
             android:layout_height="36dp"
             android:clipToPadding="false"
             app:animStartDelay="600"
-            app:drawable="@drawable/user3"
             app:fromAngle="65"
             app:interpolator="decelerate"
             app:orbitDuration="400"
-            app:toAngle="130" />
+            app:toAngle="130">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:srcCompat="@drawable/user3" />
+
+        </com.sambarboza.orbitview.PlanetView>
 
     </com.sambarboza.orbitview.OrbitView>
 
@@ -78,22 +97,77 @@
             android:layout_height="36dp"
             android:clipToPadding="false"
             app:animStartDelay="600"
-            app:drawable="@drawable/user4"
             app:fromAngle="80"
             app:interpolator="decelerate"
             app:orbitDuration="450"
-            app:toAngle="160" />
+            app:toAngle="160">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:srcCompat="@drawable/user4" />
+
+        </com.sambarboza.orbitview.PlanetView>
 
         <com.sambarboza.orbitview.PlanetView
+            android:id="@+id/placeholder_user_icon"
             android:layout_width="36dp"
             android:layout_height="36dp"
             android:clipToPadding="false"
             app:animStartDelay="600"
-            app:drawable="@drawable/user5"
             app:duration="500"
             app:fromAngle="50"
             app:interpolator="decelerate"
-            app:toAngle="115" />
+            app:toAngle="115"
+            tools:visibility="gone">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:srcCompat="@drawable/user5" />
+
+        </com.sambarboza.orbitview.PlanetView>
+
+    </com.sambarboza.orbitview.OrbitView>
+
+    <com.sambarboza.orbitview.OrbitView
+        android:layout_width="483dp"
+        android:layout_height="483dp"
+        android:layout_centerInParent="true"
+        app:orbitColor="@android:color/transparent"
+        app:orbitWidth="0dp">
+
+        <com.sambarboza.orbitview.PlanetView
+            android:id="@+id/dashpay_user_icon"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:clipToPadding="false"
+            android:visibility="gone"
+            app:animStartDelay="600"
+            app:duration="500"
+            app:fromAngle="0"
+            app:interpolator="decelerate"
+            app:toAngle="115"
+            tools:visibility="visible">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:srcCompat="@drawable/blue_circle" />
+
+            <TextView
+                android:id="@+id/username_1st_letter"
+                style="@style/MontserratRegular"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:textAllCaps="true"
+                android:textColor="@android:color/white"
+                android:textSize="30dp"
+                tools:ignore="SpUsage"
+                tools:text="S" />
+
+        </com.sambarboza.orbitview.PlanetView>
 
     </com.sambarboza.orbitview.OrbitView>
 

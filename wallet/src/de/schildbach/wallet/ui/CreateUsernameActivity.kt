@@ -34,6 +34,7 @@ import de.schildbach.wallet.data.IdentityCreationState
 import de.schildbach.wallet.ui.dashpay.NewAccountConfirmDialog
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.create_username.*
+import kotlinx.android.synthetic.main.users_orbit.*
 import org.dash.wallet.common.InteractionAwareActivity
 import java.util.concurrent.Executors
 
@@ -43,7 +44,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private val mediumTypeFace by lazy { ResourcesCompat.getFont(this, R.font.montserrat_medium) }
     private val slideInAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.slide_in_bottom) }
     private val fadeOutAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.fade_out) }
-    private var completeUsername: String? = null
+    private lateinit var completeUsername: String
 
     companion object {
         @JvmStatic
@@ -73,13 +74,16 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         registration_content.visibility = View.GONE
         processing_identity.visibility = View.GONE
         choose_username_title.visibility = View.GONE
+        placeholder_user_icon.visibility = View.GONE
         identity_complete.visibility = View.VISIBLE
+        dashpay_user_icon.visibility = View.VISIBLE
+        username_1st_letter.text = completeUsername[0].toString()
 
-        val text = getString(R.string.identity_complete_message, completeUsername!!)
+        val text = getString(R.string.identity_complete_message, completeUsername)
 
         val spannableContent = SpannableString(text)
-        val start = text.indexOf(completeUsername!!)
-        val end = start + completeUsername!!.length
+        val start = text.indexOf(completeUsername)
+        val end = start + completeUsername.length
         spannableContent.setSpan(StyleSpan(Typeface.BOLD), start, end, 0)
         identity_complete_text.text = spannableContent
         identity_complete_button.setOnClickListener { finish() }

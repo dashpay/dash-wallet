@@ -9,60 +9,9 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/bg_less_bright">
-
-        <!--Header-->
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/header"
-            android:layout_width="match_parent"
-            android:layout_height="230dp"
-            android:background="@android:color/white"
-            android:clipChildren="false"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <FrameLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:clipChildren="false"
-                android:clipToPadding="false"
-                android:translationX="@dimen/create_username_orbits_translation_x"
-                android:translationY="-130dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent">
-
-                <include layout="@layout/users_orbit" />
-
-            </FrameLayout>
-
-            <ImageView
-                android:id="@+id/close_btn"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="24dp"
-                android:layout_marginLeft="24dp"
-                android:layout_marginTop="36dp"
-                app:layout_constraintLeft_toLeftOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:srcCompat="@drawable/ic_close_blue" />
-
-            <TextView
-                android:id="@+id/choose_username_title"
-                style="@style/MontserratRegular"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="20dp"
-                android:layout_marginLeft="20dp"
-                android:layout_marginTop="146dp"
-                android:lines="2"
-                android:textColor="@color/medium_gray"
-                android:textSize="22sp"
-                app:layout_constraintLeft_toLeftOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                tools:ignore="RtlHardcoded"
-                tools:text="Choose your Dash\nUsername" />
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
+        android:background="@color/bg_less_bright"
+        android:clipChildren="false"
+        android:clipToPadding="false">
 
         <!--Registration-->
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -215,8 +164,8 @@
             android:id="@+id/identity_complete"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:visibility="gone"
             android:background="@android:color/white"
+            android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintTop_toBottomOf="@id/header"
             tools:visibility="visible">
@@ -256,6 +205,60 @@
                 android:text="@string/verify_continue"
                 android:textSize="18sp"
                 app:layout_constraintBottom_toBottomOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!--Header-->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/header"
+            android:layout_width="match_parent"
+            android:layout_height="230dp"
+            android:background="@android:color/white"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:translationX="@dimen/create_username_orbits_translation_x"
+                android:translationY="-130dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <include layout="@layout/users_orbit" />
+
+            </FrameLayout>
+
+            <ImageView
+                android:id="@+id/close_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="24dp"
+                android:layout_marginLeft="24dp"
+                android:layout_marginTop="36dp"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:srcCompat="@drawable/ic_close_blue" />
+
+            <TextView
+                android:id="@+id/choose_username_title"
+                style="@style/MontserratRegular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:layout_marginLeft="20dp"
+                android:layout_marginTop="146dp"
+                android:lines="2"
+                android:textColor="@color/medium_gray"
+                android:textSize="22sp"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:ignore="RtlHardcoded"
+                tools:text="Choose your Dash\nUsername" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
