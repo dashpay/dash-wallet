@@ -99,6 +99,11 @@ public class FingerprintHelper {
         KeyguardManager keyguardManager = (KeyguardManager) context.getSystemService(KEYGUARD_SERVICE);
         fingerprintManager = FingerprintManagerCompat.from(context);
 
+        if (fingerprintManager.isHardwareDetected()) {
+            log.info("Fingerprint hardware not detected");
+            return  false;
+        }
+
         if (!keyguardManager.isKeyguardSecure()) {
             log.info("User hasn't enabled Lock Screen");
             return false;
