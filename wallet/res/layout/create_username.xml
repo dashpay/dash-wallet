@@ -151,13 +151,12 @@
                 android:id="@+id/register_btn"
                 style="@style/DashButton.Blue"
                 android:layout_width="match_parent"
-                android:layout_height="50dp"
+                android:layout_height="wrap_content"
                 android:layout_marginLeft="15dp"
                 android:layout_marginRight="15dp"
                 android:layout_marginBottom="25dp"
                 android:enabled="false"
                 android:text="@string/register"
-                android:textSize="18sp"
                 app:layout_constraintBottom_toBottomOf="parent" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
@@ -202,12 +201,11 @@
                 android:id="@+id/processing_identity_dismiss_btn"
                 style="@style/DashButton.White.BlueText"
                 android:layout_width="match_parent"
-                android:layout_height="50dp"
+                android:layout_height="wrap_content"
                 android:layout_marginLeft="15dp"
                 android:layout_marginRight="15dp"
                 android:layout_marginBottom="25dp"
                 android:text="@string/processing_let_me_know"
-                android:textSize="18sp"
                 app:layout_constraintBottom_toBottomOf="parent" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
