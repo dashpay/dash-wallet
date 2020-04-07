@@ -209,9 +209,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         registerOnCoinsSentReceivedListener();
 
+        //TODO: Remove after integration with back-end
         Executors.newSingleThreadExecutor().execute(new Runnable() {
             @Override
             public void run() {
+                //Uncomment line below to clear identity creation state
                 //AppDatabase.getAppDatabase().identityCreationStateDao().clear();
             }
         });
