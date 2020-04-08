@@ -116,7 +116,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
         Executors.newSingleThreadExecutor().execute {
             val identityCreationState = IdentityCreationState(IdentityCreationState
-                    .State.PROCESSING_PAYMENT, username)
+                    .State.PROCESSING_PAYMENT, false, username)
             AppDatabase.getAppDatabase().identityCreationStateDao().insert(identityCreationState)
         }
     }

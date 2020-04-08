@@ -21,6 +21,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.BitmapDrawable
+import android.text.SpannableString
 import android.text.style.ImageSpan
 import android.util.AttributeSet
 import android.view.View
@@ -102,7 +103,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
         qr_preview.setImageDrawable(qrCodeBitmap)
         address_preview.text = address.toBase58() + "  "
 
-        val addressSpannable = address_preview.text.toSpannable()
+        val addressSpannable = SpannableString.valueOf(address_preview.text)
         val copyIconDrawable = ContextCompat.getDrawable(context, R.drawable.ic_copy_addres)!!
         val iconSize = address_preview.lineHeight
         copyIconDrawable.setBounds(0, 0, iconSize, iconSize)
