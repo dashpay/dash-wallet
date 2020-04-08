@@ -17,11 +17,15 @@
 
 package de.schildbach.wallet.ui
 
+import android.graphics.Typeface
+import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
 import android.text.Editable
+import android.text.SpannableString
 import android.text.TextWatcher
+import android.text.style.StyleSpan
 import android.view.View
-import android.widget.Toast
+import android.view.animation.AnimationUtils
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
@@ -34,6 +38,9 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
     private val regularTypeFace by lazy { ResourcesCompat.getFont(this, R.font.montserrat_regular) }
     private val mediumTypeFace by lazy { ResourcesCompat.getFont(this, R.font.montserrat_medium) }
+    private val slideInAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.slide_in_bottom) }
+    private val fadeOutAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.fade_out) }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,16 +50,8 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         choose_username_title.text = getText(R.string.choose_your_username)
         close_btn.setOnClickListener { finish() }
         username.addTextChangedListener(this)
-
-        register_btn.setOnClickListener {
-            val dialog = NewAccountConfirmDialog.createDialog()
-            dialog.show(supportFragmentManager, "NewAccountConfirmDialog")
-        }
-
-        val confirmTransactionSharedViewModel: SingleActionSharedViewModel = ViewModelProviders.of(this).get(SingleActionSharedViewModel::class.java)
-        confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
-            Toast.makeText(this, "Not yet implemented", Toast.LENGTH_LONG).show()
-        })
+        register_btn.setOnClickListener { showConfirmationDialog() }
+        processing_identity_dismiss_btn.setOnClickListener { finish() }
     }
 
     private fun validateUsernameSize(uname: String): Boolean {
@@ -95,6 +94,33 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             val usernameIsValid = validateUsernameCharacters(username) && validateUsernameSize(username)
             register_btn.isEnabled = usernameIsValid
         }
+    }
+
+    private fun showProcessingState() {
+        val username = username.text.toString()
+        val text = getString(R.string.username_being_created, username)
+
+        processing_identity.visibility = View.VISIBLE
+        choose_username_title.startAnimation(fadeOutAnimation)
+        processing_identity.startAnimation(slideInAnimation)
+        (processing_identity_loading_image.drawable as AnimationDrawable).start()
+
+        val spannableContent = SpannableString(text)
+        val start = text.indexOf(username)
+        val end = start + username.length
+        spannableContent.setSpan(StyleSpan(Typeface.BOLD), start, end, 0)
+        processing_identity_message.text = spannableContent
+    }
+
+    private fun showConfirmationDialog() {
+        val dialog = NewAccountConfirmDialog.createDialog()
+        dialog.show(supportFragmentManager, "NewAccountConfirmDialog")
+
+        val confirmTransactionSharedViewModel = ViewModelProviders.of(this)
+                .get(SingleActionSharedViewModel::class.java)
+        confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
+            showProcessingState()
+        })
     }
 
     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
