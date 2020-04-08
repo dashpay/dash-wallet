@@ -162,7 +162,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         MaybeMaintenanceFragment.add(getSupportFragmentManager());
 
-        initUphold();
         initView();
 
         //Prevent showing dialog twice or more when activity is recreated (e.g: rotating device, etc)
@@ -207,15 +206,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 fingerprintHelper = null;
             }
         }
-    }
-
-    private void initUphold() {
-        //Uses Sha256 hash of excerpt of xpub as Uphold authentication salt
-        String xpub = wallet.getWatchingKey().serializePubB58(Constants.NETWORK_PARAMETERS);
-        byte[] xpubExcerptHash = Sha256Hash.hash(xpub.substring(4, 15).getBytes());
-        String authenticationHash = Sha256Hash.wrap(xpubExcerptHash).toString();
-
-        UpholdClient.init(getApplicationContext(), authenticationHash);
     }
 
     private void initView() {
