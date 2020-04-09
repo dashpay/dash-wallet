@@ -14,7 +14,8 @@
         android:normalScreens="true"
         android:smallScreens="true" />
 
-	<application android:label="Dash in-app payment sample" >
+	<application android:label="Dash in-app payment sample"
+        android:name="androidx.multidex.MultiDexApplication">
 
 		<activity
 			android:name="de.schildbach.wallet.integration.sample.SampleActivity"

@@ -26,7 +26,6 @@ import android.net.Uri;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
 import android.os.Bundle;
-import android.os.Parcelable;
 import android.view.MenuItem;
 
 import androidx.lifecycle.Observer;
@@ -94,7 +93,6 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity {
                         String message = paymentIntentResource.getMessage();
                         if (message != null) {
                             final DialogBuilder dialog = new DialogBuilder(SendCoinsActivity.this);
-//                        dialog.setTitle(titleResId);
                             dialog.setMessage(message);
                             dialog.singleDismissButton(activityDismissListener);
                             dialog.show();
@@ -187,6 +185,13 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity {
     };
 
     public boolean isUserAuthorized() {
+        String action = getIntent().getAction();
+        if (Intent.ACTION_VIEW.equals(action)) {
+            return false;
+        }
+        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)) {
+            return false;
+        }
         return getIntent().getBooleanExtra(INTENT_EXTRA_USER_AUTHORIZED, false);
     }
 

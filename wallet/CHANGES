@@ -1,4 +1,10 @@
 Dash Wallet
+v7.0.4
+* Fix clipboard issues with Android 10
+* Payments/Send screen updates with changes in clipboard
+* Fix upgrade crash from v6 apps without a PIN
+* Fix upgrade crash from when PIN is entered incorrectly 3 times and app goes to background
+
 v7.0.3
 * Fix start up crash in Blockchain Service
 

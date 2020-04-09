@@ -46,11 +46,11 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
         securityGuard.savePin(pin)
     }
 
-    fun encrypt(scryptIterationsTarget: Int) {
+    fun encrypt(scryptIterationsTarget: Int, initialize: Boolean = true) {
         if (encryptWalletTask == null) {
             this.scryptIterationsTarget = scryptIterationsTarget
             encryptWalletTask = EncryptWalletTask()
-            encryptWalletTask!!.execute()
+            encryptWalletTask!!.execute(initialize)
         }
     }
 
@@ -80,6 +80,7 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
         }
 
         override fun doInBackground(vararg args: Any): Resource<Wallet> {
+            val initialize = args[0] as Boolean
             val wallet = walletApplication.wallet
 
             val password = securityGuard.generateRandomPassword()
@@ -91,7 +92,9 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
                 val newKey = keyCrypter.deriveKey(password)
                 wallet.encrypt(keyCrypter, newKey)
 
-                walletApplication.saveWalletAndFinalizeInitialization()
+                if(initialize) {
+                    walletApplication.saveWalletAndFinalizeInitialization()
+                }
 
                 securityGuard.savePassword(password)
 

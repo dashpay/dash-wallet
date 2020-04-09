@@ -109,7 +109,7 @@ import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
-import de.schildbach.wallet.ui.WalletActivity;
+import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet.util.BlockchainStateUtils;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
@@ -170,6 +170,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     public static final String START_AS_FOREGROUND_EXTRA = "start_as_foreground";
 
     private Executor executor = Executors.newSingleThreadExecutor();
+    private int syncPercentage = 0; // 0 to 100%
 
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
@@ -276,7 +277,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         notification.setContentTitle(msg);
         if (text.length() > 0)
             notification.setContentText(text);
-        notification.setContentIntent(PendingIntent.getActivity(this, 0, new Intent(this, WalletActivity.class), 0));
+        notification.setContentIntent(PendingIntent.getActivity(this, 0, OnboardingActivity.createIntent(this), 0));
         notification.setNumber(notificationCount == 1 ? 0 : notificationCount);
         notification.setWhen(System.currentTimeMillis());
         notification.setSound(Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.coins_received));
@@ -335,7 +336,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                         notification.setContentTitle(getString(R.string.app_name));
                         notification.setContentText(getString(R.string.notification_peers_connected_msg, numPeers));
                         notification.setContentIntent(PendingIntent.getActivity(BlockchainServiceImpl.this, 0,
-                                new Intent(BlockchainServiceImpl.this, WalletActivity.class), 0));
+                                OnboardingActivity.createIntent(BlockchainServiceImpl.this), 0));
                         notification.setWhen(System.currentTimeMillis());
                         notification.setOngoing(true);
                         nm.notify(Constants.NOTIFICATION_ID_CONNECTED, notification.getNotification());
@@ -377,19 +378,32 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     if(timeAgo < DateUtils.DAY_IN_MILLIS)
                         config.setRestoringBackup(false);
                 }
+                // this method is always called after progress or doneDownload
+                updateBlockchainState();
             }
         };
 
+        /*
+            This method is called by super.onBlocksDownloaded when the percentage
+            of the chain downloaded is 0.0, 1.0, 2.0, 3.0 .. 99.0% (whole numbers)
+
+            The pct value is relative to the blocks that need to be downloaded to sync,
+            rather than the relative to the entire blockchain.
+         */
         @Override
         protected void progress(double pct, int blocksLeft, Date date) {
             super.progress(pct, blocksLeft, date);
-            updateBlockchainState();
+            syncPercentage = pct > 0.0 ? (int)pct : 0;
         }
 
+        /*
+            This method is called by super.onBlocksDownloaded when the percentage
+            of the chain downloaded is 100.0% (completely done)
+        */
         @Override
         protected void doneDownload() {
             super.doneDownload();
-            updateBlockchainState();
+            syncPercentage = 100;
         }
     };
 
@@ -928,7 +942,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     }
 
     private Notification createNetworkSyncNotification(BlockchainState blockchainState) {
-        Intent notificationIntent = new Intent(this, WalletActivity.class);
+        Intent notificationIntent = OnboardingActivity.createIntent(this);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
                 notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
@@ -1026,6 +1040,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     }
 
     private void handleBlockchainStateNotification(BlockchainState blockchainState) {
+        // send this out for the Network Monitor, other activities observe the database
+        final Intent broadcast = new Intent(ACTION_BLOCKCHAIN_STATE);
+        broadcast.setPackage(getPackageName());
+        LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && blockchainState != null
                 && blockchainState.getBestChainDate() != null) {
             //Handle Ongoing notification state
@@ -1045,19 +1064,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     }
 
     private int percentageSync() {
-        int chainHeadHeight = blockChain.getChainHead().getHeight();
-        int mostCommonChainHeight;
-        if (peerGroup == null) {
-            return 0;
-        }
-        if (peerGroup.getMostCommonChainHeight() > 0) {
-            mostCommonChainHeight = peerGroup.getMostCommonChainHeight();
-        } else {
-            mostCommonChainHeight = chainHeadHeight;
-        }
-        float percentage = ((float) chainHeadHeight / (float) mostCommonChainHeight) * 100;
-        log.info("mostCommonChainHeight: " + mostCommonChainHeight + "\tchainHeadHeight: " + chainHeadHeight + "\t" + percentage + "%\t" + config.getBestChainHeightEver());
-        return (int) percentage;
+        return syncPercentage;
     }
 
     private void updateAppWidget() {

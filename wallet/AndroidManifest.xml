@@ -3,8 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="de.schildbach.wallet_test"
     android:installLocation="internalOnly"
-    android:versionCode="70008"
-    android:versionName="7.0.3">
+    android:versionCode="70009"
+    android:versionName="7.0.4">
 
     <!-- normal permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -113,7 +113,8 @@
             android:configChanges="keyboard|keyboardHidden"
             android:label="@string/pay_title"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity">
+            android:theme="@style/My.Theme.ChildActivity"
+            tools:ignore="LockedOrientationActivity">
             <intent-filter android:label="@string/send_coins_activity_title" >
                 <action android:name="android.intent.action.VIEW" />
 
