@@ -168,6 +168,9 @@ android {
         evonet {
             res.srcDirs = ["evonet/res"]
         }
+        mobile {
+            res.srcDirs = ["mobile/res"]
+        }
     }
     flavorDimensions "default"
     productFlavors {
@@ -185,6 +188,9 @@ android {
         }
         evonet {
             applicationId = "hashengineering.darkcoin.wallet.evonet"
+        }
+        mobile {
+            applicationId = "hashengineering.darkcoin.wallet.mobile"
         }
     }
     externalNativeBuild {
