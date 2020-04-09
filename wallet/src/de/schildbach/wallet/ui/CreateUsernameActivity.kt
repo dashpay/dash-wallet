@@ -68,6 +68,12 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             this.completeUsername = intentUsername
             showCompleteState()
         }
+
+        val confirmTransactionSharedViewModel = ViewModelProviders.of(this)
+                .get(SingleActionSharedViewModel::class.java)
+        confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
+            showProcessingState()
+        })
     }
 
     private fun showCompleteState() {
@@ -157,11 +163,6 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         val dialog = NewAccountConfirmDialog.createDialog()
         dialog.show(supportFragmentManager, "NewAccountConfirmDialog")
 
-        val confirmTransactionSharedViewModel = ViewModelProviders.of(this)
-                .get(SingleActionSharedViewModel::class.java)
-        confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
-            showProcessingState()
-        })
     }
 
     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
