@@ -97,7 +97,7 @@ class PaymentsPayFragment : Fragment() {
                 }
             }
 
-            override fun error(messageResId: Int, vararg messageArgs: Any) {
+            override fun error(ex: Exception, messageResId: Int, vararg messageArgs: Any) {
                 if (fireAction) {
                     dialog(context, null, errorDialogTitleResId, messageResId, *messageArgs)
                 } else {

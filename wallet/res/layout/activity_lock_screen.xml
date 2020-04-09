@@ -55,6 +55,18 @@
         app:srcCompat="@drawable/ic_dash_logo_white"
         tools:ignore="ContentDescription" />
 
+    <TextView
+        style="@style/MontserratMedium.PageTitle"
+        app:layout_constraintTop_toBottomOf="@id/dash_logo"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:textSize="24dp"
+        android:text="~ BIP70 DEMO ~"
+        android:textColor="@color/dash_white" />
+
     <LinearLayout
         android:id="@+id/content"
         android:layout_width="match_parent"

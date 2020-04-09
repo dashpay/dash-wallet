@@ -17,29 +17,29 @@
 
 package de.schildbach.wallet.ui.send;
 
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
+import android.os.Handler;
+import android.os.Looper;
+
+import com.google.protobuf.CodedInputStream;
+import com.google.protobuf.CodedOutputStream;
+
+import org.bitcoinj.protocols.payments.PaymentProtocol;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
 import javax.annotation.Nullable;
 
-import org.bitcoinj.protocols.payments.PaymentProtocol;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.CodedOutputStream;
-
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.InputParser;
 import de.schildbach.wallet.util.Bluetooth;
-
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothSocket;
-import android.os.Handler;
-import android.os.Looper;
 import de.schildbach.wallet_test.R;
 import okhttp3.CacheControl;
 import okhttp3.Call;
@@ -59,7 +59,7 @@ public abstract class RequestPaymentRequestTask {
     public interface ResultCallback {
         void onPaymentIntent(PaymentIntent paymentIntent);
 
-        void onFail(int messageResId, Object... messageArgs);
+        void onFail(Exception ex, int messageResId, Object... messageArgs);
     }
 
     public RequestPaymentRequestTask(final Handler backgroundHandler, final ResultCallback resultCallback) {
@@ -73,7 +73,7 @@ public abstract class RequestPaymentRequestTask {
         private final String userAgent;
 
         public HttpRequestTask(final Handler backgroundHandler, final ResultCallback resultCallback,
-                @Nullable final String userAgent) {
+                               @Nullable final String userAgent) {
             super(backgroundHandler, resultCallback);
 
             this.userAgent = userAgent;
@@ -108,8 +108,8 @@ public abstract class RequestPaymentRequestTask {
                                 }
 
                                 @Override
-                                protected void error(final int messageResId, final Object... messageArgs) {
-                                    onFail(messageResId, messageArgs);
+                                protected void error(Exception x, final int messageResId, final Object... messageArgs) {
+                                    onFail(x, messageResId, messageArgs);
                                 }
                             }.parse();
                             is.close();
@@ -118,12 +118,12 @@ public abstract class RequestPaymentRequestTask {
                             final String responseMessage = response.message();
 
                             log.info("got http error {}: {}", responseCode, responseMessage);
-                            onFail(R.string.error_http, responseCode, responseMessage);
+                            onFail(null, R.string.error_http, responseCode, responseMessage);
                         }
                     } catch (final IOException x) {
                         log.info("problem sending", x);
 
-                        onFail(R.string.error_io, x.getMessage());
+                        onFail(x, R.string.error_io, x.getMessage());
                     }
                 }
             });
@@ -134,7 +134,7 @@ public abstract class RequestPaymentRequestTask {
         private final BluetoothAdapter bluetoothAdapter;
 
         public BluetoothRequestTask(final Handler backgroundHandler, final ResultCallback resultCallback,
-                final BluetoothAdapter bluetoothAdapter) {
+                                    final BluetoothAdapter bluetoothAdapter) {
             super(backgroundHandler, resultCallback);
 
             this.bluetoothAdapter = bluetoothAdapter;
@@ -183,19 +183,19 @@ public abstract class RequestPaymentRequestTask {
                                 }
 
                                 @Override
-                                protected void error(final int messageResId, final Object... messageArgs) {
-                                    onFail(messageResId, messageArgs);
+                                protected void error(Exception x, int messageResId, Object... messageArgs) {
+                                    onFail(x, messageResId, messageArgs);
                                 }
                             }.parse();
                         } else {
                             log.info("got bluetooth error {}", responseCode);
 
-                            onFail(R.string.error_bluetooth, responseCode);
+                            onFail(null, R.string.error_bluetooth, responseCode);
                         }
                     } catch (final IOException x) {
                         log.info("problem sending", x);
 
-                        onFail(R.string.error_io, x.getMessage());
+                        onFail(x, R.string.error_io, x.getMessage());
                     } finally {
                         if (os != null) {
                             try {
@@ -237,11 +237,11 @@ public abstract class RequestPaymentRequestTask {
         });
     }
 
-    protected void onFail(final int messageResId, final Object... messageArgs) {
+    protected void onFail(final Exception ex, final int messageResId, final Object... messageArgs) {
         callbackHandler.post(new Runnable() {
             @Override
             public void run() {
-                resultCallback.onFail(messageResId, messageArgs);
+                resultCallback.onFail(ex, messageResId, messageArgs);
             }
         });
     }

@@ -107,7 +107,7 @@ public class SendCoinsQrActivity extends ShortcutComponentActivity {
                 }
 
                 @Override
-                protected void error(final int messageResId, final Object... messageArgs) {
+                protected void error(Exception x, final int messageResId, final Object... messageArgs) {
                     dialog(SendCoinsQrActivity.this, dismissListener, 0, messageResId, messageArgs);
                 }
 

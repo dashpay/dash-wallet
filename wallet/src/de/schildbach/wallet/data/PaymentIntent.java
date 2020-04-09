@@ -376,14 +376,13 @@ public final class PaymentIntent implements Parcelable {
      *            payment intent that is checked if it extends this one
      * @return true if it extends
      */
-    public boolean isExtendedBy(final PaymentIntent other) {
+    public boolean isExtendedBy(final PaymentIntent other, boolean ignoreDetails) {
         // shortcut via hash
         if (standard == Standard.BIP21 && other.standard == Standard.BIP70)
             if (paymentRequestHash != null && Arrays.equals(paymentRequestHash, other.paymentRequestHash))
                 return true;
 
-        // TODO memo
-        return equalsAmount(other) && equalsAddress(other);
+        return ignoreDetails || (equalsAmount(other) && equalsAddress(other));
     }
 
     public boolean equalsAmount(final PaymentIntent other) {

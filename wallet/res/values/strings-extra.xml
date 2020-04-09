@@ -319,4 +319,15 @@
     <string name="sync_status_sync_completed">Completed</string>
 
     <string name="appwidget_wallet_not_ready">Please setup your wallet</string>
+
+    <string name="payment_request_please_wait_title">Please wait</string>
+    <string name="payment_request_please_wait_message">Connecting to Payment Server</string>
+    <string name="payment_request_unable_to_connect">Unable to Connect</string>
+    <string name="payment_request_unable_to_send">Unable to Send</string>
+    <string name="payment_request_please_try_again">Please try again</string>
+    <string name="payment_request_try_again">Try Again</string>
+    <string name="payment_request_problem_title">Problem sending coins</string>
+    <string name="payment_request_expired_title">Payment Request Expired</string>
+    <string name="payment_request_close">Close</string>
+    <string name="payment_request_paid_to">Paid to</string>
 </resources>

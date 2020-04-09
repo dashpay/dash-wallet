@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="de.schildbach.wallet_test"
     android:installLocation="internalOnly"
     android:versionCode="70008"
@@ -118,6 +119,8 @@
 
                 <data android:scheme="dash" />
                 <data android:scheme="darkcoin" />
+                <data android:scheme="bitcoinsv" />
+                <data android:scheme="pay" />
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -127,6 +130,8 @@
 
                 <data android:scheme="dash" />
                 <data android:scheme="darkcoin" />
+                <data android:scheme="bitcoinsv" />
+                <data android:scheme="pay" />
 
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>

@@ -18,18 +18,35 @@ package de.schildbach.wallet.livedata
 
 import de.schildbach.wallet.livedata.Status.*
 
-data class Resource<out T>(val status: Status, val data: T?, val message: String?) {
+data class Resource<out T>(val status: Status, val data: T?, val message: String?, val exception: Exception?) {
     companion object {
+        @JvmStatic
         fun <T> success(data: T?): Resource<T> {
-            return Resource(SUCCESS, data, null)
+            return Resource(SUCCESS, data, null, null)
+        }
+
+        fun <T> error(msg: String): Resource<T> {
+            return Resource(ERROR, null, msg, null)
         }
 
         fun <T> error(msg: String, data: T?): Resource<T> {
-            return Resource(ERROR, data, msg)
+            return Resource(ERROR, data, msg, null)
+        }
+
+        fun <T> error(exception: Exception): Resource<T> {
+            return Resource(ERROR, null, null, exception)
+        }
+
+        fun <T> error(exception: Exception, data: T?): Resource<T> {
+            return Resource(ERROR, data, null, exception)
+        }
+
+        fun <T> error(exception: Exception, msg: String): Resource<T> {
+            return Resource(ERROR, null, msg, exception)
         }
 
         fun <T> loading(data: T?): Resource<T> {
-            return Resource(LOADING, data, null)
+            return Resource(LOADING, data, null, null)
         }
     }
 }
