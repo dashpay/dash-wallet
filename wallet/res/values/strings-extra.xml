@@ -326,8 +326,10 @@
     <string name="payment_request_unable_to_send">Unable to Send</string>
     <string name="payment_request_please_try_again">Please try again</string>
     <string name="payment_request_try_again">Try Again</string>
-    <string name="payment_request_problem_title">Problem sending coins</string>
+    <string name="payment_request_problem_title">Payment was not acknowledged</string>
+    <string name="payment_request_problem_message">Your payment was processed but the server was not able to acknowledge it</string>
     <string name="payment_request_expired_title">Payment Request Expired</string>
     <string name="payment_request_close">Close</string>
+    <string name="payment_request_skip">Skip</string>
     <string name="payment_request_paid_to">Paid to</string>
 </resources>

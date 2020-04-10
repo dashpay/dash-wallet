@@ -238,7 +238,7 @@ class PaymentProtocolFragment : Fragment() {
                         error_view.setOnConfirmClickListener(R.string.payment_request_try_again, View.OnClickListener { _ ->
                             paymentProtocolModel.directPay(it.data!!.first)
                         })
-                        error_view.setOnCancelClickListener(R.string.button_cancel, View.OnClickListener { _ ->
+                        error_view.setOnCancelClickListener(R.string.payment_request_skip, View.OnClickListener { _ ->
                             showTransactionResult(it.data!!.first)
                         })
                     } else {
