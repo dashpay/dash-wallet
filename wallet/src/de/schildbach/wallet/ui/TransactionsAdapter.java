@@ -17,51 +17,50 @@
 
 package de.schildbach.wallet.ui;
 
+import android.content.Context;
+import android.content.Intent;
+import android.content.res.Resources;
+import android.graphics.drawable.AnimationDrawable;
+import android.text.format.DateUtils;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
+import androidx.recyclerview.widget.RecyclerView;
+
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionConfidence;
+import org.bitcoinj.utils.ExchangeRate;
+import org.bitcoinj.utils.MonetaryFormat;
+import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.ui.CurrencyTextView;
+import org.dash.wallet.common.util.GenericUtils;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 import javax.annotation.Nullable;
 
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionConfidence;
-import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
-import org.bitcoinj.utils.ExchangeRate;
-import org.bitcoinj.utils.MonetaryFormat;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.ZeroConfCoinSelector;
-import org.dash.wallet.common.ui.CurrencyTextView;
-import org.dash.wallet.common.ui.Formats;
-import org.dash.wallet.common.util.GenericUtils;
-
+import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
-
-import de.schildbach.wallet.util.FiatExtensionsKt;
+import de.schildbach.wallet.data.IdentityCreationState;
 import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
-
-import android.content.Context;
-import android.content.res.Resources;
-
-import androidx.cardview.widget.CardView;
-import androidx.recyclerview.widget.RecyclerView;
-
-import android.text.format.DateUtils;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.TextView;
 
 /**
  * @author Andreas Schildbach
@@ -95,8 +94,12 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private static final String CONFIDENCE_SYMBOL_UNKNOWN = "?";
 
     private static final int VIEW_TYPE_TRANSACTION = 0;
+    private static final int VIEW_TYPE_PROCESSING_IDENTITY = 1;
 
     private Map<Sha256Hash, TransactionCacheEntry> transactionCache = new HashMap<Sha256Hash, TransactionCacheEntry>();
+
+    //Temporary field while IdentityCreationTx (or whatever we call it) is not integrated yet.
+    private IdentityCreationState identityCreationState;
 
     private static class TransactionCacheEntry {
         private final Coin value;
@@ -173,12 +176,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         notifyDataSetChanged();
     }
 
-    public void setSelectedItemId(final long itemId) {
-        selectedItemId = itemId;
-
-        notifyDataSetChanged();
-    }
-
     public void clearCacheAndNotifyDataSetChanged() {
         transactionCache.clear();
 
@@ -189,11 +186,11 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     public int getItemCount() {
         int count = transactions.size();
 
-        return count;
-    }
+        if (identityCreationState != null) {
+            count += 1;
+        }
 
-    public int getTransactionsCount() {
-        return transactions.size();
+        return count;
     }
 
     @Override
@@ -201,21 +198,30 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         if (position == RecyclerView.NO_POSITION)
             return RecyclerView.NO_ID;
 
-        return WalletUtils.longHash(transactions.get(position).getHash());
+        if (identityCreationState != null) {
+            if (position == 0) {
+                return identityCreationState.getId();
+            } else {
+                return WalletUtils.longHash(transactions.get(position - 1).getHash());
+            }
+        } else {
+            return WalletUtils.longHash(transactions.get(position).getHash());
+        }
     }
 
     @Override
     public int getItemViewType(final int position) {
+        if (identityCreationState != null && position == 0) {
+            return VIEW_TYPE_PROCESSING_IDENTITY;
+        }
         return VIEW_TYPE_TRANSACTION;
-    }
-
-    public RecyclerView.ViewHolder createTransactionViewHolder(final ViewGroup parent) {
-        return createViewHolder(parent, VIEW_TYPE_TRANSACTION);
     }
 
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(final ViewGroup parent, final int viewType) {
-        if (viewType == VIEW_TYPE_TRANSACTION) {
+        if (viewType == VIEW_TYPE_PROCESSING_IDENTITY) {
+            return new ProcessingIdentityViewHolder(inflater.inflate(R.layout.identity_creation_state, parent, false));
+        } else if (viewType == VIEW_TYPE_TRANSACTION) {
             return new TransactionViewHolder(inflater.inflate(R.layout.transaction_row, parent, false));
         } else {
             throw new IllegalStateException("unknown type: " + viewType);
@@ -230,7 +236,12 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             final long itemId = getItemId(position);
             transactionHolder.itemView.setActivated(itemId == selectedItemId);
 
-            final Transaction tx = transactions.get(position);
+            Transaction tx;
+            if (identityCreationState != null) {
+                tx = transactions.get(position - 1);
+            } else {
+                tx = transactions.get(position);
+            }
             transactionHolder.bind(tx);
 
             transactionHolder.itemView.setOnClickListener(new View.OnClickListener() {
@@ -242,6 +253,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                     }
                 }
             });
+        } else if (holder instanceof ProcessingIdentityViewHolder) {
+            ((ProcessingIdentityViewHolder) holder).bind(identityCreationState);
         }
     }
 
@@ -251,7 +264,76 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     public interface OnClickListener {
         void onTransactionMenuClick(View view, Transaction tx);
+
         void onTransactionRowClicked(Transaction tx);
+    }
+
+    private class ProcessingIdentityViewHolder extends RecyclerView.ViewHolder {
+
+        private ImageView animatedIcon;
+        private TextView title;
+        private TextView subTitle;
+        private ProgressBar progress;
+        private ImageView forwardIcon;
+
+        public ProcessingIdentityViewHolder(@NonNull View itemView) {
+            super(itemView);
+            animatedIcon = itemView.findViewById(R.id.processing_animated_icon);
+            title = itemView.findViewById(R.id.processing_title);
+            subTitle = itemView.findViewById(R.id.processing_subtitle);
+            progress = itemView.findViewById(R.id.processing_progress);
+            forwardIcon = itemView.findViewById(R.id.processing_forward_arrow);
+
+            ((AnimationDrawable) animatedIcon.getDrawable()).start();
+            itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (identityCreationState.getState() == IdentityCreationState.State.DONE) {
+                        Intent intent = new Intent(v.getContext(), CreateUsernameActivity.class);
+                        intent.putExtra(CreateUsernameActivity.Companion.getCOMPLETE_USERNAME(),
+                                identityCreationState.getUsername());
+                        v.getContext().startActivity(intent);
+                    } else {
+                        Executors.newSingleThreadExecutor().execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                identityCreationState.nextState();
+                                AppDatabase.getAppDatabase()
+                                        .identityCreationStateDao().insert(identityCreationState);
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        public void bind(IdentityCreationState identityCreationState) {
+            switch (identityCreationState.getState()) {
+                case PROCESSING_PAYMENT:
+                    animatedIcon.setVisibility(View.VISIBLE);
+                    forwardIcon.setVisibility(View.GONE);
+                    progress.setProgress(25);
+                    subTitle.setText(R.string.processing_home_step_1);
+                    break;
+                case CREATING_IDENTITY:
+                    progress.setProgress(50);
+                    subTitle.setText(R.string.processing_home_step_2);
+                    break;
+                case REGISTERING_USERNAME:
+                    progress.setProgress(75);
+                    subTitle.setText(R.string.processing_home_step_3);
+                    break;
+                case DONE:
+                    animatedIcon.setVisibility(View.GONE);
+                    forwardIcon.setVisibility(View.VISIBLE);
+                    progress.setProgress(100);
+                    title.setText(itemView.getContext().getString(R.string.processing_done_title,
+                            identityCreationState.getUsername()));
+                    subTitle.setText(R.string.processing_done_subtitle);
+                    break;
+            }
+        }
+
     }
 
     private class TransactionViewHolder extends RecyclerView.ViewHolder {
@@ -361,10 +443,10 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             signalView.setTextColor(valueColor);
             dashSymbolView.setColorFilter(valueColor);
 
-            if(value.isPositive()) {
+            if (value.isPositive()) {
                 signalView.setText(String.format("%c", org.dash.wallet.common.Constants.CURRENCY_PLUS_SIGN));
                 valueView.setAmount(value);
-            } else if(value.isNegative()) {
+            } else if (value.isNegative()) {
                 signalView.setText(String.format("%c", org.dash.wallet.common.Constants.CURRENCY_MINUS_SIGN));
                 valueView.setAmount(value.negate());
             } else {
@@ -372,9 +454,9 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             }
 
             // fiat value
-            if(!value.isZero()) {
+            if (!value.isZero()) {
                 final ExchangeRate exchangeRate = tx.getExchangeRate();
-                if(exchangeRate != null) {
+                if (exchangeRate != null) {
                     String exchangeCurrencyCode = GenericUtils.currencySymbol(exchangeRate.fiat.currencyCode);
                     fiatView.setFiatAmount(txCache.value, exchangeRate, Constants.LOCAL_FORMAT,
                             exchangeCurrencyCode);
@@ -394,16 +476,26 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             // Show the secondary status:
             //
             int secondaryStatusId = -1;
-            if(confidence.hasErrors())
+            if (confidence.hasErrors())
                 secondaryStatusId = TransactionUtil.getErrorName(tx);
-            else if(!txCache.sent)
+            else if (!txCache.sent)
                 secondaryStatusId = TransactionUtil.getReceivedStatusString(tx, wallet);
 
-            if(secondaryStatusId != -1)
+            if (secondaryStatusId != -1)
                 secondaryStatusView.setText(secondaryStatusId);
             else secondaryStatusView.setText(null);
             secondaryStatusView.setTextColor(secondaryStatusColor);
         }
 
     }
+
+    public IdentityCreationState getIdentityCreationState() {
+        return identityCreationState;
+    }
+
+    public void setIdentityCreationState(IdentityCreationState identityCreationState) {
+        this.identityCreationState = identityCreationState;
+        notifyDataSetChanged();
+    }
+
 }

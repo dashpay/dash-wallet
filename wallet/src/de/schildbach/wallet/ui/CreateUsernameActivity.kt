@@ -29,10 +29,14 @@ import android.view.animation.AnimationUtils
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
+import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.data.IdentityCreationState
 import de.schildbach.wallet.ui.dashpay.NewAccountConfirmDialog
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.create_username.*
+import kotlinx.android.synthetic.main.users_orbit.*
 import org.dash.wallet.common.InteractionAwareActivity
+import java.util.concurrent.Executors
 
 class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
@@ -40,6 +44,12 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private val mediumTypeFace by lazy { ResourcesCompat.getFont(this, R.font.montserrat_medium) }
     private val slideInAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.slide_in_bottom) }
     private val fadeOutAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.fade_out) }
+    private lateinit var completeUsername: String
+
+    companion object {
+        @JvmStatic
+        public val COMPLETE_USERNAME = "complete_username"
+    }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,6 +62,37 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         username.addTextChangedListener(this)
         register_btn.setOnClickListener { showConfirmationDialog() }
         processing_identity_dismiss_btn.setOnClickListener { finish() }
+
+        val intentUsername = intent?.extras?.getString(COMPLETE_USERNAME)
+        if (intentUsername != null) {
+            this.completeUsername = intentUsername
+            showCompleteState()
+        }
+
+        val confirmTransactionSharedViewModel = ViewModelProviders.of(this)
+                .get(SingleActionSharedViewModel::class.java)
+        confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
+            showProcessingState()
+        })
+    }
+
+    private fun showCompleteState() {
+        registration_content.visibility = View.GONE
+        processing_identity.visibility = View.GONE
+        choose_username_title.visibility = View.GONE
+        placeholder_user_icon.visibility = View.GONE
+        identity_complete.visibility = View.VISIBLE
+        dashpay_user_icon.visibility = View.VISIBLE
+        username_1st_letter.text = completeUsername[0].toString()
+
+        val text = getString(R.string.identity_complete_message, completeUsername)
+
+        val spannableContent = SpannableString(text)
+        val start = text.indexOf(completeUsername)
+        val end = start + completeUsername.length
+        spannableContent.setSpan(StyleSpan(Typeface.BOLD), start, end, 0)
+        identity_complete_text.text = spannableContent
+        identity_complete_button.setOnClickListener { finish() }
     }
 
     private fun validateUsernameSize(uname: String): Boolean {
@@ -110,17 +151,18 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         val end = start + username.length
         spannableContent.setSpan(StyleSpan(Typeface.BOLD), start, end, 0)
         processing_identity_message.text = spannableContent
+
+        Executors.newSingleThreadExecutor().execute {
+            val identityCreationState = IdentityCreationState(IdentityCreationState
+                    .State.PROCESSING_PAYMENT, username)
+            AppDatabase.getAppDatabase().identityCreationStateDao().insert(identityCreationState)
+        }
     }
 
     private fun showConfirmationDialog() {
         val dialog = NewAccountConfirmDialog.createDialog()
         dialog.show(supportFragmentManager, "NewAccountConfirmDialog")
 
-        val confirmTransactionSharedViewModel = ViewModelProviders.of(this)
-                .get(SingleActionSharedViewModel::class.java)
-        confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
-            showProcessingState()
-        })
     }
 
     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {

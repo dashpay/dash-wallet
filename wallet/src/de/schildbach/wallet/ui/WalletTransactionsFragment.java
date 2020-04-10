@@ -45,6 +45,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.AsyncTaskLoader;
 import androidx.loader.content.Loader;
@@ -77,9 +78,11 @@ import java.util.concurrent.RejectedExecutionException;
 
 import javax.annotation.Nullable;
 
+import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
+import de.schildbach.wallet.data.IdentityCreationState;
 import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Qr;
@@ -193,7 +196,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
             }
         });
 
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(filterSpinner.getContext(), R.array.history_filter, R.layout.custom_spinner_item);
+        final ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(filterSpinner.getContext(), R.array.history_filter, R.layout.custom_spinner_item);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         filterSpinner.setAdapter(adapter);
         filterSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -216,6 +219,15 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
 
+            }
+        });
+
+        AppDatabase.getAppDatabase().identityCreationStateDao().load().observe(this, new Observer<IdentityCreationState>() {
+            @Override
+            public void onChanged(IdentityCreationState identityCreationState) {
+                if (identityCreationState != null) {
+                    WalletTransactionsFragment.this.adapter.setIdentityCreationState(identityCreationState);
+                }
             }
         });
 
