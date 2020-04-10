@@ -51,7 +51,7 @@ dependencies {
     implementation 'com.github.tony19:logback-android-core:1.1.1-6'
     implementation 'com.google.code.findbugs:jsr305:3.0.2'
     implementation 'com.tbuonomo.andrui:viewpagerdotsindicator:4.1.2'
-    implementation 'com.sambarboza:orbitview:0.1.4'
+    implementation 'com.sambarboza:orbitview:0.2.0'
 
     implementation project(path: ':common')
     implementation project(path: ':ui-redesign')

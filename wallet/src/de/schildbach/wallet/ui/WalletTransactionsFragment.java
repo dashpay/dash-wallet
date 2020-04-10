@@ -72,6 +72,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.IdentityCreationState;
+import de.schildbach.wallet.data.IdentityCreationState;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet_test.R;
 
@@ -271,13 +272,21 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
     @Override
     public void onProcessingIdentityRowClicked(final IdentityCreationState identityCreationState, boolean retry) {
-        Executors.newSingleThreadExecutor().execute(new Runnable() {
-            @Override
-            public void run() {
-                identityCreationState.nextState();
-                AppDatabase.getAppDatabase().identityCreationStateDao().insert(identityCreationState);
-            }
-        });
+        if (identityCreationState.getState() == IdentityCreationState.State.DONE) {
+            Intent intent = new Intent(activity, CreateUsernameActivity.class);
+            intent.putExtra(CreateUsernameActivity.Companion.getCOMPLETE_USERNAME(),
+                    identityCreationState.getUsername());
+            startActivity(intent);
+        } else {
+            Executors.newSingleThreadExecutor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    identityCreationState.nextState();
+                    AppDatabase.getAppDatabase()
+                            .identityCreationStateDao().insert(identityCreationState);
+                }
+            });
+        }
     }
 
     @Override

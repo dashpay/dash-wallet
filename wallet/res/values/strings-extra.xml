@@ -345,4 +345,5 @@
     <string name="processing_error_step_2">(2/3) Unable to create ID</string>
     <string name="processing_error_step_3">(3/3) Can\'t register username</string>
 
+    <string name="identity_complete_message">Your username %s has been successfully created on the Dash Network</string>
 </resources>

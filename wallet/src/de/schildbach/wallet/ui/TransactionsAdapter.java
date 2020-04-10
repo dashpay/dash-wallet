@@ -66,7 +66,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private final LayoutInflater inflater;
 
     private final Wallet wallet;
-    private final int maxConnectedPeers;
     @Nullable
     private final OnClickListener onClickListener;
 
@@ -79,14 +78,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private final int colorPrimaryStatus, colorSecondaryStatus, colorInsignificant;
     private final int colorValuePositve, colorValueNegative;
     private final int colorError;
-    private final String textCoinBase;
-    private final String textInternal;
-    private final float textSizeNormal;
-    private boolean showTransactionRowMenu;
-
-    private static final String CONFIDENCE_SYMBOL_IN_CONFLICT = "\u26A0"; // warning sign
-    private static final String CONFIDENCE_SYMBOL_DEAD = "\u271D"; // latin cross
-    private static final String CONFIDENCE_SYMBOL_UNKNOWN = "?";
 
     private static final int VIEW_TYPE_TRANSACTION = 0;
     private static final int VIEW_TYPE_PROCESSING_IDENTITY = 1;
@@ -125,7 +116,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         inflater = LayoutInflater.from(context);
 
         this.wallet = wallet;
-        this.maxConnectedPeers = maxConnectedPeers;
         this.onClickListener = onClickListener;
 
         final Resources res = context.getResources();
@@ -137,10 +127,10 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         colorValuePositve = res.getColor(R.color.colorPrimary);
         colorValueNegative = res.getColor(android.R.color.black);
         colorError = res.getColor(R.color.fg_error);
-        textCoinBase = context.getString(R.string.wallet_transactions_fragment_coinbase);
-        textInternal = context.getString(R.string.symbol_internal) + " "
+        String textCoinBase = context.getString(R.string.wallet_transactions_fragment_coinbase);
+        String textInternal = context.getString(R.string.symbol_internal) + " "
                 + context.getString(R.string.wallet_transactions_fragment_internal);
-        textSizeNormal = res.getDimension(R.dimen.font_size_normal);
+        float textSizeNormal = res.getDimension(R.dimen.font_size_normal);
 
         setHasStableIds(true);
     }
@@ -263,7 +253,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     }
 
     public void setShowTransactionRowMenu(boolean showTransactionRowMenu) {
-        this.showTransactionRowMenu = showTransactionRowMenu;
     }
 
     public interface OnClickListener {
@@ -434,4 +423,5 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         this.identityCreationState = identityCreationState;
         notifyDataSetChanged();
     }
+
 }

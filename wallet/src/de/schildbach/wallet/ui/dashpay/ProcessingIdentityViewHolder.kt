@@ -24,14 +24,14 @@ class ProcessingIdentityViewHolder(itemView: View) : RecyclerView.ViewHolder(ite
         } else {
             itemView.title.setTextColor(ResourcesCompat.getColor(itemView.resources, R.color.dash_blue, null))
             itemView.title.text = itemView.context.getString(R.string.processing_home_title)
-            itemView.retry_icon.visibility = View.GONE
-            if (identityCreationState.state == IdentityCreationState.State.PROCESSING_PAYMENT) {
-                itemView.animated_icon.visibility = View.VISIBLE
-                itemView.error_icon.visibility = View.INVISIBLE
-            } else {
+            if (identityCreationState.state == IdentityCreationState.State.DONE) {
                 itemView.animated_icon.visibility = View.GONE
                 itemView.error_icon.visibility = View.GONE
+            } else {
+                itemView.animated_icon.visibility = View.VISIBLE
+                itemView.error_icon.visibility = View.INVISIBLE
             }
+            itemView.retry_icon.visibility = View.GONE
         }
 
         when (identityCreationState.state) {
