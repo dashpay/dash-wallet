@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <declare-styleable name="PaymentRequestWaitErrorView">
+        <attr name="mode" format="enum">
+            <enum name="progress" value="0" />
+            <enum name="error" value="1" />
+        </attr>
+        <attr format="reference" name="iconSrc"/>
+    </declare-styleable>
+
     <declare-styleable name="KeyboardResponsiveCoordinatorLayout">
         <attr name="viewToHideWhenSoftKeyboardIsOpen" format="reference" />
     </declare-styleable>

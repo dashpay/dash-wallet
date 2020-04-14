@@ -128,7 +128,7 @@ public final class WalletUriHandlerActivity extends AppCompatActivity {
                     }
 
                     @Override
-                    protected void error(final int messageResId, final Object... messageArgs) {
+                    protected void error(Exception x, final int messageResId, final Object... messageArgs) {
                         dialog(WalletUriHandlerActivity.this, new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {

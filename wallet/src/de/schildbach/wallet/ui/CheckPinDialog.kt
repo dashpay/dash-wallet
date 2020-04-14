@@ -30,7 +30,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import androidx.annotation.RequiresApi
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.os.CancellationSignal
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
@@ -55,7 +54,7 @@ open class CheckPinDialog : DialogFragment() {
         internal const val ARG_PIN_ONLY = "arg_pin_only"
 
         @JvmStatic
-        fun show(activity: AppCompatActivity, requestCode: Int = 0, pinOnly: Boolean = false) {
+        fun show(activity: FragmentActivity, requestCode: Int = 0, pinOnly: Boolean = false) {
             val checkPinDialog = CheckPinDialog()
             if (PinRetryController.getInstance().isLocked) {
                 checkPinDialog.showLockedAlert(activity)
@@ -69,7 +68,7 @@ open class CheckPinDialog : DialogFragment() {
         }
 
         @JvmStatic
-        fun show(activity: AppCompatActivity, requestCode: Int = 0) {
+        fun show(activity: FragmentActivity, requestCode: Int = 0) {
             show(activity, requestCode, false)
         }
     }

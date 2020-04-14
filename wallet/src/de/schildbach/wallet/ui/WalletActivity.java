@@ -332,7 +332,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 }
 
                 @Override
-                protected void error(final int messageResId, final Object... messageArgs) {
+                protected void error(Exception x, final int messageResId, final Object... messageArgs) {
                     dialog(WalletActivity.this, null, 0, messageResId, messageArgs);
                 }
             }.parse();
@@ -383,14 +383,14 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
 
             @Override
-            protected void error(final int messageResId, final Object... messageArgs) {
+            protected void error(Exception x, final int messageResId, final Object... messageArgs) {
                 dialog(WalletActivity.this, null, errorDialogTitleResId, messageResId, messageArgs);
             }
 
             @Override
             protected void cannotClassify(String input) {
                 log.info("cannot classify: '{}'", input);
-                error(cannotClassifyCustomMessageResId, input);
+                error(null, cannotClassifyCustomMessageResId, input);
             }
         }.parse();
     }

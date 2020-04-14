@@ -5,6 +5,7 @@ import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -119,7 +120,7 @@ class PaymentsPayFragment : Fragment() {
                 }
             }
 
-            override fun error(messageResId: Int, vararg messageArgs: Any) {
+            override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 if (fireAction) {
                     dialog(context, null, errorDialogTitleResId, messageResId, *messageArgs)
                 } else {
@@ -128,22 +129,35 @@ class PaymentsPayFragment : Fragment() {
             }
 
             override fun handlePrivateKey(key: PrefixedChecksummedBytes) {
-
+                // ignore
             }
 
             @Throws(VerificationException::class)
             override fun handleDirectTransaction(tx: Transaction) {
-
+                // ignore
             }
         }.parse()
     }
 
     private fun manageStateOfPayToAddressButton(paymentIntent: PaymentIntent?) {
-        pay_to_address.setActive(paymentIntent != null)
-        if (paymentIntent == null) {
-            pay_to_address.setSubTitle(R.string.payments_pay_to_clipboard_sub_title)
-        } else {
-            pay_to_address.setSubTitle(paymentIntent.address.toBase58())
+        if (paymentIntent != null) {
+            when {
+                paymentIntent.hasAddress() -> {
+                    pay_to_address.setActive(true)
+                    pay_to_address.setSubTitle(paymentIntent.address.toBase58())
+                    return
+                }
+                paymentIntent.hasPaymentRequestUrl() -> {
+                    val host = Uri.parse(paymentIntent.paymentRequestUrl).host
+                    if (host != null) {
+                        pay_to_address.setActive(true)
+                        pay_to_address.setSubTitle(host)
+                        return
+                    }
+                }
+            }
         }
+        pay_to_address.setActive(false)
+        pay_to_address.setSubTitle(R.string.payments_pay_to_clipboard_sub_title)
     }
 }
