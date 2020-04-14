@@ -58,7 +58,7 @@ open class SendCoinsActivityViewModel(application: Application) : AndroidViewMod
                 throw UnsupportedOperationException()
             }
 
-            override fun error(ex: Exception, messageResId: Int, vararg messageArgs: Any) {
+            override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 val message = walletApplication.getString(messageResId, *messageArgs)
                 basePaymentIntent.value = Resource.error(message)
             }
@@ -71,7 +71,7 @@ open class SendCoinsActivityViewModel(application: Application) : AndroidViewMod
                 basePaymentIntent.value = Resource.success(paymentIntent)
             }
 
-            override fun error(ex: Exception, messageResId: Int, vararg messageArgs: Any) {
+            override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 val message = walletApplication.getString(messageResId, *messageArgs)
                 basePaymentIntent.value = Resource.error(message)
             }
@@ -91,7 +91,7 @@ open class SendCoinsActivityViewModel(application: Application) : AndroidViewMod
                 basePaymentIntent.value = Resource.success(paymentIntent)
             }
 
-            override fun error(ex: Exception, messageResId: Int, vararg messageArgs: Any) {
+            override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 val message = walletApplication.getString(messageResId, *messageArgs)
                 basePaymentIntent.value = Resource.error(message)
             }
