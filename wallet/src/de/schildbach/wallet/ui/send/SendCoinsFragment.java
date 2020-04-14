@@ -421,7 +421,7 @@ public class SendCoinsFragment extends Fragment {
     private void handleEmpty() {
         final Coin available = viewModel.getWallet().getBalance(BalanceType.ESTIMATED);
         enterAmountSharedViewModel.getApplyMaxAmountEvent().setValue(available);
-
+        
         handler.post(dryrunRunnable);
     }
 

@@ -120,7 +120,7 @@ open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(a
                 if (wasChanged) {
                     walletApplication.backupWallet()
                 }
-                finalSendRequest = createSendRequest(wallet, false, paymentIntent, true, ensureMinRequiredFee)
+                finalSendRequest = createSendRequest(wallet, basePaymentIntentValue.mayEditAmount(), paymentIntent, true, ensureMinRequiredFee)
                 finalSendRequest.aesKey = encryptionKey
                 finalSendRequest.exchangeRate = exchangeRate
                 finalSendRequest.memo = memo
