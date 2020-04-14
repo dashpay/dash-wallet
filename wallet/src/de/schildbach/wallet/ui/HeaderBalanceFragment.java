@@ -18,20 +18,25 @@ package de.schildbach.wallet.ui;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
+
+import com.amulyakhare.textdrawable.TextDrawable;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.Fiat;
@@ -46,6 +51,7 @@ import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.BlockchainState;
+import de.schildbach.wallet.data.IdentityCreationState;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet_test.R;
@@ -139,6 +145,17 @@ public final class HeaderBalanceFragment extends Fragment {
                 updateView();
             }
         });
+
+        AppDatabase.getAppDatabase().identityCreationStateDao().load().observe(this, new Observer<IdentityCreationState>() {
+            @Override
+            public void onChanged(IdentityCreationState identityCreationState) {
+                if (identityCreationState != null
+                        && identityCreationState.getState() == IdentityCreationState.State.DONE) {
+                    char firstLetter = identityCreationState.getUsername().charAt(0);
+                    setDefaultUserAvatar(firstLetter);
+                }
+            }
+        });
     }
 
     @Override
@@ -171,6 +188,21 @@ public final class HeaderBalanceFragment extends Fragment {
 
         autoLockHandler.removeCallbacksAndMessages(null);
         super.onPause();
+    }
+
+    private void setDefaultUserAvatar(char firstLetter) {
+        ImageView dashpayUserAvatar = view.findViewById(R.id.dashpay_user_avatar);
+        dashpayUserAvatar.setVisibility(View.VISIBLE);
+        float[] hsv = new float[3];
+        //Ascii codes for A: 65 - Z: 90
+        hsv[0] = (1 - (90f - firstLetter) / (90 - 65)) * 360f;
+        hsv[1] = 0.3f;
+        hsv[2] = 0.6f;
+        int bgColor = Color.HSVToColor(hsv);
+        final TextDrawable defaultAvatar = TextDrawable.builder().beginConfig().textColor(Color.WHITE)
+                .useFont(ResourcesCompat.getFont(getContext(), R.font.montserrat_regular))
+                .endConfig().buildRound(String.valueOf(firstLetter).toUpperCase(), bgColor);
+        dashpayUserAvatar.setBackground(defaultAvatar);
     }
 
     private void updateView() {
