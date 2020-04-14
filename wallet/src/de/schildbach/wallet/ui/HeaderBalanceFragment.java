@@ -151,8 +151,16 @@ public final class HeaderBalanceFragment extends Fragment {
             public void onChanged(IdentityCreationState identityCreationState) {
                 if (identityCreationState != null
                         && identityCreationState.getState() == IdentityCreationState.State.DONE) {
-                    char firstLetter = identityCreationState.getUsername().charAt(0);
-                    setDefaultUserAvatar(firstLetter);
+                    String username = identityCreationState.getUsername();
+                    StringBuilder lettersBuilder = new StringBuilder();
+                    for (int i = 0; i < 2; i++) {
+                        try {
+                            lettersBuilder.append(username.charAt(i));
+                        } catch (IndexOutOfBoundsException e) {
+                            //swallow
+                        }
+                    }
+                    setDefaultUserAvatar(lettersBuilder.toString().toUpperCase());
                 }
             }
         });
@@ -190,18 +198,18 @@ public final class HeaderBalanceFragment extends Fragment {
         super.onPause();
     }
 
-    private void setDefaultUserAvatar(char firstLetter) {
+    private void setDefaultUserAvatar(String letters) {
         ImageView dashpayUserAvatar = view.findViewById(R.id.dashpay_user_avatar);
         dashpayUserAvatar.setVisibility(View.VISIBLE);
         float[] hsv = new float[3];
         //Ascii codes for A: 65 - Z: 90
-        hsv[0] = (1 - (90f - firstLetter) / (90 - 65)) * 360f;
+        hsv[0] = (1 - (90f - letters.charAt(0)) / (90 - 65)) * 360f;
         hsv[1] = 0.3f;
         hsv[2] = 0.6f;
         int bgColor = Color.HSVToColor(hsv);
         final TextDrawable defaultAvatar = TextDrawable.builder().beginConfig().textColor(Color.WHITE)
                 .useFont(ResourcesCompat.getFont(getContext(), R.font.montserrat_regular))
-                .endConfig().buildRound(String.valueOf(firstLetter).toUpperCase(), bgColor);
+                .endConfig().buildRound(letters, bgColor);
         dashpayUserAvatar.setBackground(defaultAvatar);
     }
 
