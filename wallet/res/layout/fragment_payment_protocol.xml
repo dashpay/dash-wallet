@@ -19,7 +19,7 @@
         android:id="@+id/error_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:iconSrc="@drawable/ic_retry_request"
+        app:iconSrc="@drawable/ic_retry_simple"
         app:mode="error" />
 
 </ViewFlipper>
