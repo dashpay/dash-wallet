@@ -146,7 +146,7 @@ class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewMode
                         appendln(PaymentProtocol.MIMETYPE_PAYMENT)
                     }
                     appendln()
-                    appendln(walletApplication.getString(R.string.send_coins_fragment_direct_payment_failed_msg))
+                    appendln(walletApplication.getString(R.string.payment_request_problem_message))
                 }
 
                 directPaymentAckLiveData.value = Resource.error(message.toString(), Pair(transaction, false))
