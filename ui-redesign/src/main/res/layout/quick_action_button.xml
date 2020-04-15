@@ -68,6 +68,8 @@
         android:gravity="center"
         android:maxLines="2"
         android:minLines="2"
+        android:breakStrategy="simple"
+        android:ellipsize="end"
         android:textSize="@dimen/quick_action_button_text_size"
         app:layout_constraintBottom_toBottomOf="@id/bottom_margin"
         app:layout_constraintEnd_toEndOf="@id/right_margin"

@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Henter signatur fra %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Hentning af signatur mislykkedes</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Forkert signatur!</string>
-    <string name="send_coins_fragment_payee_verified_by">verificeret af: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">ukendt</string>
     <string name="send_coins_fragment_receiving_address_label">Betal til</string>
     <string name="send_coins_fragment_receiving_address_hint">skriv adresse eller navn</string>

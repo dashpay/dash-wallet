@@ -35,11 +35,10 @@
                 <fragment
                     android:id="@+id/wallet_balance_fragment"
                     android:name="de.schildbach.wallet.ui.HeaderBalanceFragment"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_horizontal"
                     tools:layout="@layout/header_balance_fragment" />
-
 
                 <FrameLayout
                     android:id="@+id/buttons_anchor"
@@ -86,7 +85,7 @@
                     android:clickable="true"
                     android:focusable="true"
                     android:padding="16dp"
-                    android:src="@drawable/ic_dash_logo_white" />
+                    app:srcCompat="@drawable/ic_dash_logo_white" />
 
             </androidx.appcompat.widget.Toolbar>
 
@@ -118,8 +117,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:drawableStart="@drawable/ic_arrow_upward_blue_24dp"
-                android:drawableLeft="@drawable/ic_arrow_upward_blue_24dp"
+                app:drawableStartCompat="@drawable/ic_arrow_upward_blue_24dp"
                 android:drawablePadding="5dp"
                 android:text="@string/home_pay" />
 
@@ -141,8 +139,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:drawableStart="@drawable/ic_arrow_downward_blue_24dp"
-                android:drawableLeft="@drawable/ic_arrow_downward_blue_24dp"
+                app:drawableStartCompat="@drawable/ic_arrow_downward_blue_24dp"
                 android:drawablePadding="5dp"
                 android:text="@string/home_receive" />
 

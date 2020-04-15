@@ -34,7 +34,7 @@
     <string name="wallet_transactions_options_filter_received">Получено</string>
     <string name="wallet_transactions_options_filter_sent">Отправлено</string>
     <string name="wallet_options_safety_menu">Безопасность</string>
-    <string name="wallet_options_encrypt_keys_set">Установить PIN-код</string>
+    <string name="wallet_options_encrypt_keys_set">Установить PIN</string>
     <string name="wallet_options_encrypt_keys_change">Изменить PIN-код</string>
     <string name="wallet_options_safety">Заметки по безопасности</string>
     <string name="wallet_low_storage_dialog_title">Мало места на устройстве!</string>
@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Получение подписи %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Ошибка при получении подписи</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Неверная подпись!</string>
-    <string name="send_coins_fragment_payee_verified_by">проверено: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">неизвестно</string>
     <string name="send_coins_fragment_receiving_address_label">Отправить</string>
     <string name="send_coins_fragment_receiving_address_hint">введите адрес или имя</string>
@@ -68,7 +67,7 @@
     <string name="send_coins_fragment_hint_dusty_send">Сумма слишком мала для отправки</string>
     <string name="send_coins_fragment_hint_insufficient_money">Недостаточно средств</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Количества малых платежей в Вашем кошельке недостаточно для отправки средств.</string>
-    <string name="send_coins_fragment_hint_replaying">В данный момент платежи недоступны, идёт проверка блоков.</string>
+    <string name="send_coins_fragment_hint_replaying">В данный момент платежи невозможны, так как кошелёк не полностью синхронизирован с сетью.</string>
     <string name="send_coins_fragment_direct_payment_enable">Отправить платёж непосредственно получателю.</string>
     <string name="send_coins_fragment_direct_payment_ack">Платёж был успешно отправлен получателю.</string>
     <string name="send_coins_fragment_direct_payment_nack">Ваш платёж был отклонен через прямое подключение.</string>
@@ -159,7 +158,7 @@
     <string name="transaction_row_status_received">Получено</string>
     <string name="transaction_row_status_sent">Отправлено</string>
     <string name="transaction_row_status_sending">Отправка</string>
-    <string name="transaction_row_status_sent_interally">Внутренний</string>
+    <string name="transaction_row_status_sent_internally">Внутренний</string>
     <string name="transaction_row_status_processing">Обрабатывается</string>
     <string name="transaction_row_status_confirming">Подтверждается</string>
     <string name="transaction_row_status_locked">Зафиксировано</string>

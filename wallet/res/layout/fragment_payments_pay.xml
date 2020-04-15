@@ -19,8 +19,8 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="1px"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
         android:background="@color/dash_light_gray" />
 
     <de.schildbach.wallet.ui.widget.PaymentsButtonView

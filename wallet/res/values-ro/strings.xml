@@ -32,8 +32,6 @@
     <string name="wallet_transactions_options_filter_received">Plăți primite</string>
     <string name="wallet_transactions_options_filter_sent">Plăți trimise</string>
     <string name="wallet_options_safety_menu">Siguranță</string>
-    <string name="wallet_options_encrypt_keys_set">Setează codul PIN de cheltuieli</string>
-    <string name="wallet_options_encrypt_keys_change">Schimbă codul PIN de cheltuieli</string>
     <string name="wallet_options_safety">Note de siguranță</string>
     <string name="wallet_low_storage_dialog_title">Spațiul de stocare intern al dispozitivului este scăzut!</string>
     <string name="wallet_low_storage_dialog_msg">Portofelul Dash utilizează un spațiu de stocare intern pentru a reține tranzacțiile și block-urile. Dacă ramâne fara spațiu, acesta nu va mai funcționa și suma ta de Dash va fi în pericol!\n\nVrei să deschizi Manager de Aplicatii pentru a dezinstala aplicațiile care nu sunt necesare?</string>
@@ -51,7 +49,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Preluare semnătura de la %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Preluarea semnăturii a eșuat</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Semnătura greșită!</string>
-    <string name="send_coins_fragment_payee_verified_by">Verificat de: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">necunoscut</string>
     <string name="send_coins_fragment_receiving_address_hint">introdu adresa sau numele</string>
     <string name="send_coins_fragment_receiving_address_error">Adresă Dash invalidă</string>
@@ -63,7 +60,6 @@
     <string name="send_coins_fragment_hint_fee_priority">O taxă de prioritate de %s va fi plătită. Dacă vrei taxe reduse, utilizează "prioritate" numai dacă ai nevoie de confirmare cât mai curând posibil.</string>
     <string name="send_coins_fragment_hint_insufficient_money">Fonduri nesuficiente</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Suma plăților minuscule din portofel tău nu reprezintă o valoare care poate fi trimisă.</string>
-    <string name="send_coins_fragment_hint_replaying">În prezent, plățile nu sunt posibile, deoarece un replay este în curs de desfășurare.</string>
     <string name="send_coins_fragment_direct_payment_enable">Trimite plata direct beneficiarului.</string>
     <string name="send_coins_fragment_direct_payment_ack">Plata ta directă a fost trimisă cu succes. </string>
     <string name="send_coins_fragment_direct_payment_nack">Plata ta directă a fost respinsă.</string>

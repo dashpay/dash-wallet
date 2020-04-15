@@ -215,13 +215,18 @@
     <string name="verify_seed_success_message">Su billetera está segura ahora. Podrás utilizar su frase de recuperación en cualquier momento para recuperar su cuenta en otro dispositivo.</string>
     <string name="view_seed_done">Hecho</string>
     <string name="view_seed_title">Frase de Recuperación</string>
-	<string name="transaction_result_view_on_explorer">Ver en el explorador</string>
+	<string name="transaction_result_view_on_explorer">Ver en el Explorador de Bloqu</string>
 	<string name="transaction_result_paid_successfully">Enviado exitosamente</string>
 	<string name="transaction_result_sent_to">Enviado para</string>
-	<string name="transaction_date_and_time">Fecha &amp; Tiempo</string>
+	<string name="transaction_date_and_time">Fecha</string>
 	<string name="transaction_close">Cerrar</string>
 	<string name="transaction_details_amount_received">Monto Recibido</string>
 	<string name="transaction_details_amount_sent">Monto Enviado</string>
+    <string name="transaction_details_sent_from">Enviado de</string>
+    <string name="transaction_details_sent_to">Enviado para</string>
+    <string name="transaction_details_received_at">Recibido en</string>
+    <string name="transaction_details_moved_from">Movido de</string>
+    <string name="transaction_details_moved_internally_to">Movido internamente para</string>
 
     <string name="authenticate_fingerprint_title">Autenticar</string>
     <string name="authenticate_fingerprint_message">Comfirma la huella dactilar para continuar</string>
@@ -272,7 +277,6 @@
     <string name="one_minute">1 minuto</string>
     <string name="five_minute">5 minutos</string>
     <string name="one_hour">1 hora</string>
-    <string name="one_day">1 día</string>
     <string name="biometric_limit">Límite biométrico</string>
     <string name="spending_confirmation_hint_zero">PIN siempre será requerido para realizar un pago</string>
     <string name="spending_confirmation_hint_above_zero">Puedes autenticarte con la autenticación biométrica para los pagos a continuación</string>
@@ -307,6 +311,8 @@
     <string name="sync_status_syncing_sub_title">con la blockchain de Dash</string>
     <string name="sync_status_unable_to_connect">No fue posible conectarse</string>
     <string name="sync_status_check_connection">Verifique su conección</string>
+    <string name="sync_status_sync_title">Sincronización</string>
+    <string name="sync_status_sync_completed">Completa</string>
 
-
+    <string name="appwidget_wallet_not_ready">Configura tu billetera por favor</string>
 </resources>

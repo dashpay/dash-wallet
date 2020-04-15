@@ -29,17 +29,17 @@ import androidx.annotation.Nullable;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.content.ContextCompat;
 import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import android.view.MenuItem;
 import android.view.View;
 
+import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
 import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
 
-public class UpholdSplashActivity extends AppCompatActivity {
+public class UpholdSplashActivity extends InteractionAwareActivity {
 
     public static final String UPHOLD_EXTRA_CODE = "uphold_extra_code";
     public static final String UPHOLD_EXTRA_STATE = "uphold_extra_state";
@@ -106,12 +106,18 @@ public class UpholdSplashActivity extends AppCompatActivity {
             UpholdClient.getInstance().getAccessToken(code, new UpholdClient.Callback<String>() {
                 @Override
                 public void onSuccess(String dashCardId) {
+                    if (isFinishing()) {
+                        return;
+                    }
                     loadingDialog.hide();
                     startUpholdAccountActivity();
                 }
 
                 @Override
                 public void onError(Exception e, boolean otpRequired) {
+                    if (isFinishing()) {
+                        return;
+                    }
                     loadingDialog.hide();
                     showLoadingErrorAlert();
                 }

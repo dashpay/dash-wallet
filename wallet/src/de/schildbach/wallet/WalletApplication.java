@@ -40,6 +40,7 @@ import android.text.format.DateUtils;
 import android.widget.Toast;
 
 import androidx.annotation.StringRes;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.multidex.MultiDexApplication;
 
@@ -47,6 +48,7 @@ import com.google.common.base.Stopwatch;
 import com.jakewharton.processphoenix.ProcessPhoenix;
 
 import org.bitcoinj.core.CoinDefinition;
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionMessage;
@@ -58,6 +60,8 @@ import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.ResetAutoLogoutTimerHandler;
+import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,6 +72,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import ch.qos.logback.classic.Level;
@@ -77,6 +83,7 @@ import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
+import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.ui.LockScreenActivity;
@@ -94,7 +101,7 @@ import de.schildbach.wallet_test.R;
 /**
  * @author Andreas Schildbach
  */
-public class WalletApplication extends MultiDexApplication {
+public class WalletApplication extends MultiDexApplication implements ResetAutoLogoutTimerHandler {
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
@@ -141,6 +148,7 @@ public class WalletApplication extends MultiDexApplication {
     @Override
     public void onCreate() {
         super.onCreate();
+        AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
         autoLogout = new AutoLogout(config);
@@ -260,12 +268,23 @@ public class WalletApplication extends MultiDexApplication {
                 }
             }
         });
+        initUphold();
+    }
+
+    private void initUphold() {
+        //Uses Sha256 hash of excerpt of xpub as Uphold authentication salt
+        String xpub = wallet.getWatchingKey().serializePubB58(Constants.NETWORK_PARAMETERS);
+        byte[] xpubExcerptHash = Sha256Hash.hash(xpub.substring(4, 15).getBytes());
+        String authenticationHash = Sha256Hash.wrap(xpubExcerptHash).toString();
+
+        UpholdClient.init(getApplicationContext(), authenticationHash);
     }
 
     public void maybeStartAutoLogoutTimer() {
         autoLogout.setup();
     }
 
+    @Override
     public void resetAutoLogoutTimer() {
         autoLogout.resetTimerIfActive();
     }
@@ -564,8 +583,18 @@ public class WalletApplication extends MultiDexApplication {
         stopService(blockchainServiceIntent);
     }
 
+    public void resetBlockchainState() {
+        Executors.newSingleThreadExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                AppDatabase.getAppDatabase().blockchainStateDao().save(new BlockchainState(true));
+            }
+        });
+    }
+
     public void resetBlockchain() {
         // implicitly stops blockchain service
+        resetBlockchainState();
         Intent blockchainServiceResetBlockchainIntent = new Intent(BlockchainService.ACTION_RESET_BLOCKCHAIN, null, this,
                 BlockchainServiceImpl.class);
         startService(blockchainServiceResetBlockchainIntent);
@@ -701,15 +730,15 @@ public class WalletApplication extends MultiDexApplication {
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    public void finalizeWipe() {
+    public void shutdownAndDeleteWallet() {
         if (walletFile.exists()) {
             wallet.shutdownAutosaveAndWait();
             walletFile.delete();
         }
-        System.out.println("walletFile.exists(): " + walletFile.exists());
-        if (walletFile.exists()) {
-            walletFile.delete();
-        }
+    }
+
+    public void finalizeWipe() {
+        shutdownAndDeleteWallet();
         cleanupFiles();
         config.clear();
         PinRetryController.getInstance().clearPinFailPrefs();

@@ -34,8 +34,8 @@
     <string name="wallet_transactions_options_filter_received">받은 거래</string>
     <string name="wallet_transactions_options_filter_sent">보낸 거래</string>
     <string name="wallet_options_safety_menu">안전 보관</string>
-    <string name="wallet_options_encrypt_keys_set">송금 PIN 설정</string>
-    <string name="wallet_options_encrypt_keys_change">송금 PIN 변경</string>
+    <string name="wallet_options_encrypt_keys_set">PIN 설정</string>
+    <string name="wallet_options_encrypt_keys_change">PIN 변경</string>
     <string name="wallet_options_safety">안전 이슈 참조</string>
     <string name="wallet_low_storage_dialog_title">내부 저장소 용량이 부족합니다!</string>
     <string name="wallet_low_storage_dialog_msg">대시 지갑은 거래 기록과 블록을 기억하기 위해 내부 저장 장치를 사용합니다. 저장 공간이 부족할 경우 앱 작동이 중단될 수 있으며, 대시 보관과 거래에 문제가 발생할 수 있습니다.\n\n불필요한 앱 정리를 위해 어플리케이션 매니저를 여시겠습니까?</string>
@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress"> %s에서 전자 서명을 불러오는 중...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">전자 서명 불러오기 실패</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">잘못된 서명입니다!</string>
-    <string name="send_coins_fragment_payee_verified_by">다음에 의해 승인됨 : %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">알 수 없음</string>
     <string name="send_coins_fragment_receiving_address_label">다음으로 전송합니다</string>
     <string name="send_coins_fragment_receiving_address_hint">주소 또는 이름을 입력하세요</string>
@@ -68,7 +67,6 @@
     <string name="send_coins_fragment_hint_dusty_send">송금액이 너무 적어 전송할 수 없습니다</string>
     <string name="send_coins_fragment_hint_insufficient_money">잔액 부족</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">극소량의 금액은 송금 가능액에 포함되지 않습니다.</string>
-    <string name="send_coins_fragment_hint_replaying">재생이 진행 중이므로 현재 지불 할 수 없습니다.</string>
     <string name="send_coins_fragment_direct_payment_enable">대시가 수신인에게 바로 송금됩니다.</string>
     <string name="send_coins_fragment_direct_payment_ack">송금이 완료되었습니다.</string>
     <string name="send_coins_fragment_direct_payment_nack">송금 시도가 직접 연결된 곳으로부터 거부되었습니다.</string>
@@ -159,7 +157,7 @@
     <string name="transaction_row_status_received">받음</string>
     <string name="transaction_row_status_sent">보냄</string>
     <string name="transaction_row_status_sending">보내는 중</string>
-    <string name="transaction_row_status_sent_interally">내부 처리 금액</string>
+    <string name="transaction_row_status_sent_internally">내부 처리 금액</string>
     <string name="transaction_row_status_processing">처리 중</string>
     <string name="transaction_row_status_confirming">확인 중</string>
     <string name="transaction_row_status_locked">잠김</string>

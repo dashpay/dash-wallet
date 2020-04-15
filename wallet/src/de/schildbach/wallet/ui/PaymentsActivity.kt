@@ -73,8 +73,8 @@ class PaymentsActivity : GlobalFooterActivity() {
 
             override fun onTabSelected(tab: TabLayout.Tab) {
                 initialReselection = false
-                val fragment = when {
-                    tab.position == 0 -> PaymentsPayFragment.newInstance()
+                val fragment = when (tab.position) {
+                    0 -> PaymentsPayFragment.newInstance()
                     else -> PaymentsReceiveFragment.newInstance()
                 }
                 supportFragmentManager.beginTransaction()

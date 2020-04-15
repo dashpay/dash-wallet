@@ -218,10 +218,15 @@
 	<string name="transaction_result_view_on_explorer">Voir dans l\'explorateur</string>
 	<string name="transaction_result_paid_successfully">Envoyé avec succès</string>
 	<string name="transaction_result_sent_to">Envoyé à</string>
-	<string name="transaction_date_and_time">Date &amp; heure</string>
+	<string name="transaction_date_and_time">Date</string>
 	<string name="transaction_close">Fermer</string>
 	<string name="transaction_details_amount_received">Montant reçu</string>
 	<string name="transaction_details_amount_sent">Montant envoyé</string>
+    <string name="transaction_details_sent_from">Envoyé depuis</string>
+    <string name="transaction_details_sent_to">Envoyé à</string>
+    <string name="transaction_details_received_at">Reçu à</string>
+    <string name="transaction_details_moved_from">Déplacé de</string>
+    <string name="transaction_details_moved_internally_to">Déplacé en interne vers</string>
 
     <string name="authenticate_fingerprint_title">S\'authentifier</string>
     <string name="authenticate_fingerprint_message">Confirmez votre empreinte digitale pour continuer</string>
@@ -272,7 +277,6 @@
     <string name="one_minute">1 min.</string>
     <string name="five_minute">5 min.</string>
     <string name="one_hour">1 heure</string>
-    <string name="one_day">1 jour</string>
     <string name="biometric_limit">Limite pour la biométrie</string>
     <string name="spending_confirmation_hint_zero">Le code PIN est toujours demandé pour faire un paiement</string>
     <string name="spending_confirmation_hint_above_zero">Vous pouvez vous authentifier biométriquement pour les paiements ci-dessous</string>
@@ -307,6 +311,8 @@
     <string name="sync_status_syncing_sub_title">avec la blockchain Dash</string>
     <string name="sync_status_unable_to_connect">Impossible de se connecter</string>
     <string name="sync_status_check_connection">Vérifier votre connexion</string>
+    <string name="sync_status_sync_title">Synchronisation</string>
+    <string name="sync_status_sync_completed">Terminé</string>
 
-
+    <string name="appwidget_wallet_not_ready">Veuillez configurer votre portefeuille</string>
 </resources>

@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
 import de.schildbach.wallet.WalletApplication
+import org.dash.wallet.common.InteractionAwareActivity
 
 @SuppressLint("Registered")
 open class ShortcutComponentActivity : InteractionAwareActivity() {

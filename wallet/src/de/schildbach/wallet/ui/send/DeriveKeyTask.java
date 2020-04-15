@@ -17,21 +17,21 @@
 
 package de.schildbach.wallet.ui.send;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
+import android.os.Handler;
+import android.os.Looper;
 
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.crypto.KeyCrypterScrypt;
 import org.bitcoinj.wallet.Wallet;
+import org.bouncycastle.crypto.params.KeyParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.bouncycastle.crypto.params.KeyParameter;
 
 import de.schildbach.wallet.Constants;
 
-import android.os.Handler;
-import android.os.Looper;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * @author Andreas Schildbach
@@ -59,7 +59,18 @@ public abstract class DeriveKeyTask {
                 org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
 
                 // Key derivation takes time.
-                KeyParameter key = keyCrypter.deriveKey(password);
+                KeyParameter key;
+                try {
+                    key = keyCrypter.deriveKey(password);
+                } catch (final KeyCrypterException ex) {
+                    callbackHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            onFailure(ex);
+                        }
+                    });
+                    return;
+                }
                 boolean wasChanged = false;
 
                 // If the key isn't derived using the desired parameters, derive a new key.
@@ -99,4 +110,8 @@ public abstract class DeriveKeyTask {
     }
 
     protected abstract void onSuccess(KeyParameter encryptionKey, boolean changed);
+
+    protected void onFailure(KeyCrypterException ex) {
+
+    }
 }

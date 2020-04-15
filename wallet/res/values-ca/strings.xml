@@ -53,8 +53,6 @@
 	<string name="send_coins_fragment_request_payment_request_progress">Important signatura des de %s…</string>
 	<string name="send_coins_fragment_request_payment_request_failed_title">Importació de signatura fallida</string>
 	<string name="send_coins_fragment_request_payment_request_wrong_signature">Signatura errònia!</string>
-
-	<string name="send_coins_fragment_payee_verified_by">verificat per: %s</string>
 	<string name="send_coins_fragment_payee_verified_by_unknown">desconegut</string>
 
 	<string name="send_coins_fragment_receiving_address_label">Pagar a</string>

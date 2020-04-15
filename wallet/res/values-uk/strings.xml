@@ -48,7 +48,6 @@
   <string name="send_coins_fragment_request_payment_request_progress">Отримання підпису %s…</string>
   <string name="send_coins_fragment_request_payment_request_failed_title">Помилка при отриманні підпису</string>
   <string name="send_coins_fragment_request_payment_request_wrong_signature">Неправильний підпис!</string>
-  <string name="send_coins_fragment_payee_verified_by">Перевіряється: %s</string>
   <string name="send_coins_fragment_payee_verified_by_unknown">невідомо</string>
   <string name="send_coins_fragment_receiving_address_label">Оплатити</string>
   <string name="send_coins_fragment_receiving_address_hint">введіть адресу чи ім\'я</string>

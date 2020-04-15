@@ -20,6 +20,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.LayerDrawable
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.text.TextUtils
@@ -84,7 +85,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
                     walletApplication.fullInitialization()
                     regularFlow()
                 } else {
-                    startActivity(SetPinActivity.createIntent(this, R.string.set_pin_create_new_wallet))
+                    onboarding()
                 }
             }
         }
@@ -172,8 +173,10 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private fun hideSlogan() {
-        val sloganDrawable = (window.decorView.background as LayerDrawable).getDrawable(1)
-        sloganDrawable.mutate().alpha = 0
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            val sloganDrawable = (window.decorView.background as LayerDrawable).getDrawable(1)
+            sloganDrawable.mutate().alpha = 0
+        }
     }
 
     private fun getStatusBarHeightPx(): Int {

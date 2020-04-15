@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.AttributeSet
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.appcompat.content.res.AppCompatResources
 import kotlinx.android.synthetic.main.quick_action_button.view.*
 
 
@@ -17,9 +18,12 @@ class LockScreenButton(context: Context, attrs: AttributeSet) : LinearLayout(con
 
         val attrsArray = context.obtainStyledAttributes(attrs, R.styleable.LockScreenButton)
         try {
-            val actionIconDrawable = attrsArray.getDrawable(R.styleable.LockScreenButton_action_icon)
-            if (actionIconDrawable != null) {
-                action_icon.setImageDrawable(actionIconDrawable)
+            val drawableResId = attrsArray.getResourceId(R.styleable.LockScreenButton_action_icon, -1)
+            if (drawableResId > -1) {
+                val actionIconDrawable = AppCompatResources.getDrawable(context, drawableResId)
+                if (actionIconDrawable != null) {
+                    action_icon.setImageDrawable(actionIconDrawable)
+                }
             }
             val actionText = attrsArray.getString(R.styleable.LockScreenButton_text)
             if (actionText != null) {

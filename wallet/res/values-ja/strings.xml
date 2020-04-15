@@ -34,8 +34,8 @@
     <string name="wallet_transactions_options_filter_received">受け取った支払い</string>
     <string name="wallet_transactions_options_filter_sent">送った支払い</string>
     <string name="wallet_options_safety_menu">安全対策</string>
-    <string name="wallet_options_encrypt_keys_set">送金用PINコードを設定</string>
-    <string name="wallet_options_encrypt_keys_change">送金用PINコードを変更</string>
+    <string name="wallet_options_encrypt_keys_set">PINを設定する</string>
+    <string name="wallet_options_encrypt_keys_change">PINを変更する</string>
     <string name="wallet_options_safety">安全上の注意事項</string>
     <string name="wallet_low_storage_dialog_title">内部デバイスのストレージ容量が残りわずかです！</string>
     <string name="wallet_low_storage_dialog_msg">Dashウォレットはトランザクションやブロックを記憶するのに内部ストレージを使用します。もし容量が不足した場合、動作しなくなりあなたのDashが危機にさらされるでしょう!\n\n不要なアプリを削除するためにアプリケーションマネージャを開きますか？</string>
@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">%s から署名の取得中…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">署名の取得に失敗しました</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">不正な署名です！</string>
-    <string name="send_coins_fragment_payee_verified_by">認証者: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">不明</string>
     <string name="send_coins_fragment_receiving_address_label">へ送金する</string>
     <string name="send_coins_fragment_receiving_address_hint">アドレスもしくは名前を入力</string>
@@ -68,7 +67,7 @@
     <string name="send_coins_fragment_hint_dusty_send">送金額が小さすぎます</string>
     <string name="send_coins_fragment_hint_insufficient_money">資金不足</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">ウォレット中の少額の支払いを合計しても送信可能な額には足りませんでした。</string>
-    <string name="send_coins_fragment_hint_replaying">現在再試行中なので、お支払いできません。</string>
+    <string name="send_coins_fragment_hint_replaying">ウォレットがネットワークと完全に同期されていないため、現在支払いはできません</string>
     <string name="send_coins_fragment_direct_payment_enable">受取人へ直接送金する。</string>
     <string name="send_coins_fragment_direct_payment_ack">直接的な送金が成功しました。</string>
     <string name="send_coins_fragment_direct_payment_nack">直接的な接続による送金での支払いは拒否されました。</string>
@@ -159,7 +158,7 @@
     <string name="transaction_row_status_received">受取済み</string>
     <string name="transaction_row_status_sent">送信済み</string>
     <string name="transaction_row_status_sending">送金中</string>
-    <string name="transaction_row_status_sent_interally">内部の</string>
+    <string name="transaction_row_status_sent_internally">内部の</string>
     <string name="transaction_row_status_processing">処理中</string>
     <string name="transaction_row_status_confirming">確認中</string>
     <string name="transaction_row_status_locked">ロック済み</string>

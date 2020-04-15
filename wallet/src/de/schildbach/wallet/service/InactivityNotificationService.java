@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.ui.WalletActivity;
+import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet_test.R;
 
 import android.app.Notification;
@@ -114,7 +114,7 @@ public final class InactivityNotificationService extends Service {
             notification.setContentTitle(title);
             notification.setContentText(text);
             notification
-                    .setContentIntent(PendingIntent.getActivity(this, 0, new Intent(this, WalletActivity.class), 0));
+                    .setContentIntent(PendingIntent.getActivity(this, 0, OnboardingActivity.createIntent(this), 0));
             notification.setAutoCancel(true);
             notification.addAction(new NotificationCompat.Action.Builder(0,
                     getString(R.string.notification_inactivity_action_dismiss_forever),

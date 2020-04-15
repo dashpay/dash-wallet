@@ -47,13 +47,17 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
 
     fun savePinAndEncrypt() {
         val pin = getPinAsString()
-        encryptWalletLiveData.savePin(pin)
-        encryptWallet()
+        savePinAndEncrypt(pin, true)
     }
 
-    private fun encryptWallet() {
+    fun savePinAndEncrypt(pin: String, initialize: Boolean) {
+        encryptWalletLiveData.savePin(pin)
+        encryptWallet(initialize)
+    }
+
+    private fun encryptWallet(initialize: Boolean) {
         if (!walletApplication.wallet.isEncrypted) {
-            encryptWalletLiveData.encrypt(walletApplication.scryptIterationsTarget())
+            encryptWalletLiveData.encrypt(walletApplication.scryptIterationsTarget(), initialize)
         } else {
             log.warn("Trying to encrypt already encrypted wallet")
         }

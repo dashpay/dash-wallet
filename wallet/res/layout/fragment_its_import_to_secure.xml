@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="24dp"
         android:layout_marginLeft="24dp"
-        android:src="@drawable/ic_info_outline_black_24dp"
+        app:srcCompat="@drawable/ic_info_outline_black_24dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -36,7 +36,7 @@
         android:layout_width="20dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
-        android:src="@drawable/ic_info_outline_black_24dp"
+        app:srcCompat="@drawable/ic_info_outline_black_24dp"
         app:layout_constraintStart_toStartOf="@+id/info_icon_1"
         app:layout_constraintTop_toBottomOf="@id/info_text_1" />
 
@@ -59,7 +59,7 @@
         android:layout_width="20dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
-        android:src="@drawable/ic_info_outline_black_24dp"
+        app:srcCompat="@drawable/ic_info_outline_black_24dp"
         app:layout_constraintStart_toStartOf="@+id/info_icon_2"
         app:layout_constraintTop_toBottomOf="@id/info_text_2" />
 
@@ -95,7 +95,7 @@
         android:layout_width="wrap_content"
         android:layout_height="60dp"
         android:layout_marginBottom="14dp"
-        android:src="@drawable/security_red"
+        app:srcCompat="@drawable/security_red"
         app:layout_constraintBottom_toTopOf="@+id/title"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />

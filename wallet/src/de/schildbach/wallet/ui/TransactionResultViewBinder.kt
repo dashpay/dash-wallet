@@ -17,7 +17,6 @@
 package de.schildbach.wallet.ui
 
 import android.text.format.DateUtils
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -30,9 +29,7 @@ import de.schildbach.wallet.util.*
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Transaction
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.ui.CurrencyTextView
-import org.dash.wallet.common.util.GenericUtils
 
 /**
  * @author Samuel Barbosa
@@ -51,20 +48,25 @@ class TransactionResultViewBinder(private val containerView: View) {
     private val primaryStatusTxt by lazy { containerView.findViewById<TextView>(R.id.transaction_primary_status) }
     private val secondaryStatusTxt by lazy { containerView.findViewById<TextView>(R.id.transaction_secondary_status) }
     private val inputsLabel by lazy { containerView.findViewById<TextView>(R.id.input_addresses_label) }
-    private val outputsLabel by lazy { containerView.findViewById<TextView>(R.id.output_addresses_label) }
+    private val inputsContainer by lazy { containerView.findViewById<View>(R.id.inputs_container) }
     private val inputsContainerWrapper by lazy { containerView.findViewById<View>(R.id.inputs_container_content) }
-    private val inputsContainer by lazy {
+    private val inputsAddressesContainer by lazy {
         containerView.findViewById<ViewGroup>(R.id.transaction_input_addresses_container)
     }
+    private val outputsLabel by lazy { containerView.findViewById<TextView>(R.id.output_addresses_label) }
+    private val outputsContainer by lazy { containerView.findViewById<View>(R.id.outputs_container) }
     private val outputsContainerWrapper by lazy { containerView.findViewById<View>(R.id.outputs_container_content) }
-    private val outputsContainer by lazy {
+    private val outputsAddressesContainer by lazy {
         containerView.findViewById<ViewGroup>(R.id.transaction_output_addresses_container)
     }
     private val feeRow by lazy { containerView.findViewById<View>(R.id.fee_container) }
+    private val payeeName by lazy { containerView.findViewById<TextView>(R.id.payee_name) }
+    private val payeeNameContainer by lazy { containerView.findViewById<View>(R.id.payee_name_container) }
+    private val payeeVerifiedByContainer by lazy { containerView.findViewById<View>(R.id.payee_verified_by_container) }
+    private val payeeVerifiedBy by lazy { containerView.findViewById<TextView>(R.id.payee_verified_by) }
 
-    fun bind(tx: Transaction) {
-        val noCodeFormat = MonetaryFormat().noCode()
-                .minDecimals(MonetaryFormat.MAX_DECIMALS)
+    fun bind(tx: Transaction, payeeName: String? = null, payeeVerifiedBy: String? = null) {
+        val noCodeFormat = WalletApplication.getInstance().configuration.format.noCode()
         val wallet = WalletApplication.getInstance().wallet
         val primaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet)
         val secondaryStatus = TransactionUtil.getReceivedStatusString(tx, wallet)
@@ -83,6 +85,19 @@ class TransactionResultViewBinder(private val containerView: View) {
             ctx.getString(errorStatus)
         } else {
             ""
+        }
+
+        if (payeeName != null) {
+            this.payeeName.text = payeeName
+            this.payeeNameContainer.visibility = View.VISIBLE
+            this.payeeVerifiedBy.text = payeeVerifiedBy
+            this.payeeVerifiedByContainer.visibility = View.VISIBLE
+            outputsContainer.visibility = View.GONE
+            inputsContainer.visibility = View.GONE
+            this.payeeNameContainer.setOnClickListener {
+                outputsContainer.visibility = if (outputsContainer.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+                inputsContainer.visibility = outputsContainer.visibility
+            }
         }
 
         // handle sending
@@ -115,16 +130,16 @@ class TransactionResultViewBinder(private val containerView: View) {
         inputsContainerWrapper.visibility = if (inputAddresses.isEmpty()) View.GONE else View.VISIBLE
         inputAddresses.forEach {
             val addressView = inflater.inflate(R.layout.transaction_result_address_row,
-                    inputsContainer, false) as TextView
+                    inputsAddressesContainer, false) as TextView
             addressView.text = it.toBase58()
-            inputsContainer.addView(addressView)
+            inputsAddressesContainer.addView(addressView)
         }
         outputsContainerWrapper.visibility = if (outputAddresses.isEmpty()) View.GONE else View.VISIBLE
         outputAddresses.forEach {
             val addressView = inflater.inflate(R.layout.transaction_result_address_row,
-                    outputsContainer, false) as TextView
+                    outputsAddressesContainer, false) as TextView
             addressView.text = it.toBase58()
-            outputsContainer.addView(addressView)
+            outputsAddressesContainer.addView(addressView)
         }
 
         dashAmount.setFormat(noCodeFormat)

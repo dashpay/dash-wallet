@@ -182,7 +182,7 @@ public final class SendingAddressesFragment extends FancyListFragment
                 }
 
                 @Override
-                protected void error(final int messageResId, final Object... messageArgs) {
+                protected void error(Exception x, final int messageResId, final Object... messageArgs) {
                     dialog(activity, null, R.string.address_book_options_scan_title, messageResId, messageArgs);
                 }
             }.parse();
