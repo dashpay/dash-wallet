@@ -205,10 +205,10 @@ public final class HeaderBalanceFragment extends Fragment {
         ImageView dashpayUserAvatar = view.findViewById(R.id.dashpay_user_avatar);
         dashpayUserAvatar.setVisibility(View.VISIBLE);
         float[] hsv = new float[3];
-        //Ascii codes for A: 65 - Z: 90
+        //Ascii codes for A: 65 - Z: 90, 0: 48 - 9: 57
         float firstChar = letters.charAt(0);
         float charIndex;
-        if (firstChar <= 57) {
+        if (firstChar <= 57) { //57 == '9' in Ascii table
             charIndex = (firstChar - 48f) / 36f; // 48 == '0', 36 == total count of supported
         } else {
             charIndex = (firstChar - 65f + 10f) / 36f; // 65 == 'A', 10 == count of digits
