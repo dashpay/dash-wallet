@@ -232,7 +232,13 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             transactionHolder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(final View v) {
-                    Transaction tx = transactions.get(transactionHolder.getAdapterPosition());
+                    Transaction tx;
+                    if (getItemViewType(0) == VIEW_TYPE_PROCESSING_IDENTITY) {
+                        tx = transactions.get(transactionHolder.getAdapterPosition() - 1);
+                    } else {
+                        tx = transactions.get(transactionHolder.getAdapterPosition());
+                    }
+
                     if (onClickListener != null) {
                         onClickListener.onTransactionRowClicked(tx);
                     }
