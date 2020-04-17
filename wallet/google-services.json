@@ -111,6 +111,35 @@
     },
     {
       "client_info": {
+        "mobilesdk_app_id": "1:1039839682638:android:00c0428ce4b131d2ea631f",
+        "android_client_info": {
+          "package_name": "hashengineering.darkcoin.wallet.mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1039839682638-ptp5u4p6c5ioatg7apqp3tvald05alb1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDBEolfMU2qC6Pfe-Ot_6HcZ1f6LyXZt5w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1039839682638-ptp5u4p6c5ioatg7apqp3tvald05alb1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:1039839682638:android:3202b16d460a1a88",
         "android_client_info": {
           "package_name": "hashengineering.darkcoin.wallet_test"

@@ -32,6 +32,7 @@ import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.EvoNetParams;
 import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.params.MobileDevNetParams;
 import org.bitcoinj.params.PalinkaDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.MonetaryFormat;
@@ -101,6 +102,15 @@ public final class Constants {
                 DNS_SEED = NETWORK_PARAMETERS.getDnsSeeds();
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-evonet";
+                WALLET_NAME_CURRENCY_CODE = "tdash";
+                break;
+            }
+            case "mobile": {
+                BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
+                NETWORK_PARAMETERS = MobileDevNetParams.get();
+                DNS_SEED = NETWORK_PARAMETERS.getDnsSeeds();
+                IS_PROD_BUILD = false;
+                FILENAME_NETWORK_SUFFIX = "-mobile";
                 WALLET_NAME_CURRENCY_CODE = "tdash";
                 break;
             }

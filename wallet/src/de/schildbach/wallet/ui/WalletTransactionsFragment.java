@@ -73,6 +73,7 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.IdentityCreationState;
 import de.schildbach.wallet.data.IdentityCreationState;
+import de.schildbach.wallet.data.IdentityCreationState;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet_test.R;
 
