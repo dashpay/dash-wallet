@@ -24,23 +24,36 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.BaseBottomSheetDialogFragment
 import de.schildbach.wallet.ui.SingleActionSharedViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dialog_new_account_confirm.*
+import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.util.GenericUtils
 
 class NewAccountConfirmDialog : BaseBottomSheetDialogFragment() {
 
     companion object {
 
+        private const val ARG_USERNAME = "arg_username"
+        private const val ARG_UPGRADE_FEE = "arg_upgrade_fee"
+
         @JvmStatic
-        fun createDialog(): DialogFragment {
-            return NewAccountConfirmDialog()
+        fun createDialog(upgradeFee: Long, username: String): DialogFragment {
+            val dialog = NewAccountConfirmDialog()
+            val bundle = Bundle()
+            bundle.putString(ARG_USERNAME, username)
+            bundle.putLong(ARG_UPGRADE_FEE, upgradeFee)
+            dialog.arguments = bundle
+            return dialog
         }
     }
 
+    private lateinit var viewModel: NewAccountConfirmDialogViewModel
     private lateinit var sharedViewModel: SingleActionSharedViewModel
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -58,21 +71,6 @@ class NewAccountConfirmDialog : BaseBottomSheetDialogFragment() {
             dismiss()
             sharedViewModel.clickConfirmButtonEvent.call(true)
         }
-
-        val creatingCost = SpannableStringBuilder("0.01").run {
-            setSpan(StyleSpan(Typeface.BOLD), 0, length, 0)
-//            setSpan(RelativeSizeSpan(1.1f), 0, length, 0)
-            this
-        }
-        val costWithDashSymbol = GenericUtils.insertDashSymbol(context, creatingCost, 0, true, true, 1.1f)
-        val builder = SpannableStringBuilder().run {
-            append(getString(R.string.new_account_confirm_message_prefix))
-            append(costWithDashSymbol)
-            append(" ")
-            append(getString(R.string.new_account_confirm_message_suffix))
-            this
-        }
-        message.text = builder
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -80,5 +78,41 @@ class NewAccountConfirmDialog : BaseBottomSheetDialogFragment() {
         sharedViewModel = activity?.run {
             ViewModelProviders.of(this)[SingleActionSharedViewModel::class.java]
         } ?: throw IllegalStateException("Invalid Activity")
+        viewModel = ViewModelProviders.of(this).get(NewAccountConfirmDialogViewModel::class.java)
+        viewModel.exchangeRateData.observe(viewLifecycleOwner, Observer {
+            updateView()
+        })
+        updateView()
+    }
+
+    private fun updateView() {
+        val upgradeFee = Coin.valueOf(arguments!!.getLong(ARG_UPGRADE_FEE))
+
+        val upgradeFeeStr = MonetaryFormat.BTC.noCode().format(upgradeFee).toString()
+        val fiatUpgradeFee = viewModel.exchangeRate?.coinToFiat(upgradeFee)
+        // if the exchange rate is not available, then show "Not Available"
+        val upgradeFeeFiatStr = if (fiatUpgradeFee != null) Constants.LOCAL_FORMAT.format(fiatUpgradeFee).toString() else getString(R.string.transaction_row_rate_not_available)
+        val fiatSymbol = if (fiatUpgradeFee != null) GenericUtils.currencySymbol(fiatUpgradeFee.currencyCode) else ""
+
+        input_value.text = upgradeFeeStr
+        fiat_symbol.text = upgradeFeeFiatStr
+        fiat_value.text = fiatSymbol
+
+        val username = "“${arguments!!.getString(ARG_USERNAME)}”"
+
+        val usernameSpan = SpannableStringBuilder(username).run {
+            setSpan(StyleSpan(Typeface.BOLD), 0, length, 0)
+//            setSpan(RelativeSizeSpan(1.1f), 0, length, 0)
+            this
+        }
+        val builder = SpannableStringBuilder().run {
+            append(getString(R.string.new_account_confirm_message_prefix))
+            append(" ")
+            append(usernameSpan)
+            append(" ")
+            append(getString(R.string.new_account_confirm_message_suffix))
+            this
+        }
+        message.text = builder
     }
 }
