@@ -19,6 +19,11 @@
         <item name="android:background">@drawable/transparent_button_background</item>
     </style>
 
+    <style name="DashButton.Transparent.Dark" parent="DashButton.Blue">
+        <item name="android:textColor">@color/dash_black</item>
+        <item name="android:background">@drawable/transparent_dark_button_background</item>
+    </style>
+
     <style name="DashButton.White" parent="DashButton.Blue">
         <item name="android:textColor">@drawable/white_button_text</item>
         <item name="android:background">@drawable/white_button_background</item>

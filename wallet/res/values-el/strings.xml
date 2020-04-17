@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Παραλαβή υπογραφής από %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Η παραλαβή της υπογραφής απέτυχε</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Λανθασμένη υπογραφή!</string>
-    <string name="send_coins_fragment_payee_verified_by">εγκρίθηκε από: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">άγνωστο</string>
     <string name="send_coins_fragment_receiving_address_label">Αποστολή στο</string>
     <string name="send_coins_fragment_receiving_address_hint">πληκτρολογήστε τη διεύθυνση ή το όνομα</string>

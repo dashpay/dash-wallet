@@ -48,6 +48,7 @@ import com.google.common.base.Stopwatch;
 import com.jakewharton.processphoenix.ProcessPhoenix;
 
 import org.bitcoinj.core.CoinDefinition;
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionMessage;
@@ -60,6 +61,7 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ResetAutoLogoutTimerHandler;
+import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -266,6 +268,16 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
                 }
             }
         });
+        initUphold();
+    }
+
+    private void initUphold() {
+        //Uses Sha256 hash of excerpt of xpub as Uphold authentication salt
+        String xpub = wallet.getWatchingKey().serializePubB58(Constants.NETWORK_PARAMETERS);
+        byte[] xpubExcerptHash = Sha256Hash.hash(xpub.substring(4, 15).getBytes());
+        String authenticationHash = Sha256Hash.wrap(xpubExcerptHash).toString();
+
+        UpholdClient.init(getApplicationContext(), authenticationHash);
     }
 
     public void maybeStartAutoLogoutTimer() {
@@ -718,15 +730,15 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    public void finalizeWipe() {
+    public void shutdownAndDeleteWallet() {
         if (walletFile.exists()) {
             wallet.shutdownAutosaveAndWait();
             walletFile.delete();
         }
-        System.out.println("walletFile.exists(): " + walletFile.exists());
-        if (walletFile.exists()) {
-            walletFile.delete();
-        }
+    }
+
+    public void finalizeWipe() {
+        shutdownAndDeleteWallet();
         cleanupFiles();
         config.clear();
         PinRetryController.getInstance().clearPinFailPrefs();

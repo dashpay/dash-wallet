@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
-    tools:ignore="ContentDescription">
+    tools:ignore="ContentDescription,HardcodedText">
 
     <ImageView
         android:id="@+id/collapse_button"
@@ -28,8 +28,8 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#c7c7c7"
-        android:layout_margin="16dp" />
+        android:layout_margin="16dp"
+        android:background="#c7c7c7" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -127,10 +127,47 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:ellipsize="middle"
-            android:gravity="right"
+            android:ellipsize="marquee"
+            android:marqueeRepeatLimit="1"
+
             android:singleLine="true"
             android:text="yZmdmsTnnMMXwfhTCP2bUZ5uo6qU8AsXnu"
+            android:textColor="@color/dash_black"
+            android:textSize="16sp" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/payee_verified_by_pane"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="16dp"
+        android:layout_marginRight="16dp"
+        android:background="@drawable/top_separator"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <TextView
+            style="@style/MontserratRegular"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/dialog_confirm_verified_by"
+            android:textColor="@color/dash_gray"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/payee_verified_by"
+            style="@style/MontserratRegular"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:singleLine="true"
+            android:ellipsize="marquee"
+            android:marqueeRepeatLimit="1"
+            android:text="Digital Signature Trust CO."
             android:textColor="@color/dash_black"
             android:textSize="16sp" />
 
@@ -157,8 +194,8 @@
         <ImageView
             android:layout_width="12dp"
             android:layout_height="match_parent"
-            android:paddingTop="1dp"
             android:layout_marginRight="4dp"
+            android:paddingTop="1dp"
             app:srcCompat="@drawable/ic_dash_d_black" />
 
         <TextView
@@ -196,8 +233,8 @@
         <ImageView
             android:layout_width="12dp"
             android:layout_height="match_parent"
-            android:paddingTop="1dp"
             android:layout_marginRight="4dp"
+            android:paddingTop="1dp"
             app:srcCompat="@drawable/ic_dash_d_black" />
 
         <TextView
@@ -210,7 +247,8 @@
             android:singleLine="true"
             android:text="1.234"
             android:textColor="@color/dash_black"
-            android:textSize="16sp" />
+            android:textSize="16sp"
+            tools:ignore="HardcodedText" />
 
     </LinearLayout>
 

@@ -49,7 +49,7 @@
     <ImageView
         android:id="@+id/action_icon"
         android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
         android:src="@drawable/ic_arrow_downward_blue_24dp"
         app:layout_constraintBottom_toTopOf="@id/action_text"
@@ -63,7 +63,7 @@
         android:id="@+id/action_text"
         style="@style/TextViewStyle.Body"
         android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:gravity="center"
         android:maxLines="2"

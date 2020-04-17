@@ -90,15 +90,15 @@ public abstract class InputParser {
                 } catch (final IOException x) {
                     log.info("i/o error while fetching payment request", x);
 
-                    error(R.string.input_parser_io_error, x.getMessage());
+                    error(x, R.string.input_parser_io_error, x.getMessage());
                 } catch (final PaymentProtocolException.PkiVerificationException x) {
                     log.info("got unverifyable payment request", x);
 
-                    error(R.string.input_parser_unverifyable_paymentrequest, x.getMessage());
+                    error(x, R.string.input_parser_unverifyable_paymentrequest, x.getMessage());
                 } catch (final PaymentProtocolException x) {
                     log.info("got invalid payment request", x);
 
-                    error(R.string.input_parser_invalid_paymentrequest, x.getMessage());
+                    error(x, R.string.input_parser_invalid_paymentrequest, x.getMessage());
                 }
             } else if (input.startsWith(CoinDefinition.coinURIScheme + ":")) {
                 try {
@@ -111,7 +111,7 @@ public abstract class InputParser {
                 } catch (final BitcoinURIParseException x) {
                     log.info("got invalid bitcoin uri: '" + input + "'", x);
 
-                    error(R.string.input_parser_invalid_bitcoin_uri, input);
+                    error(x, R.string.input_parser_invalid_bitcoin_uri, input);
                 }
             } else if (PATTERN_BITCOIN_ADDRESS.matcher(input).matches()) {
                 try {
@@ -121,7 +121,7 @@ public abstract class InputParser {
                 } catch (final AddressFormatException x) {
                     log.info("got invalid address", x);
 
-                    error(R.string.input_parser_invalid_address);
+                    error(x, R.string.input_parser_invalid_address);
                 }
             } else if (PATTERN_DUMPED_PRIVATE_KEY_UNCOMPRESSED.matcher(input).matches()
                     || PATTERN_DUMPED_PRIVATE_KEY_COMPRESSED.matcher(input).matches()) {
@@ -133,7 +133,7 @@ public abstract class InputParser {
                 } catch (final AddressFormatException x) {
                     log.info("got invalid address", x);
 
-                    error(R.string.input_parser_invalid_address);
+                    error(x, R.string.input_parser_invalid_address);
                 }
             } else if (PATTERN_BIP38_PRIVATE_KEY.matcher(input).matches()) {
                 try {
@@ -144,7 +144,7 @@ public abstract class InputParser {
                 } catch (final AddressFormatException x) {
                     log.info("got invalid address", x);
 
-                    error(R.string.input_parser_invalid_address);
+                    error(x, R.string.input_parser_invalid_address);
                 }
             } else if (PATTERN_TRANSACTION.matcher(input).matches()) {
                 try {
@@ -155,11 +155,11 @@ public abstract class InputParser {
                 } catch (final IOException x) {
                     log.info("i/o error while fetching transaction", x);
 
-                    error(R.string.input_parser_invalid_transaction, x.getMessage());
+                    error(x, R.string.input_parser_invalid_transaction, x.getMessage());
                 } catch (final ProtocolException x) {
                     log.info("got invalid transaction", x);
 
-                    error(R.string.input_parser_invalid_transaction, x.getMessage());
+                    error(x, R.string.input_parser_invalid_transaction, x.getMessage());
                 }
             } else {
                 cannotClassify(input);
@@ -193,7 +193,7 @@ public abstract class InputParser {
                 } catch (final VerificationException x) {
                     log.info("got invalid transaction", x);
 
-                    error(R.string.input_parser_invalid_transaction, x.getMessage());
+                    error(x, R.string.input_parser_invalid_transaction, x.getMessage());
                 }
             } else if (PaymentProtocol.MIMETYPE_PAYMENTREQUEST.equals(inputType)) {
                 try {
@@ -201,11 +201,11 @@ public abstract class InputParser {
                 } catch (final PaymentProtocolException.PkiVerificationException x) {
                     log.info("got unverifyable payment request", x);
 
-                    error(R.string.input_parser_unverifyable_paymentrequest, x.getMessage());
+                    error(x, R.string.input_parser_unverifyable_paymentrequest, x.getMessage());
                 } catch (final PaymentProtocolException x) {
                     log.info("got invalid payment request", x);
 
-                    error(R.string.input_parser_invalid_paymentrequest, x.getMessage());
+                    error(x, R.string.input_parser_invalid_paymentrequest, x.getMessage());
                 }
             } else {
                 cannotClassify(inputType);
@@ -239,15 +239,15 @@ public abstract class InputParser {
                 } catch (final IOException x) {
                     log.info("i/o error while fetching payment request", x);
 
-                    error(R.string.input_parser_io_error, x.getMessage());
+                    error(x, R.string.input_parser_io_error, x.getMessage());
                 } catch (final PaymentProtocolException.PkiVerificationException x) {
                     log.info("got unverifyable payment request", x);
 
-                    error(R.string.input_parser_unverifyable_paymentrequest, x.getMessage());
+                    error(x, R.string.input_parser_unverifyable_paymentrequest, x.getMessage());
                 } catch (final PaymentProtocolException x) {
                     log.info("got invalid payment request", x);
 
-                    error(R.string.input_parser_invalid_paymentrequest, x.getMessage());
+                    error(x, R.string.input_parser_invalid_paymentrequest, x.getMessage());
                 } finally {
                     try {
                         if (baos != null)
@@ -288,7 +288,7 @@ public abstract class InputParser {
             } catch (BitcoinURIParseException x) {
                 log.info("got invalid dashwallet uri: '" + input + "'", x);
 
-                error(R.string.input_parser_invalid_bitcoin_uri, input);
+                error(x, R.string.input_parser_invalid_bitcoin_uri, input);
                 return;
             }
 
@@ -300,7 +300,7 @@ public abstract class InputParser {
                 } catch (BitcoinURIParseException x) {
                     log.info("got invalid dashwallet uri: '" + input + "'", x);
 
-                    error(R.string.input_parser_invalid_bitcoin_uri, input);
+                    error(x, R.string.input_parser_invalid_bitcoin_uri, input);
                 }
             } else if (walletUri.isMasterPublicKeyRequest()) {
                 handleMasterPublicKeyRequest(walletUri.getSender());
@@ -403,20 +403,25 @@ public abstract class InputParser {
 
     protected abstract void handleDirectTransaction(Transaction transaction) throws VerificationException;
 
-    protected abstract void error(int messageResId, Object... messageArgs);
+    protected abstract void error(Exception x, int messageResId, Object... messageArgs);
 
     protected void cannotClassify(final String input) {
         log.info("cannot classify: '{}'", input);
 
-        error(R.string.input_parser_cannot_classify, input);
+        error(null, R.string.input_parser_cannot_classify, input);
     }
 
     public static void dialog(final Context context, @Nullable final OnClickListener dismissListener, final int titleResId,
-            final int messageResId, final Object... messageArgs) {
+                              final int messageResId, final Object... messageArgs) {
+        dialog(context, dismissListener, titleResId, context.getString(messageResId, messageArgs));
+    }
+
+    public static void dialog(final Context context, @Nullable final OnClickListener dismissListener, final int titleResId,
+                              String message) {
         final DialogBuilder dialog = new DialogBuilder(context);
         if (titleResId != 0)
             dialog.setTitle(titleResId);
-        dialog.setMessage(context.getString(messageResId, messageArgs));
+        dialog.setMessage(message);
         dialog.singleDismissButton(dismissListener);
         dialog.show();
     }

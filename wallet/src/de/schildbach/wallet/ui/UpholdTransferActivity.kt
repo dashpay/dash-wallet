@@ -128,9 +128,12 @@ class UpholdTransferActivity : InteractionAwareActivity() {
             override fun onConfirm(transaction: UpholdTransaction) {
                 val address: String = receiveAddress.toBase58()
                 val amountStr = transaction.origin.base.toPlainString()
-                val fiatAmount = enterAmountSharedViewModel.exchangeRate!!.coinToFiat(amount)
-                val amountFiat = Constants.LOCAL_FORMAT.format(fiatAmount).toString()
-                val fiatSymbol = GenericUtils.currencySymbol(fiatAmount.currencyCode)
+
+                // if the exchange rate is not available, then show "Not Available"
+                val fiatAmount = enterAmountSharedViewModel.exchangeRate?.coinToFiat(amount)
+                val amountFiat = if (fiatAmount != null) Constants.LOCAL_FORMAT.format(fiatAmount).toString() else getString(R.string.transaction_row_rate_not_available)
+                val fiatSymbol = if (fiatAmount != null) GenericUtils.currencySymbol(fiatAmount.currencyCode) else ""
+
                 val fee = transaction.origin.fee.toPlainString()
                 val total = transaction.origin.amount.toPlainString()
                 val dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat, fiatSymbol, fee, total, getString(R.string.uphold_transfer))

@@ -53,7 +53,6 @@
 	<string name="send_coins_fragment_request_payment_request_progress">Aláírás begyűjtése tőle: %s…</string>
 	<string name="send_coins_fragment_request_payment_request_failed_title">Aláírás begyűjtése sikertelen</string>
 	<string name="send_coins_fragment_request_payment_request_wrong_signature">Helytelen aláírás!</string>
-	<string name="send_coins_fragment_payee_verified_by">ellenőrizve általa: %s</string>
 	<string name="send_coins_fragment_payee_verified_by_unknown">ismeretlen</string>
 	<string name="send_coins_fragment_receiving_address_label">Fizetés</string>
 	<string name="send_coins_fragment_receiving_address_hint">írd be a címet vagy nevet</string>

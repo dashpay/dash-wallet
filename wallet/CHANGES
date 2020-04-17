@@ -1,4 +1,21 @@
 Dash Wallet
+v7.0.5
+* Fix crash on Local Currency Screen (Android 5, 6, Chinese locale)
+* Clicking Notification goes to the Lock Screen instead of Home Screen
+* Fix crash on Android 6 when fingerprint hardware is not available
+* Fix various Uphold crashes
+* Prevent Notifications from keeping the app open
+* Fix Network Monitor that would not update as blocks were downloaded
+* Add complete BIP70 support
+* Fix crashes related to InstantSend and Chainlocks with dashj 0.17.1
+* Update gradle components
+
+v7.0.4
+* Fix clipboard issues with Android 10
+* Payments/Send screen updates with changes in clipboard
+* Fix upgrade crash from v6 apps without a PIN
+* Fix upgrade crash from when PIN is entered incorrectly 3 times and app goes to background
+
 v7.0.3
 * Fix start up crash in Blockchain Service
 
