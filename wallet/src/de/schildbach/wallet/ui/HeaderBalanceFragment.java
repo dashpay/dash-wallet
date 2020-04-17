@@ -16,6 +16,8 @@
 
 package de.schildbach.wallet.ui;
 
+import android.animation.Animator;
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
@@ -25,6 +27,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.view.animation.LinearInterpolator;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -203,7 +206,14 @@ public final class HeaderBalanceFragment extends Fragment {
         dashpayUserAvatar.setVisibility(View.VISIBLE);
         float[] hsv = new float[3];
         //Ascii codes for A: 65 - Z: 90
-        hsv[0] = (1 - (90f - letters.charAt(0)) / (90 - 65)) * 360f;
+        float firstChar = letters.charAt(0);
+        float charIndex;
+        if (firstChar <= 57) {
+            charIndex = (firstChar - 48f) / 36f; // 48 == '0', 36 == total count of supported
+        } else {
+            charIndex = (firstChar - 65f + 10f) / 36f; // 65 == 'A', 10 == count of digits
+        }
+        hsv[0] = charIndex * 360f;
         hsv[1] = 0.3f;
         hsv[2] = 0.6f;
         int bgColor = Color.HSVToColor(hsv);
