@@ -272,12 +272,12 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
     @Override
     public void onProcessingIdentityRowClicked(final IdentityCreationState identityCreationState, boolean retry) {
-        if (identityCreationState.getState() == IdentityCreationState.State.DONE) {
-            Intent intent = new Intent(activity, CreateUsernameActivity.class);
-            intent.putExtra(CreateUsernameActivity.Companion.getCOMPLETE_USERNAME(),
-                    identityCreationState.getUsername());
-            startActivity(intent);
-        } else {
+//        if (identityCreationState.getState() == IdentityCreationState.State.DONE) {
+//            Intent intent = new Intent(activity, CreateUsernameActivity.class);
+//            intent.putExtra(CreateUsernameActivity.Companion.getCOMPLETE_USERNAME(),
+//                    identityCreationState.getUsername());
+//            startActivity(intent);
+//        } else {
             Executors.newSingleThreadExecutor().execute(new Runnable() {
                 @Override
                 public void run() {
@@ -286,7 +286,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
                             .identityCreationStateDao().insert(identityCreationState);
                 }
             });
-        }
+//        }
     }
 
     @Override

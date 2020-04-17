@@ -13,54 +13,46 @@
     tools:ignore="ContentDescription">
 
     <ImageView
-        android:id="@+id/animated_icon"
+        android:id="@+id/icon"
         android:layout_width="42dp"
         android:layout_height="42dp"
         android:layout_marginStart="6dp"
-        android:layout_marginTop="10dp"
+        android:padding="6dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="@drawable/identity_processing" />
 
-    <ImageView
-        android:id="@+id/error_icon"
-        android:layout_width="42dp"
-        android:layout_height="42dp"
-        android:layout_marginStart="6dp"
-        android:layout_marginTop="10dp"
-        android:padding="6dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/ic_error" />
-
-    <TextView
-        android:id="@+id/title"
-        style="@style/MontserratMedium"
+    <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
-        android:layout_marginTop="12dp"
-        android:text="@string/processing_home_title"
-        android:textSize="15sp"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/retry_icon"
-        app:layout_constraintStart_toEndOf="@id/error_icon"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintStart_toEndOf="@id/icon"
+        app:layout_constraintTop_toTopOf="parent">
 
-    <TextView
-        android:id="@+id/subtitle"
-        style="@style/MontserratRegular.G"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="10dp"
-        android:layout_marginTop="1dp"
-        android:ellipsize="end"
-        android:maxLines="1"
-        android:text="@string/processing_home_title"
-        android:textSize="13sp"
-        app:layout_constraintEnd_toStartOf="@id/retry_icon"
-        app:layout_constraintStart_toEndOf="@id/error_icon"
-        app:layout_constraintTop_toBottomOf="@id/title"
-        tools:text="@string/processing_home_step_1" />
+        <TextView
+            android:id="@+id/title"
+            style="@style/MontserratMedium"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/processing_home_title"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/subtitle"
+            style="@style/MontserratRegular.G"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/processing_home_title"
+            android:textSize="13sp"
+            tools:text="@string/processing_home_step_1" />
+
+    </LinearLayout>
 
     <ProgressBar
         android:id="@+id/progress"
@@ -87,15 +79,16 @@
 
     <TextView
         android:id="@+id/retry_icon"
-        style="@style/MontserratMedium.B"
+        style="@style/DashButton.Blue"
         android:layout_width="wrap_content"
         android:layout_height="38dp"
-        android:layout_marginEnd="5dp"
+        android:layout_marginEnd="12dp"
         android:drawableStart="@drawable/ic_retry"
         android:drawablePadding="8dp"
         android:gravity="center_vertical"
         android:padding="5dp"
         android:text="@string/processing_error_retry"
+        android:textColor="@color/dash_white"
         android:textSize="12sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
