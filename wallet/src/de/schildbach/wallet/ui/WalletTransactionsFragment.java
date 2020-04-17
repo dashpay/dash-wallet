@@ -141,7 +141,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         setRetainInstance(true);
 
         adapter = new TransactionsAdapter(activity, wallet, application.maxConnectedPeers(), this);
-        adapter.setShowTransactionRowMenu(true);
 
         this.direction = null;
     }
