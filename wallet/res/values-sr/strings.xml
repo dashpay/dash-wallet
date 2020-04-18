@@ -49,7 +49,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Dobavljanje potpisa od %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Dobavljanje potpisa je neuspešno</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Pogrešan potpis!</string>
-    <string name="send_coins_fragment_payee_verified_by">overeno od strane: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">nepoznato</string>
     <string name="send_coins_fragment_receiving_address_hint">unesite adresu ili ime</string>
     <string name="send_coins_fragment_receiving_address_error">Neispravna Dash adresa!</string>

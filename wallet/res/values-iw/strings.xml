@@ -46,7 +46,6 @@
 	<string name="send_coins_fragment_request_payment_request_progress">אוסף חתימה מ%s…</string>
 	<string name="send_coins_fragment_request_payment_request_failed_title">איסוף חתימה נכשל</string>
 	<string name="send_coins_fragment_request_payment_request_wrong_signature">חתימה שגויה!</string>
-	<string name="send_coins_fragment_payee_verified_by">נבדק על ידי: %s</string>
 	<string name="send_coins_fragment_payee_verified_by_unknown">לא ידוע</string>
 	<string name="send_coins_fragment_receiving_address_label">שלם ל</string>
 	<string name="send_coins_fragment_receiving_address_hint">הקש כתובת או שם</string>

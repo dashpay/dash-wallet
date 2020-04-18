@@ -1,63 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:paddingStart="16dp"
-    android:paddingEnd="16dp">
-
-    <TextView
-        android:id="@+id/send_coins_payee_name"
-        style="@style/MontserratRegular.DB.12"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:gravity="center_horizontal"
-        android:singleLine="true" />
-
-    <TextView
-        android:id="@+id/send_coins_payee_verified_by"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:singleLine="true"
-        android:textColor="@color/fg_less_significant"
-        android:textSize="@dimen/font_size_small"
-        tools:text="@string/send_coins_fragment_payee_verified_by" />
-
-    <TextView
-        android:id="@+id/send_coins_receiving_static_address"
-        style="@style/MontserratMedium.MG.14"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:gravity="center_horizontal"
-        android:visibility="gone" />
-
-    <LinearLayout
-        android:id="@+id/is_direct_group"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-        <de.schildbach.wallet.ui.widget.MontserratCheckBox
-            android:id="@+id/send_coins_direct_payment_enable"
-            style="@style/CheckBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/list_entry_padding"
-            android:text="@string/send_coins_fragment_direct_payment_enable" />
-
-        <TextView
-            android:id="@+id/send_coins_direct_payment_message"
-            style="@style/MontserratRegular.DB.12"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/list_entry_padding_vertical"
-            android:visibility="gone"
-            tools:text="Directly payment message"
-            tools:visibilty="visible" />
-
-    </LinearLayout>
-
-</LinearLayout>
+    android:paddingEnd="16dp" />

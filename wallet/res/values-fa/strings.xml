@@ -48,7 +48,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">در حال دریافت امضاء از %s ...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">دریافت امضاء ناموفق بود</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">امضای نادرست!</string>
-    <string name="send_coins_fragment_payee_verified_by">تایید شده توسط: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">ناشناس</string>
     <string name="send_coins_fragment_receiving_address_hint">نشانی یا نام دریافت‌کننده را وارد کنید</string>
     <string name="send_coins_fragment_receiving_address_error">نشانی وارد شده مامعتبر است!</string>

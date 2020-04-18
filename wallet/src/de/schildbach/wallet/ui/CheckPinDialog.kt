@@ -30,7 +30,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import androidx.annotation.RequiresApi
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.os.CancellationSignal
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
@@ -55,7 +54,7 @@ open class CheckPinDialog : DialogFragment() {
         internal const val ARG_PIN_ONLY = "arg_pin_only"
 
         @JvmStatic
-        fun show(activity: AppCompatActivity, requestCode: Int = 0, pinOnly: Boolean = false) {
+        fun show(activity: FragmentActivity, requestCode: Int = 0, pinOnly: Boolean = false) {
             val checkPinDialog = CheckPinDialog()
             if (PinRetryController.getInstance().isLocked) {
                 checkPinDialog.showLockedAlert(activity)
@@ -69,7 +68,7 @@ open class CheckPinDialog : DialogFragment() {
         }
 
         @JvmStatic
-        fun show(activity: AppCompatActivity, requestCode: Int = 0) {
+        fun show(activity: FragmentActivity, requestCode: Int = 0) {
             show(activity, requestCode, false)
         }
     }
@@ -83,7 +82,7 @@ open class CheckPinDialog : DialogFragment() {
     protected var fingerprintHelper: FingerprintHelper? = null
     protected lateinit var fingerprintCancellationSignal: CancellationSignal
 
-    private var pinLength = WalletApplication.getInstance().configuration.pinLength
+    protected var pinLength = WalletApplication.getInstance().configuration.pinLength
 
     protected enum class State {
         ENTER_PIN,
@@ -126,7 +125,7 @@ open class CheckPinDialog : DialogFragment() {
                 }
                 if (viewModel.pin.length == pinLength) {
                     Handler().postDelayed({
-                        viewModel.checkPin(viewModel.pin)
+                        checkPin(viewModel.pin.toString())
                     }, 200)
                 }
             }
@@ -152,6 +151,10 @@ open class CheckPinDialog : DialogFragment() {
                 pin_or_fingerprint_button.isEnabled = false
             } else initFingerprint()
         }
+    }
+
+    open fun checkPin(pin: String) {
+        viewModel.checkPin(pin)
     }
 
     /*

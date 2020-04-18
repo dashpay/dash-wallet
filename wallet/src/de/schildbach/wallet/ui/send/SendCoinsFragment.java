@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Dash Core Group
+ * Copyright 2020 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package de.schildbach.wallet.ui.send;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.bluetooth.BluetoothAdapter;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -26,12 +25,8 @@ import android.content.Intent;
 import android.graphics.Typeface;
 import android.media.RingtoneManager;
 import android.net.Uri;
-import android.nfc.NdefMessage;
-import android.nfc.NfcAdapter;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.Process;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
@@ -39,99 +34,53 @@ import android.text.style.StyleSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
-import android.widget.CompoundButton.OnCheckedChangeListener;
-import android.widget.TextView;
 
-import androidx.annotation.NonNull;
-import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
-import org.bitcoin.protocols.payments.Protos.Payment;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.InsufficientMoneyException;
-import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
-import org.bitcoinj.wallet.KeyChain.KeyPurpose;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards;
 import org.bitcoinj.wallet.Wallet.DustySendRequested;
-import org.bitcoinj.wallet.ZeroConfCoinSelector;
-import org.bouncycastle.crypto.params.KeyParameter;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.common.util.GenericUtils;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileNotFoundException;
-import java.io.InputStream;
-import java.util.Arrays;
-
-import javax.annotation.Nullable;
+import java.util.Objects;
 
 import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.data.PaymentIntent.Standard;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
-import de.schildbach.wallet.offline.DirectPaymentTask;
+import de.schildbach.wallet.livedata.Resource;
 import de.schildbach.wallet.ui.CheckPinDialog;
 import de.schildbach.wallet.ui.CheckPinSharedModel;
-import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
-import de.schildbach.wallet.ui.InputParser.StreamInputParser;
-import de.schildbach.wallet.ui.InputParser.StringInputParser;
-import de.schildbach.wallet.ui.ProgressDialogFragment;
+import de.schildbach.wallet.ui.InputParser;
 import de.schildbach.wallet.ui.SingleActionSharedViewModel;
 import de.schildbach.wallet.ui.TransactionResultActivity;
-import de.schildbach.wallet.ui.security.SecurityGuard;
-import de.schildbach.wallet.util.Bluetooth;
-import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
-import kotlin.Pair;
 
-import static org.dash.wallet.common.Constants.CHAR_CHECKMARK;
+public class SendCoinsFragment extends Fragment {
 
-public final class SendCoinsFragment extends Fragment {
-
-    private static Coin ECONOMIC_FEE = Coin.valueOf(1000);
-
-    private SendCoinsActivity activity;
-    private WalletApplication application;
+    protected SendCoinsActivity activity;
     private Configuration config;
-    private FragmentManager fragmentManager;
-    @Nullable
-    private BluetoothAdapter bluetoothAdapter;
 
-    private final Handler handler = new Handler();
-    private HandlerThread backgroundThread;
-    private Handler backgroundHandler;
-
-    private TextView payeeNameView;
-    private TextView payeeVerifiedByView;
-    private TextView receivingStaticAddressView;
-    private CheckBox directPaymentEnableView;
-
-    private TextView directPaymentMessageView;
-
-    private static final int REQUEST_CODE_ENABLE_BLUETOOTH_FOR_PAYMENT_REQUEST = 0;
-    private static final int REQUEST_CODE_ENABLE_BLUETOOTH_FOR_DIRECT_PAYMENT = 1;
+    protected final Handler handler = new Handler();
 
     private static final int AUTH_REQUEST_CODE_MAX = 1;
     private static final int AUTH_REQUEST_CODE_SEND = 2;
@@ -145,14 +94,15 @@ public final class SendCoinsFragment extends Fragment {
 
     private boolean userAuthorizedDuring = false;
 
-    private SecurityGuard securityGuard;
     private BlockchainState blockchainState;
+
+    private boolean handlePaymentRequest = false;
 
     private boolean isUserAuthorized() {
         return activity.isUserAuthorized() || userAuthorizedDuring;
     }
 
-    private final DialogInterface.OnClickListener activityDismissListener = new DialogInterface.OnClickListener() {
+    final DialogInterface.OnClickListener activityDismissListener = new DialogInterface.OnClickListener() {
         @Override
         public void onClick(final DialogInterface dialog, final int which) {
             activity.finish();
@@ -160,28 +110,44 @@ public final class SendCoinsFragment extends Fragment {
     };
 
     @Override
-    public void onAttach(final Context context) {
+    public void onAttach(@NotNull final Context context) {
         super.onAttach(context);
 
         this.activity = (SendCoinsActivity) context;
-        this.application = (WalletApplication) activity.getApplication();
-        this.config = application.getConfiguration();
-        this.fragmentManager = getFragmentManager();
+        WalletApplication walletApplication = (WalletApplication) activity.getApplication();
+        this.config = walletApplication.getConfiguration();
     }
 
     @Override
     public void onActivityCreated(@androidx.annotation.Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
-        try {
-            securityGuard = new SecurityGuard();
-        } catch (Exception e) {
-            log.error("Unable to instantiate SecurityGuard", e);
-            activity.finish();
-            return;
-        }
-
         viewModel = ViewModelProviders.of(this).get(SendCoinsViewModel.class);
+        viewModel.getBasePaymentIntent().observe(getViewLifecycleOwner(), new Observer<Resource<PaymentIntent>>() {
+            @Override
+            public void onChanged(Resource<PaymentIntent> paymentIntentResource) {
+                switch (paymentIntentResource.getStatus()) {
+                    case LOADING: {
+                        break;
+                    }
+                    case SUCCESS: {
+                        PaymentIntent paymentIntent = Objects.requireNonNull(paymentIntentResource.getData());
+                        if (paymentIntent.hasPaymentRequestUrl()) {
+                            throw new IllegalArgumentException(PaymentProtocolFragment.class.getSimpleName()
+                                    + "class should be used to handle Payment requests (BIP70 and BIP270)");
+                        } else {
+                            updateStateFrom(paymentIntent);
+                        }
+                        break;
+                    }
+                    case ERROR: {
+                        String errorMessage = paymentIntentResource.getMessage();
+                        InputParser.dialog(activity, activityDismissListener, 0, errorMessage);
+                        break;
+                    }
+                }
+            }
+        });
 
         AppDatabase.getAppDatabase().blockchainStateDao().load().observe(this, new Observer<BlockchainState>() {
             @Override
@@ -192,9 +158,9 @@ public final class SendCoinsFragment extends Fragment {
         });
 
         CheckPinSharedModel checkPinSharedModel = ViewModelProviders.of(activity).get(CheckPinSharedModel.class);
-        checkPinSharedModel.getOnCorrectPinCallback().observe(activity, new Observer<Pair<Integer, String>>() {
+        checkPinSharedModel.getOnCorrectPinCallback().observe(activity, new Observer<kotlin.Pair<Integer, String>>() {
             @Override
-            public void onChanged(Pair<Integer, String> data) {
+            public void onChanged(kotlin.Pair<Integer, String> data) {
                 userAuthorizedDuring = true;
                 switch (data.getFirst()) {
                     case AUTH_REQUEST_CODE_MAX:
@@ -224,20 +190,7 @@ public final class SendCoinsFragment extends Fragment {
         enterAmountSharedViewModel.getButtonClickEvent().observe(getViewLifecycleOwner(), new Observer<Coin>() {
             @Override
             public void onChanged(Coin coin) {
-                if (everythingPlausible()) {
-                    if (!isUserAuthorized() || config.getSpendingConfirmationEnabled()) {
-                        Coin thresholdAmount = Coin.parseCoin(
-                                Float.valueOf(config.getBiometricLimit()).toString());
-                        if (enterAmountSharedViewModel.getDashAmount().isLessThan(thresholdAmount)) {
-                            CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND);
-                        } else {
-                            CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND, true);
-                        }
-                    } else {
-                        showPaymentConfirmation();
-                    }
-                }
-                updateView();
+                authenticateOrConfirm();
             }
         });
         enterAmountSharedViewModel.getMaxButtonClickEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
@@ -257,86 +210,105 @@ public final class SendCoinsFragment extends Fragment {
                 handleGo();
             }
         });
-
-        if (savedInstanceState == null) {
-            final Intent intent = activity.getIntent();
-            final String action = intent.getAction();
-            final Uri intentUri = intent.getData();
-            final String scheme = intentUri != null ? intentUri.getScheme() : null;
-            final String mimeType = intent.getType();
-
-            if ((Intent.ACTION_VIEW.equals(action) || NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action))
-                    && intentUri != null && "dash".equals(scheme)) {
-                initStateFromDashUri(intentUri);
-            } else if ((NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action))
-                    && PaymentProtocol.MIMETYPE_PAYMENTREQUEST.equals(mimeType)) {
-                final NdefMessage ndefMessage = (NdefMessage) intent
-                        .getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)[0];
-                final byte[] ndefMessagePayload = Nfc.extractMimePayload(PaymentProtocol.MIMETYPE_PAYMENTREQUEST,
-                        ndefMessage);
-                initStateFromPaymentRequest(mimeType, ndefMessagePayload);
-            } else if ((Intent.ACTION_VIEW.equals(action))
-                    && PaymentProtocol.MIMETYPE_PAYMENTREQUEST.equals(mimeType)) {
-                final byte[] paymentRequest = BitcoinIntegration.paymentRequestFromIntent(intent);
-
-                if (intentUri != null)
-                    initStateFromIntentUri(mimeType, intentUri);
-                else if (paymentRequest != null)
-                    initStateFromPaymentRequest(mimeType, paymentRequest);
-                else
-                    throw new IllegalArgumentException();
-            } else if (intent.hasExtra(SendCoinsActivity.INTENT_EXTRA_PAYMENT_INTENT)) {
-                initStateFromIntentExtras(intent.getExtras());
-            } else {
-                updateStateFrom(PaymentIntent.blank());
-            }
-        }
-    }
-
-    @Override
-    public void onCreate(final Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-
-        backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);
-        backgroundThread.start();
-        backgroundHandler = new Handler(backgroundThread.getLooper());
-    }
-
-    @Override
-    public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
-                             final Bundle savedInstanceState) {
-        final View view = inflater.inflate(R.layout.send_coins_fragment, container);
-
-        payeeNameView = view.findViewById(R.id.send_coins_payee_name);
-        payeeVerifiedByView = view.findViewById(R.id.send_coins_payee_verified_by);
-
-        receivingStaticAddressView = view.findViewById(R.id.send_coins_receiving_static_address);
-
-        directPaymentEnableView = view.findViewById(R.id.send_coins_direct_payment_enable);
-        directPaymentEnableView.setTypeface(ResourcesCompat.getFont(getActivity(), R.font.montserrat_medium));
-        directPaymentEnableView.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+        viewModel.state.observe(getViewLifecycleOwner(), new Observer<SendCoinsViewModel.State>() {
             @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                if (viewModel.paymentIntent.isBluetoothPaymentUrl() && isChecked && !bluetoothAdapter.isEnabled()) {
-                    // ask for permission to enable bluetooth
-                    startActivityForResult(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE),
-                            REQUEST_CODE_ENABLE_BLUETOOTH_FOR_DIRECT_PAYMENT);
+            public void onChanged(SendCoinsViewModel.State state) {
+                updateView();
+            }
+        });
+        viewModel.getOnSendCoinsOffline().observe(getViewLifecycleOwner(), new Observer<kotlin.Pair<SendCoinsViewModel.SendCoinsOfflineStatus, Object>>() {
+            @Override
+            public void onChanged(kotlin.Pair<SendCoinsViewModel.SendCoinsOfflineStatus, Object> sendCoinsData) {
+
+                SendCoinsViewModel.SendCoinsOfflineStatus status = sendCoinsData.getFirst();
+                switch (status) {
+                    case SUCCESS: {
+                        viewModel.state.setValue(SendCoinsViewModel.State.SENDING);
+                        Transaction transaction = (Transaction) sendCoinsData.getSecond();
+                        onSignAndSendPaymentSuccess(transaction);
+                        break;
+                    }
+                    case INSUFFICIENT_MONEY: {
+                        viewModel.state.setValue(SendCoinsViewModel.State.INPUT);
+                        Coin missing = (Coin) sendCoinsData.getSecond();
+                        showInsufficientMoneyDialog(missing);
+                        break;
+                    }
+                    case INVALID_ENCRYPTION_KEY: {
+                        viewModel.state.setValue(SendCoinsViewModel.State.INPUT);
+                        break;
+                    }
+                    case EMPTY_WALLET_FAILED: {
+                        viewModel.state.setValue(SendCoinsViewModel.State.INPUT);
+                        showEmptyWalletFailedDialog();
+                        break;
+                    }
+                    case FAILURE: {
+                        viewModel.state.setValue(SendCoinsViewModel.State.FAILED);
+                        Exception exception = (Exception) sendCoinsData.getSecond();
+                        showFailureDialog(exception);
+                        break;
+                    }
                 }
             }
         });
 
-        directPaymentMessageView = view.findViewById(R.id.send_coins_direct_payment_message);
+        if (savedInstanceState == null) {
+            final Intent intent = activity.getIntent();
 
-        return view;
+            Bundle extras = Objects.requireNonNull(intent.getExtras());
+            final PaymentIntent paymentIntent = extras.getParcelable(SendCoinsActivity.INTENT_EXTRA_PAYMENT_INTENT);
+            if (paymentIntent == null || paymentIntent.hasPaymentRequestUrl()) {
+                throw new IllegalArgumentException();
+            }
+            viewModel.getBasePaymentIntent().setValue(Resource.success(paymentIntent));
+        }
+    }
+
+    private void updateStateFrom(final PaymentIntent paymentIntent) {
+        log.info("got {}", paymentIntent);
+
+        // delay these actions until fragment is resumed
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                enterAmountSharedViewModel.getChangeDashAmountEvent().setValue(paymentIntent.getAmount());
+                viewModel.state.setValue(SendCoinsViewModel.State.INPUT);
+                handler.post(dryrunRunnable);
+            }
+        });
+    }
+
+    private void authenticateOrConfirm() {
+        if (everythingPlausible()) {
+            if (!isUserAuthorized() || config.getSpendingConfirmationEnabled()) {
+                Coin thresholdAmount = Coin.parseCoin(
+                        Float.valueOf(config.getBiometricLimit()).toString());
+                if (enterAmountSharedViewModel.getDashAmount().isLessThan(thresholdAmount)) {
+                    CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND);
+                } else {
+                    CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND, true);
+                }
+            } else if (viewModel.dryrunException == null) {
+                showPaymentConfirmation();
+            }
+        }
+        updateView();
+    }
+
+    private SendCoinsViewModel.State getState() {
+        return viewModel.state.getValue();
+    }
+
+    @Override
+    public View onCreateView(final LayoutInflater inflater, final ViewGroup container, final Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.send_coins_fragment, container);
     }
 
     @Override
     public void onResume() {
         super.onResume();
 
-        updateView();
         handler.post(dryrunRunnable);
     }
 
@@ -347,230 +319,93 @@ public final class SendCoinsFragment extends Fragment {
         super.onDetach();
     }
 
-    @Override
-    public void onDestroy() {
-        backgroundThread.getLooper().quit();
-        super.onDestroy();
-    }
-
-    @Override
-    public void onActivityResult(final int requestCode, final int resultCode, final Intent intent) {
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                onActivityResultResumed(requestCode, resultCode, intent);
-            }
-        });
-    }
-
-    private void onActivityResultResumed(final int requestCode, final int resultCode, final Intent intent) {
-        if (requestCode == REQUEST_CODE_ENABLE_BLUETOOTH_FOR_PAYMENT_REQUEST) {
-            if (viewModel.paymentIntent.isBluetoothPaymentRequestUrl())
-                requestPaymentRequest();
-        } else if (requestCode == REQUEST_CODE_ENABLE_BLUETOOTH_FOR_DIRECT_PAYMENT) {
-            if (viewModel.paymentIntent.isBluetoothPaymentUrl())
-                directPaymentEnableView.setChecked(resultCode == Activity.RESULT_OK);
-        }
-    }
-
-    private void handleCancel() {
-        if (viewModel.state == null || viewModel.state.compareTo(SendCoinsViewModel.State.INPUT) <= 0) {
-            activity.setResult(Activity.RESULT_CANCELED);
-        }
-
-        activity.finish();
-    }
-
     private boolean isPayeePlausible() {
-        return viewModel.paymentIntent != null && viewModel.paymentIntent.hasOutputs();
+        return viewModel.getBasePaymentIntentValue().hasOutputs();
     }
 
     private boolean isAmountPlausible() {
-        if (viewModel.dryrunSendRequest != null) {
-            return viewModel.dryrunException == null;
-        } else if (viewModel.paymentIntent.mayEditAmount()) {
+        if (viewModel.getBasePaymentIntentValue().mayEditAmount()) {
             return enterAmountSharedViewModel.hasAmount();
         } else {
-            return viewModel.paymentIntent.hasAmount();
+            return viewModel.getBasePaymentIntentValue().hasAmount();
         }
     }
 
     private boolean everythingPlausible() {
-        return viewModel.state == SendCoinsViewModel.State.INPUT && isPayeePlausible() && isAmountPlausible();
+        return getState() == SendCoinsViewModel.State.INPUT && isPayeePlausible() && isAmountPlausible();
     }
 
     private void handleGo() {
-        final Wallet wallet = viewModel.wallet;
-        if (wallet.isEncrypted()) {
-
-            new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
-                @Override
-                protected void onSuccess(final KeyParameter encryptionKey, final boolean wasChanged) {
-                    if (wasChanged)
-                        application.backupWallet();
-                    signAndSendPayment(encryptionKey);
-                }
-            }.deriveKey(wallet, securityGuard.retrievePassword());
-
-            setState(SendCoinsViewModel.State.DECRYPTING);
-        } else {
-            signAndSendPayment(null);
+        if (viewModel.dryrunSendRequest == null) {
+            log.error("illegal state dryrunSendRequest == null");
+            return;
         }
+        Coin editedAmount = enterAmountSharedViewModel.getDashAmount();
+        ExchangeRate exchangeRate = enterAmountSharedViewModel.getExchangeRate();
+
+        viewModel.signAndSendPayment(editedAmount, exchangeRate);
     }
 
-    private void signAndSendPayment(final KeyParameter encryptionKey) {
-        setState(SendCoinsViewModel.State.SIGNING);
+    private void onSignAndSendPaymentSuccess(Transaction transaction) {
+        final ComponentName callingActivity = activity.getCallingActivity();
+        if (callingActivity != null) {
+            log.info("returning result to calling activity: {}", callingActivity.flattenToString());
+            Intent resultIntent = new Intent();
+            BitcoinIntegration.transactionHashToResult(resultIntent, viewModel.sentTransaction.getTxId().toString());
+            activity.setResult(Activity.RESULT_OK, resultIntent);
+        }
+        showTransactionResult(viewModel.sentTransaction, viewModel.getWallet());
+        playSentSound();
+        activity.finish();
+    }
 
-        // final payment intent
-        final PaymentIntent finalPaymentIntent = viewModel.paymentIntent.mergeWithEditedValues(
-                enterAmountSharedViewModel.getDashAmount(), null);
+    private void showInsufficientMoneyDialog(Coin missing) {
 
-        SendRequest sendRequest = createSendRequest(finalPaymentIntent, true, viewModel.dryrunSendRequest.ensureMinRequiredFee);
+        final Wallet wallet = viewModel.getWallet();
+        final Coin estimated = wallet.getBalance(BalanceType.ESTIMATED);
+        final Coin available = wallet.getBalance(BalanceType.AVAILABLE);
+        final Coin pending = estimated.subtract(available);
 
-        final Coin finalAmount = finalPaymentIntent.getAmount();
+        final MonetaryFormat dashFormat = config.getFormat();
 
-        sendRequest.memo = viewModel.paymentIntent.memo;
-        sendRequest.exchangeRate = enterAmountSharedViewModel.getExchangeRate();
-        log.info("Using exchange rate: " + (sendRequest.exchangeRate != null
-                ? sendRequest.exchangeRate.coinToFiat(Coin.COIN).toFriendlyString() :
-                "not available"));
-        sendRequest.aesKey = encryptionKey;
+        final DialogBuilder dialog = DialogBuilder.warn(activity,
+                R.string.send_coins_fragment_insufficient_money_title);
+        final StringBuilder msg = new StringBuilder();
+        msg.append(getString(R.string.send_coins_fragment_insufficient_money_msg1, dashFormat.format(missing)));
 
-        final Wallet wallet = viewModel.wallet;
-        new SendCoinsOfflineTask(wallet, backgroundHandler) {
-            @Override
-            protected void onSuccess(@NonNull final Transaction transaction) {
-
-                viewModel.sentTransaction = transaction;
-
-                setState(SendCoinsViewModel.State.SENDING);
-
-                final Address refundAddress = viewModel.paymentIntent.standard == Standard.BIP70
-                        ? wallet.freshAddress(KeyPurpose.REFUND) : null;
-                final Payment payment = PaymentProtocol.createPaymentMessage(
-                        Arrays.asList(viewModel.sentTransaction), finalAmount, refundAddress, null,
-                        viewModel.paymentIntent.payeeData);
-
-                if (directPaymentEnableView.isChecked())
-                    directPay(payment);
-
-                application.broadcastTransaction(viewModel.sentTransaction);
-
-                final ComponentName callingActivity = activity.getCallingActivity();
-                if (callingActivity != null) {
-                    log.info("returning result to calling activity: {}", callingActivity.flattenToString());
-
-                    final Intent result = new Intent();
-                    BitcoinIntegration.transactionHashToResult(result, viewModel.sentTransaction.getHashAsString());
-                    if (viewModel.paymentIntent.standard == Standard.BIP70)
-                        BitcoinIntegration.paymentToResult(result, payment.toByteArray());
-                    activity.setResult(Activity.RESULT_OK, result);
+        if (pending.signum() > 0)
+            msg.append("\n\n")
+                    .append(getString(R.string.send_coins_fragment_pending, dashFormat.format(pending)));
+        if (viewModel.getBasePaymentIntentValue().mayEditAmount())
+            msg.append("\n\n").append(getString(R.string.send_coins_fragment_insufficient_money_msg2));
+        dialog.setMessage(msg);
+        if (viewModel.getBasePaymentIntentValue().mayEditAmount()) {
+            dialog.setPositiveButton(R.string.send_coins_options_empty, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(final DialogInterface dialog, final int which) {
+                    handleEmpty();
                 }
-                showTransactionResult(viewModel.sentTransaction, wallet);
-                playSentSound();
-                activity.finish();
-            }
+            });
+            dialog.setNegativeButton(R.string.button_cancel, null);
+        } else {
+            dialog.setNeutralButton(R.string.button_dismiss, null);
+        }
+        dialog.show();
+    }
 
-            private void directPay(final Payment payment) {
-                final DirectPaymentTask.ResultCallback callback = new DirectPaymentTask.ResultCallback() {
-                    @Override
-                    public void onResult(final boolean ack) {
-                        viewModel.directPaymentAck = ack;
+    private void showEmptyWalletFailedDialog() {
+        final DialogBuilder dialog = DialogBuilder.warn(activity,
+                R.string.send_coins_fragment_empty_wallet_failed_title);
+        dialog.setMessage(R.string.send_coins_fragment_hint_empty_wallet_failed);
+        dialog.setNeutralButton(R.string.button_dismiss, null);
+        dialog.show();
+    }
 
-                        if (viewModel.state == SendCoinsViewModel.State.SENDING)
-                            setState(SendCoinsViewModel.State.SENT);
-
-                        updateView();
-                    }
-
-                    @Override
-                    public void onFail(final int messageResId, final Object... messageArgs) {
-                        final DialogBuilder dialog = DialogBuilder.warn(activity,
-                                R.string.send_coins_fragment_direct_payment_failed_title);
-                        dialog.setMessage(viewModel.paymentIntent.paymentUrl + "\n" + getString(messageResId, messageArgs)
-                                + "\n\n" + getString(R.string.send_coins_fragment_direct_payment_failed_msg));
-                        dialog.setPositiveButton(R.string.button_retry, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(final DialogInterface dialog, final int which) {
-                                directPay(payment);
-                            }
-                        });
-                        dialog.setNegativeButton(R.string.button_dismiss, null);
-                        dialog.show();
-                    }
-                };
-
-                if (viewModel.paymentIntent.isHttpPaymentUrl()) {
-                    new DirectPaymentTask.HttpPaymentTask(backgroundHandler, callback, viewModel.paymentIntent.paymentUrl,
-                            application.httpUserAgent()).send(payment);
-                } else if (viewModel.paymentIntent.isBluetoothPaymentUrl() && bluetoothAdapter != null
-                        && bluetoothAdapter.isEnabled()) {
-                    new DirectPaymentTask.BluetoothPaymentTask(backgroundHandler, callback, bluetoothAdapter,
-                            Bluetooth.getBluetoothMac(viewModel.paymentIntent.paymentUrl)).send(payment);
-                }
-            }
-
-            @Override
-            protected void onInsufficientMoney(final Coin missing) {
-                setState(SendCoinsViewModel.State.INPUT);
-
-                final Coin estimated = wallet.getBalance(BalanceType.ESTIMATED);
-                final Coin available = wallet.getBalance(BalanceType.AVAILABLE);
-                final Coin pending = estimated.subtract(available);
-
-                final MonetaryFormat dashFormat = config.getFormat();
-
-                final DialogBuilder dialog = DialogBuilder.warn(activity,
-                        R.string.send_coins_fragment_insufficient_money_title);
-                final StringBuilder msg = new StringBuilder();
-                msg.append(getString(R.string.send_coins_fragment_insufficient_money_msg1, dashFormat.format(missing)));
-
-                if (pending.signum() > 0)
-                    msg.append("\n\n")
-                            .append(getString(R.string.send_coins_fragment_pending, dashFormat.format(pending)));
-                if (viewModel.paymentIntent.mayEditAmount())
-                    msg.append("\n\n").append(getString(R.string.send_coins_fragment_insufficient_money_msg2));
-                dialog.setMessage(msg);
-                if (viewModel.paymentIntent.mayEditAmount()) {
-                    dialog.setPositiveButton(R.string.send_coins_options_empty, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(final DialogInterface dialog, final int which) {
-                            handleEmpty();
-                        }
-                    });
-                    dialog.setNegativeButton(R.string.button_cancel, null);
-                } else {
-                    dialog.setNeutralButton(R.string.button_dismiss, null);
-                }
-                dialog.show();
-            }
-
-            @Override
-            protected void onInvalidEncryptionKey() {
-                setState(SendCoinsViewModel.State.INPUT);
-            }
-
-            @Override
-            protected void onEmptyWalletFailed() {
-                setState(SendCoinsViewModel.State.INPUT);
-
-                final DialogBuilder dialog = DialogBuilder.warn(activity,
-                        R.string.send_coins_fragment_empty_wallet_failed_title);
-                dialog.setMessage(R.string.send_coins_fragment_hint_empty_wallet_failed);
-                dialog.setNeutralButton(R.string.button_dismiss, null);
-                dialog.show();
-            }
-
-            @Override
-            protected void onFailure(Exception exception) {
-                setState(SendCoinsViewModel.State.FAILED);
-
-                final DialogBuilder dialog = DialogBuilder.warn(activity, R.string.send_coins_error_msg);
-                dialog.setMessage(exception.toString());
-                dialog.setNeutralButton(R.string.button_dismiss, null);
-                dialog.show();
-            }
-        }.sendCoinsOffline(sendRequest); // send asynchronously
+    private void showFailureDialog(Exception exception) {
+        final DialogBuilder dialog = DialogBuilder.warn(activity, R.string.send_coins_error_msg);
+        dialog.setMessage(exception.toString());
+        dialog.setNeutralButton(R.string.button_dismiss, null);
+        dialog.show();
     }
 
     private void showTransactionResult(Transaction transaction, Wallet wallet) {
@@ -584,17 +419,16 @@ public final class SendCoinsFragment extends Fragment {
     }
 
     private void handleEmpty() {
-        final Coin available = viewModel.wallet.getBalance(BalanceType.ESTIMATED);
+        final Coin available = viewModel.getWallet().getBalance(BalanceType.ESTIMATED);
         enterAmountSharedViewModel.getApplyMaxAmountEvent().setValue(available);
-
-        updateView();
+        
         handler.post(dryrunRunnable);
     }
 
     private Runnable dryrunRunnable = new Runnable() {
         @Override
         public void run() {
-            if (viewModel.state == SendCoinsViewModel.State.INPUT)
+            if (getState() == SendCoinsViewModel.State.INPUT)
                 executeDryrun();
 
             updateView();
@@ -606,97 +440,53 @@ public final class SendCoinsFragment extends Fragment {
             viewModel.dryrunException = null;
 
             final Coin amount = enterAmountSharedViewModel.getDashAmount();
-            final Wallet wallet = viewModel.wallet;
+            final Wallet wallet = viewModel.getWallet();
             final Address dummyAddress = wallet.currentReceiveAddress(); // won't be used, tx is never committed
 
             if (Coin.ZERO.equals(amount)) {
                 return;
             }
 
-            final PaymentIntent finalPaymentIntent = viewModel.paymentIntent.mergeWithEditedValues(amount, dummyAddress);
+            final PaymentIntent finalPaymentIntent = viewModel.getBasePaymentIntentValue().mergeWithEditedValues(amount, dummyAddress);
 
             try {
                 // check regular payment
-                SendRequest sendRequest = createSendRequest(finalPaymentIntent, false, false);
+                SendRequest sendRequest = viewModel.createSendRequest(finalPaymentIntent, false, false);
 
                 wallet.completeTx(sendRequest);
-                if (checkDust(sendRequest)) {
-                    sendRequest = createSendRequest(finalPaymentIntent, false, true);
+                if (viewModel.checkDust(sendRequest)) {
+                    sendRequest = viewModel.createSendRequest(finalPaymentIntent, false, true);
                     wallet.completeTx(sendRequest);
                 }
                 viewModel.dryrunSendRequest = sendRequest;
             } catch (final Exception x) {
                 viewModel.dryrunException = x;
             }
+
+            if (handlePaymentRequest) {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        handlePaymentRequest = false;
+                        authenticateOrConfirm();
+                    }
+                });
+            }
         }
     };
 
-    private SendRequest createSendRequest(PaymentIntent paymentIntent, boolean signInputs, boolean forceEnsureMinRequiredFee) {
-
-        paymentIntent.setInstantX(false); //to make sure the correct instance of Transaction class is used in toSendRequest() method
-        final SendRequest sendRequest = paymentIntent.toSendRequest();
-        sendRequest.coinSelector = ZeroConfCoinSelector.get();
-        sendRequest.useInstantSend = false;
-        sendRequest.feePerKb = ECONOMIC_FEE;
-        sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee;
-        sendRequest.signInputs = signInputs;
-
-        Coin walletBalance = viewModel.wallet.getBalance(BalanceType.ESTIMATED);
-        sendRequest.emptyWallet = viewModel.paymentIntent.mayEditAmount() && walletBalance.equals(paymentIntent.getAmount());
-
-        return sendRequest;
-    }
-
-    private void setState(final SendCoinsViewModel.State state) {
-        viewModel.state = state;
-
-        updateView();
-    }
-
     @SuppressLint("SetTextI18n")
-    private void updateView() {
+    protected void updateView() {
 
-        if (viewModel.paymentIntent == null) {
-            log.info("viewModel.paymentIntent == null");
+        if (!viewModel.getBasePaymentIntentReady()) {
             return;
         }
 
-        if (viewModel.paymentIntent.hasPayee()) {
-            payeeNameView.setVisibility(View.VISIBLE);
-            payeeNameView.setText(viewModel.paymentIntent.payeeName);
-
-            payeeVerifiedByView.setVisibility(View.VISIBLE);
-            final String verifiedBy = viewModel.paymentIntent.payeeVerifiedBy != null ? viewModel.paymentIntent.payeeVerifiedBy : getString(R.string.send_coins_fragment_payee_verified_by_unknown);
-            payeeVerifiedByView.setText(CHAR_CHECKMARK + String.format(getString(R.string.send_coins_fragment_payee_verified_by), verifiedBy));
-        } else {
-            payeeNameView.setVisibility(View.GONE);
-            payeeVerifiedByView.setVisibility(View.GONE);
-        }
-
-        if (viewModel.paymentIntent.hasOutputs()) {
-            if (viewModel.paymentIntent.hasAddress())
-                receivingStaticAddressView.setText(viewModel.paymentIntent.getAddress().toBase58());
-            else
-                receivingStaticAddressView.setText(R.string.send_coins_fragment_receiving_address_complex);
-        }
-
         enterAmountSharedViewModel.getDirectionChangeEnabledData().setValue(
-                viewModel.state == SendCoinsViewModel.State.INPUT && viewModel.paymentIntent.mayEditAmount());
-
-        final boolean directPaymentVisible;
-        if (viewModel.paymentIntent.hasPaymentUrl()) {
-            if (viewModel.paymentIntent.isBluetoothPaymentUrl())
-                directPaymentVisible = bluetoothAdapter != null;
-            else
-                directPaymentVisible = !Constants.BUG_OPENSSL_HEARTBLEED;
-        } else {
-            directPaymentVisible = false;
-        }
-        directPaymentEnableView.setVisibility(directPaymentVisible ? View.VISIBLE : View.GONE);
-        directPaymentEnableView.setEnabled(viewModel.state == SendCoinsViewModel.State.INPUT);
+                getState() == SendCoinsViewModel.State.INPUT && viewModel.getBasePaymentIntentValue().mayEditAmount());
 
         enterAmountSharedViewModel.getMessageTextStringData().setValue(null);
-        if (viewModel.state == SendCoinsViewModel.State.INPUT) {
+        if (getState() == SendCoinsViewModel.State.INPUT) {
             CharSequence message = null;
             if (blockchainState != null && blockchainState.getReplaying()) {
                 message = coloredString(getString(R.string.send_coins_fragment_hint_replaying), R.color.dash_red, true);
@@ -721,31 +511,24 @@ public final class SendCoinsFragment extends Fragment {
             }
         }
 
-        if (viewModel.directPaymentAck != null) {
-            directPaymentMessageView.setVisibility(View.VISIBLE);
-            directPaymentMessageView.setText(viewModel.directPaymentAck ? R.string.send_coins_fragment_direct_payment_ack
-                    : R.string.send_coins_fragment_direct_payment_nack);
-        } else {
-            directPaymentMessageView.setVisibility(View.GONE);
-        }
-
         enterAmountSharedViewModel.getButtonEnabledData().setValue(everythingPlausible()
                 && (!isUserAuthorized() || viewModel.dryrunSendRequest != null)
                 && (blockchainState == null || !blockchainState.getReplaying()));
 
-        if (viewModel.state == null || viewModel.state == SendCoinsViewModel.State.REQUEST_PAYMENT_REQUEST) {
+        SendCoinsViewModel.State state = getState();
+        if (state == null) {
             enterAmountSharedViewModel.getButtonTextData().call(0);
-        } else if (viewModel.state == SendCoinsViewModel.State.INPUT) {
+        } else if (state == SendCoinsViewModel.State.INPUT) {
             enterAmountSharedViewModel.getButtonTextData().call(R.string.send_coins_fragment_button_send);
-        } else if (viewModel.state == SendCoinsViewModel.State.DECRYPTING) {
+        } else if (state == SendCoinsViewModel.State.DECRYPTING) {
             enterAmountSharedViewModel.getButtonTextData().call(R.string.send_coins_fragment_state_decrypting);
-        } else if (viewModel.state == SendCoinsViewModel.State.SIGNING) {
+        } else if (state == SendCoinsViewModel.State.SIGNING) {
             enterAmountSharedViewModel.getButtonTextData().call(R.string.send_coins_preparation_msg);
-        } else if (viewModel.state == SendCoinsViewModel.State.SENDING) {
+        } else if (state == SendCoinsViewModel.State.SENDING) {
             enterAmountSharedViewModel.getButtonTextData().call(R.string.send_coins_sending_msg);
-        } else if (viewModel.state == SendCoinsViewModel.State.SENT) {
+        } else if (state == SendCoinsViewModel.State.SENT) {
             enterAmountSharedViewModel.getButtonTextData().call(R.string.send_coins_sent_msg);
-        } else if (viewModel.state == SendCoinsViewModel.State.FAILED) {
+        } else if (state == SendCoinsViewModel.State.FAILED) {
             enterAmountSharedViewModel.getButtonTextData().call(R.string.send_coins_failed_msg);
         }
     }
@@ -761,202 +544,12 @@ public final class SendCoinsFragment extends Fragment {
         return spannable;
     }
 
-    private void initStateFromIntentExtras(final Bundle extras) {
-        final PaymentIntent paymentIntent = extras.getParcelable(SendCoinsActivity.INTENT_EXTRA_PAYMENT_INTENT);
-
-        updateStateFrom(paymentIntent);
-    }
-
-    private void initStateFromDashUri(final Uri dashUri) {
-        final String input = dashUri.toString();
-
-        new StringInputParser(input) {
-            @Override
-            protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
-                updateStateFrom(paymentIntent);
-            }
-
-            @Override
-            protected void handlePrivateKey(final PrefixedChecksummedBytes key) {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            protected void handleDirectTransaction(final Transaction transaction) throws VerificationException {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            protected void error(final int messageResId, final Object... messageArgs) {
-                dialog(activity, activityDismissListener, 0, messageResId, messageArgs);
-            }
-        }.parse();
-    }
-
-    private void initStateFromPaymentRequest(final String mimeType, final byte[] input) {
-        new BinaryInputParser(mimeType, input) {
-            @Override
-            protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
-                updateStateFrom(paymentIntent);
-            }
-
-            @Override
-            protected void error(final int messageResId, final Object... messageArgs) {
-                dialog(activity, activityDismissListener, 0, messageResId, messageArgs);
-            }
-        }.parse();
-    }
-
-    private void initStateFromIntentUri(final String mimeType, final Uri bitcoinUri) {
-        try {
-            final InputStream is = activity.getContentResolver().openInputStream(bitcoinUri);
-
-            new StreamInputParser(mimeType, is) {
-                @Override
-                protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
-                    updateStateFrom(paymentIntent);
-                }
-
-                @Override
-                protected void error(final int messageResId, final Object... messageArgs) {
-                    dialog(activity, activityDismissListener, 0, messageResId, messageArgs);
-                }
-            }.parse();
-        } catch (final FileNotFoundException x) {
-            throw new RuntimeException(x);
-        }
-    }
-
-    private void updateStateFrom(final PaymentIntent paymentIntent) {
-        log.info("got {}", paymentIntent);
-
-        viewModel.paymentIntent = paymentIntent;
-
-        viewModel.directPaymentAck = null;
-
-        // delay these actions until fragment is resumed
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (paymentIntent.hasPaymentRequestUrl() && paymentIntent.isBluetoothPaymentRequestUrl()) {
-                    if (bluetoothAdapter.isEnabled())
-                        requestPaymentRequest();
-                    else
-                        // ask for permission to enable bluetooth
-                        startActivityForResult(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE),
-                                REQUEST_CODE_ENABLE_BLUETOOTH_FOR_PAYMENT_REQUEST);
-                } else if (paymentIntent.hasPaymentRequestUrl() && paymentIntent.isHttpPaymentRequestUrl()
-                        && !Constants.BUG_OPENSSL_HEARTBLEED) {
-                    requestPaymentRequest();
-                } else {
-                    setState(SendCoinsViewModel.State.INPUT);
-
-                    enterAmountSharedViewModel.getChangeDashAmountEvent().setValue(paymentIntent.getAmount());
-
-                    if (paymentIntent.isBluetoothPaymentUrl())
-                        directPaymentEnableView.setChecked(bluetoothAdapter != null && bluetoothAdapter.isEnabled());
-                    else if (paymentIntent.isHttpPaymentUrl())
-                        directPaymentEnableView.setChecked(!Constants.BUG_OPENSSL_HEARTBLEED);
-
-                    updateView();
-                    handler.post(dryrunRunnable);
-                }
-            }
-        });
-    }
-
-    private void requestPaymentRequest() {
-        final String host;
-        if (!Bluetooth.isBluetoothUrl(viewModel.paymentIntent.paymentRequestUrl))
-            host = Uri.parse(viewModel.paymentIntent.paymentRequestUrl).getHost();
-        else
-            host = Bluetooth.decompressMac(Bluetooth.getBluetoothMac(viewModel.paymentIntent.paymentRequestUrl));
-
-        ProgressDialogFragment.showProgress(fragmentManager,
-                getString(R.string.send_coins_fragment_request_payment_request_progress, host));
-        setState(SendCoinsViewModel.State.REQUEST_PAYMENT_REQUEST);
-
-        final RequestPaymentRequestTask.ResultCallback callback = new RequestPaymentRequestTask.ResultCallback() {
-            @Override
-            public void onPaymentIntent(final PaymentIntent paymentIntent) {
-                ProgressDialogFragment.dismissProgress(fragmentManager);
-
-                if (viewModel.paymentIntent.isExtendedBy(paymentIntent)) {
-                    // success
-                    setState(SendCoinsViewModel.State.INPUT);
-                    updateStateFrom(paymentIntent);
-                    updateView();
-                    handler.post(dryrunRunnable);
-                } else {
-                    final StringBuilder reasons = new StringBuilder();
-                    if (!viewModel.paymentIntent.equalsAddress(paymentIntent))
-                        reasons.append("address");
-                    if (!viewModel.paymentIntent.equalsAmount(paymentIntent))
-                        reasons.append(reasons.length() == 0 ? "" : ", ").append("amount");
-                    if (reasons.length() == 0)
-                        reasons.append("unknown");
-
-                    final DialogBuilder dialog = DialogBuilder.warn(activity,
-                            R.string.send_coins_fragment_request_payment_request_failed_title);
-                    dialog.setMessage(getString(R.string.send_coins_fragment_request_payment_request_wrong_signature)
-                            + "\n\n" + reasons);
-                    dialog.singleDismissButton(new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(final DialogInterface dialog, final int which) {
-                            handleCancel();
-                        }
-                    });
-                    dialog.show();
-
-                    log.info("BIP72 trust check failed: {}", reasons);
-                }
-            }
-
-            @Override
-            public void onFail(final int messageResId, final Object... messageArgs) {
-                ProgressDialogFragment.dismissProgress(fragmentManager);
-
-                final DialogBuilder dialog = DialogBuilder.warn(activity,
-                        R.string.send_coins_fragment_request_payment_request_failed_title);
-                dialog.setMessage(getString(messageResId, messageArgs));
-                dialog.setPositiveButton(R.string.button_retry, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(final DialogInterface dialog, final int which) {
-                        requestPaymentRequest();
-                    }
-                });
-                dialog.setNegativeButton(R.string.button_dismiss, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(final DialogInterface dialog, final int which) {
-                        if (!viewModel.paymentIntent.hasOutputs())
-                            handleCancel();
-                        else
-                            setState(SendCoinsViewModel.State.INPUT);
-                    }
-                });
-                dialog.show();
-            }
-        };
-
-        if (!Bluetooth.isBluetoothUrl(viewModel.paymentIntent.paymentRequestUrl))
-            new RequestPaymentRequestTask.HttpRequestTask(backgroundHandler, callback, application.httpUserAgent())
-                    .requestPaymentRequest(viewModel.paymentIntent.paymentRequestUrl);
-        else
-            new RequestPaymentRequestTask.BluetoothRequestTask(backgroundHandler, callback, bluetoothAdapter)
-                    .requestPaymentRequest(viewModel.paymentIntent.paymentRequestUrl);
-    }
-
-    private boolean checkDust(SendRequest req) {
-        if (req.tx != null) {
-            for (TransactionOutput output : req.tx.getOutputs()) {
-                if (output.isDust())
-                    return true;
-            }
-        }
-        return false;
-    }
-
     private void showPaymentConfirmation() {
+        if (viewModel.dryrunSendRequest == null) {
+            log.error("illegal state dryrunSendRequest == null");
+            return;
+        }
+
         Coin txFee = viewModel.dryrunSendRequest.tx.getFee();
         Coin amount;
         String total;
@@ -968,7 +561,7 @@ public final class SendCoinsFragment extends Fragment {
             total = amount.add(txFee).toPlainString();
         }
 
-        String address = viewModel.paymentIntent.getAddress().toBase58();
+        String address = viewModel.getBasePaymentIntentValue().getAddress().toBase58();
         ExchangeRate rate = enterAmountSharedViewModel.getExchangeRate();
         // prevent crash if the exchange rate is null
         Fiat fiatAmount = rate != null ? rate.coinToFiat(amount) : null;
@@ -979,8 +572,9 @@ public final class SendCoinsFragment extends Fragment {
         String fiatSymbol = fiatAmount != null ? GenericUtils.currencySymbol(fiatAmount.currencyCode) : "";
         String fee = txFee.toPlainString();
 
-        DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat, fiatSymbol, fee, total, null);
-        dialog.show(getFragmentManager(), "ConfirmTransactionDialog");
+        DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat,
+                fiatSymbol, fee, total, null, null, null);
+        dialog.show(Objects.requireNonNull(getFragmentManager()), "ConfirmTransactionDialog");
     }
 
 

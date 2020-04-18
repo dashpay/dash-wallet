@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">กำลังดึงข้อมูลลายเซ็นจาก %s </string>
     <string name="send_coins_fragment_request_payment_request_failed_title">การดึงข้อมูลลายเซ็นล้มเหลว</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">ลายเซ็นไม่ถูกต้อง </string>
-    <string name="send_coins_fragment_payee_verified_by">ยืนยันโดย: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">ไม่ทราบ</string>
     <string name="send_coins_fragment_receiving_address_label">ส่งไปยัง</string>
     <string name="send_coins_fragment_receiving_address_hint">พิมพ์ที่อยู่หรือชื่อ</string>

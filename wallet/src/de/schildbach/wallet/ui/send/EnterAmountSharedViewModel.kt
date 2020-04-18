@@ -42,6 +42,8 @@ class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(ap
 
     val buttonEnabledData = MutableLiveData<Boolean>()
 
+    val editableData = MutableLiveData<Boolean>()
+
     val maxButtonVisibleData = MutableLiveData<Boolean>()
 
     val buttonTextData = SingleLiveEvent<Int>()

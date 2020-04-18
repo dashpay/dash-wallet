@@ -21,6 +21,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.view.View
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
@@ -61,10 +62,18 @@ class AppUpgradeActivity : AppCompatActivity() {
 
         configuration = WalletApplication.getInstance().configuration
         configuration.pinLength = PinPreviewView.CUSTOM_PIN_LENGTH
-        
-        pinRetryController = PinRetryController.getInstance()
 
+        pinRetryController = PinRetryController.getInstance()
+    }
+
+    override fun onStart() {
+        super.onStart()
         temporaryLockCheckRunnable.run()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        temporaryLockCheckHandler.removeCallbacks(temporaryLockCheckRunnable)
     }
 
     private fun askForPin() {
@@ -74,16 +83,20 @@ class AppUpgradeActivity : AppCompatActivity() {
         checkPinSharedModel.onCorrectPinCallback.observe(this, Observer<Pair<Int?, String?>> { (_, pin) ->
             onCorrectPin(pin!!)
         })
+        checkPinSharedModel.onWalletEncryptedCallback.observe(this, Observer<String?> { pin ->
+            if (pin == null) {
+                Toast.makeText(this, "Unable to encrypt wallet", Toast.LENGTH_LONG).show()
+            } else {
+                onCorrectPin(pin)
+            }
+        })
         checkPinSharedModel.onCancelCallback.observe(this, Observer<Void> {
             temporaryLockCheckRunnable.run()
         })
-        CheckPinDuringUpgradeDialog.show(this, 0)
+        SetupPinDuringUpgradeDialog.show(this, 0)
     }
 
     private fun onCorrectPin(pin: String) {
-        val securityGuard = SecurityGuard()
-        securityGuard.savePin(pin)
-        securityGuard.savePassword(pin)
         configuration.pinLength = pin.length
         startActivity(WalletActivity.createIntent(this))
     }
