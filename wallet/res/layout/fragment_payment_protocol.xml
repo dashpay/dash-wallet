@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ViewFlipper xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/view_flipper"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true">
+
+    <de.schildbach.wallet.ui.widget.PaymentRequestWaitErrorView
+        android:id="@+id/please_wait_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:iconSrc="@drawable/please_wait_anim"
+        app:mode="progress" />
+
+    <include layout="@layout/view_payment_request_details" />
+
+    <de.schildbach.wallet.ui.widget.PaymentRequestWaitErrorView
+        android:id="@+id/error_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:iconSrc="@drawable/ic_retry_simple"
+        app:mode="error" />
+
+</ViewFlipper>

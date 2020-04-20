@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Bezig met ophalen van handtekening van %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Het ophalen van de handtekening is mislukt</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Onjuiste handtekening!</string>
-    <string name="send_coins_fragment_payee_verified_by">geverifieerd door: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">onbekend</string>
     <string name="send_coins_fragment_receiving_address_label">Verstuur naar</string>
     <string name="send_coins_fragment_receiving_address_hint">typ adres of naam</string>

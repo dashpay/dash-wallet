@@ -305,7 +305,7 @@ public class SweepWalletFragment extends Fragment {
 					}
 
 					@Override
-					protected void error(final int messageResId, final Object... messageArgs) {
+					protected void error(Exception x, final int messageResId, final Object... messageArgs) {
 						dialog(activity, null, R.string.button_scan, messageResId, messageArgs);
 					}
 				}.parse();

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animation-list xmlns:android="http://schemas.android.com/apk/res/android"
+    android:oneshot="false">
+    <item
+        android:drawable="@drawable/ic_please_wait_0"
+        android:duration="400" />
+    <item
+        android:drawable="@drawable/ic_please_wait_1"
+        android:duration="400" />
+    <item
+        android:drawable="@drawable/ic_please_wait_2"
+        android:duration="400" />
+    <item
+        android:drawable="@drawable/ic_please_wait_3"
+        android:duration="400" />
+</animation-list>

@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Fetching signature from %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Fetching signature failed</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Wrong signature!</string>
-    <string name="send_coins_fragment_payee_verified_by">verified by: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">unknown</string>
     <string name="send_coins_fragment_receiving_address_label">Send to</string>
     <string name="send_coins_fragment_receiving_address_hint">type address or name</string>
@@ -374,4 +373,7 @@
     <string name="activity_security_hide_balance">Autohide Balance</string>
     <string name="reset_to_default">Reset to Default</string>
 
+    <string name="payment_protocol_default_error_title">Payment error</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Insufficient Funds</string>
+    <string name="payment_protocol_insufficient_funds_error_message">You do not have sufficient funds to complete this transaction</string>
 </resources>
