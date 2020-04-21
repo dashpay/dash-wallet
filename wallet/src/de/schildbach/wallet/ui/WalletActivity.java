@@ -61,7 +61,7 @@ import androidx.lifecycle.ViewModelProviders;
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.navigation.NavigationView;
 import com.google.common.collect.ImmutableList;
-import com.squareup.okhttp.HttpUrl;
+import okhttp3.HttpUrl;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.PrefixedChecksummedBytes;

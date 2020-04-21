@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Stopwatch;
-import com.squareup.okhttp.internal.http.HttpDate;
+import okhttp3.internal.http.HttpDate;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
