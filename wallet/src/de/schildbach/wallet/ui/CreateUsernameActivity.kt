@@ -31,6 +31,8 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.data.IdentityCreationState
+import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.dashpay.GetUsernameViewModel
 import de.schildbach.wallet.ui.dashpay.NewAccountConfirmDialog
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.create_username.*
@@ -45,6 +47,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private val slideInAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.slide_in_bottom) }
     private val fadeOutAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.fade_out) }
     private lateinit var completeUsername: String
+    private lateinit var getUsernameViewModel: GetUsernameViewModel
 
     companion object {
         @JvmStatic
@@ -73,6 +76,37 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
                 .get(SingleActionSharedViewModel::class.java)
         confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
             showProcessingState()
+        })
+
+        getUsernameViewModel = ViewModelProviders.of(this).get(GetUsernameViewModel::class.java)
+
+        getUsernameViewModel.getUserNameLiveData.observe(this, Observer {
+            when(it.status) {
+                Status.LOADING -> {
+                    register_btn.isEnabled = false
+                    username_exists_req_label.visibility = View.GONE
+                    username_exists_req_img.visibility = View.GONE
+                }
+                Status.ERROR -> {
+                    // Some error happened when communicating with Platform
+                    // nothing is currently reported to the user
+                    register_btn.isEnabled = false
+                    username_exists_req_label.visibility = View.GONE
+                    username_exists_req_img.visibility = View.GONE
+                }
+                Status.SUCCESS -> {
+                    if (it.data != null) {
+                        // This user name exists
+                        register_btn.isEnabled = false
+                        username_exists_req_label.visibility = View.VISIBLE
+                        username_exists_req_img.visibility = View.VISIBLE
+                    } else {
+                        register_btn.isEnabled = true
+                        username_exists_req_label.visibility = View.GONE
+                        username_exists_req_img.visibility = View.GONE
+                    }
+                }
+            }
         })
     }
 
@@ -128,11 +162,22 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         return isValid
     }
 
+    private fun checkUsernameNotExist(username: String) {
+        getUsernameViewModel.getUsername(username)
+    }
+
     override fun afterTextChanged(s: Editable?) {
         val username = s?.toString()
 
         if (username != null) {
             val usernameIsValid = validateUsernameCharacters(username) && validateUsernameSize(username)
+
+            if(usernameIsValid) //ensure username meets basic rules before making a Platform query
+                checkUsernameNotExist(username)
+            else {
+                username_exists_req_label.visibility = View.GONE
+                username_exists_req_img.visibility = View.GONE
+            }
             register_btn.isEnabled = usernameIsValid
         }
     }

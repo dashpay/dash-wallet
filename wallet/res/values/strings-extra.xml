@@ -324,6 +324,8 @@
     <string name="choose_your_username">Choose your <b>Dash\nUsername</b></string>
     <string name="min_3_chars">Between 4 and 23 characters</string>
     <string name="alphanum_only">Alphabets and Numbers only</string>
+    <string name="identity_exists_on_network">This username already exists</string>
+    <string name="platform_communication_error">Communication error with Dash Platform</string>
     <string name="register">Register</string>
 
     <string name="new_account_confirm_message_prefix">It costs</string>
