@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui
 import android.graphics.Typeface
 import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
+import android.os.Handler
 import android.text.Editable
 import android.text.SpannableString
 import android.text.TextWatcher
@@ -48,6 +49,9 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private val fadeOutAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.fade_out) }
     private lateinit var completeUsername: String
     private lateinit var getUsernameViewModel: GetUsernameViewModel
+
+    private var handler: Handler = Handler()
+    private lateinit var checkUsernameNotExistRunnable: Runnable
 
     companion object {
         @JvmStatic
@@ -163,7 +167,13 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     }
 
     private fun checkUsernameNotExist(username: String) {
-        getUsernameViewModel.getUsername(username)
+        if (this::checkUsernameNotExistRunnable.isInitialized) {
+            handler.removeCallbacks(checkUsernameNotExistRunnable)
+        }
+        checkUsernameNotExistRunnable = Runnable {
+            getUsernameViewModel.getUsername(username)
+        }
+        handler.postDelayed(checkUsernameNotExistRunnable, 600)
     }
 
     override fun afterTextChanged(s: Editable?) {
@@ -178,7 +188,6 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
                 username_exists_req_label.visibility = View.GONE
                 username_exists_req_img.visibility = View.GONE
             }
-            register_btn.isEnabled = usernameIsValid
         }
     }
 
