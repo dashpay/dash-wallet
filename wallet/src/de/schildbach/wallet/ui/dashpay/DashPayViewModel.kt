@@ -23,6 +23,7 @@ import androidx.lifecycle.liveData
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Resource
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 
 class DashPayViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -30,8 +31,13 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
 
     private val usernameLiveData = MutableLiveData<String>()
 
-    val getUsernameLiveData = Transformations.switchMap(usernameLiveData) { username: String ->
-        liveData(Dispatchers.IO) {
+    // Job instance (https://stackoverflow.com/questions/57723714/how-to-cancel-a-running-livedata-coroutine-block/57726583#57726583)
+    private var getUsernameJob = Job()
+
+    val getUsernameLiveData = Transformations.switchMap(usernameLiveData) { username ->
+        getUsernameJob.cancel()
+        getUsernameJob = Job()
+        liveData(context = getUsernameJob + Dispatchers.IO) {
             emit(Resource.loading(null))
             emit(platformRepo.getUsername(username))
         }
@@ -39,5 +45,10 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
 
     fun searchUsername(username: String) {
         usernameLiveData.value = username
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        getUsernameJob.cancel()
     }
 }
