@@ -312,6 +312,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 case PROCESSING_PAYMENT:
                     animatedIcon.setVisibility(View.VISIBLE);
                     forwardIcon.setVisibility(View.GONE);
+                    progress.setVisibility(View.VISIBLE);
                     progress.setProgress(25);
                     subTitle.setText(R.string.processing_home_step_1);
                     break;
@@ -326,7 +327,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 case DONE:
                     animatedIcon.setVisibility(View.GONE);
                     forwardIcon.setVisibility(View.VISIBLE);
-                    progress.setProgress(100);
+                    progress.setVisibility(View.GONE);
                     title.setText(itemView.getContext().getString(R.string.processing_done_title,
                             identityCreationState.getUsername()));
                     subTitle.setText(R.string.processing_done_subtitle);
