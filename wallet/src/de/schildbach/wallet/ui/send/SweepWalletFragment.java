@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.send;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
@@ -82,7 +83,6 @@ import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
-import de.schildbach.wallet.ui.ProgressDialogFragment;
 import de.schildbach.wallet.ui.TransactionResultActivity;
 import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.util.WalletUtils;
@@ -123,6 +123,8 @@ public class SweepWalletFragment extends Fragment {
 	private static final int ID_DYNAMIC_FEES_LOADER = 0;
 
 	private static final int REQUEST_CODE_SCAN = 0;
+
+	private ProgressDialog loadingDialog;
 
 	private enum State {
 	    INTRO,
@@ -167,6 +169,10 @@ public class SweepWalletFragment extends Fragment {
 
 		setRetainInstance(true);
 		setHasOptionsMenu(true);
+
+		loadingDialog = new ProgressDialog(activity);
+		loadingDialog.setIndeterminate(true);
+		loadingDialog.setCancelable(false);
 
 		backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);
 		backgroundThread.start();
@@ -313,6 +319,14 @@ public class SweepWalletFragment extends Fragment {
 		}
 	}
 
+	private void showProgress(int messageResId) {
+		loadingDialog.setMessage(getString(messageResId));
+	}
+
+	private void dismissProgress() {
+		loadingDialog.dismiss();
+	}
+
 	private void handleScan() {
 		startActivityForResult(new Intent(activity, ScanActivity.class), REQUEST_CODE_SCAN);
 	}
@@ -333,15 +347,14 @@ public class SweepWalletFragment extends Fragment {
 			askConfirmSweep(key);
 		} else if (privateKeyToSweep instanceof BIP38PrivateKey) {
 			if (!password.isEmpty()) {
-				ProgressDialogFragment.showProgress(fragmentManager,
-						getString(R.string.sweep_wallet_fragment_decrypt_progress));
+				showProgress(R.string.sweep_wallet_fragment_decrypt_progress);
 
 				new DecodePrivateKeyTask(backgroundHandler) {
 					@Override
 					protected void onSuccess(ECKey decryptedKey) {
 						log.info("successfully decoded BIP38 private key");
 
-						ProgressDialogFragment.dismissProgress(fragmentManager);
+						dismissProgress();
 
 						askConfirmSweep(decryptedKey);
 					}
@@ -350,7 +363,7 @@ public class SweepWalletFragment extends Fragment {
 					protected void onBadPassphrase() {
 						log.info("failed decoding BIP38 private key (bad password)");
 
-						ProgressDialogFragment.dismissProgress(fragmentManager);
+						dismissProgress();
 						showDecryptDialog(true);
 					}
 				}.decodePrivateKey((BIP38PrivateKey) privateKeyToSweep, password);
@@ -388,13 +401,12 @@ public class SweepWalletFragment extends Fragment {
 	};
 
 	private void requestWalletBalance() {
-		ProgressDialogFragment.showProgress(fragmentManager,
-				getString(R.string.sweep_wallet_fragment_request_wallet_balance_progress));
+		showProgress(R.string.sweep_wallet_fragment_request_wallet_balance_progress);
 
 		final RequestWalletBalanceTask.ResultCallback callback = new RequestWalletBalanceTask.ResultCallback() {
 			@Override
 			public void onResult(final Set<UTXO> utxos) {
-				ProgressDialogFragment.dismissProgress(fragmentManager);
+				dismissProgress();
 
 				// Filter UTXOs we've already spent and sort the rest.
 				final Set<Transaction> walletTxns = application.getWallet().getTransactions(false);
@@ -443,7 +455,7 @@ public class SweepWalletFragment extends Fragment {
 
 			@Override
 			public void onFail(final int messageResId, final Object... messageArgs) {
-				ProgressDialogFragment.dismissProgress(fragmentManager);
+				dismissProgress();
 
 				final DialogBuilder dialog = DialogBuilder.warn(activity,
 						R.string.sweep_wallet_fragment_request_wallet_balance_failed_title);
