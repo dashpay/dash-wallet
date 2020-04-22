@@ -21,6 +21,7 @@ import android.content.Context
 import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
+import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
@@ -29,7 +30,6 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_enter_pin.*
-import kotlin.system.exitProcess
 
 open class SetupPinDuringUpgradeDialog : CheckPinDialog() {
 
@@ -45,7 +45,10 @@ open class SetupPinDuringUpgradeDialog : CheckPinDialog() {
         }
     }
 
-    protected lateinit var setPinViewModel: SetPinViewModel
+    private val negativeButton: Button by lazy { view!!.findViewById<Button>(R.id.negative_button) }
+    private val positiveButton: Button by lazy { view!!.findViewById<Button>(R.id.positive_button) }
+
+    private lateinit var setPinViewModel: SetPinViewModel
 
     private val walletNotEncrypted = !WalletApplication.getInstance().wallet.isEncrypted
 
@@ -66,16 +69,16 @@ open class SetupPinDuringUpgradeDialog : CheckPinDialog() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         isCancelable = false
-        pin_or_fingerprint_button.visibility = View.GONE
+        positiveButton.visibility = View.GONE
 
         if (walletNotEncrypted) {
             title.setText(R.string.forgot_pin_instruction_2)
             message.setText(R.string.lock_enter_pin)
-            cancel_button.setText(R.string.button_cancel)
-            cancel_button.isEnabled = false
+            negativeButton.setText(R.string.button_cancel)
+            negativeButton.isEnabled = false
         } else {
-            cancel_button.setText(R.string.wallet_lock_unlock)
-            cancel_button.setOnClickListener {
+            negativeButton.setText(R.string.wallet_lock_unlock)
+            negativeButton.setOnClickListener {
                 if (viewModel.pin.isNotEmpty()) {
                     viewModel.checkPin(viewModel.pin)
                 }
