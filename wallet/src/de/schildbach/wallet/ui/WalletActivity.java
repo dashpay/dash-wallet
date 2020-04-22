@@ -64,7 +64,6 @@ import com.google.common.collect.ImmutableList;
 import com.squareup.okhttp.HttpUrl;
 
 import org.bitcoinj.core.PrefixedChecksummedBytes;
-import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.ChildNumber;
@@ -72,7 +71,6 @@ import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.ui.DialogBuilder;
-import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
 
 import java.io.IOException;
@@ -91,7 +89,6 @@ import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
-import de.schildbach.wallet.util.ActivityExtensionsKt;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.Nfc;
@@ -550,7 +547,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 if (clipUri != null) {
                     input = clipUri.toString();
                 }
-            } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
+            } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)
+                    || clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)) {
                 final CharSequence clipText = clip.getItemAt(0).getText();
                 if (clipText != null) {
                     input = clipText.toString();
