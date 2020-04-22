@@ -52,6 +52,7 @@ dependencies {
     implementation 'com.google.code.findbugs:jsr305:3.0.2'
     implementation 'com.tbuonomo.andrui:viewpagerdotsindicator:4.1.2'
     implementation 'com.sambarboza:orbitview:0.2.0'
+    implementation 'com.amulyakhare:com.amulyakhare.textdrawable:1.0.1'
 
     implementation project(path: ':common')
     implementation project(path: ':ui-redesign')
