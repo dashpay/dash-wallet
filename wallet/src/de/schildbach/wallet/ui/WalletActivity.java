@@ -316,7 +316,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             boolean canAffordIt = walletBalance.isGreaterThan(Constants.DASH_PAY_FEE)
                     || walletBalance.equals(Constants.DASH_PAY_FEE);
             boolean visible = canAffordIt && config.getShowJoinDashPay();
-            joinDashPayAction.setVisibility(visible ? View.VISIBLE : View.GONE);
+            joinDashPayAction.setVisibility(View.VISIBLE);//visible ? View.VISIBLE : View.GONE);
         } else {
             joinDashPayAction.setVisibility(View.GONE);
         }
