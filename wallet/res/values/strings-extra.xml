@@ -329,8 +329,7 @@
     <string name="new_account_confirm_button_text">Confirm &amp; Pay</string>
     <string name="new_account_confirm_accept">I Accept</string>
     <string name="new_account_confirm_upgrade_fee">Upgrade Fee</string>
-    <string name="new_account_confirm_message_prefix">You have chose</string>
-    <string name="new_account_confirm_message_suffix">as your username. Username cannot be changed once its registered.</string>
+    <string name="new_account_confirm_message">You have chose %s as your username. Username cannot be changed once its registered.</string>
 
     <string name="username_being_created">Your username %s is being created on the Dash Network</string>
     <string name="processing_let_me_know">Let me know when it\'s done</string>

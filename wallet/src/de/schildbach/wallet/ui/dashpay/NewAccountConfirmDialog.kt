@@ -16,10 +16,8 @@
 
 package de.schildbach.wallet.ui.dashpay
 
-import android.graphics.Typeface
 import android.os.Bundle
-import android.text.SpannableStringBuilder
-import android.text.style.StyleSpan
+import android.text.Html
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -98,21 +96,8 @@ class NewAccountConfirmDialog : BaseBottomSheetDialogFragment() {
         fiat_symbol.text = upgradeFeeFiatStr
         fiat_value.text = fiatSymbol
 
-        val username = "“${arguments!!.getString(ARG_USERNAME)}”"
-
-        val usernameSpan = SpannableStringBuilder(username).run {
-            setSpan(StyleSpan(Typeface.BOLD), 0, length, 0)
-//            setSpan(RelativeSizeSpan(1.1f), 0, length, 0)
-            this
-        }
-        val builder = SpannableStringBuilder().run {
-            append(getString(R.string.new_account_confirm_message_prefix))
-            append(" ")
-            append(usernameSpan)
-            append(" ")
-            append(getString(R.string.new_account_confirm_message_suffix))
-            this
-        }
-        message.text = builder
+        val username = "<b>“${arguments!!.getString(ARG_USERNAME)}”</b>"
+        @Suppress("DEPRECATION")
+        message.text = Html.fromHtml(getString(R.string.new_account_confirm_message, username))
     }
 }
