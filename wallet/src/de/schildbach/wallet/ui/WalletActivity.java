@@ -61,6 +61,10 @@ import androidx.lifecycle.ViewModelProviders;
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.navigation.NavigationView;
 import com.google.common.collect.ImmutableList;
+
+import de.schildbach.wallet.livedata.Resource;
+import de.schildbach.wallet.livedata.Status;
+import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
 import okhttp3.HttpUrl;
 
 import org.bitcoinj.core.Coin;
@@ -148,6 +152,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private View joinDashPayAction;
     private OnCoinsSentReceivedListener coinsSendReceivedListener = new OnCoinsSentReceivedListener();
 
+    private DashPayViewModel dashPayViewModel;
+    private boolean isPlatformAvailable = false;
+
+
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -217,6 +225,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 //AppDatabase.getAppDatabase().identityCreationStateDao().clear();
             }
         });
+
+        initViewModel();
     }
 
     private void initFingerprintHelper() {
@@ -304,6 +314,19 @@ public final class WalletActivity extends AbstractBindServiceActivity
         });
     }
 
+    private void initViewModel() {
+        dashPayViewModel = ViewModelProviders.of(this).get(DashPayViewModel.class);
+        dashPayViewModel.isPlatformAvailableLiveData().observe(this, new Observer<Resource<Boolean>>() {
+            @Override
+            public void onChanged(Resource<Boolean> status) {
+                if(status.getStatus() == Status.SUCCESS)
+                    isPlatformAvailable = status.getData();
+                else isPlatformAvailable = false;
+            }
+        });
+        dashPayViewModel.isPlatformAvailable();
+    }
+
     private void showHideSecureAction() {
         View secureActionView = findViewById(R.id.secure_action);
         secureActionView.setVisibility(config.getRemindBackupSeed() ? View.VISIBLE : View.GONE);
@@ -311,7 +334,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void showHideJoinDashPayAction() {
-        if (syncComplete) {
+        if (syncComplete && isPlatformAvailable) {
             final Coin walletBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED);
             boolean canAffordIt = walletBalance.isGreaterThan(Constants.DASH_PAY_FEE)
                     || walletBalance.equals(Constants.DASH_PAY_FEE);

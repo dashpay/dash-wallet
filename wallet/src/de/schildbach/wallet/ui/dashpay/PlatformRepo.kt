@@ -15,14 +15,29 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Resource
+import org.bitcoinj.core.NetworkParameters
 import org.dashevo.dpp.document.Document
 import org.dashevo.platform.Platform
 
 class PlatformRepo(walletApplication: WalletApplication) {
 
     private val platform: Platform = walletApplication.platform
+
+    fun isPlatformAvailable(): Resource<Boolean> {
+        // this checks only one random node, but should check several.
+        // it is possible that some nodes are not available due to location,
+        // firewalls or other reasons
+        return try {
+            val response = platform.client.getStatus()
+            Resource.success(response!!.connections > 0 && response.errors.isBlank() &&
+                    Constants.NETWORK_PARAMETERS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM) >= response.protocolVersion)
+        } catch(e: Exception) {
+            Resource.error(e.localizedMessage, null)
+        }
+    }
 
     fun getUsername(username: String): Resource<Document> {
         return try {

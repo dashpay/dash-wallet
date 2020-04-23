@@ -29,10 +29,13 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
 
     private val platformRepo = PlatformRepo(application as WalletApplication)
 
+
     private val usernameLiveData = MutableLiveData<String>()
+    private val platformStatusLiveData = MutableLiveData<Boolean>()
 
     // Job instance (https://stackoverflow.com/questions/57723714/how-to-cancel-a-running-livedata-coroutine-block/57726583#57726583)
     private var getUsernameJob = Job()
+    private var isPlatformAvailableJob = Job()
 
     val getUsernameLiveData = Transformations.switchMap(usernameLiveData) { username ->
         getUsernameJob.cancel()
@@ -50,5 +53,18 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     override fun onCleared() {
         super.onCleared()
         getUsernameJob.cancel()
+    }
+
+    val isPlatformAvailableLiveData = Transformations.switchMap(platformStatusLiveData) { _ ->
+        isPlatformAvailableJob.cancel()
+        isPlatformAvailableJob = Job()
+        liveData(context = isPlatformAvailableJob + Dispatchers.IO) {
+            emit(Resource.loading(null))
+            emit(platformRepo.isPlatformAvailable())
+        }
+    }
+
+    fun isPlatformAvailable() {
+        platformStatusLiveData.value = true
     }
 }
