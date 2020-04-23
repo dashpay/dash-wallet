@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui
 import android.graphics.Typeface
 import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
+import android.os.Handler
 import android.text.Editable
 import android.text.SpannableString
 import android.text.TextWatcher
@@ -28,11 +29,12 @@ import android.view.View
 import android.view.animation.AnimationUtils
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.data.IdentityCreationState
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.dashpay.GetUsernameViewModel
+import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NewAccountConfirmDialog
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.create_username.*
@@ -47,7 +49,10 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private val slideInAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.slide_in_bottom) }
     private val fadeOutAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.fade_out) }
     private lateinit var completeUsername: String
-    private lateinit var getUsernameViewModel: GetUsernameViewModel
+    private lateinit var dashPayViewModel: DashPayViewModel
+
+    private var handler: Handler = Handler()
+    private lateinit var checkUsernameNotExistRunnable: Runnable
 
     companion object {
         @JvmStatic
@@ -78,10 +83,10 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             showProcessingState()
         })
 
-        getUsernameViewModel = ViewModelProviders.of(this).get(GetUsernameViewModel::class.java)
+        dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
 
-        getUsernameViewModel.getUserNameLiveData.observe(this, Observer {
-            when(it.status) {
+        dashPayViewModel.getUsernameLiveData.observe(this, Observer {
+            when (it.status) {
                 Status.LOADING -> {
                     register_btn.isEnabled = false
                     username_exists_req_label.visibility = View.GONE
@@ -163,7 +168,13 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     }
 
     private fun checkUsernameNotExist(username: String) {
-        getUsernameViewModel.getUsername(username)
+        if (this::checkUsernameNotExistRunnable.isInitialized) {
+            handler.removeCallbacks(checkUsernameNotExistRunnable)
+        }
+        checkUsernameNotExistRunnable = Runnable {
+            dashPayViewModel.searchUsername(username)
+        }
+        handler.postDelayed(checkUsernameNotExistRunnable, 600)
     }
 
     override fun afterTextChanged(s: Editable?) {
@@ -178,7 +189,6 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
                 username_exists_req_label.visibility = View.GONE
                 username_exists_req_img.visibility = View.GONE
             }
-            register_btn.isEnabled = usernameIsValid
         }
     }
 
