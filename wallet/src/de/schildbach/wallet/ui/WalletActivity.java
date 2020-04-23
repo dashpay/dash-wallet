@@ -315,6 +315,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void initViewModel() {
+        //
+        // Currently this is only used to check the status of Platform before showing
+        // the Join DashPay (evolution) button on the shortcuts bar.
+        // If that is the only function that the platform required for, then we can
+        // conditionally execute this code when a username hasn't been registered.
         dashPayViewModel = ViewModelProviders.of(this).get(DashPayViewModel.class);
         dashPayViewModel.isPlatformAvailableLiveData().observe(this, new Observer<Resource<Boolean>>() {
             @Override
@@ -322,6 +327,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 if(status.getStatus() == Status.SUCCESS)
                     isPlatformAvailable = status.getData();
                 else isPlatformAvailable = false;
+                showHideJoinDashPayAction();
             }
         });
         dashPayViewModel.isPlatformAvailable();
