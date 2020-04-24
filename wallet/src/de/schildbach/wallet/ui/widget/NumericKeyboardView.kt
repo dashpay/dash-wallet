@@ -70,6 +70,7 @@ class NumericKeyboardView(context: Context, attrs: AttributeSet) : TableLayout(c
     override fun setEnabled(enabled: Boolean) {
         for (btnResId in ALL_BUTTONS_RES_ID) {
             findViewById<View>(btnResId).isClickable = enabled
+            findViewById<View>(btnResId).visibility= if(enabled) View.VISIBLE else View.INVISIBLE
         }
     }
 

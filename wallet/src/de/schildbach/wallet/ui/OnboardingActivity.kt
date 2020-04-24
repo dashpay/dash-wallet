@@ -85,7 +85,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
                     walletApplication.fullInitialization()
                     regularFlow()
                 } else {
-                    startActivity(SetPinActivity.createIntent(this, R.string.set_pin_create_new_wallet))
+                    onboarding()
                 }
             }
         }

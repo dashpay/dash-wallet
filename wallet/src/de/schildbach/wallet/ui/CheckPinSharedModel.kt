@@ -25,4 +25,5 @@ open class CheckPinSharedModel : ViewModel() {
 
     val onCancelCallback = SingleLiveEventExt<Void>()
 
+    val onWalletEncryptedCallback = SingleLiveEventExt<String?>()
 }

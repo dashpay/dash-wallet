@@ -230,6 +230,9 @@ class EnterAmountFragment : Fragment() {
         sharedViewModel.buttonEnabledData.observe(viewLifecycleOwner, Observer {
             confirm_button.isEnabled = it
         })
+        sharedViewModel.editableData.observe(viewLifecycleOwner, Observer {
+            numeric_keyboard.isEnabled = it
+        })
         sharedViewModel.maxButtonVisibleData.observe(viewLifecycleOwner, Observer {
             max_button.visibility = if (it) View.VISIBLE else View.GONE
         })

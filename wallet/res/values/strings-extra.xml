@@ -25,6 +25,7 @@
 
     <string name="dialog_confirm_confirm">Confirm</string>
     <string name="dialog_confirm_pay_to">Send to</string>
+    <string name="dialog_confirm_verified_by">Verified by</string>
     <string name="dialog_confirm_fee">Network fee</string>
     <string name="dialog_confirm_total">Total</string>
 
@@ -321,6 +322,19 @@
 
     <string name="appwidget_wallet_not_ready">Please setup your wallet</string>
 
+    <string name="payment_request_please_wait_title">Please wait</string>
+    <string name="payment_request_please_wait_message">Connecting to Payment Server</string>
+    <string name="payment_request_unable_to_connect">Unable to Connect</string>
+    <string name="payment_request_unable_to_send">Unable to Send</string>
+    <string name="payment_request_please_try_again">Please try again</string>
+    <string name="payment_request_try_again">Try Again</string>
+    <string name="payment_request_problem_title">Payment was not acknowledged</string>
+    <string name="payment_request_problem_message">Your payment was processed but the server was not able to acknowledge it</string>
+    <string name="payment_request_expired_title">Payment Request Expired</string>
+    <string name="payment_request_close">Close</string>
+    <string name="payment_request_skip">Skip</string>
+    <string name="payment_request_paid_to">Paid to</string>
+
     <string name="choose_your_username">Choose your <b>Dash\nUsername</b></string>
     <string name="min_3_chars">Between 4 and 23 characters</string>
     <string name="alphanum_only">Alphabets and Numbers only</string>
@@ -328,20 +342,23 @@
     <string name="platform_communication_error">Communication error with Dash Platform</string>
     <string name="register">Register</string>
 
-    <string name="new_account_confirm_message_prefix">It costs</string>
-    <string name="new_account_confirm_message_suffix">to create your Evolution account.</string>
     <string name="new_account_confirm_button_text">Confirm &amp; Pay</string>
     <string name="new_account_confirm_accept">I Accept</string>
+    <string name="new_account_confirm_upgrade_fee">Upgrade Fee</string>
+    <string name="new_account_confirm_message">You have chose %s as your username. Username cannot be changed once its registered.</string>
 
     <string name="username_being_created">Your username %s is being created on the Dash Network</string>
     <string name="processing_let_me_know">Let me know when it\'s done</string>
-    <string name="processing_home_title">Upgrading to DashPay</string>
+    <string name="processing_home_title">Upgrading to Evolution</string>
     <string name="processing_home_step_1" tools:ignore="TypographyFractions">(1/3) Processing Payment</string>
     <string name="processing_home_step_2">(2/3) Creating ID</string>
     <string name="processing_home_step_3">(3/3) Registering Username</string>
     <string name="processing_done_title">Hello %s,</string>
-    <string name="processing_done_subtitle">Your DashPay Username is ready to use</string>
+    <string name="processing_done_subtitle">Your Evolution account is ready to use</string>
+    <string name="processing_error_title">Error Upgrading</string>
+    <string name="processing_error_retry">Retry</string>
+    <string name="processing_username_unavailable_title">Username Unavailable</string>
+    <string name="processing_username_unavailable_subtitle">Please choose another</string>
 
     <string name="identity_complete_message">Your username %s has been successfully created on the Dash Network</string>
-
 </resources>

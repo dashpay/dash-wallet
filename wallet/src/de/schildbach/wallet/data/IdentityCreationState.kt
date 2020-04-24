@@ -21,7 +21,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 @Entity(tableName = "identity_creation_state")
-class IdentityCreationState(var state: State, var username: String) {
+class IdentityCreationState(var state: State, var error: Boolean, var username: String) {
 
     @PrimaryKey
     var id = 1
@@ -34,11 +34,16 @@ class IdentityCreationState(var state: State, var username: String) {
     }
 
     fun nextState() {
-        state = when (state) {
-            State.PROCESSING_PAYMENT -> State.CREATING_IDENTITY
-            State.CREATING_IDENTITY -> State.REGISTERING_USERNAME
-            State.REGISTERING_USERNAME -> State.DONE
-            else -> State.PROCESSING_PAYMENT
+        if (error || state == State.DONE) {
+            state = when (state) {
+                State.PROCESSING_PAYMENT -> State.CREATING_IDENTITY
+                State.CREATING_IDENTITY -> State.REGISTERING_USERNAME
+                State.REGISTERING_USERNAME -> State.DONE
+                else -> State.PROCESSING_PAYMENT
+            }
+            error = false
+        } else {
+            error = true
         }
     }
 

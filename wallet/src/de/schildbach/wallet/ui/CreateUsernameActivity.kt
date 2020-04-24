@@ -39,6 +39,7 @@ import de.schildbach.wallet.ui.dashpay.NewAccountConfirmDialog
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.create_username.*
 import kotlinx.android.synthetic.main.users_orbit.*
+import org.bitcoinj.core.Coin
 import org.dash.wallet.common.InteractionAwareActivity
 import java.util.concurrent.Executors
 
@@ -209,13 +210,15 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
         Executors.newSingleThreadExecutor().execute {
             val identityCreationState = IdentityCreationState(IdentityCreationState
-                    .State.PROCESSING_PAYMENT, username)
+                    .State.PROCESSING_PAYMENT, false, username)
             AppDatabase.getAppDatabase().identityCreationStateDao().insert(identityCreationState)
         }
     }
 
     private fun showConfirmationDialog() {
-        val dialog = NewAccountConfirmDialog.createDialog()
+        val username = username.text.toString()
+        val upgradeFee = Coin.CENT
+        val dialog = NewAccountConfirmDialog.createDialog(upgradeFee.value, username)
         dialog.show(supportFragmentManager, "NewAccountConfirmDialog")
 
     }

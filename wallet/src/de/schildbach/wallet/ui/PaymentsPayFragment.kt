@@ -5,19 +5,21 @@ import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import androidx.fragment.app.Fragment
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_payments_pay.*
+import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
-import org.bitcoinj.core.PrefixedChecksummedBytes
 
 class PaymentsPayFragment : Fragment() {
 
@@ -44,11 +46,32 @@ class PaymentsPayFragment : Fragment() {
         //Make the whole row clickable
         pay_by_qr_button.setOnClickListener { handleScan(it) }
         pay_to_address.setOnClickListener { handlePaste(true) }
-
+        handlePaste(false)
     }
 
     override fun onResume() {
         super.onResume()
+        view!!.viewTreeObserver?.addOnWindowFocusChangeListener(onWindowFocusChangeListener)
+        getClipboardManager().addPrimaryClipChangedListener(onPrimaryClipChangedListener)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        view!!.viewTreeObserver?.removeOnWindowFocusChangeListener(onWindowFocusChangeListener)
+        getClipboardManager().removePrimaryClipChangedListener(onPrimaryClipChangedListener)
+    }
+
+    private fun getClipboardManager(): ClipboardManager {
+        return context?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager;
+    }
+
+    private val onWindowFocusChangeListener = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
+        if (hasFocus) {
+            handlePaste(false)
+        }
+    }
+
+    private val onPrimaryClipChangedListener = ClipboardManager.OnPrimaryClipChangedListener {
         handlePaste(false)
     }
 
@@ -73,7 +96,7 @@ class PaymentsPayFragment : Fragment() {
     }
 
     private fun clipboardData(): String? {
-        val clipboardManager = context!!.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clipboardManager = getClipboardManager()
         if (clipboardManager.hasPrimaryClip()) {
             clipboardManager.primaryClip?.run {
                 return when {
@@ -97,7 +120,7 @@ class PaymentsPayFragment : Fragment() {
                 }
             }
 
-            override fun error(messageResId: Int, vararg messageArgs: Any) {
+            override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 if (fireAction) {
                     dialog(context, null, errorDialogTitleResId, messageResId, *messageArgs)
                 } else {
@@ -106,22 +129,35 @@ class PaymentsPayFragment : Fragment() {
             }
 
             override fun handlePrivateKey(key: PrefixedChecksummedBytes) {
-
+                // ignore
             }
 
             @Throws(VerificationException::class)
             override fun handleDirectTransaction(tx: Transaction) {
-
+                // ignore
             }
         }.parse()
     }
 
     private fun manageStateOfPayToAddressButton(paymentIntent: PaymentIntent?) {
-        pay_to_address.setActive(paymentIntent != null)
-        if (paymentIntent == null) {
-            pay_to_address.setSubTitle(R.string.payments_pay_to_clipboard_sub_title)
-        } else {
-            pay_to_address.setSubTitle(paymentIntent.address.toBase58())
+        if (paymentIntent != null) {
+            when {
+                paymentIntent.hasAddress() -> {
+                    pay_to_address.setActive(true)
+                    pay_to_address.setSubTitle(paymentIntent.address.toBase58())
+                    return
+                }
+                paymentIntent.hasPaymentRequestUrl() -> {
+                    val host = Uri.parse(paymentIntent.paymentRequestUrl).host
+                    if (host != null) {
+                        pay_to_address.setActive(true)
+                        pay_to_address.setSubTitle(host)
+                        return
+                    }
+                }
+            }
         }
+        pay_to_address.setActive(false)
+        pay_to_address.setSubTitle(R.string.payments_pay_to_clipboard_sub_title)
     }
 }

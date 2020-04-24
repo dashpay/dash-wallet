@@ -9,6 +9,7 @@ dependencies {
         exclude(group: 'com.google.android', module: 'android')
     }
     implementation "org.dashj:dashj-core:$dashjVersion"
+    implementation 'androidx.multidex:multidex:2.0.1'
 }
 
 android {
@@ -35,6 +36,7 @@ android {
         exclude 'org/bitcoinj/crypto/cacerts'
     }
     defaultConfig {
-        minSdkVersion = 15
+        minSdkVersion 15
+        multiDexEnabled true
     }
 }

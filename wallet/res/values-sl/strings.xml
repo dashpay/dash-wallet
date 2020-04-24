@@ -48,7 +48,6 @@
   <string name="send_coins_fragment_request_payment_request_progress">Pridobivam podpis od %s..</string>
   <string name="send_coins_fragment_request_payment_request_failed_title">Pridobivanje podpisa spodletelo</string>
   <string name="send_coins_fragment_request_payment_request_wrong_signature">Napačen podpis!</string>
-  <string name="send_coins_fragment_payee_verified_by">preverjeno: %s</string>
   <string name="send_coins_fragment_payee_verified_by_unknown">neznano</string>
   <string name="send_coins_fragment_receiving_address_label">V dobro</string>
   <string name="send_coins_fragment_receiving_address_hint">vpišite naslov ali ime</string>

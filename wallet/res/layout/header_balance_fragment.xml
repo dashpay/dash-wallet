@@ -13,8 +13,18 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingStart="14dp"
+        android:paddingTop="?attr/actionBarSize"
         android:paddingEnd="14dp"
         android:paddingBottom="32dp">
+
+        <ImageView
+            android:id="@+id/dashpay_user_avatar"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_margin="14dp"
+            android:visibility="gone"
+            tools:visibility="visible" />
 
         <TextView
             android:id="@+id/caption"
@@ -22,7 +32,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:layout_marginTop="?attr/actionBarSize"
             android:text="@string/home_available_balance" />
 
         <LinearLayout
