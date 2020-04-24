@@ -78,9 +78,9 @@
     <string name="payments_title">Πληρωμές</string>
     <string name="payments_tab_pay_label">Αποστολή</string>
     <string name="payments_tab_receive_label">Λήψη</string>
-    <string name="payments_pay_by_qr_title">Απεσταλμένο από</string>
+    <string name="payments_pay_by_qr_title">Αποστολή με</string>
     <string name="payments_pay_by_qr_sub_title">Σάρωση QR κωδικού</string>
-    <string name="payments_pay_by_qr_button">Ανίχνευση</string>
+    <string name="payments_pay_by_qr_button">Σάρωση</string>
     <string name="payments_pay_to_clipboard_title">Αποστολή στη αντιγραμμένη διεύθυνση</string>
     <string name="payments_pay_to_clipboard_sub_title">Δεν αντιγράφηκε καμία διεύθυνση</string>
     <string name="payments_pay_to_clipboard_button">Αποστολή</string>

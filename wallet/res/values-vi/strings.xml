@@ -53,6 +53,7 @@
     <string name="send_coins_fragment_request_payment_request_progress">Đang tìm chữ ký từ %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Không tìm được chữ ký</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Sai chữ ký!</string>
+    <string name="send_coins_fragment_payee_verified_by">đã được xác thực bởi: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">không biết</string>
     <string name="send_coins_fragment_receiving_address_label">Gửi đến</string>
     <string name="send_coins_fragment_receiving_address_hint">loại địa chỉ hoặc tên</string>

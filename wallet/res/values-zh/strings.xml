@@ -53,6 +53,7 @@
     <string name="send_coins_fragment_request_payment_request_progress">正在从 %s 读取签名…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">获取签名失败</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">签名错误！</string>
+    <string name="send_coins_fragment_payee_verified_by">已由 %s 验证</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">未知</string>
     <string name="send_coins_fragment_receiving_address_label">发送至</string>
     <string name="send_coins_fragment_receiving_address_hint">输入地址或名称</string>

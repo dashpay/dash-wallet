@@ -53,6 +53,7 @@
     <string name="send_coins_fragment_request_payment_request_progress">%s から署名の取得中…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">署名の取得に失敗しました</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">不正な署名です！</string>
+    <string name="send_coins_fragment_payee_verified_by">認証者: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">不明</string>
     <string name="send_coins_fragment_receiving_address_label">へ送金する</string>
     <string name="send_coins_fragment_receiving_address_hint">アドレスもしくは名前を入力</string>

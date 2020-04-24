@@ -53,6 +53,7 @@
     <string name="send_coins_fragment_request_payment_request_progress">Získavanie podpisu z %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Získavanie podpisu zlyhalo</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Nesprávny podpis!</string>
+    <string name="send_coins_fragment_payee_verified_by">overené od: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">neznáme</string>
     <string name="send_coins_fragment_receiving_address_label">Poslať ku</string>
     <string name="send_coins_fragment_receiving_address_hint">zadajte adresu alebo meno</string>

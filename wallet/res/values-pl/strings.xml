@@ -53,6 +53,7 @@
     <string name="send_coins_fragment_request_payment_request_progress">Pobieranie podpisu z %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Pobieranie podpisu nie powiodło się</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Zły podpis!</string>
+    <string name="send_coins_fragment_payee_verified_by">zweryfikowany przez: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">nieznany</string>
     <string name="send_coins_fragment_receiving_address_label">Wyślij do</string>
     <string name="send_coins_fragment_receiving_address_hint">wpisz adres lub nazwę</string>
