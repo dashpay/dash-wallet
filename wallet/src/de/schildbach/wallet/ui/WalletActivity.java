@@ -56,12 +56,17 @@ import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.lifecycle.ViewModelProviders;
 
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.navigation.NavigationView;
 import com.google.common.collect.ImmutableList;
-import com.squareup.okhttp.HttpUrl;
+
+import de.schildbach.wallet.livedata.Resource;
+import de.schildbach.wallet.livedata.Status;
+import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
+import okhttp3.HttpUrl;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.PrefixedChecksummedBytes;
@@ -148,6 +153,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private View joinDashPayAction;
     private OnCoinsSentReceivedListener coinsSendReceivedListener = new OnCoinsSentReceivedListener();
 
+    private DashPayViewModel dashPayViewModel;
+    private boolean isPlatformAvailable = false;
+
+
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -216,6 +225,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 //AppDatabase.getAppDatabase().identityCreationStateDao().clear();
             }
         });
+
+        initViewModel();
     }
 
     private void initFingerprintHelper() {
@@ -294,6 +305,24 @@ public final class WalletActivity extends AbstractBindServiceActivity
         });
     }
 
+    private void initViewModel() {
+        //
+        // Currently this is only used to check the status of Platform before showing
+        // the Join DashPay (evolution) button on the shortcuts bar.
+        // If that is the only function that the platform required for, then we can
+        // conditionally execute this code when a username hasn't been registered.
+        dashPayViewModel = new ViewModelProvider(this).get(DashPayViewModel.class);
+        dashPayViewModel.isPlatformAvailableLiveData().observe(this, new Observer<Resource<Boolean>>() {
+            @Override
+            public void onChanged(Resource<Boolean> status) {
+                if(status.getStatus() == Status.SUCCESS)
+                    isPlatformAvailable = status.getData();
+                else isPlatformAvailable = false;
+                showHideJoinDashPayAction();
+            }
+        });
+    }
+
     private void showHideSecureAction() {
         View secureActionView = findViewById(R.id.secure_action);
         secureActionView.setVisibility(config.getRemindBackupSeed() ? View.VISIBLE : View.GONE);
@@ -301,7 +330,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void showHideJoinDashPayAction() {
-        if (syncComplete) {
+        if (syncComplete && isPlatformAvailable) {
             final Coin walletBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED);
             boolean canAffordIt = walletBalance.isGreaterThan(Constants.DASH_PAY_FEE)
                     || walletBalance.equals(Constants.DASH_PAY_FEE);

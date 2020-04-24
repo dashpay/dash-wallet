@@ -59,6 +59,7 @@ import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
+import org.dashevo.platform.Platform;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ResetAutoLogoutTimerHandler;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
@@ -109,6 +110,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     private boolean basicWalletInitalizationFinished = false;
 
     private Intent blockchainServiceIntent;
+    private Platform platform;
 
     private File walletFile;
     private Wallet wallet;
@@ -223,6 +225,8 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
 
         blockchainServiceIntent = new Intent(this, BlockchainServiceImpl.class);
+
+        platform = new Platform(Constants.NETWORK_PARAMETERS);
     }
 
     public void setWallet(Wallet newWallet) {
@@ -432,6 +436,8 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     public Wallet getWallet() {
         return wallet;
     }
+
+   public Platform getPlatform() { return platform; }
 
     private void loadWalletFromProtobuf() {
         FileInputStream walletStream = null;

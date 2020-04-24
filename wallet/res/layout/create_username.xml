@@ -96,6 +96,37 @@
                 app:layout_constraintStart_toEndOf="@id/alphanum_req_img"
                 app:layout_constraintTop_toTopOf="@id/alphanum_req_img" />
 
+            <ImageView
+                android:id="@+id/username_exists_req_img"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="30dp"
+                android:layout_marginLeft="30dp"
+                android:layout_marginTop="20dp"
+                android:visibility="invisible"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/alphanum_req_img"
+                app:srcCompat="@drawable/ic_username_requirement_x"
+                tools:visibility="visible" />
+
+            <TextView
+                android:id="@+id/username_exists_req_label"
+                style="@style/MontserratRegular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginLeft="8dp"
+                android:visibility="invisible"
+                android:text="@string/identity_exists_on_network"
+                android:textColor="@color/dash_red"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                app:layout_constraintBottom_toBottomOf="@id/username_exists_req_img"
+                app:layout_constraintLeft_toRightOf="@id/username_exists_req_img"
+                app:layout_constraintStart_toEndOf="@id/username_exists_req_img"
+                app:layout_constraintTop_toTopOf="@id/username_exists_req_img" />
+
             <Button
                 android:id="@+id/register_btn"
                 style="@style/DashButton.Blue"
