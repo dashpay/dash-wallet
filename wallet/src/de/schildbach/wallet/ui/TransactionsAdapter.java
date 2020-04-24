@@ -18,18 +18,14 @@
 package de.schildbach.wallet.ui;
 
 import android.content.Context;
-import android.content.Intent;
 import android.content.res.Resources;
-import android.graphics.drawable.AnimationDrawable;
 import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -50,14 +46,13 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
 
 import javax.annotation.Nullable;
 
-import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.IdentityCreationState;
+import de.schildbach.wallet.ui.dashpay.ProcessingIdentityViewHolder;
 import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -71,7 +66,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private final LayoutInflater inflater;
 
     private final Wallet wallet;
-    private final int maxConnectedPeers;
     @Nullable
     private final OnClickListener onClickListener;
 
@@ -84,14 +78,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private final int colorPrimaryStatus, colorSecondaryStatus, colorInsignificant;
     private final int colorValuePositve, colorValueNegative;
     private final int colorError;
-    private final String textCoinBase;
-    private final String textInternal;
-    private final float textSizeNormal;
-    private boolean showTransactionRowMenu;
-
-    private static final String CONFIDENCE_SYMBOL_IN_CONFLICT = "\u26A0"; // warning sign
-    private static final String CONFIDENCE_SYMBOL_DEAD = "\u271D"; // latin cross
-    private static final String CONFIDENCE_SYMBOL_UNKNOWN = "?";
 
     private static final int VIEW_TYPE_TRANSACTION = 0;
     private static final int VIEW_TYPE_PROCESSING_IDENTITY = 1;
@@ -130,7 +116,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         inflater = LayoutInflater.from(context);
 
         this.wallet = wallet;
-        this.maxConnectedPeers = maxConnectedPeers;
         this.onClickListener = onClickListener;
 
         final Resources res = context.getResources();
@@ -142,10 +127,10 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         colorValuePositve = res.getColor(R.color.colorPrimary);
         colorValueNegative = res.getColor(android.R.color.black);
         colorError = res.getColor(R.color.fg_error);
-        textCoinBase = context.getString(R.string.wallet_transactions_fragment_coinbase);
-        textInternal = context.getString(R.string.symbol_internal) + " "
+        String textCoinBase = context.getString(R.string.wallet_transactions_fragment_coinbase);
+        String textInternal = context.getString(R.string.symbol_internal) + " "
                 + context.getString(R.string.wallet_transactions_fragment_internal);
-        textSizeNormal = res.getDimension(R.dimen.font_size_normal);
+        float textSizeNormal = res.getDimension(R.dimen.font_size_normal);
 
         setHasStableIds(true);
     }
@@ -247,94 +232,37 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             transactionHolder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(final View v) {
-                    Transaction tx = transactions.get(transactionHolder.getAdapterPosition());
+                    Transaction tx;
+                    if (getItemViewType(0) == VIEW_TYPE_PROCESSING_IDENTITY) {
+                        tx = transactions.get(transactionHolder.getAdapterPosition() - 1);
+                    } else {
+                        tx = transactions.get(transactionHolder.getAdapterPosition());
+                    }
+
                     if (onClickListener != null) {
                         onClickListener.onTransactionRowClicked(tx);
                     }
                 }
             });
         } else if (holder instanceof ProcessingIdentityViewHolder) {
-            ((ProcessingIdentityViewHolder) holder).bind(identityCreationState);
-        }
-    }
-
-    public void setShowTransactionRowMenu(boolean showTransactionRowMenu) {
-        this.showTransactionRowMenu = showTransactionRowMenu;
-    }
-
-    public interface OnClickListener {
-        void onTransactionMenuClick(View view, Transaction tx);
-
-        void onTransactionRowClicked(Transaction tx);
-    }
-
-    private class ProcessingIdentityViewHolder extends RecyclerView.ViewHolder {
-
-        private ImageView animatedIcon;
-        private TextView title;
-        private TextView subTitle;
-        private ProgressBar progress;
-        private ImageView forwardIcon;
-
-        public ProcessingIdentityViewHolder(@NonNull View itemView) {
-            super(itemView);
-            animatedIcon = itemView.findViewById(R.id.processing_animated_icon);
-            title = itemView.findViewById(R.id.processing_title);
-            subTitle = itemView.findViewById(R.id.processing_subtitle);
-            progress = itemView.findViewById(R.id.processing_progress);
-            forwardIcon = itemView.findViewById(R.id.processing_forward_arrow);
-
-            ((AnimationDrawable) animatedIcon.getDrawable()).start();
-            itemView.setOnClickListener(new View.OnClickListener() {
+            ProcessingIdentityViewHolder processingIdentityHolder = ((ProcessingIdentityViewHolder) holder);
+            processingIdentityHolder.bind(identityCreationState);
+            processingIdentityHolder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onClick(View v) {
-                    if (identityCreationState.getState() == IdentityCreationState.State.DONE) {
-                        Intent intent = new Intent(v.getContext(), CreateUsernameActivity.class);
-                        intent.putExtra(CreateUsernameActivity.Companion.getCOMPLETE_USERNAME(),
-                                identityCreationState.getUsername());
-                        v.getContext().startActivity(intent);
-                    } else {
-                        Executors.newSingleThreadExecutor().execute(new Runnable() {
-                            @Override
-                            public void run() {
-                                identityCreationState.nextState();
-                                AppDatabase.getAppDatabase()
-                                        .identityCreationStateDao().insert(identityCreationState);
-                            }
-                        });
+                public void onClick(final View v) {
+                    if (onClickListener != null) {
+                        onClickListener.onProcessingIdentityRowClicked(identityCreationState, identityCreationState.getError());
                     }
                 }
             });
         }
+    }
 
-        public void bind(IdentityCreationState identityCreationState) {
-            switch (identityCreationState.getState()) {
-                case PROCESSING_PAYMENT:
-                    animatedIcon.setVisibility(View.VISIBLE);
-                    forwardIcon.setVisibility(View.GONE);
-                    progress.setVisibility(View.VISIBLE);
-                    progress.setProgress(25);
-                    subTitle.setText(R.string.processing_home_step_1);
-                    break;
-                case CREATING_IDENTITY:
-                    progress.setProgress(50);
-                    subTitle.setText(R.string.processing_home_step_2);
-                    break;
-                case REGISTERING_USERNAME:
-                    progress.setProgress(75);
-                    subTitle.setText(R.string.processing_home_step_3);
-                    break;
-                case DONE:
-                    animatedIcon.setVisibility(View.GONE);
-                    forwardIcon.setVisibility(View.VISIBLE);
-                    progress.setVisibility(View.GONE);
-                    title.setText(itemView.getContext().getString(R.string.processing_done_title,
-                            identityCreationState.getUsername()));
-                    subTitle.setText(R.string.processing_done_subtitle);
-                    break;
-            }
-        }
+    public interface OnClickListener {
 
+        void onTransactionRowClicked(Transaction tx);
+
+        void onProcessingIdentityRowClicked(IdentityCreationState identityCreationState, boolean retry);
     }
 
     private class TransactionViewHolder extends RecyclerView.ViewHolder {
