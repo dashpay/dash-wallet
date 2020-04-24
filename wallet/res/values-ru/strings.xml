@@ -53,6 +53,7 @@
     <string name="send_coins_fragment_request_payment_request_progress">Получение подписи %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Ошибка при получении подписи</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Неверная подпись!</string>
+    <string name="send_coins_fragment_payee_verified_by">проверено: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">неизвестно</string>
     <string name="send_coins_fragment_receiving_address_label">Отправить</string>
     <string name="send_coins_fragment_receiving_address_hint">введите адрес или имя</string>

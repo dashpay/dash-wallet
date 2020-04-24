@@ -1,36 +1,39 @@
-Unawain ang posibleng panganib! (Nangangailangan ng Android 4 o higit pa)
+PANGUNAHING PAGLALARAWAN
 
-<b>Palaging dalhin ang iyong Dash, sa iyong bulsa!</b>Magbayad sa pamamagitan ng mabilisang pag-scan ng QR code. Bilang isang negosyante, makakatanggap ka ng mga bayad ng tapat at agad-agad. Ang Dash Wallet ang unang mobile Dash app, at walang dudang pinakaligtas!
+Ang Dash Wallet ay sanggunian ng Android wallet na pinapanatili ng Dash Core Group para sa Dash - Digital Cash - ang makabagong alternatibo kaysa Bitcoin na malinaw na nakadesinyo sa mga bayarin.
 
-<b>KATANGIAN</b>
+Ang Dash ay isang crypto-currency na naglalayon na maisaayos ang kamalian na nararanasan ng ibang crypto-currencies. Ito ay umaasa sa network ng Masternodes para makamit ang inaasahang bagay tulad ng pagiging pribado, mabilis na transaksyon, at direktang pagpopondo para maisulong ang paglaki ng network.
 
-• Hindi kailangan magrehistro, web service o cloud! Itong pitakang ito ay decentralisado at peer to peer.
-• Ipakita ang halaga ng Dash sa DASH, mDASH at µDASH.
-• Pagsasalin patungo at mula sa mga pambansang pananalapi.
-• Pagpadala at pagtanggap ng Dash sa pamamagitan ng NFC, QR codes o Dash URLs.
-• Adresbuk para sa palagiang paggamit ng mga Dash address.
-• Kahit ikaw ay offline, maaari ka parin magbayad sa pamamagitan ng Bluetooth.
-• Pagbibigay abiso sa taong nakatanggap ng mga barya.
-• Pinagpalisan ng papel na pitaka (Mga ginagamit para sa cold storage).
-• App widget para sa balanse ng Dash.
+Mabisa at sigurado, ang Dash Wallet ay nagbibigay sa iyo ng kumpletong kontrol sa iyong digital cash. Mabilis na magpadala at tumanggap ng bayad sa Dash, na may pinakaligtas na mobile wallet.
 
+Ang Dash Wallet ay kumo-konekta ng diretso sa Dash network. Ito ay nangangahulugan na walang server na maaring i-hack o pabagsakin- ang iyong funds ay palaging ligtas. Kahit na ay iyong phone ay nawala, nasira o nanakaw, madali mong makukuha ulit ang iyong pondo gamit ang iyong personal na recovery phrase.
 
-<b>TUMULONG</b>
+Katangian:
 
-Ang Dash Wallet ay <b>open source</b> at <b>free software</b>. Lisensya: GPLv3
+* Magpadala at tumanggap ng bayad sa Dash sa loob ng ilang segundo, online o sa ibang tao
+* Isang button para sa bayad sa mga websites o merchants na tumatanggap ng Dash
+* Magbayad ng mabilis gamit ang biometric authentication
+* Pinagpalisan ng papel na pitaka (Mga ginagamit para sa cold storage)
+* 3rd party integrasyon na payagan ang mga gumagamit na makabili at magbenta ng Dash
+*Ang simpleng recovery phrase ay hinahayaan ka na makuha ulit ang iyong pondo kung sakaling mawala o nabago.
+Flexible settings para makita ang saklaw ng pasadyang kagustuhan na seguridad 
+* Diretsong dash network client - walang mga server na maaring i-hack o mapatumba
+
+Ang Dash Wallet ay isang open source at libre. Ang bayad sa network ay mas mura kompara sa mga cryptocurrencies at walang ekstrang bayad. Magpadala ng kahit anong halaga ng pera saan mang panig ng mundo. Tumanggap ng bayad na maaasahan at mabilisan sa iyong negosyo. Ganito dapat ang pera.
+
+TUMULONG
+
+Ang Dash Wallet ay open source at free software. Lisensya: GPLv3
 https://www.gnu.org/licenses/gpl-3.0.en.html
 
 Ang aming source code ay makukuha sa Github:
-https://github.com/HashEngineering/dash-wallet
+https://github.com/dashevo/dash-wallet
 
 Ang lahat ng pagsasalin ay pinangangasiwaan sa pamamagitaan ng Transifex:
-https://www.transifex.com/dash/dash-wallet/
+https://www.transifex.com/dash/dash-mobile-wallets/
 
 Makikita ang ibang pang impormasyon tungkol sa Dash sa
 https://www.dash.org/
 
-<b>MGA KATIBAYAN</b>
-
-• Inirekomendang mobile wallet ng https://www.dash.org
-
-<i>Unawain ang posibleng panganib!</i>
+v7.0.0 I-upgrade
+Ang Dash Wallet v7.0 ay nagdadala ito ng kompletong panibagong disenyong karanasan na naghahanap na mapahusay ang pag gamit na madaling maunawaan at pamilyar na paraan gamit ang iyong device. Aming muling binagayan ang proseso ng recovery phrase verification para i-highlight ang importansya ng pagsisiguridad ng impormasyon para sa pagrekober ng pitaka, at ang mga gumagamit ngayon ay pwede ng magdesisyon kung kailan nila gustong isulat ang kanilang 12 na salita sa recovery phrase. Nagdagdag din tayo ng shortcut sa homescreen para sa mabilisang pag-access sa madalas na ginagamit na features at ang ating menu ay nareposisyon sa app at inorganisa para makatulong sa mga manggagamit na i-configure ang kanilang pitaka na mabilis at mas mabisa. Ang mga manggagamit ay mayroon ng mas malawak na kontrol sa kanilang security settings at ang abilidad na makapagdesisyon kung gaano kadalas nila i-enter ang kanilang pin code.

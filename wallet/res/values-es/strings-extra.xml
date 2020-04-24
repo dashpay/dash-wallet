@@ -31,7 +31,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_secure_now">Asegurar Billetera Ahora</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Escanear para Envia</string>
+    <string name="quick_action_scan_to_pay">Escanear para Enviar</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_pay_to_address">Enviar a Dirección</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -48,7 +48,7 @@
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_login_with_fingerprint">Login con huella dactilar</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
-    <string name="lock_action_scan_to_pay">Escanear para Envia</string>
+    <string name="lock_action_scan_to_pay">Escanear para Enviar</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
     <string name="lock_enter_pin">Ingresar PIN</string>
     <string name="lock_unlock_with_fingerprint">Use tu huella para desbloquear</string>
@@ -57,7 +57,7 @@
     <string name="perm_lock_wipe_wallet">Limpiar Billetera</string>
     <string name="perm_lock_close_app">Cerrar</string>
 
-    <string name="scan_to_pay_error_dialog_title">Escanear para Envia</string>
+    <string name="scan_to_pay_error_dialog_title">Escanear para Enviar</string>
     <string name="scan_to_pay_error_dialog_message">Dirección de Dash o solicitud de URL no válida en el portapapeles:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Dirección de Dash o solicitud de URL no válida en el portapapeles</string>
 
@@ -181,7 +181,7 @@
 
     <string name="net_type_indicator" />
 
-    <string name="unlock_with_fingerprint">Use tu huella para desbloquear.</string>
+    <string name="unlock_with_fingerprint">Usa tu huella para desbloquear.</string>
     <string name="unlock_with_fingerprint_error">No se pudo reconocer tu huella, por favor intente nuevamente.</string>
     <string name="unlock_with_fingerprint_error_max_attempts">Máximo número de intentos de huella superado. Intente nuevamente más tarde por favor.</string>
     <string name="or_unlock_with_fingerprint">O use tu huella para desbloquear.</string>

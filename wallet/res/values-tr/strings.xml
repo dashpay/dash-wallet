@@ -53,6 +53,7 @@
     <string name="send_coins_fragment_request_payment_request_progress">%s tarafından imza alınıyor…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">İmza alımı başarısız</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Yanlış imza!</string>
+    <string name="send_coins_fragment_payee_verified_by">Tarafından doğrulandı: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">bilinmeyen</string>
     <string name="send_coins_fragment_receiving_address_label">Gönder</string>
     <string name="send_coins_fragment_receiving_address_hint">adresini veya adını giriniz</string>
@@ -67,6 +68,7 @@
     <string name="send_coins_fragment_hint_dusty_send">Bu miktar göndermek için çok düşüktür</string>
     <string name="send_coins_fragment_hint_insufficient_money">Yetersiz bakiye</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Cüzdanınıza gelen küçük ödemelerin toplamı göndermek için yetersiz kalıyor.</string>
+    <string name="send_coins_fragment_hint_replaying">Cüzdanınız ağ ile senkronize olmadığından şuan ödeme yapabilmeniz mümkün değil.</string>
     <string name="send_coins_fragment_direct_payment_enable">Ödemeyi doğrudan alıcıya gönder.</string>
     <string name="send_coins_fragment_direct_payment_ack">Ödemeniz başarıyla doğrudan gönderilmiştir.</string>
     <string name="send_coins_fragment_direct_payment_nack">Ödemeniz doğrudan bağlantı tarafından reddedilmiştir.</string>

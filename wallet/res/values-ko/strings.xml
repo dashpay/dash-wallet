@@ -53,6 +53,7 @@
     <string name="send_coins_fragment_request_payment_request_progress"> %s에서 전자 서명을 불러오는 중...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">전자 서명 불러오기 실패</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">잘못된 서명입니다!</string>
+    <string name="send_coins_fragment_payee_verified_by">다음에 의해 승인됨 : %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">알 수 없음</string>
     <string name="send_coins_fragment_receiving_address_label">다음으로 전송합니다</string>
     <string name="send_coins_fragment_receiving_address_hint">주소 또는 이름을 입력하세요</string>
