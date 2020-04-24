@@ -56,6 +56,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.lifecycle.ViewModelProviders;
 
 import com.google.android.material.appbar.AppBarLayout;
@@ -320,7 +321,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         // the Join DashPay (evolution) button on the shortcuts bar.
         // If that is the only function that the platform required for, then we can
         // conditionally execute this code when a username hasn't been registered.
-        dashPayViewModel = ViewModelProviders.of(this).get(DashPayViewModel.class);
+        dashPayViewModel = new ViewModelProvider(this).get(DashPayViewModel.class);
         dashPayViewModel.isPlatformAvailableLiveData().observe(this, new Observer<Resource<Boolean>>() {
             @Override
             public void onChanged(Resource<Boolean> status) {
@@ -330,7 +331,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 showHideJoinDashPayAction();
             }
         });
-        dashPayViewModel.isPlatformAvailable();
     }
 
     private void showHideSecureAction() {
@@ -345,7 +345,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             boolean canAffordIt = walletBalance.isGreaterThan(Constants.DASH_PAY_FEE)
                     || walletBalance.equals(Constants.DASH_PAY_FEE);
             boolean visible = canAffordIt && config.getShowJoinDashPay();
-            joinDashPayAction.setVisibility(View.VISIBLE);//visible ? View.VISIBLE : View.GONE);
+            joinDashPayAction.setVisibility(visible ? View.VISIBLE : View.GONE);
         } else {
             joinDashPayAction.setVisibility(View.GONE);
         }
