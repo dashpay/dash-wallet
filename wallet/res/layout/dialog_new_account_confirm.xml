@@ -109,7 +109,7 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:padding="16dp"
-        android:text="You have chose “Johndoe” as your username. Username cannot be changed once its registered."
+        tools:text="You have chose “Johndoe” as your username. Username cannot be changed once it is registered."
         android:textColor="@color/dash_black" />
 
     <de.schildbach.wallet.ui.widget.MontserratCheckBox
