@@ -336,7 +336,7 @@
     <string name="payment_request_paid_to">Paid to</string>
 
     <string name="choose_your_username">Choose your <b>Dash\nUsername</b></string>
-    <string name="min_3_chars">Between 4 and 23 characters</string>
+    <string name="min_3_chars">Between 3 and 23 characters</string>
     <string name="alphanum_only">Alphabets and Numbers only</string>
     <string name="identity_exists_on_network">Username taken</string>
     <string name="platform_communication_error">Communication error with Dash Platform</string>
@@ -345,7 +345,7 @@
     <string name="new_account_confirm_button_text">Confirm &amp; Pay</string>
     <string name="new_account_confirm_accept">I Accept</string>
     <string name="new_account_confirm_upgrade_fee">Upgrade Fee</string>
-    <string name="new_account_confirm_message">You have chose %s as your username. Username cannot be changed once its registered.</string>
+    <string name="new_account_confirm_message">You have chose %s as your username. Username cannot be changed once it is registered.</string>
 
     <string name="username_being_created">Your username %s is being created on the Dash Network</string>
     <string name="processing_let_me_know">Let me know when it\'s done</string>

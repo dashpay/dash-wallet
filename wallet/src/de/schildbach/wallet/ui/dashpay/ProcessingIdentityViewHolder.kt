@@ -40,6 +40,7 @@ class ProcessingIdentityViewHolder(itemView: View) : RecyclerView.ViewHolder(ite
 
         when (identityCreationState.state) {
             IdentityCreationState.State.PROCESSING_PAYMENT -> {
+                itemView.progress.visibility = View.VISIBLE
                 itemView.progress.progress = 25
                 itemView.subtitle.setText(R.string.processing_home_step_1)
             }
@@ -56,7 +57,7 @@ class ProcessingIdentityViewHolder(itemView: View) : RecyclerView.ViewHolder(ite
             }
             IdentityCreationState.State.DONE -> {
                 itemView.forward_arrow.visibility = View.VISIBLE
-                itemView.progress.progress = 100
+                itemView.progress.visibility = View.GONE
                 itemView.title.text = itemView.context.getString(R.string.processing_done_title,
                         identityCreationState.username)
                 itemView.subtitle.setText(R.string.processing_done_subtitle)

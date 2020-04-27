@@ -138,7 +138,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private fun validateUsernameSize(uname: String): Boolean {
         val isValid: Boolean
 
-        min_chars_req_img.visibility = if (uname.length in 4..23) {
+        min_chars_req_img.visibility = if (uname.length in 3..23) {
             isValid = true
             min_chars_req_label.typeface = mediumTypeFace
             View.VISIBLE
