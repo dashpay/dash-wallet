@@ -22,12 +22,11 @@ import android.view.MenuItem
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
 import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
-import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
+import org.dash.wallet.integration.uphold.ui.UpholdDisabledActivity
 
 class MoreActivity : GlobalFooterActivity() {
 
@@ -76,8 +75,7 @@ class MoreActivity : GlobalFooterActivity() {
     }
 
     private fun startBuyAndSellActivity() {
-        val wallet = WalletApplication.getInstance().wallet
-        startActivity(UpholdAccountActivity.createIntent(this, wallet))
+        startActivity(Intent(this, UpholdDisabledActivity::class.java))
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

@@ -1,4 +1,6 @@
 apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
 
 android {
     compileSdkVersion 28
@@ -36,4 +38,5 @@ dependencies {
 
     implementation project(path: ':common')
     implementation project(path: ':ui-redesign')
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }

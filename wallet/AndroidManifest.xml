@@ -216,6 +216,9 @@
         <activity android:name="org.dash.wallet.integration.uphold.ui.UpholdAccountActivity"
             android:theme="@style/My.Theme.ChildActivity"/>
 
+        <activity android:name="org.dash.wallet.integration.uphold.ui.UpholdDisabledActivity"
+            android:theme="@style/My.Theme.ChildActivity"/>
+
         <activity android:name="de.schildbach.wallet.ui.LockScreenActivity"
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Theme" />

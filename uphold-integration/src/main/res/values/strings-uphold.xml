@@ -24,5 +24,8 @@
     <string name="uphold_error_not_logged_in">Dash Wallet is no longer linked to your Uphold account.  On the next screen press Link Uphold account.</string>
     <string name="uphold_error_not_available">The Uphold service is not available.  Please try again later.</string>
     <string name="uphold_error_report_issue">Please report this issue to the Dash Wallet support team using "Report Issue" from the main menu.</string>
+    
+    <string name="uphold_disabled">Deposits and withdrawals from Uphold\'s Dash cards are currently disabled. Please contact Uphold support if you have questions.\n\nYou may still view your balance in a browser by visiting Uphold.com</string>
+    <string name="uphold_go_to_uphold">Go To Uphold.com</string>
 
 </resources>
