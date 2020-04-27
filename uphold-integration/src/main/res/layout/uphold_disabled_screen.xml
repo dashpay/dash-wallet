@@ -15,7 +15,7 @@
         app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
 
         <TextView
-            android:id="@+id/uphold_logout"
+            android:id="@+id/cancel_button"
             style="@style/MontserratMedium"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"

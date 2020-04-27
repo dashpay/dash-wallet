@@ -29,6 +29,9 @@ class UpholdDisabledActivity : InteractionAwareActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.uphold_disabled_screen)
+        cancel_button.setOnClickListener {
+            finish()
+        }
         go_to_uphold.setOnClickListener {
             val url = "https://uphold.com"
             val i = Intent(Intent.ACTION_VIEW)
