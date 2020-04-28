@@ -7,3 +7,6 @@
 [submodule "dapi-client"]
 	path = dapi-client
 	url = https://github.com/dashevo/dapi-client-android
+[submodule "dashpay"]
+	path = dashpay
+	url = https://github.com/HashEngineering/android-dashpay
