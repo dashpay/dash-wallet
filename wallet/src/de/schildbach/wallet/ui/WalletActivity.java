@@ -71,7 +71,7 @@ import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.ui.DialogBuilder;
-import org.dash.wallet.integration.uphold.ui.UpholdDisabledActivity;
+import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
 
 import java.io.IOException;
 import java.util.Currency;
@@ -953,7 +953,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void startUpholdActivity() {
-        startActivity(new Intent(this, UpholdDisabledActivity.class));
+        startActivity(UpholdAccountActivity.createIntent(this, wallet));
     }
 
     //Dash Specific
