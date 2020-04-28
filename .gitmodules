@@ -1,3 +1,9 @@
 [submodule "wallet/cpp/dashj-bls/bls-signatures"]
 	path = wallet/cpp/dashj-bls/bls-signatures
 	url = https://github.com/Chia-Network/bls-signatures.git
+[submodule "dpp"]
+	path = dpp
+	url = https://github.com/dashevo/android-dpp
+[submodule "dapi-client"]
+	path = dapi-client
+	url = https://github.com/dashevo/dapi-client-android
