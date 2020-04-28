@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui
 
 import android.graphics.Typeface
 import android.graphics.drawable.AnimationDrawable
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
@@ -28,19 +29,32 @@ import android.text.style.StyleSpan
 import android.view.View
 import android.view.animation.AnimationUtils
 import androidx.core.content.res.ResourcesCompat
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.IdentityCreationState
+import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NewAccountConfirmDialog
+import de.schildbach.wallet.ui.security.SecurityGuard
+import de.schildbach.wallet.ui.send.DecryptSeedTask
+import de.schildbach.wallet.ui.send.DeriveKeyTask
+import de.schildbach.wallet.ui.send.SendCoinsFragment
+import de.schildbach.wallet.util.ParcelableChainPath
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.create_username.*
 import kotlinx.android.synthetic.main.users_orbit.*
 import org.bitcoinj.core.Coin
+import org.bitcoinj.wallet.DeterministicSeed
+import org.bitcoinj.wallet.Wallet
+import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.InteractionAwareActivity
+import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
 
 class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
@@ -51,6 +65,9 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private val fadeOutAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.fade_out) }
     private lateinit var completeUsername: String
     private lateinit var dashPayViewModel: DashPayViewModel
+    private lateinit var securityGuard: SecurityGuard
+    private lateinit var walletApplication: WalletApplication
+
 
     private var handler: Handler = Handler()
     private lateinit var checkUsernameNotExistRunnable: Runnable
@@ -58,6 +75,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     companion object {
         @JvmStatic
         public val COMPLETE_USERNAME = "complete_username"
+        private val log = LoggerFactory.getLogger(SendCoinsFragment::class.java)
     }
 
 
@@ -78,9 +96,21 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             showCompleteState()
         }
 
+        walletApplication = application as WalletApplication
+
         val confirmTransactionSharedViewModel = ViewModelProviders.of(this)
                 .get(SingleActionSharedViewModel::class.java)
         confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
+            // setup the wallet
+            val wallet = (application as WalletApplication).wallet
+
+            //get key parameter
+
+            if (wallet.isEncrypted()) {
+                handleDecryptPIN(securityGuard.retrievePassword())
+            } else {
+                dashPayViewModel.createUsername(username.text.toString(), wallet.keyChainSeed, null)
+            }
             showProcessingState()
         })
 
@@ -114,7 +144,30 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
                 }
             }
         })
+
+        dashPayViewModel.createUsernameLiveData.observe(this, Observer {
+            when(it.status) {
+                Status.LOADING -> {
+
+                }
+                Status.SUCCESS -> {
+
+                }
+                Status.ERROR -> {
+
+                }
+            }
+        })
+
+        try {
+            securityGuard = SecurityGuard()
+        } catch (e: Exception) {
+            log.error("Unable to instantiate SecurityGuard", e)
+            finish()
+            return
+        }
     }
+
 
     private fun showCompleteState() {
         registration_content.visibility = View.GONE
@@ -227,6 +280,35 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     }
 
     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+    }
+
+    private fun handleDecryptPIN(password: String) {
+        if (walletApplication.wallet.isEncrypted()) {
+            object : DeriveKeyTask(handler, walletApplication.scryptIterationsTarget()) {
+                override fun onSuccess(encryptionKey: KeyParameter, wasChanged: Boolean) {
+                    handleDecryptSeed(encryptionKey, password)
+                }
+            }.deriveKey(walletApplication.wallet, password)
+        } else {
+            walletApplication.wallet.initializeAuthenticationKeyChains(walletApplication.wallet.keyChainSeed, null)
+        }
+    }
+
+    private fun handleDecryptSeed(encryptionKey: KeyParameter, password: String) {
+        val wallet: Wallet = walletApplication.wallet
+        val username = username.text.toString()
+        if (wallet.isEncrypted) {
+            object : DecryptSeedTask(handler) {
+                override fun onSuccess(seed: DeterministicSeed) {
+                    dashPayViewModel.createUsername(username, seed, encryptionKey)
+                }
+
+                override fun onBadPassphrase() { // can this happen?
+                }
+            }.decryptSeed(wallet.activeKeyChain.seed, wallet.keyCrypter, encryptionKey)
+        } else {
+            dashPayViewModel.createUsername(username, wallet.keyChainSeed, null)
+        }
     }
 
 }
