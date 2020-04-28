@@ -1,7 +1,10 @@
-include 'wallet'
+include 'wallet', ':dashpay', ':platform-core'
 include 'integration-android'
 include 'sample-integration-android'
 include ':uphold-integration', ':ui-redesign'
 include ':common'
 include ':dpp'
 include ':dapi-client'
+
+project(':dashpay').projectDir = new File('dashpay/dashpay')
+project(':platform-core').projectDir = new File('dashpay/platform-core')
