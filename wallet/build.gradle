@@ -36,14 +36,16 @@ dependencies {
     implementation 'com.google.android:flexbox:1.1.0'
     implementation 'androidx.preference:preference:1.1.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.0-beta4'
+
     implementation "org.dashj:dashj-core:$dashjVersion"
+    implementation project(path: ':dpp')
+
     implementation ("org.dashevo:dashpay:0.11-SNAPSHOT") {
         exclude group: 'com.google.protobuf', module: 'protobuf-javalite'
     }
     implementation ("org.dashevo:platform-core:0.11-SNAPSHOT") {
         exclude group: 'com.google.protobuf', module: 'protobuf-javalite'
     }
-    implementation 'org.dashevo:dpp:0.11-SNAPSHOT'
     implementation ("org.dashevo:dapi-client:0.11-SNAPSHOT") {
         exclude group: 'com.google.protobuf', module: 'protobuf-javalite'
     }
