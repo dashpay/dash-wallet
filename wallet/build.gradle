@@ -40,13 +40,8 @@ dependencies {
     implementation "org.dashj:dashj-core:$dashjVersion"
     implementation project(path: ':dpp')
     implementation project(path: ':dapi-client')
-
-    implementation ("org.dashevo:dashpay:0.11-SNAPSHOT") {
-        exclude group: 'com.google.protobuf', module: 'protobuf-javalite'
-    }
-    implementation ("org.dashevo:platform-core:0.11-SNAPSHOT") {
-        exclude group: 'com.google.protobuf', module: 'protobuf-javalite'
-    }
+    implementation project(path: ':dashpay')
+    implementation project(path: ':platform-core')
 
     implementation 'com.google.protobuf:protobuf-java:3.11.0'
     implementation 'com.google.guava:guava:27.0.1-android'

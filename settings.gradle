@@ -5,3 +5,9 @@ include ':uphold-integration', ':ui-redesign'
 include ':common'
 include ':dpp'
 include ':dapi-client'
+include ':dashpay'
+include ':platform-core'
+
+
+project(':dashpay').projectDir = new File('dashpay/dashpay')
+project(':platform-core').projectDir = new File('dashpay/platform-core')
