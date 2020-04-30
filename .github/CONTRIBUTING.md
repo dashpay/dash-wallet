@@ -1,7 +1,7 @@
 # Contributing Guidelines
 
-We use Kotlin Java for developing this app.  Java is used on legacy components and
-the underlying dashj library. New features are written in Kotlin.
+We use Kotlin and Java for developing this app.  Java is used on legacy components
+and the underlying dashj library. New features are written in Kotlin.
 
 General information on developing conventions can be found at [AOSP Java Code Style
 for Contributors](https://source.android.com/setup/contribute/code-style).
