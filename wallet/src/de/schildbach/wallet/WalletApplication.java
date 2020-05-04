@@ -305,6 +305,11 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
                 R.string.notification_synchronization_channel_name,
                 R.string.notification_synchronization_channel_description,
                 NotificationManager.IMPORTANCE_LOW);
+        //DashPay
+        createNotificationChannel(Constants.NOTIFICATION_CHANNEL_ID_DASHPAY,
+                R.string.notification_dashpay_channel_name,
+                R.string.notification_dashpay_channel_description,
+                NotificationManager.IMPORTANCE_LOW);
     }
 
     @TargetApi(Build.VERSION_CODES.O)

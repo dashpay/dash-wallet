@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui
 
 import android.graphics.Typeface
 import android.graphics.drawable.AnimationDrawable
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
@@ -28,24 +27,19 @@ import android.text.TextWatcher
 import android.text.style.StyleSpan
 import android.view.View
 import android.view.animation.AnimationUtils
+import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
-import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.IdentityCreationState
-import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService.Companion.createIntent
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NewAccountConfirmDialog
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DecryptSeedTask
 import de.schildbach.wallet.ui.send.DeriveKeyTask
-import de.schildbach.wallet.ui.send.SendCoinsFragment
-import de.schildbach.wallet.util.ParcelableChainPath
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.create_username.*
 import kotlinx.android.synthetic.main.users_orbit.*
@@ -55,7 +49,6 @@ import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.InteractionAwareActivity
 import org.slf4j.LoggerFactory
-import java.util.concurrent.Executors
 
 class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
@@ -75,7 +68,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     companion object {
         @JvmStatic
         public val COMPLETE_USERNAME = "complete_username"
-        private val log = LoggerFactory.getLogger(SendCoinsFragment::class.java)
+        private val log = LoggerFactory.getLogger(CreateUsernameActivity::class.java)
     }
 
 
@@ -105,11 +98,12 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             val wallet = (application as WalletApplication).wallet
 
             //get key parameter
-
-            if (wallet.isEncrypted()) {
-                handleDecryptPIN(securityGuard.retrievePassword())
+            val username = username.text.toString()
+            if (wallet.isEncrypted) {
+//                handleDecryptPIN(securityGuard.retrievePassword())
+                ContextCompat.startForegroundService(this, createIntent(this, username))
             } else {
-                dashPayViewModel.createUsername(username.text.toString(), wallet.keyChainSeed, null)
+                dashPayViewModel.createUsername(username, wallet.keyChainSeed, null)
             }
             showProcessingState()
         })
@@ -237,12 +231,18 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         if (username != null) {
             val usernameIsValid = validateUsernameCharacters(username) && validateUsernameSize(username)
 
-            if(usernameIsValid) //ensure username meets basic rules before making a Platform query
-                checkUsernameNotExist(username)
-            else {
+            if(usernameIsValid) {
+                register_btn.isEnabled = true
                 username_exists_req_label.visibility = View.GONE
                 username_exists_req_img.visibility = View.GONE
             }
+
+//            if(usernameIsValid) //ensure username meets basic rules before making a Platform query
+//                checkUsernameNotExist(username)
+//            else {
+//                username_exists_req_label.visibility = View.GONE
+//                username_exists_req_img.visibility = View.GONE
+//            }
         }
     }
 
@@ -260,12 +260,6 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         val end = start + username.length
         spannableContent.setSpan(StyleSpan(Typeface.BOLD), start, end, 0)
         processing_identity_message.text = spannableContent
-
-        Executors.newSingleThreadExecutor().execute {
-            val identityCreationState = IdentityCreationState(IdentityCreationState
-                    .State.PROCESSING_PAYMENT, false, username)
-            AppDatabase.getAppDatabase().identityCreationStateDao().insert(identityCreationState)
-        }
     }
 
     private fun showConfirmationDialog() {

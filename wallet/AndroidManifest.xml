@@ -340,6 +340,9 @@
         <service
             android:name="de.schildbach.wallet.service.InactivityNotificationService"
             android:exported="false" />
+        <service
+            android:name="de.schildbach.wallet.ui.dashpay.CreateIdentityService"
+            android:exported="false" />
 
         <meta-data
             android:name="android.nfc.disable_beam_default"

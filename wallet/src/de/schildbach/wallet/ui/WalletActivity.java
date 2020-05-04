@@ -65,6 +65,8 @@ import com.google.common.collect.ImmutableList;
 
 import de.schildbach.wallet.livedata.Resource;
 import de.schildbach.wallet.livedata.Status;
+import de.schildbach.wallet.service.InactivityNotificationService;
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
 import okhttp3.HttpUrl;
 
@@ -275,7 +277,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         joinDashPayAction.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startActivity(new Intent(WalletActivity.this, CreateUsernameActivity.class));
+//                startActivity(new Intent(WalletActivity.this, CreateUsernameActivity.class));
+                ContextCompat.startForegroundService(WalletActivity.this, CreateIdentityService.createIntent(WalletActivity.this, "username"));
             }
         });
         showHideJoinDashPayAction();
@@ -330,7 +333,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void showHideJoinDashPayAction() {
-        if (syncComplete && isPlatformAvailable) {
+        if (syncComplete){// && isPlatformAvailable) {
             final Coin walletBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED);
             boolean canAffordIt = walletBalance.isGreaterThan(Constants.DASH_PAY_FEE)
                     || walletBalance.equals(Constants.DASH_PAY_FEE);
