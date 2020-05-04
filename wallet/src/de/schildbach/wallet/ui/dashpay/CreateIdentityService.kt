@@ -2,13 +2,13 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.app.Notification
 import android.app.NotificationManager
-import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.Handler
-import android.os.IBinder
 import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
+import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.Observer
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -28,7 +28,7 @@ import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 
-class CreateIdentityService : Service() {
+class CreateIdentityService : LifecycleService() {
 
     companion object {
         private val log = LoggerFactory.getLogger(CreateIdentityService::class.java)
@@ -70,6 +70,30 @@ class CreateIdentityService : Service() {
         startForeground(
                 Constants.NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY,
                 createNotification(R.string.processing_home_title, 0, -1, 0))
+
+        AppDatabase.getAppDatabase().identityCreationStateDao().load().observe(this, Observer {
+            when (it?.state) {
+                IdentityCreationState.State.UPGRADING_WALLET,
+                IdentityCreationState.State.CREDIT_FUNDING_TX_CREATING,
+                IdentityCreationState.State.CREDIT_FUNDING_TX_SENDING,
+                IdentityCreationState.State.CREDIT_FUNDING_TX_SENT,
+                IdentityCreationState.State.CREDIT_FUNDING_TX_CONFIRMED -> {
+                    updateNotification(R.string.processing_home_title, R.string.processing_home_step_1, 4, 1)
+                }
+                IdentityCreationState.State.IDENTITY_REGISTERING,
+                IdentityCreationState.State.IDENTITY_REGISTERED -> {
+                    updateNotification(R.string.processing_home_title, R.string.processing_home_step_2, 4, 2)
+                }
+                IdentityCreationState.State.PREORDER_REGISTERING,
+                IdentityCreationState.State.PREORDER_REGISTERED,
+                IdentityCreationState.State.USERNAME_REGISTERING -> {
+                    updateNotification(R.string.processing_home_title, R.string.processing_home_step_3, 4, 3)
+                }
+                IdentityCreationState.State.USERNAME_REGISTERED -> {
+                    updateNotification(R.string.processing_done_subtitle, 0, 0, 0)
+                }
+            }
+        })
     }
 
     private fun updateNotification(@StringRes titleResId: Int, @StringRes messageResId: Int, progressMax: Int, progress: Int) {
@@ -78,13 +102,13 @@ class CreateIdentityService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
 
         if (intent != null) {
 
             when (intent.action) {
                 ACTION_CREATE_IDENTITY -> handleCreateIdentityAction(intent)
             }
-
         }
 
         return START_NOT_STICKY
@@ -104,43 +128,76 @@ class CreateIdentityService : Service() {
         val wallet = walletApplication.wallet
 
         val usernameInfo: CreateUsernameInfo
+        val encryptionKey: KeyParameter
+        val seed: DeterministicSeed
         try {
-            log.info("deriveKey(handler, wallet)")
-            val encryptionKey = deriveKey(handler, wallet)
-            log.info("decryptSeedTask(handler, wallet, encryptionKey)")
-            val seed = decryptSeedTask(handler, wallet, encryptionKey)
+            encryptionKey = deriveKey(handler, wallet)
+            seed = decryptSeed(handler, wallet, encryptionKey)
             usernameInfo = CreateUsernameInfo(username, seed, encryptionKey)
         } catch (ex: KeyCrypterException) {
             log.error(ex.message, ex)
             return
         }
-        identityCreationState = IdentityCreationState(IdentityCreationState.State.PROCESSING_PAYMENT, false, username)
-
-        val totalNumOfSteps = 4
         val appDatabase = AppDatabase.getAppDatabase()
 
-        updateNotification(R.string.processing_home_title, R.string.processing_home_step_1, totalNumOfSteps, 1)
-        updateState(appDatabase, IdentityCreationState.State.PROCESSING_PAYMENT, false)
-        log.info("step1()")
-        step1()
+        identityCreationState = IdentityCreationState(IdentityCreationState.State.UPGRADING_WALLET, false, username)
+        updateState(appDatabase, IdentityCreationState.State.UPGRADING_WALLET)
 
-        updateNotification(R.string.processing_home_title, R.string.processing_home_step_2, totalNumOfSteps, 2)
-        updateState(appDatabase, IdentityCreationState.State.CREATING_IDENTITY, false)
-        log.info("step2()")
-        step2()
+/*         THIS ONLY COMMENTED OUT TO SIMPLIFY TESTING OF UI STATES, BELOW CODE SHOULD WORK CORRECTLY
 
-        updateNotification(R.string.processing_home_title, R.string.processing_home_step_2, totalNumOfSteps, 3)
-        updateState(appDatabase, IdentityCreationState.State.REGISTERING_USERNAME, false)
-        log.info("step3()")
-        step3()
+        try {
+            platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
+        } catch (ex: Exception) {
+            updateStateWithError(appDatabase)
+            log.error(ex.message, ex)
+            return
+        }
 
-        updateNotification(R.string.processing_done_subtitle, 0, 0, 0)
-        updateState(appDatabase, IdentityCreationState.State.DONE, false)
-        log.info("step4()")
-        step4()
+        updateState(appDatabase, IdentityCreationState.State.CREDIT_FUNDING_TX_SENDING)
+
+        //create the Blockchain Identity object (this needs to be saved somewhere eventually)
+        val blockchainIdentity = BlockchainIdentity(Identity.IdentityType.USER, 0, wallet)
+        try {
+            platformRepo.createCreditFundingTransactionAsync(blockchainIdentity)
+        } catch (ex: Exception) {
+            updateStateWithError(appDatabase)
+            log.error(ex.message, ex)
+            return
+        }
+*/
+
+        updateState(appDatabase, IdentityCreationState.State.CREDIT_FUNDING_TX_SENT)
+        delay2s()
+
+        updateState(appDatabase, IdentityCreationState.State.CREDIT_FUNDING_TX_CONFIRMED)
+        delay2s()
+
+        updateState(appDatabase, IdentityCreationState.State.IDENTITY_REGISTERING)
+        delay2s()
+
+        updateState(appDatabase, IdentityCreationState.State.IDENTITY_REGISTERED)
+        delay2s()
+
+        updateState(appDatabase, IdentityCreationState.State.PREORDER_REGISTERING)
+        delay2s()
+
+        updateState(appDatabase, IdentityCreationState.State.PREORDER_REGISTERED)
+        delay2s()
+
+        updateState(appDatabase, IdentityCreationState.State.USERNAME_REGISTERING)
+        delay2s()
+
+        updateState(appDatabase, IdentityCreationState.State.USERNAME_REGISTERED)
+        delay2s()
+
+        // aaaand we're done :)
     }
 
-    private suspend fun updateState(appDatabase: AppDatabase, newState: IdentityCreationState.State, error: Boolean) {
+    private suspend fun updateStateWithError(appDatabase: AppDatabase) {
+        updateState(appDatabase, identityCreationState.state, true)
+    }
+
+    private suspend fun updateState(appDatabase: AppDatabase, newState: IdentityCreationState.State, error: Boolean = false) {
         withContext(Dispatchers.IO) {
             identityCreationState.state = newState
             identityCreationState.error = error
@@ -172,7 +229,7 @@ class CreateIdentityService : Service() {
     /**
      * Wraps callbacks of DecryptSeedTask as Coroutine
      */
-    private suspend fun decryptSeedTask(handler: Handler, wallet: Wallet, encryptionKey: KeyParameter): DeterministicSeed {
+    private suspend fun decryptSeed(handler: Handler, wallet: Wallet, encryptionKey: KeyParameter): DeterministicSeed {
         return suspendCoroutine { continuation ->
             object : DecryptSeedTask(handler) {
                 override fun onSuccess(seed: DeterministicSeed) {
@@ -186,32 +243,10 @@ class CreateIdentityService : Service() {
         }
     }
 
-    private suspend fun step1() {
+    private suspend fun delay2s() {
         withContext(Dispatchers.IO) {
-            Thread.sleep(7000)
+            delay(2000)
         }
-    }
-
-    private suspend fun step2() {
-        withContext(Dispatchers.IO) {
-            Thread.sleep(7000)
-        }
-    }
-
-    private suspend fun step3() {
-        withContext(Dispatchers.IO) {
-            Thread.sleep(7000)
-        }
-    }
-
-    private suspend fun step4() {
-        withContext(Dispatchers.IO) {
-            Thread.sleep(7000)
-        }
-    }
-
-    override fun onBind(intent: Intent): IBinder {
-        TODO("Return the communication channel to the service.")
     }
 
     override fun onDestroy() {

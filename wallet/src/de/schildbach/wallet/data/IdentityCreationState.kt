@@ -30,21 +30,16 @@ class IdentityCreationState(var state: State, var error: Boolean, var username: 
         }
 
     enum class State {
-        PROCESSING_PAYMENT, CREATING_IDENTITY, REGISTERING_USERNAME, DONE
+        UPGRADING_WALLET,
+        CREDIT_FUNDING_TX_CREATING,
+        CREDIT_FUNDING_TX_SENDING,
+        CREDIT_FUNDING_TX_SENT,
+        CREDIT_FUNDING_TX_CONFIRMED,
+        IDENTITY_REGISTERING,
+        IDENTITY_REGISTERED,
+        PREORDER_REGISTERING,
+        PREORDER_REGISTERED,
+        USERNAME_REGISTERING,
+        USERNAME_REGISTERED
     }
-
-    fun nextState() {
-        if (error || state == State.DONE) {
-            state = when (state) {
-                State.PROCESSING_PAYMENT -> State.CREATING_IDENTITY
-                State.CREATING_IDENTITY -> State.REGISTERING_USERNAME
-                State.REGISTERING_USERNAME -> State.DONE
-                else -> State.PROCESSING_PAYMENT
-            }
-            error = false
-        } else {
-            error = true
-        }
-    }
-
 }

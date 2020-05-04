@@ -11,7 +11,7 @@ class ProcessingIdentityViewHolder(itemView: View) : RecyclerView.ViewHolder(ite
 
     fun bind(identityCreationState: IdentityCreationState) {
         if (identityCreationState.error) {
-            if (identityCreationState.state == IdentityCreationState.State.REGISTERING_USERNAME) {
+            if (identityCreationState.state == IdentityCreationState.State.USERNAME_REGISTERING) {
                 itemView.title.text = itemView.context.getString(R.string.processing_username_unavailable_title)
                 itemView.subtitle.visibility = View.VISIBLE
                 itemView.icon.setImageResource(R.drawable.ic_username_unavailable)
@@ -29,7 +29,7 @@ class ProcessingIdentityViewHolder(itemView: View) : RecyclerView.ViewHolder(ite
             itemView.subtitle.visibility = View.VISIBLE
             itemView.icon.setImageResource(R.drawable.identity_processing)
             (itemView.icon.drawable as AnimationDrawable).start()
-            if (identityCreationState.state == IdentityCreationState.State.DONE) {
+            if (identityCreationState.state == IdentityCreationState.State.USERNAME_REGISTERED) {
                 itemView.icon.visibility = View.GONE
             } else {
                 itemView.icon.visibility = View.VISIBLE
@@ -39,23 +39,30 @@ class ProcessingIdentityViewHolder(itemView: View) : RecyclerView.ViewHolder(ite
         }
 
         when (identityCreationState.state) {
-            IdentityCreationState.State.PROCESSING_PAYMENT -> {
+            IdentityCreationState.State.UPGRADING_WALLET,
+            IdentityCreationState.State.CREDIT_FUNDING_TX_CREATING,
+            IdentityCreationState.State.CREDIT_FUNDING_TX_SENDING,
+            IdentityCreationState.State.CREDIT_FUNDING_TX_SENT,
+            IdentityCreationState.State.CREDIT_FUNDING_TX_CONFIRMED -> {
                 itemView.progress.visibility = View.VISIBLE
                 itemView.progress.progress = 25
                 itemView.subtitle.setText(R.string.processing_home_step_1)
             }
-            IdentityCreationState.State.CREATING_IDENTITY -> {
+            IdentityCreationState.State.IDENTITY_REGISTERING,
+            IdentityCreationState.State.IDENTITY_REGISTERED -> {
                 itemView.progress.progress = 50
                 itemView.subtitle.setText(R.string.processing_home_step_2)
             }
-            IdentityCreationState.State.REGISTERING_USERNAME -> {
+            IdentityCreationState.State.PREORDER_REGISTERING,
+            IdentityCreationState.State.PREORDER_REGISTERED,
+            IdentityCreationState.State.USERNAME_REGISTERING -> {
                 itemView.progress.progress = 75
                 itemView.subtitle.setText(
                         if (identityCreationState.error) R.string.processing_username_unavailable_subtitle
                         else R.string.processing_home_step_3
                 )
             }
-            IdentityCreationState.State.DONE -> {
+            IdentityCreationState.State.USERNAME_REGISTERED -> {
                 itemView.forward_arrow.visibility = View.VISIBLE
                 itemView.progress.visibility = View.GONE
                 itemView.title.text = itemView.context.getString(R.string.processing_done_title,

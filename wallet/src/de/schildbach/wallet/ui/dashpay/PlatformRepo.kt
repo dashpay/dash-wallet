@@ -15,17 +15,16 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
-import com.google.common.base.Preconditions
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.RegistrationResource
 import de.schildbach.wallet.livedata.RegistrationStep
 import de.schildbach.wallet.livedata.Resource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.crypto.KeyCrypter
 import org.bitcoinj.wallet.DeterministicSeed
-import org.bitcoinj.wallet.SendRequest
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dashevo.dashpay.BlockchainIdentity
 import org.dashevo.dpp.document.Document
@@ -43,7 +42,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val response = platform.client.getStatus()
             Resource.success(response!!.connections > 0 && response.errors.isBlank() &&
                     Constants.NETWORK_PARAMETERS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM) >= response.protocolVersion)
-        } catch(e: Exception) {
+        } catch (e: Exception) {
             Resource.error(e.localizedMessage, null)
         }
     }
@@ -60,13 +59,23 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
+    suspend fun addWalletAuthenticationKeysAsync(seed: DeterministicSeed, keyParameter: KeyParameter?) {
+        withContext(Dispatchers.IO) {
+            val wallet = walletApplication.wallet
+            val hasKeys = wallet.hasAuthenticationKeyChains()
+            if (!hasKeys) {
+                wallet.initializeAuthenticationKeyChains(seed, keyParameter)
+            }
+        }
+    }
+
     //
     // Step 1 is to upgrade the wallet to support AuthenticationKeyChains
     //
     fun addWalletAuthenticationKeys(seed: DeterministicSeed, keyParameter: KeyParameter?): RegistrationResource<Boolean> {
         val wallet = walletApplication.wallet
         val hasKeys = wallet.hasAuthenticationKeyChains()
-        if(!hasKeys) {
+        if (!hasKeys) {
             wallet.initializeAuthenticationKeyChains(seed, keyParameter)
             return RegistrationResource.success(RegistrationStep.UPGRADING_WALLET, hasKeys)
         }
@@ -76,12 +85,21 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     //
     // Step 2 is to create the credit funding transaction
     //
-    fun createCreditFundingTransaction(blockchainIdentity: BlockchainIdentity) : RegistrationResource<Boolean> {
+    suspend fun createCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity) {
+        withContext(Dispatchers.IO) {
+            blockchainIdentity.sendCreditFundingTransaction(Coin.CENT)
+        }
+    }
+
+    //
+    // Step 2 is to create the credit funding transaction
+    //
+    fun createCreditFundingTransaction(blockchainIdentity: BlockchainIdentity): RegistrationResource<Boolean> {
         return try {
             blockchainIdentity.sendCreditFundingTransaction(Coin.CENT)
             return RegistrationResource.success(RegistrationStep.CREDIT_FUNDING_TX_SENDING, true)
         } catch (e: Exception) {
-            RegistrationResource.error(RegistrationStep.CREDIT_FUNDING_TX_SENDING, e,null)
+            RegistrationResource.error(RegistrationStep.CREDIT_FUNDING_TX_SENDING, e, null)
         }
     }
 
@@ -91,7 +109,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             RegistrationResource.success(RegistrationStep.IDENTITY_REGISTERING, true)
 
         } catch (e: Exception) {
-            RegistrationResource.error(RegistrationStep.IDENTITY_REGISTERING, e,null)
+            RegistrationResource.error(RegistrationStep.IDENTITY_REGISTERING, e, null)
         }
     }
 
