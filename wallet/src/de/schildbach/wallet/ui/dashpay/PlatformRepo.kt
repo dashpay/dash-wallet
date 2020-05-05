@@ -21,14 +21,19 @@ import de.schildbach.wallet.livedata.RegistrationResource
 import de.schildbach.wallet.livedata.RegistrationStep
 import de.schildbach.wallet.livedata.Resource
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Context
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.crypto.KeyCrypter
+import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dashevo.dashpay.BlockchainIdentity
 import org.dashevo.dpp.document.Document
 import org.dashevo.platform.Platform
+import java.util.concurrent.TimeoutException
 
 class PlatformRepo(val walletApplication: WalletApplication) {
 
@@ -77,7 +82,6 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         val hasKeys = wallet.hasAuthenticationKeyChains()
         if (!hasKeys) {
             wallet.initializeAuthenticationKeyChains(seed, keyParameter)
-            return RegistrationResource.success(RegistrationStep.UPGRADING_WALLET, hasKeys)
         }
         return RegistrationResource.success(RegistrationStep.UPGRADING_WALLET, hasKeys)
     }
@@ -85,60 +89,70 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     //
     // Step 2 is to create the credit funding transaction
     //
-    suspend fun createCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity) {
+    suspend fun createCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
-            blockchainIdentity.sendCreditFundingTransaction(Coin.CENT)
+            Context.propagate(walletApplication.wallet.context)
+            val cftx = blockchainIdentity.createCreditFundingTransaction(Coin.CENT, keyParameter)
+            blockchainIdentity.initializeCreditFundingTransaction(cftx)
         }
     }
 
     //
     // Step 2 is to create the credit funding transaction
     //
-    fun createCreditFundingTransaction(blockchainIdentity: BlockchainIdentity): RegistrationResource<Boolean> {
+    fun createCreditFundingTransaction(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?): RegistrationResource<CreditFundingTransaction> {
         return try {
-            blockchainIdentity.sendCreditFundingTransaction(Coin.CENT)
-            return RegistrationResource.success(RegistrationStep.CREDIT_FUNDING_TX_SENDING, true)
+            val cftx = blockchainIdentity.createCreditFundingTransaction(Coin.CENT, keyParameter)
+            RegistrationResource.success(RegistrationStep.CREDIT_FUNDING_TX_SENDING, cftx)
         } catch (e: Exception) {
             RegistrationResource.error(RegistrationStep.CREDIT_FUNDING_TX_SENDING, e, null)
         }
     }
 
-    fun registerIdentity(blockchainIdentity: BlockchainIdentity): RegistrationResource<Boolean> {
-        return try {
-            blockchainIdentity.registerIdentity()
-            RegistrationResource.success(RegistrationStep.IDENTITY_REGISTERING, true)
-
-        } catch (e: Exception) {
-            RegistrationResource.error(RegistrationStep.IDENTITY_REGISTERING, e, null)
+    suspend fun registerIdentityAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
+        withContext(Dispatchers.IO) {
+            blockchainIdentity.registerIdentity(keyParameter)
         }
     }
 
-    suspend fun isIdentityRegistered(blockchainIdentity: BlockchainIdentity): RegistrationResource<Boolean> {
-        return try {
-            blockchainIdentity.monitorForBlockchainIdentityWithRetryCount(10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
-            RegistrationResource.success(RegistrationStep.IDENTITY_REGISTERED, true)
-        } catch (e: Exception) {
-            RegistrationResource.error(RegistrationStep.IDENTITY_REGISTERED, e, false)
+    suspend fun verifyIdentityRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
+        withContext(Dispatchers.IO) {
+            blockchainIdentity.watchIdentity(10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
+                    ?: throw TimeoutException("the identity was not found to be registered in the allotted amount of time")
         }
     }
 
-    fun preorderName(blockchainIdentity: BlockchainIdentity): RegistrationResource<Boolean> {
-        return try {
+    suspend fun preorderNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
+        withContext(Dispatchers.IO) {
             val names = blockchainIdentity.getUnregisteredUsernames()
-            blockchainIdentity.registerPreorderedSaltedDomainHashesForUsernames(names)
-            RegistrationResource.success(RegistrationStep.PREORDER_REGISTERING, true)
-        } catch (e: Exception) {
-            RegistrationResource.error(RegistrationStep.PREORDER_REGISTERING, e, false)
+            blockchainIdentity.registerPreorderedSaltedDomainHashesForUsernames(names, keyParameter)
         }
     }
 
-    fun registerName(blockchainIdentity: BlockchainIdentity): RegistrationResource<Boolean> {
-        return try {
-            val names = blockchainIdentity.getUnregisteredUsernames()
-            blockchainIdentity.registerUsernameDomainsForUsernames(names)
-            RegistrationResource.success(RegistrationStep.USERNAME_REGISTERING, true)
-        } catch (e: Exception) {
-            RegistrationResource.error(RegistrationStep.USERNAME_REGISTERING, e, false)
+    suspend fun isNamePreorderedAsync(blockchainIdentity: BlockchainIdentity) {
+        withContext(Dispatchers.IO) {
+            val set = blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.PREORDER_REGISTRATION_PENDING)
+            val saltedDomainHashes = blockchainIdentity.saltedDomainHashesForUsernames(set)
+            val (result, usernames) = blockchainIdentity.watchPreorder(saltedDomainHashes, 10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
+            if(!result) {
+                throw TimeoutException("the usernames: $usernames were not found to be preordered in the allotted amount of time")
+            }
+        }
+    }
+
+    suspend fun registerNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
+        withContext(Dispatchers.IO) {
+            val names = blockchainIdentity.preorderedUsernames()
+            blockchainIdentity.registerUsernameDomainsForUsernames(names, keyParameter)
+        }
+    }
+
+    suspend fun isNameRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
+        withContext(Dispatchers.IO) {
+            val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.REGISTRATION_PENDING), 10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
+            if(!result) {
+                throw TimeoutException("the usernames: $usernames were not found to be registered in the allotted amount of time")
+            }
         }
     }
 }
