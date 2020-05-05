@@ -32,7 +32,9 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.IdentityCreationState
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService.Companion.createIntent
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
@@ -58,7 +60,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private val fadeOutAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.fade_out) }
     private lateinit var completeUsername: String
     private lateinit var dashPayViewModel: DashPayViewModel
-    private lateinit var securityGuard: SecurityGuard
+//    private lateinit var securityGuard: SecurityGuard
     private lateinit var walletApplication: WalletApplication
 
 
@@ -100,8 +102,18 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             //get key parameter
             val username = username.text.toString()
             if (wallet.isEncrypted) {
-//                handleDecryptPIN(securityGuard.retrievePassword())
                 ContextCompat.startForegroundService(this, createIntent(this, username))
+
+                // finish this activity on error or when registration is complete
+                AppDatabase.getAppDatabase().identityCreationStateDao().load().observe(this, Observer {
+                    if (it != null && it.error) {
+                        finish()
+                    } else when (it?.state) {
+                        IdentityCreationState.State.USERNAME_REGISTERED -> {
+                            finish()
+                        }
+                    }
+                })
             } else {
                 dashPayViewModel.createUsername(username, wallet.keyChainSeed, null)
             }
@@ -139,27 +151,27 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             }
         })
 
-        dashPayViewModel.createUsernameLiveData.observe(this, Observer {
-            when(it.status) {
-                Status.LOADING -> {
+//        dashPayViewModel.createUsernameLiveData.observe(this, Observer {
+//            when(it.status) {
+//                Status.LOADING -> {
+//
+//                }
+//                Status.SUCCESS -> {
+//
+//                }
+//                Status.ERROR -> {
+//
+//                }
+//            }
+//        })
 
-                }
-                Status.SUCCESS -> {
-
-                }
-                Status.ERROR -> {
-
-                }
-            }
-        })
-
-        try {
-            securityGuard = SecurityGuard()
-        } catch (e: Exception) {
-            log.error("Unable to instantiate SecurityGuard", e)
-            finish()
-            return
-        }
+//        try {
+//            securityGuard = SecurityGuard()
+//        } catch (e: Exception) {
+//            log.error("Unable to instantiate SecurityGuard", e)
+//            finish()
+//            return
+//        }
     }
 
 
@@ -231,18 +243,18 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         if (username != null) {
             val usernameIsValid = validateUsernameCharacters(username) && validateUsernameSize(username)
 
-            if(usernameIsValid) {
+            if (usernameIsValid) {
                 register_btn.isEnabled = true
                 username_exists_req_label.visibility = View.GONE
                 username_exists_req_img.visibility = View.GONE
             }
 
-//            if(usernameIsValid) //ensure username meets basic rules before making a Platform query
-//                checkUsernameNotExist(username)
-//            else {
-//                username_exists_req_label.visibility = View.GONE
-//                username_exists_req_img.visibility = View.GONE
-//            }
+            if (usernameIsValid) //ensure username meets basic rules before making a Platform query
+                checkUsernameNotExist(username)
+            else {
+                username_exists_req_label.visibility = View.GONE
+                username_exists_req_img.visibility = View.GONE
+            }
         }
     }
 
@@ -276,33 +288,33 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
     }
 
-    private fun handleDecryptPIN(password: String) {
-        if (walletApplication.wallet.isEncrypted()) {
-            object : DeriveKeyTask(handler, walletApplication.scryptIterationsTarget()) {
-                override fun onSuccess(encryptionKey: KeyParameter, wasChanged: Boolean) {
-                    handleDecryptSeed(encryptionKey, password)
-                }
-            }.deriveKey(walletApplication.wallet, password)
-        } else {
-            walletApplication.wallet.initializeAuthenticationKeyChains(walletApplication.wallet.keyChainSeed, null)
-        }
-    }
-
-    private fun handleDecryptSeed(encryptionKey: KeyParameter, password: String) {
-        val wallet: Wallet = walletApplication.wallet
-        val username = username.text.toString()
-        if (wallet.isEncrypted) {
-            object : DecryptSeedTask(handler) {
-                override fun onSuccess(seed: DeterministicSeed) {
-                    dashPayViewModel.createUsername(username, seed, encryptionKey)
-                }
-
-                override fun onBadPassphrase() { // can this happen?
-                }
-            }.decryptSeed(wallet.activeKeyChain.seed, wallet.keyCrypter, encryptionKey)
-        } else {
-            dashPayViewModel.createUsername(username, wallet.keyChainSeed, null)
-        }
-    }
+//    private fun handleDecryptPIN(password: String) {
+//        if (walletApplication.wallet.isEncrypted()) {
+//            object : DeriveKeyTask(handler, walletApplication.scryptIterationsTarget()) {
+//                override fun onSuccess(encryptionKey: KeyParameter, wasChanged: Boolean) {
+//                    handleDecryptSeed(encryptionKey, password)
+//                }
+//            }.deriveKey(walletApplication.wallet, password)
+//        } else {
+//            walletApplication.wallet.initializeAuthenticationKeyChains(walletApplication.wallet.keyChainSeed, null)
+//        }
+//    }
+//
+//    private fun handleDecryptSeed(encryptionKey: KeyParameter, password: String) {
+//        val wallet: Wallet = walletApplication.wallet
+//        val username = username.text.toString()
+//        if (wallet.isEncrypted) {
+//            object : DecryptSeedTask(handler) {
+//                override fun onSuccess(seed: DeterministicSeed) {
+//                    dashPayViewModel.createUsername(username, seed, encryptionKey)
+//                }
+//
+//                override fun onBadPassphrase() { // can this happen?
+//                }
+//            }.decryptSeed(wallet.activeKeyChain.seed, wallet.keyCrypter, encryptionKey)
+//        } else {
+//            dashPayViewModel.createUsername(username, wallet.keyChainSeed, null)
+//        }
+//    }
 
 }
