@@ -22,6 +22,7 @@ import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import kotlin.random.Random
 
 
 class CreateIdentityService : LifecycleService() {
@@ -37,7 +38,7 @@ class CreateIdentityService : LifecycleService() {
         fun createIntent(context: Context, username: String): Intent {
             return Intent(context, CreateIdentityService::class.java).apply {
                 action = ACTION_CREATE_IDENTITY
-                putExtra(EXTRA_USERNAME, "username")
+                putExtra(EXTRA_USERNAME, username)
             }
         }
     }
@@ -99,8 +100,11 @@ class CreateIdentityService : LifecycleService() {
 
     private suspend fun createIdentity(username: String) {
 
-        identityCreationState = identityCreationStateDaoAsync.load()
-                ?: IdentityCreationState(IdentityCreationState.State.UPGRADING_WALLET, false, username)
+        //identityCreationState = identityCreationStateDaoAsync.load()
+        //        ?: IdentityCreationState(IdentityCreationState.State.UPGRADING_WALLET, false, username)
+        identityCreationState = IdentityCreationState(IdentityCreationState.State.UPGRADING_WALLET, false, username)
+        identityCreationStateDaoAsync.insert(identityCreationState)
+
         if (identityCreationState.state != IdentityCreationState.State.UPGRADING_WALLET || identityCreationState.error) {
             log.info("resuming identity creation process [${identityCreationState.state}${if (identityCreationState.error) "(error)" else ""}]")
         }
@@ -112,8 +116,7 @@ class CreateIdentityService : LifecycleService() {
         val encryptionKey = deriveKey(handler, wallet, password)
         val seed = decryptSeed(handler, wallet, encryptionKey)
 
-        val usernameInfo = CreateUsernameInfo(username, seed, encryptionKey)
-
+//        val usernameInfo = CreateUsernameInfo(username, seed, encryptionKey)
 
 
         platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
@@ -122,10 +125,12 @@ class CreateIdentityService : LifecycleService() {
 
         //create the Blockchain Identity object (this needs to be saved somewhere eventually)
         val blockchainIdentity = BlockchainIdentity(Identity.IdentityType.USER, 0, wallet)
-        platformRepo.createCreditFundingTransactionAsync(blockchainIdentity)
+
+        platformRepo.createCreditFundingTransactionAsync(blockchainIdentity, encryptionKey)
+
+        walletApplication.broadcastTransaction(blockchainIdentity.creditFundingTransaction)
 
         updateState(IdentityCreationState.State.CREDIT_FUNDING_TX_SENT)
-
 
         println("step2")
         updateState(IdentityCreationState.State.CREDIT_FUNDING_TX_CONFIRMED)
@@ -135,24 +140,32 @@ class CreateIdentityService : LifecycleService() {
         updateState(IdentityCreationState.State.IDENTITY_REGISTERING)
         delay2s()
 
-        println("step4")
+        updateState(IdentityCreationState.State.IDENTITY_REGISTERING)
+
+        platformRepo.registerIdentityAsync(blockchainIdentity, encryptionKey)
+
+        delay2s()
+
         updateState(IdentityCreationState.State.IDENTITY_REGISTERED)
+        platformRepo.verifyIdentityRegisteredAsync(blockchainIdentity)
         delay2s()
 
-        println("step5")
         updateState(IdentityCreationState.State.PREORDER_REGISTERING)
+        blockchainIdentity.addUsername(username)
+
+        platformRepo.preorderNameAsync(blockchainIdentity, encryptionKey)
         delay2s()
 
-        println("step6")
         updateState(IdentityCreationState.State.PREORDER_REGISTERED)
+        platformRepo.isNamePreorderedAsync(blockchainIdentity)
         delay2s()
 
-        println("step7")
         updateState(IdentityCreationState.State.USERNAME_REGISTERING)
+        platformRepo.registerNameAsync(blockchainIdentity, encryptionKey)
         delay2s()
 
-        println("step8")
         updateState(IdentityCreationState.State.USERNAME_REGISTERED)
+        platformRepo.isNameRegisteredAsync(blockchainIdentity)
         delay2s()
 
         // aaaand we're done :)
