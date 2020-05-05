@@ -265,6 +265,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             } else {
                 username_exists_req_label.visibility = View.GONE
                 username_exists_req_img.visibility = View.GONE
+                register_btn.isEnabled = false
             }
         }
     }
