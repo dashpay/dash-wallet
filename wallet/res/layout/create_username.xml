@@ -96,19 +96,38 @@
                 app:layout_constraintStart_toEndOf="@id/alphanum_req_img"
                 app:layout_constraintTop_toTopOf="@id/alphanum_req_img" />
 
-            <ImageView
-                android:id="@+id/username_exists_req_img"
+            <FrameLayout
+                android:id="@+id/username_exists_req"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="30dp"
-                android:layout_marginLeft="30dp"
                 android:layout_marginTop="20dp"
-                android:visibility="invisible"
                 app:layout_constraintLeft_toLeftOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/alphanum_req_img"
-                app:srcCompat="@drawable/ic_username_requirement_x"
-                tools:visibility="visible" />
+                app:layout_constraintTop_toBottomOf="@id/alphanum_req_img">
+
+                <ImageView
+                    android:id="@+id/username_exists_req_img"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:visibility="invisible"
+                    app:srcCompat="@drawable/ic_username_requirement_x"
+                    tools:ignore="ContentDescription"
+                    tools:visibility="visible" />
+
+                <ProgressBar
+                    android:id="@+id/username_exists_req_progress"
+                    style="?android:attr/progressBarStyleSmall"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:layout_gravity="center"
+                    android:indeterminate="true"
+                    android:indeterminateTint="@color/dark_text"
+                    android:visibility="invisible"
+                    tools:targetApi="lollipop"
+                    tools:visibility="visible" />
+
+            </FrameLayout>
 
             <TextView
                 android:id="@+id/username_exists_req_label"
@@ -116,16 +135,15 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:layout_marginLeft="8dp"
-                android:visibility="invisible"
-                android:text="@string/identity_exists_on_network"
+                android:text="@string/identity_username_taken"
                 android:textColor="@color/dash_red"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                app:layout_constraintBottom_toBottomOf="@id/username_exists_req_img"
-                app:layout_constraintLeft_toRightOf="@id/username_exists_req_img"
-                app:layout_constraintStart_toEndOf="@id/username_exists_req_img"
-                app:layout_constraintTop_toTopOf="@id/username_exists_req_img" />
+                android:visibility="invisible"
+                app:layout_constraintBottom_toBottomOf="@id/username_exists_req"
+                app:layout_constraintLeft_toRightOf="@id/username_exists_req"
+                app:layout_constraintStart_toEndOf="@id/username_exists_req"
+                app:layout_constraintTop_toTopOf="@id/username_exists_req" />
 
             <Button
                 android:id="@+id/register_btn"
