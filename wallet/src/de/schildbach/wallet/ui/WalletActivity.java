@@ -277,8 +277,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         joinDashPayAction.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                startActivity(new Intent(WalletActivity.this, CreateUsernameActivity.class));
-                ContextCompat.startForegroundService(WalletActivity.this, CreateIdentityService.createIntent(WalletActivity.this, "username"));
+                startActivity(new Intent(WalletActivity.this, CreateUsernameActivity.class));
             }
         });
         showHideJoinDashPayAction();
@@ -333,7 +332,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void showHideJoinDashPayAction() {
-        if (syncComplete){// && isPlatformAvailable) {
+        if (syncComplete && isPlatformAvailable) {
             final Coin walletBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED);
             boolean canAffordIt = walletBalance.isGreaterThan(Constants.DASH_PAY_FEE)
                     || walletBalance.equals(Constants.DASH_PAY_FEE);
