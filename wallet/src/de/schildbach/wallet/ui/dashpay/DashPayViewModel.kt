@@ -86,7 +86,7 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
 
             // STEP 2a: create funding transaction
             emit(RegistrationResource.loading(RegistrationStep.CREDIT_FUNDING_TX_CREATING, null))
-            val status = platformRepo.createCreditFundingTransaction(blockchainIdentity)
+            val status = platformRepo.createCreditFundingTransaction(blockchainIdentity, usernameInfo.keyParameter)
             emit(status)
             if (status.status == Status.ERROR) {
                 return@liveData
