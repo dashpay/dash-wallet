@@ -43,6 +43,7 @@ import de.schildbach.wallet_test.R;
  */
 public final class UpgradeWalletService extends IntentService {
     public static void startUpgrade(final Context context) {
+        log.info("Starting upgrade service");
         ContextCompat.startForegroundService(context, new Intent(context,
                 UpgradeWalletService.class));
     }

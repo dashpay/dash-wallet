@@ -49,6 +49,7 @@ import androidx.core.content.ContextCompat;
  */
 public final class InactivityNotificationService extends Service {
     public static void startMaybeShowNotification(final Context context) {
+        log.info("Starting inactivity service");
         ContextCompat.startForegroundService(context, new Intent(context, InactivityNotificationService.class));
     }
 

@@ -689,7 +689,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         final PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, lockName);
-
+        //start service as a Foreground Service if it's synchronizing the blockchain
+        startForeground();
         application = (WalletApplication) getApplication();
         config = application.getConfiguration();
         final Wallet wallet = application.getWallet();
@@ -783,14 +784,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     @Override
     public int onStartCommand(final Intent intent, final int flags, final int startId) {
+        log.info("BlockchainServiceInfo.onStartCommand " + (System.currentTimeMillis()-serviceCreatedAt));
         super.onStartCommand(intent, flags, startId);
 
         if (intent != null) {
-            //Restart service as a Foreground Service if it's synchronizing the blockchain
-            Bundle extras = intent.getExtras();
-            if (extras != null && extras.containsKey(START_AS_FOREGROUND_EXTRA)) {
-                startForeground();
-            }
 
             log.info("service start command: " + intent + (intent.hasExtra(Intent.EXTRA_ALARM_COUNT)
                     ? " (alarm count: " + intent.getIntExtra(Intent.EXTRA_ALARM_COUNT, 0) + ")" : ""));
@@ -859,7 +856,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     public void onDestroy() {
         log.debug(".onDestroy()");
 
-        WalletApplication.scheduleStartBlockchainService(this);  //disconnect feature
+        //This is not part of Bitcoin Wallet and may be a leftover from
+        //having a Disconnect command on the Navigation menu v6 and prior
+        //WalletApplication.scheduleStartBlockchainService(this);  //disconnect feature
 
         unregisterReceiver(tickReceiver);
 

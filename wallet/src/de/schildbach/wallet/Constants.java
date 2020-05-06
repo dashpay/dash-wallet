@@ -230,11 +230,11 @@ public final class Constants {
 
     public static final int MEMORY_CLASS_LOWEND = 64;
 
-    public static final int NOTIFICATION_ID_CONNECTED = 0;
-    public static final int NOTIFICATION_ID_COINS_RECEIVED = 1;
-    public static final int NOTIFICATION_ID_INACTIVITY = 2;
-    public static final int NOTIFICATION_ID_BLOCKCHAIN_SYNC = 3;
-    public static final int NOTIFICATION_ID_UPGRADE_WALLET = 4;
+    public static final int NOTIFICATION_ID_CONNECTED = 1;
+    public static final int NOTIFICATION_ID_COINS_RECEIVED = 2;
+    public static final int NOTIFICATION_ID_INACTIVITY = 3;
+    public static final int NOTIFICATION_ID_BLOCKCHAIN_SYNC = 4;
+    public static final int NOTIFICATION_ID_UPGRADE_WALLET = 5;
 
     public static String NOTIFICATION_CHANNEL_ID_TRANSACTIONS = "dash.notifications.transactions";
     public static String NOTIFICATION_CHANNEL_ID_ONGOING = "dash.notifications.ongoing";

@@ -41,6 +41,7 @@ import android.widget.Toast;
 
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.multidex.MultiDexApplication;
 
@@ -570,12 +571,14 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     }
 
     public void startBlockchainService(final boolean cancelCoinsReceived) {
+        log.info("Starting blockchain service (" + cancelCoinsReceived + ")");
+        Context context = getApplicationContext();
         if (cancelCoinsReceived) {
             Intent blockchainServiceCancelCoinsReceivedIntent = new Intent(BlockchainService.ACTION_CANCEL_COINS_RECEIVED, null,
                     this, BlockchainServiceImpl.class);
-            startService(blockchainServiceCancelCoinsReceivedIntent);
+            ContextCompat.startForegroundService(context, blockchainServiceCancelCoinsReceivedIntent);
         } else {
-            startService(blockchainServiceIntent);
+            ContextCompat.startForegroundService(context, blockchainServiceIntent);
         }
     }
 
@@ -594,10 +597,11 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
 
     public void resetBlockchain() {
         // implicitly stops blockchain service
+        log.info("Starting reset service");
         resetBlockchainState();
         Intent blockchainServiceResetBlockchainIntent = new Intent(BlockchainService.ACTION_RESET_BLOCKCHAIN, null, this,
                 BlockchainServiceImpl.class);
-        startService(blockchainServiceResetBlockchainIntent);
+        ContextCompat.startForegroundService(this, blockchainServiceResetBlockchainIntent);
     }
 
     public void replaceWallet(final Wallet newWallet) {
@@ -623,10 +627,11 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     }
 
     public void broadcastTransaction(final Transaction tx) {
+        log.info("Starting broadcast service");
         final Intent intent = new Intent(BlockchainService.ACTION_BROADCAST_TRANSACTION, null, this,
                 BlockchainServiceImpl.class);
         intent.putExtra(BlockchainService.ACTION_BROADCAST_TRANSACTION_HASH, tx.getHash().getBytes());
-        startService(intent);
+        ContextCompat.startForegroundService(getApplicationContext(), intent);
     }
 
     public static PackageInfo packageInfoFromContext(final Context context) {
@@ -705,7 +710,8 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
 
         Intent serviceIntent = new Intent(context, BlockchainServiceImpl.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            serviceIntent.putExtra(BlockchainServiceImpl.START_AS_FOREGROUND_EXTRA, true);
+            //serviceIntent.putExtra(BlockchainServiceImpl.START_AS_FOREGROUND_EXTRA, true);
+            log.info("get pending intent: getForegroundService");
             alarmIntent = PendingIntent.getForegroundService(context, 0, serviceIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT);
         } else {
@@ -726,7 +732,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     public void triggerWipe(final Context context) {
         log.info("Removing all the data and restarting the app.");
 
-        startService(new Intent(BlockchainService.ACTION_WIPE_WALLET, null, this, BlockchainServiceImpl.class));
+        ContextCompat.startForegroundService(context, new Intent(BlockchainService.ACTION_WIPE_WALLET, null, this, BlockchainServiceImpl.class));
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")

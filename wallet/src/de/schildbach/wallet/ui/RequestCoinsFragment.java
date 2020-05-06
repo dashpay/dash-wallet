@@ -45,6 +45,8 @@ import de.schildbach.wallet.util.Toast;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
+
+import androidx.core.content.ContextCompat;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import android.bluetooth.BluetoothAdapter;
@@ -279,11 +281,12 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
     }
 
    private boolean maybeStartBluetoothListening() {
+        log.info("Starting bluetooth listening");
         final String bluetoothAddress = Bluetooth.getAddress(bluetoothAdapter);
         if (bluetoothAddress != null) {
             bluetoothMac = Bluetooth.compressMac(bluetoothAddress);
             bluetoothServiceIntent = new Intent(activity, AcceptBluetoothService.class);
-            activity.startService(bluetoothServiceIntent);
+            ContextCompat.startForegroundService(activity, bluetoothServiceIntent);
             return true;
         } else {
             return false;
