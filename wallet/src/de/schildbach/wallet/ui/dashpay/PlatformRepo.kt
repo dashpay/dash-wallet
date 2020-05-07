@@ -81,7 +81,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     }
 
     //
-    // Step 2 is to create the credit funding transaction
+    // Step 3: Register the identity
     //
     suspend fun registerIdentityAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
@@ -89,6 +89,9 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
+    //
+    // Step 3: Verify that the identity is registered
+    //
     suspend fun verifyIdentityRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
             blockchainIdentity.watchIdentity(10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
@@ -96,6 +99,9 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
+    //
+    // Step 4: Preorder the username
+    //
     suspend fun preorderNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
             val names = blockchainIdentity.getUnregisteredUsernames()
@@ -103,6 +109,9 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
+    //
+    // Step 4: Verify that the username was preordered
+    //
     suspend fun isNamePreorderedAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
             val set = blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.PREORDER_REGISTRATION_PENDING)
@@ -114,6 +123,9 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
+    //
+    // Step 5: Register the username
+    //
     suspend fun registerNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
             val names = blockchainIdentity.preorderedUsernames()
@@ -121,6 +133,9 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
+    //
+    // Step 5: Verify that the username was registered
+    //
     suspend fun isNameRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
             val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.REGISTRATION_PENDING), 10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
