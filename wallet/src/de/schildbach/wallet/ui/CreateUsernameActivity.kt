@@ -87,15 +87,16 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
         walletApplication = application as WalletApplication
 
+        initViewModel()
+    }
+
+    private fun initViewModel() {
         val confirmTransactionSharedViewModel = ViewModelProviders.of(this)
                 .get(SingleActionSharedViewModel::class.java)
         confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
-            // setup the wallet
-            val wallet = (application as WalletApplication).wallet
 
-            //get key parameter
             val username = username.text.toString()
-            if (wallet.isEncrypted) {
+            if (walletApplication.wallet.isEncrypted) {
                 ContextCompat.startForegroundService(this, createIntent(this, username))
 
                 // finish this activity on error or when registration is complete
@@ -157,28 +158,6 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
                 }
             }
         })
-
-//        dashPayViewModel.createUsernameLiveData.observe(this, Observer {
-//            when(it.status) {
-//                Status.LOADING -> {
-//
-//                }
-//                Status.SUCCESS -> {
-//
-//                }
-//                Status.ERROR -> {
-//
-//                }
-//            }
-//        })
-
-//        try {
-//            securityGuard = SecurityGuard()
-//        } catch (e: Exception) {
-//            log.error("Unable to instantiate SecurityGuard", e)
-//            finish()
-//            return
-//        }
     }
 
 
