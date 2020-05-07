@@ -111,7 +111,7 @@ class PaymentsPayFragment : Fragment() {
     }
 
     private fun handleString(input: String, fireAction: Boolean, errorDialogTitleResId: Int) {
-        object : InputParser.StringInputParser(input) {
+        object : InputParser.StringInputParser(input, true) {
 
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
                 if (fireAction) {

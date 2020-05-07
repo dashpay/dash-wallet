@@ -77,7 +77,7 @@ public class SendCoinsQrActivity extends ShortcutComponentActivity {
         if (requestCode == REQUEST_CODE_SCAN && resultCode == Activity.RESULT_OK) {
             final String input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT);
 
-            new StringInputParser(input) {
+            new StringInputParser(input, true) {
                 @Override
                 protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
                     SendCoinsActivity.start(SendCoinsQrActivity.this, paymentIntent, false);

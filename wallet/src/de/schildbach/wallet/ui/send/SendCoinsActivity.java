@@ -31,6 +31,7 @@ import android.view.MenuItem;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
+import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.dash.wallet.common.ui.DialogBuilder;
 
@@ -48,6 +49,8 @@ import de.schildbach.wallet_test.R;
  * @author Andreas Schildbach
  */
 public final class SendCoinsActivity extends AbstractBindServiceActivity {
+
+    public static final List<String> ANYPAY_SCHEMES = Arrays.asList("pay", "bitcoinsv");
 
     public static final String INTENT_EXTRA_PAYMENT_INTENT = "payment_intent";
     public static final String INTENT_EXTRA_USER_AUTHORIZED = "user_authorized";
@@ -77,8 +80,6 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity {
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        List<String> supportedSchemes = Arrays.asList("dash", "pay", "bitcoinsv");
 
         SendCoinsActivityViewModel viewModel = ViewModelProviders.of(this).get(SendCoinsActivityViewModel.class);
         viewModel.getBasePaymentIntent().observe(this, new Observer<Resource<PaymentIntent>>() {
@@ -116,18 +117,18 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity {
             final String scheme = intentUri != null ? intentUri.getScheme() : null;
             final String mimeType = intent.getType();
 
-            if ((Intent.ACTION_VIEW.equals(action) || NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)) && intentUri != null && supportedSchemes.contains(scheme)) {
-
+            if ((Intent.ACTION_VIEW.equals(action) || NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action))
+                    && intentUri != null && (CoinDefinition.coinURIScheme.equals(scheme) || ANYPAY_SCHEMES.contains(scheme))) {
                 viewModel.initStateFromDashUri(intentUri);
 
-            } else if ((NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)) && PaymentProtocol.MIMETYPE_PAYMENTREQUEST.equals(mimeType)) {
+            } else if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action) && PaymentProtocol.MIMETYPE_PAYMENTREQUEST.equals(mimeType)) {
 
                 final NdefMessage ndefMessage = (NdefMessage) intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)[0];
                 final byte[] ndefMessagePayload = Nfc.extractMimePayload(PaymentProtocol.MIMETYPE_PAYMENTREQUEST, ndefMessage);
 
                 viewModel.initStateFromPaymentRequest(mimeType, ndefMessagePayload);
 
-            } else if ((Intent.ACTION_VIEW.equals(action)) && PaymentProtocol.MIMETYPE_PAYMENTREQUEST.equals(mimeType)) {
+            } else if (Intent.ACTION_VIEW.equals(action) && PaymentProtocol.MIMETYPE_PAYMENTREQUEST.equals(mimeType)) {
 
                 final byte[] paymentRequest = BitcoinIntegration.paymentRequestFromIntent(intent);
                 if (intentUri != null) {

@@ -153,7 +153,7 @@ public final class SendingAddressesFragment extends FancyListFragment
         if (requestCode == REQUEST_CODE_SCAN && resultCode == Activity.RESULT_OK) {
             final String input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT);
 
-            new StringInputParser(input) {
+            new StringInputParser(input, false) {
                 @Override
                 protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
                     // workaround for "IllegalStateException: Can not perform this action after
