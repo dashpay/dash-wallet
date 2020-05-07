@@ -17,17 +17,12 @@ package de.schildbach.wallet.ui.dashpay
 
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.livedata.RegistrationResource
-import de.schildbach.wallet.livedata.RegistrationStep
 import de.schildbach.wallet.livedata.Resource
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.crypto.KeyCrypter
-import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dashevo.dashpay.BlockchainIdentity
@@ -75,18 +70,6 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     }
 
     //
-    // Step 1 is to upgrade the wallet to support AuthenticationKeyChains
-    //
-    fun addWalletAuthenticationKeys(seed: DeterministicSeed, keyParameter: KeyParameter?): RegistrationResource<Boolean> {
-        val wallet = walletApplication.wallet
-        val hasKeys = wallet.hasAuthenticationKeyChains()
-        if (!hasKeys) {
-            wallet.initializeAuthenticationKeyChains(seed, keyParameter)
-        }
-        return RegistrationResource.success(RegistrationStep.UPGRADING_WALLET, hasKeys)
-    }
-
-    //
     // Step 2 is to create the credit funding transaction
     //
     suspend fun createCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
@@ -100,15 +83,6 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     //
     // Step 2 is to create the credit funding transaction
     //
-    fun createCreditFundingTransaction(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?): RegistrationResource<CreditFundingTransaction> {
-        return try {
-            val cftx = blockchainIdentity.createCreditFundingTransaction(Coin.CENT, keyParameter)
-            RegistrationResource.success(RegistrationStep.CREDIT_FUNDING_TX_SENDING, cftx)
-        } catch (e: Exception) {
-            RegistrationResource.error(RegistrationStep.CREDIT_FUNDING_TX_SENDING, e, null)
-        }
-    }
-
     suspend fun registerIdentityAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
             blockchainIdentity.registerIdentity(keyParameter)
