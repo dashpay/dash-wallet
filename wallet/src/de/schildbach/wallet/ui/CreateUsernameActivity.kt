@@ -302,34 +302,4 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
     }
-
-//    private fun handleDecryptPIN(password: String) {
-//        if (walletApplication.wallet.isEncrypted()) {
-//            object : DeriveKeyTask(handler, walletApplication.scryptIterationsTarget()) {
-//                override fun onSuccess(encryptionKey: KeyParameter, wasChanged: Boolean) {
-//                    handleDecryptSeed(encryptionKey, password)
-//                }
-//            }.deriveKey(walletApplication.wallet, password)
-//        } else {
-//            walletApplication.wallet.initializeAuthenticationKeyChains(walletApplication.wallet.keyChainSeed, null)
-//        }
-//    }
-//
-//    private fun handleDecryptSeed(encryptionKey: KeyParameter, password: String) {
-//        val wallet: Wallet = walletApplication.wallet
-//        val username = username.text.toString()
-//        if (wallet.isEncrypted) {
-//            object : DecryptSeedTask(handler) {
-//                override fun onSuccess(seed: DeterministicSeed) {
-//                    dashPayViewModel.createUsername(username, seed, encryptionKey)
-//                }
-//
-//                override fun onBadPassphrase() { // can this happen?
-//                }
-//            }.decryptSeed(wallet.activeKeyChain.seed, wallet.keyCrypter, encryptionKey)
-//        } else {
-//            dashPayViewModel.createUsername(username, wallet.keyChainSeed, null)
-//        }
-//    }
-
 }
