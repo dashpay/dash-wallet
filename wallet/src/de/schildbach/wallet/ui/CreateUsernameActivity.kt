@@ -109,7 +109,10 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
                     }
                 })
             } else {
-                dashPayViewModel.createUsername(username, wallet.keyChainSeed, null)
+                // do we need this or should we show an error message
+                // The wallet should be encrypted and this code should
+                // never be executed
+                ContextCompat.startForegroundService(this, createIntent(this, username))
             }
             showProcessingState()
         })

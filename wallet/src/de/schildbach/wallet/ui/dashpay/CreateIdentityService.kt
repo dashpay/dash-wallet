@@ -5,13 +5,18 @@ import android.content.Intent
 import android.os.Handler
 import androidx.lifecycle.LifecycleService
 import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.IdentityCreationState
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DecryptSeedTask
 import de.schildbach.wallet.ui.send.DeriveKeyTask
 import kotlinx.coroutines.*
+import org.bitcoinj.core.RejectMessage
+import org.bitcoinj.core.RejectedTransactionException
+import org.bitcoinj.core.TransactionConfidence
 import org.bitcoinj.crypto.KeyCrypterException
+import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
@@ -118,32 +123,32 @@ class CreateIdentityService : LifecycleService() {
 
 //        val usernameInfo = CreateUsernameInfo(username, seed, encryptionKey)
 
-
-        platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
-
-        updateState(IdentityCreationState.State.CREDIT_FUNDING_TX_SENDING)
-
         //create the Blockchain Identity object (this needs to be saved somewhere eventually)
         val blockchainIdentity = BlockchainIdentity(Identity.IdentityType.USER, 0, wallet)
 
+        platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
+
+        updateState(IdentityCreationState.State.CREDIT_FUNDING_TX_CREATING)
+
+
+
         platformRepo.createCreditFundingTransactionAsync(blockchainIdentity, encryptionKey)
 
-        walletApplication.broadcastTransaction(blockchainIdentity.creditFundingTransaction)
+        updateState(IdentityCreationState.State.CREDIT_FUNDING_TX_SENDING)
+        sendTransaction(blockchainIdentity.creditFundingTransaction!!)
 
+        // If the tx is in a block, seen by a peer, InstantSend lock, then it is considered confirmed
         updateState(IdentityCreationState.State.CREDIT_FUNDING_TX_SENT)
-
-        println("step2")
+        // currently there is no difference between SENT and CONFIRMED
         updateState(IdentityCreationState.State.CREDIT_FUNDING_TX_CONFIRMED)
+
         delay2s()
 
-        println("step3")
+        //
+        // Step 3: Register the identity
+        //
         updateState(IdentityCreationState.State.IDENTITY_REGISTERING)
-        delay2s()
-
-        updateState(IdentityCreationState.State.IDENTITY_REGISTERING)
-
         platformRepo.registerIdentityAsync(blockchainIdentity, encryptionKey)
-
         delay2s()
 
         updateState(IdentityCreationState.State.IDENTITY_REGISTERED)
@@ -152,7 +157,6 @@ class CreateIdentityService : LifecycleService() {
 
         updateState(IdentityCreationState.State.PREORDER_REGISTERING)
         blockchainIdentity.addUsername(username)
-
         platformRepo.preorderNameAsync(blockchainIdentity, encryptionKey)
         delay2s()
 
@@ -212,6 +216,57 @@ class CreateIdentityService : LifecycleService() {
 
                 }
             }.decryptSeed(wallet.activeKeyChain.seed, wallet.keyCrypter, encryptionKey)
+        }
+    }
+
+    private suspend fun sendTransaction(cftx: CreditFundingTransaction): Boolean {
+        return suspendCoroutine { continuation ->
+            cftx.confidence.addEventListener(object: TransactionConfidence.Listener {
+                override fun onConfidenceChanged(confidence: TransactionConfidence?, reason: TransactionConfidence.Listener.ChangeReason?) {
+                    when (reason) {
+                        // If this transaction is in a block, then it has been sent successfully
+                        TransactionConfidence.Listener.ChangeReason.DEPTH -> {
+                            confidence!!.removeEventListener(this)
+                            continuation.resumeWith(Result.success(true))
+                        }
+                        // If this transaction is InstantSend Locked, then it has been sent successfully
+                        TransactionConfidence.Listener.ChangeReason.IX_TYPE -> {
+                            if(confidence!!.isTransactionLocked) {
+                                confidence!!.removeEventListener(this)
+                                continuation.resumeWith(Result.success(true))
+                            }
+                        }
+                        // If this transaction has been seen by more than 1 peer, then it has been sent successfully
+                        TransactionConfidence.Listener.ChangeReason.SEEN_PEERS -> {
+                            if(confidence!!.numBroadcastPeers() > 1) {
+                                confidence!!.removeEventListener(this)
+                                continuation.resumeWith(Result.success(true))
+                            }
+                        }
+                        // If this transaction was rejected, then it was not sent successfully
+                        TransactionConfidence.Listener.ChangeReason.REJECT -> {
+                            if(confidence!!.hasRejections() && confidence.rejections.size >= 1) {
+                                confidence!!.removeEventListener(this)
+                                continuation.resumeWithException(confidence.rejectedTransactionException)
+                            }
+                        }
+                        TransactionConfidence.Listener.ChangeReason.TYPE -> {
+                            if(confidence!!.hasErrors()) {
+                                confidence.removeEventListener(this)
+                                val code = when(confidence.confidenceType) {
+                                    TransactionConfidence.ConfidenceType.DEAD -> RejectMessage.RejectCode.INVALID
+                                    TransactionConfidence.ConfidenceType.IN_CONFLICT -> RejectMessage.RejectCode.DUPLICATE
+                                    else -> RejectMessage.RejectCode.OTHER
+                                }
+                                val rejectMessage = RejectMessage(Constants.NETWORK_PARAMETERS, code, confidence.transactionHash,
+                                        "Credit funding transaction is dead or double-spent", "cftx-dead-or-double-spent")
+                                continuation.resumeWithException(RejectedTransactionException(cftx, rejectMessage))
+                            }
+                        }
+                    }
+                }
+            })
+            walletApplication.broadcastTransaction(cftx)
         }
     }
 
