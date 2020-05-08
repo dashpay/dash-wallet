@@ -5,6 +5,9 @@ import androidx.room.Room;
 import androidx.room.RoomDatabase;
 import androidx.room.TypeConverters;
 
+import de.schildbach.wallet.data.BlockchainIdentityData;
+import de.schildbach.wallet.data.BlockchainIdentityDataDao;
+import de.schildbach.wallet.data.BlockchainIdentityDataDaoAsync;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.data.IdentityCreationState;
@@ -17,7 +20,7 @@ import de.schildbach.wallet.rates.ExchangeRatesDao;
 /**
  * @author Samuel Barbosa
  */
-@Database(entities = {ExchangeRate.class, BlockchainState.class, IdentityCreationState.class}, version = 6)
+@Database(entities = {ExchangeRate.class, BlockchainState.class, IdentityCreationState.class, BlockchainIdentityData.class}, version = 7)
 @TypeConverters({RoomConverters.class})
 public abstract class AppDatabase extends RoomDatabase {
 
@@ -26,10 +29,13 @@ public abstract class AppDatabase extends RoomDatabase {
     public abstract ExchangeRatesDao exchangeRatesDao();
 
     public abstract BlockchainStateDao blockchainStateDao();
-
     public abstract IdentityCreationStateDao identityCreationStateDao();
 
     public abstract IdentityCreationStateDaoAsync identityCreationStateDaoAsync();
+
+    public abstract BlockchainIdentityDataDao blockchainIdentityDataDao();
+
+    public abstract BlockchainIdentityDataDaoAsync blockchainIdentityDataDaoAsync();
 
     public static AppDatabase getAppDatabase() {
         if (instance == null) {
