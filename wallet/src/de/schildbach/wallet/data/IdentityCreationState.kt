@@ -42,4 +42,12 @@ class IdentityCreationState(var state: State, var error: Boolean, var username: 
         USERNAME_REGISTERING,
         USERNAME_REGISTERED
     }
+
+    enum class Error {
+        CONNECTION,
+        TIMEOUT,
+        ALREADY_EXISTS,
+        INVALID_QUERY,
+        INVALID_TRANSITION
+    }
 }
