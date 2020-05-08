@@ -7,6 +7,7 @@ import androidx.lifecycle.LifecycleService
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.IdentityCreationState
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DecryptSeedTask
@@ -22,12 +23,12 @@ import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dashevo.dashpay.BlockchainIdentity
 import org.dashevo.dpp.identity.Identity
+import org.dashevo.platform.Names
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
-import kotlin.random.Random
 
 
 class CreateIdentityService : LifecycleService() {
@@ -53,6 +54,7 @@ class CreateIdentityService : LifecycleService() {
     private lateinit var securityGuard: SecurityGuard
 
     private val identityCreationStateDaoAsync = AppDatabase.getAppDatabase().identityCreationStateDaoAsync()
+    private val blockchainIdentityDataDaoAsync = AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync()
 
     private val createIdentityNotification by lazy { CreateIdentityNotification(this) }
 
@@ -60,6 +62,7 @@ class CreateIdentityService : LifecycleService() {
     private val serviceScope = CoroutineScope(serviceJob + Dispatchers.Main)
 
     lateinit var identityCreationState: IdentityCreationState
+    lateinit var blockchainIdentityData: BlockchainIdentityData
 
     override fun onCreate() {
         super.onCreate()
@@ -105,10 +108,14 @@ class CreateIdentityService : LifecycleService() {
 
     private suspend fun createIdentity(username: String) {
 
+        // Lines are commented out here will allow to start from a previously started identity creation process
         //identityCreationState = identityCreationStateDaoAsync.load()
         //        ?: IdentityCreationState(IdentityCreationState.State.UPGRADING_WALLET, false, username)
+
+        // for now this class will start the whole process from scratch.  Create the Status and the Identity objects
         identityCreationState = IdentityCreationState(IdentityCreationState.State.UPGRADING_WALLET, false, username)
         identityCreationStateDaoAsync.insert(identityCreationState)
+        blockchainIdentityData = BlockchainIdentityData(0, null ,null, null, null, null, null, username)
 
         if (identityCreationState.state != IdentityCreationState.State.UPGRADING_WALLET || identityCreationState.error) {
             log.info("resuming identity creation process [${identityCreationState.state}${if (identityCreationState.error) "(error)" else ""}]")
@@ -134,6 +141,7 @@ class CreateIdentityService : LifecycleService() {
 
         platformRepo.createCreditFundingTransactionAsync(blockchainIdentity, encryptionKey)
 
+
         updateState(IdentityCreationState.State.CREDIT_FUNDING_TX_SENDING)
         sendTransaction(blockchainIdentity.creditFundingTransaction!!)
 
@@ -141,6 +149,7 @@ class CreateIdentityService : LifecycleService() {
         updateState(IdentityCreationState.State.CREDIT_FUNDING_TX_SENT)
         // currently there is no difference between SENT and CONFIRMED
         updateState(IdentityCreationState.State.CREDIT_FUNDING_TX_CONFIRMED)
+        updateBlockchainIdentity(blockchainIdentity)
 
         delay2s()
 
@@ -151,26 +160,37 @@ class CreateIdentityService : LifecycleService() {
         platformRepo.registerIdentityAsync(blockchainIdentity, encryptionKey)
         delay2s()
 
-        updateState(IdentityCreationState.State.IDENTITY_REGISTERED)
+        updateBlockchainIdentity(blockchainIdentity)
+
         platformRepo.verifyIdentityRegisteredAsync(blockchainIdentity)
+        updateState(IdentityCreationState.State.IDENTITY_REGISTERED)
+
         delay2s()
+
+        updateBlockchainIdentity(blockchainIdentity)
 
         updateState(IdentityCreationState.State.PREORDER_REGISTERING)
         blockchainIdentity.addUsername(username)
         platformRepo.preorderNameAsync(blockchainIdentity, encryptionKey)
         delay2s()
+        updateBlockchainIdentity(blockchainIdentity)
 
-        updateState(IdentityCreationState.State.PREORDER_REGISTERED)
+
         platformRepo.isNamePreorderedAsync(blockchainIdentity)
+        updateState(IdentityCreationState.State.PREORDER_REGISTERED)
         delay2s()
+        updateBlockchainIdentity(blockchainIdentity)
+
 
         updateState(IdentityCreationState.State.USERNAME_REGISTERING)
         platformRepo.registerNameAsync(blockchainIdentity, encryptionKey)
         delay2s()
+        updateBlockchainIdentity(blockchainIdentity)
 
-        updateState(IdentityCreationState.State.USERNAME_REGISTERED)
+
         platformRepo.isNameRegisteredAsync(blockchainIdentity)
-        delay2s()
+        updateState(IdentityCreationState.State.USERNAME_REGISTERED)
+        updateBlockchainIdentity(blockchainIdentity)
 
         // aaaand we're done :)
     }
@@ -179,6 +199,32 @@ class CreateIdentityService : LifecycleService() {
         identityCreationState.state = newState
         identityCreationState.error = error
         identityCreationStateDaoAsync.insert(identityCreationState)
+    }
+
+    private suspend fun updateBlockchainIdentity(blockchainIdentity: BlockchainIdentity) {
+        //
+        // This is a mess, maybe we should have a class that converts a BlockchainIdentity to the database
+        // and vice versa.
+        //
+        if(blockchainIdentity.creditFundingTransaction != null) {
+            blockchainIdentityData.creditFundingTxId = blockchainIdentity.creditFundingTransaction!!.txId
+        }
+        if(blockchainIdentity.registrationStatus != null) {
+            blockchainIdentityData.registrationStatus = blockchainIdentity.registrationStatus
+            if(blockchainIdentity.registrationStatus == BlockchainIdentity.RegistrationStatus.REGISTERING ||
+                    blockchainIdentity.registrationStatus == BlockchainIdentity.RegistrationStatus.REGISTERED ) {
+                blockchainIdentityData.lockedOutpoint = blockchainIdentity.lockedOutpoint
+            }
+            if(blockchainIdentity.currentUsername != null &&
+                    blockchainIdentity.registrationStatus == BlockchainIdentity.RegistrationStatus.REGISTERED) {
+                blockchainIdentityData.domain = Names.DEFAULT_PARENT_DOMAIN
+                blockchainIdentityData.username = blockchainIdentity.currentUsername
+                blockchainIdentityData.preorderSalt = blockchainIdentity.saltForUsername(blockchainIdentity.currentUsername!!, false)
+                blockchainIdentityData.usernameStatus = blockchainIdentity.statusOfUsername(blockchainIdentity.currentUsername!!)
+            }
+        }
+
+        blockchainIdentityDataDaoAsync.insert(blockchainIdentityData)
     }
 
     /**
