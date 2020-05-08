@@ -105,7 +105,8 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
                         finish()
                     } else when (it?.state) {
                         IdentityCreationState.State.USERNAME_REGISTERED -> {
-                            finish()
+                            completeUsername = it.username
+                            showCompleteState()
                         }
                     }
                 })
