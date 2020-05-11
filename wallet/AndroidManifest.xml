@@ -130,7 +130,6 @@
 
                 <data android:scheme="dash" />
                 <data android:scheme="darkcoin" />
-                <data android:scheme="bitcoin-sv" />
                 <data android:scheme="pay" />
 
                 <category android:name="android.intent.category.DEFAULT" />

@@ -50,7 +50,7 @@ import de.schildbach.wallet_test.R;
  */
 public final class SendCoinsActivity extends AbstractBindServiceActivity {
 
-    public static final List<String> ANYPAY_SCHEMES = Arrays.asList("pay", "bitcoin-sv");
+    public static final List<String> ANYPAY_SCHEMES = Arrays.asList("pay");
 
     public static final String INTENT_EXTRA_PAYMENT_INTENT = "payment_intent";
     public static final String INTENT_EXTRA_USER_AUTHORIZED = "user_authorized";
