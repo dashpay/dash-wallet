@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">جلب التوقيع من %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">فشل جلب التوقيع</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">التوقيع غير صحيح!</string>
-    <string name="send_coins_fragment_payee_verified_by">أكد عن طريق: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">مجهول</string>
     <string name="send_coins_fragment_receiving_address_label">إرسال الى</string>
     <string name="send_coins_fragment_receiving_address_hint">أكتب العنوان أو الاسم</string>
@@ -375,4 +374,7 @@
     <string name="activity_security_hide_balance">إخفاء الرصيد بشكل تلقائي</string>
     <string name="reset_to_default">إعادة تعيين إلى الافتراضي</string>
 
+    <string name="payment_protocol_default_error_title">خطأ في الدفع</string>
+    <string name="payment_protocol_insufficient_funds_error_title">رصيد غير كاف</string>
+    <string name="payment_protocol_insufficient_funds_error_message">ليس لديك رصيد كافي لإتمام هذه المعاملة</string>
 </resources>

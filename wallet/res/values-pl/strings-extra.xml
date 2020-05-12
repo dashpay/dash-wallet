@@ -25,6 +25,7 @@
 
     <string name="dialog_confirm_confirm">Potwierdź</string>
     <string name="dialog_confirm_pay_to">Wyślij do</string>
+    <string name="dialog_confirm_verified_by">Zweryfikowane przez</string>
     <string name="dialog_confirm_fee">Opłata sieci</string>
     <string name="dialog_confirm_total">Całkowite</string>
 
@@ -238,7 +239,7 @@
     <string name="authenticate_fingerprint_message">Potwierdź odciskiem palca by kontynuować</string>
     <string name="authenticate_pin_message">Wprowadź kod PIN by kontynuować </string>
     <string name="authenticate_switch_to_fingerprint">Użyj Odcisku Palca</string>
-    <string name="authenticate_switch_to_pin">Użyj Hasło</string>
+    <string name="authenticate_switch_to_pin">Użyj kod PIN</string>
 
     <string name="menu_buy_and_sell_title">Kupuj &amp; Sprzedawaj Dash</string>
     <string name="menu_buy_and_sell_subtitle">Połącz się z giełdą stron trzecich</string>
@@ -321,4 +322,17 @@
     <string name="sync_status_sync_completed">Ukończona</string>
 
     <string name="appwidget_wallet_not_ready">Stwórz swój potfel</string>
+
+    <string name="payment_request_please_wait_title">Jedna chwila </string>
+    <string name="payment_request_please_wait_message">Trwa łączenie z serwerem płatności</string>
+    <string name="payment_request_unable_to_connect">Połączenie jest niemożliwe</string>
+    <string name="payment_request_unable_to_send">Wysłąnie funduszy jest niemożliwe</string>
+    <string name="payment_request_please_try_again">Spróbuj jeszcze raz</string>
+    <string name="payment_request_try_again">Spróbuj ponownie</string>
+    <string name="payment_request_problem_title">Płatność nie została uznana</string>
+    <string name="payment_request_problem_message">Twoja płatność została wysłąna ale sewer płatności nie mógł jej uznać. </string>
+    <string name="payment_request_expired_title">Żądanie płatności przedawniło się</string>
+    <string name="payment_request_close">Zamknij</string>
+    <string name="payment_request_skip">Pomiń</string>
+    <string name="payment_request_paid_to">Płatność została wysłana do</string>
 </resources>
