@@ -292,7 +292,7 @@ public class SweepWalletFragment extends Fragment {
 			if (resultCode == Activity.RESULT_OK) {
 				final String input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT);
 
-				new StringInputParser(input) {
+				new StringInputParser(input, false) {
 					@Override
 					protected void handlePrivateKey(final PrefixedChecksummedBytes key) {
 						privateKeyToSweep = key;

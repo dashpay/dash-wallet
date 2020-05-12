@@ -363,7 +363,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void handleString(String input, final int errorDialogTitleResId, final int cannotClassifyCustomMessageResId) {
-        new StringInputParser(input) {
+        new StringInputParser(input, true) {
             @Override
             protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
                 SendCoinsActivity.start(WalletActivity.this, paymentIntent, true);

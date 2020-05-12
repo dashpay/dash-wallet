@@ -314,7 +314,7 @@ class PaymentProtocolFragment : Fragment() {
         transaction_fee.text = txFee.toPlainString()
         total_amount.text = amount.add(txFee).toPlainString()
 
-        payee_name.text = paymentIntent.payeeName
+        memo.text = paymentIntent.memo
         payee_verified_by.text = paymentIntent.payeeVerifiedBy
                 ?: getString(R.string.send_coins_fragment_payee_verified_by_unknown)
 
@@ -322,7 +322,6 @@ class PaymentProtocolFragment : Fragment() {
             it.isSelected = false
             it.isSelected = true
         }
-        payee_name.setOnClickListener(forceMarqueeOnClickListener)
         payee_verified_by.setOnClickListener(forceMarqueeOnClickListener)
     }
 

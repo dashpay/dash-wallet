@@ -58,6 +58,7 @@ import com.google.protobuf.UninitializedMessageException;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.util.AddressUtil;
 import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet.util.Qr;
@@ -76,7 +77,17 @@ public abstract class InputParser {
     public abstract static class StringInputParser extends InputParser {
         private final String input;
 
-        public StringInputParser(final String input) {
+        public StringInputParser(final String input, boolean supportAnypayUrls) {
+            if (supportAnypayUrls) {
+                // replaces Anypay schemes with the Dash one
+                // eg "pay:?r=https://(...)" become "dash:?r=https://(...)"
+                for (String anypaySchema : SendCoinsActivity.ANYPAY_SCHEMES) {
+                    if (input.startsWith(anypaySchema + ":")) {
+                        this.input = input.replaceFirst(anypaySchema, CoinDefinition.coinURIScheme);
+                        return;
+                    }
+                }
+            }
             this.input = input;
         }
 
