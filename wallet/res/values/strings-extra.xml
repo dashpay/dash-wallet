@@ -33,6 +33,7 @@
     <string name="quick_action_secure_now">Secure Wallet Now</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_join_dashpay">Join DashPay</string>
+    <string name="quick_action_contacts">Contacts</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_scan_to_pay">Scan to Send</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -354,9 +355,10 @@
     <string name="username_being_created">Your username %s is being created on the Dash Network</string>
     <string name="processing_let_me_know">Let me know when it\'s done</string>
     <string name="processing_home_title">Upgrading to Evolution</string>
-    <string name="processing_home_step_1" tools:ignore="TypographyFractions">(1/3) Processing Payment</string>
-    <string name="processing_home_step_2">(2/3) Creating ID</string>
-    <string name="processing_home_step_3">(3/3) Registering Username</string>
+    <string name="processing_home_step_1" tools:ignore="TypographyFractions">(1/4) Processing Payment</string>
+    <string name="processing_home_step_2">(2/4) Creating ID</string>
+    <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/4) Registering Username</string>
+    <string name="processing_home_step_4">(4/4) Creating DashPay Profile</string>
     <string name="processing_done_title">Hello %s,</string>
     <string name="processing_done_subtitle">Your Evolution account is ready to use</string>
     <string name="processing_error_title">Error Upgrading</string>

@@ -39,6 +39,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.LocaleList;
 import android.telephony.TelephonyManager;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -64,6 +65,7 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.common.collect.ImmutableList;
 
 import de.schildbach.wallet.data.BlockchainIdentityData;
+import de.schildbach.wallet.data.IdentityCreationState;
 import de.schildbach.wallet.livedata.Resource;
 import de.schildbach.wallet.livedata.Status;
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
@@ -151,11 +153,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private boolean syncComplete = false;
     private View joinDashPayAction;
+    private View contactsAction;
     private OnCoinsSentReceivedListener coinsSendReceivedListener = new OnCoinsSentReceivedListener();
 
     private DashPayViewModel dashPayViewModel;
     private boolean isPlatformAvailable = false;
     private boolean hasIdentity = false;
+    private boolean hasDashPayProfile = false;
 
 
     @Override
@@ -213,6 +217,16 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 WalletActivity.this.blockchainState = blockchainState;
                 updateSyncState();
                 showHideJoinDashPayAction();
+            }
+        });
+        AppDatabase.getAppDatabase().identityCreationStateDao().load().observe(this, new Observer<IdentityCreationState>() {
+            @Override
+            public void onChanged(IdentityCreationState identityCreationState) {
+                if (identityCreationState != null) {
+                    Log.d("dashPay", "identity creation state " + identityCreationState.getState());
+                    hasDashPayProfile = IdentityCreationState.State.DASHPAY_PROFILE_CREATED == identityCreationState.getState();
+                    setContactsActionVisibility();
+                }
             }
         });
 
@@ -279,6 +293,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 startActivity(new Intent(WalletActivity.this, CreateUsernameActivity.class));
             }
         });
+        contactsAction = findViewById(R.id.contacts_action);
         showHideJoinDashPayAction();
         findViewById(R.id.scan_to_pay_action).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -333,6 +348,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 }
             }
         });
+
     }
 
     private void showHideSecureAction() {
@@ -352,6 +368,13 @@ public final class WalletActivity extends AbstractBindServiceActivity
             joinDashPayAction.setVisibility(View.GONE);
         }
         findViewById(R.id.join_dashpay_action_space).setVisibility(joinDashPayAction.getVisibility());
+    }
+
+    private void setContactsActionVisibility() {
+        boolean visible = syncComplete && hasIdentity && isPlatformAvailable && hasDashPayProfile;
+        contactsAction.setVisibility(visible ? View.VISIBLE : View.GONE);
+        Log.d("dashPay", visible+"");
+        findViewById(R.id.contacts_action_space).setVisibility(contactsAction.getVisibility());
     }
 
     private void initNavigationDrawer() {
