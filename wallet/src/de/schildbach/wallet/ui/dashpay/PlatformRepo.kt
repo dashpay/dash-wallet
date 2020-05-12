@@ -59,6 +59,9 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
+    //
+    // Step 1 is to upgrade the wallet to support authentication keys
+    //
     suspend fun addWalletAuthenticationKeysAsync(seed: DeterministicSeed, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
             val wallet = walletApplication.wallet

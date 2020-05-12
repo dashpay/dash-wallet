@@ -107,15 +107,12 @@ class CreateIdentityService : LifecycleService() {
     }
 
     private suspend fun createIdentity(username: String) {
+        log.info("Username registration starting")
 
-        // Lines are commented out here will allow to start from a previously started identity creation process
-        //identityCreationState = identityCreationStateDaoAsync.load()
-        //        ?: IdentityCreationState(IdentityCreationState.State.UPGRADING_WALLET, false, username)
-
-        // for now this class will start the whole process from scratch.  Create the Status and the Identity objects
-        identityCreationState = IdentityCreationState(IdentityCreationState.State.UPGRADING_WALLET, false, username)
-        identityCreationStateDaoAsync.insert(identityCreationState)
-        blockchainIdentityData = BlockchainIdentityData(0, null ,null, null, null, null, null, username)
+        identityCreationState = identityCreationStateDaoAsync.load()
+                ?: IdentityCreationState(IdentityCreationState.State.UPGRADING_WALLET, false, username)
+        blockchainIdentityData = blockchainIdentityDataDaoAsync.load()
+                ?: BlockchainIdentityData(0, null ,null, null, null, null, null, username)
 
         if (identityCreationState.state != IdentityCreationState.State.UPGRADING_WALLET || identityCreationState.error) {
             log.info("resuming identity creation process [${identityCreationState.state}${if (identityCreationState.error) "(error)" else ""}]")
@@ -128,71 +125,68 @@ class CreateIdentityService : LifecycleService() {
         val encryptionKey = deriveKey(handler, wallet, password)
         val seed = decryptSeed(handler, wallet, encryptionKey)
 
-//        val usernameInfo = CreateUsernameInfo(username, seed, encryptionKey)
-
         //create the Blockchain Identity object (this needs to be saved somewhere eventually)
         val blockchainIdentity = BlockchainIdentity(Identity.IdentityType.USER, 0, wallet)
-
         platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
 
+        //
+        // Step 2: Create and send the credit funding transaction
+        //
         updateState(IdentityCreationState.State.CREDIT_FUNDING_TX_CREATING)
-
-
-
         platformRepo.createCreditFundingTransactionAsync(blockchainIdentity, encryptionKey)
-
 
         updateState(IdentityCreationState.State.CREDIT_FUNDING_TX_SENDING)
         sendTransaction(blockchainIdentity.creditFundingTransaction!!)
 
         // If the tx is in a block, seen by a peer, InstantSend lock, then it is considered confirmed
-        updateState(IdentityCreationState.State.CREDIT_FUNDING_TX_SENT)
-        // currently there is no difference between SENT and CONFIRMED
         updateState(IdentityCreationState.State.CREDIT_FUNDING_TX_CONFIRMED)
         updateBlockchainIdentity(blockchainIdentity)
-
-        delay2s()
 
         //
         // Step 3: Register the identity
         //
         updateState(IdentityCreationState.State.IDENTITY_REGISTERING)
         platformRepo.registerIdentityAsync(blockchainIdentity, encryptionKey)
-        delay2s()
-
         updateBlockchainIdentity(blockchainIdentity)
 
+        //
+        // Step 3: Verify that the identity was registered
+        //
         platformRepo.verifyIdentityRegisteredAsync(blockchainIdentity)
         updateState(IdentityCreationState.State.IDENTITY_REGISTERED)
-
-        delay2s()
-
         updateBlockchainIdentity(blockchainIdentity)
 
+        //
+        // Step 4: Preorder the username
+        //
         updateState(IdentityCreationState.State.PREORDER_REGISTERING)
         blockchainIdentity.addUsername(username)
         platformRepo.preorderNameAsync(blockchainIdentity, encryptionKey)
-        delay2s()
         updateBlockchainIdentity(blockchainIdentity)
 
-
+        //
+        // Step 4: Verify that the username was preordered
+        //
         platformRepo.isNamePreorderedAsync(blockchainIdentity)
         updateState(IdentityCreationState.State.PREORDER_REGISTERED)
-        delay2s()
         updateBlockchainIdentity(blockchainIdentity)
 
-
+        //
+        // Step 5: Register the username
+        //
         updateState(IdentityCreationState.State.USERNAME_REGISTERING)
         platformRepo.registerNameAsync(blockchainIdentity, encryptionKey)
-        delay2s()
         updateBlockchainIdentity(blockchainIdentity)
 
-
+        //
+        // Step 5: Verify that the username was registered
+        //
         platformRepo.isNameRegisteredAsync(blockchainIdentity)
         updateState(IdentityCreationState.State.USERNAME_REGISTERED)
         updateBlockchainIdentity(blockchainIdentity)
 
         // aaaand we're done :)
+        log.info("Username registration complete")
     }
 
     private suspend fun updateState(newState: IdentityCreationState.State, error: Boolean = false) {
@@ -223,7 +217,6 @@ class CreateIdentityService : LifecycleService() {
                 blockchainIdentityData.usernameStatus = blockchainIdentity.statusOfUsername(blockchainIdentity.currentUsername!!)
             }
         }
-
         blockchainIdentityDataDaoAsync.insert(blockchainIdentityData)
     }
 
@@ -265,7 +258,18 @@ class CreateIdentityService : LifecycleService() {
         }
     }
 
+    /**
+     * Send the credit funding transaction and wait for confirmation from other nodes that the
+     * transaction was sent.  InstantSendLock, in a block or seen by more than one peer.
+     *
+     * Exceptions are returned in the case of a reject message (may not be sent with Dash Core 0.16)
+     * or in the case of a double spend or some other error.
+     *
+     * @param cftx The credit funding transaction to send
+     * @return True if successful
+     */
     private suspend fun sendTransaction(cftx: CreditFundingTransaction): Boolean {
+        log.info("Sending credit funding transaction: ${cftx.txId}")
         return suspendCoroutine { continuation ->
             cftx.confidence.addEventListener(object: TransactionConfidence.Listener {
                 override fun onConfidenceChanged(confidence: TransactionConfidence?, reason: TransactionConfidence.Listener.ChangeReason?) {
@@ -293,6 +297,7 @@ class CreateIdentityService : LifecycleService() {
                         TransactionConfidence.Listener.ChangeReason.REJECT -> {
                             if(confidence!!.hasRejections() && confidence.rejections.size >= 1) {
                                 confidence!!.removeEventListener(this)
+                                log.info("Error sending ${cftx.txId}: ${confidence.rejectedTransactionException.rejectMessage.reasonString}")
                                 continuation.resumeWithException(confidence.rejectedTransactionException)
                             }
                         }
@@ -306,6 +311,7 @@ class CreateIdentityService : LifecycleService() {
                                 }
                                 val rejectMessage = RejectMessage(Constants.NETWORK_PARAMETERS, code, confidence.transactionHash,
                                         "Credit funding transaction is dead or double-spent", "cftx-dead-or-double-spent")
+                                log.info("Error sending ${cftx.txId}: ${rejectMessage.reasonString}")
                                 continuation.resumeWithException(RejectedTransactionException(cftx, rejectMessage))
                             }
                         }
@@ -313,12 +319,6 @@ class CreateIdentityService : LifecycleService() {
                 }
             })
             walletApplication.broadcastTransaction(cftx)
-        }
-    }
-
-    private suspend fun delay2s() {
-        withContext(Dispatchers.IO) {
-            delay(2000)
         }
     }
 
