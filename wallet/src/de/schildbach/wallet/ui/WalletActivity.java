@@ -66,14 +66,11 @@ import com.google.common.collect.ImmutableList;
 import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.livedata.Resource;
 import de.schildbach.wallet.livedata.Status;
-import de.schildbach.wallet.service.InactivityNotificationService;
-import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
 import okhttp3.HttpUrl;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.PrefixedChecksummedBytes;
-import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.ChildNumber;
@@ -83,7 +80,6 @@ import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.ui.DialogBuilder;
-import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
 import org.dashevo.dashpay.BlockchainIdentity;
 
