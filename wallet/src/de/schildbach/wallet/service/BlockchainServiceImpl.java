@@ -843,16 +843,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private void startForeground() {
         //Shows ongoing notification promoting service to foreground service and
         //preventing it from being killed in Android 26 or later
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                BlockchainState blockchainState = AppDatabase.getAppDatabase().blockchainStateDao().loadSync();
-                Notification notification = createNetworkSyncNotification(blockchainState);
-                if (notification != null) {
-                    startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
-                }
-            }
-        });
+        Notification notification = createNetworkSyncNotification();
+        startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
     }
 
     @Override
@@ -941,15 +933,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         }
     }
 
-    private Notification createNetworkSyncNotification(BlockchainState blockchainState) {
+    private Notification createNetworkSyncNotification() {
         Intent notificationIntent = OnboardingActivity.createIntent(this);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
                 notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-        String message = BlockchainStateUtils.getSyncStateString(blockchainState, this);
-        if (message == null) {
-            message = getString(R.string.blockchain_state_progress_downloading);
-        }
+        String message = getString(R.string.blockchain_state_progress_downloading);
 
         return new NotificationCompat.Builder(this,
                 Constants.NOTIFICATION_CHANNEL_ID_ONGOING)
@@ -1055,10 +1044,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 nm.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC);
             } else if (blockchainState.getReplaying() || syncing) {
                 //Shows ongoing notification when synchronizing the blockchain
-                Notification notification = createNetworkSyncNotification(blockchainState);
-                if (notification != null) {
-                    nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
-                }
+                Notification notification = createNetworkSyncNotification();
+                nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
             }
         }
     }
