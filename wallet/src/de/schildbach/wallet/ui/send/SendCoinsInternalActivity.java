@@ -34,7 +34,14 @@ public class SendCoinsInternalActivity extends SendCoinsActivity {
     }
 
     public static void start(final Context context, final PaymentIntent paymentIntent, boolean userAuthorized) {
+        start(context, null, paymentIntent, userAuthorized);
+    }
+
+    public static void start(final Context context, final String action, final PaymentIntent paymentIntent, boolean userAuthorized) {
         final Intent intent = new Intent(context, SendCoinsInternalActivity.class);
+        if (action != null) {
+            intent.setAction(action);
+        }
         intent.putExtra(INTENT_EXTRA_PAYMENT_INTENT, paymentIntent);
         intent.putExtra(INTENT_EXTRA_USER_AUTHORIZED, userAuthorized);
         context.startActivity(intent);
@@ -59,5 +66,5 @@ public class SendCoinsInternalActivity extends SendCoinsActivity {
         }
         return getIntent().getBooleanExtra(INTENT_EXTRA_USER_AUTHORIZED, false);
     }
-    
+
 }

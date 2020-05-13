@@ -80,7 +80,7 @@ public class SendCoinsQrActivity extends ShortcutComponentActivity {
             new StringInputParser(input, true) {
                 @Override
                 protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
-                    SendCoinsInternalActivity.start(SendCoinsQrActivity.this, paymentIntent, false);
+                    SendCoinsInternalActivity.start(SendCoinsQrActivity.this, getIntent().getAction(), paymentIntent, false);
 
                     if (isQuickScan()) {
                         SendCoinsQrActivity.this.finish();
