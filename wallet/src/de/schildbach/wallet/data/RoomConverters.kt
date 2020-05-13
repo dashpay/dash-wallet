@@ -93,7 +93,7 @@ class RoomConverters {
     }
 
     @TypeConverter
-    fun toUserNameStatus(value: Int): BlockchainIdentity.UsernameStatus {
+    fun toUsernameStatus(value: Int): BlockchainIdentity.UsernameStatus {
         return BlockchainIdentity.UsernameStatus.values()[value]
     }
 
