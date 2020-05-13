@@ -96,7 +96,7 @@ class CreateIdentityService : LifecycleService() {
             log.error("[${identityCreationState.state}(error)]", exception)
             GlobalScope.launch {
                 updateState(identityCreationState.state, true)
-//                stopSelf()
+                //TODO: Do we need to call stopSelf() here?
             }
         }
 
