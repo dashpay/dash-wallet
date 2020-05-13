@@ -247,8 +247,8 @@
     <string name="menu_tools_subtitle">Import private key…</string>
     <string name="menu_local_currency">Local Currency</string>
     <string name="menu_rescan_blockchain">Rescan Blockchain</string>
-    <string name="menu_contact_support_title">Report an issue</string>
-    <string name="menu_contact_support_subtitle">Reach out to us for any queries or help</string>
+    <string name="menu_contact_support_title">Contact Support</string>
+    <string name="menu_contact_support_subtitle">Report an issue</string>
 
     <string name="tools_address_book">Address Book</string>
     <string name="tools_import_private_key">Import Private Key</string>
