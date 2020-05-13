@@ -26,13 +26,13 @@ import org.dashevo.dashpay.BlockchainIdentity
 
 @Entity(tableName = "blockchain_identity")
 class BlockchainIdentityData(var index: Int?,
-                             var creditFundingTxId: Sha256Hash?,
-                             var lockedOutpoint: TransactionOutPoint?,
-                             var preorderSalt: ByteArray?,
-                             var registrationStatus: BlockchainIdentity.RegistrationStatus?,
-                             var usernameStatus: BlockchainIdentity.UsernameStatus?,
-                             var domain: String?,
-                             var username: String?) {
+                             var username: String?,
+                             var creditFundingTxId: Sha256Hash? = null,
+                             var lockedOutpoint: TransactionOutPoint? = null,
+                             var preorderSalt: ByteArray? = null,
+                             var registrationStatus: BlockchainIdentity.RegistrationStatus? = null,
+                             var usernameStatus: BlockchainIdentity.UsernameStatus? = null,
+                             var domain: String? = null) {
 
     @PrimaryKey
     var id = 1

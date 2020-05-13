@@ -112,7 +112,7 @@ class CreateIdentityService : LifecycleService() {
         identityCreationState = identityCreationStateDaoAsync.load()
                 ?: IdentityCreationState(IdentityCreationState.State.UPGRADING_WALLET, false, username)
         blockchainIdentityData = blockchainIdentityDataDaoAsync.load()
-                ?: BlockchainIdentityData(0, null ,null, null, null, null, null, username)
+                ?: BlockchainIdentityData(0, username)
 
         if (identityCreationState.state != IdentityCreationState.State.UPGRADING_WALLET || identityCreationState.error) {
             log.info("resuming identity creation process [${identityCreationState.state}${if (identityCreationState.error) "(error)" else ""}]")
