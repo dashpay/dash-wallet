@@ -79,13 +79,11 @@ public abstract class InputParser {
 
         public StringInputParser(final String input, boolean supportAnypayUrls) {
             if (supportAnypayUrls) {
-                // replaces Anypay schemes with the Dash one
-                // eg "pay:?r=https://(...)" become "dash:?r=https://(...)"
-                for (String anypaySchema : SendCoinsActivity.ANYPAY_SCHEMES) {
-                    if (input.startsWith(anypaySchema + ":")) {
-                        this.input = input.replaceFirst(anypaySchema, CoinDefinition.coinURIScheme);
-                        return;
-                    }
+                // replaces Anypay scheme with the Dash one
+                // ie "pay:?r=https://(...)" become "dash:?r=https://(...)"
+                if (input.startsWith(SendCoinsActivity.ANYPAY_SCHEME + ":")) {
+                    this.input = input.replaceFirst(SendCoinsActivity.ANYPAY_SCHEME, CoinDefinition.coinURIScheme);
+                    return;
                 }
             }
             this.input = input;

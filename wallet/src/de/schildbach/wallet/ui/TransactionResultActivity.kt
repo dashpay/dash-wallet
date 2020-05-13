@@ -42,7 +42,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
     companion object {
         const val EXTRA_TX_ID = "tx_id"
         const val EXTRA_USER_AUTHORIZED_RESULT_EXTRA = "user_authorized_result_extra"
-        private const val EXTRA_PAYEE_NAME = "payee_name"
+        private const val EXTRA_PAYMENT_MEMO = "payee_name"
         private const val EXTRA_PAYEE_VERIFIED_BY = "payee_verified_by"
 
         @JvmStatic
@@ -52,11 +52,11 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
         @JvmStatic
         fun createIntent(context: Context, transaction: Transaction, userAuthorized: Boolean,
-                         payeeName: String? = null, payeeVerifiedBy: String? = null): Intent {
+                         paymentMemo: String? = null, payeeVerifiedBy: String? = null): Intent {
             val transactionResultIntent = Intent(context, TransactionResultActivity::class.java)
             transactionResultIntent.putExtra(EXTRA_TX_ID, transaction.txId)
             transactionResultIntent.putExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, userAuthorized)
-            transactionResultIntent.putExtra(EXTRA_PAYEE_NAME, payeeName)
+            transactionResultIntent.putExtra(EXTRA_PAYMENT_MEMO, paymentMemo)
             transactionResultIntent.putExtra(EXTRA_PAYEE_VERIFIED_BY, payeeVerifiedBy)
             return transactionResultIntent
         }
@@ -72,7 +72,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
         val transactionResultViewBinder = TransactionResultViewBinder(container)
         val tx = WalletApplication.getInstance().wallet.getTransaction(txId)
         if (tx != null) {
-            val payeeName = intent.getStringExtra(EXTRA_PAYEE_NAME)
+            val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
             val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
             transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
             view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
