@@ -1,6 +1,4 @@
 /*
- * Copyright 2011-2015 the original author or authors.
-/*
  * Copyright 2020 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,8 +16,6 @@
 
 package de.schildbach.wallet.ui.send;
 
-import android.app.Activity;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
@@ -45,37 +41,11 @@ import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
 
-/**
- * @author Andreas Schildbach
- */
-public final class SendCoinsActivity extends AbstractBindServiceActivity {
+public class SendCoinsActivity extends AbstractBindServiceActivity {
 
     public static final List<String> ANYPAY_SCHEMES = Arrays.asList("pay");
 
     public static final String INTENT_EXTRA_PAYMENT_INTENT = "payment_intent";
-    public static final String INTENT_EXTRA_USER_AUTHORIZED = "user_authorized";
-
-    public static final String ACTION_SEND_FROM_WALLET_URI = "de.schildbach.wallet.action.SEND_FROM_WALLET_URI";
-
-    public static void start(final Context context, final PaymentIntent paymentIntent) {
-        start(context, paymentIntent, false);
-    }
-
-    public static void start(final Context context, final PaymentIntent paymentIntent, boolean userAuthorized) {
-        final Intent intent = new Intent(context, SendCoinsActivity.class);
-        intent.putExtra(INTENT_EXTRA_PAYMENT_INTENT, paymentIntent);
-        intent.putExtra(INTENT_EXTRA_USER_AUTHORIZED, userAuthorized);
-        context.startActivity(intent);
-    }
-
-    public static void sendFromWalletUri(final Activity callingActivity, int requestCode,
-                                         final PaymentIntent paymentIntent) {
-        final Intent intent = new Intent(callingActivity, SendCoinsActivity.class);
-        intent.setAction(ACTION_SEND_FROM_WALLET_URI);
-        intent.putExtra(INTENT_EXTRA_USER_AUTHORIZED, false);
-        intent.putExtra(INTENT_EXTRA_PAYMENT_INTENT, paymentIntent);
-        callingActivity.startActivityForResult(intent, requestCode);
-    }
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -186,22 +156,14 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity {
     };
 
     public boolean isUserAuthorized() {
-        String action = getIntent().getAction();
-        if (Intent.ACTION_VIEW.equals(action)) {
-            return false;
-        }
-        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)) {
-            return false;
-        }
-        return getIntent().getBooleanExtra(INTENT_EXTRA_USER_AUTHORIZED, false);
+        return false;
     }
 
     @Override
     public boolean onOptionsItemSelected(final MenuItem item) {
-        switch (item.getItemId()) {
-            case android.R.id.home:
-                finish();
-                return true;
+        if (item.getItemId() == android.R.id.home) {
+            finish();
+            return true;
         }
 
         return super.onOptionsItemSelected(item);

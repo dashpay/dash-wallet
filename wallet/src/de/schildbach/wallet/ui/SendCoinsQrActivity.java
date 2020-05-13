@@ -33,7 +33,7 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.scan.ScanActivity;
-import de.schildbach.wallet.ui.send.SendCoinsActivity;
+import de.schildbach.wallet.ui.send.SendCoinsInternalActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
 
 /**
@@ -80,7 +80,7 @@ public class SendCoinsQrActivity extends ShortcutComponentActivity {
             new StringInputParser(input, true) {
                 @Override
                 protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
-                    SendCoinsActivity.start(SendCoinsQrActivity.this, paymentIntent, false);
+                    SendCoinsInternalActivity.start(SendCoinsQrActivity.this, paymentIntent, false);
 
                     if (isQuickScan()) {
                         SendCoinsQrActivity.this.finish();
