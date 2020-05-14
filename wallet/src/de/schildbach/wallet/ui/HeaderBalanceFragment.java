@@ -66,8 +66,6 @@ public final class HeaderBalanceFragment extends Fragment {
     private CurrencyTextView viewBalanceDash;
     private CurrencyTextView viewBalanceLocal;
 
-    private boolean showLocalBalance;
-
     private ExchangeRatesViewModel exchangeRatesViewModel;
 
     @Nullable
@@ -77,8 +75,6 @@ public final class HeaderBalanceFragment extends Fragment {
 
     private static final int ID_BALANCE_LOADER = 0;
     private static final int ID_BLOCKCHAIN_STATE_LOADER = 1;
-
-    private boolean initComplete = false;
 
     private Handler autoLockHandler = new Handler();
     private BlockchainState blockchainState;
@@ -93,8 +89,6 @@ public final class HeaderBalanceFragment extends Fragment {
         this.wallet = application.getWallet();
         this.loaderManager = LoaderManager.getInstance(this);
         hideBalance = config.getHideBalance();
-
-        showLocalBalance = getResources().getBoolean(R.bool.show_local_balance);
     }
 
     @Override
@@ -203,26 +197,21 @@ public final class HeaderBalanceFragment extends Fragment {
             return;
         }
 
-        if (!showLocalBalance)
-            viewBalanceLocal.setVisibility(View.GONE);
-
         if (balance != null) {
             viewBalanceDash.setVisibility(View.VISIBLE);
             viewBalanceDash.setFormat(config.getFormat().noCode());
             viewBalanceDash.setAmount(balance);
 
-            if (showLocalBalance) {
-                if (exchangeRate != null) {
-                    org.bitcoinj.utils.ExchangeRate rate = new org.bitcoinj.utils.ExchangeRate(Coin.COIN,
-                            exchangeRate.getFiat());
-                    final Fiat localValue = rate.coinToFiat(balance);
-                    viewBalanceLocal.setVisibility(View.VISIBLE);
-                    String currencySymbol = GenericUtils.currencySymbol(exchangeRate.getCurrencyCode());
-                    viewBalanceLocal.setFormat(Constants.LOCAL_FORMAT.code(0, currencySymbol));
-                    viewBalanceLocal.setAmount(localValue);
-                } else {
-                    viewBalanceLocal.setVisibility(View.INVISIBLE);
-                }
+            if (exchangeRate != null) {
+                org.bitcoinj.utils.ExchangeRate rate = new org.bitcoinj.utils.ExchangeRate(Coin.COIN,
+                        exchangeRate.getFiat());
+                final Fiat localValue = rate.coinToFiat(balance);
+                viewBalanceLocal.setVisibility(View.VISIBLE);
+                String currencySymbol = GenericUtils.currencySymbol(exchangeRate.getCurrencyCode());
+                viewBalanceLocal.setFormat(Constants.LOCAL_FORMAT.code(0, currencySymbol));
+                viewBalanceLocal.setAmount(localValue);
+            } else {
+                viewBalanceLocal.setVisibility(View.INVISIBLE);
             }
         } else {
             viewBalanceDash.setVisibility(View.INVISIBLE);

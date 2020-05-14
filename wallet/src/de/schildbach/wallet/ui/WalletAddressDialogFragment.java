@@ -113,8 +113,7 @@ public class WalletAddressDialogFragment extends DialogFragment {
         });
 
         final View hintView = dialog.findViewById(R.id.wallet_address_dialog_hint);
-        hintView.setVisibility(
-                getResources().getBoolean(R.bool.show_wallet_address_dialog_hint) ? View.VISIBLE : View.GONE);
+        hintView.setVisibility(View.VISIBLE);
 
         final View dialogView = dialog.findViewById(R.id.wallet_address_dialog_group);
         dialogView.setOnClickListener(new View.OnClickListener() {

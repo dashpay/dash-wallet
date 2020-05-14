@@ -45,7 +45,7 @@ public final class NetworkMonitorActivity extends AbstractBindServiceActivity {
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setContentView(R.layout.network_monitor_content);
+        setContentView(R.layout.network_monitor_onepane);
 
         pager = findViewById(R.id.network_monitor_pager);
         final FragmentManager fm = getSupportFragmentManager();
@@ -53,25 +53,20 @@ public final class NetworkMonitorActivity extends AbstractBindServiceActivity {
         peersCheckBox = findViewById(R.id.peers_checkbox);
         blocksCheckBox = findViewById(R.id.blocks_checkbox);
 
-        if (pager != null) {
-            peersCheckBox.setOnCheckedChangeListener(onCheckedChangeListener);
-            blocksCheckBox.setOnCheckedChangeListener(onCheckedChangeListener);
+        peersCheckBox.setOnCheckedChangeListener(onCheckedChangeListener);
+        blocksCheckBox.setOnCheckedChangeListener(onCheckedChangeListener);
 
-            String peersTitle = getString(R.string.network_monitor_peer_list_title);
-            String blocksTitle = getString(R.string.network_monitor_block_list_title);
-            final PagerAdapter pagerAdapter = new PagerAdapter(fm, peersTitle, blocksTitle);
+        String peersTitle = getString(R.string.network_monitor_peer_list_title);
+        String blocksTitle = getString(R.string.network_monitor_block_list_title);
+        final PagerAdapter pagerAdapter = new PagerAdapter(fm, peersTitle, blocksTitle);
 
-            pager.setAdapter(pagerAdapter);
-            pager.setPageMargin(2);
-            pager.setPageMarginDrawable(R.color.bg_less_bright);
-            pager.addOnPageChangeListener(onPageChangeListener);
+        pager.setAdapter(pagerAdapter);
+        pager.setPageMargin(2);
+        pager.setPageMarginDrawable(R.color.bg_less_bright);
+        pager.addOnPageChangeListener(onPageChangeListener);
 
-            peerListFragment = new PeerListFragment();
-            blockListFragment = new BlockListFragment();
-        } else {
-            peerListFragment = (PeerListFragment) fm.findFragmentById(R.id.peer_list_fragment);
-            blockListFragment = (BlockListFragment) fm.findFragmentById(R.id.block_list_fragment);
-        }
+        peerListFragment = new PeerListFragment();
+        blockListFragment = new BlockListFragment();
     }
 
     private ViewPager.OnPageChangeListener onPageChangeListener = new ViewPager.OnPageChangeListener() {

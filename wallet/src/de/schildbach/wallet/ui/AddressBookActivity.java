@@ -65,7 +65,7 @@ public final class AddressBookActivity extends AbstractBindServiceActivity {
     protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		setContentView(R.layout.address_book_content);
+		setContentView(R.layout.address_book_onepane);
 
 		final FragmentManager fragmentManager = getSupportFragmentManager();
 
@@ -90,27 +90,22 @@ public final class AddressBookActivity extends AbstractBindServiceActivity {
 		}
 
 		final ViewPager pager = (ViewPager) findViewById(R.id.address_book_pager);
-        if (pager != null) {
-			String leftTitle = getString(R.string.address_book_list_receiving_title);
-			String rightTitle = getString(R.string.address_book_list_sending_title);
-			PagerAdapter adapter = new TwoFragmentAdapter(fragmentManager, walletAddressesFragment,
-					sendingAddressesFragment, leftTitle, rightTitle);
-			pager.setAdapter(adapter);
+		String leftTitle = getString(R.string.address_book_list_receiving_title);
+		String rightTitle = getString(R.string.address_book_list_sending_title);
+		PagerAdapter adapter = new TwoFragmentAdapter(fragmentManager, walletAddressesFragment,
+				sendingAddressesFragment, leftTitle, rightTitle);
+		pager.setAdapter(adapter);
 
-			TabLayout tabs = findViewById(R.id.address_book_pager_tabs);
-			final int position = 1;
-			pager.setCurrentItem(position);
-			pager.setPageMargin(2);
-			pager.setPageMarginDrawable(R.color.bg_less_bright);
+		TabLayout tabs = findViewById(R.id.address_book_pager_tabs);
+		final int position = 1;
+		pager.setCurrentItem(position);
+		pager.setPageMargin(2);
+		pager.setPageMarginDrawable(R.color.bg_less_bright);
 
-			tabs.setupWithViewPager(pager);
-			for (int i = 0; i < tabs.getTabCount(); i++) {
-				TextView tv = (TextView) LayoutInflater.from(this).inflate(R.layout.tab_title, null);
-				tabs.getTabAt(i).setCustomView(tv);
-			}
-        } else {
-			fragmentManager.beginTransaction().add(R.id.wallet_addresses_fragment, walletAddressesFragment, TAG_LEFT)
-					.add(R.id.sending_addresses_fragment, sendingAddressesFragment, TAG_RIGHT).commit();
+		tabs.setupWithViewPager(pager);
+		for (int i = 0; i < tabs.getTabCount(); i++) {
+			TextView tv = (TextView) LayoutInflater.from(this).inflate(R.layout.tab_title, null);
+			tabs.getTabAt(i).setCustomView(tv);
 		}
 
 		updateFragments();

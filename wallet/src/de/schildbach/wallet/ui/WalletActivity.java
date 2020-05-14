@@ -80,7 +80,6 @@ import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.CrashReporter;
-import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
 import kotlin.Pair;
@@ -177,12 +176,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void initView() {
         initQuickActions();
-        findViewById(R.id.uphold_account_section).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startUpholdActivity();
-            }
-        });
         findViewById(R.id.pay_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
