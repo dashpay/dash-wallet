@@ -25,6 +25,7 @@
 
     <string name="dialog_confirm_confirm">تأكيد</string>
     <string name="dialog_confirm_pay_to">إرسال الى</string>
+    <string name="dialog_confirm_verified_by">أٌكد عن طريق</string>
     <string name="dialog_confirm_fee">رسوم الشبكة</string>
     <string name="dialog_confirm_total">المجموع</string>
 
@@ -244,7 +245,7 @@
     <string name="authenticate_fingerprint_message">تأكيد بصمة الإصبع للمتابعة</string>
     <string name="authenticate_pin_message">أدخل الرقم السري للمتابعة</string>
     <string name="authenticate_switch_to_fingerprint">استخدام بصمة الإصبع</string>
-    <string name="authenticate_switch_to_pin">استخدام كلمة المرور</string>
+    <string name="authenticate_switch_to_pin">استخدم  الرقم السري</string>
 
     <string name="menu_buy_and_sell_title">شراء &amp; بيع داش</string>
     <string name="menu_buy_and_sell_subtitle">اتصال مع منصات الطرف الثالث</string>
@@ -327,4 +328,17 @@
     <string name="sync_status_sync_completed">منجز</string>
 
     <string name="appwidget_wallet_not_ready">يرجى إعداد محفظتك</string>
+
+    <string name="payment_request_please_wait_title">الرجاء الانتظار</string>
+    <string name="payment_request_please_wait_message">الاتصال بخادم الدفع</string>
+    <string name="payment_request_unable_to_connect">غير قادر على الاتصال</string>
+    <string name="payment_request_unable_to_send">غير قادر على الارسال</string>
+    <string name="payment_request_please_try_again">حاول مرة اخرى</string>
+    <string name="payment_request_try_again">حاول ثانية</string>
+    <string name="payment_request_problem_title">لم يتم الإعتراف بالدفع</string>
+    <string name="payment_request_problem_message">تمت معالجة دفعتك ولكن الخادم لم يتمكن من الإعتراف بها</string>
+    <string name="payment_request_expired_title">انتهت صلاحية طلب الدفع</string>
+    <string name="payment_request_close">اغلاق</string>
+    <string name="payment_request_skip">تخطي</string>
+    <string name="payment_request_paid_to">تم الدفع الى</string>
 </resources>

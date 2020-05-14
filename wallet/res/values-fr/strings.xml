@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Récupération de la signature de %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Échec lors de la récupération de la signature</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Signature erronée !</string>
-    <string name="send_coins_fragment_payee_verified_by">vérifié par : %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">inconnu</string>
     <string name="send_coins_fragment_receiving_address_label">Envoyer à</string>
     <string name="send_coins_fragment_receiving_address_hint">saisir l\'adresse ou le nom</string>
@@ -374,4 +373,7 @@
     <string name="activity_security_hide_balance">Cacher autom. le solde</string>
     <string name="reset_to_default">Retour aux valeurs par défaut</string>
 
+    <string name="payment_protocol_default_error_title">Erreur de paiement</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Fonds insuffisants</string>
+    <string name="payment_protocol_insufficient_funds_error_message">Vous n\'avez pas assez de fonds pour terminer cette transaction</string>
 </resources>

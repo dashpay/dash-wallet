@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">由 %s 讀取簽名…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">讀取簽名失敗</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">簽名錯誤!</string>
-    <string name="send_coins_fragment_payee_verified_by">由 %s 驗證</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">不知名</string>
     <string name="send_coins_fragment_receiving_address_label">發給</string>
     <string name="send_coins_fragment_receiving_address_hint">輸入地址或是名稱</string>
@@ -374,4 +373,7 @@
     <string name="activity_security_hide_balance">自動隱藏結餘</string>
     <string name="reset_to_default">重置為預設值</string>
 
+    <string name="payment_protocol_default_error_title">付款錯誤</string>
+    <string name="payment_protocol_insufficient_funds_error_title">餘額不足</string>
+    <string name="payment_protocol_insufficient_funds_error_message">您沒有足夠的資金來完成此交易</string>
 </resources>

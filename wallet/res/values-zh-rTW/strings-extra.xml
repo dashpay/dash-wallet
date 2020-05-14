@@ -25,6 +25,7 @@
 
     <string name="dialog_confirm_confirm">確認:</string>
     <string name="dialog_confirm_pay_to">發給</string>
+    <string name="dialog_confirm_verified_by">經由以下服務器核實</string>
     <string name="dialog_confirm_fee">網絡費用</string>
     <string name="dialog_confirm_total">總共</string>
 
@@ -312,4 +313,17 @@
     <string name="sync_status_sync_completed">完成</string>
 
     <string name="appwidget_wallet_not_ready">請設置您的錢包</string>
+
+    <string name="payment_request_please_wait_title">請稍等</string>
+    <string name="payment_request_please_wait_message">連接到支付服務器</string>
+    <string name="payment_request_unable_to_connect">無法連接</string>
+    <string name="payment_request_unable_to_send">無法發送</string>
+    <string name="payment_request_please_try_again">請再試一遍</string>
+    <string name="payment_request_try_again">再試一次</string>
+    <string name="payment_request_problem_title">付款未得到確認</string>
+    <string name="payment_request_problem_message">您的付款已處理，但服務器無法確認</string>
+    <string name="payment_request_expired_title">付款請求已過期</string>
+    <string name="payment_request_close">關閉</string>
+    <string name="payment_request_skip">略過</string>
+    <string name="payment_request_paid_to">付給</string>
 </resources>

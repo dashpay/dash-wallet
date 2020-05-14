@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Nakakuha ng pansin ang lagda mula %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Ang pagkuha ng pansin ng lagda ay hindi nagtagumpay</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Maling lagda!</string>
-    <string name="send_coins_fragment_payee_verified_by">beripikado ni: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">lingid</string>
     <string name="send_coins_fragment_receiving_address_label">Pinadala kay</string>
     <string name="send_coins_fragment_receiving_address_hint">I-type ang address o pangalan</string>
@@ -374,4 +373,7 @@
     <string name="activity_security_hide_balance">Awtimatikong Pagtago ng Balanse</string>
     <string name="reset_to_default">I-reset sa Default</string>
 
+    <string name="payment_protocol_default_error_title">May mali sa bayad</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Hindi sapat na pondo</string>
+    <string name="payment_protocol_insufficient_funds_error_message">Wala ka nang sapat na pondo para makompleto ang transaksyong ito</string>
 </resources>

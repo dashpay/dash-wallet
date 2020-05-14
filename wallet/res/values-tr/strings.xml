@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">%s tarafından imza alınıyor…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">İmza alımı başarısız</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Yanlış imza!</string>
-    <string name="send_coins_fragment_payee_verified_by">Tarafından doğrulandı: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">bilinmeyen</string>
     <string name="send_coins_fragment_receiving_address_label">Gönder</string>
     <string name="send_coins_fragment_receiving_address_hint">adresini veya adını giriniz</string>
@@ -374,4 +373,7 @@
     <string name="activity_security_hide_balance">Otomatik Bakiye Gizleme</string>
     <string name="reset_to_default">Varsayılana sıfırla</string>
 
+    <string name="payment_protocol_default_error_title">Ödeme hatası</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Yetersiz Bakiye</string>
+    <string name="payment_protocol_insufficient_funds_error_message">Bu işlemi gerçekleştirmek için yeterli bakiyeniz yoktur</string>
 </resources>

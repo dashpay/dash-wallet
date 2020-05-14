@@ -25,6 +25,7 @@
 
     <string name="dialog_confirm_confirm">Onayla</string>
     <string name="dialog_confirm_pay_to">Gönder</string>
+    <string name="dialog_confirm_verified_by">Tarafından doğrulanan</string>
     <string name="dialog_confirm_fee">Ağ ücreti</string>
     <string name="dialog_confirm_total">Toplam</string>
 
@@ -232,7 +233,7 @@
     <string name="authenticate_fingerprint_message">Devam etmek için parmak iziyle onaylayın</string>
     <string name="authenticate_pin_message">Devam etmek için PİN\'inizi girin</string>
     <string name="authenticate_switch_to_fingerprint">Parmak izinizi kullanın</string>
-    <string name="authenticate_switch_to_pin">Şifre kullan</string>
+    <string name="authenticate_switch_to_pin">PİN Kullan</string>
 
     <string name="menu_buy_and_sell_title">Dash Al &amp; Sat</string>
     <string name="menu_buy_and_sell_subtitle">Üçüncü parti borsalara bağlanın</string>
@@ -315,4 +316,17 @@
     <string name="sync_status_sync_completed">Tamamlandı</string>
 
     <string name="appwidget_wallet_not_ready">Lütfen cüzdanınızı kurun</string>
+
+    <string name="payment_request_please_wait_title">Lütfen bekleyin</string>
+    <string name="payment_request_please_wait_message">Ödeme Sunucusuna Bağlanıyor</string>
+    <string name="payment_request_unable_to_connect">Bağlanılamıyor</string>
+    <string name="payment_request_unable_to_send">Gönderilemiyor</string>
+    <string name="payment_request_please_try_again">Lütfen tekrar deneyin</string>
+    <string name="payment_request_try_again">Tekrar Dene</string>
+    <string name="payment_request_problem_title">Ödeme kabul edilmedi</string>
+    <string name="payment_request_problem_message">Ödemeniz işleme koyuldu, fakat sunucu kabul etmedi</string>
+    <string name="payment_request_expired_title">Ödeme Talebinin Süresi Bitti</string>
+    <string name="payment_request_close">Kapat</string>
+    <string name="payment_request_skip">Atla</string>
+    <string name="payment_request_paid_to">Ödeme yap</string>
 </resources>

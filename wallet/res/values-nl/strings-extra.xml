@@ -25,6 +25,7 @@
 
     <string name="dialog_confirm_confirm">Bevestig</string>
     <string name="dialog_confirm_pay_to">Verstuur naar</string>
+    <string name="dialog_confirm_verified_by">geverifieerd door</string>
     <string name="dialog_confirm_fee">Netwerk transactiekosten</string>
     <string name="dialog_confirm_total">Totaal</string>
 
@@ -232,7 +233,7 @@
     <string name="authenticate_fingerprint_message">Bevestig vingerafdruk om door te gaan</string>
     <string name="authenticate_pin_message">Voer PIN in om door te gaan</string>
     <string name="authenticate_switch_to_fingerprint">Vingerafdruk gebruiken</string>
-    <string name="authenticate_switch_to_pin">Gebruik wachtwoord</string>
+    <string name="authenticate_switch_to_pin">gebruik PIN</string>
 
     <string name="menu_buy_and_sell_title">Koop &amp; verkoop Dash</string>
     <string name="menu_buy_and_sell_subtitle">Verbind met beurzen van derden</string>
@@ -315,4 +316,17 @@
     <string name="sync_status_sync_completed">Voltooid</string>
 
     <string name="appwidget_wallet_not_ready">Stel uw portemonnee in</string>
+
+    <string name="payment_request_please_wait_title">Even wachten aub</string>
+    <string name="payment_request_please_wait_message">Verbinding maken met betalingsserver</string>
+    <string name="payment_request_unable_to_connect">Kan geen verbinding maken</string>
+    <string name="payment_request_unable_to_send">Verzenden niet mogelijk</string>
+    <string name="payment_request_please_try_again">Probeer opnieuw</string>
+    <string name="payment_request_try_again">Probeer opnieuw</string>
+    <string name="payment_request_problem_title">Betaling werd niet bevestigd</string>
+    <string name="payment_request_problem_message">Uw betaling is verwerkt, maar de server heeft deze niet kunnen bevestigen</string>
+    <string name="payment_request_expired_title">Betaalverzoek is verlopen</string>
+    <string name="payment_request_close">Sluiten</string>
+    <string name="payment_request_skip">Overslaan</string>
+    <string name="payment_request_paid_to">Betaald aan</string>
 </resources>

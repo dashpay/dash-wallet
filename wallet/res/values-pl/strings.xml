@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Pobieranie podpisu z %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Pobieranie podpisu nie powiodło się</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Zły podpis!</string>
-    <string name="send_coins_fragment_payee_verified_by">zweryfikowany przez: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">nieznany</string>
     <string name="send_coins_fragment_receiving_address_label">Wyślij do</string>
     <string name="send_coins_fragment_receiving_address_hint">wpisz adres lub nazwę</string>
@@ -374,4 +373,7 @@
     <string name="activity_security_hide_balance">Automatyczne Ukrywanie Salda</string>
     <string name="reset_to_default">Resetuj do domyślne</string>
 
+    <string name="payment_protocol_default_error_title">Błąd płatności</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Niewystarczająca Ilość Środków</string>
+    <string name="payment_protocol_insufficient_funds_error_message">Nie posiadasz wystarczających środków aby dokonać tej transakcji</string>
 </resources>

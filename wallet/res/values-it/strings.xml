@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Acquisizione firma da %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Acquisizione firma fallita</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Firma errata!</string>
-    <string name="send_coins_fragment_payee_verified_by">confermato da: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">sconosciuto</string>
     <string name="send_coins_fragment_receiving_address_label">Manda a</string>
     <string name="send_coins_fragment_receiving_address_hint">inserisci indirizzo o nome</string>
@@ -374,4 +373,7 @@
     <string name="activity_security_hide_balance">Mascheramento Automatico Bilancio </string>
     <string name="reset_to_default">Riportare alle condizioni originali</string>
 
+    <string name="payment_protocol_default_error_title">Errore di pagamento</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Fondi insufficenti</string>
+    <string name="payment_protocol_insufficient_funds_error_message">Non hai fondi sufficienti per completare questa transazione</string>
 </resources>
