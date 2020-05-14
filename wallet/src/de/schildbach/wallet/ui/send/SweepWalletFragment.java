@@ -636,7 +636,7 @@ public class SweepWalletFragment extends Fragment {
 		}
 
 		Intent transactionResultIntent = TransactionResultActivity.createIntent(activity,
-				sentTransaction, activity.isUserAuthorized());
+				null, sentTransaction, activity.isUserAuthorized());
 		startActivity(transactionResultIntent);
 		activity.finish();
 	}
