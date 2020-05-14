@@ -41,6 +41,7 @@ import android.os.PowerManager.WakeLock;
 import android.text.format.DateUtils;
 
 import androidx.core.app.NotificationCompat;
+import androidx.lifecycle.LifecycleService;
 import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
@@ -58,8 +59,8 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
-import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
@@ -115,8 +116,6 @@ import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
-
-import androidx.lifecycle.LifecycleService;
 
 import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 
@@ -843,7 +842,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private void startForeground() {
         //Shows ongoing notification promoting service to foreground service and
         //preventing it from being killed in Android 26 or later
-        Notification notification = createNetworkSyncNotification();
+        Notification notification = createNetworkSyncNotification(null);
         startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
     }
 
@@ -933,12 +932,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         }
     }
 
-    private Notification createNetworkSyncNotification() {
+    private Notification createNetworkSyncNotification(BlockchainState blockchainState) {
         Intent notificationIntent = OnboardingActivity.createIntent(this);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
                 notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-        String message = getString(R.string.blockchain_state_progress_downloading);
+        final String message = (blockchainState != null)
+                ? BlockchainStateUtils.getSyncStateString(blockchainState, this)
+                : getString(R.string.blockchain_state_progress_downloading);
 
         return new NotificationCompat.Builder(this,
                 Constants.NOTIFICATION_CHANNEL_ID_ONGOING)
@@ -1044,7 +1045,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 nm.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC);
             } else if (blockchainState.getReplaying() || syncing) {
                 //Shows ongoing notification when synchronizing the blockchain
-                Notification notification = createNetworkSyncNotification();
+                Notification notification = createNetworkSyncNotification(blockchainState);
                 nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
             }
         }
