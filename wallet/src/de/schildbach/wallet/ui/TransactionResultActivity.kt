@@ -46,19 +46,25 @@ class TransactionResultActivity : AbstractWalletActivity() {
         private const val EXTRA_PAYEE_VERIFIED_BY = "payee_verified_by"
 
         @JvmStatic
-        fun createIntent(context: Context, transaction: Transaction, userAuthorized: Boolean): Intent {
-            return createIntent(context, transaction, userAuthorized, null, null)
+        fun createIntent(context: Context, action: String? = null, transaction: Transaction, userAuthorized: Boolean): Intent {
+            return createIntent(context, action, transaction, userAuthorized, null, null)
         }
 
         @JvmStatic
-        fun createIntent(context: Context, transaction: Transaction, userAuthorized: Boolean,
+        fun createIntent(context: Context, transaction: Transaction, userAuthorized: Boolean, payeeName: String? = null,
+                         payeeVerifiedBy: String? = null): Intent {
+            return createIntent(context, null, transaction, userAuthorized, payeeName, payeeVerifiedBy)
+        }
+
+        fun createIntent(context: Context, action: String?, transaction: Transaction, userAuthorized: Boolean,
                          payeeName: String? = null, payeeVerifiedBy: String? = null): Intent {
-            val transactionResultIntent = Intent(context, TransactionResultActivity::class.java)
-            transactionResultIntent.putExtra(EXTRA_TX_ID, transaction.txId)
-            transactionResultIntent.putExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, userAuthorized)
-            transactionResultIntent.putExtra(EXTRA_PAYEE_NAME, payeeName)
-            transactionResultIntent.putExtra(EXTRA_PAYEE_VERIFIED_BY, payeeVerifiedBy)
-            return transactionResultIntent
+            return Intent(context, TransactionResultActivity::class.java).apply {
+                setAction(action)
+                putExtra(EXTRA_TX_ID, transaction.txId)
+                putExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, userAuthorized)
+                putExtra(EXTRA_PAYEE_NAME, payeeName)
+                putExtra(EXTRA_PAYEE_VERIFIED_BY, payeeVerifiedBy)
+            }
         }
     }
 
@@ -77,10 +83,16 @@ class TransactionResultActivity : AbstractWalletActivity() {
             transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
             view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
             transaction_close_btn.setOnClickListener {
-                if (intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false)) {
-                    startActivity(WalletActivity.createIntent(this))
-                } else {
-                    startActivity(LockScreenActivity.createIntentAsNewTask(this))
+                when {
+                    intent.action == Intent.ACTION_VIEW -> {
+                        finish()
+                    }
+                    intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
+                        startActivity(WalletActivity.createIntent(this))
+                    }
+                    else -> {
+                        startActivity(LockScreenActivity.createIntentAsNewTask(this))
+                    }
                 }
             }
         } else {

@@ -38,7 +38,7 @@ import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.scan.ScanActivity;
-import de.schildbach.wallet.ui.send.SendCoinsActivity;
+import de.schildbach.wallet.ui.send.SendCoinsInternalActivity;
 import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.Qr;
 import de.schildbach.wallet.util.Toast;
@@ -318,7 +318,7 @@ public final class SendingAddressesFragment extends FancyListFragment
     }
 
     private void handleSend(final String address) {
-        SendCoinsActivity.start(activity, PaymentIntent.fromAddress(address, null));
+        SendCoinsInternalActivity.start(activity, PaymentIntent.fromAddress(address, null));
     }
 
     private void handleRemove(final String address) {

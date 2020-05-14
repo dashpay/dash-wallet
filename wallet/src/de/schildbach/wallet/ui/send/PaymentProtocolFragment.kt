@@ -252,10 +252,12 @@ class PaymentProtocolFragment : Fragment() {
     private fun showTransactionResult(transaction: Transaction) {
         val payeeName = paymentProtocolModel.finalPaymentIntent!!.payeeName
         val payeeVerifiedBy = paymentProtocolModel.finalPaymentIntent!!.payeeVerifiedBy
-        val transactionResultIntent = TransactionResultActivity.createIntent(
-                activity!!, transaction, isUserAuthorized(), payeeName, payeeVerifiedBy)
-        startActivity(transactionResultIntent)
-        activity!!.finish()
+        activity!!.run {
+            val transactionResultIntent = TransactionResultActivity.createIntent(
+                    this, intent.action, transaction, isUserAuthorized(), payeeName, payeeVerifiedBy)
+            startActivity(transactionResultIntent)
+            finish()
+        }
     }
 
     private fun handleSendRequestException() {
