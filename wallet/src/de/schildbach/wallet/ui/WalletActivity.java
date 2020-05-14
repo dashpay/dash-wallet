@@ -35,14 +35,9 @@ import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.LocaleList;
 import android.telephony.TelephonyManager;
-import android.view.ContextMenu;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -53,15 +48,11 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.view.GravityCompat;
-import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
 import com.google.android.material.appbar.AppBarLayout;
-import com.google.android.material.navigation.NavigationView;
 import com.google.common.collect.ImmutableList;
-import com.squareup.okhttp.HttpUrl;
 
 import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.core.Transaction;
@@ -84,7 +75,6 @@ import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
-import de.schildbach.wallet.ui.preference.PreferenceActivity;
 import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
@@ -100,7 +90,6 @@ import kotlin.Pair;
  */
 public final class WalletActivity extends AbstractBindServiceActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback,
-        NavigationView.OnNavigationItemSelectedListener,
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
 
@@ -118,11 +107,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private WalletApplication application;
     private Configuration config;
     private Wallet wallet;
-    private FingerprintHelper fingerprintHelper;
-
-    private DrawerLayout viewDrawer;
-    private View viewFakeForSafetySubmenu;
-    private View payBtn;
 
     private Handler handler = new Handler();
 
@@ -157,8 +141,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         handleIntent(getIntent());
 
-        MaybeMaintenanceFragment.add(getSupportFragmentManager());
-
         initView();
 
         //Prevent showing dialog twice or more when activity is recreated (e.g: rotating device, etc)
@@ -166,8 +148,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             //Add BIP44 support and PIN if missing
             upgradeWalletKeyChains(Constants.BIP44_PATH, false);
         }
-
-        initFingerprintHelper();
 
         this.clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
 
@@ -195,24 +175,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
         });
     }
 
-    private void initFingerprintHelper() {
-        //Init fingerprint helper
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            fingerprintHelper = new FingerprintHelper(this);
-            if (!fingerprintHelper.init()) {
-                fingerprintHelper = null;
-            }
-        }
-    }
-
     private void initView() {
-        initNavigationDrawer();
         initQuickActions();
         findViewById(R.id.uphold_account_section).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 startUpholdActivity();
-                viewDrawer.closeDrawer(GravityCompat.START);
             }
         });
         findViewById(R.id.pay_btn).setOnClickListener(new View.OnClickListener() {
@@ -267,18 +235,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         View secureActionView = findViewById(R.id.secure_action);
         secureActionView.setVisibility(config.getRemindBackupSeed() ? View.VISIBLE : View.GONE);
         findViewById(R.id.secure_action_space).setVisibility(secureActionView.getVisibility());
-    }
-
-    private void initNavigationDrawer() {
-        final NavigationView navigationView = findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(this);
-
-        viewFakeForSafetySubmenu = new View(this);
-        viewFakeForSafetySubmenu.setVisibility(View.GONE);
-        viewDrawer = findViewById(R.id.drawer_layout);
-        viewDrawer.addView(viewFakeForSafetySubmenu);
-        registerForContextMenu(viewFakeForSafetySubmenu);
-        viewDrawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
     }
 
     @Override
@@ -392,96 +348,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }.parse();
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(final Menu menu) {
-        getMenuInflater().inflate(R.menu.wallet_options, menu);
-        super.onCreateOptionsMenu(menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(final MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.wallet_options_request:
-                handleRequestCoins();
-                return true;
-
-            case R.id.wallet_options_send:
-                handleSendCoins();
-                return true;
-
-			/*case R.id.wallet_options_scan:
-                handleScan();
-				return true;
-
-			case R.id.wallet_options_address_book:
-				AddressBookActivity.start(this);
-				return true;
-
-			case R.id.wallet_options_exchange_rates:
-				startActivity(new Intent(this, ExchangeRatesActivity.class));
-				return true;
-
-			case R.id.wallet_options_sweep_wallet:
-				SweepWalletActivity.start(this);
-				return true;
-
-			case R.id.wallet_options_network_monitor:
-				startActivity(new Intent(this, NetworkMonitorActivity.class));
-				return true;
-
-			case R.id.wallet_options_restore_wallet:
-				handleRestoreWallet();
-				return true;
-
-			case R.id.wallet_options_backup_wallet:
-				handleBackupWallet();
-				return true;
-
-			case R.id.wallet_options_encrypt_keys:
-				handleEncryptKeys();
-				return true;
-
-			case R.id.wallet_options_preferences:
-				startActivity(new Intent(this, PreferenceActivity.class));
-				return true;
-
-			case R.id.wallet_options_safety:
-				HelpDialogFragment.page(getFragmentManager(), R.string.help_safety);
-				return true;
-*/
-            case R.id.wallet_options_report_issue:
-                handleReportIssue();
-                return true;
-
-            case R.id.options_paste:
-                handlePaste();
-                return true;
-
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
-    public void handleRequestCoins() {
-        startActivity(new Intent(this, RequestCoinsActivity.class));
-    }
-
-    public void handleSendCoins() {
-        SendCoinsActivity.start(this, null, true);
-    }
-
     public void handleScan(View clickView) {
         ScanActivity.startForResult(this, clickView, REQUEST_CODE_SCAN);
-    }
-
-    public void handleBackupWallet() {
-        if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
-            BackupWalletDialogFragment.show(getSupportFragmentManager());
-        else
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    REQUEST_CODE_BACKUP_WALLET);
     }
 
     public void handleRestoreWallet() {
@@ -517,10 +385,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         showRestoreWalletFromSeedDialog();
     }
 
-    public void handleEncryptKeys() {
-        startActivity(SetPinActivity.createIntent(this, R.string.wallet_options_encrypt_keys_change, true));
-    }
-
     public void handleEncryptKeysRestoredWallet() {
         EncryptKeysDialogFragment.show(false, getSupportFragmentManager(), new DialogInterface.OnDismissListener() {
             @Override
@@ -528,10 +392,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 resetBlockchain();
             }
         });
-    }
-
-    private void handleReportIssue() {
-        ReportIssueDialogBuilder.createReportIssueDialog(this, application).show();
     }
 
     private void handlePaste() {
@@ -560,11 +420,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         } else {
             InputParser.dialog(this, null, R.string.scan_to_pay_error_dialog_title, R.string.scan_to_pay_error_dialog_message_no_data);
         }
-    }
-
-    private void enableFingerprint() {
-        config.setRemindEnableFingerprint(true);
-        UnlockWalletDialogFragment.show(getSupportFragmentManager());
     }
 
     @Override
@@ -648,72 +503,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void checkAlerts() {
-
-        final PackageInfo packageInfo = getWalletApplication().packageInfo();
-        final int versionNameSplit = packageInfo.versionName.indexOf('-');
-        final HttpUrl.Builder url = HttpUrl
-                .parse(Constants.VERSION_URL
-                        + (versionNameSplit >= 0 ? packageInfo.versionName.substring(versionNameSplit) : ""))
-                .newBuilder();
-        url.addEncodedQueryParameter("package", packageInfo.packageName);
-        url.addQueryParameter("current", Integer.toString(packageInfo.versionCode));
-
-		/*new HttpGetThread(url.build(), application.httpUserAgent()) {
-			@Override
-			protected void handleLine(final String line, final long serverTime) {
-				final int serverVersionCode = Integer.parseInt(line.split("\\s+")[0]);
-
-				log.info("according to \"" + url + "\", strongly recommended minimum app version is "
-						+ serverVersionCode);
-
-				if (serverTime > 0) {
-					final long diffMinutes = Math
-							.abs((System.currentTimeMillis() - serverTime) / DateUtils.MINUTE_IN_MILLIS);
-
-					if (diffMinutes >= 60) {
-						log.info("according to \"" + url + "\", system clock is off by " + diffMinutes + " minutes");
-
-						runOnUiThread(new Runnable() {
-							@Override
-							public void run() {
-								if (!isFinishing())
-									return;
-								final Bundle args = new Bundle();
-								args.putLong("diff_minutes", diffMinutes);
-								showDialog(DIALOG_TIMESKEW_ALERT, args);
-							}
-						});
-
-						return;
-					}
-				}
-
-				if (serverVersionCode > packageInfo.versionCode) {
-					runOnUiThread(new Runnable() {
-						@Override
-						public void run() {
-							if (isFinishing())
-								return;
-							showDialog(DIALOG_VERSION_ALERT);
-						}
-					});
-
-					return;
-				}
-			}
-
-			@Override
-			protected void handleException(final Exception x) {
-				if (x instanceof UnknownHostException || x instanceof SocketException
-						|| x instanceof SocketTimeoutException) {
-					// swallow
-					log.debug("problem reading", x);
-				} else {
-					CrashReporter.saveBackgroundTrace(new RuntimeException(url.toString(), x), packageInfo);
-				}
-			}
-		}.start();*/
-
         if (CrashReporter.hasSavedCrashTrace()) {
             final StringBuilder stackTrace = new StringBuilder();
 
@@ -727,6 +516,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     R.string.report_issue_dialog_title_crash, R.string.report_issue_dialog_message_crash) {
                 @Override
                 protected CharSequence subject() {
+                    final PackageInfo packageInfo = getWalletApplication().packageInfo();
                     return Constants.REPORT_SUBJECT_BEGIN + packageInfo.versionName + " " + Constants.REPORT_SUBJECT_CRASH;
                 }
 
@@ -828,10 +618,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         config.disarmBackupReminder();
         this.wallet = application.getWallet();
         upgradeWalletKeyChains(Constants.BIP44_PATH, true);
-
-        if (fingerprintHelper != null) {
-            fingerprintHelper.clear();
-        }
     }
 
     private void resetBlockchain() {
@@ -863,103 +649,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }
     }
 
-    @Override
-    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
-        super.onCreateContextMenu(menu, v, menuInfo);
-        MenuInflater inflater = getMenuInflater();
-        if (v == viewFakeForSafetySubmenu) {
-            inflater.inflate(R.menu.wallet_safety_options, menu);
-
-            final String externalStorageState = Environment.getExternalStorageState();
-
-            menu.findItem(R.id.wallet_options_restore_wallet).setEnabled(
-                    Environment.MEDIA_MOUNTED.equals(externalStorageState) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(externalStorageState));
-            menu.findItem(R.id.wallet_options_backup_wallet).setEnabled(Environment.MEDIA_MOUNTED.equals(externalStorageState));
-            menu.findItem(R.id.wallet_options_encrypt_keys).setTitle(
-                    wallet.isEncrypted() ? R.string.wallet_options_encrypt_keys_change : R.string.wallet_options_encrypt_keys_set);
-
-            boolean showFingerprintOption = fingerprintHelper != null && !fingerprintHelper.isFingerprintEnabled();
-            menu.findItem(R.id.wallet_options_enable_fingerprint).setVisible(showFingerprintOption);
-        }
-    }
-
-    @Override
-    public boolean onContextItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-
-            case R.id.wallet_options_backup_wallet:
-                handleBackupWallet();
-                return true;
-
-            case R.id.wallet_options_restore_wallet:
-                handleRestoreWallet();
-                return true;
-
-            case R.id.wallet_options_encrypt_keys:
-                handleEncryptKeys();
-                return true;
-            case R.id.wallet_options_backup_wallet_to_seed:
-                handleBackupWalletToSeed();
-                return true;
-
-            case R.id.wallet_options_restore_wallet_from_seed:
-                handleRestoreWalletFromSeed();
-                return true;
-
-            case R.id.wallet_options_enable_fingerprint:
-                enableFingerprint();
-                return true;
-        }
-
-        return super.onContextItemSelected(item);
-    }
-
-    @Override
-    public boolean onNavigationItemSelected(MenuItem item) {
-        // Handle navigation view item clicks here.
-        int id = item.getItemId();
-
-        if (id == R.id.nav_home) {
-
-        } else if (id == R.id.nav_address_book) {
-            AddressBookActivity.start(this);
-        } else if (id == R.id.nav_exchenge_rates) {
-            startActivity(new Intent(this, ExchangeRatesActivity.class));
-        } else if (id == R.id.nav_paper_wallet) {
-            SweepWalletActivity.start(this, true);
-        } else if (id == R.id.nav_network_monitor) {
-            startActivity(new Intent(this, NetworkMonitorActivity.class));
-        } else if (id == R.id.nav_safety) {
-            openContextMenu(viewFakeForSafetySubmenu);
-        } else if (id == R.id.nav_settings) {
-            startActivity(new Intent(this, PreferenceActivity.class));
-        } else if (id == R.id.nav_disconnect) {
-            handleDisconnect();
-        } else if (id == R.id.nav_report_issue) {
-            handleReportIssue();
-        }
-
-        viewDrawer.closeDrawer(GravityCompat.START);
-        return true;
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (viewDrawer.isDrawerOpen(GravityCompat.START)) {
-            viewDrawer.closeDrawer(GravityCompat.START);
-        } else {
-            super.onBackPressed();
-        }
-    }
-
     private void startUpholdActivity() {
         startActivity(UpholdAccountActivity.createIntent(this, wallet));
-    }
-
-    //Dash Specific
-    private void handleDisconnect() {
-        getWalletApplication().stopBlockchainService();
-        finish();
     }
 
     public void upgradeWalletKeyChains(final ImmutableList<ChildNumber> path, final boolean restoreBackup) {
