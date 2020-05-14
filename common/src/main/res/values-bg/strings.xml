@@ -3,6 +3,5 @@
 
     <string name="loading">Зареждане…</string>
     <string name="loading_error">Възникна грешка. Моля опитайте отново по-късно.</string>
-    <string name="dash_available">%1$s налични</string>
 
 </resources>

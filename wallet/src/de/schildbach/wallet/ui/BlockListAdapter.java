@@ -24,24 +24,18 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
-import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.Transaction.Purpose;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.ui.CurrencyTextView;
 
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockInfo;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
 import android.content.Context;
-import android.graphics.Typeface;
 
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -49,7 +43,6 @@ import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
 import android.widget.TextView;
 
 /**
@@ -230,49 +223,6 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
                 }
             });
         }
-    }
-
-    public void bindView(final View row, final Transaction tx) {
-        final boolean isCoinBase = tx.isCoinBase();
-        final boolean isInternal = tx.getPurpose() == Purpose.KEY_ROTATION;
-
-        final Coin value = tx.getValue(wallet);
-        final boolean sent = value.signum() < 0;
-        final boolean self = WalletUtils.isEntirelySelf(tx, wallet);
-        final Address address;
-        if (sent)
-            address = WalletUtils.getToAddressOfSent(tx, wallet).get(0);
-        else
-            address = WalletUtils.getWalletAddressOfReceived(tx, wallet);
-
-        // receiving or sending
-        final TextView rowFromTo = (TextView) row.findViewById(R.id.block_row_transaction_fromto);
-        if (isInternal || self)
-            rowFromTo.setText(R.string.symbol_internal);
-        else if (sent)
-            rowFromTo.setText(R.string.symbol_to);
-        else
-            rowFromTo.setText(R.string.symbol_from);
-
-        // address
-        final TextView rowAddress = (TextView) row.findViewById(R.id.block_row_transaction_address);
-        final String label;
-        if (isCoinBase)
-            label = textCoinBase;
-        else if (isInternal || self)
-            label = textInternal;
-        else if (address != null)
-            label = AddressBookProvider.resolveLabel(context, address.toString());
-        else
-            label = "?";
-        rowAddress.setText(label != null ? label : address.toString());
-        rowAddress.setTypeface(label != null ? Typeface.DEFAULT : Typeface.MONOSPACE);
-
-        // value
-        final CurrencyTextView rowValue = (CurrencyTextView) row.findViewById(R.id.block_row_transaction_value);
-        rowValue.setAlwaysSigned(true);
-        rowValue.setFormat(format);
-        rowValue.setAmount(value);
     }
 
     public interface OnClickListener {

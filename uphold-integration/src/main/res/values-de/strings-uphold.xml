@@ -2,14 +2,12 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
-    <string name="uphold_buy_dash_activity_title">Dash mit Uphold kaufen/verkaufen</string>
     <string name="uphold_buy_dash_with_uphold">Dash über den Uphold Account kaufen</string>
     <string name="uphold_buy_dash_button">Dash kaufen</string>
     <string name="uphold_transfer_to_this_wallet_button">Von Uphold transferieren</string>
     <string name="uphold_link_account">Uphold-Konto verknüpfen</string>
     <string name="uphold_account_dash_balance">Das Dash-Guthaben des Uphold Accounts beträgt</string>
     <string name="uphold_transfer_to_this_wallet">Dash vom Uphold Account an diese Wallet transferieren</string>
-    <string name="uphold_withdrawal_deduct_fee_disclaimer">Die Gebühr wird vom angeforderten Betrag abgezogen.</string>
     <string name="uphold_withdrawal_instructions">Trage den Transaktionsbetrag ein</string>
     <string name="uphold_withdrawal_success_title">Erfolg</string>
     <string name="uphold_withdrawal_success_message">Deine Transaktion wurde abgeschickt und der Betrag sollte in ein paar Minuten auf deine Wallet gutgeschrieben werden.\n\nTransaktions-ID: %s</string>

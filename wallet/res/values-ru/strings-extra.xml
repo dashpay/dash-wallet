@@ -92,20 +92,6 @@
     <string name="forgot_pin_instruction_3">Войдите в кошелёк, используя новый PIN-код</string>
     <string name="forgot_pin_warning">Если Вы забыли PIN-код и потеряли фразу восстановления, Вы не сможете получить доступ к кошельку и средствам. </string>
 
-    <string name="send_coins_auto_lock_feasible">Эту транзакция будет подтверждена немедленно без дополнительной комиссии</string>
-    <string name="send_coins_auto_lock_not_feasible">Подтверждение может занять несколько минут. Провести мгновенно за %1$s%2$s?</string>
-    <string name="send_coins_instant_send_not_feasible">Подтверждение может занять несколько минут.</string>
-
-    <string name="options_paste_from_clipboard_title">Вставить из буфера обмена</string>
-
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">Платёж ещё не был передан в сеть.</string>
-    <string name="transaction_row_message_sent_to_single_peer">Платёж был передан в сеть.</string>
-
-    <string name="regular_transaction_info_message">Транзакция не была подтверждена мгновенно.</string>
-
-    <string name="wallet_options_disconnect">Отключить</string>
-
-    <string name="network_monitor_masternodes_title">Мастерноды</string>
     <string name="export_keys_dialog_title_to_seed">Посмотреть фразу восстановления</string>
     <string name="import_keys_dialog_title_from_seed">Восстановить из фразы восстановления</string>
     <string name="backup_to_seed_wallet_dialog_message">Это Ваша фраза восстановления. Пожалуйста, запишите и сохраните её.</string>
@@ -114,17 +100,11 @@
     <string name="import_keys_from_seed_dialog_message">Введите свою фразу восстановления.</string>
     <string name="import_export_keys_dialog_password_phrase">Ваша фраза восстановления.</string>
     <string name="preferences_report_issue_summary">Изложите в подробностях вашу проблему и отправьте на электронный адрес разработчиков.</string>
-    <string name="navigation_configuration">Конфигурация</string>
-    <string name="button_copy_address">Скопировать адрес</string>
-    <string name="request_coins_clipboard_address_msg">Адрес скопирован в буфер обмена</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Показать</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">«%s» не является словом из фразы восстановления</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Фраза восстановления должна состоять из 12 слов</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Некорректная фраза восстановления</string>
     <string name="restore_wallet_from_invalid_seed_failure">Кошелёк не может быть восстановлен:\n\n%s\n\nПроверьте правильность фразы восстановления.</string>
-
-    <string name="send_coins_options_fee_category_zero">Бесплатно</string>
-    <string name="send_coins_fragment_hint_fee_zero">Без комиссии. Используйте эту опцию, только если Вас не волнует время прохождения транзакции.</string>
 
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">Приложение %s просит Вас предоставить свой публичный мастер-ключ. Этот ключ может быть использован для слежения за Вашим кошельком, но его нельзя использовать для перемещения Ваших средств.</string>
@@ -133,16 +113,12 @@
 
     <string name="wallet_lock_unlock">Открыть</string>
     <string name="wallet_lock_unlock_wallet">Открыть кошелёк</string>
-    <string name="wallet_lock_unlock_to_see_txs_title">Кошелёк закрыт</string>
-    <string name="wallet_lock_unlock_to_see_txs_txt">Коснитесь иконки сверху, чтобы открыть свой кошелёк и увидеть историю транзакций.</string>
-    <string name="wallet_lock_unlock_dialog_title">Открыть ваш кошелёк</string>
     <string name="wallet_lock_unlock_dialog_message">Ваш кошелёк защищён ПИН-кодом. Введите свой ПИН-код и нажмите "Открыть".</string>
     <string name="wallet_lock_reset_wallet_title">Сброс кошелька</string>
     <string name="wallet_lock_reset_wallet_message">Вы уверены? Ваш кошелёк будет удалён, а доступ к средствам утерян.\n\nВаш кошелёк Dash можно будет восстановить только с помощью файла восстановления или фразы восстановления.</string>
 
     <string name="wallet_lock_wallet_disabled">Кошелёк отключён</string>
     <string name="wallet_lock_try_again">Попробуйте снова через %1$d%2$s</string>
-    <string name="wallet_lock_reset">Сброс</string>
     <string name="wallet_lock_wrong_pin">Неправильный ПИН-код! %s</string>
 
     <plurals name="wallet_lock_attempts_remaining">
@@ -177,26 +153,19 @@
     <string name="change_to">Поменять на %s</string>
     <string name="leave_as">Оставить %s</string>
 
-    <string name="remind_later">Напомнить позже</string>
-    <string name="backup_now">Восстановить сейчас</string>
-
     <string name="notification_transactions_channel_name">Транзакции</string>
     <string name="notification_transactions_channel_description">Получать оповещения о входящих транзакциях.</string>
     <string name="notification_synchronization_channel_name"> Синхронизация</string>
     <string name="notification_synchronization_channel_description">Показывает уведомление, когда приложение синхронизируется с сетью.</string>
 
-    <string name="net_type_indicator" />
-
     <string name="unlock_with_fingerprint">Используйте свой отпечаток пальца, чтобы разблокировать.</string>
     <string name="unlock_with_fingerprint_error">Не удалось распознать отпечаток пальца, пожалуйста, повторите попытку.</string>
     <string name="unlock_with_fingerprint_error_max_attempts">Превышено максимальное количество попыток разблокировки с помощью отпечатка пальцев. Пожалуйста, попробуйте позже.</string>
-    <string name="or_unlock_with_fingerprint">Или используйте свой отпечаток пальца, чтобы разблокировать.</string>
     <string name="enable_fingerprint">Включить разблокировку с помощью отпечатка пальца.</string>
     <string name="touch_fingerprint_sensor">Коснитесь датчика отпечатков пальцев.</string>
     <string name="touch_fingerprint_to_enable">Коснитесь датчика отпечатков пальцев, чтобы разблокировать с помощью отпечатка пальца.</string>
     <string name="fingerprint_changed_title">Данные об отпечатке изменены</string>
 	<string name="fingerprint_changed_message">Мы обнаружили изменение данных об отпечатке. В этот раз для входа нужно ввести PIN-код. </string>
-	<string name="exchange_rate_missing">Это давний платёж, фиатный эквивалент недоступен.</string>
 
     <string name="preferences_enable_payment_request_summary">Используйте платёжный протокол для платежей через QR-код</string>
     <string name="preferences_enable_payment_request_title">BIP70 для функции "сканируй и плати"</string>
@@ -217,8 +186,6 @@
     <string name="verify_seed_title">Пожалуйста, запишите её</string>
     <string name="verify_seed_write_down_confirmation">Я записал</string>
     <string name="verify_seed_buttons_tip">Пожалуйста, нажмите на слова из Вашей фразы восстановления в правильном порядке</string>
-    <string name="verify_seed_success_title">Успешно подтверждено</string>
-    <string name="verify_seed_success_message">Сейчас Ваш кошелёк защищён. Вы можете использовать фразу восстановления в любое время, чтобы получить доступ к Вашему аккаунту на другом устройстве.</string>
     <string name="view_seed_done">Готово</string>
     <string name="view_seed_title">Фраза восстановления</string>
 	<string name="transaction_result_view_on_explorer">Посмотреть в Block Explorer</string>

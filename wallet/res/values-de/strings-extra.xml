@@ -92,20 +92,6 @@
     <string name="forgot_pin_instruction_3">Mit neuer PIN einloggen, um Zugang zur Wallet zu erhalten</string>
     <string name="forgot_pin_warning">Wenn Du deine PIN vergisst und deine Wiederherstellungsphrase verlierst, kannst du nicht mehr auf deine Wallet und dein Guthaben zugreifen.</string>
 
-    <string name="send_coins_auto_lock_feasible">Diese Transaktion wird sofort und ohne zusätzliche Gebühren abgeschlossen</string>
-    <string name="send_coins_auto_lock_not_feasible">Diese Transaktion benötigt einige Minuten, um bestätigt zu werden. Soll sie für zusätzlich %1$s%2$s sofort bestätigt werden?</string>
-    <string name="send_coins_instant_send_not_feasible">Diese Transaktion benötigt einige Minuten, um bestätigt zu werden.</string>
-
-    <string name="options_paste_from_clipboard_title">Aus dem Clipboard einfügen</string>
-
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">Diese Zahlung ist noch nicht übertragen.</string>
-    <string name="transaction_row_message_sent_to_single_peer">Die Zahlung wurde gesendet.</string>
-
-    <string name="regular_transaction_info_message">Diese Transaktion wurde nicht sofort bestätigt.</string>
-
-    <string name="wallet_options_disconnect">Verbindungen trennen</string>
-
-    <string name="network_monitor_masternodes_title">Masternodes</string>
     <string name="export_keys_dialog_title_to_seed">Wiederherstellungsphrase ansehen</string>
     <string name="import_keys_dialog_title_from_seed">Mithilfe der Phrase wiederherstellen</string>
     <string name="backup_to_seed_wallet_dialog_message">Das ist deine Wiederherstellungsphrase. Bitte schreibe diese nieder.</string>
@@ -114,17 +100,11 @@
     <string name="import_keys_from_seed_dialog_message">Gib hier deine Wiederherstellungsphrase ein.</string>
     <string name="import_export_keys_dialog_password_phrase">Hier bitte die Wiederherstellungsphrase eingeben.</string>
     <string name="preferences_report_issue_summary">Informationen über das Problem sammeln und an die Entwickler weiterleiten.</string>
-    <string name="navigation_configuration">Konfiguration</string>
-    <string name="button_copy_address">Adresse kopieren</string>
-    <string name="request_coins_clipboard_address_msg">Dash-Adresse in die Zwischenablage kopiert</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Zeigen</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" ist kein Wort aus der Wiederherstellungs-Wortfolge</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Wiederherstellungs-Wortfolge muss 12 Wörter haben</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Fehlerhafte Wiederherstellungs-Wortfolge</string>
     <string name="restore_wallet_from_invalid_seed_failure">Die Wallet konnte nicht wiederhergestellt werden:\n\n%s\n\nFalsche Wiederherstellungsphrase?</string>
-
-    <string name="send_coins_options_fee_category_zero">Keine Netzwerk-Gebühr</string>
-    <string name="send_coins_fragment_hint_fee_zero">Keine Netzwerk-Gebühr zahlen. Verwende das nur, wenn die Bestätigungszeit für dich nicht relevant ist.</string>
 
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">Die App %s möchte auf deinen Master Public Key zugreifen. Dadurch kann deine Wallet eingesehen werden, es können jedoch keine Dash verschoben werden.</string>
@@ -133,16 +113,12 @@
 
     <string name="wallet_lock_unlock">Entsperren</string>
     <string name="wallet_lock_unlock_wallet">Wallet entsperren</string>
-    <string name="wallet_lock_unlock_to_see_txs_title">Wallet verschlossen.</string>
-    <string name="wallet_lock_unlock_to_see_txs_txt">Tippe auf das Schloßsymbol, damit die Wallet entsperrt und der Transaktionsverlauf sichtbar wird.</string>
-    <string name="wallet_lock_unlock_dialog_title">Entsperre deine Wallet</string>
     <string name="wallet_lock_unlock_dialog_message">Deine Wallet wird durch einen Zahlungs-PIN geschützt. Gib nun den PIN ein und tippe auf Entsperren, um fortzufahren.</string>
     <string name="wallet_lock_reset_wallet_title">Wallet zurücksetzen</string>
     <string name="wallet_lock_reset_wallet_message">Bist du sicher? Die Wallet wird gelöscht und der Inhalt wird verloren gehen.\n\nDie Dash können danach nur noch über eine Backup-Datei oder eine Wiederherstellungsphrase wiederhergestellt werden.</string>
 
     <string name="wallet_lock_wallet_disabled">Wallet deaktiviert</string>
     <string name="wallet_lock_try_again">Versuches es wieder in %1$d %2$s</string>
-    <string name="wallet_lock_reset">Zurücksetzen</string>
     <string name="wallet_lock_wrong_pin">Falscher PIN! %s</string>
 
     <plurals name="wallet_lock_attempts_remaining">
@@ -171,26 +147,19 @@
     <string name="change_to">Wechsel zu %s</string>
     <string name="leave_as">Belasse %s</string>
 
-    <string name="remind_later">Später erinnern</string>
-    <string name="backup_now">Backup erstellen</string>
-
     <string name="notification_transactions_channel_name">Transaktionen</string>
     <string name="notification_transactions_channel_description">Benachrichtigungen zu eingehenden Transaktionen erhalten.</string>
     <string name="notification_synchronization_channel_name">Synchronisierung</string>
     <string name="notification_synchronization_channel_description">Eine Benachrichtigung anzeigen, wenn die App sich mit dem Netzwerk synchronisiert.</string>
 
-    <string name="net_type_indicator" />
-
     <string name="unlock_with_fingerprint">Fingerabdruck zum Entsperren verwenden.</string>
     <string name="unlock_with_fingerprint_error">Fingerabdruck nicht erkannt. Bitte erneut versuchen.</string>
     <string name="unlock_with_fingerprint_error_max_attempts">Maximale Anzahl an Fingerabdruckversuchen überschritte. Bitte später erneut versuchen.</string>
-    <string name="or_unlock_with_fingerprint">Oder den Fingerabdruck zum Entsperren verwenden.</string>
     <string name="enable_fingerprint">Fingerabdruck aktivieren</string>
     <string name="touch_fingerprint_sensor">Fingerabdrucksensor berühren</string>
     <string name="touch_fingerprint_to_enable">Den Fingerabdrucksensor berühren, um das Entsperren per Fingerabdruck zu aktivieren.</string>
     <string name="fingerprint_changed_title">Fingerscan-Daten geändert</string>
 	<string name="fingerprint_changed_message">Wir haben festgestellt, dass die Authentifizierungsdaten des Fingerscans geändert wurden. Du musst dich diesmal mit der PIN anmelden.</string>
-	<string name="exchange_rate_missing">Diese Transaktion ist zu alt, um den Fiatwert zu ermitteln.</string>
 
     <string name="preferences_enable_payment_request_summary">Zahlungsprotokoll für QR-Code Zahlungen verwenden</string>
     <string name="preferences_enable_payment_request_title">BIP70 für Scan-to-Pay</string>
@@ -211,8 +180,6 @@
     <string name="verify_seed_title">Bitte aufschreiben</string>
     <string name="verify_seed_write_down_confirmation">Ich habe es aufgeschrieben</string>
     <string name="verify_seed_buttons_tip">Bitte tippe die Wörter deiner Wiederherstellungsphrase in der richtigen Reihenfolge an</string>
-    <string name="verify_seed_success_title">Erfolgreich verifiziert</string>
-    <string name="verify_seed_success_message">Deine Wallet ist jetzt gesichert. Du kannst die Phrase jederzeit nutzen, um die Wallet auf einem anderen Gerät wiederherzustellen.</string>
     <string name="view_seed_done">Fertig</string>
     <string name="view_seed_title">Wiederherstellungs-Wortfolge</string>
 	<string name="transaction_result_view_on_explorer">Im Blockexplorer ansehen</string>

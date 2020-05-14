@@ -2,14 +2,12 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
-    <string name="uphold_buy_dash_activity_title">Vânzare/cumpărare Dash cu Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Cumpără Dash cu Uphold</string>
     <string name="uphold_buy_dash_button">Cumpără Dash</string>
     <string name="uphold_transfer_to_this_wallet_button">Transferă din Uphold</string>
     <string name="uphold_link_account">Link Contul Uphold</string>
     <string name="uphold_account_dash_balance">Soldul tău Dash din contul Uphold este</string>
     <string name="uphold_transfer_to_this_wallet">Transferă Dash din contul tău Uphold în acest portofel</string>
-    <string name="uphold_withdrawal_deduct_fee_disclaimer">Taxa va fi dedusă din suma solicitată.</string>
     <string name="uphold_withdrawal_success_title">Success</string>
     <string name="uphold_withdrawal_success_message">Tranzacția ta a fost trimisă, iar suma ar trebui să apară în portofel în câteva minute.\n\nIDTranzacție: %s</string>
     <string name="uphold_otp_dialog_title">Introdu codul tău 2FA mai jos</string>

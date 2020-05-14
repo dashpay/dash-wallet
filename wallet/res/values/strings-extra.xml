@@ -93,20 +93,6 @@
     <string name="forgot_pin_instruction_3">Login with your new PIN to access your wallet</string>
     <string name="forgot_pin_warning">If you have forgot your PIN and lost your recover phrase, you cannot get back access to your wallet and funds.</string>
 
-    <string name="send_coins_auto_lock_feasible">This transaction should settle instantly at no extra fee</string>
-    <string name="send_coins_auto_lock_not_feasible">This transaction may take several minutes to settle. Complete instantly for %1$s%2$s?</string>
-    <string name="send_coins_instant_send_not_feasible">This transaction may take several minutes to settle.</string>
-
-    <string name="options_paste_from_clipboard_title">Paste from clipboard</string>
-
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">This payment has not been transmitted yet.</string>
-    <string name="transaction_row_message_sent_to_single_peer">This payment has been sent.</string>
-
-    <string name="regular_transaction_info_message">This transaction was not settled instantly.</string>
-
-    <string name="wallet_options_disconnect">Disconnect</string>
-
-    <string name="network_monitor_masternodes_title">Masternodes</string>
     <string name="export_keys_dialog_title_to_seed">View Recovery Phrase</string>
     <string name="import_keys_dialog_title_from_seed">Restore from recovery phrase</string>
     <string name="backup_to_seed_wallet_dialog_message">This is your recovery phrase.  Please write it down.</string>
@@ -115,17 +101,11 @@
     <string name="import_keys_from_seed_dialog_message">Enter your recovery phrase here.</string>
     <string name="import_export_keys_dialog_password_phrase">Recovery phrase goes here.</string>
     <string name="preferences_report_issue_summary">Collect information about your issue and email your report to the developers.</string>
-    <string name="navigation_configuration">Configuration</string>
-    <string name="button_copy_address">Copy address</string>
-    <string name="request_coins_clipboard_address_msg">Dash address copied to clipboard</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Show</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" is not a recovery phrase word</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Recovery phrase must have 12 words</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Bad recovery phrase</string>
     <string name="restore_wallet_from_invalid_seed_failure">Wallet could not be restored:\n\n%s\n\nBad recovery phrase?</string>
-
-    <string name="send_coins_options_fee_category_zero">No Fee</string>
-    <string name="send_coins_fragment_hint_fee_zero">No fee of will be paid. Use \'no fee\' only if you don\'t care about confirmation time.</string>
 
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">Application %s would like to receive your Master Public Key.  This can be used to keep track of your wallet, this can not be used to move your Dash.</string>
@@ -134,16 +114,12 @@
 
     <string name="wallet_lock_unlock">Unlock</string>
     <string name="wallet_lock_unlock_wallet">Unlock wallet</string>
-    <string name="wallet_lock_unlock_to_see_txs_title">Wallet locked.</string>
-    <string name="wallet_lock_unlock_to_see_txs_txt">Tap the lock icon above to unlock your wallet and see the transaction history.</string>
-    <string name="wallet_lock_unlock_dialog_title">Unlock your wallet</string>
     <string name="wallet_lock_unlock_dialog_message">Your wallet is protected by a spending PIN. Enter your PIN and press Unlock to continue.</string>
     <string name="wallet_lock_reset_wallet_title">Reset Wallet</string>
     <string name="wallet_lock_reset_wallet_message">Are you sure? Your wallet will be deleted and all your Dash will be lost.\n\nThe only way to recover your Dash is with a backup file or recovery phrase.</string>
 
     <string name="wallet_lock_wallet_disabled">Wallet disabled</string>
     <string name="wallet_lock_try_again">Try again in %1$d %2$s</string>
-    <string name="wallet_lock_reset">Reset</string>
     <string name="wallet_lock_wrong_pin">Wrong PIN! %s</string>
 
     <plurals name="wallet_lock_attempts_remaining">
@@ -174,26 +150,19 @@
 
     <string name="protocol_version" translatable="false">%1$s\nprotocol: %2$d</string>
 
-    <string name="remind_later">Remind later</string>
-    <string name="backup_now">Backup now</string>
-
     <string name="notification_transactions_channel_name">Transactions</string>
     <string name="notification_transactions_channel_description">Receive alerts about incoming transactions.</string>
     <string name="notification_synchronization_channel_name">Synchronization</string>
     <string name="notification_synchronization_channel_description">Shows a notification when the app is synchronizing with the network.</string>
 
-    <string name="net_type_indicator" />
-
     <string name="unlock_with_fingerprint">Use your fingerprint to unlock.</string>
     <string name="unlock_with_fingerprint_error">Failed to recognize fingerprint, please try again.</string>
     <string name="unlock_with_fingerprint_error_max_attempts">Maximum fingerprint attempts exceeded. Please try again later.</string>
-    <string name="or_unlock_with_fingerprint">Or use your fingerprint to unlock.</string>
     <string name="enable_fingerprint">Enable fingerprint</string>
     <string name="touch_fingerprint_sensor">Touch fingerprint sensor</string>
     <string name="touch_fingerprint_to_enable">Touch the fingerprint sensor to enable unlocking with fingerprint.</string>
     <string name="fingerprint_changed_title">Fingerprint data changed</string>
 	<string name="fingerprint_changed_message">We detected a change in your fingerprint authentication data. You need to use PIN this time.</string>
-	<string name="exchange_rate_missing">This payment is too old to get the fiat value.</string>
 
     <string name="preferences_enable_payment_request_summary">Use payment protocol for QR-code initiated payments</string>
     <string name="preferences_enable_payment_request_title">BIP70 for scan-to-pay</string>
@@ -214,8 +183,6 @@
     <string name="verify_seed_title">Please write it down</string>
     <string name="verify_seed_write_down_confirmation">I wrote it down</string>
     <string name="verify_seed_buttons_tip">Please tap on the words from your recovery phrase in the right order</string>
-    <string name="verify_seed_success_title">Verified Successfully</string>
-    <string name="verify_seed_success_message">Your wallet is secured now. You can use your recovery phrase anytime to recover your account on another device.</string>
     <string name="view_seed_done">Done</string>
     <string name="view_seed_title">Recovery Phrase</string>
 	<string name="transaction_result_view_on_explorer">View in Block Explorer</string>

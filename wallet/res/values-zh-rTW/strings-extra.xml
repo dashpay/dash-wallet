@@ -92,20 +92,6 @@
     <string name="forgot_pin_instruction_3">使用新的密碼來登錄並訪問您的錢包</string>
     <string name="forgot_pin_warning">如果您忘記了密碼並丟失了恢復詞組，則無法找回錢包和資金。</string>
 
-    <string name="send_coins_auto_lock_feasible">此交易應立即被結算，無需支付額外費用</string>
-    <string name="send_coins_auto_lock_not_feasible">此交易可能需要幾分鐘才能結算。 支付額外的 %1$s%2$s費用來立即完成該交易嗎?</string>
-    <string name="send_coins_instant_send_not_feasible">此交易可能需要幾分鐘才能結算。</string>
-
-    <string name="options_paste_from_clipboard_title">從剪貼簿貼上</string>
-
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">付款尚未傳輸。</string>
-    <string name="transaction_row_message_sent_to_single_peer">此款項經已完成發送。</string>
-
-    <string name="regular_transaction_info_message">此交易並沒有即時結算。</string>
-
-    <string name="wallet_options_disconnect">離線</string>
-
-    <string name="network_monitor_masternodes_title">主節點</string>
     <string name="export_keys_dialog_title_to_seed">查看恢復詞組</string>
     <string name="import_keys_dialog_title_from_seed">從恢復詞組中復原</string>
     <string name="backup_to_seed_wallet_dialog_message">這是你的恢復詞組。 請寫下來。</string>
@@ -114,17 +100,11 @@
     <string name="import_keys_from_seed_dialog_message">在這裡輸入你的恢復詞組。</string>
     <string name="import_export_keys_dialog_password_phrase">恢復詞組在這裡。</string>
     <string name="preferences_report_issue_summary">收集有關您問題的信息，並將您的報告以電子郵件發方式發送給開發人員。</string>
-    <string name="navigation_configuration">配置</string>
-    <string name="button_copy_address">複製位址</string>
-    <string name="request_coins_clipboard_address_msg">達世幣位址複製到剪貼板</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">顯示</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" 不是恢復詞組的字詞</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">恢復詞組必須包含 12 個字</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">錯誤恢復詞組</string>
     <string name="restore_wallet_from_invalid_seed_failure">錢包無法還原:\n\n%s\n\n錯誤的恢復詞組?</string>
-
-    <string name="send_coins_options_fee_category_zero">不支付交易費用</string>
-    <string name="send_coins_fragment_hint_fee_zero">不支付任何交易費用。 只有在你不關心確認時間的情況下才使用“不支付交易費用”。</string>
 
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">應用程式 %s 想要獲得您的主公鑰。 這可以用來跟踪你的錢包，但這不能用來移動你的達世幣。</string>
@@ -133,16 +113,12 @@
 
     <string name="wallet_lock_unlock">解鎖</string>
     <string name="wallet_lock_unlock_wallet">解鎖錢包</string>
-    <string name="wallet_lock_unlock_to_see_txs_title">錢包己被鎖上</string>
-    <string name="wallet_lock_unlock_to_see_txs_txt">點擊上面的鎖定圖標解鎖你的錢包並查看交易記錄。</string>
-    <string name="wallet_lock_unlock_dialog_title">解鎖你的錢包</string>
     <string name="wallet_lock_unlock_dialog_message">您的錢包受個人密碼保護。輸入您的PIN碼並按 解鎖以繼續。</string>
     <string name="wallet_lock_reset_wallet_title">重置錢包</string>
     <string name="wallet_lock_reset_wallet_message">你確定嗎?  您的錢包將被刪除，而您的所有達世幣都將會丟失。\n\n你只能透過備份文件或恢復詞組來找回你的達世幣。</string>
 
     <string name="wallet_lock_wallet_disabled">錢包被禁用</string>
     <string name="wallet_lock_try_again">請在 %1$d %2$s 後再試</string>
-    <string name="wallet_lock_reset">重設</string>
     <string name="wallet_lock_wrong_pin">錯誤的 PIN碼! %s</string>
 
     <plurals name="wallet_lock_attempts_remaining">
@@ -168,26 +144,19 @@
     <string name="change_to">變更為 %s</string>
     <string name="leave_as">保留使用 %s</string>
 
-    <string name="remind_later">稍後提醒</string>
-    <string name="backup_now">立刻備份</string>
-
     <string name="notification_transactions_channel_name">交易</string>
     <string name="notification_transactions_channel_description">接收有關接收交易的警報。</string>
     <string name="notification_synchronization_channel_name">同步</string>
     <string name="notification_synchronization_channel_description">應用程序與網絡同步時顯示通知。</string>
 
-    <string name="net_type_indicator" />
-
     <string name="unlock_with_fingerprint">使用指紋解鎖。</string>
     <string name="unlock_with_fingerprint_error">無法識別指紋，請再試一次。</string>
     <string name="unlock_with_fingerprint_error_max_attempts">超出最大指紋嘗試次數 請稍後再試。</string>
-    <string name="or_unlock_with_fingerprint">或者使用指紋解鎖。</string>
     <string name="enable_fingerprint">啟用指紋解鎖</string>
     <string name="touch_fingerprint_sensor">觸控指紋感應器</string>
     <string name="touch_fingerprint_to_enable">觸摸指紋傳感器以啟用指紋解鎖。</string>
     <string name="fingerprint_changed_title">指紋數據已更改</string>
 	<string name="fingerprint_changed_message">我們檢測到您的指紋身份驗證數據發生了變化。 您這次需要使用密碼。</string>
-	<string name="exchange_rate_missing">這筆付款太舊，無法獲得它的法定價值。</string>
 
     <string name="preferences_enable_payment_request_summary">使用支付協議來進行二維碼啟動的付款</string>
     <string name="preferences_enable_payment_request_title">BIP70 用於掃描付費</string>
@@ -208,8 +177,6 @@
     <string name="verify_seed_title">請寫下來</string>
     <string name="verify_seed_write_down_confirmation">我寫下來</string>
     <string name="verify_seed_buttons_tip">請以正確的順序點按您的恢復詞組中的單詞</string>
-    <string name="verify_seed_success_title">已成功驗證</string>
-    <string name="verify_seed_success_message">您的錢包現在已經安全了。 您可以隨時使用恢復詞組在另一台設備上恢復帳戶。</string>
     <string name="view_seed_done">完成</string>
     <string name="view_seed_title">恢復詞組</string>
 	<string name="transaction_result_view_on_explorer">在區塊瀏覽器中查看</string>

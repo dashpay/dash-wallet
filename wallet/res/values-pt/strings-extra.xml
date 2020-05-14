@@ -92,20 +92,6 @@
     <string name="forgot_pin_instruction_3">Entre com o seu PIN para acessar a sua carteira</string>
     <string name="forgot_pin_warning">Se você esqueceu o seu PIN e perdeu a sua frase de recuperação, você não pode recuperar sua carteira e fundos.</string>
 
-    <string name="send_coins_auto_lock_feasible">Essa transação pode ser confirmada instantaneamente sem taxa adicional</string>
-    <string name="send_coins_auto_lock_not_feasible">Esta transação poderá levar vários minutos para se concretizar. Completar imediatamente por %1$s%2$s?</string>
-    <string name="send_coins_instant_send_not_feasible">Esta transação poderá levar vários minutos para se concretizar.</string>
-
-    <string name="options_paste_from_clipboard_title">Colar</string>
-
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">Este pagamento ainda não foi transmitido.</string>
-    <string name="transaction_row_message_sent_to_single_peer">Esse pagamento foi enviado</string>
-
-    <string name="regular_transaction_info_message">Esta transação não se concretizou de forma instantânea.</string>
-
-    <string name="wallet_options_disconnect">Desconectado</string>
-
-    <string name="network_monitor_masternodes_title">Masternodes</string>
     <string name="export_keys_dialog_title_to_seed">Ver Frase de Recuperação</string>
     <string name="import_keys_dialog_title_from_seed">Restaurar a partir da frase de recuperação</string>
     <string name="backup_to_seed_wallet_dialog_message">Esta é a sua frase de recuperação. Por favor, anote isso.</string>
@@ -114,17 +100,11 @@
     <string name="import_keys_from_seed_dialog_message">Digite sua frase de recuperação aqui.</string>
     <string name="import_export_keys_dialog_password_phrase">A frase de recuperação vai aqui.</string>
     <string name="preferences_report_issue_summary">Coletar informações sobre seu problema e enviar seu relatório por e-mail para os desenvolvedores.</string>
-    <string name="navigation_configuration">Configuração</string>
-    <string name="button_copy_address">Copiar endereço</string>
-    <string name="request_coins_clipboard_address_msg">Endereço Dash copiado para a área de transferência</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Mostrar</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" não é uma frase de recuperação </string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Frase de recuperação deve ter 12 palavras</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Frase de recuperação incorreta</string>
     <string name="restore_wallet_from_invalid_seed_failure">A carteira não pôde ser restaurada:\n\n%s\n\nSenha incorreta?</string>
-
-    <string name="send_coins_options_fee_category_zero">Sem Taxa</string>
-    <string name="send_coins_fragment_hint_fee_zero">Nenhuma taxa será paga. Use \'sem taxa\' somente se você não se importa com o tempo de confirmação.</string>
 
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">A App %s gostaria de receber sua Chave Pública Mestre. Isso pode ser usado para monitorar sua carteira, isso não pode ser usado para mover seus Dash.</string>
@@ -133,16 +113,12 @@
 
     <string name="wallet_lock_unlock">Desbloquear</string>
     <string name="wallet_lock_unlock_wallet">Desbloquear carteira</string>
-    <string name="wallet_lock_unlock_to_see_txs_title">Carteira bloqueada.</string>
-    <string name="wallet_lock_unlock_to_see_txs_txt">Toque o ícone de cadeado acima para desbloquear a sua carteira e ver o histórico de transações.</string>
-    <string name="wallet_lock_unlock_dialog_title">Desbloqueie sua carteira</string>
     <string name="wallet_lock_unlock_dialog_message">Sua carteira é protegida por um PIN. Insira o seu PIN e pressione Desbloquear para continuar.</string>
     <string name="wallet_lock_reset_wallet_title">Resetar Carteira</string>
     <string name="wallet_lock_reset_wallet_message">Tem certeza? Sua carteira será deletada e todo seu Dash será perdido.\n\nA única maneira de recuperar seu Dash é com um arquivo de backup ou frase de recuperação.</string>
 
     <string name="wallet_lock_wallet_disabled">Carteira desabilitada</string>
     <string name="wallet_lock_try_again">Tente novamente em %1$d %2$s</string>
-    <string name="wallet_lock_reset">Resetar</string>
     <string name="wallet_lock_wrong_pin">PIN incorreto! %s</string>
 
     <plurals name="wallet_lock_attempts_remaining">
@@ -171,26 +147,19 @@
     <string name="change_to">Mudar para %s</string>
     <string name="leave_as">Deixar como %s</string>
 
-    <string name="remind_later">Lembrar mais tarde</string>
-    <string name="backup_now">Fazer backup</string>
-
     <string name="notification_transactions_channel_name">Transações</string>
     <string name="notification_transactions_channel_description">Receba alerta sobre transações entrantes</string>
     <string name="notification_synchronization_channel_name">Sincronização</string>
     <string name="notification_synchronization_channel_description">Mostra uma notificação enquanto o app está sincronizando com a rede.</string>
 
-    <string name="net_type_indicator" />
-
     <string name="unlock_with_fingerprint">Use sua digital para desbloquear.</string>
     <string name="unlock_with_fingerprint_error">Falha ao reconhecer digital, por favor tente novamente.</string>
     <string name="unlock_with_fingerprint_error_max_attempts">Numero máximo de tentativas de digital excedido. Por favor tente novamente mais tarde.</string>
-    <string name="or_unlock_with_fingerprint">Ou use sua digital para desbloquear.</string>
     <string name="enable_fingerprint">Habilitar digital</string>
     <string name="touch_fingerprint_sensor">Toque o sensor de digital</string>
     <string name="touch_fingerprint_to_enable">Toque o sensor de digital para habilitar o desbloqueio por digital.</string>
     <string name="fingerprint_changed_title">Dados de Impressão Digital mudaram</string>
 	<string name="fingerprint_changed_message">Detectamos uma mudança nos dados de autenticação por digital. Você precisa usar o seu PIN essa vez.</string>
-	<string name="exchange_rate_missing">Esse pagamento é muito antigo para obter-se o valor em fiat</string>
 
     <string name="preferences_enable_payment_request_summary">Usar protocolo de pagamento para pagamentos iniciados por código QR</string>
     <string name="preferences_enable_payment_request_title">Escanear para pagar con BIP70</string>
@@ -211,8 +180,6 @@
     <string name="verify_seed_title">Por favor, anote</string>
     <string name="verify_seed_write_down_confirmation">Eu anotei</string>
     <string name="verify_seed_buttons_tip">Por favor, toque as palavras da sua frase de recuperação na ordem correta</string>
-    <string name="verify_seed_success_title">Verificado com Sucesso</string>
-    <string name="verify_seed_success_message"> Sua carteira está segura agora. Você pode usar sua frase de recuperação em qualquer momento para recuperar sua conta em outro dispositivo.</string>
     <string name="view_seed_done">Feito</string>
     <string name="view_seed_title">Frase de Recuperação</string>
 	<string name="transaction_result_view_on_explorer">Ver no Explorador de Blocos</string>

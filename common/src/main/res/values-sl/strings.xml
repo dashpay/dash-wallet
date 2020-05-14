@@ -3,6 +3,5 @@
 
     <string name="loading">Nalagam...</string>
     <string name="loading_error">Prišlo je do napake. Poskusite znova.</string>
-    <string name="dash_available">%1$s na voljo</string>
 
 </resources>

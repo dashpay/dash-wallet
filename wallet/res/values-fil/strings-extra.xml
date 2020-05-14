@@ -92,20 +92,6 @@
     <string name="forgot_pin_instruction_3">Buksan gamit ang iyong bagong PIN para ma-access ang iyong pitaka</string>
     <string name="forgot_pin_warning">Kapag nakalimutan mo ang iyong PIN at nawala ang iyong recover phrase, hindi muna ulit ma-aaccess ang iyong pitaka at pondo.</string>
 
-    <string name="send_coins_auto_lock_feasible">Ang transaksyon na ito ay dapat matapos agad ng walang ekstrang bayad</string>
-    <string name="send_coins_auto_lock_not_feasible">Ang transaksyon na ito ay maaaring magtagal ng ilang minuto. Kumpletuhin agad sa halagang %1$s%2$s?</string>
-    <string name="send_coins_instant_send_not_feasible">Ang transaksyon na ito ay maaring magtagal ng ilang minuto.</string>
-
-    <string name="options_paste_from_clipboard_title">I-paste sa clipboard</string>
-
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">Ang  bayad ay kasalukuyang hindi pa naililipat.</string>
-    <string name="transaction_row_message_sent_to_single_peer">Naipadala na ang bayad na ito.</string>
-
-    <string name="regular_transaction_info_message">Ang transaksyon na ito ay hindi nakumpleto ng mabilisan.</string>
-
-    <string name="wallet_options_disconnect">Idiskonekta</string>
-
-    <string name="network_monitor_masternodes_title">Masternodes</string>
     <string name="export_keys_dialog_title_to_seed">Ipakita ang parirala ng muling pagbawi</string>
     <string name="import_keys_dialog_title_from_seed">Manumbalik sa dating kalagayan mula sa parirala ng muling pagbawi</string>
     <string name="backup_to_seed_wallet_dialog_message">Ito ang iyong parirala ng muling pagbawi. Pakisulat sa ibaba.</string>
@@ -114,17 +100,11 @@
     <string name="import_keys_from_seed_dialog_message">Itala ang iyong parirala ng muling pagbawi dito.</string>
     <string name="import_export_keys_dialog_password_phrase">Ang parirala ng muling pagbawi ay napupunta dito.</string>
     <string name="preferences_report_issue_summary">Tipunin ang mga impormasyon tungkol sa iyong suliranin at ipadala ang reklamo sa mga developer.</string>
-    <string name="navigation_configuration">Pagsasaayos</string>
-    <string name="button_copy_address">Kopyahin ang address</string>
-    <string name="request_coins_clipboard_address_msg">Ang Dash address ay nakopya na sa clipboard</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Ipakita</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" ay hindi isang recovery phrase na salita</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Ang recovery phrase ay dapat mayroong 12 mga salita</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Maling recovery phrase</string>
     <string name="restore_wallet_from_invalid_seed_failure">Ang wallet ay hindi pwedeng ibalik:\n\n%s\n\nMaling recovery phrase?</string>
-
-    <string name="send_coins_options_fee_category_zero">Walang Bayad</string>
-    <string name="send_coins_fragment_hint_fee_zero">Walang bayad ang piliin sa pagbayad. Gamitin lamang ang \'walang bayad\' kung wala kang pakialam sa oras ng kumpirmasyon.</string>
 
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">Ang aplikasyon %s ay gustong matanggap ang iyong Master Public Key. Ito ay maaaring magamit upang maantabayanan ang iyong pitaka, ito ay hindi maaaring magamit upang ilipat ang iyong Dash.</string>
@@ -133,16 +113,12 @@
 
     <string name="wallet_lock_unlock">I-unlock</string>
     <string name="wallet_lock_unlock_wallet">I-unlock ang pitaka</string>
-    <string name="wallet_lock_unlock_to_see_txs_title">Naka-lock ang pitaka</string>
-    <string name="wallet_lock_unlock_to_see_txs_txt">I-tap ang lock icon sa taas upang mai-unlock ang iyong pitaka at tingnan ang nakaraang transaksyon.</string>
-    <string name="wallet_lock_unlock_dialog_title">I-unlock ang iyong pitaka</string>
     <string name="wallet_lock_unlock_dialog_message">Ang iyong pitaka ay protektado ng spending PIN. Itala ang iyong PIN at pindutin ang I-unlock para magpatuloy.</string>
     <string name="wallet_lock_reset_wallet_title">I-reset ang pitaka</string>
     <string name="wallet_lock_reset_wallet_message">Sigurado ka ba? Ang iyong pitaka ay mabubura at ang lahat ng iyong Dash ay mawawala.\n\nAng tanging paraan para maibalik ang iyong Dash ay sa pamamagitan ng backup na file o recovery phrase.</string>
 
     <string name="wallet_lock_wallet_disabled">Naka-disabled ang iyong pitaka</string>
     <string name="wallet_lock_try_again">Subukan ulit sa loob ng %1$d %2$s</string>
-    <string name="wallet_lock_reset">I-reset</string>
     <string name="wallet_lock_wrong_pin">Maling PIN! %s</string>
 
     <plurals name="wallet_lock_attempts_remaining">
@@ -171,26 +147,19 @@
     <string name="change_to">Ilipat sa %s</string>
     <string name="leave_as">Hayaan ito sa %s</string>
 
-    <string name="remind_later">Ipaalala mamaya</string>
-    <string name="backup_now">I-back up na ngayon</string>
-
     <string name="notification_transactions_channel_name">Mga transaksyon</string>
     <string name="notification_transactions_channel_description">Makatanggap ng alerto tungkol sa parating na mga transaksyon.</string>
     <string name="notification_synchronization_channel_name">Pagtutugma</string>
     <string name="notification_synchronization_channel_description">Magpakita ng notipikasyon kapag ang app ay tumugma sa network.</string>
 
-    <string name="net_type_indicator" />
-
     <string name="unlock_with_fingerprint">Gamitin ang iyong fingerprint para mabuksan.</string>
     <string name="unlock_with_fingerprint_error">Hindi kinilala ang fingerprint, subukan ulit.</string>
     <string name="unlock_with_fingerprint_error_max_attempts">Umabot sa hangganan ang bilang ng pagsubok ng fingerprint. Subukan muli mamaya.</string>
-    <string name="or_unlock_with_fingerprint">O gamitin ang iyong fingerprint sa pagbukas.</string>
     <string name="enable_fingerprint">I-enable ang fingerprint</string>
     <string name="touch_fingerprint_sensor">Hawakan ang sensor ng fingerprint.</string>
     <string name="touch_fingerprint_to_enable">Hawakan ang fingerprint sensor upang mabuksan gamit ang fingerprint.</string>
     <string name="fingerprint_changed_title">Fingerprint data ay napalitan</string>
 	<string name="fingerprint_changed_message">Napansin namin ang pagbabago ng iyong fingerprint authentication data. Kailangan mong gamitin ang PIN sa oras na ito.</string>
-	<string name="exchange_rate_missing">Abg bayad na ito ay masyado ng matagal para magkaroon ng fiat value.</string>
 
     <string name="preferences_enable_payment_request_summary">Gamitin ang protokol sa pagbabayad para sa pinasimulang pagbabayad ng QR code</string>
     <string name="preferences_enable_payment_request_title">BIP70 para sa scan-to-pay</string>
@@ -211,8 +180,6 @@
     <string name="verify_seed_title">Paki-sulat sa ibaba</string>
     <string name="verify_seed_write_down_confirmation">Naisulat ko na ito</string>
     <string name="verify_seed_buttons_tip">Paki-pindot ang mga salita mula sa iyong recovery phrase sa tamang pagkakasunod-sunod.</string>
-    <string name="verify_seed_success_title">Matagumpay na na-beripika</string>
-    <string name="verify_seed_success_message">Ang iyong pitaka ay ligtas na. Maari mong magamit ang recovery phrase kahit kailan upanh marekober ang account sa ibang device.</string>
     <string name="view_seed_done">Tapos</string>
     <string name="view_seed_title">Recovery phrase</string>
 	<string name="transaction_result_view_on_explorer">Tingnan sa block explorer</string>

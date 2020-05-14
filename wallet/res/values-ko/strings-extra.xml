@@ -92,20 +92,6 @@
     <string name="forgot_pin_instruction_3">새로운 PIN으로 로그인하셔서 당신의 지갑에 접근하세요</string>
     <string name="forgot_pin_warning">당신의 PIN과 복원 문구를 잊어버리시면 당신의 지갑과 자금에 접근할 수 없게 됩니다.</string>
 
-    <string name="send_coins_auto_lock_feasible">이 거래는 추가 수수료 없이 곧바로 완료됩니다.</string>
-    <string name="send_coins_auto_lock_not_feasible">이 거래가 처리되는 데에는 수 분이 걸릴 수 있습니다. 즉시 처리하는 데에는 %1$s%2$s가 필요합니다.</string>
-    <string name="send_coins_instant_send_not_feasible">이 거래가 처리되는 데에는 수 분이 걸릴 수 있습니다. </string>
-
-    <string name="options_paste_from_clipboard_title">클립보드에서 붙여넣기</string>
-
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">이 결제는 아직 전송되지 않았습니다.</string>
-    <string name="transaction_row_message_sent_to_single_peer">송금이 완료되었습니다.</string>
-
-    <string name="regular_transaction_info_message">이 거래는 즉시 처리되지 않았습니다.</string>
-
-    <string name="wallet_options_disconnect">연결 해제</string>
-
-    <string name="network_monitor_masternodes_title">마스터 노드</string>
     <string name="export_keys_dialog_title_to_seed">복원 문구 확인</string>
     <string name="import_keys_dialog_title_from_seed">복원 문구를 이용해 복구</string>
     <string name="backup_to_seed_wallet_dialog_message">지갑 복원 문구 입니다. 옮겨 적어주세요.</string>
@@ -114,17 +100,11 @@
     <string name="import_keys_from_seed_dialog_message">여기에 지갑 복구 문구를 입력하세요.</string>
     <string name="import_export_keys_dialog_password_phrase">지갑 복구 문구입니다.</string>
     <string name="preferences_report_issue_summary">오류에 대한 정보를 수집 후 오류 보고서를 개발자에게 전달합니다.</string>
-    <string name="navigation_configuration">설정</string>
-    <string name="button_copy_address">주소 복사하기</string>
-    <string name="request_coins_clipboard_address_msg">대시 주소가 클립보드에 복사되었습니다</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">보기</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\"는 복원 문구에 쓰이는 단어가 아닙니다</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">복원 문구는 반드시 12개의 단어로 구성돼야 합니다</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">잘못된 복원 문구</string>
     <string name="restore_wallet_from_invalid_seed_failure">지갑을 복구하지 못했습니다:\n\n%s복원 문구를 잘못 입력하셨나요?</string>
-
-    <string name="send_coins_options_fee_category_zero">수수료 없음</string>
-    <string name="send_coins_fragment_hint_fee_zero">수수료가 부과되지 않습니다. 확인 시간에 신경 쓰지 않는 경우에만 \'수수료 없음\'을 사용하십시오.</string>
 
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">어플리케이션 %s 이 귀하의 마스터 공개 키를 요청합니다. 이것은 지갑을 추적하는 데 사용할 수 있으며 대시를 이동하는 데에는 사용할 수 없습니다.</string>
@@ -133,16 +113,12 @@
 
     <string name="wallet_lock_unlock">잠금 해제</string>
     <string name="wallet_lock_unlock_wallet">지갑 잠금 해제</string>
-    <string name="wallet_lock_unlock_to_see_txs_title">지갑이 잠겼습니다.</string>
-    <string name="wallet_lock_unlock_to_see_txs_txt">위의 자물쇠 아이콘을 탭하면 지갑의 잠금을 해제하고 거래 내역을 볼 수 있습니다.</string>
-    <string name="wallet_lock_unlock_dialog_title">내 지갑 잠금 해제</string>
     <string name="wallet_lock_unlock_dialog_message">지갑은 지출 PIN으로 보호됩니다. 계속하시려면 PIN 번호를 입력하고 잠금 해제를 누르십시오.</string>
     <string name="wallet_lock_reset_wallet_title">지갑 리셋하기</string>
     <string name="wallet_lock_reset_wallet_message">확실합니까? 지갑은 삭제되고 모든 대시가 손실될 수 있습니다.\n\n이 대시를 복구하는 데에는 백업 파일 혹은 복구 문구를 통해서만 가능합니다.</string>
 
     <string name="wallet_lock_wallet_disabled">지갑 사용 중지됨</string>
     <string name="wallet_lock_try_again">%1$d %2$s 로 다시 시도하기</string>
-    <string name="wallet_lock_reset">리셋</string>
     <string name="wallet_lock_wrong_pin">잘못된 PIN 입니다! %s</string>
 
     <plurals name="wallet_lock_attempts_remaining">
@@ -168,26 +144,19 @@
     <string name="change_to">%s 로 변경</string>
     <string name="leave_as">%s 로 설정</string>
 
-    <string name="remind_later">다음에 알림</string>
-    <string name="backup_now">지금 백업하기</string>
-
     <string name="notification_transactions_channel_name">거래</string>
     <string name="notification_transactions_channel_description">들어오는 거래에 대한 알람 수신</string>
     <string name="notification_synchronization_channel_name">동기화</string>
     <string name="notification_synchronization_channel_description">어플이 네트워크와 동기화될 때 알람을 보여줍니다.</string>
 
-    <string name="net_type_indicator" />
-
     <string name="unlock_with_fingerprint">잠금 해제를 위해서 지문을 사용합니다</string>
     <string name="unlock_with_fingerprint_error">지문을 인식하는 데 실패하였습니다. 다시 시도해주세요.</string>
     <string name="unlock_with_fingerprint_error_max_attempts">지문 인식을 위한 최대 시도 횟수를 초과하였습니다. 다음에 다시 시도해주십시오.</string>
-    <string name="or_unlock_with_fingerprint">혹은 잠금 해제를 위해 지문을 사용합니다.</string>
     <string name="enable_fingerprint">지문 활성화</string>
     <string name="touch_fingerprint_sensor">지문 센서를 터치하세요</string>
     <string name="touch_fingerprint_to_enable">지문으로 잠금 해제하기 위해서는 지문 센서를 터치하세요.</string>
     <string name="fingerprint_changed_title">지문 데이터가 변경됨</string>
 	<string name="fingerprint_changed_message">당신의 지문 인증 데이터에서 변경을 감지하였습니다. 이번에는 PIN을 사용하셔야 합니다.</string>
-	<string name="exchange_rate_missing">이 지불은 너무 오래되어 고정 가치를 확인할 수 없습니다.</string>
 
     <string name="preferences_enable_payment_request_summary">QR 코드를 통한 지불을 위해서는 지불 프로토콜을 사용하십시오.</string>
     <string name="preferences_enable_payment_request_title">\'스캔하여 지불하기\'를 위한 BIP70</string>
@@ -208,8 +177,6 @@
     <string name="verify_seed_title">다음을 옮겨 적으십시오</string>
     <string name="verify_seed_write_down_confirmation">옮겨 적었습니다</string>
     <string name="verify_seed_buttons_tip">당신의 복원 문구의 단어를 올바른 순서로 탭하십시오</string>
-    <string name="verify_seed_success_title">성공적으로 인증되었습니다</string>
-    <string name="verify_seed_success_message">이제 당신의 지갑은 안전합니다. 언제든 당신의 복원 문구를 사용하셔서 당신의 계정을 다른 기기에서 복원하실 수 있습니다.</string>
     <string name="view_seed_done">완료</string>
     <string name="view_seed_title">복원 문구</string>
 	<string name="transaction_result_paid_successfully">성공적으로 전송되었습니다</string>

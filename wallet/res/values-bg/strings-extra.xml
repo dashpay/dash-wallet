@@ -92,20 +92,6 @@
     <string name="forgot_pin_instruction_3">Влезте с новият си ПИН код, за да получите достъп до портфейла си</string>
     <string name="forgot_pin_warning">Ако сте забравили вашият ПИН и сте загубили фразата за възстановяване, няма да можете да получите обратно достъп до портфейла и средствата си.</string>
 
-    <string name="send_coins_auto_lock_feasible">Тази транзакция ще бъде уредена мигновено без допълнителна такса</string>
-    <string name="send_coins_auto_lock_not_feasible">Ще отнеме няколко минути тази транзакция да бъде наредена. Завършете я мигновено за %1$s%2$s?</string>
-    <string name="send_coins_instant_send_not_feasible">Тази транзакция ще отнеме няколко минути.</string>
-
-    <string name="options_paste_from_clipboard_title">Постави от клипборда</string>
-
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">Това плащане все още не е предадено.</string>
-    <string name="transaction_row_message_sent_to_single_peer">Плащането е изпратено.</string>
-
-    <string name="regular_transaction_info_message">Тази транзакция не беше наредена мигновено.</string>
-
-    <string name="wallet_options_disconnect">Прекъсване </string>
-
-    <string name="network_monitor_masternodes_title">Masternodes</string>
     <string name="export_keys_dialog_title_to_seed">Виж фразата за възстановяване</string>
     <string name="import_keys_dialog_title_from_seed">Възстановяване от фразата за възстановяване</string>
     <string name="backup_to_seed_wallet_dialog_message">Това е вашата фраза за възстановяване. Моля, напишете я.</string>
@@ -114,17 +100,11 @@
     <string name="import_keys_from_seed_dialog_message">Въведете фразата си за възстановяване тук.</string>
     <string name="import_export_keys_dialog_password_phrase">Фразата за възстановяване отива тук.</string>
     <string name="preferences_report_issue_summary">Съберете информацията за проблема си и я изпратете  до разработчиците.</string>
-    <string name="navigation_configuration">Конфигурация</string>
-    <string name="button_copy_address">Копирай адрес</string>
-    <string name="request_coins_clipboard_address_msg">Dash е копиран в клипборда</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Покажи</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" не е фраза за възстановяване</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Фразата за възстановяване трябва да има 12 думи</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Грешна възстановяваща фраза</string>
     <string name="restore_wallet_from_invalid_seed_failure">Портфейлът не може да бъде възстановен:\n\n%s\n\nГрешна фраза за възстановяване?</string>
-
-    <string name="send_coins_options_fee_category_zero">Без такса</string>
-    <string name="send_coins_fragment_hint_fee_zero">Няма да бъде платена такса. Използвайте "без такса" само ако не ви е грижа за времето за потвърждение.</string>
 
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">Приложението %s би желало да получи вашият Главен публичен ключ.  Той може да бъде използвано за да проследи вашият портфейл, но не може да бъде използван за преместването на вашите  Dash.</string>
@@ -133,16 +113,12 @@
 
     <string name="wallet_lock_unlock">Отключи</string>
     <string name="wallet_lock_unlock_wallet">Отключи портфейла</string>
-    <string name="wallet_lock_unlock_to_see_txs_title">Портфейлът е заключен.</string>
-    <string name="wallet_lock_unlock_to_see_txs_txt">Докоснете иконата за заключване по-горе, за да отключите портфейла си и да видите историята на транзакциите.</string>
-    <string name="wallet_lock_unlock_dialog_title">Отключете портфейла си</string>
     <string name="wallet_lock_unlock_dialog_message">Портфейлът Ви е защитен от ПИН за  похарчване. Въведете своя ПИН и натиснете Отключи за да продължите.</string>
     <string name="wallet_lock_reset_wallet_title">Нулиране на портфейла</string>
     <string name="wallet_lock_reset_wallet_message">Сигурен ли си? Твоят портфейл ще бъде изтрит и всичкият Dash ще бъдат изгубен.\n\nЕдинственият начин да възстановиш твоят Dash е, чрез резервен архив или възстановяваща фраза.</string>
 
     <string name="wallet_lock_wallet_disabled">Портфейлът е изключен</string>
     <string name="wallet_lock_try_again">Опитай отново след %1$d %2$s</string>
-    <string name="wallet_lock_reset">Нулиране</string>
     <string name="wallet_lock_wrong_pin">Грешен ПИН! %s</string>
 
     <plurals name="wallet_lock_attempts_remaining">
@@ -171,26 +147,19 @@
     <string name="change_to">Промени в %s</string>
     <string name="leave_as">Остави в %s</string>
 
-    <string name="remind_later">Напомни по-късно</string>
-    <string name="backup_now">Архивирай сега</string>
-
     <string name="notification_transactions_channel_name">Транзакции</string>
     <string name="notification_transactions_channel_description">Получаване на известия при входящи транзакции.</string>
     <string name="notification_synchronization_channel_name">Синхронизация</string>
     <string name="notification_synchronization_channel_description">Показване на известие, когато приложението е синхронизирано с мрежата.</string>
 
-    <string name="net_type_indicator" />
-
     <string name="unlock_with_fingerprint">Използвайте пръстов отпечатък за отключване.</string>
     <string name="unlock_with_fingerprint_error">Неуспешно разпознаване на пръстов отпечатък, моля опитайте отново.</string>
     <string name="unlock_with_fingerprint_error_max_attempts">Максималните опити с пръстов отпечатък са достигнати. Моля опитайте отново по-късно.</string>
-    <string name="or_unlock_with_fingerprint">Или използвайте пръстов отпечатък за отключване.</string>
     <string name="enable_fingerprint">Активиране на пръстов отпечатък.</string>
     <string name="touch_fingerprint_sensor">Докоснете сензора за пръстов отпечатък.</string>
     <string name="touch_fingerprint_to_enable">Докоснете сензора за да активиране отключване с пръстов отпечатък.</string>
     <string name="fingerprint_changed_title">Данни за пръстовият отпечатък са променени</string>
 	<string name="fingerprint_changed_message">Установихме промяна във вашите данни за удостоверяване с пръстов отпечатък. Този път трябва да използвате ПИН.</string>
-	<string name="exchange_rate_missing">Това плащане е прекалено старо, за да се получи стойността му във фиат.</string>
 
     <string name="preferences_enable_payment_request_summary">Използвайте платежен протокол за инициираните на плащане с  QR-код </string>
     <string name="preferences_enable_payment_request_title">BIP70 за сканиране и плащане</string>
@@ -211,8 +180,6 @@
     <string name="verify_seed_title">Моля запишете го долу</string>
     <string name="verify_seed_write_down_confirmation">Написах го долу</string>
     <string name="verify_seed_buttons_tip">Моля, докоснете думите от фразата за възстановяване в правилния ред</string>
-    <string name="verify_seed_success_title">Проверено успешно</string>
-    <string name="verify_seed_success_message">Вашият портфейл сега е защитен. Можете да използвате вашата фраза за възстановяване по всяко време, за да възстановите акаунта си на друго устройство.</string>
     <string name="view_seed_done">Завършено</string>
     <string name="view_seed_title">Фраза за възстановяване</string>
 	<string name="transaction_result_view_on_explorer">Преглед в Block Explorer</string>

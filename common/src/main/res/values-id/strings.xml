@@ -3,6 +3,5 @@
 
     <string name="loading">Memuat...</string>
     <string name="loading_error">Terjadi kesalahan. Silakan coba lagi nanti.</string>
-    <string name="dash_available">%1$stersedia </string>
 
 </resources>

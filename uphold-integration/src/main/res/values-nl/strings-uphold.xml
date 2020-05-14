@@ -2,14 +2,12 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
-    <string name="uphold_buy_dash_activity_title">Koop/Verkoop Dash met Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Koop Dash met Uphold-rekening</string>
     <string name="uphold_buy_dash_button">Koop Dash</string>
     <string name="uphold_transfer_to_this_wallet_button">Maak over vanaf Uphold</string>
     <string name="uphold_link_account">Koppel Uphold account</string>
     <string name="uphold_account_dash_balance">Je Dash-saldo in je Uphold-rekening is</string>
     <string name="uphold_transfer_to_this_wallet">Maak Dash van je Uphold-rekening over naar deze portemonnee</string>
-    <string name="uphold_withdrawal_deduct_fee_disclaimer">Kosten worden ingehouden van het gevraagde bedrag.</string>
     <string name="uphold_withdrawal_instructions">Voer het bedrag in om te verplaatsen</string>
     <string name="uphold_withdrawal_success_title">Succes</string>
     <string name="uphold_withdrawal_success_message">Je transactie is verstuurd en het bedrag zou binnen enkele minuten moeten verschijnen in je portemonnee. \n\nTransactie-id: %s</string>

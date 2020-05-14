@@ -1,16 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <dimen name="app_bar_title_margin_start">56dp</dimen>
-    <dimen name="app_bar_balance_font_size">14sp</dimen>
-    <dimen name="app_bar_balance_local_font_size">10sp</dimen>
-    <dimen name="app_bar_slogan_font_size">13sp</dimen>
-    <dimen name="app_bar_logo_width">89dp</dimen>
-    <dimen name="app_bar_logo_height">24dp</dimen>
-
-    <dimen name="backup_buttons_margin">28dp</dimen>
-
-    <dimen name="welcome_screenshot_height">420dp</dimen>
     <dimen name="welcome_screenshot_vertical_margin">64dp</dimen>
     <dimen name="welcome_screen_title_size">30sp</dimen>
     <dimen name="welcome_screen_subtitle_size">18sp</dimen>

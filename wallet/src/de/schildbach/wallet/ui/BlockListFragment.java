@@ -113,7 +113,6 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 		super.onCreate(savedInstanceState);
 
 		adapter = new BlockListAdapter(activity, wallet, this);
-		adapter.setFormat(config.getFormat());
 	}
 
 	@Override

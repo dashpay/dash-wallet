@@ -3,6 +3,5 @@
 
     <string name="loading">Φορτώνει...</string>
     <string name="loading_error">Παρουσιάστηκε σφάλμα. Παρακαλώ προσπαθήστε ξανά αργότερα.</string>
-    <string name="dash_available">%1$s διαθέσιμα</string>
 
 </resources>

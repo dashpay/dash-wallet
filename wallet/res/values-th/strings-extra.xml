@@ -92,20 +92,6 @@
     <string name="forgot_pin_instruction_3">เข้าสู่ระบบด้วยเลขรหัสผ่านใหม่ของคุณเพื่อการเข้าถึงกระเป๋าสตางค์ของคุณ</string>
     <string name="forgot_pin_warning">หากคุณลืมเลขรหัสผ่านของคุณ และวลีรหัสผ่านการกู้คืนสูญหาย คุณจะไม่สามารถเข้าถึงกระเป๋าสตางค์และกองทุนเงินสะสมของคุณได้อีกต่อไป</string>
 
-    <string name="send_coins_auto_lock_feasible">ธุรกรรมนี้ชำระทันทีโดยไม่มีค่าธรรมเนียมเพิ่มเติม</string>
-    <string name="send_coins_auto_lock_not_feasible">ธุรกรรมนี้อาจจะใช้เวลาในการชำระหลายนาที  ทำให้เสร็จสมบูรณ์ทันทีสำหรับ%1$s%2$s หรือไม่?</string>
-    <string name="send_coins_instant_send_not_feasible">ธุรกรรมนี้อาจใช้เวลาหลายนาทีในการชำระ</string>
-
-    <string name="options_paste_from_clipboard_title">วางจากคลิปบอร์ด</string>
-
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">การชำระเงินนี้ยังไม่ได้รับการส่ง</string>
-    <string name="transaction_row_message_sent_to_single_peer">การชำระเงินนี้ถูกส่งแล้ว</string>
-
-    <string name="regular_transaction_info_message">ธุรกรรมนี้ไม่ได้ถูกชำระโดยทันที</string>
-
-    <string name="wallet_options_disconnect">ไม่เชื่อมต่อ</string>
-
-    <string name="network_monitor_masternodes_title">Masternodes</string>
     <string name="export_keys_dialog_title_to_seed">ดูวลีกู้คืน</string>
     <string name="import_keys_dialog_title_from_seed">กู้คืนจากวลีกู้คืน</string>
     <string name="backup_to_seed_wallet_dialog_message">นี่คือวลีกู้คืนของคุณ โปรดเขียนมันลงไป</string>
@@ -114,17 +100,11 @@
     <string name="import_keys_from_seed_dialog_message">ป้อนวลีกู้คืนของคุณที่นี่</string>
     <string name="import_export_keys_dialog_password_phrase">วลีกู้คืนไปที่นี่</string>
     <string name="preferences_report_issue_summary">รวบรวมข้อมูลเกี่ยวกับปัญหาของคุณและส่งอีเมลรายงานของคุณไปยังนักพัฒนาซอฟต์แวร์</string>
-    <string name="navigation_configuration">องค์ประกอบ</string>
-    <string name="button_copy_address">คัดลอกที่อยู่</string>
-    <string name="request_coins_clipboard_address_msg">คัดลอกที่อยู่ Dash ไปยัง คลิปบอร์ด</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">แสดง</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">%sไม่ใช่วลีกู้คืน</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">การกู้คืนวลีต้องมี 12 คำ</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">วลีกู้คืนไม่ดี</string>
     <string name="restore_wallet_from_invalid_seed_failure">ไม่สามารถทำการกู้คืนกระเป๋าสตางค์ได้: \n\n%s\n\n วลีรหัสผ่านถูกต้องหรือไม่</string>
-
-    <string name="send_coins_options_fee_category_zero">ไม่มีค่าธรรมเนียม</string>
-    <string name="send_coins_fragment_hint_fee_zero">จะไม่มีการชำระค่าธรรมเนียม. ใช้ No fee เท่านั้นถ้าคุณไม่สนใจเกี่ยวกับเวลายืนยัน</string>
 
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">แอพพลิเคชั่น %s ต้องการรับ Master Public Key ของคุณ  สิ่งนี้สามารถใช้เพื่อติดตาม wallet  ของคุณได้  แต่ไม่สามารถใช้ย้าย Dash ของคุณได้</string>
@@ -133,16 +113,12 @@
 
     <string name="wallet_lock_unlock">ปลดล็อค</string>
     <string name="wallet_lock_unlock_wallet">ปลดล็อค wallet ของคุณ</string>
-    <string name="wallet_lock_unlock_to_see_txs_title">wallet ถูกล็อค</string>
-    <string name="wallet_lock_unlock_to_see_txs_txt">แตะไอคอนด้านบนเพื่อปลดล็อค wallet ของคุณและดูประวัติการทำธุรกรรม</string>
-    <string name="wallet_lock_unlock_dialog_title">ปลดล็อค  wallet  ของคุณ </string>
     <string name="wallet_lock_unlock_dialog_message">wallet ของคุณถูกป้องกันโดยการใช้รหัส PIN  ป้อนรหัส PIN และกดปุ่มปลดล็อคเพื่อทำต่อ</string>
     <string name="wallet_lock_reset_wallet_title">ตั้งค่า wallet</string>
     <string name="wallet_lock_reset_wallet_message">คุณแน่ใจหรือไม่?  Wallet ของคุณจะถูกลบและ Dash ทั้งหมดจะหายไป \n\n วิธีเดียวที่จะกู้คืน Dash ของคุณได้คือไฟล์สำรองหรือวลีกู้คืน</string>
 
     <string name="wallet_lock_wallet_disabled">wallet ถูกปิดการใช้งาน</string>
     <string name="wallet_lock_try_again">ลองอีกครั้ง ใน %1$d%2$s</string>
-    <string name="wallet_lock_reset">ตั้งค่า</string>
     <string name="wallet_lock_wrong_pin">รหัสผิด %s</string>
 
     <plurals name="wallet_lock_attempts_remaining">
@@ -168,26 +144,19 @@
     <string name="change_to">เปลี่ยนเป็น%s</string>
     <string name="leave_as">%sปล่อยให้เป็น </string>
 
-    <string name="remind_later">เตือนภายหลัง</string>
-    <string name="backup_now">สำรองข้อมูลตอนนี้</string>
-
     <string name="notification_transactions_channel_name">ธุรกรรม</string>
     <string name="notification_transactions_channel_description">รับการแจ้งเตือนเกี่ยวกับการทำธุรกรรมที่เข้ามา</string>
     <string name="notification_synchronization_channel_name">ซิงโครไนซ์</string>
     <string name="notification_synchronization_channel_description">แสดงการแจ้งเตือนเมื่อแอพพลิเคชั่นกำลังซิงโครไนซ์กับเครือข่าย</string>
 
-    <string name="net_type_indicator" />
-
     <string name="unlock_with_fingerprint">ใช้ลายนิ้วมือของคุณเพื่อปลดล็อค</string>
     <string name="unlock_with_fingerprint_error">ลายนิ้วมือไม่ตรงกัน โปรดลองอีกครั้ง</string>
     <string name="unlock_with_fingerprint_error_max_attempts">ความพยายามใช้ลายนิ้วมือเกินขีดจำกัด กรุณาลองใหม่อีกครั้งในภายหลัง.</string>
-    <string name="or_unlock_with_fingerprint">หรือใช้ลายนิ้วมือเพื่อปลดล็อก</string>
     <string name="enable_fingerprint">เปิดใช้งานลายนิ้วมือ</string>
     <string name="touch_fingerprint_sensor">แตะเซ็นเซอร์ลายนิ้วมือ</string>
     <string name="touch_fingerprint_to_enable">แตะเซ็นเซอร์ลายนิ้วมือเพื่อเปิดใช้งานการปลดล็อคด้วยลายนิ้วมือ</string>
     <string name="fingerprint_changed_title">เปลี่ยนแปลงข้อมูลลายนิ้วมือเรียบร้อยแล้ว</string>
 	<string name="fingerprint_changed_message">เราตรวจพบข้อมูลการเปลี่ยนแปลงการสแกนลายนิ้วมือของคุณ คุณต้องใช้เลขรหัสส่วนตัวในครั้งนี้</string>
-	<string name="exchange_rate_missing">การชำระเงินนี้เก่าเกินไปที่จะรับ fiat value</string>
 
     <string name="preferences_enable_payment_request_summary">ใช้โปรโตคอลการชำระเงินสำหรับการชำระเงินที่ใช้รหัส QR-code</string>
     <string name="preferences_enable_payment_request_title">BIP70 สำหรับสแกนเพื่อจ่าย</string>
@@ -208,8 +177,6 @@
     <string name="verify_seed_title">กรุณาเขียนลงไป</string>
     <string name="verify_seed_write_down_confirmation">ฉันได้เขียนลงไปแล้ว</string>
     <string name="verify_seed_buttons_tip">โปรดแตะที่คำจากวลีการกู้คืนของคุณในลำดับที่ถูกต้อง</string>
-    <string name="verify_seed_success_title">้ตรวจสอบสำเร็จ</string>
-    <string name="verify_seed_success_message">กระเป๋าเงินของคุณปลอดภัยแล้ว คุณสามารถใช้วลีกู้คืนได้ทุกเวลาเพื่อกู้คืนบัญชีของคุณบนอุปกรณ์อื่น</string>
     <string name="view_seed_done">เสร็จแล้ว</string>
     <string name="view_seed_title">วลีกู้คืน</string>
 	<string name="transaction_result_view_on_explorer">ดูใน Block Explorer</string>

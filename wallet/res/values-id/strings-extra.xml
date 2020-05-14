@@ -92,20 +92,6 @@
     <string name="forgot_pin_instruction_3">Masuk dengan PIN baru Anda untuk mengakses dompet Anda</string>
     <string name="forgot_pin_warning">Jika Anda lupa PIN dan kehilangan frasa pemulihan, Anda tidak bisa mendapatkan kembali akses ke dompet dan dana Anda.</string>
 
-    <string name="send_coins_auto_lock_feasible">Transaksi ini harus diselesaikan secara instan tanpa biaya tambahan</string>
-    <string name="send_coins_auto_lock_not_feasible">Transaksi ini mungkin perlu beberapa menit untuk diselesaikan. Selesaikan instan untuk %1$s%2$s?</string>
-    <string name="send_coins_instant_send_not_feasible">Transaksi ini mungkin perlu beberapa menit untuk diselesaikan.</string>
-
-    <string name="options_paste_from_clipboard_title">Tempelkan</string>
-
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">Pembayaran ini belum disiarkan.</string>
-    <string name="transaction_row_message_sent_to_single_peer">Pembayaran ini telah dikirim.</string>
-
-    <string name="regular_transaction_info_message">Transaksi ini tidak diselesaikan secara instan.</string>
-
-    <string name="wallet_options_disconnect">Terputus</string>
-
-    <string name="network_monitor_masternodes_title">Masternode</string>
     <string name="export_keys_dialog_title_to_seed">Lihat frasa pemulihan</string>
     <string name="import_keys_dialog_title_from_seed">Pulihkan dari frasa pemulihan</string>
     <string name="backup_to_seed_wallet_dialog_message">Ini adalah frasa pemulihan anda. Tolong Catat.</string>
@@ -114,17 +100,11 @@
     <string name="import_keys_from_seed_dialog_message">Masukkan frasa pemulihan anda disini.</string>
     <string name="import_export_keys_dialog_password_phrase">Frasa pemulihan ada di sini.</string>
     <string name="preferences_report_issue_summary">Kumpulkan informasi masalah Anda dan kirimkan laporan Anda ke pengembang.</string>
-    <string name="navigation_configuration">Konfigurasi</string>
-    <string name="button_copy_address">Salin alamat</string>
-    <string name="request_coins_clipboard_address_msg">Alamat Dash disalin</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Tunjukkan</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" bukan kata frasa pemulihan</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Frasa pemulihan harus memiliki 12 kata</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Frasa pemulihan yang buruk</string>
     <string name="restore_wallet_from_invalid_seed_failure">Kunci pribadi tidak dapat dipulihkan:\n\n%s\n\nKata sandi salah?</string>
-
-    <string name="send_coins_options_fee_category_zero">Tanpa Biaya</string>
-    <string name="send_coins_fragment_hint_fee_zero">Tidak ada biaya yang akan dibayarkan. Gunakan \'tanpa biaya\' hanya jika Anda tidak peduli tentang waktu konfirmasi.</string>
 
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">Aplikasi %s  ingin menerima Master Public Key Anda. Ini dapat digunakan untuk melacak dompet Anda, ini tidak dapat digunakan untuk memindahkan Dash Anda.</string>
@@ -133,16 +113,12 @@
 
     <string name="wallet_lock_unlock">Terbuka</string>
     <string name="wallet_lock_unlock_wallet">Buka kunci dompet</string>
-    <string name="wallet_lock_unlock_to_see_txs_title">Dompet terkunci.</string>
-    <string name="wallet_lock_unlock_to_see_txs_txt">Ketuk ikon kunci di atas untuk membuka kunci dompet Anda dan lihat riwayat transaksi.</string>
-    <string name="wallet_lock_unlock_dialog_title">Buka kunci dompet Anda</string>
     <string name="wallet_lock_unlock_dialog_message">Dompet Anda dilindungi oleh PIN. Masukkan PIN Anda dan tekan Buka Kunci untuk melanjutkan.</string>
     <string name="wallet_lock_reset_wallet_title">Atur ulang dompet</string>
     <string name="wallet_lock_reset_wallet_message">Apakah kamu yakin? Dompet Anda akan dihapus dan semua Dash Anda akan hilang.\n\n Satu-satunya cara untuk memulihkan Dash Anda adalah dengan file cadangan atau frasa pemulihan.</string>
 
     <string name="wallet_lock_wallet_disabled">Dompet dinonaktifkan</string>
     <string name="wallet_lock_try_again">Coba lagi dalam %1$d %2$s</string>
-    <string name="wallet_lock_reset">Atur-ulang</string>
     <string name="wallet_lock_wrong_pin">PIN salah! %s</string>
 
     <plurals name="wallet_lock_attempts_remaining">
@@ -168,26 +144,19 @@
     <string name="change_to">Ubah ke %s</string>
     <string name="leave_as">tinggalkan sebagai %s</string>
 
-    <string name="remind_later">Ingatkan nanti</string>
-    <string name="backup_now">Cadangkan sekarang</string>
-
     <string name="notification_transactions_channel_name">Transaksi</string>
     <string name="notification_transactions_channel_description">Terima peringatan untuk transaksi masuk.</string>
     <string name="notification_synchronization_channel_name">Sinkronisasi</string>
     <string name="notification_synchronization_channel_description">Perlihatkan pemberitahuan saat aplikasi menyinkronkan dengan jaringan.</string>
 
-    <string name="net_type_indicator" />
-
     <string name="unlock_with_fingerprint">Gunakan sidik jari Anda untuk membuka kunci.</string>
     <string name="unlock_with_fingerprint_error">Gagal mengenali sidik jari, silakan coba lagi.</string>
     <string name="unlock_with_fingerprint_error_max_attempts">Upaya sidik jari maksimum terlampaui. Silakan coba lagi nanti.</string>
-    <string name="or_unlock_with_fingerprint">Atau gunakan sidik jari Anda untuk membuka kunci.</string>
     <string name="enable_fingerprint">Aktifkan sidik jari</string>
     <string name="touch_fingerprint_sensor">Sentuh sensor sidik jari</string>
     <string name="touch_fingerprint_to_enable">Sentuh sensor sidik jari untuk mengaktifkan membuka kunci dengan sidik jari.</string>
     <string name="fingerprint_changed_title">Data sidik jari berubah</string>
 	<string name="fingerprint_changed_message">Kami mendeteksi perubahan dalam data otentikasi sidik jari Anda. Anda perlu menggunakan PIN saat ini.</string>
-	<string name="exchange_rate_missing">Pembayaran ini terlalu lama untuk mendapatkan nilai fiat.</string>
 
     <string name="preferences_enable_payment_request_summary">Gunakan protokol pembayaran untuk pembayaran yang dimulai dengan kode-QR</string>
     <string name="preferences_enable_payment_request_title">BIP70 untuk pindai-untuk-bayar</string>
@@ -208,8 +177,6 @@
     <string name="verify_seed_title">Tolong catat</string>
     <string name="verify_seed_write_down_confirmation">Saya telah mencatat</string>
     <string name="verify_seed_buttons_tip">Ketuk kata-kata dari frasa pemulihan Anda dalam urutan yang benar</string>
-    <string name="verify_seed_success_title">Berhasil Diverifikasi</string>
-    <string name="verify_seed_success_message">Dompet Anda aman sekarang. Anda dapat menggunakan frasa pemulihan kapan saja untuk memulihkan akun di perangkat lain.</string>
     <string name="view_seed_done">Selesai</string>
     <string name="view_seed_title">Frasa pemulihan</string>
 	<string name="transaction_result_view_on_explorer">Lihat di Blok Explorer</string>

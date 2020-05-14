@@ -2,14 +2,12 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
-    <string name="uphold_buy_dash_activity_title">通过Uphold 买/卖达世币</string>
     <string name="uphold_buy_dash_with_uphold">通过Uphold账户购买达世币</string>
     <string name="uphold_buy_dash_button">购买达世币</string>
     <string name="uphold_transfer_to_this_wallet_button">从Uphold进行转账</string>
     <string name="uphold_link_account">关联Uphold账号</string>
     <string name="uphold_account_dash_balance">您Uphold账户达世币余额为</string>
     <string name="uphold_transfer_to_this_wallet">将达世币从您的Uphold账户转账到本钱包</string>
-    <string name="uphold_withdrawal_deduct_fee_disclaimer">手续费将从申请数额中扣除。</string>
     <string name="uphold_withdrawal_instructions">输入转账数额</string>
     <string name="uphold_withdrawal_success_title">成功</string>
     <string name="uphold_withdrawal_success_message">您的交易已发送，金额将几分钟内在您的钱包中显示.\n\n交易 id: %s</string>

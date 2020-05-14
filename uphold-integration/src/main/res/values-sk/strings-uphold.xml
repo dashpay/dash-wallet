@@ -2,14 +2,12 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
-    <string name="uphold_buy_dash_activity_title">Kúpiť/Predať Dash s Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Kúpiť Dash s Uphold účtom</string>
     <string name="uphold_buy_dash_button">Kúpiť Dash</string>
     <string name="uphold_transfer_to_this_wallet_button">Presunúť s Uphold</string>
     <string name="uphold_link_account">Pripojiť Uphold účet</string>
     <string name="uphold_account_dash_balance">Vaša Dash bilancia na Uphold je</string>
     <string name="uphold_transfer_to_this_wallet">Presunúť Dash z Uphold účtu do tejto peňaženky</string>
-    <string name="uphold_withdrawal_deduct_fee_disclaimer">Poplatok bude odpočítaný z požadovanej sumy.</string>
     <string name="uphold_withdrawal_instructions">Zadajte sumu, ktorú chcete previesť</string>
     <string name="uphold_withdrawal_success_title">Úspešné</string>
     <string name="uphold_withdrawal_success_message">Vaša transakcia bola odoslaná a suma by sa mala objaviť v peňaženke o niekoľko minút.\n\nId transakcie: %s</string>

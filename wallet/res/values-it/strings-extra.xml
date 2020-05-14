@@ -92,20 +92,6 @@
     <string name="forgot_pin_instruction_3">Accedi con il tuo nuovo PIN per accedere al tuo portafoglio</string>
     <string name="forgot_pin_warning">Se hai dimenticato il PIN e perso la frase di recupero, non puoi ottenere di nuovo l\'accesso al tuo portafoglio e ai tuoi fondi.</string>
 
-    <string name="send_coins_auto_lock_feasible">Questa transazione potrebbe essere eseguita istantaneamente senza costi aggiuntivi</string>
-    <string name="send_coins_auto_lock_not_feasible">Questa transazione potrebbe richiedere diversi minuti per essere eseguita. Vuoi eseguirla istantaneamente per un extra %1$s%2$s?</string>
-    <string name="send_coins_instant_send_not_feasible">Questa transazione potrebbe richiedere diversi minuti per essere eseguita.</string>
-
-    <string name="options_paste_from_clipboard_title">Incolla dagli appunti</string>
-
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">Questo pagamento non è ancora stato trasmesso.</string>
-    <string name="transaction_row_message_sent_to_single_peer">Pagamento inviato.</string>
-
-    <string name="regular_transaction_info_message">Questa transazione non è stata eseguita immediatamente.</string>
-
-    <string name="wallet_options_disconnect">Disconnesso</string>
-
-    <string name="network_monitor_masternodes_title">Masternodes</string>
     <string name="export_keys_dialog_title_to_seed">Visualizza la frase di recupero</string>
     <string name="import_keys_dialog_title_from_seed">Ripristina con la frase di recupero</string>
     <string name="backup_to_seed_wallet_dialog_message">Questa è la tua frase di recupero. Si prega di trascriverla.</string>
@@ -114,17 +100,11 @@
     <string name="import_keys_from_seed_dialog_message">Digita qui la tua frase di recupero.</string>
     <string name="import_export_keys_dialog_password_phrase">La frase di recupero va qui.</string>
     <string name="preferences_report_issue_summary">Raccogli informazioni sul tuo problema e invia tramite email la tua segnalazione agli sviluppatori.</string>
-    <string name="navigation_configuration">Configurazione</string>
-    <string name="button_copy_address">Copia indirizzo</string>
-    <string name="request_coins_clipboard_address_msg">Indirizzo Dash copiato negli appunti</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Mostra</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" non è una parola della frase di recupero</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">La frase di recupero deve avere 12 parole</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Frase di recupero errata</string>
     <string name="restore_wallet_from_invalid_seed_failure">Impossibile ripristinare il portafoglio:\n\n%s\n\nFrase di recupero Errata?</string>
-
-    <string name="send_coins_options_fee_category_zero">Senza Costi</string>
-    <string name="send_coins_fragment_hint_fee_zero">Nessun costo verrà addebitato. Usa "Senza Costi" soltanto se non hai bisogno di un tempo di conferma rapido.</string>
 
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">L\'applicazione %s vorrebbe ricevere la tua Master Public Key. Questa può essere utilizzata per tenere traccia del tuo portafoglio; non può essere utilizzata per spostare i tuoi Dash.</string>
@@ -133,16 +113,12 @@
 
     <string name="wallet_lock_unlock">Sblocca</string>
     <string name="wallet_lock_unlock_wallet">Sblocca portafoglio</string>
-    <string name="wallet_lock_unlock_to_see_txs_title">Portafoglio bloccato.</string>
-    <string name="wallet_lock_unlock_to_see_txs_txt">Clicca l\'icona del lucchetto sopra per sbloccare il tuo portafoglio e vedere la cronologia delle transazioni.</string>
-    <string name="wallet_lock_unlock_dialog_title">Sblocca il tuo portafoglio </string>
     <string name="wallet_lock_unlock_dialog_message">Il tuo portafoglio è protetto da un PIN. Digita il tuo PIN e clicca "Sblocca" per continuare.</string>
     <string name="wallet_lock_reset_wallet_title">Resetta portafoglio</string>
     <string name="wallet_lock_reset_wallet_message">Sei sicuro? Il tuo portafoglio verrà eliminato e tutti i tuoi Dash andranno persi.\n\nL\'unico modo per recuperare i tuoi Dash è con un file di backup o una frase di recupero.</string>
 
     <string name="wallet_lock_wallet_disabled">Portafoglio disabilitato</string>
     <string name="wallet_lock_try_again">Riprova ancora in %1$d %2$s</string>
-    <string name="wallet_lock_reset">Reset</string>
     <string name="wallet_lock_wrong_pin">PIN errato! %s</string>
 
     <plurals name="wallet_lock_attempts_remaining">
@@ -171,26 +147,19 @@
     <string name="change_to">cambiare a %s</string>
     <string name="leave_as">Lasciare come %s</string>
 
-    <string name="remind_later">Ricorda dopo</string>
-    <string name="backup_now">Effettua il backup ora</string>
-
     <string name="notification_transactions_channel_name">Transazioni</string>
     <string name="notification_transactions_channel_description">Ricevi avvisi per le transazioni in entrata.</string>
     <string name="notification_synchronization_channel_name">Sincronizzazione</string>
     <string name="notification_synchronization_channel_description">Notifica quando la "app" è sincronizzata con la rete.</string>
 
-    <string name="net_type_indicator" />
-
     <string name="unlock_with_fingerprint">Usa la tua impronta digitale per sbloccare.</string>
     <string name="unlock_with_fingerprint_error">Impronta digitale non riconosciuta, prova ancora.</string>
     <string name="unlock_with_fingerprint_error_max_attempts">Numero massimo di tentativi raggiunto . Per cortesia prova più tardi.</string>
-    <string name="or_unlock_with_fingerprint">Oppure usa la tua impronta digitale per sbloccare.</string>
     <string name="enable_fingerprint">Abilita impronta digitale</string>
     <string name="touch_fingerprint_sensor">Toccare il sensore di impronta digitale</string>
     <string name="touch_fingerprint_to_enable">Toccare il sensore di impronte digitali per abilitare lo sblocco con l\'impronta digitale.</string>
     <string name="fingerprint_changed_title">Dati biometrici dell\'impronta digitale modificati</string>
 	<string name="fingerprint_changed_message">Abbiamo rilevato un cambiamento nei dati di autenticazione delle tue impronte digitali. Questa volta devi usare il PIN.</string>
-	<string name="exchange_rate_missing">Questo pagamento è troppo vecchio per ottenere il valore fiat</string>
 
     <string name="preferences_enable_payment_request_summary">Utilizza il protocollo di pagamento dal codice QR per i pagamenti avviati </string>
     <string name="preferences_enable_payment_request_title">BIP70 per scan-to-pay</string>
@@ -211,8 +180,6 @@
     <string name="verify_seed_title">Per favore scrivilo di seguito</string>
     <string name="verify_seed_write_down_confirmation">L\'ho scritto</string>
     <string name="verify_seed_buttons_tip">Si prega di toccare le parole dalla frase di recupero nel giusto ordine</string>
-    <string name="verify_seed_success_title">Verifica effettuata con Successo</string>
-    <string name="verify_seed_success_message">Il tuo Wallet ora è protetto. Puoi utilizzare la frase di recupero in qualsiasi momento per ripristinare il tuo account su un altro dispositivo.</string>
     <string name="view_seed_done">Fatto</string>
     <string name="view_seed_title">Frase di recupero</string>
 	<string name="transaction_result_view_on_explorer">Visualizza in Block Explorer</string>

@@ -2,14 +2,12 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
-    <string name="uphold_buy_dash_activity_title">Bumili/Magbenta sa Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Bumili ng Dash sa Uphold na account</string>
     <string name="uphold_buy_dash_button">Bumili ng Dash</string>
     <string name="uphold_transfer_to_this_wallet_button">Ilipat mula sa Uphold</string>
     <string name="uphold_link_account">I-liink ang Uphold Account</string>
     <string name="uphold_account_dash_balance">Ang balanse ng iyong Uphold account Dash ay</string>
     <string name="uphold_transfer_to_this_wallet">Ilipat ang Dash mula sa iyong Uphold account patungong pitaka</string>
-    <string name="uphold_withdrawal_deduct_fee_disclaimer">Ang bayad ay ibabawas mula sa hiniling na halaga.</string>
     <string name="uphold_withdrawal_instructions">Ilagay ang halaga na ipamamahagi</string>
     <string name="uphold_withdrawal_success_title">Tagumpay</string>
     <string name="uphold_withdrawal_success_message">Ang iyong transaksyon ay naipadala na at ang halaga ay dapat lumabas na sa iyong pitaka sa loob ng ilang minuto\n\nTransaksyon id: %s</string>

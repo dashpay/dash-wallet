@@ -92,20 +92,6 @@
     <string name="forgot_pin_instruction_3">新しいPINでログインしてウォレットにアクセスする</string>
     <string name="forgot_pin_warning">自分のPINを忘れたり、復元フレーズを紛失した場合は、あなたのウォレットと資金にアクセスできなくなります。</string>
 
-    <string name="send_coins_auto_lock_feasible">この取引は追加手数料なしで即座に完了するはずです</string>
-    <string name="send_coins_auto_lock_not_feasible">このトランザクションは決済に数分かかるかもしれません。 %1$s%2$sの追加で即時に完了させますか ？</string>
-    <string name="send_coins_instant_send_not_feasible">このトランザクションは決済に数分がかかります。</string>
-
-    <string name="options_paste_from_clipboard_title">クリップボードから貼付け</string>
-
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">この支払はまだ送信されていません。</string>
-    <string name="transaction_row_message_sent_to_single_peer">この支払いは送信されました。</string>
-
-    <string name="regular_transaction_info_message">このトランザクションは即時に決済されます。</string>
-
-    <string name="wallet_options_disconnect">切断</string>
-
-    <string name="network_monitor_masternodes_title">マスターノード</string>
     <string name="export_keys_dialog_title_to_seed">復元フレーズを表示する</string>
     <string name="import_keys_dialog_title_from_seed">復元フレーズでウォレットを復元する</string>
     <string name="backup_to_seed_wallet_dialog_message">これはあなたの復元フレーズです。ペンで書き留めてください。</string>
@@ -114,17 +100,11 @@
     <string name="import_keys_from_seed_dialog_message">あなたの復元フレーズをここに入力して下さい。</string>
     <string name="import_export_keys_dialog_password_phrase">ここに復元フレーズを入力</string>
     <string name="preferences_report_issue_summary">問題に関する情報を収集し、開発者へメールで報告する。</string>
-    <string name="navigation_configuration">設定</string>
-    <string name="button_copy_address">アドレスをコピーする</string>
-    <string name="request_coins_clipboard_address_msg">Dashアドレスがクリップボードにコピーされました</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">表示</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" は復元フレーズのワードではありません</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">復元フレーズは12ワードなくてはいけません。</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">正しくない復元フレーズ</string>
     <string name="restore_wallet_from_invalid_seed_failure">ウォレットは復元できませんでした:\n\n%s\n\n復元フレーズが間違っていますか?</string>
-
-    <string name="send_coins_options_fee_category_zero">手数料無料</string>
-    <string name="send_coins_fragment_hint_fee_zero">手数料は支払われません。承認時間を気にされない場合のみ「手数料無料」をお使いください。</string>
 
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg"> %sというアプリがあなたのマスターパブリックキーを要求しています。これはあなたのウォレットの記録を取るために使用されます。あなたのDashが勝手に送金されることはありません。</string>
@@ -133,16 +113,12 @@
 
     <string name="wallet_lock_unlock">ロック解除する</string>
     <string name="wallet_lock_unlock_wallet">ウォレットのロックを解除する</string>
-    <string name="wallet_lock_unlock_to_see_txs_title">ウォレットはロックされています。</string>
-    <string name="wallet_lock_unlock_to_see_txs_txt">上のロックのアイコンをタップすると、あなたのウォレットがロック解除されて取引履歴が表示されます。</string>
-    <string name="wallet_lock_unlock_dialog_title">あなたのウォレットのロックを解除する</string>
     <string name="wallet_lock_unlock_dialog_message">あなたのウォレットは送金用PINコードで保護されています。 PINを入力してロック解除を押すと次へ進めます。</string>
     <string name="wallet_lock_reset_wallet_title">ウォレットをリセットする</string>
     <string name="wallet_lock_reset_wallet_message">本気ですか？ウォレットは削除され全てのDashが失われます。\n\nDashを復元する唯一の方法はバックアップファイル又は復元フレーズの使用です。</string>
 
     <string name="wallet_lock_wallet_disabled">ウォレットは機能停止しています</string>
     <string name="wallet_lock_try_again">もう一度 %1$d %2$sにてお試しください。</string>
-    <string name="wallet_lock_reset">リセット</string>
     <string name="wallet_lock_wrong_pin">PINコードが間違っています! %s</string>
 
     <plurals name="wallet_lock_attempts_remaining">
@@ -168,26 +144,19 @@
     <string name="change_to"> %sに変更する</string>
     <string name="leave_as"> そのまま%sを使う</string>
 
-    <string name="remind_later">後で通知する</string>
-    <string name="backup_now">今すぐバックアップを行う</string>
-
     <string name="notification_transactions_channel_name">トランザクション</string>
     <string name="notification_transactions_channel_description">着金時にアラートを受信する。</string>
     <string name="notification_synchronization_channel_name">同期</string>
     <string name="notification_synchronization_channel_description">アプリがネットワークと同期している時に通知を表示する。</string>
 
-    <string name="net_type_indicator" />
-
     <string name="unlock_with_fingerprint">ロック解除に指紋認証を使う。</string>
     <string name="unlock_with_fingerprint_error">指紋を認識できませんでした。もう一度やり直してください。</string>
     <string name="unlock_with_fingerprint_error_max_attempts">指紋認証の最大試行回数を超えました。 後でもう一度やり直してください。</string>
-    <string name="or_unlock_with_fingerprint">またはロック解除に指紋認証を使う。</string>
     <string name="enable_fingerprint">指紋認証を有効にする</string>
     <string name="touch_fingerprint_sensor">指紋認証センサーに触れて下さい。</string>
     <string name="touch_fingerprint_to_enable">指紋認証センサーに触れて、指紋によるロック解除を有効にします。</string>
     <string name="fingerprint_changed_title">指紋認証データが変更されました</string>
 	<string name="fingerprint_changed_message">指紋認証データの変更を検知しました。今回はPINを使用する必要があります。</string>
-	<string name="exchange_rate_missing">この支払いは古すぎるため額面価値を得ることができません。</string>
 
     <string name="preferences_enable_payment_request_summary">QRコードで開始された支払いに支払いプロトコルを使用する</string>
     <string name="preferences_enable_payment_request_title">BIP70 for scan-to-pay</string>
@@ -211,10 +180,6 @@
     <string name="verify_seed_title">紙に書き留めて下さい</string>
     <string name="verify_seed_write_down_confirmation">紙に書き留めました</string>
     <string name="verify_seed_buttons_tip">復元フレーズの言葉を正しい順番にタップしてください</string>
-    <string name="verify_seed_success_title">IPアドレスで使用済みです
-</string>
-    <string name="verify_seed_success_message">現在あなたのウォレットは安全です。復元フレーズを使えばいつでも
-他の端末であなたのアカウントを復元できます。</string>
     <string name="view_seed_done">完了</string>
     <string name="view_seed_title">復元フレーズ</string>
 	<string name="transaction_result_view_on_explorer">ブロックエクスプローラーで見る</string>

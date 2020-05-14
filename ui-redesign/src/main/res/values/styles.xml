@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="WindowAnimationTransition">
-        <item name="android:windowEnterAnimation">@android:anim/fade_in</item>
-        <item name="android:windowExitAnimation">@android:anim/fade_out</item>
-    </style>
-
     <style name="DashButton.Blue" parent="Widget.AppCompat.Button.Borderless">
         <item name="fontFamily">@font/montserrat_medium</item>
         <item name="android:textColor">@drawable/blue_button_text</item>
@@ -27,11 +22,6 @@
     <style name="DashButton.White" parent="DashButton.Blue">
         <item name="android:textColor">@drawable/white_button_text</item>
         <item name="android:background">@drawable/white_button_background</item>
-    </style>
-
-    <style name="DashButton.Gray" parent="DashButton.Blue">
-        <item name="android:textColor">@drawable/gray_button_text</item>
-        <item name="android:background">@drawable/gray_button_background</item>
     </style>
 
     <style name="Panel.Red" parent="DashButton.Blue">

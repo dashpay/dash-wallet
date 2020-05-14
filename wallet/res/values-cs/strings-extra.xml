@@ -89,20 +89,7 @@
     <string name="forgot_pin_message">Nový PIN můžete nastavit pomocí vaší fráze pro obnovení.</string>
     <string name="forgot_pin_instruction_1">Zadejte frázi pro obnovení vaší peněženky</string>
     <string name="forgot_pin_instruction_2">Nastavit nový PIN</string>
-    <string name="send_coins_auto_lock_feasible">Tato transakce bude vyřízena okamžitě bez poplatku navíc.</string>
-    <string name="send_coins_auto_lock_not_feasible">Vyřízení této transakce může trvat několik minut. Výřidit ji okamžitě za %1$s%2$s?</string>
-    <string name="send_coins_instant_send_not_feasible">Výřízení této transakce může trvat několik minut.</string>
 
-    <string name="options_paste_from_clipboard_title">Vložit ze schránky</string>
-
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">Tato platba ještě nebyla odeslána.</string>
-    <string name="transaction_row_message_sent_to_single_peer">Platba byla odeslána.</string>
-
-    <string name="regular_transaction_info_message">Tato transakce nebyla vyřízena okamžitě.</string>
-
-    <string name="wallet_options_disconnect">Odpojit</string>
-
-    <string name="network_monitor_masternodes_title">Masternody</string>
     <string name="export_keys_dialog_title_to_seed">Zobrazit frázi pro obnovení</string>
     <string name="import_keys_dialog_title_from_seed">Obnovit pomocí fráze</string>
     <string name="backup_to_seed_wallet_dialog_message">Toto je vaše fráze pro obnovení. Poznamenejte si ji.</string>
@@ -111,15 +98,10 @@
     <string name="import_keys_from_seed_dialog_message">Vložte frázi pro obnovení.</string>
     <string name="import_export_keys_dialog_password_phrase">Sem vložte frázi pro obnovení.</string>
     <string name="preferences_report_issue_summary">Získat a odeslat informace o problému vývojářům.</string>
-    <string name="navigation_configuration">Konfigurace</string>
-    <string name="button_copy_address">Kopírovat adresu</string>
-    <string name="request_coins_clipboard_address_msg">Dash adresa zkopírována do schránky</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Zobrazit</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" není slovo z fráze pro obnovení</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Fráze pro obnovení musí mít 12 slov</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Špátná fráze pro obnovení</string>
-    <string name="send_coins_options_fee_category_zero">Bez poplatku</string>
-    <string name="send_coins_fragment_hint_fee_zero">Poplatek nebude účtován. Použijte ‚bez poplatku‘ pouze pokud vám nezáleží na době trvání konfirmace.</string>
 
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">Aplikace %s chce získat váš hlavní veřejný klíč. Může být použit pro sledování peněženky, nemůže být použit pro přesunutí vašich Dash.</string>
@@ -128,16 +110,12 @@
 
     <string name="wallet_lock_unlock">Odemknout</string>
     <string name="wallet_lock_unlock_wallet">Odemknout peněženku</string>
-    <string name="wallet_lock_unlock_to_see_txs_title">Peněženka uzamčena.</string>
-    <string name="wallet_lock_unlock_to_see_txs_txt">Klepnutím na ikonu zámku výše odemknete peněženku a zobrazíte historii transakcí.</string>
-    <string name="wallet_lock_unlock_dialog_title">Odemknout peněženku</string>
     <string name="wallet_lock_unlock_dialog_message">Peněženka je chráněna PIN kódem. Zadejte váš PIN a stiskněte Odemknout pro pokračování.</string>
     <string name="wallet_lock_reset_wallet_title">Resetovat Peněženku</string>
     <string name="wallet_lock_reset_wallet_message">Jste si jistí? Peněženka bude smazána a veškerý váš Dash se tím ztratí.\n\nJediným způsobem pro obnovení vašeho Dash je soubor se zálohou nebo fráze pro obnovení.</string>
 
     <string name="wallet_lock_wallet_disabled">Peněženka deaktivována</string>
     <string name="wallet_lock_try_again">Zkuste to znovu za %1$d %2$s</string>
-    <string name="wallet_lock_reset">Resetovat</string>
     <string name="wallet_lock_wrong_pin">Špatný PIN! %s</string>
 
     <plurals name="wallet_lock_attempts_remaining">
@@ -172,23 +150,16 @@
     <string name="change_to">Změnit na %s</string>
     <string name="leave_as">Ponechat %s</string>
 
-    <string name="remind_later">Připomenout později</string>
-    <string name="backup_now">Zálohovat</string>
-
     <string name="notification_transactions_channel_name">Transakce</string>
     <string name="notification_transactions_channel_description">Dostávat upozornění o příchozích transakcích.</string>
     <string name="notification_synchronization_channel_name">Synchronizace</string>
     <string name="notification_synchronization_channel_description">Ukazuje notifikaci, když se aplikace synchronizuje se sítí.</string>
 
-    <string name="net_type_indicator" />
-
     <string name="unlock_with_fingerprint">K odemčení použijte otisk prstu.</string>
     <string name="unlock_with_fingerprint_error">Nepodařilo se rozpoznat otisk prstu, zkuste to ještě jednou.</string>
     <string name="unlock_with_fingerprint_error_max_attempts">Byl překročen maximální počet pokusů. Zkuste to později.</string>
-    <string name="or_unlock_with_fingerprint">Nebo k odemčení použijte otisk prstu.</string>
     <string name="enable_fingerprint">Povolit otisk prstu</string>
     <string name="touch_fingerprint_to_enable">Dotkněte se snímače otisku prstu pro umožnění odemčení otiskem prstu.</string>
-    <string name="exchange_rate_missing">Tato platba je příliš stará na získání hodnoty fiat.</string>
 
     <string name="preferences_enable_payment_request_summary">Používat platební protokol pro platby iniciované QR kódem</string>
     <string name="preferences_enable_payment_request_title">BIP70 pro scan-to-pay</string>
@@ -209,8 +180,6 @@
     <string name="verify_seed_title">Poznamenejte si ji</string>
     <string name="verify_seed_write_down_confirmation">Mám poznamenáno</string>
     <string name="verify_seed_buttons_tip">Klepněte na slova z vaší fráze pro obnovení ve správném pořadí</string>
-    <string name="verify_seed_success_title">Úspěšně verifikováno</string>
-    <string name="verify_seed_success_message">Peněženka je teď zabezpečena. Frázi pro obnovení můžete kdykoliv použít pro obnovení na jiném zařízení.</string>
     <string name="view_seed_done">Hotovo</string>
     <string name="view_seed_title">Fráze Pro Obnovení</string>
 	<string name="transaction_result_paid_successfully">Úspešně odesláno</string>

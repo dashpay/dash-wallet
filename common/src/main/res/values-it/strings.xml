@@ -3,6 +3,5 @@
 
     <string name="loading">Caricamento in corso.....</string>
     <string name="loading_error">Si è verificato un errore. Per favore riprova più tardi.</string>
-    <string name="dash_available">%1$s disponibile</string>
 
 </resources>

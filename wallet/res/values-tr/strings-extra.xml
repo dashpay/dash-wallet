@@ -92,20 +92,6 @@
     <string name="forgot_pin_instruction_3">Yeni PİN\'inizle oturum açarak cüzdanınıza erişin</string>
     <string name="forgot_pin_warning">Eğer kurtarma sözcük grubunuzu ve PİN\'inizi unuttuysanız cüzdanınıza ve paranıza erişemezsiniz.</string>
 
-    <string name="send_coins_auto_lock_feasible">Bu işlem hiç ek ücret ödenmeden anında tamamlanabilir</string>
-    <string name="send_coins_auto_lock_not_feasible">Bu işlemin gerçekleşmesi birkaç dakika sürebilir. %1$s%2$s ile anında tamamlansın mı?</string>
-    <string name="send_coins_instant_send_not_feasible">Bu işlemin gerçekleşmesi birkaç dakika sürebilir.</string>
-
-    <string name="options_paste_from_clipboard_title">Panodan yapıştır</string>
-
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">Bu ödeme henüz aktarılmadı.</string>
-    <string name="transaction_row_message_sent_to_single_peer">Bu ödeme gönderildi.</string>
-
-    <string name="regular_transaction_info_message">Bu işlem anında gerçekleşmedi.</string>
-
-    <string name="wallet_options_disconnect">Bağlantıyı Kes</string>
-
-    <string name="network_monitor_masternodes_title">TemelAğlar</string>
     <string name="export_keys_dialog_title_to_seed">Kurtarma Sözcük Grubunu Göster</string>
     <string name="import_keys_dialog_title_from_seed">Kurtarma sözcük grubundan geri yükle</string>
     <string name="backup_to_seed_wallet_dialog_message">Bu sizin kurtarma sözcük grubunuzdur. Lütfen bir yere yazınız.</string>
@@ -114,17 +100,11 @@
     <string name="import_keys_from_seed_dialog_message">Kurtarma sözcük grubunuzu girin.</string>
     <string name="import_export_keys_dialog_password_phrase">Kurtarma sözcük grubunuz buraya.</string>
     <string name="preferences_report_issue_summary">Sorununuz ile ilgili bilgi toplayın ve raporunuzu geliştiricilere e-posta yolu ile gönderin.</string>
-    <string name="navigation_configuration">Yapılandırma</string>
-    <string name="button_copy_address">Adresi Kopyala</string>
-    <string name="request_coins_clipboard_address_msg">Dash adresi panoya kopyalandı</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Göster</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" kurtarma cümlesi kelimesi değil</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Kurtarma cümlesi 12 kelime olmalı</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Hatalı kurtarma cümlesi</string>
     <string name="restore_wallet_from_invalid_seed_failure">Cüzdan geri yüklenemedi:\n\n%s\n\nYanlış kurtarma sözcük grubu?</string>
-
-    <string name="send_coins_options_fee_category_zero">Ücret Yok</string>
-    <string name="send_coins_fragment_hint_fee_zero">Ücret ödenmeyecek. Sadece onay süresi sizin için önemli değilse \'ücret yok\' seçeneğini kullanın.</string>
 
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">%s uygulaması size ait Ana Herkese Açık Anahtarı istiyor. Bunun sayesinde cüzdanınız takip edilebilir ama Dashlerinizi başka bir yere aktarmakta kullanılamaz.</string>
@@ -133,16 +113,12 @@
 
     <string name="wallet_lock_unlock">Kilidi Aç</string>
     <string name="wallet_lock_unlock_wallet">Cüzdanın kilidini aç</string>
-    <string name="wallet_lock_unlock_to_see_txs_title">Cüzdan kilitli.</string>
-    <string name="wallet_lock_unlock_to_see_txs_txt">Cüzdanınızın kilidi açıp işlem geçmişinizi görmek için yukarıdaki kilit simgesine dokunun.</string>
-    <string name="wallet_lock_unlock_dialog_title">Cüzdanının kilidini aç</string>
     <string name="wallet_lock_unlock_dialog_message">Cüzdanınız bir harcama PIN kodu ile korunuyor. Devam etmek için PIN kodunuzu girin ve Kilidi Aça basın.</string>
     <string name="wallet_lock_reset_wallet_title">Cüzdanı Sıfırla</string>
     <string name="wallet_lock_reset_wallet_message">Emin misiniz? Cüzdanınız silinecek ve tüm Dash\'iniz kaybolacak.\n\nDash\'inizi geri almanın tek yolu yedek dosyası veya kurtarma sözcükleridir.</string>
 
     <string name="wallet_lock_wallet_disabled">Cüzdan devredışı</string>
     <string name="wallet_lock_try_again">%1$d %2$s içinde tekrar dene</string>
-    <string name="wallet_lock_reset">Yeniden Başlat</string>
     <string name="wallet_lock_wrong_pin">Yanlış PIN! %s</string>
 
     <plurals name="wallet_lock_attempts_remaining">
@@ -171,26 +147,19 @@
     <string name="change_to">%s olarak değiştir</string>
     <string name="leave_as">%s olarak kalsın</string>
 
-    <string name="remind_later">Sonra hatırlat</string>
-    <string name="backup_now">Hemen yedekle</string>
-
     <string name="notification_transactions_channel_name">İşlemler</string>
     <string name="notification_transactions_channel_description">Yaklaşan işlemlerle ilgili uyarı al.</string>
     <string name="notification_synchronization_channel_name">Eşleştirme</string>
     <string name="notification_synchronization_channel_description">Uygulama ağ ile eşleşirken bir bildirim gösterir.</string>
 
-    <string name="net_type_indicator" />
-
     <string name="unlock_with_fingerprint">Açmak için parmak izini kullan.</string>
     <string name="unlock_with_fingerprint_error">Parmak izi tanınamadı, lütfen tekrar dene.</string>
     <string name="unlock_with_fingerprint_error_max_attempts">Parmak izi deneme sınırı aşıldı. Lütfen daha sonra tekrar dene.</string>
-    <string name="or_unlock_with_fingerprint">Ya da açmak için parmak izini kullan.</string>
     <string name="enable_fingerprint">Parmak izini etkinleştir</string>
     <string name="touch_fingerprint_sensor">Parmak izi sensörüne dokunun</string>
     <string name="touch_fingerprint_to_enable">Parmak izi ile kilit açma için parmak izi okuyucusuna dokun.</string>
     <string name="fingerprint_changed_title">Parmak izi verileri değiştirildi</string>
 	<string name="fingerprint_changed_message">Parmak izi kimlik doğrulama verilerinizde bir değişiklik tespit ettik. Bu sefer PIN kodunuzu kullanmanız gerekiyor.</string>
-	<string name="exchange_rate_missing">Bu ödeme itibari para karşılığını göstermek için çok eskidir.</string>
 
     <string name="preferences_enable_payment_request_summary">QR-koduyla başlatılan ödemeler için ödeme protokolünü kullan</string>
     <string name="preferences_enable_payment_request_title">ödemeyi-tara için BIP70</string>
@@ -211,8 +180,6 @@
     <string name="verify_seed_title">Lütfen bir yere yazın</string>
     <string name="verify_seed_write_down_confirmation">Not aldım</string>
     <string name="verify_seed_buttons_tip">Lütfen kurtarma sözcük grubunuzu doğru şekilde sıralayın</string>
-    <string name="verify_seed_success_title">Başarıyla Doğrulandı</string>
-    <string name="verify_seed_success_message">Cüzdanınız artık güvende. Hesabınızı başka bir cihaza aktarmak için kurtarma sözcük grubunuzu istediğiniz zaman kullanabilirsiniz.</string>
     <string name="view_seed_done">Bitti</string>
     <string name="view_seed_title">Kurtarma Sözcük Grubu</string>
 	<string name="transaction_result_view_on_explorer">Blok gezgininde görüntüle</string>

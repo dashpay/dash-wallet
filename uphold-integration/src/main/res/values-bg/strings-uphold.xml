@@ -2,14 +2,12 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
-    <string name="uphold_buy_dash_activity_title">Купи/Продай Dash с Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Купи Dash с Uphold акаунт</string>
     <string name="uphold_buy_dash_button">Купи Dash</string>
     <string name="uphold_transfer_to_this_wallet_button">Прехвърляне от Uphold</string>
     <string name="uphold_link_account">Свързване на Uphold акаунт</string>
     <string name="uphold_account_dash_balance">Вашият Dash баланс в Uphold акаунта е</string>
     <string name="uphold_transfer_to_this_wallet">Прехвърляне на Dash от Вашият Uphold акаунт към този портфейл</string>
-    <string name="uphold_withdrawal_deduct_fee_disclaimer">Таксата ще бъде приспадната от поисканата сума.</string>
     <string name="uphold_withdrawal_instructions">Въведи сумата за прехвърляне </string>
     <string name="uphold_withdrawal_success_title">Успешно</string>
     <string name="uphold_withdrawal_success_message">Вашата транзакция беше изпратена и сумата трябва да се появи в портфейла Ви след няколко минути.\n\nТранзакция номер: %s</string>

@@ -92,20 +92,6 @@
     <string name="forgot_pin_instruction_3">Log in met uw nieuwe PIN om toegang te krijgen tot uw portemonnee</string>
     <string name="forgot_pin_warning">Als u uw PIN bent vergeten en uw herstelzin bent kwijtgeraakt, kunt u geen toegang meer krijgen tot uw portemonnee en het saldo.</string>
 
-    <string name="send_coins_auto_lock_feasible">Deze transactie wordt direct afgehandeld en zonder extra transactiekosten</string>
-    <string name="send_coins_auto_lock_not_feasible">Het uitvoeren van deze transactie kan enkele minuten duren. Direct uitvoeren voor %1$s%2$s?</string>
-    <string name="send_coins_instant_send_not_feasible">Het uitvoeren van deze transactie kan enkele minuten duren. </string>
-
-    <string name="options_paste_from_clipboard_title">Plakken vanuit klembord</string>
-
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">Deze betaling is nog niet verzonden.</string>
-    <string name="transaction_row_message_sent_to_single_peer">Deze betaling is verzonden.</string>
-
-    <string name="regular_transaction_info_message">Deze transactie is niet direct uitgevoerd.</string>
-
-    <string name="wallet_options_disconnect">Verbreek verbinding</string>
-
-    <string name="network_monitor_masternodes_title">Masternodes</string>
     <string name="export_keys_dialog_title_to_seed">Toon herstelzin</string>
     <string name="import_keys_dialog_title_from_seed">Herstel met herstelzin</string>
     <string name="backup_to_seed_wallet_dialog_message">Dit is je herstelzin. Schrijf deze a.u.b. op.</string>
@@ -114,17 +100,11 @@
     <string name="import_keys_from_seed_dialog_message">Voer je herstelzin hier in.</string>
     <string name="import_export_keys_dialog_password_phrase">Voer hier je herstelzin in.</string>
     <string name="preferences_report_issue_summary">Vergaar informatie over uw probleem en verstuur via e-mail een melding aan de ontwikkelaars.</string>
-    <string name="navigation_configuration">Configuratie</string>
-    <string name="button_copy_address">Kopieer adres</string>
-    <string name="request_coins_clipboard_address_msg">Dash-adres is gekopieerd naar het klembord</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Toon</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" is geen herstelzinwoord</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Herstelzin moet 12 woorden hebben</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Incorrecte herstelzin</string>
     <string name="restore_wallet_from_invalid_seed_failure">Portemonnee kon niet worden hersteld:\n\n%s\n\nVerkeerde herstelzin?</string>
-
-    <string name="send_coins_options_fee_category_zero">Geen kosten</string>
-    <string name="send_coins_fragment_hint_fee_zero">Geen kosten zullen worden betaald. Gebruik \'geen kosten\' alleen als de bevestigingstijd niet van belang is.</string>
 
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">Applicatie %s wil je Master Public Key verkrijgen. Deze kan worden gebruikt om je portemonnee te volgen, maar kan niet gebruikt worden om Dash over te maken.</string>
@@ -133,16 +113,12 @@
 
     <string name="wallet_lock_unlock">Ontgrendel</string>
     <string name="wallet_lock_unlock_wallet">Ontgrendel portemonnee</string>
-    <string name="wallet_lock_unlock_to_see_txs_title">Portemonnee vergrendeld.</string>
-    <string name="wallet_lock_unlock_to_see_txs_txt">Druk op het slot icoon hierboven om je portemonnee te ontgrendelen en de transactiegeschiedenis te bekijken.</string>
-    <string name="wallet_lock_unlock_dialog_title">Ontgrendel je portemonnee</string>
     <string name="wallet_lock_unlock_dialog_message">Betalingen vanuit je portemonnee zijn beschermd met een pin. Voer je pin in en kies Ontgrendel om verder te gaan.</string>
     <string name="wallet_lock_reset_wallet_title">Portemonnee resetten</string>
     <string name="wallet_lock_reset_wallet_message">Weet je het zeker? Je portemonnee wordt verwijderd en al je Dash gaat verloren.\n\nDe enige manier om je Dash te herstellen is met een backup bestand of herstelzin.</string>
 
     <string name="wallet_lock_wallet_disabled">Portemonnee uitgeschakeld</string>
     <string name="wallet_lock_try_again">Probeer nogmaals over %1$d %2$s</string>
-    <string name="wallet_lock_reset">Reset</string>
     <string name="wallet_lock_wrong_pin">Verkeerde pin! %s</string>
 
     <plurals name="wallet_lock_attempts_remaining">
@@ -171,26 +147,19 @@
     <string name="change_to">Verander naar %s</string>
     <string name="leave_as">%s behouden</string>
 
-    <string name="remind_later">Herinner mij later</string>
-    <string name="backup_now">Nu backup maken</string>
-
     <string name="notification_transactions_channel_name">Transacties</string>
     <string name="notification_transactions_channel_description">Ontvang notificaties over binnenkomende transacties.</string>
     <string name="notification_synchronization_channel_name">Synchronisatie</string>
     <string name="notification_synchronization_channel_description">Toont een notificatie als de app met het netwerk aan het synchroniseren is.</string>
 
-    <string name="net_type_indicator" />
-
     <string name="unlock_with_fingerprint">Gebruik je vingerafdruk om te ontgrendelen.</string>
     <string name="unlock_with_fingerprint_error">Vingerafdruk niet herkend. Probeer het opnieuw.</string>
     <string name="unlock_with_fingerprint_error_max_attempts">Maximum aantal vingerafdruk pogingen overschreden. Probeer het later opnieuw.</string>
-    <string name="or_unlock_with_fingerprint">Of gebruik je vingerafdruk om te ontgrendelen.</string>
     <string name="enable_fingerprint">Vingerafdruk activeren</string>
     <string name="touch_fingerprint_sensor">Raak de vingerafdruk sensor aan.</string>
     <string name="touch_fingerprint_to_enable">Raak de vingerafdruk sensor aan om ontgrendelen met vingerafdruk te activeren.</string>
     <string name="fingerprint_changed_title">Vingerafdruk gegevens gewijzigd</string>
 	<string name="fingerprint_changed_message">We hebben een wijziging in uw vingerafdrukverificatie gedetecteerd. U moet deze keer uw PIN gebruiken.</string>
-	<string name="exchange_rate_missing">Deze betaling is te oud om de fiat-waarde te verkrijgen.</string>
 
     <string name="preferences_enable_payment_request_summary">Gebruik betalingsprotocol voor QR-code geïnitieerde betalingen</string>
     <string name="preferences_enable_payment_request_title">BIP70 voor scan-to-pay</string>
@@ -211,8 +180,6 @@
     <string name="verify_seed_title">schrijf het alsjeblieft op</string>
     <string name="verify_seed_write_down_confirmation">ik heb het opgeschreven</string>
     <string name="verify_seed_buttons_tip">Tik op de woorden van uw herstelzin in de juiste volgorde</string>
-    <string name="verify_seed_success_title">Succesvol geverifieerd </string>
-    <string name="verify_seed_success_message">Uw portemonnee is nu beveiligd. U kunt uw herstelzin op elk gewenst moment gebruiken om uw account op een ander apparaat te herstellen.</string>
     <string name="view_seed_done">Klaar</string>
     <string name="view_seed_title">Herstelzin</string>
 	<string name="transaction_result_view_on_explorer">Bekijk in Block Explorer</string>
