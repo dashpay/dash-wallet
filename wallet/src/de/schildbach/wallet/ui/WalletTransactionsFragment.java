@@ -271,8 +271,10 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
     @Override
     public void onProcessingIdentityRowClicked(final IdentityCreationState identityCreationState, boolean retry) {
-        if (identityCreationState.getState() == IdentityCreationState.State.DASHPAY_PROFILE_CREATED) {
-            Intent intent = new Intent(activity, SearchDashPayProfileActivity.class);
+        if (identityCreationState.getState() == IdentityCreationState.State.USERNAME_REGISTERED) {
+            Intent intent = new Intent(activity, CreateUsernameActivity.class);
+            intent.putExtra(CreateUsernameActivity.Companion.getCOMPLETE_USERNAME(),
+                    identityCreationState.getUsername());
             startActivity(intent);
         }
     }

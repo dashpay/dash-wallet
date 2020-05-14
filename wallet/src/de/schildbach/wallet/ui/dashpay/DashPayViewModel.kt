@@ -46,16 +46,6 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    //TODO: Rename this
-    val getSearchDashPayProfileLiveDatha = Transformations.switchMap(dashPayProfileQuery) {
-        searchDashPayProfileJob.cancel()
-        searchDashPayProfileJob = Job()
-        liveData(context = searchDashPayProfileJob + Dispatchers.IO) {
-            emit(Resource.loading(null))
-            emit(platformRepo.getDashPayProfiles())
-        }
-    }
-
     fun searchUsername(username: String) {
         usernameLiveData.value = username
     }
