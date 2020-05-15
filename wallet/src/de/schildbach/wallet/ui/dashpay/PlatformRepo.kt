@@ -17,6 +17,7 @@ package de.schildbach.wallet.ui.dashpay
 
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -25,8 +26,11 @@ import org.bitcoinj.core.Context
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dashevo.dapiclient.model.DocumentQuery
 import org.dashevo.dashpay.BlockchainIdentity
+import org.dashevo.dashpay.ContactRequests
 import org.dashevo.dpp.document.Document
+import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
 import java.util.concurrent.TimeoutException
 
@@ -54,6 +58,57 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 nameDocument = platform.names.get(username, "")
             }
             Resource.success(nameDocument)
+        } catch (e: Exception) {
+            Resource.error(e.localizedMessage, null)
+        }
+    }
+
+    /**
+     * gets all the name documents for usernames starting with text
+     *
+     * @param text
+     * @return
+     */
+    fun searchUsernames(text: String, userId: String): Resource<List<UsernameSearchResult>> {
+        return try {
+            // Names.search does support retrieving 100 names at a time if retrieveAll = false
+            var nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, true)
+
+            // TODO: Replace this Platform call with a query into the local database
+            var toContactDocuments = ContactRequests(platform).get(userId, false, true)
+
+            // Get all contact requests where toUserId == userId
+            var fromContactDocuments = ContactRequests(platform).get(userId, true, true)
+
+            val usernameSearchResults = ArrayList<UsernameSearchResult>()
+
+            // TODO: Replace this loop that processed DPP with a loop that processes the results
+            // from the database query
+            for (doc in nameDocuments) {
+                var toContact: Document? = null
+                var fromContact: Document? = null
+
+                // Determine if any of our contacts match the current name's identity
+                if (toContactDocuments.isNotEmpty()) {
+                    toContact = toContactDocuments.find { contact ->
+                        if (contact.data.containsKey("toUserId"))
+                            contact.data["toUserId"] == doc.userId
+                        else false
+                    }
+                }
+
+                // Determine if our identity is someone else's contact
+                if (fromContactDocuments.isNotEmpty()) {
+                    fromContact = fromContactDocuments.find { contact ->
+                        contact.userId == doc.userId
+                    }
+                }
+
+                usernameSearchResults.add(UsernameSearchResult(doc.data["normalizedLabel"] as String,
+                        doc, toContact, fromContact))
+            }
+
+            Resource.success(usernameSearchResults)
         } catch (e: Exception) {
             Resource.error(e.localizedMessage, null)
         }
@@ -120,7 +175,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val set = blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.PREORDER_REGISTRATION_PENDING)
             val saltedDomainHashes = blockchainIdentity.saltedDomainHashesForUsernames(set)
             val (result, usernames) = blockchainIdentity.watchPreorder(saltedDomainHashes, 10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
-            if(!result) {
+            if (!result) {
                 throw TimeoutException("the usernames: $usernames were not found to be preordered in the allotted amount of time")
             }
         }
@@ -142,7 +197,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     suspend fun isNameRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
             val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.REGISTRATION_PENDING), 10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
-            if(!result) {
+            if (!result) {
                 throw TimeoutException("the usernames: $usernames were not found to be registered in the allotted amount of time")
             }
         }

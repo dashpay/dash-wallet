@@ -21,6 +21,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.liveData
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.UsernameSearch
 import de.schildbach.wallet.livedata.Resource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -31,9 +32,11 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     private val walletApplication = application as WalletApplication
 
     private val usernameLiveData = MutableLiveData<String>()
+    private val usernamesLiveData = MutableLiveData<UsernameSearch>()
 
     // Job instance (https://stackoverflow.com/questions/57723714/how-to-cancel-a-running-livedata-coroutine-block/57726583#57726583)
     private var getUsernameJob = Job()
+    private var searchUsernamesJob = Job()
 
     val getUsernameLiveData = Transformations.switchMap(usernameLiveData) { username ->
         getUsernameJob.cancel()
@@ -51,6 +54,24 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     override fun onCleared() {
         super.onCleared()
         getUsernameJob.cancel()
+        searchUsernamesJob.cancel()
+    }
+
+    //
+    // Search Usernames that start with "text".  Results are a list of documents for names
+    // starting with text.  If no results are found then an empty list is returned.
+    //
+    val searchUsernamesLiveData = Transformations.switchMap(usernamesLiveData) { usernameSearch: UsernameSearch ->
+        searchUsernamesJob.cancel()
+        searchUsernamesJob = Job()
+        liveData(context = searchUsernamesJob + Dispatchers.IO) {
+            emit(Resource.loading(null))
+            emit(platformRepo.searchUsernames(usernameSearch.text, usernameSearch.userId))
+        }
+    }
+
+    fun searchUsernames(text: String, userId: String) {
+        usernamesLiveData.value = UsernameSearch(text, userId)
     }
 
     val isPlatformAvailableLiveData = liveData(Dispatchers.IO) {
