@@ -1,4 +1,15 @@
 Dash Wallet
+v7.0.6
+* Handle Dash payment requests and addresses in HTML clipboard format
+* Properly format authentication dialog
+* Center Dash Logo on Home Screen
+* Add contact support to More menu
+* BIP70: add support for pay: uri's
+* Fix crash when importing private key
+* Fix crashes related to the Lock Screen
+* Fix background service crashes
+* Update Translations
+
 v7.0.5
 * Fix crash on Local Currency Screen (Android 5, 6, Chinese locale)
 * Clicking Notification goes to the Lock Screen instead of Home Screen
