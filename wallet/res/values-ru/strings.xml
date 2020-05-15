@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Получение подписи %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Ошибка при получении подписи</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Неверная подпись!</string>
-    <string name="send_coins_fragment_payee_verified_by">проверено: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">неизвестно</string>
     <string name="send_coins_fragment_receiving_address_label">Отправить</string>
     <string name="send_coins_fragment_receiving_address_hint">введите адрес или имя</string>
@@ -374,4 +373,7 @@
     <string name="activity_security_hide_balance">Авто-скрытие баланса</string>
     <string name="reset_to_default">Установить по умолчанию</string>
 
+    <string name="payment_protocol_default_error_title">Ошибка оплаты</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Недостаточно средств</string>
+    <string name="payment_protocol_insufficient_funds_error_message">У вас недостаточно средств для завершения этой транзакции</string>
 </resources>

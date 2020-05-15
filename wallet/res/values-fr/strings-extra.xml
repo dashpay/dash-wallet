@@ -25,7 +25,6 @@
 
     <string name="dialog_confirm_confirm">Confirmer</string>
     <string name="dialog_confirm_pay_to">Envoyer à</string>
-    <string name="dialog_confirm_verified_by">Vérifié par</string>
     <string name="dialog_confirm_fee">Frais de réseau</string>
     <string name="dialog_confirm_total">Total</string>
 
@@ -245,6 +244,8 @@
     <string name="menu_tools_subtitle">Importer une clé privée…</string>
     <string name="menu_local_currency">Monnaie locale</string>
     <string name="menu_rescan_blockchain">Réanalyser la blockchain</string>
+    <string name="menu_contact_support_title">Contacter le service d\'aide</string>
+    <string name="menu_contact_support_subtitle">Signaler un problème</string>
 
     <string name="tools_address_book">Carnet d\'adresses</string>
     <string name="tools_import_private_key">Importer une clé privée</string>

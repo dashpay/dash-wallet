@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Carregando assinatura de %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Erro ao carregar assinatura</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Assinatura inválida!</string>
-    <string name="send_coins_fragment_payee_verified_by">verificado por: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">desconhecido</string>
     <string name="send_coins_fragment_receiving_address_label">Enviar para</string>
     <string name="send_coins_fragment_receiving_address_hint">insira o endereço ou nome</string>
@@ -374,4 +373,7 @@
     <string name="activity_security_hide_balance">Auto-esconder Saldo</string>
     <string name="reset_to_default">Restaurar ao Padrão</string>
 
+    <string name="payment_protocol_default_error_title">Erro no pagamento</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Saldo Insuficiente</string>
+    <string name="payment_protocol_insufficient_funds_error_message">Você não tem fundos suficientes para completar esta transação</string>
 </resources>

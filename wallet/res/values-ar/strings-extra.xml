@@ -25,7 +25,6 @@
 
     <string name="dialog_confirm_confirm">تأكيد</string>
     <string name="dialog_confirm_pay_to">إرسال الى</string>
-    <string name="dialog_confirm_verified_by">أٌكد عن طريق</string>
     <string name="dialog_confirm_fee">رسوم الشبكة</string>
     <string name="dialog_confirm_total">المجموع</string>
 
@@ -257,7 +256,7 @@
     <string name="menu_tools_subtitle">استيراد المفتاح الخاص...</string>
     <string name="menu_local_currency">العملة المحلية</string>
     <string name="menu_rescan_blockchain">اعادة نسخ بلوكشين</string>
-
+    <string name="menu_contact_support_title">اتصل بالدعم</string>
     <string name="tools_address_book">دليل العناوين</string>
     <string name="tools_import_private_key">استيراد مفتاح خاص</string>
     <string name="tools_network_monitor">مراقب الشبكة</string>

@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Извличане на подписа от %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Извличането на подписа е неуспешно</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Грешен подпис!</string>
-    <string name="send_coins_fragment_payee_verified_by">проверен от: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">непознат</string>
     <string name="send_coins_fragment_receiving_address_label">Изпрати на</string>
     <string name="send_coins_fragment_receiving_address_hint">напишете адрес или име</string>
@@ -374,4 +373,7 @@
     <string name="activity_security_hide_balance">Автоматично скриване на баланса</string>
     <string name="reset_to_default">Нулиране по подразбиране</string>
 
+    <string name="payment_protocol_default_error_title">Грешка при плащане</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Недостатъчни средства</string>
+    <string name="payment_protocol_insufficient_funds_error_message">Нямате достатъчно средства за да извършите тази транзакция</string>
 </resources>

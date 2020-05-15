@@ -25,7 +25,6 @@
 
     <string name="dialog_confirm_confirm">تائید</string>
     <string name="dialog_confirm_pay_to">ارسال به</string>
-    <string name="dialog_confirm_verified_by">تائید شده توسط</string>
     <string name="dialog_confirm_fee">کارمزد شبکه</string>
     <string name="dialog_confirm_total">مجموع</string>
 
@@ -247,7 +246,7 @@
     <string name="menu_tools_subtitle">وارد کردن کلید خصوصی</string>
     <string name="menu_local_currency">واحد پول محلی</string>
     <string name="menu_rescan_blockchain">اسکن دوباره بلاکچین</string>
-
+    <string name="menu_contact_support_title">تماس با پشتیبانی</string>
     <string name="tools_address_book">دفترچه نشانی‌ها</string>
     <string name="tools_import_private_key">وارد کردن کلید خصوصی</string>
     <string name="tools_network_monitor">پایش شبکه</string>

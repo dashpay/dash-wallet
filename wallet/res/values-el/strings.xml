@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Παραλαβή υπογραφής από %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Η παραλαβή της υπογραφής απέτυχε</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Λανθασμένη υπογραφή!</string>
-    <string name="send_coins_fragment_payee_verified_by">εγκρίθηκε από: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">άγνωστο</string>
     <string name="send_coins_fragment_receiving_address_label">Αποστολή στο</string>
     <string name="send_coins_fragment_receiving_address_hint">πληκτρολογήστε τη διεύθυνση ή το όνομα</string>
@@ -374,4 +373,7 @@
     <string name="activity_security_hide_balance">Αυτόματη απόκρυψη Υπολοίπου</string>
     <string name="reset_to_default">Επαναφορά στα Προεπιλεγμένα</string>
 
+    <string name="payment_protocol_default_error_title">Σφάλμα πληρωμής</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Ανεπαρκή Χρήματα</string>
+    <string name="payment_protocol_insufficient_funds_error_message">Δεν έχετε αρκετά χρήματα για να ολοκληρώσετε αυτή την συναλλαγή</string>
 </resources>

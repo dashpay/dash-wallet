@@ -25,7 +25,6 @@
 
     <string name="dialog_confirm_confirm">Onayla</string>
     <string name="dialog_confirm_pay_to">Gönder</string>
-    <string name="dialog_confirm_verified_by">Tarafından doğrulanan</string>
     <string name="dialog_confirm_fee">Ağ ücreti</string>
     <string name="dialog_confirm_total">Toplam</string>
 
@@ -245,6 +244,8 @@
     <string name="menu_tools_subtitle">Özel anahtari içeri aktar...</string>
     <string name="menu_local_currency">Yerel Para Birimi</string>
     <string name="menu_rescan_blockchain">Blok Zincirini Tekrar Tara</string>
+    <string name="menu_contact_support_title">Destekle İletişime Geçin</string>
+    <string name="menu_contact_support_subtitle">Sorun rapor et</string>
 
     <string name="tools_address_book">Adres Rehberi</string>
     <string name="tools_import_private_key">Özel anahtar içeri al</string>

@@ -25,7 +25,7 @@
 
     <string name="dialog_confirm_confirm">Confirmar</string>
     <string name="dialog_confirm_pay_to">Enviar a</string>
-    <string name="dialog_confirm_verified_by">Verificado por</string>
+    <string name="dialog_confirm_secured_by">Protegido por</string>
     <string name="dialog_confirm_fee">Comisión de red</string>
     <string name="dialog_confirm_total">Total</string>
 
@@ -245,6 +245,8 @@
     <string name="menu_tools_subtitle">Barrer billetera de papel…</string>
     <string name="menu_local_currency">Moneda Local</string>
     <string name="menu_rescan_blockchain">Reescanear la cadena de bloques</string>
+    <string name="menu_contact_support_title">Contactar Soporte</string>
+    <string name="menu_contact_support_subtitle">Reportar un problema</string>
 
     <string name="tools_address_book">Libreta de direcciones</string>
     <string name="tools_import_private_key">Barrer billetera de papel</string>

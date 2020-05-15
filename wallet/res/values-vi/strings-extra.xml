@@ -25,7 +25,6 @@
 
     <string name="dialog_confirm_confirm">Xác nhận</string>
     <string name="dialog_confirm_pay_to">Gửi đến</string>
-    <string name="dialog_confirm_verified_by">Xác thực bởi</string>
     <string name="dialog_confirm_fee">Phí giao dịch</string>
     <string name="dialog_confirm_total">Tổng số</string>
 
@@ -242,6 +241,8 @@
     <string name="menu_tools_subtitle">Nhập khoá riêng...</string>
     <string name="menu_local_currency">Tiền địa phương</string>
     <string name="menu_rescan_blockchain">Quét lại blockchain</string>
+    <string name="menu_contact_support_title">Liên hệ hỗ trợ</string>
+    <string name="menu_contact_support_subtitle">Báo cáo về lỗi</string>
 
     <string name="tools_address_book">Sổ địa chỉ</string>
     <string name="tools_import_private_key">Nhập khoá riêng</string>

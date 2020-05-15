@@ -53,7 +53,6 @@
     <string name="send_coins_fragment_request_payment_request_progress">Stahuji podpis z %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Stahováni podpisu selhalo</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Špatný podpis!</string>
-    <string name="send_coins_fragment_payee_verified_by">ověřeno: %s</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">neznámý</string>
     <string name="send_coins_fragment_receiving_address_label">Odeslat prostřednictvím</string>
     <string name="send_coins_fragment_receiving_address_hint">napište adresu či jméno</string>
@@ -354,4 +353,5 @@
     <string name="activity_security_hide_balance">Automaticky skrýt zůstatek</string>
     <string name="reset_to_default">Obnovit výchozí nastavení</string>
 
-</resources>
+    <string name="payment_protocol_insufficient_funds_error_title">Nedostatečný zůstatek</string>
+    </resources>
