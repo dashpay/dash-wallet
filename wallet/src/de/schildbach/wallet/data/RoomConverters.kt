@@ -18,6 +18,11 @@
 package de.schildbach.wallet.data
 
 import androidx.room.TypeConverter
+import de.schildbach.wallet.Constants
+import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.TransactionOutPoint
+import org.bitcoinj.evolution.CreditFundingTransaction
+import org.dashevo.dashpay.BlockchainIdentity
 import java.util.*
 
 class RoomConverters {
@@ -67,4 +72,43 @@ class RoomConverters {
         return identityCreationState.ordinal
     }
 
+    @TypeConverter
+    fun fromHash(hash: Sha256Hash?): ByteArray? {
+        return hash?.reversedBytes
+    }
+
+    @TypeConverter
+    fun byteArrayToHash(bytes: ByteArray?): Sha256Hash? {
+        return bytes?.let { Sha256Hash.wrapReversed(it) }
+    }
+
+    @TypeConverter
+    fun fromTransactionOutPoint(outpoint: TransactionOutPoint?): ByteArray? {
+        return outpoint?.bitcoinSerialize()
+    }
+
+    @TypeConverter
+    fun toTransactionOutPoint(bytes: ByteArray?): TransactionOutPoint? {
+        return bytes?.let { TransactionOutPoint(Constants.NETWORK_PARAMETERS, it, 0) }
+    }
+
+    @TypeConverter
+    fun toUsernameStatus(value: Int): BlockchainIdentity.UsernameStatus {
+        return BlockchainIdentity.UsernameStatus.values()[value]
+    }
+
+    @TypeConverter
+    fun fromUsernameStatus(usernameStatus: BlockchainIdentity.UsernameStatus?): Int {
+        return usernameStatus?.value ?: BlockchainIdentity.UsernameStatus.NOT_PRESENT.value
+    }
+
+    @TypeConverter
+    fun toRegistrationStatus(value: Int): BlockchainIdentity.RegistrationStatus {
+        return BlockchainIdentity.RegistrationStatus.values()[value]
+    }
+
+    @TypeConverter
+    fun fromRegistrationStatus(registrationStatus: BlockchainIdentity.RegistrationStatus): Int {
+        return registrationStatus.ordinal
+    }
 }

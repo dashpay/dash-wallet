@@ -27,13 +27,16 @@ import android.text.TextWatcher
 import android.text.style.StyleSpan
 import android.view.View
 import android.view.animation.AnimationUtils
+import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.IdentityCreationState
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService.Companion.createIntent
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NewAccountConfirmDialog
 import de.schildbach.wallet_test.R
@@ -41,7 +44,7 @@ import kotlinx.android.synthetic.main.create_username.*
 import kotlinx.android.synthetic.main.users_orbit.*
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.InteractionAwareActivity
-import java.util.concurrent.Executors
+import org.slf4j.LoggerFactory
 
 class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
@@ -51,6 +54,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private val fadeOutAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.fade_out) }
     private lateinit var completeUsername: String
     private lateinit var dashPayViewModel: DashPayViewModel
+    private lateinit var walletApplication: WalletApplication
 
     private var handler: Handler = Handler()
     private lateinit var checkUsernameNotExistRunnable: Runnable
@@ -58,6 +62,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     companion object {
         @JvmStatic
         public val COMPLETE_USERNAME = "complete_username"
+        private val log = LoggerFactory.getLogger(CreateUsernameActivity::class.java)
     }
 
 
@@ -78,43 +83,82 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             showCompleteState()
         }
 
+        walletApplication = application as WalletApplication
+
+        initViewModel()
+    }
+
+    private fun initViewModel() {
         val confirmTransactionSharedViewModel = ViewModelProviders.of(this)
                 .get(SingleActionSharedViewModel::class.java)
         confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
+
+            val username = username.text.toString()
+            if (walletApplication.wallet.isEncrypted) {
+                ContextCompat.startForegroundService(this, createIntent(this, username))
+
+                // finish this activity on error or when registration is complete
+                AppDatabase.getAppDatabase().identityCreationStateDao().load().observe(this, Observer {
+                    if (it != null && it.error) {
+                        finish()
+                    } else when (it?.state) {
+                        IdentityCreationState.State.USERNAME_REGISTERED -> {
+                            completeUsername = it.username
+                            showCompleteState()
+                        }
+                    }
+                })
+            } else {
+                // do we need this or should we show an error message
+                // The wallet should be encrypted and this code should
+                // never be executed
+                ContextCompat.startForegroundService(this, createIntent(this, username))
+            }
             showProcessingState()
         })
 
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
 
         dashPayViewModel.getUsernameLiveData.observe(this, Observer {
+            username_exists_req.visibility = View.VISIBLE
+            username_exists_req_label.visibility = View.VISIBLE
             when (it.status) {
                 Status.LOADING -> {
-                    register_btn.isEnabled = false
-                    username_exists_req_label.visibility = View.GONE
-                    username_exists_req_img.visibility = View.GONE
+                    // this is delayed therefore the UI state is configured before calling checkUsernameNotExist(...)
                 }
                 Status.ERROR -> {
-                    // Some error happened when communicating with Platform
-                    // nothing is currently reported to the user
+                    username_exists_req_progress.visibility = View.INVISIBLE
+                    username_exists_req_img.visibility = View.VISIBLE
+                    username_exists_req_img.setImageResource(R.drawable.ic_username_requirement_x)
+                    username_exists_req_label.typeface = mediumTypeFace
+                    username_exists_req_label.setTextColor(ResourcesCompat.getColor(resources, R.color.dash_red, null))
+                    username_exists_req_label.setText(R.string.platform_communication_error)
                     register_btn.isEnabled = false
-                    username_exists_req_label.visibility = View.GONE
-                    username_exists_req_img.visibility = View.GONE
                 }
                 Status.SUCCESS -> {
                     if (it.data != null) {
                         // This user name exists
-                        register_btn.isEnabled = false
-                        username_exists_req_label.visibility = View.VISIBLE
+                        username_exists_req_progress.visibility = View.INVISIBLE
                         username_exists_req_img.visibility = View.VISIBLE
+                        username_exists_req_img.setImageResource(R.drawable.ic_username_requirement_x)
+                        username_exists_req_label.typeface = mediumTypeFace
+                        username_exists_req_label.setTextColor(ResourcesCompat.getColor(resources, R.color.dash_red, null))
+                        username_exists_req_label.setText(R.string.identity_username_taken)
+                        register_btn.isEnabled = false
                     } else {
+                        username_exists_req_progress.visibility = View.INVISIBLE
+                        username_exists_req_img.visibility = View.VISIBLE
+                        username_exists_req_img.setImageResource(R.drawable.ic_username_requirement_checkmark)
+                        username_exists_req_label.typeface = mediumTypeFace
+                        username_exists_req_label.setTextColor(ResourcesCompat.getColor(resources, R.color.dark_text, null))
+                        username_exists_req_label.setText(R.string.identity__username_available)
                         register_btn.isEnabled = true
-                        username_exists_req_label.visibility = View.GONE
-                        username_exists_req_img.visibility = View.GONE
                     }
                 }
             }
         })
     }
+
 
     private fun showCompleteState() {
         registration_content.visibility = View.GONE
@@ -184,11 +228,25 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         if (username != null) {
             val usernameIsValid = validateUsernameCharacters(username) && validateUsernameSize(username)
 
-            if(usernameIsValid) //ensure username meets basic rules before making a Platform query
-                checkUsernameNotExist(username)
-            else {
+            if (usernameIsValid) {
+                register_btn.isEnabled = true
                 username_exists_req_label.visibility = View.GONE
                 username_exists_req_img.visibility = View.GONE
+            }
+
+            if (usernameIsValid) {//ensure username meets basic rules before making a Platform query
+                username_exists_req_progress.visibility = View.VISIBLE
+                username_exists_req_img.visibility = View.INVISIBLE
+                username_exists_req_label.visibility = View.VISIBLE
+                username_exists_req_label.typeface = regularTypeFace
+                username_exists_req_label.setTextColor(ResourcesCompat.getColor(resources, R.color.dark_text, null))
+                username_exists_req_label.setText(R.string.identity_username_validating)
+                register_btn.isEnabled = false
+                checkUsernameNotExist(username)
+            } else {
+                username_exists_req_label.visibility = View.GONE
+                username_exists_req_img.visibility = View.GONE
+                register_btn.isEnabled = false
             }
         }
     }
@@ -207,12 +265,6 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         val end = start + username.length
         spannableContent.setSpan(StyleSpan(Typeface.BOLD), start, end, 0)
         processing_identity_message.text = spannableContent
-
-        Executors.newSingleThreadExecutor().execute {
-            val identityCreationState = IdentityCreationState(IdentityCreationState
-                    .State.PROCESSING_PAYMENT, false, username)
-            AppDatabase.getAppDatabase().identityCreationStateDao().insert(identityCreationState)
-        }
     }
 
     private fun showConfirmationDialog() {
@@ -228,5 +280,4 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
     }
-
 }

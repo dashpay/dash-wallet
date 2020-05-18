@@ -62,7 +62,6 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
 import javax.annotation.Nullable;
@@ -272,20 +271,11 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
     @Override
     public void onProcessingIdentityRowClicked(final IdentityCreationState identityCreationState, boolean retry) {
-        if (identityCreationState.getState() == IdentityCreationState.State.DONE) {
+        if (identityCreationState.getState() == IdentityCreationState.State.USERNAME_REGISTERED) {
             Intent intent = new Intent(activity, CreateUsernameActivity.class);
             intent.putExtra(CreateUsernameActivity.Companion.getCOMPLETE_USERNAME(),
                     identityCreationState.getUsername());
             startActivity(intent);
-        } else {
-            Executors.newSingleThreadExecutor().execute(new Runnable() {
-                @Override
-                public void run() {
-                    identityCreationState.nextState();
-                    AppDatabase.getAppDatabase()
-                            .identityCreationStateDao().insert(identityCreationState);
-                }
-            });
         }
     }
 

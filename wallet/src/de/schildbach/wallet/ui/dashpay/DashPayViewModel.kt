@@ -28,6 +28,7 @@ import kotlinx.coroutines.Job
 class DashPayViewModel(application: Application) : AndroidViewModel(application) {
 
     private val platformRepo = PlatformRepo(application as WalletApplication)
+    private val walletApplication = application as WalletApplication
 
     private val usernameLiveData = MutableLiveData<String>()
 

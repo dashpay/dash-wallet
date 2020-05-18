@@ -63,6 +63,7 @@ import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.navigation.NavigationView;
 import com.google.common.collect.ImmutableList;
 
+import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.livedata.Resource;
 import de.schildbach.wallet.livedata.Status;
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
@@ -70,7 +71,6 @@ import okhttp3.HttpUrl;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.PrefixedChecksummedBytes;
-import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.ChildNumber;
@@ -80,8 +80,8 @@ import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.ui.DialogBuilder;
-import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
+import org.dashevo.dashpay.BlockchainIdentity;
 
 import java.io.IOException;
 import java.util.Currency;
@@ -155,6 +155,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private DashPayViewModel dashPayViewModel;
     private boolean isPlatformAvailable = false;
+    private boolean hasIdentity = false;
 
 
     @Override
@@ -321,6 +322,17 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 showHideJoinDashPayAction();
             }
         });
+
+        AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(this, new Observer<BlockchainIdentityData>() {
+            @Override
+            public void onChanged(BlockchainIdentityData blockchainIdentityData) {
+                if(blockchainIdentityData != null) {
+                    BlockchainIdentity.RegistrationStatus status = blockchainIdentityData.getRegistrationStatus();
+                    hasIdentity = status != null ? status == BlockchainIdentity.RegistrationStatus.REGISTERED : false;
+                    showHideJoinDashPayAction();
+                }
+            }
+        });
     }
 
     private void showHideSecureAction() {
@@ -330,7 +342,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void showHideJoinDashPayAction() {
-        if (syncComplete && isPlatformAvailable) {
+        if (!hasIdentity && syncComplete && isPlatformAvailable) {
             final Coin walletBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED);
             boolean canAffordIt = walletBalance.isGreaterThan(Constants.DASH_PAY_FEE)
                     || walletBalance.equals(Constants.DASH_PAY_FEE);

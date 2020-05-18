@@ -183,6 +183,8 @@
     <string name="notification_transactions_channel_description">Receive alerts about incoming transactions.</string>
     <string name="notification_synchronization_channel_name">Synchronization</string>
     <string name="notification_synchronization_channel_description">Shows a notification when the app is synchronizing with the network.</string>
+    <string name="notification_dashpay_channel_name">DashPay</string>
+    <string name="notification_dashpay_channel_description">Status of ongoing DashPay operations.</string>
 
     <string name="net_type_indicator" />
 
@@ -338,7 +340,9 @@
     <string name="choose_your_username">Choose your <b>Dash\nUsername</b></string>
     <string name="min_3_chars">Between 3 and 23 characters</string>
     <string name="alphanum_only">Alphabets and Numbers only</string>
-    <string name="identity_exists_on_network">Username taken</string>
+    <string name="identity_username_validating">Validating username…</string>
+        <string name="identity__username_available">Username available</string>
+    <string name="identity_username_taken">Username taken</string>
     <string name="platform_communication_error">Communication error with Dash Platform</string>
     <string name="register">Register</string>
 

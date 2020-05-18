@@ -149,11 +149,11 @@ public final class HeaderBalanceFragment extends Fragment {
             }
         });
 
-        AppDatabase.getAppDatabase().identityCreationStateDao().load().observe(this, new Observer<IdentityCreationState>() {
+        AppDatabase.getAppDatabase().identityCreationStateDao().load().observe(getViewLifecycleOwner(), new Observer<IdentityCreationState>() {
             @Override
             public void onChanged(IdentityCreationState identityCreationState) {
                 if (identityCreationState != null
-                        && identityCreationState.getState() == IdentityCreationState.State.DONE) {
+                        && identityCreationState.getState() == IdentityCreationState.State.USERNAME_REGISTERED) {
                     String username = identityCreationState.getUsername();
                     StringBuilder lettersBuilder = new StringBuilder();
                     for (int i = 0; i < 2; i++) {
