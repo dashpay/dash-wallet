@@ -45,7 +45,10 @@ public class BootstrapReceiver extends BroadcastReceiver {
         final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context),
                 context.getResources());
 
-        boolean walletFileExists = ((WalletApplication) context.getApplicationContext()).walletFileExists();
+        WalletApplication walletApplication = (WalletApplication) context.getApplicationContext();
+        walletApplication.myPackageReplaced = true;
+
+        boolean walletFileExists = walletApplication.walletFileExists();
         if (walletFileExists && (packageReplaced || bootCompleted)) {
             // make sure wallet is upgraded to HD
             if (packageReplaced)
