@@ -705,6 +705,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
 
         Intent serviceIntent = new Intent(context, BlockchainServiceImpl.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            serviceIntent.putExtra(BlockchainServiceImpl.START_AS_FOREGROUND_EXTRA, true);
             alarmIntent = PendingIntent.getForegroundService(context, 0, serviceIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT);
         } else {

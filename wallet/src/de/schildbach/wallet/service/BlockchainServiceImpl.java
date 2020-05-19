@@ -166,6 +166,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private static final Logger log = LoggerFactory.getLogger(BlockchainServiceImpl.class);
 
+    public static final String START_AS_FOREGROUND_EXTRA = "start_as_foreground";
+
     private Executor executor = Executors.newSingleThreadExecutor();
     private int syncPercentage = 0; // 0 to 100%
 
@@ -787,6 +789,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         super.onStartCommand(intent, flags, startId);
 
         if (intent != null) {
+            //Restart service as a Foreground Service if it's synchronizing the blockchain
+            Bundle extras = intent.getExtras();
+            if (extras != null && extras.containsKey(START_AS_FOREGROUND_EXTRA)) {
+                startForeground();
+            }
+
             log.info("service start command: " + intent + (intent.hasExtra(Intent.EXTRA_ALARM_COUNT)
                     ? " (alarm count: " + intent.getIntExtra(Intent.EXTRA_ALARM_COUNT, 0) + ")" : ""));
 
