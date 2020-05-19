@@ -33,7 +33,6 @@
     <string name="quick_action_secure_now">Secure Wallet Now</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_join_dashpay">Join DashPay</string>
-    <string name="quick_action_contacts">Contacts</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_scan_to_pay">Scan to Send</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
