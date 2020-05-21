@@ -3,32 +3,25 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/bg_less_bright"
     android:orientation="vertical"
-    android:padding="16dp"
     tools:context="de.schildbach.wallet.ui.PaymentsPayFragment">
 
     <de.schildbach.wallet.ui.widget.PaymentsButtonView
         android:id="@+id/pay_by_qr_button"
+        style="@style/MenuRow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:pb_button_title="@string/payments_pay_by_qr_button"
         app:pb_icon="@drawable/ic_scan_qr"
         app:pb_sub_title="@string/payments_pay_by_qr_sub_title"
         app:pb_title="@string/payments_pay_by_qr_title" />
 
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="1px"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="8dp"
-        android:background="@color/dash_light_gray" />
-
     <de.schildbach.wallet.ui.widget.PaymentsButtonView
         android:id="@+id/pay_to_address"
+        style="@style/MenuRow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:pb_active="false"
-        app:pb_button_title="@string/payments_pay_to_clipboard_button"
         app:pb_icon="@drawable/ic_pay_copied_address"
         app:pb_sub_title="@string/payments_pay_to_clipboard_sub_title"
         app:pb_title="@string/payments_pay_to_clipboard_title" />

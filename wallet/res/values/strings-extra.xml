@@ -81,10 +81,8 @@
     <string name="payments_tab_receive_label">Receive</string>
     <string name="payments_pay_by_qr_title">Send by</string>
     <string name="payments_pay_by_qr_sub_title">Scanning QR code</string>
-    <string name="payments_pay_by_qr_button">Scan</string>
     <string name="payments_pay_to_clipboard_title">Send to copied address</string>
     <string name="payments_pay_to_clipboard_sub_title">No address copied</string>
-    <string name="payments_pay_to_clipboard_button">Send</string>
 
     <string name="forgot_pin_title">Forgot PIN?</string>
     <string name="forgot_pin_message">You can set a new PIN with the help of your recovery phrase.</string>
