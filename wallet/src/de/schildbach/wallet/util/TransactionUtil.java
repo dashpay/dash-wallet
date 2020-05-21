@@ -4,6 +4,7 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.RejectedTransactionException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
+import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.wallet.Wallet;
 
 import de.schildbach.wallet.Constants;
@@ -35,7 +36,9 @@ public class TransactionUtil {
                     break;
                 default:
                     TransactionConfidence confidence = tx.getConfidence();
-                    if (confidence.hasErrors())
+                    if (CreditFundingTransaction.isCreditFundingTransaction(tx))
+                        typeId = R.string.dashpay_upgrade_fee;
+                    else if (confidence.hasErrors())
                         typeId = R.string.transaction_row_status_error_sending;
                     else if (WalletUtils.isEntirelySelf(tx, wallet))
                         typeId = R.string.transaction_row_status_sent_internally;
