@@ -89,7 +89,8 @@ deploy:
   api_key:
     secure: HnAH0AJL7/9ar2sTiQls2XarwhGETRSPpoNA+hGpI8xHp9bwH00lpSxQ2p69f4BTszUq4IY77fayYIgZIhhg3b/2NRuC61b94kTF3acXJNkMYkin9Vq/CmYqHWK0Z4AgjPCv9TMZzNvpzaEXLQtEWGBIxQYLXXz9PHjVOTIU+ye6OSkj9TcrZRsyib1iHevQfxBcT0haDkk//fQ1Fsfvvd0yV/k/b7xLJI/y3bB0eYk5vA/e2ufT/ZSTemrUV1cpR0f86xcFYo+AQS9C1v0jVyyWBzDQLbCDGlFjvbvPKQHA9bi6gw06nPFLXDqz6FWFAPvG3pTjRFublc3AAjOjdxLoCSBTUsWKvTkJg5z1goBKzBId0tfRnKF6RHY77DfRxHhUIUOmgpai4GHZx6bJKMqzytI6rq0fu974nyH806u1VZm6axe2nM21fD7cxpJ27ck9FzCDi/5ujGO19RPVdx33NxCyzaa1kvl/G7+RfbbpMS6liTe12kYEhWxMD2SanWWl+P8XNexK6VMwsg3RH+3XHlTl1iW8ID+++ULwVXTLiAhWsQrCJV3bjsmol24vN4n6E63wQe7mf61mXVbwB72BKCaSd3pQ635ytkefvt8Z2N+KklUOjDdXWytAz8DaBfRFVmefdMAv55liV25iVYA6+sAuYc7Q/QOun2ZnQbw=
   file: wallet/build/outputs/apk/wallet*release*.apk
-  skip_cleanup: 'true'
+  overwrite: true
+  skip_cleanup: true
   on:
     branch: develop
     repo: dashevo/dash-wallet
