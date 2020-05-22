@@ -13,7 +13,9 @@ public class KeyboardUtil {
             InputMethodManager imm = (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
             boolean isShowing = imm.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT);
             if (!isShowing) {
-                activity.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+                ((InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE))
+                        .toggleSoftInput(InputMethodManager.SHOW_FORCED, InputMethodManager.HIDE_IMPLICIT_ONLY);
+
             }
         }
     }

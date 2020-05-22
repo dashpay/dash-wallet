@@ -31,7 +31,6 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     private val usernameLiveData = MutableLiveData<String?>()
     private val usernamesLiveData = MutableLiveData<UsernameSearch>()
 
-    // Job instance (https://stackoverflow.com/questions/57723714/how-to-cancel-a-running-livedata-coroutine-block/57726583#57726583)
     private var getUsernameJob = Job()
     private var searchUsernamesJob = Job()
 
