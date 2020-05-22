@@ -22,28 +22,25 @@ import android.os.Handler
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
-import android.view.MotionEvent
+import android.util.TypedValue
+import android.view.Gravity
+import android.view.View
 import androidx.appcompat.widget.Toolbar
-import androidx.databinding.DataBindingUtil
+import androidx.constraintlayout.widget.ConstraintSet
+import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.transition.ChangeBounds
-import androidx.transition.Scene
 import androidx.transition.Transition
 import androidx.transition.TransitionManager
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
-import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.ActivitySearchDashpayProfileRootBinding
 import kotlinx.android.synthetic.main.activity_search_dashpay_profile_1.*
-import kotlinx.android.synthetic.main.activity_search_dashpay_profile_root.*
 import org.dash.wallet.common.InteractionAwareActivity
-import kotlinx.android.synthetic.main.activity_search_dashpay_profile_1.search_results_rv as searchResultsRv
-import kotlinx.android.synthetic.main.activity_search_dashpay_profile_2.search as editText
 
 
 class SearchDashPayProfileActivity : InteractionAwareActivity(), TextWatcher {
@@ -73,31 +70,30 @@ class SearchDashPayProfileActivity : InteractionAwareActivity(), TextWatcher {
         }
         setTitle(R.string.add_new_contact)
 
-        searchResultsRv.layoutManager = LinearLayoutManager(this)
-        searchResultsRv.adapter = this.adapter
+        search_results_rv.layoutManager = LinearLayoutManager(this)
+        search_results_rv.adapter = this.adapter
 
         initViewModel()
 
-        val userSearchViewModel = ViewModelProvider(this).get(UserSearchViewModel::class.java)
-        userSearchViewModel.name.observe(this, Observer<String> { t -> Log.d("SearchDashPayProfile", "query changed $t") })
-        val binding: ActivitySearchDashpayProfileRootBinding = DataBindingUtil.setContentView(this, R.layout.activity_search_dashpay_profile_root)
-        binding.userSearch = userSearchViewModel
-
-        val sceneRoot = root
-        val sceneB = Scene.getSceneForLayout(sceneRoot, R.layout.activity_search_dashpay_profile_2,
-                this)
+        var setChanged = false
+        val constraintSet1 = ConstraintSet()
+        constraintSet1.clone(root)
+        val constraintSet2 = ConstraintSet()
+        constraintSet2.clone(this, R.layout.activity_search_dashpay_profile_2)
 
         search.addTextChangedListener(this)
-        search.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_UP || event.action == MotionEvent.ACTION_POINTER_UP) {
-                Log.d("SearchDashPayProfile", "ActionUp")
-                val transition = ChangeBounds()
+        search.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus && !setChanged) {
+                val transition: Transition = ChangeBounds()
                 transition.addListener(object : Transition.TransitionListener {
                     override fun onTransitionEnd(transition: Transition) {
-                        handler.postDelayed({
-                            val _this = this@SearchDashPayProfileActivity
-                            KeyboardUtil.showSoftKeyboard(_this, editText)
-                        }, 200)
+                        search.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+                        search.gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                        val searchPadding = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
+                                60f, resources.displayMetrics).toInt()
+                        search.setPadding(searchPadding, 0, 0, 0)
+                        search.typeface = ResourcesCompat.getFont(this@SearchDashPayProfileActivity,
+                                R.font.montserrat_semibold)
                     }
 
                     override fun onTransitionResume(transition: Transition) {
@@ -110,11 +106,15 @@ class SearchDashPayProfileActivity : InteractionAwareActivity(), TextWatcher {
                     }
 
                     override fun onTransitionStart(transition: Transition) {
+                        layout_title.visibility = View.GONE
+                        find_a_user_label.visibility = View.GONE
                     }
+
                 })
-                TransitionManager.go(sceneB, transition)
+                TransitionManager.beginDelayedTransition(root, transition)
+                constraintSet2.applyTo(root)
+                setChanged = true
             }
-            true
         }
 
     }

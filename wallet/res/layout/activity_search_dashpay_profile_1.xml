@@ -1,96 +1,85 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools">
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintTop_toTopOf="parent">
 
-    <data>
+    <TextView
+        android:id="@+id/layout_title"
+        style="@style/MontserratSemiBold"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="42dp"
+        android:layout_marginEnd="42dp"
+        android:layout_marginBottom="6dp"
+        android:gravity="center"
+        android:text="@string/add_new_contact"
+        android:textColor="@color/black_text"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toTopOf="@id/find_a_user_label"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
-        <variable
-            name="userSearch"
-            type="de.schildbach.wallet.ui.SearchDashPayProfileActivity.UserSearchViewModel" />
-    </data>
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+    <TextView
+        android:id="@+id/find_a_user_label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="25dp"
+        android:layout_marginEnd="25dp"
+        android:gravity="center"
+        android:text="@string/search_user_find_a_user"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
-        <TextView
-            android:id="@+id/title"
-            style="@style/MontserratSemiBold"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="42dp"
-            android:layout_marginEnd="42dp"
-            android:layout_marginBottom="6dp"
-            android:gravity="center"
-            android:text="@string/add_new_contact"
-            android:textColor="@color/black_text"
-            android:textSize="18sp"
-            app:layout_constraintBottom_toTopOf="@id/find_a_user_label"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/search"
+        style="@style/MontserratRegular"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="22dp"
+        android:layout_marginEnd="24dp"
+        android:background="@drawable/round_corners_white_bg"
+        android:elevation="4dp"
+        android:gravity="center"
+        android:hint="@string/search_user_input_placeholder"
+        android:inputType="textEmailAddress"
+        android:lines="1"
+        android:paddingLeft="28dp"
+        android:paddingRight="28dp"
+        android:textColor="@color/dash_gray"
+        android:textSize="12sp"
+        app:layout_constraintTop_toBottomOf="@id/find_a_user_label"
+        tools:targetApi="lollipop" />
 
-        <TextView
-            android:id="@+id/find_a_user_label"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="25dp"
-            android:layout_marginEnd="25dp"
-            android:gravity="center"
-            android:text="@string/search_user_find_a_user"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+    <ImageView
+        android:id="@+id/icon"
+        android:layout_width="wrap_content"
+        android:layout_height="84dp"
+        android:layout_marginBottom="28dp"
+        android:elevation="10dp"
+        app:layout_constraintBottom_toTopOf="@id/layout_title"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:srcCompat="@drawable/ic_add_contact" />
 
-        <androidx.appcompat.widget.AppCompatEditText
-            android:id="@+id/search"
-            style="@style/MontserratRegular"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginStart="24dp"
-            android:layout_marginTop="22dp"
-            android:layout_marginEnd="24dp"
-            android:background="@drawable/round_corners_white_bg"
-            android:elevation="4dp"
-            android:gravity="center"
-            android:hint="@string/search_user_input_placeholder"
-            android:inputType="textEmailAddress"
-            android:lines="1"
-            android:paddingLeft="28dp"
-            android:paddingRight="28dp"
-            android:text="@{userSearch.name}"
-            android:textColor="@color/dash_gray"
-            android:textSize="12sp"
-            app:layout_constraintTop_toBottomOf="@id/find_a_user_label"
-            tools:targetApi="lollipop" />
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/search_results_rv"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="22dp"
+        android:layout_marginRight="20dp"
+        android:layout_marginBottom="22dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/search" />
 
-        <ImageView
-            android:id="@+id/icon"
-            android:layout_width="wrap_content"
-            android:layout_height="84dp"
-            android:layout_marginBottom="28dp"
-            android:elevation="10dp"
-            app:layout_constraintBottom_toTopOf="@id/title"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:srcCompat="@drawable/ic_add_contact" />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/search_results_rv"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_marginLeft="20dp"
-            android:layout_marginTop="22dp"
-            android:layout_marginRight="20dp"
-            android:layout_marginBottom="22dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/search" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-</layout>
+</androidx.constraintlayout.widget.ConstraintLayout>
