@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 //import com.bumptech.glide.Glide
 import de.schildbach.wallet_test.R
 import org.dashevo.dpp.document.Document
@@ -39,10 +40,8 @@ class DashPayProfilesAdapter() : RecyclerView.Adapter<DashPayProfilesAdapter.Vie
         fun bind(document: Document) {
             displayName.text = document.data["displayName"].toString()
             publicMessage.text = document.data["publicMessage"].toString()
-            /*
             Glide.with(avatar).load(document.data["avatarUrl"]).circleCrop()
                     .placeholder(R.drawable.user5).into(avatar)
-             */
         }
 
     }
