@@ -65,7 +65,8 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     /**
      * gets all the name documents for usernames starting with text
      *
-     * @param text
+     * @param text The beginning of a username to search for
+     * @param userId The current userId for which to search contacts
      * @return
      */
     fun searchUsernames(text: String, userId: String): Resource<List<UsernameSearchResult>> {
@@ -74,10 +75,10 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             var nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, true)
 
             // TODO: Replace this Platform call with a query into the local database
-            var toContactDocuments = ContactRequests(platform).get(userId, false, true)
+            var toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
 
             // Get all contact requests where toUserId == userId
-            var fromContactDocuments = ContactRequests(platform).get(userId, true, true)
+            var fromContactDocuments = ContactRequests(platform).get(userId, toUserId = true, retrieveAll = true)
 
             val usernameSearchResults = ArrayList<UsernameSearchResult>()
 
