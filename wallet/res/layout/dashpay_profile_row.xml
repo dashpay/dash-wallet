@@ -8,6 +8,7 @@
 
     <ImageView
         android:id="@+id/avatar"
+        android:transitionName="avatar"
         android:layout_width="36dp"
         android:layout_height="36dp"
         app:layout_constraintStart_toStartOf="parent"

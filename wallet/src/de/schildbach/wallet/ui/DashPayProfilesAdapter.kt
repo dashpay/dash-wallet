@@ -1,6 +1,7 @@
 package de.schildbach.wallet.ui
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
@@ -12,6 +13,11 @@ import org.dashevo.dpp.document.Document
 
 class DashPayProfilesAdapter() : RecyclerView.Adapter<DashPayProfilesAdapter.ViewHolder>() {
 
+    interface OnItemClickListener {
+        fun onItemClicked(view: View, document: Document)
+    }
+
+    var itemClickListener: OnItemClickListener? = null
     var profiles: List<Document> = arrayListOf()
         set(value) {
             field = value
@@ -42,6 +48,12 @@ class DashPayProfilesAdapter() : RecyclerView.Adapter<DashPayProfilesAdapter.Vie
             publicMessage.text = document.data["publicMessage"].toString()
             Glide.with(avatar).load(document.data["avatarUrl"]).circleCrop()
                     .placeholder(R.drawable.user5).into(avatar)
+
+            itemClickListener?.let { l ->
+                this.itemView.setOnClickListener {
+                    l.onItemClicked(it, document)
+                }
+            }
         }
 
     }

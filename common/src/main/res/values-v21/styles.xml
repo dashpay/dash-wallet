@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <style name="My.Theme.NoActionBar" parent="@style/My.Theme">
         <item name="windowActionBar">false</item>
@@ -16,6 +16,16 @@
         <item name="android:elevation">0dp</item>
         <item name="elevation">0dp</item>
         <item name="android:windowTranslucentStatus">true</item>
+    </style>
+
+    <style name="My.Theme.ChildActivity.DashPayProfile">
+        <!-- specify shared element transitions -->
+        <item name="android:windowSharedElementEnterTransition">
+            @transition/change_image_transform
+        </item>
+        <item name="android:windowSharedElementExitTransition">
+            @transition/change_image_transform
+        </item>
     </style>
 
 </resources>
