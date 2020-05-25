@@ -689,6 +689,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         final PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, lockName);
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForeground();
+        }
+
         application = (WalletApplication) getApplication();
         config = application.getConfiguration();
         final Wallet wallet = application.getWallet();
