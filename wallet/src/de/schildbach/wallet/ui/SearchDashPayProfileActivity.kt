@@ -17,6 +17,9 @@
 
 package de.schildbach.wallet.ui
 
+import android.app.ActivityOptions
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
@@ -25,12 +28,11 @@ import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.view.Window
 import androidx.appcompat.widget.Toolbar
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.res.ResourcesCompat
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.transition.ChangeBounds
@@ -41,9 +43,11 @@ import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_search_dashpay_profile_1.*
 import org.dash.wallet.common.InteractionAwareActivity
+import org.dashevo.dpp.document.Document
+import org.dashevo.dpp.document.DocumentFactory
 
 
-class SearchDashPayProfileActivity : InteractionAwareActivity(), TextWatcher {
+class SearchDashPayProfileActivity : InteractionAwareActivity(), TextWatcher, DashPayProfilesAdapter.OnItemClickListener {
 
     private lateinit var dashPayViewModel: DashPayViewModel
     private lateinit var walletApplication: WalletApplication
@@ -51,12 +55,14 @@ class SearchDashPayProfileActivity : InteractionAwareActivity(), TextWatcher {
     private lateinit var searchDashPayProfileRunnable: Runnable
     private val adapter: DashPayProfilesAdapter = DashPayProfilesAdapter()
 
-    class UserSearchViewModel : ViewModel() {
-        val name = MutableLiveData<String>()
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            with(window) {
+                requestFeature(Window.FEATURE_CONTENT_TRANSITIONS)
+            }
+        }
 
         setContentView(R.layout.activity_search_dashpay_profile_root)
         walletApplication = application as WalletApplication
@@ -72,6 +78,7 @@ class SearchDashPayProfileActivity : InteractionAwareActivity(), TextWatcher {
 
         search_results_rv.layoutManager = LinearLayoutManager(this)
         search_results_rv.adapter = this.adapter
+        this.adapter.itemClickListener = this
 
         initViewModel()
 
@@ -150,5 +157,18 @@ class SearchDashPayProfileActivity : InteractionAwareActivity(), TextWatcher {
     }
 
     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+    }
+
+    override fun onItemClicked(view: View, document: Document) {
+        val intent = Intent(this, DashPayProfileActivity::class.java)
+        intent.putExtra("avatarUrl", document.data["avatarUrl"].toString())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            view.transitionName = "avatar"
+            val options = ActivityOptions.makeSceneTransitionAnimation(this, view,
+                    "avatar")
+            startActivity(intent, options.toBundle())
+        } else {
+            startActivity(intent)
+        }
     }
 }
