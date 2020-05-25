@@ -20,7 +20,7 @@ import de.schildbach.wallet.rates.ExchangeRatesDao;
 /**
  * @author Samuel Barbosa
  */
-@Database(entities = {ExchangeRate.class, BlockchainState.class, IdentityCreationState.class, BlockchainIdentityData.class}, version = 7)
+@Database(entities = {ExchangeRate.class, BlockchainState.class, IdentityCreationState.class, BlockchainIdentityData.class}, version = 6)
 @TypeConverters({RoomConverters.class})
 public abstract class AppDatabase extends RoomDatabase {
 

@@ -26,7 +26,6 @@ import org.bitcoinj.core.Context
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dashevo.dapiclient.model.DocumentQuery
 import org.dashevo.dashpay.BlockchainIdentity
 import org.dashevo.dashpay.ContactRequests
 import org.dashevo.dpp.document.Document

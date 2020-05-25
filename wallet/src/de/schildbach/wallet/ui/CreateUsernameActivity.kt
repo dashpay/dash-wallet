@@ -54,9 +54,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private val fadeOutAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.fade_out) }
     private lateinit var completeUsername: String
     private lateinit var dashPayViewModel: DashPayViewModel
-    //    private lateinit var securityGuard: SecurityGuard
     private lateinit var walletApplication: WalletApplication
-
 
     private var handler: Handler = Handler()
     private lateinit var checkUsernameNotExistRunnable: Runnable

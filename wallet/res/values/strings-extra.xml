@@ -364,5 +364,7 @@
     <string name="processing_username_unavailable_title">Username Unavailable</string>
     <string name="processing_username_unavailable_subtitle">Please choose another</string>
 
+    <string name="dashpay_upgrade_fee">DashPay Upgrade Fee</string>
+
     <string name="identity_complete_message">Your username %s has been successfully created on the Dash Network</string>
 </resources>
