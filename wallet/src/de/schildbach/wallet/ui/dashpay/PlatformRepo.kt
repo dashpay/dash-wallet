@@ -28,6 +28,7 @@ import org.bitcoinj.wallet.DeterministicSeed
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dashevo.dashpay.BlockchainIdentity
 import org.dashevo.dashpay.ContactRequests
+import org.dashevo.dashpay.Profiles
 import org.dashevo.dpp.document.Document
 import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
@@ -202,4 +203,14 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             }
         }
     }
+
+    //Step 6: Create DashPay Profile
+    suspend fun createDashPayProfile(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter) {
+        withContext(Dispatchers.IO) {
+            val profiles = Profiles(platform, blockchainIdentity, keyParameter)
+            val username = blockchainIdentity.currentUsername!!
+            profiles.create(username, "Hello, I'm ${username}. I was created by the Android Wallet")
+        }
+    }
+
 }

@@ -40,7 +40,9 @@ class IdentityCreationState(var state: State, var error: Boolean, var username: 
         PREORDER_REGISTERING,
         PREORDER_REGISTERED,
         USERNAME_REGISTERING,
-        USERNAME_REGISTERED
+        USERNAME_REGISTERED,
+        DASHPAY_PROFILE_CREATING,
+        DASHPAY_PROFILE_CREATED
     }
 
     enum class Error {
