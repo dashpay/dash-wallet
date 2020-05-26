@@ -152,12 +152,13 @@ android {
     }
 
     buildTypes {
-        all {
+        release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg'
             testProguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg', 'proguardTest-rules.txt'
         }
         debug {
+            multiDexEnabled true
             debuggable true
         }
     }

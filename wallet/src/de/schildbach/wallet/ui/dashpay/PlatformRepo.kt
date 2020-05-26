@@ -26,6 +26,7 @@ import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dashevo.dashpay.BlockchainIdentity
+import org.dashevo.dashpay.Profiles
 import org.dashevo.dpp.document.Document
 import org.dashevo.platform.Platform
 import java.util.concurrent.TimeoutException
@@ -120,7 +121,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val set = blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.PREORDER_REGISTRATION_PENDING)
             val saltedDomainHashes = blockchainIdentity.saltedDomainHashesForUsernames(set)
             val (result, usernames) = blockchainIdentity.watchPreorder(saltedDomainHashes, 10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
-            if(!result) {
+            if (!result) {
                 throw TimeoutException("the usernames: $usernames were not found to be preordered in the allotted amount of time")
             }
         }
@@ -142,9 +143,19 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     suspend fun isNameRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
             val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.REGISTRATION_PENDING), 10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
-            if(!result) {
+            if (!result) {
                 throw TimeoutException("the usernames: $usernames were not found to be registered in the allotted amount of time")
             }
         }
     }
+
+    //Step 6: Create DashPay Profile
+    suspend fun createDashPayProfile(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter) {
+        withContext(Dispatchers.IO) {
+            val profiles = Profiles(platform, blockchainIdentity, keyParameter)
+            val username = blockchainIdentity.currentUsername!!
+            profiles.create(username, "Hello, I'm ${username}. I was created by the Android Wallet")
+        }
+    }
+
 }

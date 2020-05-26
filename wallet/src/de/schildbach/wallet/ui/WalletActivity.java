@@ -39,6 +39,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.LocaleList;
 import android.telephony.TelephonyManager;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -64,6 +65,7 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.common.collect.ImmutableList;
 
 import de.schildbach.wallet.data.BlockchainIdentityData;
+import de.schildbach.wallet.data.IdentityCreationState;
 import de.schildbach.wallet.livedata.Resource;
 import de.schildbach.wallet.livedata.Status;
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
