@@ -37,7 +37,7 @@ dependencies {
     implementation 'androidx.preference:preference:1.1.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.0-beta4'
     implementation "org.dashj:dashj-core:$dashjVersion"
-    implementation 'com.google.protobuf:protobuf-java:3.4.0'
+
     implementation 'com.google.guava:guava:27.0.1-android'
     implementation 'com.google.zxing:core:3.3.3'
     implementation "com.squareup.okhttp3:okhttp:$ok_http_version"
@@ -64,13 +64,13 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation 'androidx.core:core-ktx:1.1.0'
 
-    implementation 'com.google.firebase:firebase-analytics:17.2.0'
+    implementation 'com.google.firebase:firebase-analytics:17.4.2'
 
-    implementation ('com.google.firebase:firebase-inappmessaging:19.0.1') {
+    implementation ('com.google.firebase:firebase-inappmessaging:19.0.7') {
         exclude group: 'com.google.protobuf', module: 'protobuf-lite'
         exclude group: 'com.google.firebase', module: 'protolite-well-known-types'
     }
-    implementation ('com.google.firebase:firebase-inappmessaging-display:19.0.1') {
+    implementation ('com.google.firebase:firebase-inappmessaging-display:19.0.7') {
         exclude group: 'com.google.protobuf', module: 'protobuf-lite'
         exclude group: 'com.google.firebase', module: 'protolite-well-known-types'
     }
