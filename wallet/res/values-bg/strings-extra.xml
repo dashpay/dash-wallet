@@ -296,5 +296,4 @@
     <string name="payment_request_expired_title">Искането за плащане е изтекло</string>
     <string name="payment_request_close">Затвори</string>
     <string name="payment_request_skip">Пропусни</string>
-    <string name="payment_request_paid_to">Платено na</string>
 </resources>

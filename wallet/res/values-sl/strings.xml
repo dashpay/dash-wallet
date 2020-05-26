@@ -85,8 +85,7 @@
     <string name="import_export_keys_dialog_password">geslo</string>
   <string name="import_export_keys_dialog_show">Prikaži geslo</string>
   <string name="import_export_keys_dialog_failure_title">Napaka</string>
-  <string name="import_keys_intent_filter_action">Obnovi denarnico</string>
-  <string name="scan_camera_problem_dialog_title">Oprostite</string>
+    <string name="scan_camera_problem_dialog_title">Oprostite</string>
   <string name="scan_camera_problem_dialog_message">Težava s kamero. Najbrž boste morali ponovno zagnati napravo.</string>
   <string name="input_parser_io_error">Branje podatkov spodletelo:\n%s</string>
   <string name="input_parser_cannot_classify">Neznana vrsta vhoda:\n%s</string>

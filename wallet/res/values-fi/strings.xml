@@ -121,7 +121,6 @@
     <string name="backup_wallet_dialog_password_mismatch">ei täsmää!</string>
     <string name="import_export_keys_dialog_show">Näytä salasana</string>
     <string name="import_export_keys_dialog_failure_title">Virhe</string>
-    <string name="import_keys_intent_filter_action">Palauta lompakko</string>
     <string name="encrypt_keys_dialog_title">Maksu-PIN</string>
     <string name="encrypt_keys_dialog_message">Lompakon varojen käyttö suojataan valitulla PIN-koodilla.</string>
     <string name="encrypt_keys_dialog_warning">Tärkeää: Sinun on muistettava PIN-koodisi! Älä käytä yleisiä numeroyhdistelmiä (kuten syntymäpäiviä).</string>

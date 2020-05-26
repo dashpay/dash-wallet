@@ -300,5 +300,4 @@
     <string name="payment_request_expired_title">Payment Request Expired</string>
     <string name="payment_request_close">Close</string>
     <string name="payment_request_skip">Skip</string>
-    <string name="payment_request_paid_to">Paid to</string>
 </resources>

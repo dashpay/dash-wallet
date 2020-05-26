@@ -113,8 +113,7 @@
     <string name="import_export_keys_dialog_password">siri</string>
   <string name="import_export_keys_dialog_show">Soma siri</string>
   <string name="import_export_keys_dialog_failure_title">kosa</string>
-  <string name="import_keys_intent_filter_action">Kurejesha pochi</string>
-  <string name="encrypt_keys_dialog_title">PIN za malipo</string>
+    <string name="encrypt_keys_dialog_title">PIN za malipo</string>
   <string name="encrypt_keys_dialog_message">Malipo kwa pochi yako watalindwa na PIN hii.</string>
   <string name="encrypt_keys_dialog_warning">Onyo! Je, si kutumia namba ya kawaida kama birthdates katika PIN yako.</string>
   <string name="encrypt_keys_dialog_password_old">PIN mzee</string>

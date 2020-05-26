@@ -296,5 +296,4 @@
     <string name="payment_request_expired_title">Richiesta di pagamento scaduta</string>
     <string name="payment_request_close">Chiudi</string>
     <string name="payment_request_skip">Salta</string>
-    <string name="payment_request_paid_to">Pagato a</string>
 </resources>

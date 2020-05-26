@@ -293,5 +293,4 @@
     <string name="payment_request_expired_title">付款請求已過期</string>
     <string name="payment_request_close">關閉</string>
     <string name="payment_request_skip">略過</string>
-    <string name="payment_request_paid_to">付給</string>
 </resources>

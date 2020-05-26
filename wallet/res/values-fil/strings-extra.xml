@@ -296,5 +296,4 @@
     <string name="payment_request_expired_title">Ang hiling sa pagbayad ay nag-expire na</string>
     <string name="payment_request_close">Sarado</string>
     <string name="payment_request_skip">Laktawan</string>
-    <string name="payment_request_paid_to">Nabayaran kay</string>
 </resources>

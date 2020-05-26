@@ -91,8 +91,7 @@
     <string name="import_export_keys_dialog_password">סיסמא</string>
   <string name="import_export_keys_dialog_show">הצג סיסמא</string>
   <string name="import_export_keys_dialog_failure_title">שגיאה</string>
-  <string name="import_keys_intent_filter_action">שחזר ארנק</string>
-  <string name="scan_camera_problem_dialog_title">סליחה</string>
+    <string name="scan_camera_problem_dialog_title">סליחה</string>
   <string name="scan_camera_problem_dialog_message">בעיה במצלמה, אנא אחתל מחדש את המכשיר שלך.</string>
   <string name="input_parser_io_error">לא יכול לקרוא מידע:\n%s</string>
   <string name="input_parser_cannot_classify">לא ניתן לזהות קלט:\n%s</string>

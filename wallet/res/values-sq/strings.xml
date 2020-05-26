@@ -120,8 +120,7 @@
 	<string name="backup_wallet_dialog_password_mismatch">mospërputhje</string>
 	<string name="import_export_keys_dialog_show">Trego fjalëkalimin</string>
 	<string name="import_export_keys_dialog_failure_title">Gabim</string>
-	<string name="import_keys_intent_filter_action">Rikthe kuletën</string>
-	<string name="encrypt_keys_dialog_title">Pin-i shpenzues</string>
+    <string name="encrypt_keys_dialog_title">Pin-i shpenzues</string>
 	<string name="encrypt_keys_dialog_message">Shpenzimi nga kuleta juaj do të mbrohet me PIN-in qe caktoni.</string>
 	<string name="encrypt_keys_dialog_warning">Kujdes: Mos përdorni numra të zakonshëm (si psh datëlindje) në PIN-in tuaj.</string>
 	<string name="encrypt_keys_dialog_password_old">PIN i vjetër</string>

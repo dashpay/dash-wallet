@@ -296,5 +296,4 @@
     <string name="payment_request_expired_title">Zahlungsanforderung abgelaufen</string>
     <string name="payment_request_close">Schließen</string>
     <string name="payment_request_skip">Überspringen</string>
-    <string name="payment_request_paid_to">Gezahlt an</string>
 </resources>

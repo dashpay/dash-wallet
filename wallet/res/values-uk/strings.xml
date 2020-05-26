@@ -94,8 +94,7 @@
     <string name="import_export_keys_dialog_password">пароль</string>
   <string name="import_export_keys_dialog_show">Показати пароль</string>
   <string name="import_export_keys_dialog_failure_title">Помилка</string>
-  <string name="import_keys_intent_filter_action">Відновити гаманець</string>
-  <string name="scan_camera_problem_dialog_title">Вибачте</string>
+    <string name="scan_camera_problem_dialog_title">Вибачте</string>
   <string name="scan_camera_problem_dialog_message">Проблема з камерою. Можливо, вам потрібо перезавантажити пристрій.</string>
   <string name="input_parser_io_error">Не вдається прочитати дані:\n%s</string>
   <string name="input_parser_cannot_classify">Не вдається розпізнати вхід:\n%s</string>

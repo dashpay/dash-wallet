@@ -75,8 +75,7 @@
 	<string name="import_export_keys_dialog_password">pasvorto</string>
 	<string name="import_export_keys_dialog_show">Montru pasvorton</string>
 	<string name="import_export_keys_dialog_failure_title">Eraro</string>
-	<string name="import_keys_intent_filter_action">Bitmona ŝlosila restaŭro</string>
-	<string name="scan_camera_problem_dialog_title">Pardonu</string>
+    <string name="scan_camera_problem_dialog_title">Pardonu</string>
 	<string name="scan_camera_problem_dialog_message">La kamero havas problemon. Vi verŝajne bezonas restartigi la aparaton.</string>
 	<string name="input_parser_cannot_classify">Ne eblis klasifiki enigon:\n%s</string>
 	<string name="input_parser_invalid_bitcoin_uri">Malvalida Bitmono URI:\n%s</string>

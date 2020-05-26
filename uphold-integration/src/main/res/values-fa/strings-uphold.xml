@@ -2,14 +2,12 @@
 <resources>
 
     <string name="uphold_account">آپهولد</string>
-    <string name="uphold_buy_dash_activity_title">خرید/فروش دش با آپهلد</string>
     <string name="uphold_buy_dash_with_uphold">خرید دش با حساب آپهلد</string>
     <string name="uphold_buy_dash_button">خرید دش</string>
     <string name="uphold_transfer_to_this_wallet_button">انتقال از آپهلد</string>
     <string name="uphold_link_account">اتصال حساب کاربری در آپهولد</string>
     <string name="uphold_account_dash_balance">موجودی حساب آپهلد شما برابر است با</string>
     <string name="uphold_transfer_to_this_wallet">انتقال دش از حساب آپهلد به این کیف پول</string>
-    <string name="uphold_withdrawal_deduct_fee_disclaimer">کارمزد از میزان درخواستی شما کم می‌شود.</string>
     <string name="uphold_withdrawal_instructions">مبلغ مورد نظر برای انتقال را وارد کنید</string>
     <string name="uphold_withdrawal_success_title">با موفقیت انجام شد</string>
     <string name="uphold_withdrawal_success_message">تراکنش‌تان ارسال شد و مبلغ مورد نظر طی چند دقیقه آینده در کیف پول‌تان ظاهر می‌شود. \n\n شناسه تراکنش: %s</string>

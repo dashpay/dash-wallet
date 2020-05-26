@@ -293,5 +293,4 @@
     <string name="payment_request_expired_title">คำขอชำระเงินหมดอายุ</string>
     <string name="payment_request_close">ปิด</string>
     <string name="payment_request_skip">ข้าม</string>
-    <string name="payment_request_paid_to">จ่ายให้</string>
 </resources>

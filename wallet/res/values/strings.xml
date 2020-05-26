@@ -155,7 +155,6 @@
     <string name="backup_wallet_dialog_password_mismatch">mismatch!</string>
     <string name="import_export_keys_dialog_show">Show password</string>
     <string name="import_export_keys_dialog_failure_title">Error</string>
-    <string name="import_keys_intent_filter_action">Restore wallet</string>
     <string name="encrypt_keys_dialog_title">Change PIN</string>
     <string name="encrypt_keys_dialog_message">Spending from your wallet will be protected with the chosen PIN.</string>
     <string name="encrypt_keys_dialog_warning">Important: You need to remember your PIN! Do not use common numbers (like birthdates).</string>

@@ -306,5 +306,4 @@
     <string name="payment_request_expired_title">انتهت صلاحية طلب الدفع</string>
     <string name="payment_request_close">اغلاق</string>
     <string name="payment_request_skip">تخطي</string>
-    <string name="payment_request_paid_to">تم الدفع الى</string>
 </resources>

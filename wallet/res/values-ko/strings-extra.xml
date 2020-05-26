@@ -293,5 +293,4 @@
     <string name="payment_request_expired_title">지불 요청이 만료되었습니다</string>
     <string name="payment_request_close">닫기</string>
     <string name="payment_request_skip">건너뛰기</string>
-    <string name="payment_request_paid_to">다음에 지불하였습니다</string>
 </resources>

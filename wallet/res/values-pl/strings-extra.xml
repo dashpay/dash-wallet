@@ -302,5 +302,4 @@
     <string name="payment_request_expired_title">Żądanie płatności przedawniło się</string>
     <string name="payment_request_close">Zamknij</string>
     <string name="payment_request_skip">Pomiń</string>
-    <string name="payment_request_paid_to">Płatność została wysłana do</string>
 </resources>

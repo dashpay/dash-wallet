@@ -296,5 +296,4 @@
     <string name="payment_request_expired_title">Ödeme Talebinin Süresi Bitti</string>
     <string name="payment_request_close">Kapat</string>
     <string name="payment_request_skip">Atla</string>
-    <string name="payment_request_paid_to">Ödeme yap</string>
 </resources>

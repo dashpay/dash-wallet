@@ -121,8 +121,7 @@
 	<string name="backup_wallet_dialog_password_mismatch">desajust!</string>
 	<string name="import_export_keys_dialog_show">Mostra paraula de pas.</string>
 	<string name="import_export_keys_dialog_failure_title">Error</string>
-	<string name="import_keys_intent_filter_action">Recuperar cartera</string>
-	<string name="encrypt_keys_dialog_title">PIN de despesa</string>
+    <string name="encrypt_keys_dialog_title">PIN de despesa</string>
 	<string name="encrypt_keys_dialog_message">Gastar des del teu moneder estarà protegit amb el PIN triat.</string>
 	<string name="encrypt_keys_dialog_warning">Important: No utilitzis número comuns (com dates d\'aniversari) als teus PINs.</string>
 	<string name="encrypt_keys_dialog_password_old">PIN Antic</string>

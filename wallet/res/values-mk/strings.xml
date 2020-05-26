@@ -75,8 +75,7 @@
 	<string name="import_export_keys_dialog_password">лозинка</string>
 	<string name="import_export_keys_dialog_show">Прикажи лозинка</string>
 	<string name="import_export_keys_dialog_failure_title">Грешка</string>
-	<string name="import_keys_intent_filter_action">Поврати Биткоин клуч</string>
-	<string name="scan_camera_problem_dialog_title">Извини</string>
+    <string name="scan_camera_problem_dialog_title">Извини</string>
 	<string name="scan_camera_problem_dialog_message">Камерата јавува проблем. Најверојатно треба да го рестартираш уредот.</string>
 	<string name="input_parser_cannot_classify">Не може да се класифицира внесот:\n%s</string>
 	<string name="input_parser_invalid_bitcoin_uri">Невалидно Биткоин URI:\n%s</string>

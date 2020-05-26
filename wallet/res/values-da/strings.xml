@@ -121,7 +121,6 @@
     <string name="backup_wallet_dialog_password_mismatch">uoverensstemmelse!</string>
     <string name="import_export_keys_dialog_show">Vis kodeord</string>
     <string name="import_export_keys_dialog_failure_title">Fejl</string>
-    <string name="import_keys_intent_filter_action">Genopret tegnebog</string>
     <string name="encrypt_keys_dialog_title">Spenderings-PIN</string>
     <string name="encrypt_keys_dialog_message">Spendering fra din tegnebog vil blive beskyttet med den valgte PIN.</string>
     <string name="encrypt_keys_dialog_warning">Vigtigt: Du er nødt til at huske din PIN! Brug ikke almindelige tal (som fx fødselsdage).</string>

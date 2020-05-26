@@ -121,8 +121,7 @@
 	<string name="backup_wallet_dialog_password_mismatch">Felmatchning!</string>
 	<string name="import_export_keys_dialog_show">Visa lösenord</string>
 	<string name="import_export_keys_dialog_failure_title">Fel</string>
-	<string name="import_keys_intent_filter_action">Återställ wallet</string>
-	<string name="encrypt_keys_dialog_title">Betalnings-PIN</string>
+    <string name="encrypt_keys_dialog_title">Betalnings-PIN</string>
 	<string name="encrypt_keys_dialog_message">Betalning från din wallet kommer att skyddas av en vald PIN-kod.</string>
 	<string name="encrypt_keys_dialog_warning">Viktigt: Du behöver komma ihåg din PIN-kod! Använt inte vanliga nummer så som födelsedatum.</string>
 	<string name="encrypt_keys_dialog_password_old">Gammal PIN</string>

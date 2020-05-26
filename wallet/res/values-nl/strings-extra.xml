@@ -296,5 +296,4 @@
     <string name="payment_request_expired_title">Betaalverzoek is verlopen</string>
     <string name="payment_request_close">Sluiten</string>
     <string name="payment_request_skip">Overslaan</string>
-    <string name="payment_request_paid_to">Betaald aan</string>
 </resources>

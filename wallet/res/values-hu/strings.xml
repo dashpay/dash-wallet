@@ -121,8 +121,7 @@
 	<string name="backup_wallet_dialog_password_mismatch">eltérés!</string>
 	<string name="import_export_keys_dialog_show">Jelszó megjelenítése</string>
 	<string name="import_export_keys_dialog_failure_title">Hiba</string>
-	<string name="import_keys_intent_filter_action">Tárca visszaállítása</string>
-	<string name="encrypt_keys_dialog_title">Költekezési PIN</string>
+    <string name="encrypt_keys_dialog_title">Költekezési PIN</string>
 	<string name="encrypt_keys_dialog_message">A tárcádból való költekezés a választott PIN-nel lesz védve.</string>
 	<string name="encrypt_keys_dialog_warning">Fontos: Emlékezned kell a PIN-edre! Ne használj gyakori számokat (mint születésnapok).</string>
 	<string name="encrypt_keys_dialog_password_old">Régi PIN</string>

@@ -296,5 +296,4 @@
     <string name="payment_request_expired_title">Requête de paiement expirée</string>
     <string name="payment_request_close">Fermer</string>
     <string name="payment_request_skip">Ignorer</string>
-    <string name="payment_request_paid_to">Payé à</string>
 </resources>

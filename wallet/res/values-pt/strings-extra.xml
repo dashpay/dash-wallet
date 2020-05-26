@@ -297,5 +297,4 @@
     <string name="payment_request_expired_title">Pedido de Pagamento Expirado</string>
     <string name="payment_request_close">Fechar</string>
     <string name="payment_request_skip">Pular</string>
-    <string name="payment_request_paid_to">Pago a</string>
 </resources>

@@ -93,20 +93,6 @@
     <string name="forgot_pin_instruction_3">Inicia sesión con tu nuevo PIN para acceder a tu billetera</string>
     <string name="forgot_pin_warning">Si olvidaste tu PIN y perdiste tu frase de recuperación, no podrás volver a acceder a tu billetera y fondos.</string>
 
-    <string name="send_coins_auto_lock_feasible">Esta transacción debe liquidarse instantáneamente sin costo adicional</string>
-    <string name="send_coins_auto_lock_not_feasible">Esta transacción podrá tomar varios minutos para concretarse. ¿Completar instantáneamente por %1$s%2$s?</string>
-    <string name="send_coins_instant_send_not_feasible">Esta transacción podrá tomar varios minutos para concretarse.</string>
-
-    <string name="options_paste_from_clipboard_title">Pegar desde el portapapeles</string>
-
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">Este pago aún no se ha transmitido.</string>
-    <string name="transaction_row_message_sent_to_single_peer">Este pago ha sido enviado.</string>
-
-    <string name="regular_transaction_info_message">Esta transacción no fue concretada instantáneamente.</string>
-
-    <string name="wallet_options_disconnect">Desconectar</string>
-
-    <string name="network_monitor_masternodes_title">Masternodes</string>
     <string name="export_keys_dialog_title_to_seed">Ver Frase de Recuperación</string>
     <string name="import_keys_dialog_title_from_seed">Restablecer billetera con frase de recuperación</string>
     <string name="backup_to_seed_wallet_dialog_message">Esta es tu frase de recuperación. Por favor anótala.</string>
@@ -115,17 +101,11 @@
     <string name="import_keys_from_seed_dialog_message">Introduce tu frase de recuperación aqui.</string>
     <string name="import_export_keys_dialog_password_phrase">La frase de recuperación va aquí.</string>
     <string name="preferences_report_issue_summary">Reúne información sobre tu problema y envía un email a los desarrolladores con tu reporte.</string>
-    <string name="navigation_configuration">Configuración</string>
-    <string name="button_copy_address">Copiar dirección</string>
-    <string name="request_coins_clipboard_address_msg">Dirección Dash copiada en el portapapeles</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Mostrar</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" no es una palabra de la frase de recuperación</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">La frase de recuperación debe contener 12 palabras</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Frase de recuperación incorrecta</string>
     <string name="restore_wallet_from_invalid_seed_failure">La billetera no se pudo restaurar:\n\n%s\n\nBad frase de recuperación?</string>
-
-    <string name="send_coins_options_fee_category_zero">Sin comisión</string>
-    <string name="send_coins_fragment_hint_fee_zero">No se pagará ninguna comisión. Usa "Sin comisión", solo si no te importa el tiempo de confirmación.</string>
 
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">La aplicación %s le gustaría recibir tu Llave Pública Maestra. Esto puede ser usado para realizar un seguimiento de tu billetera, esto no puede ser usado para mover tus Dash.</string>
@@ -134,16 +114,12 @@
 
     <string name="wallet_lock_unlock">Abrir</string>
     <string name="wallet_lock_unlock_wallet">Abrir billetera</string>
-    <string name="wallet_lock_unlock_to_see_txs_title">Billetera protegida.</string>
-    <string name="wallet_lock_unlock_to_see_txs_txt">Toque el ícono de candado de arriba para abrir tu billetera y ver el historial de transacciones.</string>
-    <string name="wallet_lock_unlock_dialog_title">Abra tu billetera</string>
     <string name="wallet_lock_unlock_dialog_message">Tu billetera está protegida por un PIN. Ingresa tu PIN y presiona Abrir para continuar.</string>
     <string name="wallet_lock_reset_wallet_title">Reiniciar billetera</string>
     <string name="wallet_lock_reset_wallet_message">¿Estás seguro? Tu billetera se borrará y todos tus Dash se perderán.\n\nLa única forma de recuperar tus Dash es con un archivo de backup o frase de recuperación.</string>
 
     <string name="wallet_lock_wallet_disabled">Billetera deshabilitada</string>
     <string name="wallet_lock_try_again">Intente nuevamente en %1$d %2$s</string>
-    <string name="wallet_lock_reset">Reiniciar</string>
     <string name="wallet_lock_wrong_pin">¡PIN incorrecto! %s</string>
 
     <plurals name="wallet_lock_attempts_remaining">
@@ -172,26 +148,19 @@
     <string name="change_to">Cambiar para %s</string>
     <string name="leave_as">Dejar como %s</string>
 
-    <string name="remind_later">Recordar más tarde</string>
-    <string name="backup_now">Hacer backup</string>
-
     <string name="notification_transactions_channel_name">Transacciones</string>
     <string name="notification_transactions_channel_description">Recibir alerta sobre transacciones entrantes</string>
     <string name="notification_synchronization_channel_name">Sincronización</string>
     <string name="notification_synchronization_channel_description">Muestra una notificación cuando la app está sincronizando con la red.</string>
 
-    <string name="net_type_indicator" />
-
     <string name="unlock_with_fingerprint">Usa tu huella para desbloquear.</string>
     <string name="unlock_with_fingerprint_error">No se pudo reconocer tu huella, por favor intenta nuevamente.</string>
     <string name="unlock_with_fingerprint_error_max_attempts">Máximo número de intentos de huella superado. Intente nuevamente más tarde por favor.</string>
-    <string name="or_unlock_with_fingerprint">O usa tu huella para desbloquear.</string>
     <string name="enable_fingerprint">Habilitar huella.</string>
     <string name="touch_fingerprint_sensor">Sensor de huella dactilar táctil</string>
     <string name="touch_fingerprint_to_enable">Toque el sensor de huellas para habilitar desbloqueo con huella.</string>
     <string name="fingerprint_changed_title">Datos de huella dactilar cambiados</string>
 	<string name="fingerprint_changed_message">Detectamos un cambio en tus datos de autenticación de huellas dactilares. Necesitas usar PIN esta vez.</string>
-	<string name="exchange_rate_missing">Este pago es muy antiguo para obtenerse el valor en fiat.</string>
 
     <string name="preferences_enable_payment_request_summary">Usar protocolo de pago para pagos iniciados por código QR</string>
     <string name="preferences_enable_payment_request_title">Escanear para pagar con BIP70</string>
@@ -212,8 +181,6 @@
     <string name="verify_seed_title">Anótala, por favor</string>
     <string name="verify_seed_write_down_confirmation">Ya la escribí</string>
     <string name="verify_seed_buttons_tip">Por favor escribe las palabras de tu frase de recuperación en el orden correcto</string>
-    <string name="verify_seed_success_title">Verificado Exitosamente</string>
-    <string name="verify_seed_success_message">Tu billetera está segura ahora. Podrás utilizar tu frase de recuperación en cualquier momento para recuperar tu cuenta en otro dispositivo.</string>
     <string name="view_seed_done">Hecho</string>
     <string name="view_seed_title">Frase de Recuperación</string>
 	<string name="transaction_result_view_on_explorer">Ver en el Explorador de Bloqu</string>
@@ -330,5 +297,4 @@
     <string name="payment_request_expired_title">Solicitud de pago vencida</string>
     <string name="payment_request_close">Cerrar</string>
     <string name="payment_request_skip">Salta</string>
-    <string name="payment_request_paid_to">Pagado a</string>
 </resources>

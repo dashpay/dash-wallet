@@ -302,5 +302,4 @@
     <string name="payment_request_expired_title">Запрос на оплату истёк</string>
     <string name="payment_request_close">Закрыть</string>
     <string name="payment_request_skip">Пропустить</string>
-    <string name="payment_request_paid_to">Оплатить</string>
 </resources>

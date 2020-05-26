@@ -296,5 +296,4 @@
     <string name="payment_request_expired_title">Το αίτημα πληρωμής Έληξε</string>
     <string name="payment_request_close">κλείσιμο</string>
     <string name="payment_request_skip">Παράλειψη</string>
-    <string name="payment_request_paid_to">Πληρώθηκε σε</string>
 </resources>

@@ -94,20 +94,6 @@
     <string name="forgot_pin_instruction_3">برای دسترسی به کیف پول‌تان، با پین کد جدید وارد شوید</string>
     <string name="forgot_pin_warning">اگر پین کدتان را فراموش کرده‌اید و یا عبارت بازیابی را گم‌ کرده‌اید، نمی‌توانید دوباره به کیف پول و موجودی آن دسترسی داشته باشید. </string>
 
-    <string name="send_coins_auto_lock_feasible">این تراکنش به صورت آنی و بدون کارمزد اضافه، صورت می‌گیرد</string>
-    <string name="send_coins_auto_lock_not_feasible">انجام نهایی این تراکنش ممکن است چند دقیقه وقت بگیرد. آیا مایلید با پرداخت %1$s %2$s آن را به شکلی آنی به انجام رسانید؟ </string>
-    <string name="send_coins_instant_send_not_feasible">تکمیل این تراکنش ممکن است چند دقیقه طول بکشد.</string>
-
-    <string name="options_paste_from_clipboard_title">چسباندن</string>
-
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">این پرداخت هنوز ارسال نشده است.</string>
-    <string name="transaction_row_message_sent_to_single_peer">این پرداخت ارسال شده است.</string>
-
-    <string name="regular_transaction_info_message">تراکنش به شکلی آنی به انجام نرسید.</string>
-
-    <string name="wallet_options_disconnect">عدم ارتباط با شبکه</string>
-
-    <string name="network_monitor_masternodes_title">مسترنودها</string>
     <string name="export_keys_dialog_title_to_seed">مشاهده عبارت بازیابی</string>
     <string name="import_keys_dialog_title_from_seed">بازگرداندن از طریق عبارت بازیابی</string>
     <string name="backup_to_seed_wallet_dialog_message">عبارتی که مشاهده می‌کنید، «عبارت بازیابی» شماست. لطفا آن را یادداشت کنید.</string>
@@ -116,17 +102,11 @@
     <string name="import_keys_from_seed_dialog_message">عبارت بازیابی خود را اینجا وارد کنید:</string>
     <string name="import_export_keys_dialog_password_phrase">عبارت بازیابی اینجا قرار می‌گیرد.</string>
     <string name="preferences_report_issue_summary">جمع‌آوری اطلاعات درباره مشکلی که با آن روبرو بودید و ارسال گزارش مربوط به آن به توسعه‌دهندگان</string>
-    <string name="navigation_configuration">تنظیمات</string>
-    <string name="button_copy_address">کپی نشانی</string>
-    <string name="request_coins_clipboard_address_msg">نشانی دش کپی شد</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">نمایش</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">«%s» جزو کلمات عبارت بازیابی نیست</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">عبارت بازیابی باید شامل ۱۲ کلمه باشد</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">عبارت بازیابی نادرست است</string>
     <string name="restore_wallet_from_invalid_seed_failure">امکان بازیابی کیف پول وجود ندارد: \n\n %s \n\n\ عبارت بازیابی نادرست؟ </string>
-
-    <string name="send_coins_options_fee_category_zero">بدون کارمزد</string>
-    <string name="send_coins_fragment_hint_fee_zero">هیچ کارمزدی پرداخت نمی‌شود. از گزینه «بدون کارمزد» فقط در مواردی استفاده کنید که بازه زمانی انتظار برای تایید تراکنش برایتان اهمیتی نداشته باشد. </string>
 
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">اپلیکیشن %s شاه‌کلید عمومی‌تان را دریافت خواهد کرد. با استفاده از آن می‌توانید تراکنش‌های کیف پول‌تان را مشاهده کنید، ولی نمی‌توانید از آن برای ارسال دش استفاده کنید. </string>
@@ -135,16 +115,12 @@
 
     <string name="wallet_lock_unlock">باز کردن قفل</string>
     <string name="wallet_lock_unlock_wallet">باز کردن قفل کیف پول</string>
-    <string name="wallet_lock_unlock_to_see_txs_title">کیف پول قفل شده است.</string>
-    <string name="wallet_lock_unlock_to_see_txs_txt">برای باز کردن کیف پول و مشاهده سوابق تراکنش‌ها، آیکون قفل را لمس کنید.</string>
-    <string name="wallet_lock_unlock_dialog_title">باز کردن کیف پول</string>
     <string name="wallet_lock_unlock_dialog_message">کیف پول‌تان دارای یک رمز پرداخت است. این رمز را وارد کنید و سپس دگمه «بازکردن قفل» را فشار دهید تا فرآیند ادامه یابد.</string>
     <string name="wallet_lock_reset_wallet_title">ریست کیف پول</string>
     <string name="wallet_lock_reset_wallet_message">آیا مطمئن هستید؟ کیف پول‌تان حذف می‌شود و همه موجودی آن حذف خواهد شد. \n\n تنها راه برای بازگردانی دش موجود در آن نیز استفاده از فایل پشتیبان و یا عبارت بازگردانی است. </string>
 
     <string name="wallet_lock_wallet_disabled">کیف پول غیرفعال شد</string>
     <string name="wallet_lock_try_again">در %1$d %2$s دیگر دوباره تلاش کنید.</string>
-    <string name="wallet_lock_reset">بازنشانی</string>
     <string name="wallet_lock_wrong_pin">رمز نادرست است! %s</string>
 
     <plurals name="wallet_lock_attempts_remaining">
@@ -173,26 +149,19 @@
     <string name="change_to">به %s تغییر بده!</string>
     <string name="leave_as">بگذار همچنان %s باقی بماند!</string>
 
-    <string name="remind_later">بعدا یادآوری کن</string>
-    <string name="backup_now">همین الان نسخه پشتیبان بگیر</string>
-
     <string name="notification_transactions_channel_name">تراکنش‌ها</string>
     <string name="notification_transactions_channel_description">دریافت پیعام درباره تراکنش‌های دریافتی</string>
     <string name="notification_synchronization_channel_name">همزمان‌سازی</string>
     <string name="notification_synchronization_channel_description">وقتی اولیکیشن در حال همزمان‌سازی خود با شبکه است، پیغامی را نشان بده.</string>
 
-    <string name="net_type_indicator" />
-
     <string name="unlock_with_fingerprint">از اثرانگشت برای باز کردن قفل استفاده کنید.</string>
     <string name="unlock_with_fingerprint_error">اثرانگشت شناسایی نشد. لطفا دوباره امتحان کنید.</string>
     <string name="unlock_with_fingerprint_error_max_attempts">تعداد دفعات استفاده از اثرانگشت از حد مجاز بیشتر شده است. لطفا بعدا دوباره امتحان کنید.</string>
-    <string name="or_unlock_with_fingerprint">همچنین می‌توانید از اثرانگشت برای بازکردن قفل استفاده کنید. </string>
     <string name="enable_fingerprint">فعال‌سازی باز کردن قفل با اثرانگشت</string>
     <string name="touch_fingerprint_sensor">حسگر اثرانگشت را لمس کنید</string>
     <string name="touch_fingerprint_to_enable">برای باز کردن قفل با اثرانگشت، لطفا حسگر اثرانگشت را لمس کنید.</string>
     <string name="fingerprint_changed_title">اطلاعات اثرانگشت تغییر کرد</string>
 	<string name="fingerprint_changed_message">اطلاعات احراز هویت با اثرانگشت تغییر کرده است. باید این بار، پین کدتان را وارد کنید. </string>
-	<string name="exchange_rate_missing">این تراکنش بسیار قدیمی است ونمی‌توان ارزش معادل پول رسمی آن را تعیین کرد.</string>
 
     <string name="preferences_enable_payment_request_summary">از پروتکل پرداخت برای پرداخت‌های صورت گرفته با کیوآر-کد استفاده کنید. </string>
     <string name="preferences_enable_payment_request_title">بی‌آی‌پی۷۰  برای اسکن به منظور پرداخت</string>
@@ -213,8 +182,6 @@
     <string name="verify_seed_title">لطفا آن را یادداشت کنید</string>
     <string name="verify_seed_write_down_confirmation">عبارت بازیابی را نوشتم</string>
     <string name="verify_seed_buttons_tip">لطفا این کلمات را بر اساس ترتیب کلمات در عبارت بازیابی، به ترتیب انتخاب کنید. </string>
-    <string name="verify_seed_success_title">با موفقیت تائید شد</string>
-    <string name="verify_seed_success_message">کیف پول‌تان اکنون امن است. هر گاه خواستید می‌توانید از این عبارت بازیابی برای بازگرداندن حساب‌تان روی دستگاهی دیگر استفاده کنید. </string>
     <string name="view_seed_done">انجام شد</string>
     <string name="view_seed_title">عبارت بازیابی</string>
 	<string name="transaction_result_view_on_explorer">مشاهده در مرورگر بلاک</string>
@@ -329,5 +296,4 @@
     <string name="payment_request_expired_title">درخواست پرداخت منقضی شد</string>
     <string name="payment_request_close">بستن</string>
     <string name="payment_request_skip">رد کردن</string>
-    <string name="payment_request_paid_to">پرداخت شد به</string>
 </resources>

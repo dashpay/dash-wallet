@@ -293,5 +293,4 @@
     <string name="payment_request_expired_title">Permintaan pembayaran kedaluwarsa</string>
     <string name="payment_request_close">Tutup</string>
     <string name="payment_request_skip">Lewati</string>
-    <string name="payment_request_paid_to">Dibayarkan kepada</string>
 </resources>

@@ -121,8 +121,7 @@
 	<string name="backup_wallet_dialog_password_mismatch">uoverensstemmelse!</string>
 	<string name="import_export_keys_dialog_show">Vis passeord</string>
 	<string name="import_export_keys_dialog_failure_title">Feil</string>
-	<string name="import_keys_intent_filter_action">Gjenopprett lommebok</string>
-	<string name="encrypt_keys_dialog_title">PIN for betaling</string>
+    <string name="encrypt_keys_dialog_title">PIN for betaling</string>
 	<string name="encrypt_keys_dialog_message">Betalinger fra lommeboken din vil være beskyttet med den valgte PIN-koden.</string>
 	<string name="encrypt_keys_dialog_warning">Viktig: Du må huske PIN-koden din! Ikke bruk vanlige tall (som fødselsdato).</string>
 	<string name="encrypt_keys_dialog_password_old">Gammel PIN</string>
