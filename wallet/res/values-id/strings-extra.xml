@@ -196,7 +196,7 @@
     <string name="authenticate_fingerprint_message">Konfirmasikan sidik jari untuk melanjutkan</string>
     <string name="authenticate_pin_message">Masukkan PIN Anda untuk melanjutkan</string>
     <string name="authenticate_switch_to_fingerprint">Gunakan sidik jari </string>
-    <string name="authenticate_switch_to_pin">Gunakan kata sandi</string>
+    <string name="authenticate_switch_to_pin">Gunakan PIN</string>
 
     <string name="menu_buy_and_sell_title">Beli &amp; Jual Dash</string>
     <string name="menu_buy_and_sell_subtitle">Terhubung dengan pertukaran pihak ketiga</string>
@@ -208,6 +208,8 @@
     <string name="menu_tools_subtitle">Impor kunci pribadi…</string>
     <string name="menu_local_currency">Mata uang lokal</string>
     <string name="menu_rescan_blockchain">Memindai ulang blockchain</string>
+    <string name="menu_contact_support_title">Hubungi Dukungan</string>
+    <string name="menu_contact_support_subtitle">Laporkan masalah</string>
 
     <string name="tools_address_book">Buku alamat</string>
     <string name="tools_import_private_key">Impor kunci pribadi</string>
@@ -279,4 +281,17 @@
     <string name="sync_status_sync_completed">Lengkap</string>
 
     <string name="appwidget_wallet_not_ready">Harap siapkan dompet Anda</string>
+
+    <string name="payment_request_please_wait_title">Silahkan tunggu</string>
+    <string name="payment_request_please_wait_message">Mengghubungkan ke server pembayaran</string>
+    <string name="payment_request_unable_to_connect">Tidak dapat terhubung</string>
+    <string name="payment_request_unable_to_send">Tidak dapat mengirim</string>
+    <string name="payment_request_please_try_again">Silakan coba lagi</string>
+    <string name="payment_request_try_again">Coba lagi</string>
+    <string name="payment_request_problem_title">Pembayaran tidak diakui</string>
+    <string name="payment_request_problem_message">Pembayaran anda diproses tetapi server tidak mampu mengakuinya</string>
+    <string name="payment_request_expired_title">Permintaan pembayaran kedaluwarsa</string>
+    <string name="payment_request_close">Tutup</string>
+    <string name="payment_request_skip">Lewati</string>
+    <string name="payment_request_paid_to">Dibayarkan kepada</string>
 </resources>

@@ -196,7 +196,7 @@
     <string name="authenticate_fingerprint_message">ยืนยันลายนิ้วมือเพื่อดำเนินการต่อไป</string>
     <string name="authenticate_pin_message">ป้อนเลขรหัสผ่านของคุณเพื่อดำเนินการต่อไป</string>
     <string name="authenticate_switch_to_fingerprint">ใช้ลายนิ้วมือ</string>
-    <string name="authenticate_switch_to_pin">ใช้รหัสผ่าน</string>
+    <string name="authenticate_switch_to_pin">ใช้รหัส PIN</string>
 
     <string name="menu_buy_and_sell_title">ซื้อ &amp; ขาย Dash</string>
     <string name="menu_buy_and_sell_subtitle">เชื่อมต่อกับการแลกเปลี่ยนบุคคลที่สาม</string>
@@ -208,6 +208,8 @@
     <string name="menu_tools_subtitle">นำเข้าคีย์ส่วนตัว...</string>
     <string name="menu_local_currency">สกุลเงินท้องถิ่น</string>
     <string name="menu_rescan_blockchain">สแกน blockchain อีกครั้ง</string>
+    <string name="menu_contact_support_title">ติดต่อฝ่ายสนับสนุน</string>
+    <string name="menu_contact_support_subtitle">รายงานปัญหา</string>
 
     <string name="tools_address_book">สมุดที่อยู่</string>
     <string name="tools_import_private_key">นำเข้าคีย์ส่วนตัว</string>
@@ -279,4 +281,17 @@
     <string name="sync_status_sync_completed">สำเร็จ</string>
 
     <string name="appwidget_wallet_not_ready">กรุณาตั้งค่ากระเป๋าสตางค์ของคุณ</string>
+
+    <string name="payment_request_please_wait_title">กรุณารอสักครู่</string>
+    <string name="payment_request_please_wait_message">กำลังเชื่อมต่อกับเซิร์ฟเวอร์การชำระเงิน</string>
+    <string name="payment_request_unable_to_connect">ไม่สามารถเชื่อมต่อ</string>
+    <string name="payment_request_unable_to_send">ไม่สามารถส่งออก</string>
+    <string name="payment_request_please_try_again">โปรดลองใหม่อีกครั้ง</string>
+    <string name="payment_request_try_again">ลองอีกครั้ง</string>
+    <string name="payment_request_problem_title">การชำระเงินไม่ได้รับการยอมรับ</string>
+    <string name="payment_request_problem_message">การชำระเงินเงินของคุณถูกตรวจสอบ แต่เซิร์ฟเวอร์ไม่สามารถยอมรับมันได้</string>
+    <string name="payment_request_expired_title">คำขอชำระเงินหมดอายุ</string>
+    <string name="payment_request_close">ปิด</string>
+    <string name="payment_request_skip">ข้าม</string>
+    <string name="payment_request_paid_to">จ่ายให้</string>
 </resources>

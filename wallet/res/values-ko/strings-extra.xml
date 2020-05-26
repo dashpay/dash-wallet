@@ -179,6 +179,7 @@
     <string name="verify_seed_buttons_tip">당신의 복원 문구의 단어를 올바른 순서로 탭하십시오</string>
     <string name="view_seed_done">완료</string>
     <string name="view_seed_title">복원 문구</string>
+	<string name="transaction_result_view_on_explorer">블록 탐색기에서 보기</string>
 	<string name="transaction_result_paid_successfully">성공적으로 전송되었습니다</string>
 	<string name="transaction_result_sent_to">다음에 전송하였습니다</string>
 	<string name="transaction_date_and_time">날짜</string>
@@ -187,13 +188,15 @@
 	<string name="transaction_details_amount_sent">보낸 금액</string>
     <string name="transaction_details_sent_from">다음으로부터 전송되었습니다</string>
     <string name="transaction_details_sent_to">다음에 전송하였습니다</string>
-    <string name="transaction_details_received_at">다음의 수신하였습니다</string>
+    <string name="transaction_details_received_at">다음에서 수신하였습니다</string>
     <string name="transaction_details_moved_from">다음에서 이동</string>
+    <string name="transaction_details_moved_internally_to">다음에 내부적으로 이동</string>
+
     <string name="authenticate_fingerprint_title">인증하기</string>
     <string name="authenticate_fingerprint_message">계속하시려면 지문을 확인하세요</string>
     <string name="authenticate_pin_message">계속하시려면 PIN을 입력하세요</string>
     <string name="authenticate_switch_to_fingerprint">지문 사용하기</string>
-    <string name="authenticate_switch_to_pin">비밀번호 사용하기</string>
+    <string name="authenticate_switch_to_pin">PIN 사용하기</string>
 
     <string name="menu_buy_and_sell_title">대시 매수 &amp; 매도</string>
     <string name="menu_buy_and_sell_subtitle">제3자 거래소에 연결</string>
@@ -205,6 +208,8 @@
     <string name="menu_tools_subtitle">프라이빗 키 가져오기…</string>
     <string name="menu_local_currency">현지 통화</string>
     <string name="menu_rescan_blockchain">블록체인 재스캔</string>
+    <string name="menu_contact_support_title">고객 지원부에 문의하기</string>
+    <string name="menu_contact_support_subtitle">오류 보고하기</string>
 
     <string name="tools_address_book">주소록</string>
     <string name="tools_import_private_key">프라이빗 키 가져오기</string>
@@ -272,4 +277,21 @@
     <string name="sync_status_syncing_sub_title">대시 블록체인을 통해</string>
     <string name="sync_status_unable_to_connect">연결할 수 없습니다</string>
     <string name="sync_status_check_connection">연결을 확인하세요</string>
-    </resources>
+    <string name="sync_status_sync_title">동기화</string>
+    <string name="sync_status_sync_completed">완료됨</string>
+
+    <string name="appwidget_wallet_not_ready">당신의 지갑을 설정하십시오</string>
+
+    <string name="payment_request_please_wait_title">기다려주십시오</string>
+    <string name="payment_request_please_wait_message">지불 서버에 연결 중</string>
+    <string name="payment_request_unable_to_connect">연결할 수 없습니다</string>
+    <string name="payment_request_unable_to_send">전송할 수 없습니다</string>
+    <string name="payment_request_please_try_again">다시 시도하세요</string>
+    <string name="payment_request_try_again">다시 시도하세요</string>
+    <string name="payment_request_problem_title">지불이 인식되지 않았습니다</string>
+    <string name="payment_request_problem_message">당신의 지불이 처리되었으나 서버에서 인식하지 못하였습니다</string>
+    <string name="payment_request_expired_title">지불 요청이 만료되었습니다</string>
+    <string name="payment_request_close">닫기</string>
+    <string name="payment_request_skip">건너뛰기</string>
+    <string name="payment_request_paid_to">다음에 지불하였습니다</string>
+</resources>

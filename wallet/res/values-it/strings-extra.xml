@@ -186,7 +186,7 @@
 	<string name="transaction_result_paid_successfully">Correttamente Inviato</string>
 	<string name="transaction_result_sent_to">Inviato a</string>
 	<string name="transaction_date_and_time">Data</string>
-	<string name="transaction_close">Vicino</string>
+	<string name="transaction_close">Chiudi</string>
 	<string name="transaction_details_amount_received">Importo Ricevuto</string>
 	<string name="transaction_details_amount_sent">Importo Inviato</string>
     <string name="transaction_details_sent_from">Inviato da</string>
@@ -199,7 +199,7 @@
     <string name="authenticate_fingerprint_message">Conferma dell\'impronta digitale per continuare</string>
     <string name="authenticate_pin_message">Immetti il PIN per continuare</string>
     <string name="authenticate_switch_to_fingerprint">Usa impronta digitale</string>
-    <string name="authenticate_switch_to_pin">Usa Password</string>
+    <string name="authenticate_switch_to_pin">Usa PIN</string>
 
     <string name="menu_buy_and_sell_title">Compra &amp; Vendi Dash</string>
     <string name="menu_buy_and_sell_subtitle">Connetti a Exchanges esterni</string>
@@ -211,6 +211,8 @@
     <string name="menu_tools_subtitle">Importa chiave privata…</string>
     <string name="menu_local_currency">Moneta Locale</string>
     <string name="menu_rescan_blockchain">Riscansione blockchain</string>
+    <string name="menu_contact_support_title">Contatta il Supporto</string>
+    <string name="menu_contact_support_subtitle">Segnala un problema</string>
 
     <string name="tools_address_book">Rubrica degli indirizzi</string>
     <string name="tools_import_private_key">Importa chiave privata</string>
@@ -282,4 +284,17 @@
     <string name="sync_status_sync_completed">Completato</string>
 
     <string name="appwidget_wallet_not_ready">Si prega di eseguire le impostazioni del portafoglio</string>
+
+    <string name="payment_request_please_wait_title">attendere prego</string>
+    <string name="payment_request_please_wait_message">Connessione al server di pagamento</string>
+    <string name="payment_request_unable_to_connect">Impossibile connetersi</string>
+    <string name="payment_request_unable_to_send">Impossibile inviare</string>
+    <string name="payment_request_please_try_again">Per favore riprova</string>
+    <string name="payment_request_try_again">Prova Ancora</string>
+    <string name="payment_request_problem_title">Il pagamento non è stato riconosciuto</string>
+    <string name="payment_request_problem_message">Il pagamento è stato elaborato ma il server non è stato in grado di riconoscerlo</string>
+    <string name="payment_request_expired_title">Richiesta di pagamento scaduta</string>
+    <string name="payment_request_close">Chiudi</string>
+    <string name="payment_request_skip">Salta</string>
+    <string name="payment_request_paid_to">Pagato a</string>
 </resources>

@@ -25,7 +25,7 @@
 
     <string name="dialog_confirm_confirm">Confirm</string>
     <string name="dialog_confirm_pay_to">Send to</string>
-    <string name="dialog_confirm_verified_by">Verified by</string>
+    <string name="dialog_confirm_secured_by">Secured by</string>
     <string name="dialog_confirm_fee">Network fee</string>
     <string name="dialog_confirm_total">Total</string>
 
@@ -214,6 +214,8 @@
     <string name="menu_tools_subtitle">Import private key…</string>
     <string name="menu_local_currency">Local Currency</string>
     <string name="menu_rescan_blockchain">Rescan Blockchain</string>
+    <string name="menu_contact_support_title">Contact Support</string>
+    <string name="menu_contact_support_subtitle">Report an issue</string>
 
     <string name="tools_address_book">Address Book</string>
     <string name="tools_import_private_key">Import Private Key</string>

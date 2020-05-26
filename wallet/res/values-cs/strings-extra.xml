@@ -202,6 +202,8 @@
     <string name="menu_tools_subtitle">Importovat privátní klíč…</string>
     <string name="menu_local_currency">Místní Měna</string>
     <string name="menu_rescan_blockchain">Znovu Skenovat Blockchain</string>
+    <string name="menu_contact_support_title">Podpora</string>
+    <string name="menu_contact_support_subtitle">Nahlásit problém</string>
 
     <string name="tools_address_book">Adresář</string>
     <string name="tools_import_private_key">Importovat Privátní Klíč</string>
@@ -258,4 +260,7 @@
     <string name="sync_status_syncing_sub_title">s Dash blockchainem</string>
     <string name="sync_status_unable_to_connect">Nelze se připojit</string>
     <string name="sync_status_check_connection">Zkontrolujte vaše připojení</string>
+    <string name="payment_request_please_try_again">Zkuste to ještě jednou</string>
+    <string name="payment_request_close">Zavřít</string>
+    <string name="payment_request_skip">Přeskočit</string>
     </resources>

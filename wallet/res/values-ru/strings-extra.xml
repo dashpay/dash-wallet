@@ -205,7 +205,7 @@
     <string name="authenticate_fingerprint_message">Подтвердите отпечаток пальца, чтобы продолжить</string>
     <string name="authenticate_pin_message">Введите PIN-код, чтобы продолжить</string>
     <string name="authenticate_switch_to_fingerprint">Использовать отпечаток пальца</string>
-    <string name="authenticate_switch_to_pin">Использовать пароль</string>
+    <string name="authenticate_switch_to_pin">Используйте PIN-код</string>
 
     <string name="menu_buy_and_sell_title">Купить &amp; Продать Dash</string>
     <string name="menu_buy_and_sell_subtitle">Подключиться к сторонним биржам</string>
@@ -217,6 +217,8 @@
     <string name="menu_tools_subtitle">Импортировать приватный ключ…</string>
     <string name="menu_local_currency">Местная валюта</string>
     <string name="menu_rescan_blockchain">Пересканировать блокчейн</string>
+    <string name="menu_contact_support_title">Связаться с поддержкой</string>
+    <string name="menu_contact_support_subtitle">Сообщить о проблеме</string>
 
     <string name="tools_address_book">Адресная книга</string>
     <string name="tools_import_private_key">Импортировать приватный ключ</string>
@@ -288,4 +290,17 @@
     <string name="sync_status_sync_completed">Завершено</string>
 
     <string name="appwidget_wallet_not_ready">Пожалуйста, настройте свой кошелек</string>
+
+    <string name="payment_request_please_wait_title">Пожалуйста, подождите</string>
+    <string name="payment_request_please_wait_message">Подключение к платёжному серверу</string>
+    <string name="payment_request_unable_to_connect">Невозможно подключиться</string>
+    <string name="payment_request_unable_to_send">Невозможно отправить</string>
+    <string name="payment_request_please_try_again">Попробуйте еще раз</string>
+    <string name="payment_request_try_again">Попробуйте ещё раз</string>
+    <string name="payment_request_problem_title">Платёж не был подтверждён</string>
+    <string name="payment_request_problem_message">Ваш платёж был произведён, но сервер не смог его подтвердить</string>
+    <string name="payment_request_expired_title">Запрос на оплату истёк</string>
+    <string name="payment_request_close">Закрыть</string>
+    <string name="payment_request_skip">Пропустить</string>
+    <string name="payment_request_paid_to">Оплатить</string>
 </resources>

@@ -199,7 +199,7 @@
     <string name="authenticate_fingerprint_message">Confirmez votre empreinte digitale pour continuer</string>
     <string name="authenticate_pin_message">Saisissez votre code PIN pour continuer</string>
     <string name="authenticate_switch_to_fingerprint">Utiliser l\'empreinte digitale</string>
-    <string name="authenticate_switch_to_pin">Utiliser le mot de passe</string>
+    <string name="authenticate_switch_to_pin">Utiliser code PIN</string>
 
     <string name="menu_buy_and_sell_title">Acheter &amp; vendre des dashs</string>
     <string name="menu_buy_and_sell_subtitle">Se connecter aux plateformes de change tierces</string>
@@ -211,6 +211,8 @@
     <string name="menu_tools_subtitle">Importer une clé privée…</string>
     <string name="menu_local_currency">Monnaie locale</string>
     <string name="menu_rescan_blockchain">Réanalyser la blockchain</string>
+    <string name="menu_contact_support_title">Contacter le service d\'aide</string>
+    <string name="menu_contact_support_subtitle">Signaler un problème</string>
 
     <string name="tools_address_book">Carnet d\'adresses</string>
     <string name="tools_import_private_key">Importer une clé privée</string>
@@ -282,4 +284,17 @@
     <string name="sync_status_sync_completed">Terminé</string>
 
     <string name="appwidget_wallet_not_ready">Veuillez configurer votre portefeuille</string>
+
+    <string name="payment_request_please_wait_title">Veuillez patienter</string>
+    <string name="payment_request_please_wait_message">Connexion au serveur de paiement…</string>
+    <string name="payment_request_unable_to_connect">Impossible de se connecter</string>
+    <string name="payment_request_unable_to_send">Impossible d\'envoyer</string>
+    <string name="payment_request_please_try_again">Veuillez réessayer</string>
+    <string name="payment_request_try_again">Réessayer</string>
+    <string name="payment_request_problem_title">Le paiement n\'a pas été reconnu</string>
+    <string name="payment_request_problem_message">Votre paiement a été traité mais le serveur n\'a pas pu le reconnaître</string>
+    <string name="payment_request_expired_title">Requête de paiement expirée</string>
+    <string name="payment_request_close">Fermer</string>
+    <string name="payment_request_skip">Ignorer</string>
+    <string name="payment_request_paid_to">Payé à</string>
 </resources>

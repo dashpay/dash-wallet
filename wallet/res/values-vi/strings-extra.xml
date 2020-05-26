@@ -196,7 +196,7 @@
     <string name="authenticate_fingerprint_message">Xác nhận vân tay để tiếp tục</string>
     <string name="authenticate_pin_message">Nhập mã PIN của bạn để tiếp tục</string>
     <string name="authenticate_switch_to_fingerprint">Sử dụng vân tay</string>
-    <string name="authenticate_switch_to_pin">Sử dụng mật khẩu</string>
+    <string name="authenticate_switch_to_pin">Sử dụng mã PIN</string>
 
     <string name="menu_buy_and_sell_title">Mua &amp; Bán Dash</string>
     <string name="menu_buy_and_sell_subtitle">Kết nối với sàn giao dịch của bên thứ ba</string>
@@ -208,6 +208,8 @@
     <string name="menu_tools_subtitle">Nhập khoá riêng...</string>
     <string name="menu_local_currency">Tiền địa phương</string>
     <string name="menu_rescan_blockchain">Quét lại blockchain</string>
+    <string name="menu_contact_support_title">Liên hệ hỗ trợ</string>
+    <string name="menu_contact_support_subtitle">Báo cáo về lỗi</string>
 
     <string name="tools_address_book">Sổ địa chỉ</string>
     <string name="tools_import_private_key">Nhập khoá riêng</string>
@@ -279,4 +281,17 @@
     <string name="sync_status_sync_completed">Đã xong</string>
 
     <string name="appwidget_wallet_not_ready">Hãy vui lòng thiết lập ví của bạn</string>
+
+    <string name="payment_request_please_wait_title">Vui lòng đợi</string>
+    <string name="payment_request_please_wait_message">Đang kết nối với Máy Chủ Thanh Toán</string>
+    <string name="payment_request_unable_to_connect">Không thể kết nối</string>
+    <string name="payment_request_unable_to_send">Không thể gửi</string>
+    <string name="payment_request_please_try_again">Hãy thử lại</string>
+    <string name="payment_request_try_again">Hãy thử lại</string>
+    <string name="payment_request_problem_title">Giao dịch không được thừa nhận</string>
+    <string name="payment_request_problem_message">Giao dịch của bạn đã được xử lý nhưng máy chủ không thể ghi nhận nó</string>
+    <string name="payment_request_expired_title">Yêu cầu giao dịch đã hết hạn</string>
+    <string name="payment_request_close">Đóng</string>
+    <string name="payment_request_skip">Bỏ qua</string>
+    <string name="payment_request_paid_to">Được trả cho</string>
 </resources>
