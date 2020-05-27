@@ -22,6 +22,7 @@ import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dashevo.dashpay.BlockchainIdentity
+import org.dashevo.dpp.identity.Identity
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import kotlin.coroutines.resume
@@ -35,11 +36,16 @@ class CreateIdentityService : LifecycleService() {
         private val log = LoggerFactory.getLogger(CreateIdentityService::class.java)
 
         private const val ACTION_CREATE_IDENTITY = "org.dash.dashpay.action.CREATE_IDENTITY"
+
         private const val ACTION_RETRY_WITH_NEW_USERNAME = "org.dash.dashpay.action.ACTION_RETRY_WITH_NEW_USERNAME"
         private const val ACTION_RETRY_AFTER_INTERRUPTION = "org.dash.dashpay.action.ACTION_RETRY_AFTER_INTERRUPTION"
 
+        private const val ACTION_RESTORE_IDENTITY = "org.dash.dashpay.action.RESTORE_IDENTITY"
+
         private const val EXTRA_USERNAME = "org.dash.dashpay.extra.USERNAME"
         private const val EXTRA_START_FOREGROUND_PROMISED = "org.dash.dashpay.extra.EXTRA_START_FOREGROUND_PROMISED"
+        private const val EXTRA_IDENTITY = "org.dash.dashpay.extra.IDENTITY"
+
 
         @JvmStatic
         fun createIntentForNewUsername(context: Context, username: String): Intent {
@@ -62,6 +68,14 @@ class CreateIdentityService : LifecycleService() {
             return Intent(context, CreateIdentityService::class.java).apply {
                 action = ACTION_RETRY_AFTER_INTERRUPTION
                 putExtra(EXTRA_START_FOREGROUND_PROMISED, startForegroundPromised)
+            }
+        }
+
+        @JvmStatic
+        fun createIntentForRestore(context: Context, identity: String): Intent {
+            return Intent(context, CreateIdentityService::class.java).apply {
+                action = ACTION_RESTORE_IDENTITY
+                putExtra(EXTRA_IDENTITY, identity)
             }
         }
     }
@@ -131,6 +145,10 @@ class CreateIdentityService : LifecycleService() {
                         createIdentityNotification.startServiceForeground()
                     }
                     handleCreateIdentityAction(null)
+                }
+                ACTION_RESTORE_IDENTITY -> {
+                    val identity = intent.getStringExtra(EXTRA_IDENTITY)
+                    handleRestoreIdentityAction(identity)
                 }
             }
         } else {
@@ -280,6 +298,66 @@ class CreateIdentityService : LifecycleService() {
         }
         // aaaand we're done :)
         log.info("username registration complete")
+    }
+
+    private fun handleRestoreIdentityAction(identity: String) {
+        workInProgress = true
+        serviceScope.launch(createIdentityexceptionHandler) {
+            restoreIdentity(identity)
+            workInProgress = false
+            stopSelf()
+        }
+    }
+
+    private suspend fun restoreIdentity(identity: String) {
+        log.info("Username restoration starting")
+
+        // use an "empty" state for each
+        blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, null)
+
+        val cftxs = walletApplication.wallet.creditFundingTransactions
+
+        val creditFundingTransaction: CreditFundingTransaction = cftxs.find { cftx -> cftx.creditBurnIdentityIdentifier.toStringBase58() == identity }
+                ?: throw IllegalArgumentException("identity $identity does not match a credit funding transaction")
+
+        val handler = Handler()
+        val wallet = walletApplication.wallet
+        val password = securityGuard.retrievePassword()
+
+        val encryptionKey = deriveKey(handler, wallet, password)
+        val seed = decryptSeed(handler, wallet, encryptionKey)
+
+        //create the Blockchain Identity object (this needs to be saved somewhere eventually)
+        val blockchainIdentity = BlockchainIdentity(Identity.IdentityType.USER, 0, wallet)
+        platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
+
+        //
+        // Step 2: The credit funding registration exists, no need to create it
+        //
+
+        //
+        // Step 3: Find the identity
+        //
+        platformRepo.updateCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERING)
+        platformRepo.recoverIdentityAsync(blockchainIdentity, creditFundingTransaction!!)
+        platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        platformRepo.updateCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERED)
+
+        //
+        // Step 4: Find the preorder document, this must be done after step 5 or not at all
+        //
+        //updateState(IdentityCreationState.State.PREORDER_REGISTERING)
+        //platformRepo.recoverPreorderAsync(blockchainIdentity)
+        //updateBlockchainIdentity(blockchainIdentity)
+        //updateState(IdentityCreationState.State.PREORDER_REGISTERED)
+
+        //
+        // Step 5: Find the username
+        //
+        platformRepo.updateCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERING)
+        platformRepo.recoverUsernamesAsync(blockchainIdentity)
+        platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        platformRepo.updateCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERED)
     }
 
     /**

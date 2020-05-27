@@ -27,6 +27,7 @@ import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
@@ -174,6 +175,15 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     }
 
     //
+    // Step 3: Find the identity in the case of recovery
+    //
+    suspend fun recoverIdentityAsync(blockchainIdentity: BlockchainIdentity, creditFundingTransaction: CreditFundingTransaction) {
+        withContext(Dispatchers.IO) {
+            blockchainIdentity.recoverIdentity(creditFundingTransaction)
+        }
+    }
+
+    //
     // Step 4: Preorder the username
     //
     suspend fun preorderNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
@@ -306,5 +316,14 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData) {
         blockchainIdentityDataDaoAsync.insert(blockchainIdentityData)
+    }
+
+    //
+    // Step 5: Find the usernames in the case of recovery
+    //
+    suspend fun recoverUsernamesAsync(blockchainIdentity: BlockchainIdentity) {
+        withContext(Dispatchers.IO) {
+            blockchainIdentity.recoverUsernames()
+        }
     }
 }

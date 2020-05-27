@@ -41,11 +41,13 @@ import android.os.PowerManager.WakeLock;
 import android.text.format.DateUtils;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.common.base.Stopwatch;
 
+import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.BlockChain;
@@ -63,8 +65,10 @@ import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
+import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
+import org.bitcoinj.evolution.listeners.CreditFundingTransactionEventListener;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.net.discovery.MasternodePeerDiscovery;
 import org.bitcoinj.net.discovery.MultiplexingDiscovery;
@@ -79,6 +83,7 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
+import org.dashevo.dashpay.BlockchainIdentity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,9 +112,12 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.AddressBookProvider;
+import de.schildbach.wallet.data.BlockchainIdentityData;
+import de.schildbach.wallet.data.BlockchainIdentityDataDao;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.ui.OnboardingActivity;
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
 import de.schildbach.wallet.util.BlockchainStateUtils;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
@@ -171,6 +179,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private Executor executor = Executors.newSingleThreadExecutor();
     private int syncPercentage = 0; // 0 to 100%
+    private boolean needsToWatchForIdentity = false;
 
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
@@ -205,7 +214,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             }
 
             transactionsReceived.incrementAndGet();
-
+            if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
+                CreditFundingTransaction cftx = (CreditFundingTransaction)tx;
+                ContextCompat.startForegroundService(getApplicationContext(), CreateIdentityService.createIntentForRestore(getApplicationContext(), cftx.getCreditBurnIdentityIdentifier().toStringBase58()));
+            }
 
             final Address address = WalletUtils.getWalletAddressOfReceived(tx, wallet);
             final Coin amount = tx.getValue(wallet);
@@ -229,6 +241,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         public void onCoinsSent(final Wallet wallet, final Transaction tx, final Coin prevBalance,
                 final Coin newBalance) {
             transactionsReceived.incrementAndGet();
+            if(CreditFundingTransaction.isCreditFundingTransaction(tx) && tx.getPurpose() == Transaction.Purpose.UNKNOWN) {
+                CreditFundingTransaction cftx = wallet.getCreditFundingTransaction(tx);
+                ContextCompat.startForegroundService(getApplicationContext(), CreateIdentityService.createIntentForRestore(getApplicationContext(), cftx.getCreditBurnIdentityIdentifier().toStringBase58()));
+            }
             updateAppWidget();
         }
     };
@@ -773,10 +789,29 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         peerDiscoveryList.add(dnsDiscovery);
         updateAppWidget();
+
+        initViewModel();
+    }
+
+    void initViewModel() {
+
         AppDatabase.getAppDatabase().blockchainStateDao().load().observe(this, new Observer<BlockchainState>() {
             @Override
             public void onChanged(BlockchainState blockchainState) {
                 handleBlockchainStateNotification(blockchainState);
+            }
+        });
+
+        Wallet wallet = ((WalletApplication) getApplication()).getWallet();
+        //wallet.addCreditFundingEventListener(Threading.SAME_THREAD, creditFundingTransactionEventListener);
+
+        AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(this, new Observer<BlockchainIdentityData>() {
+            @Override
+            public void onChanged(BlockchainIdentityData blockchainIdentityData) {
+                if (blockchainIdentityData != null && blockchainIdentityData.getRegistrationStatus() == BlockchainIdentity.RegistrationStatus.REGISTERED) {
+                    //Wallet wallet = ((WalletApplication) getApplication()).getWallet();
+                   // wallet.removeCreditFundingEventListener(creditFundingTransactionEventListener);
+                }
             }
         });
     }
@@ -916,6 +951,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 log.info("removing wallet file and app data");
                 application.finalizeWipe();
             }
+            //Clear the blockchain identity
+            Executors.newSingleThreadExecutor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    //not sure when this will execute
+                    AppDatabase.getAppDatabase().blockchainIdentityDataDao().clear();
+                }
+            });
         }
 
         if(bootStrapStream != null) {
@@ -1070,4 +1113,16 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private void updateAppWidget() {
         WalletBalanceWidgetProvider.updateWidgets(BlockchainServiceImpl.this, application.getWallet());
     }
+
+    private boolean isServiceStarted = false;
+    CreditFundingTransactionEventListener creditFundingTransactionEventListener = new CreditFundingTransactionEventListener() {
+        @Override
+        public void onTransactionReceived(CreditFundingTransaction tx, StoredBlock block, AbstractBlockChain.NewBlockType blockType) {
+
+            if (!isServiceStarted) {
+                isServiceStarted = true; // not sure why this is called 2-3 times
+                ContextCompat.startForegroundService(getApplicationContext(), CreateIdentityService.createIntentForRestore(getApplicationContext(), tx.getCreditBurnIdentityIdentifier().toStringBase58()));
+            }
+        }
+    };
 }
