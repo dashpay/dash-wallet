@@ -45,15 +45,19 @@ class CreateIdentityNotification(val service: LifecycleService) {
     }
 
     private fun displayError() {
-        updateNotification(R.string.processing_home_title, R.string.processing_error_title, 0, 0)
+        updateNotification(R.string.processing_home_title, R.string.processing_error_title, 0, 0, true)
     }
 
-    private fun updateNotification(@StringRes titleResId: Int, @StringRes messageResId: Int, progressMax: Int, progress: Int) {
-        val notification: Notification = createNotification(titleResId, messageResId, progressMax, progress)
+    private fun updateNotification(@StringRes titleResId: Int, @StringRes messageResId: Int,
+                                   progressMax: Int, progress: Int,
+                                   retryButton: Boolean = false) {
+        val notification: Notification = createNotification(titleResId, messageResId, progressMax, progress, retryButton)
         notificationManager.notify(Constants.NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY, notification)
     }
 
-    private fun createNotification(@StringRes titleResId: Int, @StringRes messageResId: Int = 0, progressMax: Int = 0, progress: Int = 0): Notification {
+    private fun createNotification(@StringRes titleResId: Int, @StringRes messageResId: Int = 0,
+                                   progressMax: Int = 0, progress: Int = 0,
+                                   retryButton: Boolean = false): Notification {
         return NotificationCompat.Builder(service, Constants.NOTIFICATION_CHANNEL_ID_DASHPAY).run {
             setSmallIcon(R.drawable.ic_dash_d_white_bottom)
             setContentTitle(service.getString(titleResId))

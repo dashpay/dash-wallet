@@ -38,6 +38,7 @@ import org.dashevo.dpp.identity.IdentityPublicKey
 import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
 import org.slf4j.LoggerFactory
+import java.io.IOException
 import java.util.concurrent.TimeoutException
 
 class PlatformRepo(val walletApplication: WalletApplication) {
@@ -148,6 +149,9 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             Context.propagate(walletApplication.wallet.context)
             val cftx = blockchainIdentity.createCreditFundingTransaction(Coin.CENT, keyParameter)
             blockchainIdentity.initializeCreditFundingTransaction(cftx)
+            if (walletApplication.walletFileExists()) {
+                throw IOException("testing")
+            }
         }
     }
 
@@ -227,8 +231,12 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
 
     suspend fun initBlockchainIdentityData(username: String): BlockchainIdentityData {
-        return blockchainIdentityDataDaoAsync.load()
-                ?: BlockchainIdentityData(BlockchainIdentityData.CreationState.UPGRADING_WALLET, false, username)
+        var blockchainIdentityData = blockchainIdentityDataDaoAsync.load()
+        if (blockchainIdentityData == null) {
+            blockchainIdentityData = BlockchainIdentityData(BlockchainIdentityData.CreationState.NONE, false, username)
+            blockchainIdentityDataDaoAsync.insert(blockchainIdentityData)
+        }
+        return blockchainIdentityData
     }
 
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity {
@@ -255,9 +263,8 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         return BlockchainIdentity(Identity.IdentityType.USER, 0, wallet)
     }
 
-    suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData, blockchainIdentity: BlockchainIdentity, error: Boolean = false) {
+    suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData, blockchainIdentity: BlockchainIdentity) {
         blockchainIdentityData.apply {
-            creationStateError = error
             if (blockchainIdentity.creditFundingTransaction != null) {
                 creditFundingTxId = blockchainIdentity.creditFundingTransaction!!.txId
             }
@@ -294,6 +301,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         log.info("updating creation state {}({})", state, error)
         blockchainIdentityDataDaoAsync.updateCreationState(blockchainIdentityData.id, state, error)
         blockchainIdentityData.creationState = state
+        blockchainIdentityData.creationStateError = error
     }
 
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData) {

@@ -12,6 +12,9 @@ interface BlockchainIdentityDataDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(identity: BlockchainIdentityData)
 
+    @Query("UPDATE blockchain_identity SET creationState = :state, creationStateError = :creationError WHERE id = :id")
+    fun updateCreationState(id: Int, state: BlockchainIdentityData.CreationState, creationError: Boolean)
+
     @Query("SELECT * FROM blockchain_identity LIMIT 1")
     fun load(): LiveData<BlockchainIdentityData?>
 

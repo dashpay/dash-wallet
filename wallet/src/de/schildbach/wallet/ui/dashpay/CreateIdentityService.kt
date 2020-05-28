@@ -63,7 +63,7 @@ class CreateIdentityService : LifecycleService() {
         try {
             securityGuard = SecurityGuard()
         } catch (e: Exception) {
-            log.error("Unable to instantiate SecurityGuard", e)
+            log.error("unable to instantiate SecurityGuard", e)
             stopSelf()
             return
         }
@@ -89,7 +89,10 @@ class CreateIdentityService : LifecycleService() {
         val exceptionHandler = CoroutineExceptionHandler { _, exception ->
             GlobalScope.launch {
                 log.error("[${blockchainIdentityData.creationState}(error)]", exception)
-                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity, true)
+                platformRepo.updateCreationState(blockchainIdentityData, blockchainIdentityData.creationState, true)
+                if (this@CreateIdentityService::blockchainIdentity.isInitialized) {
+                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                }
             }
         }
 
@@ -100,15 +103,13 @@ class CreateIdentityService : LifecycleService() {
     }
 
     private suspend fun createIdentity(username: String) {
-        log.info("Username registration starting")
+        log.info("username registration starting")
 
         blockchainIdentityData = platformRepo.initBlockchainIdentityData(username)
 
         if (blockchainIdentityData.creationState != CreationState.NONE || blockchainIdentityData.creationStateError) {
             log.info("resuming identity creation process [${blockchainIdentityData.creationState}${if (blockchainIdentityData.creationStateError) "(error)" else ""}]")
         }
-
-        platformRepo.resetCreationStateError(blockchainIdentityData)
 
         val handler = Handler()
         val wallet = walletApplication.wallet
@@ -125,7 +126,7 @@ class CreateIdentityService : LifecycleService() {
         val blockchainIdentity = platformRepo.initBlockchainIdentity(blockchainIdentityData, wallet)
 
         if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_CREATING) {
-            platformRepo.updateCreationState(blockchainIdentityData, CreationState.CREDIT_FUNDING_TX_CREATING)
+            platformRepo.updateCreationState(blockchainIdentityData, CreationState.CREDIT_FUNDING_TX_CREATING, true)
             //
             // Step 2: Create and send the credit funding transaction
             //
@@ -213,7 +214,7 @@ class CreateIdentityService : LifecycleService() {
         }
 
         // aaaand we're done :)
-        log.info("Username registration complete")
+        log.info("username registration complete")
     }
 
     /**
