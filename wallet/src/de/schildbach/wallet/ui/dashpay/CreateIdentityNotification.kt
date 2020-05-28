@@ -87,10 +87,12 @@ class CreateIdentityNotification(val service: LifecycleService) {
                     }
                     BlockchainIdentityData.State.PREORDER_REGISTERING,
                     BlockchainIdentityData.State.PREORDER_REGISTERED,
-                    BlockchainIdentityData.State.USERNAME_REGISTERING -> {
+                    BlockchainIdentityData.State.USERNAME_REGISTERING,
+                    BlockchainIdentityData.State.USERNAME_REGISTERED,
+                    BlockchainIdentityData.State.DASHPAY_PROFILE_CREATING -> {
                         displayStep3()
                     }
-                    BlockchainIdentityData.State.USERNAME_REGISTERED -> {
+                    BlockchainIdentityData.State.DASHPAY_PROFILE_CREATED -> {
                         displayDone()
                     }
                 }

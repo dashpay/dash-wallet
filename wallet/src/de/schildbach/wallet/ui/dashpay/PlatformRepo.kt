@@ -19,6 +19,7 @@ import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityData
+import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -29,6 +30,8 @@ import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dashevo.dashpay.BlockchainIdentity
+import org.dashevo.dashpay.ContactRequests
+import org.dashevo.dashpay.Profiles
 import org.dashevo.dpp.document.Document
 import org.dashevo.dpp.identity.Identity
 import org.dashevo.dpp.identity.IdentityPublicKey
@@ -62,6 +65,58 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 nameDocument = platform.names.get(username, "")
             }
             Resource.success(nameDocument)
+        } catch (e: Exception) {
+            Resource.error(e.localizedMessage, null)
+        }
+    }
+
+    /**
+     * gets all the name documents for usernames starting with text
+     *
+     * @param text The beginning of a username to search for
+     * @param userId The current userId for which to search contacts
+     * @return
+     */
+    fun searchUsernames(text: String, userId: String): Resource<List<UsernameSearchResult>> {
+        return try {
+            // Names.search does support retrieving 100 names at a time if retrieveAll = false
+            var nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, true)
+
+            // TODO: Replace this Platform call with a query into the local database
+            var toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
+
+            // Get all contact requests where toUserId == userId
+            var fromContactDocuments = ContactRequests(platform).get(userId, toUserId = true, retrieveAll = true)
+
+            val usernameSearchResults = ArrayList<UsernameSearchResult>()
+
+            // TODO: Replace this loop that processed DPP with a loop that processes the results
+            // from the database query
+            for (doc in nameDocuments) {
+                var toContact: Document? = null
+                var fromContact: Document? = null
+
+                // Determine if any of our contacts match the current name's identity
+                if (toContactDocuments.isNotEmpty()) {
+                    toContact = toContactDocuments.find { contact ->
+                        if (contact.data.containsKey("toUserId"))
+                            contact.data["toUserId"] == doc.userId
+                        else false
+                    }
+                }
+
+                // Determine if our identity is someone else's contact
+                if (fromContactDocuments.isNotEmpty()) {
+                    fromContact = fromContactDocuments.find { contact ->
+                        contact.userId == doc.userId
+                    }
+                }
+
+                usernameSearchResults.add(UsernameSearchResult(doc.data["normalizedLabel"] as String,
+                        doc, toContact, fromContact))
+            }
+
+            Resource.success(usernameSearchResults)
         } catch (e: Exception) {
             Resource.error(e.localizedMessage, null)
         }
@@ -156,6 +211,16 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
+    //Step 6: Create DashPay Profile
+    suspend fun createDashPayProfile(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter) {
+        withContext(Dispatchers.IO) {
+            val profiles = Profiles(platform, blockchainIdentity, keyParameter)
+            val username = blockchainIdentity.currentUsername!!
+            profiles.create(username, "Hello, I'm ${username}. I was created by the Android Wallet")
+        }
+    }
+
+
     suspend fun initBlockchainIdentityData(username: String): BlockchainIdentityData {
         return blockchainIdentityDataDaoAsync.load()
                 ?: BlockchainIdentityData(BlockchainIdentityData.State.UPGRADING_WALLET, false, username)
@@ -210,6 +275,10 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 currentMainKeyType = blockchainIdentity.currentMainKeyType
             }
         }
+        updateBlockchainIdentityData(blockchainIdentityData)
+    }
+
+    suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData) {
         blockchainIdentityDataDaoAsync.insert(blockchainIdentityData)
     }
 }

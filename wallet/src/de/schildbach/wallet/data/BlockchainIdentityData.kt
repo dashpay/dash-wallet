@@ -57,6 +57,8 @@ data class BlockchainIdentityData(var creationState: State?,
         PREORDER_REGISTERING,
         PREORDER_REGISTERED,
         USERNAME_REGISTERING,
-        USERNAME_REGISTERED
+        USERNAME_REGISTERED,
+        DASHPAY_PROFILE_CREATING,
+        DASHPAY_PROFILE_CREATED
     }
 }

@@ -174,6 +174,14 @@ class CreateIdentityService : LifecycleService() {
         blockchainIdentityData.creationState = BlockchainIdentityData.State.USERNAME_REGISTERED
         platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
 
+        // Step 6: Profile Creation
+        blockchainIdentityData.creationState = BlockchainIdentityData.State.DASHPAY_PROFILE_CREATING
+        platformRepo.createDashPayProfile(blockchainIdentity, encryptionKey)
+        platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+
+        blockchainIdentityData.creationState = BlockchainIdentityData.State.DASHPAY_PROFILE_CREATED
+        platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+
         // aaaand we're done :)
         log.info("Username registration complete")
     }

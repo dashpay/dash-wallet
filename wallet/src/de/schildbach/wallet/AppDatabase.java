@@ -10,14 +10,13 @@ import de.schildbach.wallet.data.BlockchainIdentityDataDao;
 import de.schildbach.wallet.data.BlockchainIdentityDataDaoAsync;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
+import de.schildbach.wallet.data.DashPayProfile;
+import de.schildbach.wallet.data.DashPayProfileDao;
 import de.schildbach.wallet.data.RoomConverters;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
 
-/**
- * @author Samuel Barbosa
- */
-@Database(entities = {ExchangeRate.class, BlockchainState.class, BlockchainIdentityData.class}, version = 8)
+@Database(entities = {ExchangeRate.class, BlockchainState.class, BlockchainIdentityData.class, DashPayProfile.class}, version = 8)
 @TypeConverters({RoomConverters.class})
 public abstract class AppDatabase extends RoomDatabase {
 
@@ -30,6 +29,8 @@ public abstract class AppDatabase extends RoomDatabase {
     public abstract BlockchainIdentityDataDao blockchainIdentityDataDao();
 
     public abstract BlockchainIdentityDataDaoAsync blockchainIdentityDataDaoAsync();
+
+    public abstract DashPayProfileDao dashPayProfileDao();
 
     public static AppDatabase getAppDatabase() {
         if (instance == null) {

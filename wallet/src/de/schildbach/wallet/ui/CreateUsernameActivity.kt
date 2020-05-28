@@ -40,7 +40,7 @@ import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NewAccountConfirmDialog
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.create_username.*
+import kotlinx.android.synthetic.main.activity_create_username.*
 import kotlinx.android.synthetic.main.users_orbit.*
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.InteractionAwareActivity
@@ -69,7 +69,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContentView(R.layout.create_username)
+        setContentView(R.layout.activity_create_username)
 
         choose_username_title.text = getText(R.string.choose_your_username)
         close_btn.setOnClickListener { finish() }
@@ -101,7 +101,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
                 AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(this, Observer {
                     if (it != null && it.creationStateError) {
                         finish()
-                    } else if (it?.creationState == BlockchainIdentityData.State.USERNAME_REGISTERED) {
+                    } else if (it?.creationState == BlockchainIdentityData.State.DASHPAY_PROFILE_CREATED) {
                         completeUsername = it.username ?: ""
                         showCompleteState()
                     }
