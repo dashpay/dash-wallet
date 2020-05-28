@@ -70,6 +70,7 @@ import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
+import de.schildbach.wallet.data.BlockchainIdentityBaseData;
 import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet_test.R;
@@ -204,9 +205,9 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
             }
         });
 
-        AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(this, new Observer<BlockchainIdentityData>() {
+        AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(getViewLifecycleOwner(), new Observer<BlockchainIdentityBaseData>() {
             @Override
-            public void onChanged(BlockchainIdentityData blockchainIdentityData) {
+            public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
                 if (blockchainIdentityData != null) {
                     WalletTransactionsFragment.this.adapter.setBlockchainIdentityData(blockchainIdentityData);
                 }
@@ -268,7 +269,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     }
 
     @Override
-    public void onProcessingIdentityRowClicked(final BlockchainIdentityData blockchainIdentityData, boolean retry) {
+    public void onProcessingIdentityRowClicked(final BlockchainIdentityBaseData blockchainIdentityData, boolean retry) {
         if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.State.USERNAME_REGISTERED) {
             Intent intent = new Intent(activity, CreateUsernameActivity.class);
             intent.putExtra(CreateUsernameActivity.Companion.getCOMPLETE_USERNAME(),

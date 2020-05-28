@@ -25,7 +25,7 @@ import org.dashevo.dashpay.BlockchainIdentity
 import org.dashevo.dpp.identity.IdentityPublicKey
 
 @Entity(tableName = "blockchain_identity")
-class BlockchainIdentityData(var creationState: State?,
+data class BlockchainIdentityData(var creationState: State?,
                              var creationStateError: Boolean,
                              var username: String?,
                              var creditFundingTxId: Sha256Hash? = null,

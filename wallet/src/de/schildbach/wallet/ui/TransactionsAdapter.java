@@ -51,7 +51,7 @@ import javax.annotation.Nullable;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.AddressBookProvider;
-import de.schildbach.wallet.data.BlockchainIdentityData;
+import de.schildbach.wallet.data.BlockchainIdentityBaseData;
 import de.schildbach.wallet.ui.dashpay.ProcessingIdentityViewHolder;
 import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet.util.WalletUtils;
@@ -85,7 +85,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private Map<Sha256Hash, TransactionCacheEntry> transactionCache = new HashMap<Sha256Hash, TransactionCacheEntry>();
 
     //Temporary field while IdentityCreationTx (or whatever we call it) is not integrated yet.
-    private BlockchainIdentityData blockchainIdentityData;
+    private BlockchainIdentityBaseData blockchainIdentityData;
 
     private static class TransactionCacheEntry {
         private final Coin value;
@@ -262,7 +262,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
         void onTransactionRowClicked(Transaction tx);
 
-        void onProcessingIdentityRowClicked(BlockchainIdentityData blockchainIdentityData, boolean retry);
+        void onProcessingIdentityRowClicked(BlockchainIdentityBaseData blockchainIdentityData, boolean retry);
     }
 
     private class TransactionViewHolder extends RecyclerView.ViewHolder {
@@ -418,11 +418,11 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     }
 
-    public BlockchainIdentityData getBlockchainIdentityData() {
+    public BlockchainIdentityBaseData getBlockchainIdentityData() {
         return blockchainIdentityData;
     }
 
-    public void setBlockchainIdentityData(BlockchainIdentityData blockchainIdentityData) {
+    public void setBlockchainIdentityData(BlockchainIdentityBaseData blockchainIdentityData) {
         this.blockchainIdentityData = blockchainIdentityData;
         notifyDataSetChanged();
     }

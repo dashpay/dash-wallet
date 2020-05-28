@@ -326,9 +326,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
         AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(this, new Observer<BlockchainIdentityData>() {
             @Override
             public void onChanged(BlockchainIdentityData blockchainIdentityData) {
-                if(blockchainIdentityData != null) {
+                if (blockchainIdentityData != null) {
                     BlockchainIdentity.RegistrationStatus status = blockchainIdentityData.getRegistrationStatus();
-                    hasIdentity = status != null ? status == BlockchainIdentity.RegistrationStatus.REGISTERED : false;
+                    hasIdentity = (status == BlockchainIdentity.RegistrationStatus.REGISTERED);
                     showHideJoinDashPayAction();
                 }
             }

@@ -3,13 +3,14 @@ package de.schildbach.wallet.ui.dashpay
 import android.graphics.drawable.AnimationDrawable
 import android.view.View
 import androidx.recyclerview.widget.RecyclerView
+import de.schildbach.wallet.data.BlockchainIdentityBaseData
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.identity_creation_state.view.*
 
 class ProcessingIdentityViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
-    fun bind(blockchainIdentityData: BlockchainIdentityData) {
+    fun bind(blockchainIdentityData: BlockchainIdentityBaseData) {
         if (blockchainIdentityData.creationStateError) {
             if (blockchainIdentityData.creationState == BlockchainIdentityData.State.USERNAME_REGISTERING) {
                 itemView.title.text = itemView.context.getString(R.string.processing_username_unavailable_title)

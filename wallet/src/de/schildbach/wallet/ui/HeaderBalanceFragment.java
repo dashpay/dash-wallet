@@ -53,6 +53,7 @@ import javax.annotation.Nullable;
 import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.BlockchainIdentityBaseData;
 import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.rates.ExchangeRate;
@@ -149,9 +150,9 @@ public final class HeaderBalanceFragment extends Fragment {
             }
         });
 
-        AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(getViewLifecycleOwner(), new Observer<BlockchainIdentityData>() {
+        AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(getViewLifecycleOwner(), new Observer<BlockchainIdentityBaseData>() {
             @Override
-            public void onChanged(BlockchainIdentityData blockchainIdentityData) {
+            public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
                 if (blockchainIdentityData != null
                         && blockchainIdentityData.getCreationState() == BlockchainIdentityData.State.USERNAME_REGISTERED) {
                     String username = blockchainIdentityData.getUsername();

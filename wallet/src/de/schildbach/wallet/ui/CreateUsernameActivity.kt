@@ -98,7 +98,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
                 ContextCompat.startForegroundService(this, CreateIdentityService.createIntent(this, username))
 
                 // finish this activity on error or when registration is complete
-                AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(this, Observer {
+                AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(this, Observer {
                     if (it != null && it.creationStateError) {
                         finish()
                     } else if (it?.creationState == BlockchainIdentityData.State.USERNAME_REGISTERED) {
