@@ -25,20 +25,19 @@ import org.dashevo.dashpay.BlockchainIdentity
 import org.dashevo.dpp.identity.IdentityPublicKey
 
 @Entity(tableName = "blockchain_identity")
-data class BlockchainIdentityData(var creationState: State?,
-                             var creationStateError: Boolean,
-                             var username: String?,
-                             var creditFundingTxId: Sha256Hash? = null,
-                             var preorderSalt: ByteArray? = null,
-                             var registrationStatus: BlockchainIdentity.RegistrationStatus? = null,
-                             var usernameStatus: BlockchainIdentity.UsernameStatus? = null,
-                             var domain: String? = null,
-                             var creditBalance: Coin? = null,
-                             var activeKeyCount: Int? = null,
-                             var totalKeyCount: Int? = null,
-                             var keysCreated: Long? = null,
-                             var currentMainKeyIndex: Int? = null,
-                             var currentMainKeyType: IdentityPublicKey.TYPES? = null) {
+data class BlockchainIdentityData(var creationState: CreationState = CreationState.NONE,
+                                  var creationStateError: Boolean,
+                                  var username: String?,
+                                  var creditFundingTxId: Sha256Hash? = null,
+                                  var preorderSalt: ByteArray? = null,
+                                  var registrationStatus: BlockchainIdentity.RegistrationStatus? = null,
+                                  var usernameStatus: BlockchainIdentity.UsernameStatus? = null,
+                                  var creditBalance: Coin? = null,
+                                  var activeKeyCount: Int? = null,
+                                  var totalKeyCount: Int? = null,
+                                  var keysCreated: Long? = null,
+                                  var currentMainKeyIndex: Int? = null,
+                                  var currentMainKeyType: IdentityPublicKey.TYPES? = null) {
 
     @PrimaryKey
     var id = 1
@@ -46,7 +45,8 @@ data class BlockchainIdentityData(var creationState: State?,
             field = 1
         }
 
-    enum class State {
+    enum class CreationState {
+        NONE,
         UPGRADING_WALLET,
         CREDIT_FUNDING_TX_CREATING,
         CREDIT_FUNDING_TX_SENDING,

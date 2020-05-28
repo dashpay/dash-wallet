@@ -74,25 +74,25 @@ class CreateIdentityNotification(val service: LifecycleService) {
                 if (it != null && it.creationStateError) {
                     displayError()
                 } else when (it?.creationState) {
-                    BlockchainIdentityData.State.UPGRADING_WALLET,
-                    BlockchainIdentityData.State.CREDIT_FUNDING_TX_CREATING,
-                    BlockchainIdentityData.State.CREDIT_FUNDING_TX_SENDING,
-                    BlockchainIdentityData.State.CREDIT_FUNDING_TX_SENT,
-                    BlockchainIdentityData.State.CREDIT_FUNDING_TX_CONFIRMED -> {
+                    BlockchainIdentityData.CreationState.UPGRADING_WALLET,
+                    BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_CREATING,
+                    BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_SENDING,
+                    BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_SENT,
+                    BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_CONFIRMED -> {
                         displayStep1()
                     }
-                    BlockchainIdentityData.State.IDENTITY_REGISTERING,
-                    BlockchainIdentityData.State.IDENTITY_REGISTERED -> {
+                    BlockchainIdentityData.CreationState.IDENTITY_REGISTERING,
+                    BlockchainIdentityData.CreationState.IDENTITY_REGISTERED -> {
                         displayStep2()
                     }
-                    BlockchainIdentityData.State.PREORDER_REGISTERING,
-                    BlockchainIdentityData.State.PREORDER_REGISTERED,
-                    BlockchainIdentityData.State.USERNAME_REGISTERING,
-                    BlockchainIdentityData.State.USERNAME_REGISTERED,
-                    BlockchainIdentityData.State.DASHPAY_PROFILE_CREATING -> {
+                    BlockchainIdentityData.CreationState.PREORDER_REGISTERING,
+                    BlockchainIdentityData.CreationState.PREORDER_REGISTERED,
+                    BlockchainIdentityData.CreationState.USERNAME_REGISTERING,
+                    BlockchainIdentityData.CreationState.USERNAME_REGISTERED,
+                    BlockchainIdentityData.CreationState.DASHPAY_PROFILE_CREATING -> {
                         displayStep3()
                     }
-                    BlockchainIdentityData.State.DASHPAY_PROFILE_CREATED -> {
+                    BlockchainIdentityData.CreationState.DASHPAY_PROFILE_CREATED -> {
                         displayDone()
                     }
                 }

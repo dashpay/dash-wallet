@@ -19,8 +19,8 @@ package de.schildbach.wallet.data
 
 import org.bitcoinj.core.Sha256Hash
 
-data class BlockchainIdentityBaseData(var id: Int,
-                                      val creationState: BlockchainIdentityData.State?,
+data class BlockchainIdentityBaseData(val id: Int,
+                                      val creationState: BlockchainIdentityData.CreationState,
                                       val creationStateError: Boolean,
                                       val username: String?,
                                       val creditFundingTxId: Sha256Hash? = null)

@@ -16,8 +16,6 @@
 
 package de.schildbach.wallet.ui;
 
-import android.animation.Animator;
-import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
@@ -27,7 +25,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
-import android.view.animation.LinearInterpolator;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -154,7 +151,7 @@ public final class HeaderBalanceFragment extends Fragment {
             @Override
             public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
                 if (blockchainIdentityData != null
-                        && blockchainIdentityData.getCreationState() == BlockchainIdentityData.State.DASHPAY_PROFILE_CREATED) {
+                        && blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DASHPAY_PROFILE_CREATED) {
                     String username = blockchainIdentityData.getUsername();
                     StringBuilder lettersBuilder = new StringBuilder();
                     for (int i = 0; i < 2; i++) {

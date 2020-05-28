@@ -270,7 +270,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
     @Override
     public void onProcessingIdentityRowClicked(final BlockchainIdentityBaseData blockchainIdentityData, boolean retry) {
-        if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.State.DASHPAY_PROFILE_CREATED) {
+        if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DASHPAY_PROFILE_CREATED) {
             Intent intent = new Intent(activity, CreateUsernameActivity.class);
             intent.putExtra(CreateUsernameActivity.Companion.getCOMPLETE_USERNAME(),
                     blockchainIdentityData.getUsername());

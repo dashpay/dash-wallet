@@ -7,6 +7,7 @@ import androidx.lifecycle.LifecycleService
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityData
+import de.schildbach.wallet.data.BlockchainIdentityData.CreationState
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DecryptSeedTask
 import de.schildbach.wallet.ui.send.DeriveKeyTask
@@ -86,10 +87,9 @@ class CreateIdentityService : LifecycleService() {
         val username = intent.getStringExtra(EXTRA_USERNAME)
 
         val exceptionHandler = CoroutineExceptionHandler { _, exception ->
-            blockchainIdentityData.creationStateError = true
-            log.error("[${blockchainIdentityData.creationState}(error)]", exception)
             GlobalScope.launch {
-                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                log.error("[${blockchainIdentityData.creationState}(error)]", exception)
+                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity, true)
             }
         }
 
@@ -104,83 +104,113 @@ class CreateIdentityService : LifecycleService() {
 
         blockchainIdentityData = platformRepo.initBlockchainIdentityData(username)
 
-        if (blockchainIdentityData.creationState != BlockchainIdentityData.State.UPGRADING_WALLET || blockchainIdentityData.creationStateError) {
+        if (blockchainIdentityData.creationState != CreationState.NONE || blockchainIdentityData.creationStateError) {
             log.info("resuming identity creation process [${blockchainIdentityData.creationState}${if (blockchainIdentityData.creationStateError) "(error)" else ""}]")
         }
+
+        platformRepo.resetCreationStateError(blockchainIdentityData)
 
         val handler = Handler()
         val wallet = walletApplication.wallet
         val password = securityGuard.retrievePassword()
 
         val encryptionKey = deriveKey(handler, wallet, password)
-        val seed = decryptSeed(handler, wallet, encryptionKey)
-        platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
+
+        if (blockchainIdentityData.creationState <= CreationState.UPGRADING_WALLET) {
+            platformRepo.updateCreationState(blockchainIdentityData, CreationState.UPGRADING_WALLET)
+            val seed = decryptSeed(handler, wallet, encryptionKey)
+            platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
+        }
 
         val blockchainIdentity = platformRepo.initBlockchainIdentity(blockchainIdentityData, wallet)
 
-        //
-        // Step 2: Create and send the credit funding transaction
-        //
-        blockchainIdentityData.creationState = BlockchainIdentityData.State.CREDIT_FUNDING_TX_CREATING
-        platformRepo.createCreditFundingTransactionAsync(blockchainIdentity, encryptionKey)
+        if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_CREATING) {
+            platformRepo.updateCreationState(blockchainIdentityData, CreationState.CREDIT_FUNDING_TX_CREATING)
+            //
+            // Step 2: Create and send the credit funding transaction
+            //
+            platformRepo.createCreditFundingTransactionAsync(blockchainIdentity, encryptionKey)
+        }
 
-        blockchainIdentityData.creationState = BlockchainIdentityData.State.CREDIT_FUNDING_TX_SENDING
-        sendTransaction(blockchainIdentity.creditFundingTransaction!!)
+        if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_SENDING) {
+            platformRepo.updateCreationState(blockchainIdentityData, CreationState.CREDIT_FUNDING_TX_SENDING)
+            sendTransaction(blockchainIdentity.creditFundingTransaction!!)
+        }
 
-        // If the tx is in a block, seen by a peer, InstantSend lock, then it is considered confirmed
-        blockchainIdentityData.creationState = BlockchainIdentityData.State.CREDIT_FUNDING_TX_CONFIRMED
-        platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_CONFIRMED) {
+            platformRepo.updateCreationState(blockchainIdentityData, CreationState.CREDIT_FUNDING_TX_CONFIRMED)
+            // If the tx is in a block, seen by a peer, InstantSend lock, then it is considered confirmed
+            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        }
 
-        //
-        // Step 3: Register the identity
-        //
-        blockchainIdentityData.creationState = BlockchainIdentityData.State.IDENTITY_REGISTERING
-        platformRepo.registerIdentityAsync(blockchainIdentity, encryptionKey)
-        platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        if (blockchainIdentityData.creationState <= CreationState.IDENTITY_REGISTERING) {
+            platformRepo.updateCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERING)
+            //
+            // Step 3: Register the identity
+            //
+            platformRepo.registerIdentityAsync(blockchainIdentity, encryptionKey)
+            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        }
 
-        //
-        // Step 3: Verify that the identity was registered
-        //
-        platformRepo.verifyIdentityRegisteredAsync(blockchainIdentity)
-        blockchainIdentityData.creationState = BlockchainIdentityData.State.IDENTITY_REGISTERED
-        platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        if (blockchainIdentityData.creationState <= CreationState.IDENTITY_REGISTERED) {
+            platformRepo.updateCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERED)
+            //
+            // Step 3: Verify that the identity was registered
+            //
+            platformRepo.verifyIdentityRegisteredAsync(blockchainIdentity)
+            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        }
 
-        //
-        // Step 4: Preorder the username
-        //
-        blockchainIdentityData.creationState = BlockchainIdentityData.State.PREORDER_REGISTERING
-        blockchainIdentity.addUsername(username)
-        platformRepo.preorderNameAsync(blockchainIdentity, encryptionKey)
-        platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        if (blockchainIdentityData.creationState <= CreationState.PREORDER_REGISTERING) {
+            platformRepo.updateCreationState(blockchainIdentityData, CreationState.PREORDER_REGISTERING)
+            //
+            // Step 4: Preorder the username
+            //
+            if (blockchainIdentity.currentUsername != username) {
+                blockchainIdentity.addUsername(username)
+            }
+            platformRepo.preorderNameAsync(blockchainIdentity, encryptionKey)
+            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        }
 
-        //
-        // Step 4: Verify that the username was preordered
-        //
-        platformRepo.isNamePreorderedAsync(blockchainIdentity)
-        blockchainIdentityData.creationState = BlockchainIdentityData.State.PREORDER_REGISTERED
-        platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        if (blockchainIdentityData.creationState <= CreationState.PREORDER_REGISTERED) {
+            platformRepo.updateCreationState(blockchainIdentityData, CreationState.PREORDER_REGISTERED)
+            //
+            // Step 4: Verify that the username was preordered
+            //
+            platformRepo.isNamePreorderedAsync(blockchainIdentity)
+            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        }
 
-        //
-        // Step 5: Register the username
-        //
-        blockchainIdentityData.creationState = BlockchainIdentityData.State.USERNAME_REGISTERING
-        platformRepo.registerNameAsync(blockchainIdentity, encryptionKey)
-        platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        if (blockchainIdentityData.creationState <= CreationState.USERNAME_REGISTERING) {
+            platformRepo.updateCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERING)
+            //
+            // Step 5: Register the username
+            //
+            platformRepo.registerNameAsync(blockchainIdentity, encryptionKey)
+            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        }
 
-        //
-        // Step 5: Verify that the username was registered
-        //
-        platformRepo.isNameRegisteredAsync(blockchainIdentity)
-        blockchainIdentityData.creationState = BlockchainIdentityData.State.USERNAME_REGISTERED
-        platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        if (blockchainIdentityData.creationState <= CreationState.USERNAME_REGISTERED) {
+            platformRepo.updateCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERED)
+            //
+            // Step 5: Verify that the username was registered
+            //
+            platformRepo.isNameRegisteredAsync(blockchainIdentity)
+            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        }
 
-        // Step 6: Profile Creation
-        blockchainIdentityData.creationState = BlockchainIdentityData.State.DASHPAY_PROFILE_CREATING
-        platformRepo.createDashPayProfile(blockchainIdentity, encryptionKey)
-        platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        if (blockchainIdentityData.creationState <= CreationState.DASHPAY_PROFILE_CREATING) {
+            platformRepo.updateCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATING)
+            // Step 6: Profile Creation
+            platformRepo.createDashPayProfile(blockchainIdentity, encryptionKey)
+            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        }
 
-        blockchainIdentityData.creationState = BlockchainIdentityData.State.DASHPAY_PROFILE_CREATED
-        platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+        if (blockchainIdentityData.creationState <= CreationState.DASHPAY_PROFILE_CREATED) {
+            platformRepo.updateCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATED)
+            platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+        }
 
         // aaaand we're done :)
         log.info("Username registration complete")

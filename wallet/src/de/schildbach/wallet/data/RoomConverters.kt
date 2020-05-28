@@ -64,12 +64,12 @@ class RoomConverters {
     }
 
     @TypeConverter
-    fun toIdentityCreationState(value: Int): BlockchainIdentityData.State {
-        return BlockchainIdentityData.State.values()[value]
+    fun toIdentityCreationState(value: Int): BlockchainIdentityData.CreationState {
+        return BlockchainIdentityData.CreationState.values()[value]
     }
 
     @TypeConverter
-    fun fromIdentityCreationState(identityCreationState: BlockchainIdentityData.State): Int {
+    fun fromIdentityCreationState(identityCreationState: BlockchainIdentityData.CreationState): Int {
         return identityCreationState.ordinal
     }
 

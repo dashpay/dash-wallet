@@ -223,7 +223,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
     suspend fun initBlockchainIdentityData(username: String): BlockchainIdentityData {
         return blockchainIdentityDataDaoAsync.load()
-                ?: BlockchainIdentityData(BlockchainIdentityData.State.UPGRADING_WALLET, false, username)
+                ?: BlockchainIdentityData(BlockchainIdentityData.CreationState.UPGRADING_WALLET, false, username)
     }
 
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity {
@@ -250,15 +250,15 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         return BlockchainIdentity(Identity.IdentityType.USER, 0, wallet)
     }
 
-    suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData, blockchainIdentity: BlockchainIdentity) {
+    suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData, blockchainIdentity: BlockchainIdentity, error: Boolean = false) {
         blockchainIdentityData.apply {
+            creationStateError = error
             if (blockchainIdentity.creditFundingTransaction != null) {
                 creditFundingTxId = blockchainIdentity.creditFundingTransaction!!.txId
             }
             registrationStatus = blockchainIdentity.registrationStatus
             if (blockchainIdentity.currentUsername != null &&
                     blockchainIdentity.registrationStatus == BlockchainIdentity.RegistrationStatus.REGISTERED) {
-                domain = Names.DEFAULT_PARENT_DOMAIN
                 username = blockchainIdentity.currentUsername
                 preorderSalt = blockchainIdentity.saltForUsername(blockchainIdentity.currentUsername!!, false)
                 usernameStatus = blockchainIdentity.statusOfUsername(blockchainIdentity.currentUsername!!)
@@ -276,6 +276,18 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             }
         }
         updateBlockchainIdentityData(blockchainIdentityData)
+    }
+
+    suspend fun resetCreationStateError(blockchainIdentityData: BlockchainIdentityData) {
+        blockchainIdentityDataDaoAsync.updateCreationState(blockchainIdentityData.id, blockchainIdentityData.creationState, false)
+        blockchainIdentityData.creationStateError = false
+    }
+
+    suspend fun updateCreationState(blockchainIdentityData: BlockchainIdentityData,
+                                    state: BlockchainIdentityData.CreationState,
+                                    error: Boolean = false) {
+        blockchainIdentityDataDaoAsync.updateCreationState(blockchainIdentityData.id, state, error)
+        blockchainIdentityData.creationState = state
     }
 
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData) {
