@@ -19,10 +19,11 @@ package de.schildbach.wallet.data
 
 import androidx.room.TypeConverter
 import de.schildbach.wallet.Constants
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.TransactionOutPoint
-import org.bitcoinj.evolution.CreditFundingTransaction
 import org.dashevo.dashpay.BlockchainIdentity
+import org.dashevo.dpp.identity.IdentityPublicKey
 import java.util.*
 
 class RoomConverters {
@@ -63,12 +64,12 @@ class RoomConverters {
     }
 
     @TypeConverter
-    fun toIdentityCreationState(value: Int): IdentityCreationState.State {
-        return IdentityCreationState.State.values()[value]
+    fun toIdentityCreationState(value: Int): BlockchainIdentityData.State {
+        return BlockchainIdentityData.State.values()[value]
     }
 
     @TypeConverter
-    fun fromIdentityCreationState(identityCreationState: IdentityCreationState.State): Int {
+    fun fromIdentityCreationState(identityCreationState: BlockchainIdentityData.State): Int {
         return identityCreationState.ordinal
     }
 
@@ -110,5 +111,25 @@ class RoomConverters {
     @TypeConverter
     fun fromRegistrationStatus(registrationStatus: BlockchainIdentity.RegistrationStatus): Int {
         return registrationStatus.ordinal
+    }
+
+    @TypeConverter
+    fun toCreditBalance(value: Long): Coin? {
+        return if (value >= 0) Coin.valueOf(value) else null
+    }
+
+    @TypeConverter
+    fun fromCreditBalance(creditBalance: Coin?): Long {
+        return creditBalance?.value ?: -1
+    }
+
+    @TypeConverter
+    fun toCurrentMainKeyType(value: Int): IdentityPublicKey.TYPES? {
+        return if (value >= 0) IdentityPublicKey.TYPES.values()[value] else null
+    }
+
+    @TypeConverter
+    fun fromCurrentMainKeyType(currentMainKeyType: IdentityPublicKey.TYPES?): Int {
+        return currentMainKeyType?.ordinal ?: -1
     }
 }

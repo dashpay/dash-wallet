@@ -34,9 +34,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.IdentityCreationState
+import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.dashpay.CreateIdentityService.Companion.createIntent
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NewAccountConfirmDialog
 import de.schildbach.wallet_test.R
@@ -95,24 +95,22 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
             val username = username.text.toString()
             if (walletApplication.wallet.isEncrypted) {
-                ContextCompat.startForegroundService(this, createIntent(this, username))
+                ContextCompat.startForegroundService(this, CreateIdentityService.createIntent(this, username))
 
                 // finish this activity on error or when registration is complete
-                AppDatabase.getAppDatabase().identityCreationStateDao().load().observe(this, Observer {
-                    if (it != null && it.error) {
+                AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(this, Observer {
+                    if (it != null && it.creationStateError) {
                         finish()
-                    } else when (it?.state) {
-                        IdentityCreationState.State.USERNAME_REGISTERED -> {
-                            completeUsername = it.username
-                            showCompleteState()
-                        }
+                    } else if (it?.creationState == BlockchainIdentityData.State.USERNAME_REGISTERED) {
+                        completeUsername = it.username ?: ""
+                        showCompleteState()
                     }
                 })
             } else {
                 // do we need this or should we show an error message
                 // The wallet should be encrypted and this code should
                 // never be executed
-                ContextCompat.startForegroundService(this, createIntent(this, username))
+                ContextCompat.startForegroundService(this, CreateIdentityService.createIntent(this, username))
             }
             showProcessingState()
         })

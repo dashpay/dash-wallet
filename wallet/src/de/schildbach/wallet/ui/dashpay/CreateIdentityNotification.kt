@@ -9,7 +9,7 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.Observer
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.IdentityCreationState
+import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet_test.R
 
 
@@ -70,27 +70,27 @@ class CreateIdentityNotification(val service: LifecycleService) {
     }
 
     private fun startObservingIdentityCreationState() = AppDatabase.getAppDatabase()
-            .identityCreationStateDao().load().observe(service, Observer {
-                if (it != null && it.error) {
+            .blockchainIdentityDataDao().load().observe(service, Observer {
+                if (it != null && it.creationStateError) {
                     displayError()
-                } else when (it?.state) {
-                    IdentityCreationState.State.UPGRADING_WALLET,
-                    IdentityCreationState.State.CREDIT_FUNDING_TX_CREATING,
-                    IdentityCreationState.State.CREDIT_FUNDING_TX_SENDING,
-                    IdentityCreationState.State.CREDIT_FUNDING_TX_SENT,
-                    IdentityCreationState.State.CREDIT_FUNDING_TX_CONFIRMED -> {
+                } else when (it?.creationState) {
+                    BlockchainIdentityData.State.UPGRADING_WALLET,
+                    BlockchainIdentityData.State.CREDIT_FUNDING_TX_CREATING,
+                    BlockchainIdentityData.State.CREDIT_FUNDING_TX_SENDING,
+                    BlockchainIdentityData.State.CREDIT_FUNDING_TX_SENT,
+                    BlockchainIdentityData.State.CREDIT_FUNDING_TX_CONFIRMED -> {
                         displayStep1()
                     }
-                    IdentityCreationState.State.IDENTITY_REGISTERING,
-                    IdentityCreationState.State.IDENTITY_REGISTERED -> {
+                    BlockchainIdentityData.State.IDENTITY_REGISTERING,
+                    BlockchainIdentityData.State.IDENTITY_REGISTERED -> {
                         displayStep2()
                     }
-                    IdentityCreationState.State.PREORDER_REGISTERING,
-                    IdentityCreationState.State.PREORDER_REGISTERED,
-                    IdentityCreationState.State.USERNAME_REGISTERING -> {
+                    BlockchainIdentityData.State.PREORDER_REGISTERING,
+                    BlockchainIdentityData.State.PREORDER_REGISTERED,
+                    BlockchainIdentityData.State.USERNAME_REGISTERING -> {
                         displayStep3()
                     }
-                    IdentityCreationState.State.USERNAME_REGISTERED -> {
+                    BlockchainIdentityData.State.USERNAME_REGISTERED -> {
                         displayDone()
                     }
                 }

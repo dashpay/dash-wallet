@@ -51,7 +51,7 @@ import javax.annotation.Nullable;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.AddressBookProvider;
-import de.schildbach.wallet.data.IdentityCreationState;
+import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.ui.dashpay.ProcessingIdentityViewHolder;
 import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet.util.WalletUtils;
@@ -85,7 +85,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private Map<Sha256Hash, TransactionCacheEntry> transactionCache = new HashMap<Sha256Hash, TransactionCacheEntry>();
 
     //Temporary field while IdentityCreationTx (or whatever we call it) is not integrated yet.
-    private IdentityCreationState identityCreationState;
+    private BlockchainIdentityData blockchainIdentityData;
 
     private static class TransactionCacheEntry {
         private final Coin value;
@@ -171,7 +171,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     public int getItemCount() {
         int count = transactions.size();
 
-        if (identityCreationState != null) {
+        if (blockchainIdentityData != null) {
             count += 1;
         }
 
@@ -183,9 +183,9 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         if (position == RecyclerView.NO_POSITION)
             return RecyclerView.NO_ID;
 
-        if (identityCreationState != null) {
+        if (blockchainIdentityData != null) {
             if (position == 0) {
-                return identityCreationState.getId();
+                return blockchainIdentityData.getId();
             } else {
                 return WalletUtils.longHash(transactions.get(position - 1).getHash());
             }
@@ -196,7 +196,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     @Override
     public int getItemViewType(final int position) {
-        if (identityCreationState != null && position == 0) {
+        if (blockchainIdentityData != null && position == 0) {
             return VIEW_TYPE_PROCESSING_IDENTITY;
         }
         return VIEW_TYPE_TRANSACTION;
@@ -222,7 +222,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             transactionHolder.itemView.setActivated(itemId == selectedItemId);
 
             Transaction tx;
-            if (identityCreationState != null) {
+            if (blockchainIdentityData != null) {
                 tx = transactions.get(position - 1);
             } else {
                 tx = transactions.get(position);
@@ -246,12 +246,12 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             });
         } else if (holder instanceof ProcessingIdentityViewHolder) {
             ProcessingIdentityViewHolder processingIdentityHolder = ((ProcessingIdentityViewHolder) holder);
-            processingIdentityHolder.bind(identityCreationState);
+            processingIdentityHolder.bind(blockchainIdentityData);
             processingIdentityHolder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(final View v) {
                     if (onClickListener != null) {
-                        onClickListener.onProcessingIdentityRowClicked(identityCreationState, identityCreationState.getError());
+                        onClickListener.onProcessingIdentityRowClicked(blockchainIdentityData, blockchainIdentityData.getCreationStateError());
                     }
                 }
             });
@@ -262,7 +262,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
         void onTransactionRowClicked(Transaction tx);
 
-        void onProcessingIdentityRowClicked(IdentityCreationState identityCreationState, boolean retry);
+        void onProcessingIdentityRowClicked(BlockchainIdentityData blockchainIdentityData, boolean retry);
     }
 
     private class TransactionViewHolder extends RecyclerView.ViewHolder {
@@ -418,12 +418,12 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     }
 
-    public IdentityCreationState getIdentityCreationState() {
-        return identityCreationState;
+    public BlockchainIdentityData getBlockchainIdentityData() {
+        return blockchainIdentityData;
     }
 
-    public void setIdentityCreationState(IdentityCreationState identityCreationState) {
-        this.identityCreationState = identityCreationState;
+    public void setBlockchainIdentityData(BlockchainIdentityData blockchainIdentityData) {
+        this.blockchainIdentityData = blockchainIdentityData;
         notifyDataSetChanged();
     }
 
