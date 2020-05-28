@@ -101,7 +101,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
                 AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(this, Observer {
                     if (it != null && it.creationStateError) {
                         finish()
-                    } else if (it?.creationState == BlockchainIdentityData.CreationState.DASHPAY_PROFILE_CREATED) {
+                    } else if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
                         completeUsername = it.username ?: ""
                         showCompleteState()
                     }

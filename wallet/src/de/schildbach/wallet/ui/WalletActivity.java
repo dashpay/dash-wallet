@@ -39,7 +39,6 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.LocaleList;
 import android.telephony.TelephonyManager;
-import android.util.Log;
 import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -64,12 +63,6 @@ import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.navigation.NavigationView;
 import com.google.common.collect.ImmutableList;
 
-import de.schildbach.wallet.data.BlockchainIdentityData;
-import de.schildbach.wallet.livedata.Resource;
-import de.schildbach.wallet.livedata.Status;
-import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
-import okhttp3.HttpUrl;
-
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.core.Transaction;
@@ -82,7 +75,6 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
-import org.dashevo.dashpay.BlockchainIdentity;
 
 import java.io.IOException;
 import java.util.Currency;
@@ -94,9 +86,14 @@ import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
+import de.schildbach.wallet.data.BlockchainIdentityBaseData;
+import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.livedata.Resource;
+import de.schildbach.wallet.livedata.Status;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
+import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
 import de.schildbach.wallet.ui.preference.PreferenceActivity;
 import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
@@ -107,6 +104,7 @@ import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
 import kotlin.Pair;
+import okhttp3.HttpUrl;
 
 /**
  * @author Andreas Schildbach
@@ -317,19 +315,18 @@ public final class WalletActivity extends AbstractBindServiceActivity
         dashPayViewModel.isPlatformAvailableLiveData().observe(this, new Observer<Resource<Boolean>>() {
             @Override
             public void onChanged(Resource<Boolean> status) {
-                if(status.getStatus() == Status.SUCCESS)
+                if (status.getStatus() == Status.SUCCESS)
                     isPlatformAvailable = status.getData();
                 else isPlatformAvailable = false;
                 showHideJoinDashPayAction();
             }
         });
 
-        AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(this, new Observer<BlockchainIdentityData>() {
+        AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(this, new Observer<BlockchainIdentityBaseData>() {
             @Override
-            public void onChanged(BlockchainIdentityData blockchainIdentityData) {
+            public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
                 if (blockchainIdentityData != null) {
-                    BlockchainIdentity.RegistrationStatus status = blockchainIdentityData.getRegistrationStatus();
-                    hasIdentity = (status == BlockchainIdentity.RegistrationStatus.REGISTERED);
+                    hasIdentity = (blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE);
                     showHideJoinDashPayAction();
                 }
             }

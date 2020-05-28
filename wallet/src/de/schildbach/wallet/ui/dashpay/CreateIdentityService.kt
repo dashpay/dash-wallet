@@ -1,5 +1,6 @@
 package de.schildbach.wallet.ui.dashpay
 
+import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.Handler
@@ -34,6 +35,7 @@ class CreateIdentityService : LifecycleService() {
         private val log = LoggerFactory.getLogger(CreateIdentityService::class.java)
 
         private const val ACTION_CREATE_IDENTITY = "org.dash.dashpay.action.CREATE_IDENTITY"
+        private const val ACTION_CREATE_IDENTITY_RETRY = "org.dash.dashpay.action.CREATE_IDENTITY_RETRY"
 
         private const val EXTRA_USERNAME = "org.dash.dashpay.extra.USERNAME"
 
@@ -42,6 +44,13 @@ class CreateIdentityService : LifecycleService() {
             return Intent(context, CreateIdentityService::class.java).apply {
                 action = ACTION_CREATE_IDENTITY
                 putExtra(EXTRA_USERNAME, username)
+            }
+        }
+
+        @JvmStatic
+        fun createRetryIntent(context: Context): Intent {
+            return Intent(context, CreateIdentityService::class.java).apply {
+                action = ACTION_CREATE_IDENTITY_RETRY
             }
         }
     }
@@ -53,10 +62,24 @@ class CreateIdentityService : LifecycleService() {
     private val createIdentityNotification by lazy { CreateIdentityNotification(this) }
 
     private val serviceJob = Job()
-    private val serviceScope = CoroutineScope(serviceJob + Dispatchers.Main)
+    private var serviceScope = CoroutineScope(serviceJob + Dispatchers.Main)
 
     lateinit var blockchainIdentity: BlockchainIdentity
     lateinit var blockchainIdentityData: BlockchainIdentityData
+
+    private var workInProgress = false
+
+    private val createIdentityexceptionHandler = CoroutineExceptionHandler { _, exception ->
+        GlobalScope.launch {
+            log.error("[${blockchainIdentityData.creationState}(error)]", exception)
+            platformRepo.updateCreationState(blockchainIdentityData, blockchainIdentityData.creationState, true)
+            if (this@CreateIdentityService::blockchainIdentity.isInitialized) {
+                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            }
+            stopSelf() //TODO replace with Supervision job or something else https://kotlinlang.org/docs/reference/coroutines/exception-handling.html#coroutineexceptionhandler
+        }
+        workInProgress = false
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -73,43 +96,61 @@ class CreateIdentityService : LifecycleService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
 
-        if (intent != null) {
+        if (intent == null) {
+            // the service has been restarted by the system
+            val blockchainIdentityData = runBlocking {
+                platformRepo.loadBlockchainIdentityBaseData()
+            }
+            if (blockchainIdentityData != null && blockchainIdentityData.creationState != CreationState.DONE) {
+                handleCreateIdentityAction(null)
+            }
+
+        } else if (!workInProgress) {
 
             when (intent.action) {
-                ACTION_CREATE_IDENTITY -> handleCreateIdentityAction(intent)
-            }
-        }
-
-        return START_NOT_STICKY
-    }
-
-    private fun handleCreateIdentityAction(intent: Intent) {
-        val username = intent.getStringExtra(EXTRA_USERNAME)
-
-        val exceptionHandler = CoroutineExceptionHandler { _, exception ->
-            GlobalScope.launch {
-                log.error("[${blockchainIdentityData.creationState}(error)]", exception)
-                platformRepo.updateCreationState(blockchainIdentityData, blockchainIdentityData.creationState, true)
-                if (this@CreateIdentityService::blockchainIdentity.isInitialized) {
-                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                ACTION_CREATE_IDENTITY -> {
+                    val username = intent.getStringExtra(EXTRA_USERNAME)
+                    handleCreateIdentityAction(username)
+                }
+                ACTION_CREATE_IDENTITY_RETRY -> {
+                    handleCreateIdentityAction(null)
                 }
             }
         }
 
-        serviceScope.launch(exceptionHandler) {
+        return Service.START_STICKY
+    }
+
+    private fun handleCreateIdentityAction(username: String?) {
+        workInProgress = true
+        serviceScope.launch(createIdentityexceptionHandler) {
             createIdentity(username)
+            workInProgress = false
             stopSelf()
         }
     }
 
-    private suspend fun createIdentity(username: String) {
+    private suspend fun createIdentity(username: String?) {
         log.info("username registration starting")
 
-        blockchainIdentityData = platformRepo.initBlockchainIdentityData(username)
+        val blockchainIdentityDataTmp = platformRepo.loadBlockchainIdentityData()
+        when {
+            (blockchainIdentityDataTmp != null) -> {
+                blockchainIdentityData = blockchainIdentityDataTmp
+            }
+            (username != null) -> {
+                blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, false, username)
+                platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+            }
+            else -> {
+                throw IllegalStateException()
+            }
+        }
 
         if (blockchainIdentityData.creationState != CreationState.NONE || blockchainIdentityData.creationStateError) {
             log.info("resuming identity creation process [${blockchainIdentityData.creationState}${if (blockchainIdentityData.creationStateError) "(error)" else ""}]")
         }
+        platformRepo.resetCreationStateError(blockchainIdentityData)
 
         val handler = Handler()
         val wallet = walletApplication.wallet
@@ -167,8 +208,8 @@ class CreateIdentityService : LifecycleService() {
             //
             // Step 4: Preorder the username
             //
-            if (blockchainIdentity.currentUsername != username) {
-                blockchainIdentity.addUsername(username)
+            if (!blockchainIdentity.getUsernames().contains(blockchainIdentityData.username!!)) {
+                blockchainIdentity.addUsername(blockchainIdentityData.username!!)
             }
             platformRepo.preorderNameAsync(blockchainIdentity, encryptionKey)
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
@@ -213,6 +254,9 @@ class CreateIdentityService : LifecycleService() {
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
         }
 
+        if (blockchainIdentityData.creationState < CreationState.DONE) {
+            platformRepo.updateCreationState(blockchainIdentityData, CreationState.DONE)
+        }
         // aaaand we're done :)
         log.info("username registration complete")
     }

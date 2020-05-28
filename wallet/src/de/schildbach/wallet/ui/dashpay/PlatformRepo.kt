@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui.dashpay
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.BlockchainIdentityBaseData
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
@@ -149,9 +150,6 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             Context.propagate(walletApplication.wallet.context)
             val cftx = blockchainIdentity.createCreditFundingTransaction(Coin.CENT, keyParameter)
             blockchainIdentity.initializeCreditFundingTransaction(cftx)
-            if (walletApplication.walletFileExists()) {
-                throw IOException("testing")
-            }
         }
     }
 
@@ -184,6 +182,8 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
+    var throwExceptionForTesting = true
+
     //
     // Step 4: Verify that the username was preordered
     //
@@ -203,6 +203,10 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     //
     suspend fun registerNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
+            if (throwExceptionForTesting) {
+                throwExceptionForTesting = false
+                throw IOException("testing")
+            }
             val names = blockchainIdentity.preorderedUsernames()
             blockchainIdentity.registerUsernameDomainsForUsernames(names, keyParameter)
         }
@@ -230,9 +234,20 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     }
 
 
-    suspend fun initBlockchainIdentityData(username: String): BlockchainIdentityData {
+    suspend fun loadBlockchainIdentityBaseData(): BlockchainIdentityBaseData? {
+        return blockchainIdentityDataDaoAsync.loadBase()
+    }
+
+    suspend fun loadBlockchainIdentityData(): BlockchainIdentityData? {
+        return blockchainIdentityDataDaoAsync.load()
+    }
+
+    suspend fun initBlockchainIdentityData(username: String?): BlockchainIdentityData {
         var blockchainIdentityData = blockchainIdentityDataDaoAsync.load()
         if (blockchainIdentityData == null) {
+            if (username == null) {
+                throw IllegalStateException("username == null")
+            }
             blockchainIdentityData = BlockchainIdentityData(BlockchainIdentityData.CreationState.NONE, false, username)
             blockchainIdentityDataDaoAsync.insert(blockchainIdentityData)
         }

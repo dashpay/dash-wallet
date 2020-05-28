@@ -72,6 +72,7 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainIdentityBaseData;
 import de.schildbach.wallet.data.BlockchainIdentityData;
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet_test.R;
 
@@ -270,11 +271,15 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
     @Override
     public void onProcessingIdentityRowClicked(final BlockchainIdentityBaseData blockchainIdentityData, boolean retry) {
-        if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DASHPAY_PROFILE_CREATED) {
-            Intent intent = new Intent(activity, CreateUsernameActivity.class);
-            intent.putExtra(CreateUsernameActivity.Companion.getCOMPLETE_USERNAME(),
-                    blockchainIdentityData.getUsername());
-            startActivity(intent);
+        if (retry) {
+            activity.startService(CreateIdentityService.createRetryIntent(activity));
+        } else {
+            if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DONE) {
+                Intent intent = new Intent(activity, CreateUsernameActivity.class);
+                intent.putExtra(CreateUsernameActivity.Companion.getCOMPLETE_USERNAME(),
+                        blockchainIdentityData.getUsername());
+                startActivity(intent);
+            }
         }
     }
 

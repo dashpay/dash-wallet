@@ -78,6 +78,7 @@ class CreateIdentityNotification(val service: LifecycleService) {
                 if (it != null && it.creationStateError) {
                     displayError()
                 } else when (it?.creationState) {
+                    BlockchainIdentityData.CreationState.NONE,
                     BlockchainIdentityData.CreationState.UPGRADING_WALLET,
                     BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_CREATING,
                     BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_SENDING,
@@ -93,10 +94,11 @@ class CreateIdentityNotification(val service: LifecycleService) {
                     BlockchainIdentityData.CreationState.PREORDER_REGISTERED,
                     BlockchainIdentityData.CreationState.USERNAME_REGISTERING,
                     BlockchainIdentityData.CreationState.USERNAME_REGISTERED,
-                    BlockchainIdentityData.CreationState.DASHPAY_PROFILE_CREATING -> {
+                    BlockchainIdentityData.CreationState.DASHPAY_PROFILE_CREATING,
+                    BlockchainIdentityData.CreationState.DASHPAY_PROFILE_CREATED -> {
                         displayStep3()
                     }
-                    BlockchainIdentityData.CreationState.DASHPAY_PROFILE_CREATED -> {
+                    BlockchainIdentityData.CreationState.DONE -> {
                         displayDone()
                     }
                 }

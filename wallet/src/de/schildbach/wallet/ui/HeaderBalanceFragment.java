@@ -151,7 +151,7 @@ public final class HeaderBalanceFragment extends Fragment {
             @Override
             public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
                 if (blockchainIdentityData != null
-                        && blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DASHPAY_PROFILE_CREATED) {
+                        && blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DONE) {
                     String username = blockchainIdentityData.getUsername();
                     StringBuilder lettersBuilder = new StringBuilder();
                     for (int i = 0; i < 2; i++) {
