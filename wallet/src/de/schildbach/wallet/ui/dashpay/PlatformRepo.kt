@@ -37,9 +37,14 @@ import org.dashevo.dpp.identity.Identity
 import org.dashevo.dpp.identity.IdentityPublicKey
 import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
+import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeoutException
 
 class PlatformRepo(val walletApplication: WalletApplication) {
+
+    companion object {
+        private val log = LoggerFactory.getLogger(PlatformRepo::class.java)
+    }
 
     private val platform: Platform = walletApplication.platform
 
@@ -286,6 +291,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     suspend fun updateCreationState(blockchainIdentityData: BlockchainIdentityData,
                                     state: BlockchainIdentityData.CreationState,
                                     error: Boolean = false) {
+        log.info("updating creation state {}({})", state, error)
         blockchainIdentityDataDaoAsync.updateCreationState(blockchainIdentityData.id, state, error)
         blockchainIdentityData.creationState = state
     }
