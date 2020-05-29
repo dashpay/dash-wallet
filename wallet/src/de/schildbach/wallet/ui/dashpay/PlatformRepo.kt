@@ -182,8 +182,6 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
-    var throwExceptionForTesting = true
-
     //
     // Step 4: Verify that the username was preordered
     //
@@ -203,10 +201,6 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     //
     suspend fun registerNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
-            if (throwExceptionForTesting) {
-                throwExceptionForTesting = false
-                throw IOException("testing")
-            }
             val names = blockchainIdentity.preorderedUsernames()
             blockchainIdentity.registerUsernameDomainsForUsernames(names, keyParameter)
         }
