@@ -19,10 +19,12 @@ package de.schildbach.wallet.ui
 
 import android.app.ActivityOptions
 import android.content.Intent
+import android.graphics.drawable.AnimationDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
+import android.text.Html
 import android.text.TextWatcher
 import android.util.Log
 import android.util.TypedValue
@@ -32,6 +34,7 @@ import android.view.Window
 import androidx.appcompat.widget.Toolbar
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.text.HtmlCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -42,6 +45,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_search_dashpay_profile_1.*
+import kotlinx.android.synthetic.main.search_user_empty_result.*
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dashevo.dpp.document.Document
 import org.dashevo.dpp.document.DocumentFactory
@@ -129,10 +133,37 @@ class SearchDashPayProfileActivity : InteractionAwareActivity(), TextWatcher, Da
     private fun initViewModel() {
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
         dashPayViewModel.getProfileSearchLiveData.observe(this, Observer {
+            stopLoading()
             if (it.data != null) {
                 adapter.profiles = it.data
+                if (it.data.isEmpty()) {
+                    showEmptyResults()
+                } else {
+                    search_user_empty_result.visibility = View.GONE
+                }
+            } else {
+                showEmptyResults()
             }
         })
+    }
+
+    private fun startLoading() {
+        icon.visibility = View.GONE
+        icon_searching.visibility = View.VISIBLE
+        (icon_searching.drawable as AnimationDrawable).start()
+    }
+
+    private fun stopLoading() {
+        icon.visibility = View.VISIBLE
+        icon_searching.visibility = View.GONE
+        (icon_searching.drawable as AnimationDrawable).stop()
+    }
+
+    private fun showEmptyResults() {
+        search_user_empty_result.visibility = View.VISIBLE
+        var emptyResultText = getString(R.string.search_user_no_results)
+        emptyResultText += " \"<b>${search.text.toString()}</b>\""
+        no_results_label.text = HtmlCompat.fromHtml(emptyResultText, HtmlCompat.FROM_HTML_MODE_COMPACT)
     }
 
     private fun searchDashPayProfile(query: String) {
@@ -140,15 +171,15 @@ class SearchDashPayProfileActivity : InteractionAwareActivity(), TextWatcher, Da
             handler.removeCallbacks(searchDashPayProfileRunnable)
         }
         searchDashPayProfileRunnable = Runnable {
+            startLoading()
             dashPayViewModel.searchDashPayProfile(query)
         }
-        handler.postDelayed(searchDashPayProfileRunnable, 333)
+        handler.postDelayed(searchDashPayProfileRunnable, 500)
     }
 
     override fun afterTextChanged(s: Editable?) {
         val query = s?.toString()
         if (query != null) {
-            Log.d("SearchDashPayProfile", query)
             searchDashPayProfile(query)
         }
     }

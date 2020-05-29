@@ -82,4 +82,18 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/search" />
 
+    <include layout="@layout/search_user_empty_result" />
+
+    <ImageView
+        android:id="@+id/icon_searching"
+        android:layout_width="27.35dp"
+        android:layout_height="24dp"
+        android:layout_marginStart="20dp"
+        android:elevation="10dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/search"
+        app:layout_constraintStart_toStartOf="@id/search"
+        app:layout_constraintTop_toTopOf="@id/search"
+        app:srcCompat="@drawable/ic_user_search_loading" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

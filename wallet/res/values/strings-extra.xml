@@ -373,6 +373,7 @@
     <string name="search_user_input_placeholder">enter the username to search here</string>
     <string name="add_new_contact">Add a New Contact</string>
     <string name="send_contact_request">Send Request</string>
+    <string name="search_user_no_results">There are no users that match</string>
 
     <string name="identity_complete_message">Your username %s has been successfully created on the Dash Network</string>
 </resources>
