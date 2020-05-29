@@ -35,10 +35,19 @@ class CreateIdentityService : LifecycleService() {
         private val log = LoggerFactory.getLogger(CreateIdentityService::class.java)
 
         private const val ACTION_CREATE_IDENTITY = "org.dash.dashpay.action.CREATE_IDENTITY"
-        private const val ACTION_CREATE_IDENTITY_RETRY = "org.dash.dashpay.action.CREATE_IDENTITY_RETRY"
+        private const val ACTION_RETRY_WITH_NEW_USERNAME = "org.dash.dashpay.action.ACTION_RETRY_WITH_NEW_USERNAME"
+        private const val ACTION_RETRY_AFTER_INTERRUPTION = "org.dash.dashpay.action.ACTION_RETRY_AFTER_INTERRUPTION"
 
         private const val EXTRA_USERNAME = "org.dash.dashpay.extra.USERNAME"
         private const val EXTRA_START_FOREGROUND_PROMISED = "org.dash.dashpay.extra.EXTRA_START_FOREGROUND_PROMISED"
+
+        @JvmStatic
+        fun createIntentForNewUsername(context: Context, username: String): Intent {
+            return Intent(context, CreateIdentityService::class.java).apply {
+                action = ACTION_RETRY_WITH_NEW_USERNAME
+                putExtra(EXTRA_USERNAME, username)
+            }
+        }
 
         @JvmStatic
         fun createIntent(context: Context, username: String): Intent {
@@ -49,9 +58,9 @@ class CreateIdentityService : LifecycleService() {
         }
 
         @JvmStatic
-        fun createRetryIntent(context: Context, startForegroundPromised: Boolean = false): Intent {
+        fun createIntentForRetry(context: Context, startForegroundPromised: Boolean = false): Intent {
             return Intent(context, CreateIdentityService::class.java).apply {
-                action = ACTION_CREATE_IDENTITY_RETRY
+                action = ACTION_RETRY_AFTER_INTERRUPTION
                 putExtra(EXTRA_START_FOREGROUND_PROMISED, startForegroundPromised)
             }
         }
@@ -110,11 +119,13 @@ class CreateIdentityService : LifecycleService() {
         } else if (!workInProgress) {
 
             when (intent.action) {
-                ACTION_CREATE_IDENTITY -> {
+                ACTION_CREATE_IDENTITY,
+                ACTION_RETRY_WITH_NEW_USERNAME -> {
                     val username = intent.getStringExtra(EXTRA_USERNAME)
-                    handleCreateIdentityAction(username)
+                    val retryWithNewUserName = intent.action == ACTION_RETRY_WITH_NEW_USERNAME
+                    handleCreateIdentityAction(username, retryWithNewUserName)
                 }
-                ACTION_CREATE_IDENTITY_RETRY -> {
+                ACTION_RETRY_AFTER_INTERRUPTION -> {
                     val startForegroundPromised = intent.getBooleanExtra(EXTRA_START_FOREGROUND_PROMISED, false)
                     if (startForegroundPromised) {
                         createIdentityNotification.startServiceForeground()
@@ -129,22 +140,25 @@ class CreateIdentityService : LifecycleService() {
         return Service.START_STICKY
     }
 
-    private fun handleCreateIdentityAction(username: String?) {
+    private fun handleCreateIdentityAction(username: String?, retryWithNewUserName: Boolean = false) {
         workInProgress = true
         serviceScope.launch(createIdentityexceptionHandler) {
-            createIdentity(username)
+            createIdentity(username, retryWithNewUserName)
             workInProgress = false
             stopSelf()
         }
     }
 
-    private suspend fun createIdentity(username: String?) {
+    private suspend fun createIdentity(username: String?, retryWithNewUserName: Boolean) {
         log.info("username registration starting")
 
         val blockchainIdentityDataTmp = platformRepo.loadBlockchainIdentityData()
         when {
-            (blockchainIdentityDataTmp != null) -> {
+            (blockchainIdentityDataTmp != null && !retryWithNewUserName) -> {
                 blockchainIdentityData = blockchainIdentityDataTmp
+                if (username != null && blockchainIdentityData.username != username && !retryWithNewUserName) {
+                    throw IllegalStateException()
+                }
             }
             (username != null) -> {
                 blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, username)
@@ -215,7 +229,6 @@ class CreateIdentityService : LifecycleService() {
             platformRepo.updateCreationState(blockchainIdentityData, CreationState.PREORDER_REGISTERING)
             //
             // Step 4: Preorder the username
-            //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             if (!blockchainIdentity.getUsernames().contains(blockchainIdentityData.username!!)) {
                 blockchainIdentity.addUsername(blockchainIdentityData.username!!)
             }

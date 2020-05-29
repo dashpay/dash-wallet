@@ -12,7 +12,6 @@ import androidx.lifecycle.Observer
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.BlockchainIdentityData
-import de.schildbach.wallet.ui.OnboardingActivity
 import de.schildbach.wallet_test.R
 
 
@@ -55,10 +54,10 @@ class CreateIdentityNotification(val service: LifecycleService) {
 //            val contentIntent = PendingIntent.getActivity(service, 0, startAppIntent, PendingIntent.FLAG_UPDATE_CURRENT)
 //            setContentIntent(contentIntent)
             val actionIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val serviceRetryIntent = CreateIdentityService.createRetryIntent(service, true)
+                val serviceRetryIntent = CreateIdentityService.createIntentForRetry(service, true)
                 PendingIntent.getForegroundService(service, 0, serviceRetryIntent, PendingIntent.FLAG_UPDATE_CURRENT)
             } else {
-                val serviceRetryIntent = CreateIdentityService.createRetryIntent(service)
+                val serviceRetryIntent = CreateIdentityService.createIntentForRetry(service)
                 PendingIntent.getService(service, 0, serviceRetryIntent, PendingIntent.FLAG_UPDATE_CURRENT)
             }
             addAction(R.drawable.ic_retry, service.getString(R.string.button_retry), actionIntent)

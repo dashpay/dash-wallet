@@ -23,6 +23,8 @@ import org.bitcoinj.core.Sha256Hash
 import org.dashevo.dashpay.BlockchainIdentity
 import org.dashevo.dpp.identity.IdentityPublicKey
 import java.util.*
+import kotlin.collections.ArrayList
+
 
 class RoomConverters {
 
@@ -119,5 +121,15 @@ class RoomConverters {
     @TypeConverter
     fun fromCurrentMainKeyType(currentMainKeyType: IdentityPublicKey.TYPES?): Int {
         return currentMainKeyType?.ordinal ?: -1
+    }
+
+    @TypeConverter
+    fun toArrayList(data: String?): ArrayList<String>? {
+        return data?.run { ArrayList(data.split(",")) }
+    }
+
+    @TypeConverter
+    fun fromArrayList(data: ArrayList<String>?): String? {
+        return data?.joinToString(",")
     }
 }

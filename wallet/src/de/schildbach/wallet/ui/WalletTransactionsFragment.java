@@ -273,15 +273,16 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     @Override
     public void onProcessingIdentityRowClicked(final BlockchainIdentityBaseData blockchainIdentityData, boolean retry) {
         if (retry) {
-            activity.startService(CreateIdentityService.createRetryIntent(activity, false));
+            activity.startService(CreateIdentityService.createIntentForRetry(activity, false));
         } else {
             if (blockchainIdentityData.getCreationStateErrorMessage() != null) {
-                Toast.makeText(getContext(), blockchainIdentityData.getCreationStateErrorMessage(), Toast.LENGTH_LONG).show();
+                if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.USERNAME_REGISTERING) {
+                    startActivity(CreateUsernameActivity.createIntentReuseTransaction(activity));
+                } else {
+                    Toast.makeText(getContext(), blockchainIdentityData.getCreationStateErrorMessage(), Toast.LENGTH_LONG).show();
+                }
             } else if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DONE) {
-                Intent intent = new Intent(activity, CreateUsernameActivity.class);
-                intent.putExtra(CreateUsernameActivity.Companion.getCOMPLETE_USERNAME(),
-                        blockchainIdentityData.getUsername());
-                startActivity(intent);
+                startActivity(CreateUsernameActivity.createIntent(activity, blockchainIdentityData.getUsername()));
             }
         }
     }

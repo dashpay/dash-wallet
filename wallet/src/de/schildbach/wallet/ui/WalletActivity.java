@@ -328,11 +328,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
             @Override
             public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
                 if (blockchainIdentityData != null) {
-                    hasIdentity = (blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE);
+                    hasIdentity = (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DONE);
                     showHideJoinDashPayAction();
                     if (retryCreationIfInProgress && blockchainIdentityData.getCreationInProgress()) {
                         retryCreationIfInProgress = false;
-                        startService(CreateIdentityService.createRetryIntent(WalletActivity.this, false));
+                        startService(CreateIdentityService.createIntentForRetry(WalletActivity.this, false));
                     }
                 }
             }

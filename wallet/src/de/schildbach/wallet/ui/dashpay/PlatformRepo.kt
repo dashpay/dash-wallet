@@ -41,7 +41,6 @@ import org.dashevo.dpp.identity.IdentityPublicKey
 import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
 import org.slf4j.LoggerFactory
-import java.io.IOException
 import java.util.concurrent.TimeoutException
 
 class PlatformRepo(val walletApplication: WalletApplication) {
