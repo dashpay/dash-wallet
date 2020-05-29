@@ -21,6 +21,6 @@ import org.bitcoinj.core.Sha256Hash
 
 data class BlockchainIdentityBaseData(val id: Int,
                                       val creationState: BlockchainIdentityData.CreationState,
-                                      val creationStateError: Boolean,
+                                      val creationStateErrorMessage: String?,
                                       val username: String?,
                                       val creditFundingTxId: Sha256Hash? = null)

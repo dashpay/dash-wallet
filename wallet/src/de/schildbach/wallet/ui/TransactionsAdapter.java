@@ -246,12 +246,19 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             });
         } else if (holder instanceof ProcessingIdentityViewHolder) {
             ProcessingIdentityViewHolder processingIdentityHolder = ((ProcessingIdentityViewHolder) holder);
-            processingIdentityHolder.bind(blockchainIdentityData);
+            processingIdentityHolder.bind(blockchainIdentityData, new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (onClickListener != null) {
+                        onClickListener.onProcessingIdentityRowClicked(blockchainIdentityData, true);
+                    }
+                }
+            });
             processingIdentityHolder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(final View v) {
                     if (onClickListener != null) {
-                        onClickListener.onProcessingIdentityRowClicked(blockchainIdentityData, blockchainIdentityData.getCreationStateError());
+                        onClickListener.onProcessingIdentityRowClicked(blockchainIdentityData, false);
                     }
                 }
             });

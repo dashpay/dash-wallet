@@ -75,7 +75,7 @@ class CreateIdentityNotification(val service: LifecycleService) {
 
     private fun startObservingIdentityCreationState() = AppDatabase.getAppDatabase()
             .blockchainIdentityDataDao().loadBase().observe(service, Observer {
-                if (it != null && it.creationStateError) {
+                if (it?.creationStateErrorMessage != null) {
                     displayError()
                 } else when (it?.creationState) {
                     BlockchainIdentityData.CreationState.NONE,

@@ -37,6 +37,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
@@ -274,7 +275,9 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         if (retry) {
             activity.startService(CreateIdentityService.createRetryIntent(activity));
         } else {
-            if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DONE) {
+            if (blockchainIdentityData.getCreationStateErrorMessage() != null) {
+                Toast.makeText(getContext(), blockchainIdentityData.getCreationStateErrorMessage(), Toast.LENGTH_LONG).show();
+            } else if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DONE) {
                 Intent intent = new Intent(activity, CreateUsernameActivity.class);
                 intent.putExtra(CreateUsernameActivity.Companion.getCOMPLETE_USERNAME(),
                         blockchainIdentityData.getUsername());

@@ -10,8 +10,8 @@ import kotlinx.android.synthetic.main.identity_creation_state.view.*
 
 class ProcessingIdentityViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
-    fun bind(blockchainIdentityData: BlockchainIdentityBaseData) {
-        if (blockchainIdentityData.creationStateError) {
+    fun bind(blockchainIdentityData: BlockchainIdentityBaseData, onRetryClickListener: View.OnClickListener) {
+        if (blockchainIdentityData.creationStateErrorMessage != null) {
             if (blockchainIdentityData.creationState == CreationState.USERNAME_REGISTERING) {
                 itemView.title.text = itemView.context.getString(R.string.processing_username_unavailable_title)
                 itemView.subtitle.visibility = View.VISIBLE
@@ -23,9 +23,7 @@ class ProcessingIdentityViewHolder(itemView: View) : RecyclerView.ViewHolder(ite
                 itemView.subtitle.visibility = View.GONE
                 itemView.icon.setImageResource(R.drawable.ic_error)
                 itemView.retry_icon.visibility = View.VISIBLE
-                itemView.retry_icon.setOnClickListener {
-                    itemView.performClick()
-                }
+                itemView.retry_icon.setOnClickListener(onRetryClickListener)
                 itemView.forward_arrow.visibility = View.GONE
             }
         } else {
@@ -64,7 +62,7 @@ class ProcessingIdentityViewHolder(itemView: View) : RecyclerView.ViewHolder(ite
             CreationState.USERNAME_REGISTERED -> {
                 itemView.progress.progress = 60
                 itemView.subtitle.setText(
-                        if (blockchainIdentityData.creationStateError) R.string.processing_username_unavailable_subtitle
+                        if (blockchainIdentityData.creationStateErrorMessage != null) R.string.processing_username_unavailable_subtitle
                         else R.string.processing_home_step_3
                 )
             }

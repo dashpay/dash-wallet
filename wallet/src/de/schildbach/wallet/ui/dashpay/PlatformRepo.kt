@@ -31,6 +31,8 @@ import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dashevo.dashpay.BlockchainIdentity
+import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_SALT
+import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_STATUS
 import org.dashevo.dashpay.ContactRequests
 import org.dashevo.dashpay.Profiles
 import org.dashevo.dpp.document.Document
@@ -39,7 +41,6 @@ import org.dashevo.dpp.identity.IdentityPublicKey
 import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
 import org.slf4j.LoggerFactory
-import java.io.IOException
 import java.util.concurrent.TimeoutException
 
 class PlatformRepo(val walletApplication: WalletApplication) {
@@ -242,31 +243,34 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             if (username == null) {
                 throw IllegalStateException("username == null")
             }
-            blockchainIdentityData = BlockchainIdentityData(BlockchainIdentityData.CreationState.NONE, false, username)
+            blockchainIdentityData = BlockchainIdentityData(BlockchainIdentityData.CreationState.NONE, null, username)
             blockchainIdentityDataDaoAsync.insert(blockchainIdentityData)
         }
         return blockchainIdentityData
     }
 
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity {
-        if (blockchainIdentityData.creditFundingTxId != null) {
-            val creditFundingTx = wallet.getTransaction(blockchainIdentityData.creditFundingTxId)
-            if (creditFundingTx != null) {
-                val creditFundingTransaction = wallet.getCreditFundingTransaction(creditFundingTx)
-                return BlockchainIdentity(Identity.IdentityType.USER, creditFundingTransaction, wallet).apply {
-                    currentUsername = blockchainIdentityData.username
-                    // should we load `preorderSalt` somehow?
-                    registrationStatus = blockchainIdentityData.registrationStatus!!
-                    // should we load `usernameStatus` somehow?
-                    // should we load `domain` somehow?
-                    creditBalance = blockchainIdentityData.creditBalance ?: Coin.ZERO
-                    activeKeyCount = blockchainIdentityData.activeKeyCount ?: 0
-                    totalKeyCount = blockchainIdentityData.totalKeyCount ?: 0
-                    keysCreated = blockchainIdentityData.keysCreated ?: 0
-                    currentMainKeyIndex = blockchainIdentityData.currentMainKeyIndex ?: 0
-                    currentMainKeyType = blockchainIdentityData.currentMainKeyType
-                            ?: IdentityPublicKey.TYPES.ECDSA_SECP256K1
+        val creditFundingTransaction = blockchainIdentityData.findCreditFundingTransaction(wallet)
+        if (creditFundingTransaction != null) {
+            return BlockchainIdentity(Identity.IdentityType.USER, creditFundingTransaction, wallet).apply {
+                currentUsername = blockchainIdentityData.username
+                registrationStatus = blockchainIdentityData.registrationStatus!!
+                val usernameStatus = HashMap<String, Any>()
+                if (blockchainIdentityData.preorderSalt != null) {
+                    usernameStatus[BLOCKCHAIN_USERNAME_SALT] = blockchainIdentityData.preorderSalt!!
                 }
+                if (blockchainIdentityData.usernameStatus != null) {
+                    usernameStatus[BLOCKCHAIN_USERNAME_STATUS] = blockchainIdentityData.usernameStatus!!
+                }
+                usernameStatuses[currentUsername!!] = usernameStatus
+
+                creditBalance = blockchainIdentityData.creditBalance ?: Coin.ZERO
+                activeKeyCount = blockchainIdentityData.activeKeyCount ?: 0
+                totalKeyCount = blockchainIdentityData.totalKeyCount ?: 0
+                keysCreated = blockchainIdentityData.keysCreated ?: 0
+                currentMainKeyIndex = blockchainIdentityData.currentMainKeyIndex ?: 0
+                currentMainKeyType = blockchainIdentityData.currentMainKeyType
+                        ?: IdentityPublicKey.TYPES.ECDSA_SECP256K1
             }
         }
         return BlockchainIdentity(Identity.IdentityType.USER, 0, wallet)
@@ -274,43 +278,42 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData, blockchainIdentity: BlockchainIdentity) {
         blockchainIdentityData.apply {
-            if (blockchainIdentity.creditFundingTransaction != null) {
-                creditFundingTxId = blockchainIdentity.creditFundingTransaction!!.txId
-            }
+            creditFundingTxId = blockchainIdentity.creditFundingTransaction?.txId
             registrationStatus = blockchainIdentity.registrationStatus
-            if (blockchainIdentity.currentUsername != null &&
-                    blockchainIdentity.registrationStatus == BlockchainIdentity.RegistrationStatus.REGISTERED) {
+            if (blockchainIdentity.currentUsername != null) {
                 username = blockchainIdentity.currentUsername
-                preorderSalt = blockchainIdentity.saltForUsername(blockchainIdentity.currentUsername!!, false)
-                usernameStatus = blockchainIdentity.statusOfUsername(blockchainIdentity.currentUsername!!)
-
-                // should we load `preorderSalt` somehow?
-                registrationStatus = blockchainIdentity.registrationStatus
-                // should we load `usernameStatus` somehow?
-                // should we load `domain` somehow?
-                creditBalance = blockchainIdentity.creditBalance
-                activeKeyCount = blockchainIdentity.activeKeyCount
-                totalKeyCount = blockchainIdentity.totalKeyCount
-                keysCreated = blockchainIdentity.keysCreated
-                currentMainKeyIndex = blockchainIdentity.currentMainKeyIndex
-                currentMainKeyType = blockchainIdentity.currentMainKeyType
+                if (blockchainIdentity.registrationStatus == BlockchainIdentity.RegistrationStatus.REGISTERED) {
+                    preorderSalt = blockchainIdentity.saltForUsername(blockchainIdentity.currentUsername!!, false)
+                    usernameStatus = blockchainIdentity.statusOfUsername(blockchainIdentity.currentUsername!!)
+                }
             }
+            creditBalance = blockchainIdentity.creditBalance
+            activeKeyCount = blockchainIdentity.activeKeyCount
+            totalKeyCount = blockchainIdentity.totalKeyCount
+            keysCreated = blockchainIdentity.keysCreated
+            currentMainKeyIndex = blockchainIdentity.currentMainKeyIndex
+            currentMainKeyType = blockchainIdentity.currentMainKeyType
         }
         updateBlockchainIdentityData(blockchainIdentityData)
     }
 
     suspend fun resetCreationStateError(blockchainIdentityData: BlockchainIdentityData) {
-        blockchainIdentityDataDaoAsync.updateCreationState(blockchainIdentityData.id, blockchainIdentityData.creationState, false)
-        blockchainIdentityData.creationStateError = false
+        blockchainIdentityDataDaoAsync.updateCreationState(blockchainIdentityData.id, blockchainIdentityData.creationState, null)
+        blockchainIdentityData.creationStateErrorMessage = null
     }
 
     suspend fun updateCreationState(blockchainIdentityData: BlockchainIdentityData,
                                     state: BlockchainIdentityData.CreationState,
-                                    error: Boolean = false) {
-        log.info("updating creation state {}({})", state, error)
-        blockchainIdentityDataDaoAsync.updateCreationState(blockchainIdentityData.id, state, error)
+                                    exception: Throwable? = null) {
+        val errorMessage = exception?.run { "${exception.javaClass.simpleName}: ${exception.message}" }
+        if (errorMessage != null) {
+            log.info("updating creation state {}", state)
+        } else {
+            log.info("updating creation state {} ({})", state, errorMessage)
+        }
+        blockchainIdentityDataDaoAsync.updateCreationState(blockchainIdentityData.id, state, errorMessage)
         blockchainIdentityData.creationState = state
-        blockchainIdentityData.creationStateError = error
+        blockchainIdentityData.creationStateErrorMessage = errorMessage
     }
 
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData) {

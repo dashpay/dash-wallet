@@ -99,7 +99,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
                 // finish this activity on error or when registration is complete
                 AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(this, Observer {
-                    if (it != null && it.creationStateError) {
+                    if (it?.creationStateErrorMessage != null) {
                         finish()
                     } else if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
                         completeUsername = it.username ?: ""

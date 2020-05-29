@@ -18,15 +18,18 @@
 package de.schildbach.wallet.data
 
 import androidx.room.Entity
+import androidx.room.Ignore
 import androidx.room.PrimaryKey
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.evolution.CreditFundingTransaction
+import org.bitcoinj.wallet.Wallet
 import org.dashevo.dashpay.BlockchainIdentity
 import org.dashevo.dpp.identity.IdentityPublicKey
 
 @Entity(tableName = "blockchain_identity")
 data class BlockchainIdentityData(var creationState: CreationState = CreationState.NONE,
-                                  var creationStateError: Boolean,
+                                  var creationStateErrorMessage: String?,
                                   var username: String?,
                                   var creditFundingTxId: Sha256Hash? = null,
                                   var preorderSalt: ByteArray? = null,
@@ -44,6 +47,21 @@ data class BlockchainIdentityData(var creationState: CreationState = CreationSta
         set(value) {
             field = 1
         }
+
+    @Ignore
+    private var creditFundingTransactionCache: CreditFundingTransaction? = null
+
+    fun findCreditFundingTransaction(wallet: Wallet?): CreditFundingTransaction? {
+        if (creditFundingTxId == null) {
+            return null
+        }
+        if (wallet != null) {
+            creditFundingTransactionCache = wallet.getTransaction(creditFundingTxId)?.run {
+                wallet.getCreditFundingTransaction(this)
+            }
+        }
+        return creditFundingTransactionCache
+    }
 
     enum class CreationState {
         NONE,   // this should always be the first value

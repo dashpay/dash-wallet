@@ -72,7 +72,7 @@ class CreateIdentityService : LifecycleService() {
     private val createIdentityexceptionHandler = CoroutineExceptionHandler { _, exception ->
         GlobalScope.launch {
             log.error("[${blockchainIdentityData.creationState}(error)]", exception)
-            platformRepo.updateCreationState(blockchainIdentityData, blockchainIdentityData.creationState, true)
+            platformRepo.updateCreationState(blockchainIdentityData, blockchainIdentityData.creationState, exception)
             if (this@CreateIdentityService::blockchainIdentity.isInitialized) {
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
             }
@@ -139,7 +139,7 @@ class CreateIdentityService : LifecycleService() {
                 blockchainIdentityData = blockchainIdentityDataTmp
             }
             (username != null) -> {
-                blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, false, username)
+                blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, username)
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
             }
             else -> {
@@ -147,8 +147,8 @@ class CreateIdentityService : LifecycleService() {
             }
         }
 
-        if (blockchainIdentityData.creationState != CreationState.NONE || blockchainIdentityData.creationStateError) {
-            log.info("resuming identity creation process [${blockchainIdentityData.creationState}${if (blockchainIdentityData.creationStateError) "(error)" else ""}]")
+        if (blockchainIdentityData.creationState != CreationState.NONE || blockchainIdentityData.creationStateErrorMessage != null) {
+            log.info("resuming identity creation process [${blockchainIdentityData.creationState}(${blockchainIdentityData.creationStateErrorMessage})]")
         }
         platformRepo.resetCreationStateError(blockchainIdentityData)
 
@@ -167,7 +167,7 @@ class CreateIdentityService : LifecycleService() {
         val blockchainIdentity = platformRepo.initBlockchainIdentity(blockchainIdentityData, wallet)
 
         if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_CREATING) {
-            platformRepo.updateCreationState(blockchainIdentityData, CreationState.CREDIT_FUNDING_TX_CREATING, true)
+            platformRepo.updateCreationState(blockchainIdentityData, CreationState.CREDIT_FUNDING_TX_CREATING)
             //
             // Step 2: Create and send the credit funding transaction
             //
@@ -207,7 +207,7 @@ class CreateIdentityService : LifecycleService() {
             platformRepo.updateCreationState(blockchainIdentityData, CreationState.PREORDER_REGISTERING)
             //
             // Step 4: Preorder the username
-            //
+            //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             if (!blockchainIdentity.getUsernames().contains(blockchainIdentityData.username!!)) {
                 blockchainIdentity.addUsername(blockchainIdentityData.username!!)
             }
