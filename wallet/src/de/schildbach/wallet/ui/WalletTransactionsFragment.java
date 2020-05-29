@@ -273,7 +273,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     @Override
     public void onProcessingIdentityRowClicked(final BlockchainIdentityBaseData blockchainIdentityData, boolean retry) {
         if (retry) {
-            activity.startService(CreateIdentityService.createRetryIntent(activity));
+            activity.startService(CreateIdentityService.createRetryIntent(activity, false));
         } else {
             if (blockchainIdentityData.getCreationStateErrorMessage() != null) {
                 Toast.makeText(getContext(), blockchainIdentityData.getCreationStateErrorMessage(), Toast.LENGTH_LONG).show();

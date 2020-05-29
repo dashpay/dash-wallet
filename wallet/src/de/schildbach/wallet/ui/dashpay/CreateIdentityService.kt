@@ -38,6 +38,7 @@ class CreateIdentityService : LifecycleService() {
         private const val ACTION_CREATE_IDENTITY_RETRY = "org.dash.dashpay.action.CREATE_IDENTITY_RETRY"
 
         private const val EXTRA_USERNAME = "org.dash.dashpay.extra.USERNAME"
+        private const val EXTRA_START_FOREGROUND_PROMISED = "org.dash.dashpay.extra.EXTRA_START_FOREGROUND_PROMISED"
 
         @JvmStatic
         fun createIntent(context: Context, username: String): Intent {
@@ -48,9 +49,10 @@ class CreateIdentityService : LifecycleService() {
         }
 
         @JvmStatic
-        fun createRetryIntent(context: Context): Intent {
+        fun createRetryIntent(context: Context, startForegroundPromised: Boolean = false): Intent {
             return Intent(context, CreateIdentityService::class.java).apply {
                 action = ACTION_CREATE_IDENTITY_RETRY
+                putExtra(EXTRA_START_FOREGROUND_PROMISED, startForegroundPromised)
             }
         }
     }
@@ -76,7 +78,7 @@ class CreateIdentityService : LifecycleService() {
             if (this@CreateIdentityService::blockchainIdentity.isInitialized) {
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
             }
-            stopSelf() //TODO replace with Supervision job or something else https://kotlinlang.org/docs/reference/coroutines/exception-handling.html#coroutineexceptionhandler
+            createIdentityNotification.displayErrorAndStopService()
         }
         workInProgress = false
     }
@@ -113,9 +115,15 @@ class CreateIdentityService : LifecycleService() {
                     handleCreateIdentityAction(username)
                 }
                 ACTION_CREATE_IDENTITY_RETRY -> {
+                    val startForegroundPromised = intent.getBooleanExtra(EXTRA_START_FOREGROUND_PROMISED, false)
+                    if (startForegroundPromised) {
+                        createIdentityNotification.startServiceForeground()
+                    }
                     handleCreateIdentityAction(null)
                 }
             }
+        } else {
+            log.info("work in progress, ignoring ${intent.action}")
         }
 
         return Service.START_STICKY

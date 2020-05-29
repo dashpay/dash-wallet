@@ -41,6 +41,7 @@ import org.dashevo.dpp.identity.IdentityPublicKey
 import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
 import org.slf4j.LoggerFactory
+import java.io.IOException
 import java.util.concurrent.TimeoutException
 
 class PlatformRepo(val walletApplication: WalletApplication) {
@@ -235,18 +236,6 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
     suspend fun loadBlockchainIdentityData(): BlockchainIdentityData? {
         return blockchainIdentityDataDaoAsync.load()
-    }
-
-    suspend fun initBlockchainIdentityData(username: String?): BlockchainIdentityData {
-        var blockchainIdentityData = blockchainIdentityDataDaoAsync.load()
-        if (blockchainIdentityData == null) {
-            if (username == null) {
-                throw IllegalStateException("username == null")
-            }
-            blockchainIdentityData = BlockchainIdentityData(BlockchainIdentityData.CreationState.NONE, null, username)
-            blockchainIdentityDataDaoAsync.insert(blockchainIdentityData)
-        }
-        return blockchainIdentityData
     }
 
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity {

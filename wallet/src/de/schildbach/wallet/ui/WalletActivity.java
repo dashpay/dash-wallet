@@ -93,6 +93,7 @@ import de.schildbach.wallet.livedata.Resource;
 import de.schildbach.wallet.livedata.Status;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
 import de.schildbach.wallet.ui.preference.PreferenceActivity;
 import de.schildbach.wallet.ui.scan.ScanActivity;
@@ -155,6 +156,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private DashPayViewModel dashPayViewModel;
     private boolean isPlatformAvailable = false;
     private boolean hasIdentity = false;
+    private boolean retryCreationIfInProgress = true;
 
 
     @Override
@@ -328,6 +330,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 if (blockchainIdentityData != null) {
                     hasIdentity = (blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE);
                     showHideJoinDashPayAction();
+                    if (retryCreationIfInProgress && blockchainIdentityData.getCreationInProgress()) {
+                        retryCreationIfInProgress = false;
+                        startService(CreateIdentityService.createRetryIntent(WalletActivity.this, false));
+                    }
                 }
             }
         });

@@ -2,7 +2,9 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.app.Notification
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.os.Build
 import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
@@ -10,6 +12,7 @@ import androidx.lifecycle.Observer
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.BlockchainIdentityData
+import de.schildbach.wallet.ui.OnboardingActivity
 import de.schildbach.wallet_test.R
 
 
@@ -18,6 +21,7 @@ class CreateIdentityNotification(val service: LifecycleService) {
     private val notificationManager by lazy { service.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager }
 
     fun startServiceForeground() {
+        notificationManager.cancel(Constants.NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY_ERROR)
         service.startForeground(
                 Constants.NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY,
                 initialNotification())
@@ -25,7 +29,7 @@ class CreateIdentityNotification(val service: LifecycleService) {
     }
 
     private fun initialNotification(): Notification {
-        return createNotification(R.string.processing_home_title, 0, -1)
+        return createNotification(R.string.processing_home_title, 0, -1).build()
     }
 
     private fun displayStep1() {
@@ -44,21 +48,36 @@ class CreateIdentityNotification(val service: LifecycleService) {
         updateNotification(R.string.processing_done_subtitle, 0, 0, 0)
     }
 
-    private fun displayError() {
-        updateNotification(R.string.processing_home_title, R.string.processing_error_title, 0, 0, true)
+    fun displayErrorAndStopService() {
+        val notification: Notification = createNotification(R.string.processing_home_title, R.string.processing_error_title, 0, 0).run {
+//            setAutoCancel(true)
+//            val startAppIntent = OnboardingActivity.createIntent(service)
+//            val contentIntent = PendingIntent.getActivity(service, 0, startAppIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+//            setContentIntent(contentIntent)
+            val actionIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val serviceRetryIntent = CreateIdentityService.createRetryIntent(service, true)
+                PendingIntent.getForegroundService(service, 0, serviceRetryIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+            } else {
+                val serviceRetryIntent = CreateIdentityService.createRetryIntent(service)
+                PendingIntent.getService(service, 0, serviceRetryIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+            }
+            addAction(R.drawable.ic_retry, service.getString(R.string.button_retry), actionIntent)
+            build()
+        }
+        notificationManager.notify(Constants.NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY_ERROR, notification)
+        service.stopForeground(true)
+        service.stopSelf()
     }
 
     private fun updateNotification(@StringRes titleResId: Int, @StringRes messageResId: Int,
-                                   progressMax: Int, progress: Int,
-                                   retryButton: Boolean = false) {
-        val notification: Notification = createNotification(titleResId, messageResId, progressMax, progress, retryButton)
+                                   progressMax: Int, progress: Int) {
+        val notification: Notification = createNotification(titleResId, messageResId, progressMax, progress).build()
         notificationManager.notify(Constants.NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY, notification)
     }
 
     private fun createNotification(@StringRes titleResId: Int, @StringRes messageResId: Int = 0,
-                                   progressMax: Int = 0, progress: Int = 0,
-                                   retryButton: Boolean = false): Notification {
-        return NotificationCompat.Builder(service, Constants.NOTIFICATION_CHANNEL_ID_DASHPAY).run {
+                                   progressMax: Int = 0, progress: Int = 0): NotificationCompat.Builder {
+        return NotificationCompat.Builder(service, Constants.NOTIFICATION_CHANNEL_ID_DASHPAY).apply {
             setSmallIcon(R.drawable.ic_dash_d_white_bottom)
             setContentTitle(service.getString(titleResId))
             if (messageResId != 0) {
@@ -69,15 +88,13 @@ class CreateIdentityNotification(val service: LifecycleService) {
                 (progressMax > 0) -> setProgress(progressMax, progress, false)
                 else -> setProgress(0, 0, false)
             }
-            build()
         }
     }
 
     private fun startObservingIdentityCreationState() = AppDatabase.getAppDatabase()
             .blockchainIdentityDataDao().loadBase().observe(service, Observer {
-                if (it?.creationStateErrorMessage != null) {
-                    displayError()
-                } else when (it?.creationState) {
+                notificationManager.cancel(Constants.NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY_ERROR)
+                when (it?.creationState) {
                     BlockchainIdentityData.CreationState.NONE,
                     BlockchainIdentityData.CreationState.UPGRADING_WALLET,
                     BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_CREATING,

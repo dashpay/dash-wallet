@@ -23,4 +23,10 @@ data class BlockchainIdentityBaseData(val id: Int,
                                       val creationState: BlockchainIdentityData.CreationState,
                                       val creationStateErrorMessage: String?,
                                       val username: String?,
-                                      val creditFundingTxId: Sha256Hash? = null)
+                                      val creditFundingTxId: Sha256Hash? = null) {
+
+    val creationInProgress: Boolean
+        get() = creationState > BlockchainIdentityData.CreationState.NONE &&
+                creationState < BlockchainIdentityData.CreationState.DONE &&
+                creationStateErrorMessage == null
+}

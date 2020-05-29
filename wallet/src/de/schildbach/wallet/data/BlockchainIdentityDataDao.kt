@@ -21,6 +21,9 @@ interface BlockchainIdentityDataDao {
     @Query("SELECT id, creationState, creationStateErrorMessage, username, creditFundingTxId FROM blockchain_identity LIMIT 1")
     fun loadBase(): LiveData<BlockchainIdentityBaseData?>
 
+    @Query("SELECT id, creationState, creationStateErrorMessage, username, creditFundingTxId FROM blockchain_identity LIMIT 1")
+    fun loadBaseDirect(): BlockchainIdentityBaseData?
+
     @Query("DELETE FROM blockchain_identity")
     fun clear()
 
