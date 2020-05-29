@@ -24,9 +24,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
-import android.text.Html
 import android.text.TextWatcher
-import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -46,12 +44,12 @@ import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_search_dashpay_profile_1.*
 import kotlinx.android.synthetic.main.search_user_empty_result.*
+import kotlinx.android.synthetic.main.search_user_loading.*
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dashevo.dpp.document.Document
-import org.dashevo.dpp.document.DocumentFactory
 
 
-class SearchDashPayProfileActivity : InteractionAwareActivity(), TextWatcher, DashPayProfilesAdapter.OnItemClickListener {
+class SearchUserActivity : InteractionAwareActivity(), TextWatcher, DashPayProfilesAdapter.OnItemClickListener {
 
     private lateinit var dashPayViewModel: DashPayViewModel
     private lateinit var walletApplication: WalletApplication
@@ -103,7 +101,7 @@ class SearchDashPayProfileActivity : InteractionAwareActivity(), TextWatcher, Da
                         val searchPadding = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
                                 60f, resources.displayMetrics).toInt()
                         search.setPadding(searchPadding, 0, 0, 0)
-                        search.typeface = ResourcesCompat.getFont(this@SearchDashPayProfileActivity,
+                        search.typeface = ResourcesCompat.getFont(this@SearchUserActivity,
                                 R.font.montserrat_semibold)
                     }
 
@@ -137,44 +135,53 @@ class SearchDashPayProfileActivity : InteractionAwareActivity(), TextWatcher, Da
             if (it.data != null) {
                 adapter.profiles = it.data
                 if (it.data.isEmpty()) {
-                    showEmptyResults()
+                    showEmptyResult()
                 } else {
-                    search_user_empty_result.visibility = View.GONE
+                    hideEmptyResult()
                 }
             } else {
-                showEmptyResults()
+                showEmptyResult()
             }
         })
     }
 
-    private fun startLoading() {
-        icon.visibility = View.GONE
-        icon_searching.visibility = View.VISIBLE
-        (icon_searching.drawable as AnimationDrawable).start()
+    private fun startLoading(query: String) {
+        hideEmptyResult()
+        search_loading.visibility = View.VISIBLE
+        val loadingText = getString(R.string.search_user_loading).replace("%", "\"<b>$query</b>\"")
+        search_loading_label.text = HtmlCompat.fromHtml(loadingText, HtmlCompat.FROM_HTML_MODE_COMPACT)
+        (search_loading_icon.drawable as AnimationDrawable).start()
     }
 
     private fun stopLoading() {
-        icon.visibility = View.VISIBLE
-        icon_searching.visibility = View.GONE
-        (icon_searching.drawable as AnimationDrawable).stop()
+        search_loading.visibility = View.GONE
+        (search_loading_icon.drawable as AnimationDrawable).start()
     }
 
-    private fun showEmptyResults() {
+    private fun showEmptyResult() {
         search_user_empty_result.visibility = View.VISIBLE
         var emptyResultText = getString(R.string.search_user_no_results)
         emptyResultText += " \"<b>${search.text.toString()}</b>\""
         no_results_label.text = HtmlCompat.fromHtml(emptyResultText, HtmlCompat.FROM_HTML_MODE_COMPACT)
     }
 
+    private fun hideEmptyResult() {
+        search_user_empty_result.visibility = View.GONE
+    }
+
     private fun searchDashPayProfile(query: String) {
+        adapter.profiles = listOf()
+        if (query.length < 3) {
+            return
+        }
+        startLoading(query)
         if (this::searchDashPayProfileRunnable.isInitialized) {
             handler.removeCallbacks(searchDashPayProfileRunnable)
         }
         searchDashPayProfileRunnable = Runnable {
-            startLoading()
             dashPayViewModel.searchDashPayProfile(query)
         }
-        handler.postDelayed(searchDashPayProfileRunnable, 500)
+        handler.postDelayed(searchDashPayProfileRunnable, 2000)
     }
 
     override fun afterTextChanged(s: Editable?) {
