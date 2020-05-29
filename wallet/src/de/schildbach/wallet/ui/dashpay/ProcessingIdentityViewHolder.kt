@@ -48,28 +48,25 @@ class ProcessingIdentityViewHolder(itemView: View) : RecyclerView.ViewHolder(ite
             CreationState.CREDIT_FUNDING_TX_SENT,
             CreationState.CREDIT_FUNDING_TX_CONFIRMED -> {
                 itemView.progress.visibility = View.VISIBLE
-                itemView.progress.progress = 20
+                itemView.progress.progress = 25
                 itemView.subtitle.setText(R.string.processing_home_step_1)
             }
             CreationState.IDENTITY_REGISTERING,
             CreationState.IDENTITY_REGISTERED -> {
-                itemView.progress.progress = 40
+                itemView.progress.progress = 50
                 itemView.subtitle.setText(R.string.processing_home_step_2)
             }
             CreationState.PREORDER_REGISTERING,
             CreationState.PREORDER_REGISTERED,
             CreationState.USERNAME_REGISTERING,
-            CreationState.USERNAME_REGISTERED -> {
-                itemView.progress.progress = 60
+            CreationState.USERNAME_REGISTERED,
+            CreationState.DASHPAY_PROFILE_CREATING,
+            CreationState.DASHPAY_PROFILE_CREATED -> {
+                itemView.progress.progress = 75
                 itemView.subtitle.setText(
                         if (blockchainIdentityData.creationStateErrorMessage != null) R.string.processing_username_unavailable_subtitle
                         else R.string.processing_home_step_3
                 )
-            }
-            CreationState.DASHPAY_PROFILE_CREATING,
-            CreationState.DASHPAY_PROFILE_CREATED -> {
-                itemView.progress.progress = 80
-                itemView.subtitle.setText(R.string.processing_home_step_4)
             }
             CreationState.DONE -> {
                 itemView.icon.visibility = View.GONE
