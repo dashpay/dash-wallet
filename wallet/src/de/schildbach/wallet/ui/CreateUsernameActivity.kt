@@ -17,6 +17,8 @@
 
 package de.schildbach.wallet.ui
 
+import android.content.Context
+import android.content.Intent
 import android.graphics.Typeface
 import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
@@ -27,16 +29,14 @@ import android.text.TextWatcher
 import android.text.style.StyleSpan
 import android.view.View
 import android.view.animation.AnimationUtils
-import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.IdentityCreationState
+import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.dashpay.CreateIdentityService.Companion.createIntent
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NewAccountConfirmDialog
 import de.schildbach.wallet_test.R
@@ -56,13 +56,34 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private lateinit var dashPayViewModel: DashPayViewModel
     private lateinit var walletApplication: WalletApplication
 
+    private var reuseTransaction: Boolean = false
+
     private var handler: Handler = Handler()
     private lateinit var checkUsernameNotExistRunnable: Runnable
 
     companion object {
-        @JvmStatic
-        public val COMPLETE_USERNAME = "complete_username"
         private val log = LoggerFactory.getLogger(CreateUsernameActivity::class.java)
+
+        private const val ACTION_CREATE_NEW = "action_create_new"
+        private const val ACTION_DISPLAY_COMPLETE = "action_display_complete"
+        private const val ACTION_REUSE_TRANSACTION = "action_reuse_transaction"
+
+        private const val EXTRA_USERNAME = "extra_username"
+
+        @JvmStatic
+        fun createIntent(context: Context, username: String? = null): Intent {
+            return Intent(context, CreateUsernameActivity::class.java).apply {
+                action = if (username == null) ACTION_CREATE_NEW else ACTION_DISPLAY_COMPLETE
+                putExtra(EXTRA_USERNAME, username)
+            }
+        }
+
+        @JvmStatic
+        fun createIntentReuseTransaction(context: Context): Intent {
+            return Intent(context, CreateUsernameActivity::class.java).apply {
+                action = ACTION_REUSE_TRANSACTION
+            }
+        }
     }
 
 
@@ -74,13 +95,23 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         choose_username_title.text = getText(R.string.choose_your_username)
         close_btn.setOnClickListener { finish() }
         username.addTextChangedListener(this)
-        register_btn.setOnClickListener { showConfirmationDialog() }
+        register_btn.setOnClickListener {
+            if (reuseTransaction) {
+                triggerIdentityCreation(true)
+            } else {
+                showConfirmationDialog()
+            }
+        }
         processing_identity_dismiss_btn.setOnClickListener { finish() }
 
-        val intentUsername = intent?.extras?.getString(COMPLETE_USERNAME)
-        if (intentUsername != null) {
-            this.completeUsername = intentUsername
-            showCompleteState()
+        when (intent?.action) {
+            ACTION_DISPLAY_COMPLETE -> {
+                this.completeUsername = intent!!.extras!!.getString(EXTRA_USERNAME)!!
+                showCompleteState()
+            }
+            ACTION_REUSE_TRANSACTION -> {
+                reuseTransaction = true
+            }
         }
 
         walletApplication = application as WalletApplication
@@ -89,32 +120,9 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     }
 
     private fun initViewModel() {
-        val confirmTransactionSharedViewModel = ViewModelProviders.of(this)
-                .get(SingleActionSharedViewModel::class.java)
+        val confirmTransactionSharedViewModel = ViewModelProvider(this).get(SingleActionSharedViewModel::class.java)
         confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
-
-            val username = username.text.toString()
-            if (walletApplication.wallet.isEncrypted) {
-                ContextCompat.startForegroundService(this, createIntent(this, username))
-
-                // finish this activity on error or when registration is complete
-                AppDatabase.getAppDatabase().identityCreationStateDao().load().observe(this, Observer {
-                    if (it != null && it.error) {
-                        finish()
-                    } else when (it?.state) {
-                        IdentityCreationState.State.USERNAME_REGISTERED -> {
-                            completeUsername = it.username
-                            showCompleteState()
-                        }
-                    }
-                })
-            } else {
-                // do we need this or should we show an error message
-                // The wallet should be encrypted and this code should
-                // never be executed
-                ContextCompat.startForegroundService(this, createIntent(this, username))
-            }
-            showProcessingState()
+            triggerIdentityCreation(false)
         })
 
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
@@ -144,7 +152,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
                         username_exists_req_label.typeface = mediumTypeFace
                         username_exists_req_label.setTextColor(ResourcesCompat.getColor(resources, R.color.dash_red, null))
                         username_exists_req_label.setText(R.string.identity_username_taken)
-                        register_btn.isEnabled = false
+                        register_btn.isEnabled = true   // TODO temporary change for testing NMA-309
                     } else {
                         username_exists_req_progress.visibility = View.INVISIBLE
                         username_exists_req_img.visibility = View.VISIBLE
@@ -159,6 +167,29 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         })
     }
 
+    private fun triggerIdentityCreation(reuseTransaction: Boolean) {
+        val username = username.text.toString()
+        if (reuseTransaction) {
+            finish()
+        } else {
+            AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(this, Observer {
+                if (it?.creationStateErrorMessage != null && !reuseTransaction) {
+                    finish()
+                } else if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
+                    completeUsername = it.username ?: ""
+                    showCompleteState()
+                }
+            })
+            showProcessingState()
+        }
+        Handler().postDelayed({     //delay to prevent UI lagging
+            if (reuseTransaction) {
+                startService(CreateIdentityService.createIntentForNewUsername(this, username))
+            } else {
+                startService(CreateIdentityService.createIntent(this, username))
+            }
+        }, 200)
+    }
 
     private fun showCompleteState() {
         registration_content.visibility = View.GONE

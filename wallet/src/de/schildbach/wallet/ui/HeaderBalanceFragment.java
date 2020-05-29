@@ -16,8 +16,6 @@
 
 package de.schildbach.wallet.ui;
 
-import android.animation.Animator;
-import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
@@ -27,7 +25,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
-import android.view.animation.LinearInterpolator;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -53,8 +50,9 @@ import javax.annotation.Nullable;
 import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.data.BlockchainIdentityBaseData;
+import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.data.BlockchainState;
-import de.schildbach.wallet.data.IdentityCreationState;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet_test.R;
@@ -149,12 +147,12 @@ public final class HeaderBalanceFragment extends Fragment {
             }
         });
 
-        AppDatabase.getAppDatabase().identityCreationStateDao().load().observe(getViewLifecycleOwner(), new Observer<IdentityCreationState>() {
+        AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(getViewLifecycleOwner(), new Observer<BlockchainIdentityBaseData>() {
             @Override
-            public void onChanged(IdentityCreationState identityCreationState) {
-                if (identityCreationState != null
-                        && identityCreationState.getState() == IdentityCreationState.State.USERNAME_REGISTERED) {
-                    String username = identityCreationState.getUsername();
+            public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
+                if (blockchainIdentityData != null
+                        && blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DONE) {
+                    String username = blockchainIdentityData.getUsername();
                     StringBuilder lettersBuilder = new StringBuilder();
                     for (int i = 0; i < 2; i++) {
                         try {

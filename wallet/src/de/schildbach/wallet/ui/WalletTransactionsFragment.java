@@ -37,6 +37,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
@@ -70,9 +71,9 @@ import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
-import de.schildbach.wallet.data.IdentityCreationState;
-import de.schildbach.wallet.data.IdentityCreationState;
-import de.schildbach.wallet.data.IdentityCreationState;
+import de.schildbach.wallet.data.BlockchainIdentityBaseData;
+import de.schildbach.wallet.data.BlockchainIdentityData;
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet_test.R;
 
@@ -206,11 +207,11 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
             }
         });
 
-        AppDatabase.getAppDatabase().identityCreationStateDao().load().observe(this, new Observer<IdentityCreationState>() {
+        AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(getViewLifecycleOwner(), new Observer<BlockchainIdentityBaseData>() {
             @Override
-            public void onChanged(IdentityCreationState identityCreationState) {
-                if (identityCreationState != null) {
-                    WalletTransactionsFragment.this.adapter.setIdentityCreationState(identityCreationState);
+            public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
+                if (blockchainIdentityData != null) {
+                    WalletTransactionsFragment.this.adapter.setBlockchainIdentityData(blockchainIdentityData);
                 }
             }
         });
@@ -270,12 +271,19 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     }
 
     @Override
-    public void onProcessingIdentityRowClicked(final IdentityCreationState identityCreationState, boolean retry) {
-        if (identityCreationState.getState() == IdentityCreationState.State.USERNAME_REGISTERED) {
-            Intent intent = new Intent(activity, CreateUsernameActivity.class);
-            intent.putExtra(CreateUsernameActivity.Companion.getCOMPLETE_USERNAME(),
-                    identityCreationState.getUsername());
-            startActivity(intent);
+    public void onProcessingIdentityRowClicked(final BlockchainIdentityBaseData blockchainIdentityData, boolean retry) {
+        if (retry) {
+            activity.startService(CreateIdentityService.createIntentForRetry(activity, false));
+        } else {
+            if (blockchainIdentityData.getCreationStateErrorMessage() != null) {
+                if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.USERNAME_REGISTERING) {
+                    startActivity(CreateUsernameActivity.createIntentReuseTransaction(activity));
+                } else {
+                    Toast.makeText(getContext(), blockchainIdentityData.getCreationStateErrorMessage(), Toast.LENGTH_LONG).show();
+                }
+            } else if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DONE) {
+                startActivity(CreateUsernameActivity.createIntent(activity, blockchainIdentityData.getUsername()));
+            }
         }
     }
 

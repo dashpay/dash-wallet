@@ -18,12 +18,13 @@
 package de.schildbach.wallet.data
 
 import androidx.room.TypeConverter
-import de.schildbach.wallet.Constants
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.core.TransactionOutPoint
-import org.bitcoinj.evolution.CreditFundingTransaction
 import org.dashevo.dashpay.BlockchainIdentity
+import org.dashevo.dpp.identity.IdentityPublicKey
 import java.util.*
+import kotlin.collections.ArrayList
+
 
 class RoomConverters {
 
@@ -63,12 +64,12 @@ class RoomConverters {
     }
 
     @TypeConverter
-    fun toIdentityCreationState(value: Int): IdentityCreationState.State {
-        return IdentityCreationState.State.values()[value]
+    fun toIdentityCreationState(value: Int): BlockchainIdentityData.CreationState {
+        return BlockchainIdentityData.CreationState.values()[value]
     }
 
     @TypeConverter
-    fun fromIdentityCreationState(identityCreationState: IdentityCreationState.State): Int {
+    fun fromIdentityCreationState(identityCreationState: BlockchainIdentityData.CreationState): Int {
         return identityCreationState.ordinal
     }
 
@@ -83,16 +84,6 @@ class RoomConverters {
     }
 
     @TypeConverter
-    fun fromTransactionOutPoint(outpoint: TransactionOutPoint?): ByteArray? {
-        return outpoint?.bitcoinSerialize()
-    }
-
-    @TypeConverter
-    fun toTransactionOutPoint(bytes: ByteArray?): TransactionOutPoint? {
-        return bytes?.let { TransactionOutPoint(Constants.NETWORK_PARAMETERS, it, 0) }
-    }
-
-    @TypeConverter
     fun toUsernameStatus(value: Int): BlockchainIdentity.UsernameStatus {
         return BlockchainIdentity.UsernameStatus.values()[value]
     }
@@ -103,12 +94,42 @@ class RoomConverters {
     }
 
     @TypeConverter
-    fun toRegistrationStatus(value: Int): BlockchainIdentity.RegistrationStatus {
-        return BlockchainIdentity.RegistrationStatus.values()[value]
+    fun toRegistrationStatus(value: Int): BlockchainIdentity.RegistrationStatus? {
+        return if (value > -1) BlockchainIdentity.RegistrationStatus.values()[value] else null
     }
 
     @TypeConverter
-    fun fromRegistrationStatus(registrationStatus: BlockchainIdentity.RegistrationStatus): Int {
-        return registrationStatus.ordinal
+    fun fromRegistrationStatus(registrationStatus: BlockchainIdentity.RegistrationStatus?): Int {
+        return registrationStatus?.ordinal ?: -1
+    }
+
+    @TypeConverter
+    fun toCreditBalance(value: Long): Coin? {
+        return if (value >= 0) Coin.valueOf(value) else null
+    }
+
+    @TypeConverter
+    fun fromCreditBalance(creditBalance: Coin?): Long {
+        return creditBalance?.value ?: -1
+    }
+
+    @TypeConverter
+    fun toCurrentMainKeyType(value: Int): IdentityPublicKey.TYPES? {
+        return if (value > -1) IdentityPublicKey.TYPES.values()[value] else null
+    }
+
+    @TypeConverter
+    fun fromCurrentMainKeyType(currentMainKeyType: IdentityPublicKey.TYPES?): Int {
+        return currentMainKeyType?.ordinal ?: -1
+    }
+
+    @TypeConverter
+    fun toArrayList(data: String?): ArrayList<String>? {
+        return data?.run { ArrayList(data.split(",")) }
+    }
+
+    @TypeConverter
+    fun fromArrayList(data: ArrayList<String>?): String? {
+        return data?.joinToString(",")
     }
 }

@@ -15,8 +15,11 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.BlockchainIdentityBaseData
+import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
 import kotlinx.coroutines.Dispatchers
@@ -25,18 +28,30 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.wallet.DeterministicSeed
+import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dashevo.dashpay.BlockchainIdentity
+import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_SALT
+import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_STATUS
 import org.dashevo.dashpay.ContactRequests
 import org.dashevo.dashpay.Profiles
 import org.dashevo.dpp.document.Document
+import org.dashevo.dpp.identity.Identity
+import org.dashevo.dpp.identity.IdentityPublicKey
 import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
+import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeoutException
 
 class PlatformRepo(val walletApplication: WalletApplication) {
 
+    companion object {
+        private val log = LoggerFactory.getLogger(PlatformRepo::class.java)
+    }
+
     private val platform: Platform = walletApplication.platform
+
+    private val blockchainIdentityDataDaoAsync = AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync()
 
     fun isPlatformAvailable(): Resource<Boolean> {
         // this checks only one random node, but should check several.
@@ -213,4 +228,83 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
+
+    suspend fun loadBlockchainIdentityBaseData(): BlockchainIdentityBaseData? {
+        return blockchainIdentityDataDaoAsync.loadBase()
+    }
+
+    suspend fun loadBlockchainIdentityData(): BlockchainIdentityData? {
+        return blockchainIdentityDataDaoAsync.load()
+    }
+
+    fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity {
+        val creditFundingTransaction = blockchainIdentityData.findCreditFundingTransaction(wallet)
+        if (creditFundingTransaction != null) {
+            return BlockchainIdentity(Identity.IdentityType.USER, creditFundingTransaction, wallet).apply {
+                currentUsername = blockchainIdentityData.username
+                registrationStatus = blockchainIdentityData.registrationStatus!!
+                val usernameStatus = HashMap<String, Any>()
+                if (blockchainIdentityData.preorderSalt != null) {
+                    usernameStatus[BLOCKCHAIN_USERNAME_SALT] = blockchainIdentityData.preorderSalt!!
+                }
+                if (blockchainIdentityData.usernameStatus != null) {
+                    usernameStatus[BLOCKCHAIN_USERNAME_STATUS] = blockchainIdentityData.usernameStatus!!
+                }
+                usernameStatuses[currentUsername!!] = usernameStatus
+
+                creditBalance = blockchainIdentityData.creditBalance ?: Coin.ZERO
+                activeKeyCount = blockchainIdentityData.activeKeyCount ?: 0
+                totalKeyCount = blockchainIdentityData.totalKeyCount ?: 0
+                keysCreated = blockchainIdentityData.keysCreated ?: 0
+                currentMainKeyIndex = blockchainIdentityData.currentMainKeyIndex ?: 0
+                currentMainKeyType = blockchainIdentityData.currentMainKeyType
+                        ?: IdentityPublicKey.TYPES.ECDSA_SECP256K1
+            }
+        }
+        return BlockchainIdentity(Identity.IdentityType.USER, 0, wallet)
+    }
+
+    suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData, blockchainIdentity: BlockchainIdentity) {
+        blockchainIdentityData.apply {
+            creditFundingTxId = blockchainIdentity.creditFundingTransaction?.txId
+            registrationStatus = blockchainIdentity.registrationStatus
+            if (blockchainIdentity.currentUsername != null) {
+                username = blockchainIdentity.currentUsername
+                if (blockchainIdentity.registrationStatus == BlockchainIdentity.RegistrationStatus.REGISTERED) {
+                    preorderSalt = blockchainIdentity.saltForUsername(blockchainIdentity.currentUsername!!, false)
+                    usernameStatus = blockchainIdentity.statusOfUsername(blockchainIdentity.currentUsername!!)
+                }
+            }
+            creditBalance = blockchainIdentity.creditBalance
+            activeKeyCount = blockchainIdentity.activeKeyCount
+            totalKeyCount = blockchainIdentity.totalKeyCount
+            keysCreated = blockchainIdentity.keysCreated
+            currentMainKeyIndex = blockchainIdentity.currentMainKeyIndex
+            currentMainKeyType = blockchainIdentity.currentMainKeyType
+        }
+        updateBlockchainIdentityData(blockchainIdentityData)
+    }
+
+    suspend fun resetCreationStateError(blockchainIdentityData: BlockchainIdentityData) {
+        blockchainIdentityDataDaoAsync.updateCreationState(blockchainIdentityData.id, blockchainIdentityData.creationState, null)
+        blockchainIdentityData.creationStateErrorMessage = null
+    }
+
+    suspend fun updateCreationState(blockchainIdentityData: BlockchainIdentityData,
+                                    state: BlockchainIdentityData.CreationState,
+                                    exception: Throwable? = null) {
+        val errorMessage = exception?.run { "${exception.javaClass.simpleName}: ${exception.message}" }
+        if (errorMessage != null) {
+            log.info("updating creation state {}", state)
+        } else {
+            log.info("updating creation state {} ({})", state, errorMessage)
+        }
+        blockchainIdentityDataDaoAsync.updateCreationState(blockchainIdentityData.id, state, errorMessage)
+        blockchainIdentityData.creationState = state
+        blockchainIdentityData.creationStateErrorMessage = errorMessage
+    }
+
+    suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData) {
+        blockchainIdentityDataDaoAsync.insert(blockchainIdentityData)
+    }
 }
