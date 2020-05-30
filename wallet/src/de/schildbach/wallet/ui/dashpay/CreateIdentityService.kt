@@ -172,6 +172,13 @@ class CreateIdentityService : LifecycleService() {
 
         val blockchainIdentityDataTmp = platformRepo.loadBlockchainIdentityData()
         when {
+            blockchainIdentityDataTmp!!.restoring -> {
+                val cftx = blockchainIdentityDataTmp.findCreditFundingTransaction(walletApplication.wallet)
+                        ?: throw IllegalStateException()
+
+                restoreIdentity(cftx!!.creditBurnIdentityIdentifier.toStringBase58())
+                return
+            }
             (blockchainIdentityDataTmp != null && !retryWithNewUserName) -> {
                 blockchainIdentityData = blockchainIdentityDataTmp
                 if (username != null && blockchainIdentityData.username != username && !retryWithNewUserName) {
@@ -179,7 +186,7 @@ class CreateIdentityService : LifecycleService() {
                 }
             }
             (username != null) -> {
-                blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, username)
+                blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, username, false)
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
             }
             else -> {
@@ -313,7 +320,7 @@ class CreateIdentityService : LifecycleService() {
         log.info("Restoring identity and username")
 
         // use an "empty" state for each
-        blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, null)
+        blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, null, true)
 
         val cftxs = walletApplication.wallet.creditFundingTransactions
 
