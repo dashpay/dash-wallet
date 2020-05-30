@@ -4,6 +4,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.Handler
+import android.os.PowerManager
 import androidx.lifecycle.LifecycleService
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -25,6 +26,7 @@ import org.dashevo.dashpay.BlockchainIdentity
 import org.dashevo.dpp.identity.Identity
 import org.slf4j.LoggerFactory
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -84,6 +86,12 @@ class CreateIdentityService : LifecycleService() {
     private val platformRepo by lazy { PlatformRepo(walletApplication) }
     private lateinit var securityGuard: SecurityGuard
 
+    private val wakeLock by lazy {
+        val lockName = "$packageName create identity"
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, lockName)
+    }
+
     private val createIdentityNotification by lazy { CreateIdentityNotification(this) }
 
     private val serviceJob = Job()
@@ -95,11 +103,14 @@ class CreateIdentityService : LifecycleService() {
     private var workInProgress = false
 
     private val createIdentityexceptionHandler = CoroutineExceptionHandler { _, exception ->
+        log.error(exception.message, exception)
         GlobalScope.launch {
-            log.error("[${blockchainIdentityData.creationState}(error)]", exception)
-            platformRepo.updateCreationState(blockchainIdentityData, blockchainIdentityData.creationState, exception)
-            if (this@CreateIdentityService::blockchainIdentity.isInitialized) {
-                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            if (blockchainIdentityData!= null) {
+                log.error("[${blockchainIdentityData.creationState}(error)]", exception)
+                platformRepo.updateCreationState(blockchainIdentityData, blockchainIdentityData.creationState, exception)
+                if (this@CreateIdentityService::blockchainIdentity.isInitialized) {
+                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                }
             }
             createIdentityNotification.displayErrorAndStopService()
         }
@@ -116,6 +127,7 @@ class CreateIdentityService : LifecycleService() {
             return
         }
         createIdentityNotification.startServiceForeground()
+        wakeLock.acquire(TimeUnit.MINUTES.toMillis(10));
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -172,11 +184,11 @@ class CreateIdentityService : LifecycleService() {
 
         val blockchainIdentityDataTmp = platformRepo.loadBlockchainIdentityData()
         when {
-            blockchainIdentityDataTmp!!.restoring -> {
+            (blockchainIdentityDataTmp != null && blockchainIdentityDataTmp.restoring) -> {
                 val cftx = blockchainIdentityDataTmp.findCreditFundingTransaction(walletApplication.wallet)
                         ?: throw IllegalStateException()
 
-                restoreIdentity(cftx!!.creditBurnIdentityIdentifier.toStringBase58())
+                restoreIdentity(cftx.creditBurnIdentityIdentifier.toStringBase58())
                 return
             }
             (blockchainIdentityDataTmp != null && !retryWithNewUserName) -> {
@@ -485,5 +497,10 @@ class CreateIdentityService : LifecycleService() {
     override fun onDestroy() {
         super.onDestroy()
         serviceJob.cancel()
+
+        if (wakeLock.isHeld) {
+            log.debug("wakelock still held, releasing")
+            wakeLock.release()
+        }
     }
 }
