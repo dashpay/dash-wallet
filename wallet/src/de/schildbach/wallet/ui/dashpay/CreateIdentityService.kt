@@ -297,6 +297,8 @@ class CreateIdentityService : LifecycleService() {
 
         if (blockchainIdentityData.creationState <= CreationState.DASHPAY_PROFILE_CREATED) {
             platformRepo.updateCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATED)
+            // Step 6: verify that the profile was created
+            platformRepo.verifyProfileCreatedAsync(blockchainIdentity)
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
         }
 
@@ -363,6 +365,19 @@ class CreateIdentityService : LifecycleService() {
         platformRepo.recoverUsernamesAsync(blockchainIdentity)
         platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         platformRepo.updateCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERED)
+
+        //
+        // Step 6: Find the profile
+        //
+        platformRepo.updateCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATING)
+        platformRepo.recoverDashPayProfile(blockchainIdentity)
+        // blockchainIdentity hasn't changed
+        platformRepo.updateCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATING)
+
+
+        // We are finished recovering
+        platformRepo.updateCreationState(blockchainIdentityData, CreationState.DONE)
+
     }
 
     /**

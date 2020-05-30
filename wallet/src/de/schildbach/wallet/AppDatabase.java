@@ -12,6 +12,7 @@ import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.data.DashPayProfile;
 import de.schildbach.wallet.data.DashPayProfileDao;
+import de.schildbach.wallet.data.DashPayProfileDaoAsync;
 import de.schildbach.wallet.data.RoomConverters;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
@@ -31,6 +32,8 @@ public abstract class AppDatabase extends RoomDatabase {
     public abstract BlockchainIdentityDataDaoAsync blockchainIdentityDataDaoAsync();
 
     public abstract DashPayProfileDao dashPayProfileDao();
+
+    public abstract DashPayProfileDaoAsync dashPayProfileDaoAsync();
 
     public static AppDatabase getAppDatabase() {
         if (instance == null) {
