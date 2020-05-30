@@ -83,7 +83,6 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
-import org.dashevo.dashpay.BlockchainIdentity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -112,8 +111,6 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.AddressBookProvider;
-import de.schildbach.wallet.data.BlockchainIdentityData;
-import de.schildbach.wallet.data.BlockchainIdentityDataDao;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.ui.OnboardingActivity;
@@ -214,10 +211,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             }
 
             transactionsReceived.incrementAndGet();
-            if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
-                CreditFundingTransaction cftx = (CreditFundingTransaction)tx;
-                ContextCompat.startForegroundService(getApplicationContext(), CreateIdentityService.createIntentForRestore(getApplicationContext(), cftx.getCreditBurnIdentityIdentifier().toStringBase58()));
-            }
 
             final Address address = WalletUtils.getWalletAddressOfReceived(tx, wallet);
             final Coin amount = tx.getValue(wallet);
@@ -794,24 +787,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     }
 
     void initViewModel() {
-
         AppDatabase.getAppDatabase().blockchainStateDao().load().observe(this, new Observer<BlockchainState>() {
             @Override
             public void onChanged(BlockchainState blockchainState) {
                 handleBlockchainStateNotification(blockchainState);
-            }
-        });
-
-        Wallet wallet = ((WalletApplication) getApplication()).getWallet();
-        //wallet.addCreditFundingEventListener(Threading.SAME_THREAD, creditFundingTransactionEventListener);
-
-        AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(this, new Observer<BlockchainIdentityData>() {
-            @Override
-            public void onChanged(BlockchainIdentityData blockchainIdentityData) {
-                if (blockchainIdentityData != null && blockchainIdentityData.getRegistrationStatus() == BlockchainIdentity.RegistrationStatus.REGISTERED) {
-                    //Wallet wallet = ((WalletApplication) getApplication()).getWallet();
-                   // wallet.removeCreditFundingEventListener(creditFundingTransactionEventListener);
-                }
             }
         });
     }
@@ -952,7 +931,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 application.finalizeWipe();
             }
             //Clear the blockchain identity
-            Executors.newSingleThreadExecutor().execute(new Runnable() {
+            executor.execute(new Runnable() {
                 @Override
                 public void run() {
                     //not sure when this will execute
@@ -1113,16 +1092,4 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private void updateAppWidget() {
         WalletBalanceWidgetProvider.updateWidgets(BlockchainServiceImpl.this, application.getWallet());
     }
-
-    private boolean isServiceStarted = false;
-    CreditFundingTransactionEventListener creditFundingTransactionEventListener = new CreditFundingTransactionEventListener() {
-        @Override
-        public void onTransactionReceived(CreditFundingTransaction tx, StoredBlock block, AbstractBlockChain.NewBlockType blockType) {
-
-            if (!isServiceStarted) {
-                isServiceStarted = true; // not sure why this is called 2-3 times
-                ContextCompat.startForegroundService(getApplicationContext(), CreateIdentityService.createIntentForRestore(getApplicationContext(), tx.getCreditBurnIdentityIdentifier().toStringBase58()));
-            }
-        }
-    };
 }
