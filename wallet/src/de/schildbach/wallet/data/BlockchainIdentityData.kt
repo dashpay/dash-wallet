@@ -31,6 +31,7 @@ import org.dashevo.dpp.identity.IdentityPublicKey
 data class BlockchainIdentityData(var creationState: CreationState = CreationState.NONE,
                                   var creationStateErrorMessage: String?,
                                   var username: String?,
+                                  var restoring: Boolean,
                                   var creditFundingTxId: Sha256Hash? = null,
                                   var preorderSalt: ByteArray? = null,
                                   var registrationStatus: BlockchainIdentity.RegistrationStatus? = null,
