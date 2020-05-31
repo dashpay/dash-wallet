@@ -343,6 +343,11 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         dashPayProfileDaoAsync.insert(dashPayProfile)
     }
 
+    suspend fun removeDatabases() {
+        blockchainIdentityDataDaoAsync.clear()
+        blockchainIdentityDataDaoAsync.clear()
+    }
+
     //
     // Step 5: Find the usernames in the case of recovery
     //
