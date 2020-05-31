@@ -197,7 +197,7 @@ public final class HeaderBalanceFragment extends Fragment {
         ImageView dashpayUserAvatar = view.findViewById(R.id.dashpay_user_avatar);
         if (letters == null) {
             // there is no username, so hide the image
-            dashpayUserAvatar.setVisibility(View.VISIBLE);
+            dashpayUserAvatar.setVisibility(View.GONE);
             return;
         }
         dashpayUserAvatar.setVisibility(View.VISIBLE);
