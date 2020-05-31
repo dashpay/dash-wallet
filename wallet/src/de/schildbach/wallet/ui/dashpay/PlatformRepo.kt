@@ -325,7 +325,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                                     state: BlockchainIdentityData.CreationState,
                                     exception: Throwable? = null) {
         val errorMessage = exception?.run { "${exception.javaClass.simpleName}: ${exception.message}" }
-        if (errorMessage != null) {
+        if (errorMessage == null) {
             log.info("updating creation state {}", state)
         } else {
             log.info("updating creation state {} ({})", state, errorMessage)
