@@ -79,6 +79,7 @@ data class BlockchainIdentityData(var creationState: CreationState = CreationSta
         USERNAME_REGISTERED,
         DASHPAY_PROFILE_CREATING,
         DASHPAY_PROFILE_CREATED,
-        DONE    // this should always be the last value
+        DONE,
+        DONE_AND_DISMISS // this should always be the last value
     }
 }

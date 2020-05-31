@@ -151,7 +151,7 @@ public final class HeaderBalanceFragment extends Fragment {
             @Override
             public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
                 if (blockchainIdentityData != null
-                        && blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DONE) {
+                        && blockchainIdentityData.getCreationState().ordinal() >= BlockchainIdentityData.CreationState.DONE.ordinal()) {
                     String firstLetter = blockchainIdentityData.getUsername().substring(0, 1);
                     setDefaultUserAvatar(firstLetter.toUpperCase());
                 } else {

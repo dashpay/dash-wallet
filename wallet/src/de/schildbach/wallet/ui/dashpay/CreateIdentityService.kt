@@ -390,6 +390,9 @@ class CreateIdentityService : LifecycleService() {
         // We are finished recovering
         platformRepo.updateCreationState(blockchainIdentityData, CreationState.DONE)
 
+        // Complete the entire process
+        platformRepo.updateCreationState(blockchainIdentityData, CreationState.DONE_AND_DISMISS)
+
     }
 
     /**

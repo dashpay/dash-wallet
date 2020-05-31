@@ -348,6 +348,14 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         blockchainIdentityDataDaoAsync.clear()
     }
 
+    suspend fun doneAndDismiss() {
+        val blockchainIdentityData = blockchainIdentityDataDaoAsync.load()
+        if (blockchainIdentityData != null && blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.DONE) {
+            blockchainIdentityData.creationState = BlockchainIdentityData.CreationState.DONE_AND_DISMISS
+            blockchainIdentityDataDaoAsync.insert(blockchainIdentityData)
+        }
+    }
+
     //
     // Step 5: Find the usernames in the case of recovery
     //
