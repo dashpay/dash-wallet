@@ -41,24 +41,31 @@ import android.widget.Toast;
 
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.content.ContextCompat;
+import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.multidex.MultiDexApplication;
 
 import com.google.common.base.Stopwatch;
 import com.jakewharton.processphoenix.ProcessPhoenix;
 
+import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.crypto.LinuxSecureRandom;
 import org.bitcoinj.crypto.MnemonicCode;
+import org.bitcoinj.evolution.CreditFundingTransaction;
+import org.bitcoinj.evolution.listeners.CreditFundingTransactionEventListener;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
+import org.dashevo.dashpay.BlockchainIdentity;
 import org.dashevo.platform.Platform;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ResetAutoLogoutTimerHandler;
@@ -73,7 +80,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -764,7 +770,14 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         if (walletBackupFile.exists()) {
             walletBackupFile.delete();
         }
-        ProcessPhoenix.triggerRebirth(this);
+        Executors.newSingleThreadExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                AppDatabase.getAppDatabase().blockchainIdentityDataDao().clear();
+                AppDatabase.getAppDatabase().dashPayProfileDao().clear();
+                ProcessPhoenix.triggerRebirth(WalletApplication.this);
+            }
+        });
     }
 
     public static WalletApplication getInstance() {

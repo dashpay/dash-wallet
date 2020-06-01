@@ -35,12 +35,14 @@ class CreateIdentityNotification(val service: LifecycleService) {
         updateNotification(R.string.processing_home_title, R.string.processing_home_step_1, 4, 1)
     }
 
-    private fun displayStep2() {
-        updateNotification(R.string.processing_home_title, R.string.processing_home_step_2, 4, 2)
+    private fun displayStep2(restoring: Boolean) {
+        val message = if (restoring) R.string.processing_home_step_2_restoring else R.string.processing_home_step_2
+        updateNotification(R.string.processing_home_title, message, 4, 2)
     }
 
-    private fun displayStep3() {
-        updateNotification(R.string.processing_home_title, R.string.processing_home_step_3, 4, 3)
+    private fun displayStep3(restoring: Boolean) {
+        val message = if (restoring) R.string.processing_home_step_3_restoring else R.string.processing_home_step_3
+        updateNotification(R.string.processing_home_title, message, 4, 3)
     }
 
     private fun displayDone() {
@@ -104,7 +106,7 @@ class CreateIdentityNotification(val service: LifecycleService) {
                     }
                     BlockchainIdentityData.CreationState.IDENTITY_REGISTERING,
                     BlockchainIdentityData.CreationState.IDENTITY_REGISTERED -> {
-                        displayStep2()
+                        displayStep2(it.restoring)
                     }
                     BlockchainIdentityData.CreationState.PREORDER_REGISTERING,
                     BlockchainIdentityData.CreationState.PREORDER_REGISTERED,
@@ -112,7 +114,7 @@ class CreateIdentityNotification(val service: LifecycleService) {
                     BlockchainIdentityData.CreationState.USERNAME_REGISTERED,
                     BlockchainIdentityData.CreationState.DASHPAY_PROFILE_CREATING,
                     BlockchainIdentityData.CreationState.DASHPAY_PROFILE_CREATED -> {
-                        displayStep3()
+                        displayStep3(it.restoring)
                     }
                     BlockchainIdentityData.CreationState.DONE -> {
                         displayDone()

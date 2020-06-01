@@ -154,7 +154,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private DashPayViewModel dashPayViewModel;
     private boolean isPlatformAvailable = false;
-    private boolean hasIdentity = false;
+    private boolean noIdentityCreatedOrInProgress = true;
     private boolean retryCreationIfInProgress = true;
 
 
@@ -327,7 +327,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             @Override
             public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
                 if (blockchainIdentityData != null) {
-                    hasIdentity = (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DONE);
+                    noIdentityCreatedOrInProgress = (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.NONE);
                     showHideJoinDashPayAction();
                     if (retryCreationIfInProgress && blockchainIdentityData.getCreationInProgress()) {
                         retryCreationIfInProgress = false;
@@ -345,7 +345,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void showHideJoinDashPayAction() {
-        if (!hasIdentity && syncComplete && isPlatformAvailable) {
+        if (noIdentityCreatedOrInProgress && syncComplete && isPlatformAvailable) {
             final Coin walletBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED);
             boolean canAffordIt = walletBalance.isGreaterThan(Constants.DASH_PAY_FEE)
                     || walletBalance.equals(Constants.DASH_PAY_FEE);

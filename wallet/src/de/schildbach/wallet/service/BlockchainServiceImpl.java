@@ -41,12 +41,14 @@ import android.os.PowerManager.WakeLock;
 import android.text.format.DateUtils;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 import androidx.lifecycle.LifecycleService;
 import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.common.base.Stopwatch;
 
+import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.BlockChain;
@@ -64,8 +66,10 @@ import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
+import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
+import org.bitcoinj.evolution.listeners.CreditFundingTransactionEventListener;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.net.discovery.MasternodePeerDiscovery;
 import org.bitcoinj.net.discovery.MultiplexingDiscovery;
@@ -111,6 +115,7 @@ import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.ui.OnboardingActivity;
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
 import de.schildbach.wallet.util.BlockchainStateUtils;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
@@ -170,6 +175,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private Executor executor = Executors.newSingleThreadExecutor();
     private int syncPercentage = 0; // 0 to 100%
+    private boolean needsToWatchForIdentity = false;
 
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
@@ -205,7 +211,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
             transactionsReceived.incrementAndGet();
 
-
             final Address address = WalletUtils.getWalletAddressOfReceived(tx, wallet);
             final Coin amount = tx.getValue(wallet);
             final ConfidenceType confidenceType = tx.getConfidence().getConfidenceType();
@@ -228,6 +233,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         public void onCoinsSent(final Wallet wallet, final Transaction tx, final Coin prevBalance,
                 final Coin newBalance) {
             transactionsReceived.incrementAndGet();
+            if(CreditFundingTransaction.isCreditFundingTransaction(tx) && tx.getPurpose() == Transaction.Purpose.UNKNOWN) {
+                CreditFundingTransaction cftx = wallet.getCreditFundingTransaction(tx);
+                ContextCompat.startForegroundService(getApplicationContext(), CreateIdentityService.createIntentForRestore(getApplicationContext(), cftx.getCreditBurnIdentityIdentifier().toStringBase58()));
+            }
             updateAppWidget();
         }
     };
@@ -776,6 +785,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         peerDiscoveryList.add(dnsDiscovery);
         updateAppWidget();
+
+        initViewModel();
+    }
+
+    void initViewModel() {
         AppDatabase.getAppDatabase().blockchainStateDao().load().observe(this, new Observer<BlockchainState>() {
             @Override
             public void onChanged(BlockchainState blockchainState) {
@@ -911,6 +925,15 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 log.info("removing wallet file and app data");
                 application.finalizeWipe();
             }
+            //Clear the blockchain identity
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    // This code is not executed during a wipe, only a blockchain reset
+                    AppDatabase.getAppDatabase().blockchainIdentityDataDao().clear();
+                    AppDatabase.getAppDatabase().dashPayProfileDao().clear();
+                }
+            });
         }
 
         if(bootStrapStream != null) {
