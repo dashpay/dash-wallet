@@ -934,7 +934,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    //not sure when this will execute
+                    // This code is not executed during a wipe, only a blockchain reset
                     AppDatabase.getAppDatabase().blockchainIdentityDataDao().clear();
                     AppDatabase.getAppDatabase().dashPayProfileDao().clear();
                 }
