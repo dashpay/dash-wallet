@@ -1,6 +1,4 @@
 /*
- * Copyright 2011-2015 the original author or authors.
-/*
  * Copyright 2020 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,8 +16,6 @@
 
 package de.schildbach.wallet.ui.send;
 
-import android.app.Activity;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
@@ -31,11 +27,9 @@ import android.view.MenuItem;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
+import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.dash.wallet.common.ui.DialogBuilder;
-
-import java.util.Arrays;
-import java.util.List;
 
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
@@ -44,41 +38,15 @@ import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
 
-/**
- * @author Andreas Schildbach
- */
-public final class SendCoinsActivity extends AbstractBindServiceActivity {
+public class SendCoinsActivity extends AbstractBindServiceActivity {
+
+    public static final String ANYPAY_SCHEME = "pay";
 
     public static final String INTENT_EXTRA_PAYMENT_INTENT = "payment_intent";
-    public static final String INTENT_EXTRA_USER_AUTHORIZED = "user_authorized";
-
-    public static final String ACTION_SEND_FROM_WALLET_URI = "de.schildbach.wallet.action.SEND_FROM_WALLET_URI";
-
-    public static void start(final Context context, final PaymentIntent paymentIntent) {
-        start(context, paymentIntent, false);
-    }
-
-    public static void start(final Context context, final PaymentIntent paymentIntent, boolean userAuthorized) {
-        final Intent intent = new Intent(context, SendCoinsActivity.class);
-        intent.putExtra(INTENT_EXTRA_PAYMENT_INTENT, paymentIntent);
-        intent.putExtra(INTENT_EXTRA_USER_AUTHORIZED, userAuthorized);
-        context.startActivity(intent);
-    }
-
-    public static void sendFromWalletUri(final Activity callingActivity, int requestCode,
-                                         final PaymentIntent paymentIntent) {
-        final Intent intent = new Intent(callingActivity, SendCoinsActivity.class);
-        intent.setAction(ACTION_SEND_FROM_WALLET_URI);
-        intent.putExtra(INTENT_EXTRA_USER_AUTHORIZED, false);
-        intent.putExtra(INTENT_EXTRA_PAYMENT_INTENT, paymentIntent);
-        callingActivity.startActivityForResult(intent, requestCode);
-    }
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        List<String> supportedSchemes = Arrays.asList("dash", "pay", "bitcoinsv");
 
         SendCoinsActivityViewModel viewModel = ViewModelProviders.of(this).get(SendCoinsActivityViewModel.class);
         viewModel.getBasePaymentIntent().observe(this, new Observer<Resource<PaymentIntent>>() {
@@ -116,18 +84,18 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity {
             final String scheme = intentUri != null ? intentUri.getScheme() : null;
             final String mimeType = intent.getType();
 
-            if ((Intent.ACTION_VIEW.equals(action) || NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)) && intentUri != null && supportedSchemes.contains(scheme)) {
-
+            if ((Intent.ACTION_VIEW.equals(action) || NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action))
+                    && intentUri != null && (CoinDefinition.coinURIScheme.equals(scheme) || ANYPAY_SCHEME.equals(scheme))) {
                 viewModel.initStateFromDashUri(intentUri);
 
-            } else if ((NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)) && PaymentProtocol.MIMETYPE_PAYMENTREQUEST.equals(mimeType)) {
+            } else if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action) && PaymentProtocol.MIMETYPE_PAYMENTREQUEST.equals(mimeType)) {
 
                 final NdefMessage ndefMessage = (NdefMessage) intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)[0];
                 final byte[] ndefMessagePayload = Nfc.extractMimePayload(PaymentProtocol.MIMETYPE_PAYMENTREQUEST, ndefMessage);
 
                 viewModel.initStateFromPaymentRequest(mimeType, ndefMessagePayload);
 
-            } else if ((Intent.ACTION_VIEW.equals(action)) && PaymentProtocol.MIMETYPE_PAYMENTREQUEST.equals(mimeType)) {
+            } else if (Intent.ACTION_VIEW.equals(action) && PaymentProtocol.MIMETYPE_PAYMENTREQUEST.equals(mimeType)) {
 
                 final byte[] paymentRequest = BitcoinIntegration.paymentRequestFromIntent(intent);
                 if (intentUri != null) {
@@ -185,22 +153,14 @@ public final class SendCoinsActivity extends AbstractBindServiceActivity {
     };
 
     public boolean isUserAuthorized() {
-        String action = getIntent().getAction();
-        if (Intent.ACTION_VIEW.equals(action)) {
-            return false;
-        }
-        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)) {
-            return false;
-        }
-        return getIntent().getBooleanExtra(INTENT_EXTRA_USER_AUTHORIZED, false);
+        return false;
     }
 
     @Override
     public boolean onOptionsItemSelected(final MenuItem item) {
-        switch (item.getItemId()) {
-            case android.R.id.home:
-                finish();
-                return true;
+        if (item.getItemId() == android.R.id.home) {
+            finish();
+            return true;
         }
 
         return super.onOptionsItemSelected(item);

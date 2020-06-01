@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="loading">تحمبل في طور الإنجاز...</string>
-    <string name="loading_error">حدث خطأ. المرجو المحاولة لاحقا.</string>
+    <string name="loading">جار التحميل…</string>
+    <string name="loading_error">حدث خطأ. الرجاء معاودة المحاولة في وقت لاحق.</string>
     <string name="dash_available">%1$s متاح</string>
 
 </resources>

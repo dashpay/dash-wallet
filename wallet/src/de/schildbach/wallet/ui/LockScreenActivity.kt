@@ -16,6 +16,7 @@
 
 package de.schildbach.wallet.ui
 
+import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -40,6 +41,7 @@ import kotlinx.android.synthetic.main.activity_lock_screen.*
 import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.ui.DialogBuilder
 import java.util.concurrent.TimeUnit
+
 
 class LockScreenActivity : SendCoinsQrActivity() {
 
@@ -125,7 +127,17 @@ class LockScreenActivity : SendCoinsQrActivity() {
     override fun onStart() {
         super.onStart()
         setupInitState()
-        walletApplication.startBlockchainService(true)
+        startBlockchainService()
+    }
+
+    private fun startBlockchainService() {
+        // hack for Android P bug https://issuetracker.google.com/issues/113122354
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val runningAppProcesses: List<ActivityManager.RunningAppProcessInfo> = activityManager.runningAppProcesses
+        val importance: Int = runningAppProcesses[0].importance
+        if (importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND){
+            walletApplication.startBlockchainService(false)
+        }
     }
 
     private fun initView() {

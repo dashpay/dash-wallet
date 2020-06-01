@@ -107,19 +107,22 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:padding="16dp">
 
         <TextView
             style="@style/MontserratRegular.MG.14"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="4dp"
-            android:text="@string/dialog_confirm_verified_by"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="4dp"
+            android:drawableStart="@drawable/ic_secured_by"
+            android:drawablePadding="4dp"
+            android:text="@string/dialog_confirm_secured_by"
             android:textColor="@color/dash_gray" />
 
         <TextView
-            android:id="@+id/payee_verified_by"
+            android:id="@+id/payee_secured_by"
             style="@style/MontserratRegular.MG.14"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
@@ -132,7 +135,7 @@
 
     </LinearLayout>
 
-    <LinearLayout
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginLeft="16dp"
@@ -142,35 +145,16 @@
         android:paddingBottom="12dp">
 
         <TextView
+            android:id="@+id/memo"
             style="@style/MontserratRegular"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/dialog_confirm_pay_to"
-            android:textColor="@color/dash_gray"
-            android:textSize="16sp" />
-
-        <FrameLayout
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:layout_weight="1">
+            android:maxLines="2"
+            android:textColor="@color/dash_black"
+            android:textSize="16sp"
+            tools:text="Pay 0.11 USD to MasksDelivery | Anypay.com" />
 
-            <TextView
-                android:id="@+id/payee_name"
-                style="@style/MontserratRegular"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:layout_gravity="end"
-                android:ellipsize="marquee"
-                android:marqueeRepeatLimit="1"
-                android:singleLine="true"
-                android:text="dash.org"
-                android:textColor="@color/dash_black"
-                android:textSize="16sp" />
-
-        </FrameLayout>
-
-    </LinearLayout>
+    </FrameLayout>
 
     <LinearLayout
         android:layout_width="match_parent"

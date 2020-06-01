@@ -1,83 +1,343 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">لم تتم معاملة هذا الإرسال الفوري بعد .</string>
-	<string name="transaction_row_message_sent_to_single_peer">لقد تم إرسال هذه الدفعة.</string>
-	<string name="wallet_options_disconnect">إنقطع الاتصال</string>
 
-	<string name="network_monitor_masternodes_title">ماسترنود</string>
-	<string name="export_keys_dialog_title_to_seed">إظهار جملة الإسترجاع الخاصة بك </string>
-	<string name="import_keys_dialog_title_from_seed">إسترجاع من جملة الإسرجاع الخاصة بك </string>
-	<string name="backup_to_seed_wallet_dialog_message">هذه هي جملة الإسترجاع الخاصة بك . يرجى الكتابة عليه.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">لا تترك أي أحد ان يرى جملة الإسترجاع الخاصة بك أو سوف يتمكنون من إستعمال داش الذي تملك.</string>
-	<string name="backup_to_seed_wallet_dialog_enter_pin_message">محفظتك محمي من قبل بين الإنفاق. أدخل الرقم السري الشخصي واضغط على عرض لعرض عبارة الاسترداد.</string>
-    <string name="import_keys_from_seed_dialog_message">أدخل جملة الإسترجاع الخاصة بك هنا.</string>
-	<string name="import_export_keys_dialog_password_phrase">جملة الإسترجاع تذهب هنا.</string>
-	<string name="preferences_report_issue_summary">جمع معلومات حول مشكلتك وإرسالها إلى البريد الإلكتروني للمطورين.</string>
-	<string name="navigation_configuration">الإعدادات</string>
+    <string name="onboarding_create_wallet">انشاء محفظة جديدة</string>
+    <string name="onboarding_recover_wallet">إسترجاع المحفظة من جملة الإستراد</string>
+    <string name="onboarding_restore_wallet">إسترجاع المحفظة من ملف</string>
+    <string name="onboarding_load_wallet_error">غير قادر على تحميل المحفظة!</string>
+
+    <string name="set_pin_create_new_wallet">انشاء محفظة جديدة</string>
+    <string name="set_pin_restore_wallet">استعادة المحفظة</string>
+    <string name="set_pin_enter_pin">أدخل الرقم السري الشخصي القديم</string>
+    <string name="set_pin_set_pin">قم بتعيين الرقم السري</string>
+    <string name="set_pin_confirm_pin">تأكيد الرقم السري</string>
+    <string name="set_pin_encrypting">تشفير المحفظة</string>
+    <string name="set_pin_decrypting">فك تشفير المحفظة</string>
+    <string name="set_pin_verifying_pin">تأكيد الرقم السري</string>
+    <string name="set_pin_message">سيكون الرقم  السري هذا مطلوبًا لإلغاء قفل تطبيقك في كل مرة تستخدمه.</string>
+
+    <string name="home_pay">إرسال</string>
+    <string name="home_receive">إستقبال</string>
+    <string name="home_available_balance">الرصيد المتاح</string>
+    <string name="home_balance_hidden">الرصيد مخفي</string>
+    <string name="home_balance_show_hint">اضغط لاظهار الرصيد</string>
+    <string name="home_balance_hide_hint">اضغط لاخفاء الرصيد</string>
+
+    <string name="dialog_confirm_confirm">تأكيد</string>
+    <string name="dialog_confirm_pay_to">إرسال الى</string>
+    <string name="dialog_confirm_fee">رسوم الشبكة</string>
+    <string name="dialog_confirm_total">المجموع</string>
+
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_secure_now">تأمين المحفظة الآن</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_scan_to_pay">مسح للإرسال</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_pay_to_address">إرسال إلى عنوان</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_buy_sell">شراء / بيع داش</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_import_key">استيراد مفتاح خاص</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_add_shortcut">اضافة اختصار</string>
+
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_quick_receive">إستقبال سريع</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_pin">الدخول باستخدام رقم سري</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_login_with_fingerprint">الدخول باستخدام البصمة</string>
+    <!-- Lock Screen: Button: 2 lines, 9 characters across -->
+    <string name="lock_action_scan_to_pay">مسح للإرسال</string>
+    <!-- Lock Screen: Text above the PIN Entry area -->
+    <string name="lock_enter_pin">أدخل الرقم السري</string>
+    <string name="lock_unlock_with_fingerprint">استخدم بصمتك للفتح</string>
+
+    <string name="perm_lock_info">المحفظة مقفلة بشكل دائم</string>
+    <string name="perm_lock_wipe_wallet">مسح المحفظة</string>
+    <string name="perm_lock_close_app">اغلاق</string>
+
+    <string name="scan_to_pay_error_dialog_title">مسح للإرسال</string>
+    <string name="scan_to_pay_error_dialog_message">عنوان داش أو عنوان URL غير صالح في الحافظة:\n\n%s</string>
+    <string name="scan_to_pay_error_dialog_message_no_data">عنوان داش أو عنوان URL غير صالح في الحافظة.</string>
+
+    <string name="receive_title">إستقبال</string>
+    <string name="receive_enter_amount_message">حدد المبلغ المراد استلامه</string>
+    <string name="receive_enter_amount_button">حدد المبلغ</string>
+    <string name="receive_share_button">مشاركة</string>
+    <string name="receive_copied">تم النسخ</string>
+
+    <string name="pay_title">إرسال</string>
+    <string name="history_title">التاريخ</string>
+    <string name="more_title">المزيد</string>
+    <string name="settings_title">الإعدادات</string>
+    <string name="security_title">أمان</string>
+    <string name="recover_wallet_title">إسترجاع المحفظة</string>
+    <string name="tools_title">ادوات</string>
+
+    <string name="payments_title">المدفوعات</string>
+    <string name="payments_tab_pay_label">إرسال</string>
+    <string name="payments_tab_receive_label">إستقبال</string>
+    <string name="payments_pay_by_qr_title">أرسل عن طريق</string>
+    <string name="payments_pay_by_qr_sub_title">مسح رمز الاستجابة السريعة</string>
+    <string name="payments_pay_by_qr_button">مسح</string>
+    <string name="payments_pay_to_clipboard_title">إرسال إلى العنوان المنسوخ</string>
+    <string name="payments_pay_to_clipboard_sub_title">لم يتم نسخ أي عنوان</string>
+    <string name="payments_pay_to_clipboard_button">إرسال</string>
+
+    <string name="forgot_pin_title">نسيت الرقم السري ؟</string>
+    <string name="forgot_pin_message">يمكنك تعيين رقم سري جديد بمساعدة عبارة الاسترداد.</string>
+    <string name="forgot_pin_instruction_1">أدخل عبارة الاسترداد لاسترداد محفظتك</string>
+    <string name="forgot_pin_instruction_2">قم بإعداد رقم سري جديد</string>
+    <string name="forgot_pin_instruction_3">تسجيل الدخول باستخدام الرقم السري الجديد الخاص بك للوصول إلى محفظتك</string>
+    <string name="forgot_pin_warning">إذا نسيت رقم التعريف الشخصي الخاص بك وفقدت عبارة الاسترداد الخاصة بك ، فلا يمكنك العودة إلى محفظتك وأموالك.</string>
+
+    <string name="send_coins_auto_lock_feasible">يجب تسوية هذه الصفقة على الفور بدون رسوم إضافية</string>
+    <string name="send_coins_auto_lock_not_feasible">قد تستغرق هذه المعاملة عدة دقائق لتسويتها. أكمل على الفور مقابل%1$s%2$s؟</string>
+    <string name="send_coins_instant_send_not_feasible">قد تستغرق هذه المعاملة عدة دقائق لتسويتها.</string>
+
+    <string name="options_paste_from_clipboard_title">لصق من الحافظة</string>
+
+    <string name="transaction_row_message_own_instantx_lock_request_notsent">لم يتم إرسال هذه الدفعة بعد.</string>
+    <string name="transaction_row_message_sent_to_single_peer">لقد تم إرسال هذه الدفعة.</string>
+
+    <string name="regular_transaction_info_message">لم تتم تسوية هذه الصفقة على الفور.</string>
+
+    <string name="wallet_options_disconnect">قطع الاتصال</string>
+
+    <string name="network_monitor_masternodes_title">ماسترنود</string>
+    <string name="export_keys_dialog_title_to_seed">عرض عبارة الاسترداد</string>
+    <string name="import_keys_dialog_title_from_seed">الاستعادة من عبارة الاسترداد</string>
+    <string name="backup_to_seed_wallet_dialog_message">هذه عبارة الاسترداد الخاصة بك. يرجى كتابتها.</string>
+    <string name="backup_wallet_to_seed_dialog_warning">لا تدع أي شخص يرى عبارة الاسترداد الخاصة بك أو يمكنهم إنفاق رصيد الداش الخاص بك.</string>
+    <string name="backup_to_seed_wallet_dialog_enter_pin_message">محفظتك محمية برقم سري شخصي للانفاق. أدخل الرقم السري الشخصي الخاص بك واضغط على \"إظهار\" لعرض عبارة الاسترداد.</string>
+    <string name="import_keys_from_seed_dialog_message">أدخل عبارة الإستراد الخاصة بك هنا.</string>
+    <string name="import_export_keys_dialog_password_phrase">عبارة الإستراد تذهب هنا.</string>
+    <string name="preferences_report_issue_summary">اجمع معلومات حول مشكلتك وأرسل تقريرك بالبريد الإلكتروني إلى المطورين.</string>
+    <string name="navigation_configuration">ترتيب</string>
     <string name="button_copy_address">نسخ العنوان</string>
-	<string name="request_coins_clipboard_address_msg">تم نسخ عنوان داش</string>
-	<string name="backup_wallet_to_seed_show_recovery_phrase">إظهار</string>
-	<string name="restore_wallet_from_invalid_seed_warning_message">%s هي كلمة غير صالحة. </string>
+    <string name="request_coins_clipboard_address_msg">تم نسخ عنوان داش الى الحافظة</string>
+    <string name="backup_wallet_to_seed_show_recovery_phrase">إظهار</string>
+    <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" ليست كلمة عبارة استرداد</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">يجب أن تحتوي عبارة الاسترداد على 12 كلمة</string>
+    <string name="restore_wallet_from_invalid_seed_bad_checksum">عبارة استرداد سيئة</string>
+    <string name="restore_wallet_from_invalid_seed_failure">تعذرت استعادة المحفظة:\n\n%s\n\nعبارة استرداد سيئة?</string>
 
-	<string name="send_coins_options_fee_category_zero">بدون رسوم </string>
-	<string name="send_coins_fragment_hint_fee_zero">لن يتم دفع أي رسوم. إستخدم \"بدون رسوم\" إلا إذا كنت لا تهتم لوقت التأكيد.</string>
+    <string name="send_coins_options_fee_category_zero">بدون رسوم </string>
+    <string name="send_coins_fragment_hint_fee_zero">لن يتم دفع أي رسوم. إستخدم \"بدون رسوم\" إذا كنت لا تهتم لوقت التأكيد.</string>
 
-	<string name="wallet_uri_handler_public_key_request_dialog_msg">تطبيق %s سوف يستلم مفتاحك العمومي الرئيسي. هذا يمكن أن تستخدم لتتبع محفظتك ، وهذا لا يمكن أن تستخدم لتحريك داش الخاص بك.</string>
-	<string name="wallet_uri_handler_address_request_dialog_msg">تطبيق %s يطلب عنوانًا حتى يمكنه الدفع لك. هل ترغب في اعتماد هذا؟</string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
+    <string name="wallet_uri_handler_public_key_request_dialog_msg">تطبيق %s سوف يستلم مفتاحك العمومي الرئيسي. يُمكن أن يستخدم لتتبع محفظتك ، و لا يمكن أن يستخدم لتحريك عملات الداش الخاص بك.</string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
+    <string name="wallet_uri_handler_address_request_dialog_msg">تطبيق %s يطلب عنوانًا حتى يمكنه الدفع لك. هل ترغب في السماح بذلك ؟</string>
 
-	<string name="wallet_lock_unlock">فتح </string>
-	<string name="wallet_lock_unlock_wallet">فتح المحفظة</string>
-	<string name="wallet_lock_unlock_to_see_txs_title">قفل المحفظة</string>
-	<string name="wallet_lock_unlock_to_see_txs_txt">انقر على رمز القفل أعلاه لإلغاء قفل محفظتك والاطلاع على سجل المعاملات.</string>
-	<string name="wallet_lock_unlock_dialog_title">إفتح محفظتك</string>
-	<string name="wallet_lock_unlock_dialog_message">محفظتك محمي من قبل بين الإنفاق. إدخل الرقم السري و إضغط على فتح للمتابعة.</string>
-	<string name="wallet_lock_reset_wallet_title">إعادة ظبط المحفظة</string>
-	<string name="wallet_lock_reset_wallet_message">هل أنت واثق؟ سيتم حذف جميع البيانات المخزنة وستكون محفظتك قابلة للاسترداد فقط من خلال ملف النسخ الاحتياطي أو بجملة الإسترجاع الخاصة بك.</string>
+    <string name="wallet_lock_unlock">الغاء القفل</string>
+    <string name="wallet_lock_unlock_wallet">فتح المحفظة</string>
+    <string name="wallet_lock_unlock_to_see_txs_title">تم قفل المحفظة.</string>
+    <string name="wallet_lock_unlock_to_see_txs_txt">انقر على رمز القفل أعلاه لإلغاء قفل محفظتك والاطلاع على سجل المعاملات.</string>
+    <string name="wallet_lock_unlock_dialog_title">افتح محفظتك</string>
+    <string name="wallet_lock_unlock_dialog_message">محفظتك محمية برقم سري شخصي للانفاق. أدخل الرمز السري الخاص بك واضغط الغاء القفل للمتابعة.</string>
+    <string name="wallet_lock_reset_wallet_title">إعادة تعيين المحفظة</string>
+    <string name="wallet_lock_reset_wallet_message">هل أنت واثق؟ سيتم حذف محفظتك وستفقد كل عملاتك.\n\nالطريقة الوحيدة لاسترداد رصيدك هي باستخدام ملف نسخ احتياطي أو عبارة استرداد.</string>
 
-	<string name="wallet_lock_wallet_disabled">المحفظة معطلة</string>
-	<string name="wallet_lock_try_again">أعد المحاولة %1$d%2$s</string>
-	<string name="wallet_lock_reset">إعادة ضبط</string>
-	<string name="wallet_lock_wrong_pin">الرقم السري خطأ %s</string>
+    <string name="wallet_lock_wallet_disabled">تم تعطيل المحفظة</string>
+    <string name="wallet_lock_try_again">أعد المحاولة في %1$d%2$s</string>
+    <string name="wallet_lock_reset">إعادة تعيين</string>
+    <string name="wallet_lock_wrong_pin">رقم سري خاطئ %s</string>
 
-	<plurals name="wallet_lock_attempts_remaining">
-		<item quantity="zero">%dالمحاولات المتبقية</item>
-		<item quantity="one">%dالمحاولات المتبقية</item>
-		<item quantity="two">%dالمحاولات المتبقية</item>
-		<item quantity="few">%dالمحاولات المتبقية</item>
-		<item quantity="many">%dالمحاولات المتبقية</item>
-		<item quantity="other">%dالمحاولات المتبقية</item>
-	</plurals>
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="zero">%dالمحاولات المتبقية</item>
+        <item quantity="one">%dالمحاولات المتبقية</item>
+        <item quantity="two">%dالمحاولات المتبقية</item>
+        <item quantity="few">%dالمحاولات المتبقية</item>
+        <item quantity="many">%dالمحاولات المتبقية</item>
+        <item quantity="other">%dالمحاولات المتبقية</item>
+    </plurals>
 
-	<plurals name="minute">
-		<item quantity="zero">دقائق</item>
-		<item quantity="one">دقائق</item>
-		<item quantity="two">دقائق</item>
-		<item quantity="few">دقائق</item>
-		<item quantity="many">دقائق</item>
-		<item quantity="other">دقائق</item>
-	</plurals>
-	
-	<plurals name="hour">
-		<item quantity="zero">ساعات</item>
-		<item quantity="one">ساعات</item>
-		<item quantity="two">ساعات</item>
-		<item quantity="few">ساعات</item>
-		<item quantity="many">ساعات</item>
-		<item quantity="other">ساعات</item>
-	</plurals>
+    <plurals name="minute">
+        <item quantity="zero">دقائق</item>
+        <item quantity="one">دقائق</item>
+        <item quantity="two">دقائق</item>
+        <item quantity="few">دقائق</item>
+        <item quantity="many">دقائق</item>
+        <item quantity="other">دقائق</item>
+    </plurals>
 
-	<string name="encrypt_new_key_chain_upgrade_button">تحديث</string>
-	<string name="encrypt_new_key_chain_dialog_title">تحديث محفظتك </string>
-	<string name="encrypt_new_key_chain_dialog_message">ستتم تحديث محفظتك لدعم الاستيراد والتصدير إلى المزيد من التطبيقات.</string>
-	<string name="encrypt_new_key_chain_enter_pin_dialog_message">يجب عليك إدخال الرقم السري الخاص بك لإنهاء عملية التحديث.</string>
-	<string name="pin_code_required_dialog_message">يتطلب هذا التطبيق الآن الرقم السري لإنفاق وعرض الرصيد والمعاملات.</string>
-    <string name="backup_wallet_seed_private_key_written_down_box">لقد كتبت عبارة الاسترداد في الأسفل </string>
-	
-	<string name="change_exchange_currency_code_message">عملتك المحلية هي %1$s ولكن في هذا التطبيق يتم تعيين العملة الافتراضية الخاصة بك%2$s . هل ترغب في تغييرها إلى %1$sأو تركها كما هي %2$s؟</string>
-	<string name="change_to">غبرها إلى %s</string>
-	<string name="leave_as">اتركها %s</string>
+    <plurals name="hour">
+        <item quantity="zero">ساعات</item>
+        <item quantity="one">ساعات</item>
+        <item quantity="two">ساعات</item>
+        <item quantity="few">ساعات</item>
+        <item quantity="many">ساعات</item>
+        <item quantity="other">ساعات</item>
+    </plurals>
 
-	<string name="remind_later">تذكر لاحقا</string>
-	<string name="backup_now">اعمل نسخة احتياطية الان</string>
+    <string name="encrypt_new_key_chain_upgrade_button">ترقية</string>
+    <string name="encrypt_new_key_chain_dialog_title">ترقية محفظتك</string>
+    <string name="encrypt_new_key_chain_dialog_message">ستتم تحديث محفظتك لدعم الاستيراد والتصدير إلى المزيد من التطبيقات.</string>
+    <string name="encrypt_new_key_chain_enter_pin_dialog_message">يجب عليك إدخال الرمز السري الخاص بك لإنهاء عملية الترقية.</string>
+    <string name="pin_code_required_dialog_message">يطلب هذا التطبيق الآن الرمز السري لإنفاق وعرض الرصيد والمعاملات.</string>
+    <string name="backup_wallet_seed_private_key_written_down_box">لقد كتبت عبارة الاسترداد</string>
 
+    <string name="change_exchange_currency_code_message">عملتك المحلية هي %1$s, و لكن في هذا التطبيق تم تعيين العملة الافتراضية الخاصة بك الى%2$s . هل ترغب في تغييرها إلى %1$sأو تركها كما هي %2$s؟</string>
+    <string name="change_to">التغيير إلى %s</string>
+    <string name="leave_as">اتركه ك %s</string>
+
+    <string name="remind_later">تذكر لاحقا</string>
+    <string name="backup_now">اعمل نسخة احتياطية الان</string>
+
+    <string name="notification_transactions_channel_name">المعاملات </string>
+    <string name="notification_transactions_channel_description">تلقي تنبيهات حول المعاملات الواردة.</string>
+    <string name="notification_synchronization_channel_name">التزامن</string>
+    <string name="notification_synchronization_channel_description">يعرض إشعارًا عندما يكون التطبيق متزامنًا مع الشبكة.</string>
+
+    <string name="net_type_indicator" />
+
+    <string name="unlock_with_fingerprint">استخدم بصمتك للفتح</string>
+    <string name="unlock_with_fingerprint_error">فشل التعرف على بصمة الإصبع ، يرجى المحاولة مرة أخرى.</string>
+    <string name="unlock_with_fingerprint_error_max_attempts">تم تجاوز الحد الأقصى لمحاولات بصمة الإصبع. الرجاء معاودة المحاولة في وقت لاحق.</string>
+    <string name="or_unlock_with_fingerprint">او استخدم بصمتك للفتح</string>
+    <string name="enable_fingerprint">تمكين بصمة الإصبع</string>
+    <string name="touch_fingerprint_sensor">لمس مستشعر بصمة الأصبع</string>
+    <string name="touch_fingerprint_to_enable">المس مستشعر بصمة الإصبع لتمكين إلغاء القفل ببصمة الإصبع.</string>
+    <string name="fingerprint_changed_title">تم تغيير بيانات بصمة الإصبع</string>
+	<string name="fingerprint_changed_message">اكتشفنا تغييرًا في بيانات مصادقة بصمة الإصبع. يلزمك استخدام الرقم السري هذه المرة.</string>
+	<string name="exchange_rate_missing">هذه الدفعة قديمة جدًا للحصول على القيمة الورقية.</string>
+
+    <string name="preferences_enable_payment_request_summary">استخدم بروتوكول الدفع للمدفوعات التي تبدأ برمز QR</string>
+    <string name="preferences_enable_payment_request_title">BIP70 للمسح للدفع</string>
+
+    <string name="verify_continue">استمر</string>
+    <string name="verify">تحقق</string>
+    <string name="verify_backup_wallet">نسخ احتياطي للمحفظة</string>
+    <string name="verify_show_recovery_phrase">اظهر جملة الاسترداد</string>
+    <string name="verify_secure_now">تأمين المحفظة الآن</string>
+    <string name="verify_it_is_important">انه مهم</string>
+    <string name="verify_it_is_important_subtitle">نحن على وشك أن نريك المفتاح السري لمحفظتك.</string>
+    <string name="verify_info_text_1">عبارة الاسترداد هذه هي وصولك إلى الأموال الموجودة في هذه المحفظة.</string>
+    <string name="verify_info_text_2">نحن لا نخزن عبارة الاسترداد هذه.</string>
+    <string name="verify_info_text_3">ستحتاج إلى عبارة الاسترداد هذه للوصول إلى أموالك في حالة فقد هذا الجهاز أو تلفه أو إذا تم إلغاء تثبيت محفظة داش من هذا الجهاز عن طريق الخطأ.</string>
+    <string name="verify_skip">تخطي</string>
+    <string name="verify_secure_now_btn">تأمين الآن</string>
+    <string name="verify_secure_now_message">إذا فقدت هذا الجهاز ، فستفقد أموالك. احصل على عبارة الاسترداد الخاصة بك حتى تتمكن من استعادة محفظتك على جهاز آخر.</string>
+    <string name="verify_seed_title">يرجى كتابتها</string>
+    <string name="verify_seed_write_down_confirmation">كتبتها</string>
+    <string name="verify_seed_buttons_tip">يرجى النقر على الكلمات من عبارة الاسترداد بالترتيب الصحيح</string>
+    <string name="verify_seed_success_title">تم التحقق بنجاح</string>
+    <string name="verify_seed_success_message">محفظتك مؤمنة الآن. يمكنك استخدام عبارة الاسترداد في أي وقت لاسترداد حسابك على جهاز آخر.</string>
+    <string name="view_seed_done">تم</string>
+    <string name="view_seed_title">عبارة الاسترداد</string>
+	<string name="transaction_result_view_on_explorer">عرض في بلوك إكسبلورر</string>
+	<string name="transaction_result_paid_successfully">أرسلت بنجاح</string>
+	<string name="transaction_result_sent_to">أرسلت الى</string>
+	<string name="transaction_date_and_time">تاريخ</string>
+	<string name="transaction_close">اغلاق</string>
+	<string name="transaction_details_amount_received">الكمية المستلمة</string>
+	<string name="transaction_details_amount_sent">الكمية المرسلة</string>
+    <string name="transaction_details_sent_from">أرسلت من</string>
+    <string name="transaction_details_sent_to">أرسلت الى</string>
+    <string name="transaction_details_received_at">تم الاستلام في</string>
+    <string name="transaction_details_moved_from">تم النقل من</string>
+    <string name="transaction_details_moved_internally_to">تم النقل الداخلي إلى</string>
+
+    <string name="authenticate_fingerprint_title">المصادقة</string>
+    <string name="authenticate_fingerprint_message">تأكيد بصمة الإصبع للمتابعة</string>
+    <string name="authenticate_pin_message">أدخل الرقم السري للمتابعة</string>
+    <string name="authenticate_switch_to_fingerprint">استخدام بصمة الإصبع</string>
+    <string name="authenticate_switch_to_pin">استخدم  الرقم السري</string>
+
+    <string name="menu_buy_and_sell_title">شراء &amp; بيع داش</string>
+    <string name="menu_buy_and_sell_subtitle">اتصال مع منصات الطرف الثالث</string>
+    <string name="menu_security_title">أمان</string>
+    <string name="menu_security_subtitle">عرض عبارة المرور ، المحفظة الاحتياطية ...</string>
+    <string name="menu_settings_title">الإعدادات</string>
+    <string name="menu_settings_subtitle">العملة الافتراضية ، الاختصارات ، حول ...</string>
+    <string name="menu_tools_title">ادوات</string>
+    <string name="menu_tools_subtitle">استيراد المفتاح الخاص...</string>
+    <string name="menu_local_currency">العملة المحلية</string>
+    <string name="menu_rescan_blockchain">اعادة نسخ بلوكشين</string>
+    <string name="menu_contact_support_title">اتصل بالدعم</string>
+    <string name="tools_address_book">دليل العناوين</string>
+    <string name="tools_import_private_key">استيراد مفتاح خاص</string>
+    <string name="tools_network_monitor">مراقب الشبكة</string>
+
+    <string name="about_help_us_improve">ساعدنا على تحسين تجربتك</string>
+    <string name="about_review_and_rate">مراجعة &amp; تقييم التطبيق</string>
+    <string name="about_contact_support">اتصل بالدعم</string>
+    <string name="about_fork_disclaimer">هذا هو تطبيق مفتوح المصدر متفرع من محفظة بيتكوين</string>
+    <string name="about_copyright">حقوق النشر © 2020 داش كور</string>
+    <string name="about_license">رخصة GNUالعمومية العامة الإصدار 3.0</string>
+    <string name="about_version_name">محفظة داش %s</string>
+
+    <string name="block">بلوك</string>
+    <string name="time">وقت</string>
+    <string name="hash">هاش</string>
+    <string name="block_info">معلومات عن البلوك</string>
+
+    <string name="scan_private_key">مسح المفتاح الخاص</string>
+    <string name="scan_private_key_intro_1">أنت على وشك مسح الأموال من محفظة أوراق داش.</string>
+    <string name="scan_private_key_intro_2">سيؤدي هذا إلى نقل جميع العملات المعدنية من تلك المحفظة إلى محفظتك على هذا الجهاز.</string>
+    <string name="scan_private_key_intro_3">عندما يتم تأكيد المعاملة ، ستكون المحفظة الأخرى عديمة القيمة ويجب عدم إعادة استخدامها لأسباب تتعلق بالسلامة.</string>
+    <string name="confirm">تأكد</string>
+
+    <string name="advanced_security_security_level">مستوى الأمان</string>
+    <string name="auto_logout">تسجيل الخروج التلقائي</string>
+    <string name="spending_confirmation">تأكيد الانفاق</string>
+    <string name="logout_after">تسجيل الخروج بعد</string>
+    <string name="immediately">حالاً</string>
+    <string name="twenty_four_hours">24 ساعة</string>
+    <string name="one_minute">دقيقة</string>
+    <string name="five_minute">5 دقائق</string>
+    <string name="one_hour">1 ساعة</string>
+    <string name="biometric_limit">حد البيومترية</string>
+    <string name="spending_confirmation_hint_zero">مطلوب الرقم السري دائمًا لإجراء الدفع</string>
+    <string name="spending_confirmation_hint_above_zero">يمكنك المصادقة باستخدام المصادقة البيومترية للمدفوعات أدناه</string>
+
+    <string name="security_none">لا يوجد</string>
+    <string name="security_low">منخفض</string>
+    <string name="security_medium">متوسط</string>
+    <string name="security_high">مرتفع</string>
+    <string name="security_very_high">مرتفع جداً</string>
+    <string name="max">الحد الأقصى</string>
+
+    <string name="enter_amount_available">متاح</string>
+
+    <string name="skip">تخطي</string>
+    <string name="get_started">البدء</string>
+    <string name="welcome_screen_title_1_new_install">مرحباً</string>
+    <string name="welcome_screen_title_1_upgrade">قمنا بالترقية</string>
+    <string name="welcome_screen_subtitle_1">تجربة بديهية ومألوفة عبر جميع أجهزتك</string>
+    <string name="welcome_screen_title_2">ادفع بسهولة</string>
+    <string name="welcome_screen_subtitle_2">ادفع واحصل على المال على الفور مع تدفقات دفع سهلة الاستخدام</string>
+    <string name="welcome_screen_title_3">المزيد من التحكم</string>
+    <string name="welcome_screen_subtitle_3">تمتع بالتحكم الكامل وتخصيص محفظتك بناءً على احتياجاتك</string>
+
+    <string-array name="history_filter">
+        <item>الكل</item>
+        <item>تم الاستلام</item>
+        <item>أرسلت </item>
+    </string-array>
+
+    <string name="sync_status_wait">يرجى الانتظار حتى تكتمل المزامنة</string>
+    <string name="sync_status_syncing_title">يتم المزامنة</string>
+    <string name="sync_status_syncing_sub_title">مع بلوكشين داش</string>
+    <string name="sync_status_unable_to_connect">غير قادر على الاتصال</string>
+    <string name="sync_status_check_connection">افحص اتصالك</string>
+    <string name="sync_status_sync_title">مزامنة</string>
+    <string name="sync_status_sync_completed">منجز</string>
+
+    <string name="appwidget_wallet_not_ready">يرجى إعداد محفظتك</string>
+
+    <string name="payment_request_please_wait_title">الرجاء الانتظار</string>
+    <string name="payment_request_please_wait_message">الاتصال بخادم الدفع</string>
+    <string name="payment_request_unable_to_connect">غير قادر على الاتصال</string>
+    <string name="payment_request_unable_to_send">غير قادر على الارسال</string>
+    <string name="payment_request_please_try_again">حاول مرة اخرى</string>
+    <string name="payment_request_try_again">حاول ثانية</string>
+    <string name="payment_request_problem_title">لم يتم الإعتراف بالدفع</string>
+    <string name="payment_request_problem_message">تمت معالجة دفعتك ولكن الخادم لم يتمكن من الإعتراف بها</string>
+    <string name="payment_request_expired_title">انتهت صلاحية طلب الدفع</string>
+    <string name="payment_request_close">اغلاق</string>
+    <string name="payment_request_skip">تخطي</string>
+    <string name="payment_request_paid_to">تم الدفع الى</string>
 </resources>

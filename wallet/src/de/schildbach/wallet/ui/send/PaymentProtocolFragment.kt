@@ -250,12 +250,14 @@ class PaymentProtocolFragment : Fragment() {
     }
 
     private fun showTransactionResult(transaction: Transaction) {
-        val payeeName = paymentProtocolModel.finalPaymentIntent!!.payeeName
+        val paymentMemo = paymentProtocolModel.finalPaymentIntent!!.memo
         val payeeVerifiedBy = paymentProtocolModel.finalPaymentIntent!!.payeeVerifiedBy
-        val transactionResultIntent = TransactionResultActivity.createIntent(
-                activity!!, transaction, isUserAuthorized(), payeeName, payeeVerifiedBy)
-        startActivity(transactionResultIntent)
-        activity!!.finish()
+        activity!!.run {
+            val transactionResultIntent = TransactionResultActivity.createIntent(
+                    this, intent.action, transaction, isUserAuthorized(), paymentMemo, payeeVerifiedBy)
+            startActivity(transactionResultIntent)
+            finish()
+        }
     }
 
     private fun handleSendRequestException() {
@@ -314,16 +316,15 @@ class PaymentProtocolFragment : Fragment() {
         transaction_fee.text = txFee.toPlainString()
         total_amount.text = amount.add(txFee).toPlainString()
 
-        payee_name.text = paymentIntent.payeeName
-        payee_verified_by.text = paymentIntent.payeeVerifiedBy
+        memo.text = paymentIntent.memo
+        payee_secured_by.text = paymentIntent.payeeVerifiedBy
                 ?: getString(R.string.send_coins_fragment_payee_verified_by_unknown)
 
         val forceMarqueeOnClickListener = View.OnClickListener {
             it.isSelected = false
             it.isSelected = true
         }
-        payee_name.setOnClickListener(forceMarqueeOnClickListener)
-        payee_verified_by.setOnClickListener(forceMarqueeOnClickListener)
+        payee_secured_by.setOnClickListener(forceMarqueeOnClickListener)
     }
 
     private fun isUserAuthorized(): Boolean {

@@ -333,4 +333,5 @@
     <string name="dash_slogan">Instant - Privat - Securizat</string>
     <string name="dash_wallet">Portofel</string>
 
+    <string name="payment_protocol_insufficient_funds_error_title">Fonduri Insuficiente</string>
     </resources>

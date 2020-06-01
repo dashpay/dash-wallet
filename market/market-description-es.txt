@@ -4,13 +4,13 @@ La billetera de Dash es la billetera Android de referencia mantenida por el grup
 
 Dash es una criptomoneda que busca corregir los defectos que sufren otras criptomonedas. Se basa en una red de Masternodes para permitir funciones tales como privacidad opcional, transacciones instantáneas y un mecanismo de financiación directa para promover el crecimiento de la red.
 
-Intuitiva y segura, Dash Wallet le brinda control total sobre su dinero digital. Envíe y reciba pagos rápidos al instante, con la billetera móvil más segura disponible.
+Intuitiva y segura, Dash Wallet te brinda control total sobre tu dinero digital. Envía y recibe pagos rápidos al instante, con la billetera móvil más segura disponible.
 
-La billeterad de Dash se conecta directamente a la red Dash. Esto significa que no hay servidores para ser hackeados o que se puedan caer, tus fondos siempre están seguros. Incluso si tu teléfono se pierde, se daña o te lo roban, puedes recuperar fácilmente tus fondos utilizando tu frase de recuperación personal.
+La billetera de Dash se conecta directamente a la red Dash. Esto significa que no hay servidores para ser hackeados o que se puedan caer, tus fondos siempre están seguros. Incluso si tu teléfono se pierde, se daña o te lo roban, puedes recuperar fácilmente tus fondos utilizando tu frase de recuperación personal.
 
 Características:
 
-* Envíe y reciba pagos de Dash en segundos, en línea o personalmente
+* Envía y recibe pagos de Dash en segundos, en línea o personalmente
 * Pagos con un botón para comerciantes y sitios web que aceptan Dash
 * Paga rápidamente con autenticación biométrica
 * Barrido de billeteras de papel (Ej: las usadas para almacenamiento en frío)
@@ -29,7 +29,7 @@ https://www.gnu.org/licenses/gpl-3.0.en.html
 Nuestro código fuente esta disponible en GitHub:
 https://github.com/dashevo/dash-wallet
 
-Toda las traudcciones estan gestionadas por Transifex:
+Toda las traducciones están gestionadas por Transifex:
 https://www.transifex.com/dash/dash-mobile-wallets/
 
 Puedes encontrar mas información sobre Dash en

@@ -373,4 +373,7 @@
     <string name="activity_security_hide_balance">自动隐藏余额</string>
     <string name="reset_to_default">重置为默认</string>
 
+    <string name="payment_protocol_default_error_title">支付错误</string>
+    <string name="payment_protocol_insufficient_funds_error_title">资金不足</string>
+    <string name="payment_protocol_insufficient_funds_error_message">您没有足够的资金来完成此次交易</string>
 </resources>
