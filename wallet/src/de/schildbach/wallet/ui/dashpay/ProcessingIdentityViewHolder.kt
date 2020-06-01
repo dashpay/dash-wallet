@@ -54,7 +54,10 @@ class ProcessingIdentityViewHolder(itemView: View) : RecyclerView.ViewHolder(ite
             CreationState.IDENTITY_REGISTERING,
             CreationState.IDENTITY_REGISTERED -> {
                 itemView.progress.progress = 50
-                itemView.subtitle.setText(R.string.processing_home_step_2)
+                itemView.subtitle.setText(
+                        if (blockchainIdentityData.restoring)
+                            R.string.processing_home_step_2_restoring else
+                            R.string.processing_home_step_2)
             }
             CreationState.PREORDER_REGISTERING,
             CreationState.PREORDER_REGISTERED,
@@ -64,8 +67,11 @@ class ProcessingIdentityViewHolder(itemView: View) : RecyclerView.ViewHolder(ite
             CreationState.DASHPAY_PROFILE_CREATED -> {
                 itemView.progress.progress = 75
                 itemView.subtitle.setText(
-                        if (blockchainIdentityData.creationStateErrorMessage != null) R.string.processing_username_unavailable_subtitle
-                        else R.string.processing_home_step_3
+                        when {
+                            blockchainIdentityData.creationStateErrorMessage != null -> R.string.processing_username_unavailable_subtitle
+                            blockchainIdentityData.restoring -> R.string.processing_home_step_3_restoring
+                            else -> R.string.processing_home_step_3
+                        }
                 )
             }
             CreationState.DONE -> {
