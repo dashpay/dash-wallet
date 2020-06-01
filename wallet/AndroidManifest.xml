@@ -298,7 +298,7 @@
             android:windowSoftInputMode="stateHidden|adjustResize" />
 
         <activity
-            android:name="de.schildbach.wallet.ui.SearchDashPayProfileActivity"
+            android:name="de.schildbach.wallet.ui.SearchUserActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity.DashPayProfile"
             android:windowSoftInputMode="stateHidden|adjustResize" />

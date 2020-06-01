@@ -82,8 +82,8 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/search" />
 
-    <include layout="@layout/search_user_empty_result" />
+    <include layout="@layout/user_search_empty_result" />
 
-    <include layout="@layout/search_user_loading" />
+    <include layout="@layout/user_search_loading" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
