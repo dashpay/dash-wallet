@@ -770,7 +770,15 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         if (walletBackupFile.exists()) {
             walletBackupFile.delete();
         }
-        ProcessPhoenix.triggerRebirth(this);
+        Executors.newSingleThreadExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                //not sure when this will execute
+                AppDatabase.getAppDatabase().blockchainIdentityDataDao().clear();
+                AppDatabase.getAppDatabase().dashPayProfileDao().clear();
+                ProcessPhoenix.triggerRebirth(WalletApplication.this);
+            }
+        });
     }
 
     public static WalletApplication getInstance() {

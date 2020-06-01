@@ -19,12 +19,9 @@ package de.schildbach.wallet.ui
 import android.app.Application
 import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet_test.R
-import kotlinx.coroutines.launch
 import org.bitcoinj.crypto.MnemonicException
 import org.bitcoinj.wallet.Wallet
 import org.slf4j.LoggerFactory
@@ -49,9 +46,6 @@ class RestoreWalletFromFileViewModel(application: Application) : AndroidViewMode
             walletApplication.resetBlockchainState()
             startActivityAction.call(SetPinActivity.createIntent(getApplication(),
                     R.string.set_pin_restore_wallet, false, password))
-        }
-        viewModelScope.launch {
-            PlatformRepo(walletApplication).removeDatabases()
         }
     }
 }

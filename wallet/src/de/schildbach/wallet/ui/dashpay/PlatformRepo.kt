@@ -343,11 +343,6 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         dashPayProfileDaoAsync.insert(dashPayProfile)
     }
 
-    suspend fun removeDatabases() {
-        blockchainIdentityDataDaoAsync.clear()
-        blockchainIdentityDataDaoAsync.clear()
-    }
-
     suspend fun doneAndDismiss() {
         val blockchainIdentityData = blockchainIdentityDataDaoAsync.load()
         if (blockchainIdentityData != null && blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.DONE) {
