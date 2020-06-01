@@ -52,6 +52,7 @@ import javax.annotation.Nullable;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainIdentityBaseData;
+import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.ui.dashpay.ProcessingIdentityViewHolder;
 import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet.util.WalletUtils;
@@ -171,7 +172,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     public int getItemCount() {
         int count = transactions.size();
 
-        if (blockchainIdentityData != null) {
+        if (blockchainIdentityData != null && blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE_AND_DISMISS) {
             count += 1;
         }
 
@@ -196,7 +197,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     @Override
     public int getItemViewType(final int position) {
-        if (blockchainIdentityData != null && position == 0) {
+        if (blockchainIdentityData != null && position == 0 && blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE_AND_DISMISS) {
             return VIEW_TYPE_PROCESSING_IDENTITY;
         }
         return VIEW_TYPE_TRANSACTION;
@@ -222,7 +223,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             transactionHolder.itemView.setActivated(itemId == selectedItemId);
 
             Transaction tx;
-            if (blockchainIdentityData != null) {
+            if (blockchainIdentityData != null && blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE_AND_DISMISS) {
                 tx = transactions.get(position - 1);
             } else {
                 tx = transactions.get(position);

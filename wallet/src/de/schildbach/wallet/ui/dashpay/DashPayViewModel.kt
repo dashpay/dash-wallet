@@ -16,15 +16,13 @@
 package de.schildbach.wallet.ui.dashpay
 
 import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
-import androidx.lifecycle.liveData
+import androidx.lifecycle.*
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearch
 import de.schildbach.wallet.livedata.Resource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 class DashPayViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -77,5 +75,11 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     val isPlatformAvailableLiveData = liveData(Dispatchers.IO) {
         emit(Resource.loading(null))
         emit(platformRepo.isPlatformAvailable())
+    }
+
+    fun usernameDoneAndDismiss() {
+        viewModelScope.launch {
+            platformRepo.doneAndDismiss()
+        }
     }
 }

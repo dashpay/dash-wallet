@@ -27,6 +27,7 @@ import org.bitcoinj.crypto.MnemonicCode
 import org.bitcoinj.crypto.MnemonicException
 import org.slf4j.LoggerFactory
 
+
 class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewModel(application) {
 
     private val log = LoggerFactory.getLogger(RestoreWalletFromSeedViewModel::class.java)

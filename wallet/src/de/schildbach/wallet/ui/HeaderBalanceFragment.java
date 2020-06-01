@@ -151,17 +151,11 @@ public final class HeaderBalanceFragment extends Fragment {
             @Override
             public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
                 if (blockchainIdentityData != null
-                        && blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DONE) {
-                    String username = blockchainIdentityData.getUsername();
-                    StringBuilder lettersBuilder = new StringBuilder();
-                    for (int i = 0; i < 2; i++) {
-                        try {
-                            lettersBuilder.append(username.charAt(i));
-                        } catch (IndexOutOfBoundsException e) {
-                            //swallow
-                        }
-                    }
-                    setDefaultUserAvatar(lettersBuilder.toString().toUpperCase());
+                        && blockchainIdentityData.getCreationState().ordinal() >= BlockchainIdentityData.CreationState.DONE.ordinal()) {
+                    String firstLetter = blockchainIdentityData.getUsername().substring(0, 1);
+                    setDefaultUserAvatar(firstLetter.toUpperCase());
+                } else {
+                    setDefaultUserAvatar(null);
                 }
             }
         });
@@ -201,6 +195,11 @@ public final class HeaderBalanceFragment extends Fragment {
 
     private void setDefaultUserAvatar(String letters) {
         ImageView dashpayUserAvatar = view.findViewById(R.id.dashpay_user_avatar);
+        if (letters == null) {
+            // there is no username, so hide the image
+            dashpayUserAvatar.setVisibility(View.GONE);
+            return;
+        }
         dashpayUserAvatar.setVisibility(View.VISIBLE);
         float[] hsv = new float[3];
         //Ascii codes for A: 65 - Z: 90, 0: 48 - 9: 57

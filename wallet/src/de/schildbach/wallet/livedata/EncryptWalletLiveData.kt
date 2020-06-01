@@ -87,10 +87,13 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
 
             return try {
                 org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
+                val decryptedSeed = wallet.keyChainSeed
                 // For the new key, we create a new key crypter according to the desired parameters.
                 val keyCrypter = KeyCrypterScrypt(scryptIterationsTarget)
                 val newKey = keyCrypter.deriveKey(password)
                 wallet.encrypt(keyCrypter, newKey)
+                // initialize the authentication key chains to allow recovery of the username
+                wallet.initializeAuthenticationKeyChains(decryptedSeed, newKey);
 
                 if(initialize) {
                     walletApplication.saveWalletAndFinalizeInitialization()

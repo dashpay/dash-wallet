@@ -45,6 +45,7 @@ import kotlinx.android.synthetic.main.users_orbit.*
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.InteractionAwareActivity
 import org.slf4j.LoggerFactory
+import java.util.concurrent.Executors
 
 class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
@@ -104,19 +105,19 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         }
         processing_identity_dismiss_btn.setOnClickListener { finish() }
 
+        initViewModel()
+        walletApplication = application as WalletApplication
+
         when (intent?.action) {
             ACTION_DISPLAY_COMPLETE -> {
                 this.completeUsername = intent!!.extras!!.getString(EXTRA_USERNAME)!!
                 showCompleteState()
+                doneAndDismiss()
             }
             ACTION_REUSE_TRANSACTION -> {
                 reuseTransaction = true
             }
         }
-
-        walletApplication = application as WalletApplication
-
-        initViewModel()
     }
 
     private fun initViewModel() {
@@ -182,13 +183,18 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             })
             showProcessingState()
         }
-        Handler().postDelayed({     //delay to prevent UI lagging
+        Handler().postDelayed({
+            //delay to prevent UI lagging
             if (reuseTransaction) {
                 startService(CreateIdentityService.createIntentForNewUsername(this, username))
             } else {
                 startService(CreateIdentityService.createIntent(this, username))
             }
         }, 200)
+    }
+
+    private fun doneAndDismiss() {
+        dashPayViewModel.usernameDoneAndDismiss()
     }
 
     private fun showCompleteState() {

@@ -20,6 +20,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityBaseData
 import de.schildbach.wallet.data.BlockchainIdentityData
+import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +28,7 @@ import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
@@ -52,6 +54,8 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     private val platform: Platform = walletApplication.platform
 
     private val blockchainIdentityDataDaoAsync = AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync()
+    private val dashPayProfileDaoAsync = AppDatabase.getAppDatabase().dashPayProfileDaoAsync()
+
 
     fun isPlatformAvailable(): Resource<Boolean> {
         // this checks only one random node, but should check several.
@@ -174,6 +178,15 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     }
 
     //
+    // Step 3: Find the identity in the case of recovery
+    //
+    suspend fun recoverIdentityAsync(blockchainIdentity: BlockchainIdentity, creditFundingTransaction: CreditFundingTransaction) {
+        withContext(Dispatchers.IO) {
+            blockchainIdentity.recoverIdentity(creditFundingTransaction)
+        }
+    }
+
+    //
     // Step 4: Preorder the username
     //
     suspend fun preorderNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
@@ -222,9 +235,27 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     //Step 6: Create DashPay Profile
     suspend fun createDashPayProfile(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter) {
         withContext(Dispatchers.IO) {
-            val profiles = Profiles(platform, blockchainIdentity, keyParameter)
             val username = blockchainIdentity.currentUsername!!
-            profiles.create(username, "Hello, I'm ${username}. I was created by the Android Wallet")
+            blockchainIdentity.registerProfile(username, "Hello, I'm ${username}. I was created by the Android Wallet", null, keyParameter)
+        }
+    }
+
+    //
+    // Step 6: Verify that the profile was registered
+    //
+    suspend fun verifyProfileCreatedAsync(blockchainIdentity: BlockchainIdentity) {
+        withContext(Dispatchers.IO) {
+            val profile = blockchainIdentity.watchProfile(10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
+                    ?: throw TimeoutException("the profile was not found to be created in the allotted amount of time")
+
+            if (profile != null) {
+                val dashPayProfile = DashPayProfile(blockchainIdentity.uniqueIdString,
+                        profile.data["displayName"] as String,
+                        profile.data["publicMessage"] as String,
+                        profile.data["avatarUrl"] as String)
+
+                updateDashPayProfile(dashPayProfile)
+            }
         }
     }
 
@@ -294,7 +325,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                                     state: BlockchainIdentityData.CreationState,
                                     exception: Throwable? = null) {
         val errorMessage = exception?.run { "${exception.javaClass.simpleName}: ${exception.message}" }
-        if (errorMessage != null) {
+        if (errorMessage == null) {
             log.info("updating creation state {}", state)
         } else {
             log.info("updating creation state {} ({})", state, errorMessage)
@@ -306,5 +337,44 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData) {
         blockchainIdentityDataDaoAsync.insert(blockchainIdentityData)
+    }
+
+    suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile) {
+        dashPayProfileDaoAsync.insert(dashPayProfile)
+    }
+
+    suspend fun doneAndDismiss() {
+        val blockchainIdentityData = blockchainIdentityDataDaoAsync.load()
+        if (blockchainIdentityData != null && blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.DONE) {
+            blockchainIdentityData.creationState = BlockchainIdentityData.CreationState.DONE_AND_DISMISS
+            blockchainIdentityDataDaoAsync.insert(blockchainIdentityData)
+        }
+    }
+
+    //
+    // Step 5: Find the usernames in the case of recovery
+    //
+    suspend fun recoverUsernamesAsync(blockchainIdentity: BlockchainIdentity) {
+        withContext(Dispatchers.IO) {
+            blockchainIdentity.recoverUsernames()
+        }
+    }
+
+    //Step 6: Recover the DashPay Profile
+    suspend fun recoverDashPayProfile(blockchainIdentity: BlockchainIdentity) {
+        withContext(Dispatchers.IO) {
+            val username = blockchainIdentity.currentUsername!!
+            // recovery will only get the information and place it in the database
+            val profile = blockchainIdentity.getProfile() ?: return@withContext
+
+            // blockchainIdentity doesn't yet keep track of the profile, so we will load it
+            // into the database directly
+            val dashPayProfile = DashPayProfile(blockchainIdentity.uniqueIdString,
+                    profile!!.data["displayName"] as String,
+                    profile.data["publicMessage"] as String,
+                    profile.data["avatarUrl"] as String)
+
+            updateDashPayProfile(dashPayProfile)
+        }
     }
 }

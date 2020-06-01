@@ -4,6 +4,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.Handler
+import android.os.PowerManager
 import androidx.lifecycle.LifecycleService
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -22,8 +23,10 @@ import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dashevo.dashpay.BlockchainIdentity
+import org.dashevo.dpp.identity.Identity
 import org.slf4j.LoggerFactory
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -35,11 +38,16 @@ class CreateIdentityService : LifecycleService() {
         private val log = LoggerFactory.getLogger(CreateIdentityService::class.java)
 
         private const val ACTION_CREATE_IDENTITY = "org.dash.dashpay.action.CREATE_IDENTITY"
+
         private const val ACTION_RETRY_WITH_NEW_USERNAME = "org.dash.dashpay.action.ACTION_RETRY_WITH_NEW_USERNAME"
         private const val ACTION_RETRY_AFTER_INTERRUPTION = "org.dash.dashpay.action.ACTION_RETRY_AFTER_INTERRUPTION"
 
+        private const val ACTION_RESTORE_IDENTITY = "org.dash.dashpay.action.RESTORE_IDENTITY"
+
         private const val EXTRA_USERNAME = "org.dash.dashpay.extra.USERNAME"
         private const val EXTRA_START_FOREGROUND_PROMISED = "org.dash.dashpay.extra.EXTRA_START_FOREGROUND_PROMISED"
+        private const val EXTRA_IDENTITY = "org.dash.dashpay.extra.IDENTITY"
+
 
         @JvmStatic
         fun createIntentForNewUsername(context: Context, username: String): Intent {
@@ -64,11 +72,25 @@ class CreateIdentityService : LifecycleService() {
                 putExtra(EXTRA_START_FOREGROUND_PROMISED, startForegroundPromised)
             }
         }
+
+        @JvmStatic
+        fun createIntentForRestore(context: Context, identity: String): Intent {
+            return Intent(context, CreateIdentityService::class.java).apply {
+                action = ACTION_RESTORE_IDENTITY
+                putExtra(EXTRA_IDENTITY, identity)
+            }
+        }
     }
 
     private val walletApplication by lazy { application as WalletApplication }
     private val platformRepo by lazy { PlatformRepo(walletApplication) }
     private lateinit var securityGuard: SecurityGuard
+
+    private val wakeLock by lazy {
+        val lockName = "$packageName create identity"
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, lockName)
+    }
 
     private val createIdentityNotification by lazy { CreateIdentityNotification(this) }
 
@@ -81,11 +103,14 @@ class CreateIdentityService : LifecycleService() {
     private var workInProgress = false
 
     private val createIdentityexceptionHandler = CoroutineExceptionHandler { _, exception ->
+        log.error(exception.message, exception)
         GlobalScope.launch {
-            log.error("[${blockchainIdentityData.creationState}(error)]", exception)
-            platformRepo.updateCreationState(blockchainIdentityData, blockchainIdentityData.creationState, exception)
-            if (this@CreateIdentityService::blockchainIdentity.isInitialized) {
-                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            if (blockchainIdentityData!= null) {
+                log.error("[${blockchainIdentityData.creationState}(error)]", exception)
+                platformRepo.updateCreationState(blockchainIdentityData, blockchainIdentityData.creationState, exception)
+                if (this@CreateIdentityService::blockchainIdentity.isInitialized) {
+                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                }
             }
             createIdentityNotification.displayErrorAndStopService()
         }
@@ -102,6 +127,7 @@ class CreateIdentityService : LifecycleService() {
             return
         }
         createIdentityNotification.startServiceForeground()
+        wakeLock.acquire(TimeUnit.MINUTES.toMillis(10));
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -132,6 +158,10 @@ class CreateIdentityService : LifecycleService() {
                     }
                     handleCreateIdentityAction(null)
                 }
+                ACTION_RESTORE_IDENTITY -> {
+                    val identity = intent.getStringExtra(EXTRA_IDENTITY)
+                    handleRestoreIdentityAction(identity)
+                }
             }
         } else {
             log.info("work in progress, ignoring ${intent.action}")
@@ -154,6 +184,13 @@ class CreateIdentityService : LifecycleService() {
 
         val blockchainIdentityDataTmp = platformRepo.loadBlockchainIdentityData()
         when {
+            (blockchainIdentityDataTmp != null && blockchainIdentityDataTmp.restoring) -> {
+                val cftx = blockchainIdentityDataTmp.findCreditFundingTransaction(walletApplication.wallet)
+                        ?: throw IllegalStateException()
+
+                restoreIdentity(cftx.creditBurnIdentityIdentifier.toStringBase58())
+                return
+            }
             (blockchainIdentityDataTmp != null && !retryWithNewUserName) -> {
                 blockchainIdentityData = blockchainIdentityDataTmp
                 if (username != null && blockchainIdentityData.username != username && !retryWithNewUserName) {
@@ -161,7 +198,7 @@ class CreateIdentityService : LifecycleService() {
                 }
             }
             (username != null) -> {
-                blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, username)
+                blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, username, false)
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
             }
             else -> {
@@ -272,6 +309,8 @@ class CreateIdentityService : LifecycleService() {
 
         if (blockchainIdentityData.creationState <= CreationState.DASHPAY_PROFILE_CREATED) {
             platformRepo.updateCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATED)
+            // Step 6: verify that the profile was created
+            platformRepo.verifyProfileCreatedAsync(blockchainIdentity)
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
         }
 
@@ -280,6 +319,80 @@ class CreateIdentityService : LifecycleService() {
         }
         // aaaand we're done :)
         log.info("username registration complete")
+    }
+
+    private fun handleRestoreIdentityAction(identity: String) {
+        workInProgress = true
+        serviceScope.launch(createIdentityexceptionHandler) {
+            restoreIdentity(identity)
+            workInProgress = false
+            stopSelf()
+        }
+    }
+
+    private suspend fun restoreIdentity(identity: String) {
+        log.info("Restoring identity and username")
+
+        // use an "empty" state for each
+        blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, null, true)
+
+        val cftxs = walletApplication.wallet.creditFundingTransactions
+
+        val creditFundingTransaction: CreditFundingTransaction = cftxs.find { cftx -> cftx.creditBurnIdentityIdentifier.toStringBase58() == identity }
+                ?: throw IllegalArgumentException("identity $identity does not match a credit funding transaction")
+
+        val handler = Handler()
+        val wallet = walletApplication.wallet
+        val password = securityGuard.retrievePassword()
+
+        val encryptionKey = deriveKey(handler, wallet, password)
+        val seed = decryptSeed(handler, wallet, encryptionKey)
+
+        // create the Blockchain Identity object
+        val blockchainIdentity = BlockchainIdentity(Identity.IdentityType.USER, 0, wallet)
+        // this process should have been done already, otherwise the credit funding transaction
+        // will not have the credit burn keys associated with it
+        platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
+
+        //
+        // Step 2: The credit funding registration exists, no need to create it
+        //
+
+        //
+        // Step 3: Find the identity
+        //
+        platformRepo.updateCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERING)
+        platformRepo.recoverIdentityAsync(blockchainIdentity, creditFundingTransaction!!)
+        platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        platformRepo.updateCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERED)
+
+        //
+        // Step 4: We don't need to find the preorder documents
+        //
+
+        //
+        // Step 5: Find the username
+        //
+        platformRepo.updateCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERING)
+        platformRepo.recoverUsernamesAsync(blockchainIdentity)
+        platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        platformRepo.updateCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERED)
+
+        //
+        // Step 6: Find the profile
+        //
+        platformRepo.updateCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATING)
+        platformRepo.recoverDashPayProfile(blockchainIdentity)
+        // blockchainIdentity hasn't changed
+        platformRepo.updateCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATING)
+
+
+        // We are finished recovering
+        platformRepo.updateCreationState(blockchainIdentityData, CreationState.DONE)
+
+        // Complete the entire process
+        platformRepo.updateCreationState(blockchainIdentityData, CreationState.DONE_AND_DISMISS)
+
     }
 
     /**
@@ -387,5 +500,10 @@ class CreateIdentityService : LifecycleService() {
     override fun onDestroy() {
         super.onDestroy()
         serviceJob.cancel()
+
+        if (wakeLock.isHeld) {
+            log.debug("wakelock still held, releasing")
+            wakeLock.release()
+        }
     }
 }
