@@ -373,4 +373,7 @@
     <string name="activity_security_hide_balance">Otomatis sembunyikan saldo</string>
     <string name="reset_to_default">Setel Ulang ke Default</string>
 
+    <string name="payment_protocol_default_error_title">Kesalahan pembayaran</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Dana tidak mencukupi</string>
+    <string name="payment_protocol_insufficient_funds_error_message">Anda tidak memiliki dana yang cukup umtuk memyelesaikan pembayaran ini</string>
 </resources>

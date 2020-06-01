@@ -373,4 +373,7 @@
     <string name="activity_security_hide_balance">Auto-esconder Saldo</string>
     <string name="reset_to_default">Restaurar ao Padrão</string>
 
+    <string name="payment_protocol_default_error_title">Erro no pagamento</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Saldo Insuficiente</string>
+    <string name="payment_protocol_insufficient_funds_error_message">Você não tem fundos suficientes para completar esta transação</string>
 </resources>

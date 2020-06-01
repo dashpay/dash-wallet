@@ -234,7 +234,7 @@
     <string name="authenticate_fingerprint_message">指紋を確認して続ける</string>
     <string name="authenticate_pin_message">PINを入力して続ける</string>
     <string name="authenticate_switch_to_fingerprint">指紋認証を使う</string>
-    <string name="authenticate_switch_to_pin">パスワードを使う</string>
+    <string name="authenticate_switch_to_pin">PINを使う</string>
 
     <string name="menu_buy_and_sell_title">Dashを買う &amp; 売る</string>
     <string name="menu_buy_and_sell_subtitle">サードパーティーの取引所に接続する</string>
@@ -246,6 +246,8 @@
     <string name="menu_tools_subtitle">秘密鍵をインポート…</string>
     <string name="menu_local_currency">通貨表示</string>
     <string name="menu_rescan_blockchain">ブロックチェーンの再スキャン</string>
+    <string name="menu_contact_support_title">サポートへ連絡する</string>
+    <string name="menu_contact_support_subtitle">問題を報告する</string>
 
     <string name="tools_address_book">アドレスブック</string>
     <string name="tools_import_private_key">秘密鍵をインポート</string>
@@ -319,4 +321,17 @@
     <string name="sync_status_sync_completed">完了</string>
 
     <string name="appwidget_wallet_not_ready">あなたのウォレットをセットアップしてください</string>
+
+    <string name="payment_request_please_wait_title">お待ちください</string>
+    <string name="payment_request_please_wait_message">支払い元に接続中</string>
+    <string name="payment_request_unable_to_connect">接続できません</string>
+    <string name="payment_request_unable_to_send">送金できません</string>
+    <string name="payment_request_please_try_again">もう一度お試しください</string>
+    <string name="payment_request_try_again">再試行する</string>
+    <string name="payment_request_problem_title">お支払いが確認されませんでした</string>
+    <string name="payment_request_problem_message">お支払いは処理されましたが、サーバーはそれを確認できませんでした</string>
+    <string name="payment_request_expired_title">お支払いの請求は消滅しました</string>
+    <string name="payment_request_close">閉じる</string>
+    <string name="payment_request_skip">スキップする</string>
+    <string name="payment_request_paid_to">お支払い済</string>
 </resources>

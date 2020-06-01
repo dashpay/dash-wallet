@@ -12,7 +12,7 @@
     <string name="blockchain_state_progress_stalled">Sincronización interrumpida</string>
     <string name="blockchain_state_progress_problem_storage">Sincronización: Problema de almacenamiento</string>
     <string name="blockchain_state_progress_problem_network">Sincronización: Problema de red</string>
-    <string name="wallet_address_fragment_clipboard_msg">Dirección Dash copiado al portapapeles</string>
+    <string name="wallet_address_fragment_clipboard_msg">Dirección de Dash copiada al portapapeles</string>
     <string name="wallet_address_dialog_fragment_hint">Para proteger tu privacidad, tu dirección cambiará una vez reciba un pago.</string>
     <string name="wallet_balance_fragment_too_much">Esta cantidad es muy grande para llevar en tu bolsillo, por favor, muévela a un lugar más seguro.</string>
     <string name="wallet_balance_fragment_replaying">Saldo no disponible durante la reevaluación.</string>
@@ -41,10 +41,10 @@
     <string name="wallet_low_storage_dialog_msg">Dash Wallet usa almacenamiento interno para recordar transacciones y bloques. Si se agota el espacio, dejará de funcionar y tus Dash estarán en riesgo!\n\nDeseas abrir el Administrador de Aplicaciones para desinstalar apps que no necesites?</string>
     <string name="wallet_low_storage_dialog_button_apps">Gestionar aplicaciones</string>
     <string name="wallet_timeskew_dialog_title">Verifica la fecha&amp; y configuración de hora.s</string>
-    <string name="wallet_timeskew_dialog_msg">Tu dispositivo se ha desconectado por %d minutos. Probablemente no podrás enviar o recibir Dash por este problema.\\n\\nDeberás checar si es necesario corregir la configuración de fecha, hora o zona horaria.</string>
+    <string name="wallet_timeskew_dialog_msg">Tu dispositivo se ha desconectado por %d minutos. Probablemente no podrás enviar o recibir Dash por este problema.\\n\\nDeberás revisar si es necesario corregir la configuración de fecha, hora o zona horaria.</string>
     <string name="wallet_version_dialog_title">¡Hay una nueva versión disponible!</string>
     <string name="wallet_version_dialog_msg">Esta versión corrige fallos importantes. Más detalles en el historial de cambios de Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Si no ve una actualización, es probable que su versión de Android ya no sea compatible.</string>
+    <string name="wallet_version_dialog_msg_deprecated">Si no ves una actualización, es probable que tu versión de Android ya no sea compatible.</string>
     <string name="wallet_version_dialog_button_market">Google Play</string>
     <string name="wallet_version_dialog_button_binary">Descargar</string>
     <string name="wallet_old_sdk_dialog_title">Versión de Android desactualizada</string>
@@ -55,7 +55,7 @@
     <string name="send_coins_fragment_request_payment_request_wrong_signature">¡Firma incorrecta!</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">desconocido</string>
     <string name="send_coins_fragment_receiving_address_label">Enviar a</string>
-    <string name="send_coins_fragment_receiving_address_hint">escriba dirección o nombre</string>
+    <string name="send_coins_fragment_receiving_address_hint">escribe dirección o nombre</string>
     <string name="send_coins_fragment_receiving_address_error">Dirección Dash invalida!</string>
     <string name="send_coins_fragment_receiving_address_own">¡Estás a punto de enviartelo a tí mismo!</string>
     <string name="send_coins_fragment_receiving_address_complex">dirección\ncompleja</string>
@@ -106,13 +106,13 @@
     <string name="sweep_wallet_fragment_insufficient_money_msg">La cantidad de Dash en tu billetera es demasiado pequeña para efectuar el barrido.</string>
     <string name="sweep_wallet_options_reload">Recargar el saldo</string>
     <string name="maintenance_dialog_title">Se recomienda mantenimiento</string>
-    <string name="maintenance_dialog_message">Recibíste %1$s a en direcciones no seguras ¿Te gustaría mover estas monedas a direcciones seguras? Se pagará una pequeña cuota de red de %2$s.</string>
+    <string name="maintenance_dialog_message">Recibíste %1$s en direcciones no seguras ¿Te gustaría mover estas monedas a direcciones seguras? Se pagará una pequeña cuota de red de %2$s.</string>
     <string name="maintenance_dialog_state_decrypting">Desencriptando…</string>
     <string name="maintenance_dialog_state_done">Hecho.</string>
     <string name="maintenance_dialog_button_move">Mover</string>
     <string name="request_coins_activity_title">Recibir Dash</string>
     <string name="request_coins_fragment_amount_label">Cantidad solicitada (opcional)</string>
-    <string name="request_coins_fragment_accept_bluetooth_payment">Acepte pagos vía Bluetooth para un proceso más seguro.</string>
+    <string name="request_coins_fragment_accept_bluetooth_payment">Acepta pagos vía Bluetooth para un proceso más seguro.</string>
     <string name="request_coins_fragment_initiate_request_qr">Pide al pagador que escanee este código.</string>
     <string name="request_coins_fragment_initiate_request_nfc">O toca un dispositivo dotado de NFC.</string>
     <string name="request_coins_clipboard_msg">Solicitud de Dash copiada al portapapeles</string>
@@ -135,7 +135,7 @@
     <string name="address_book_options_scan_title">Escanear dirección</string>
     <string name="address_book_options_scan_invalid">No se reconocen los datos escaneados</string>
     <string name="address_book_options_scan_own_address">La dirección escaneada es la tuya</string>
-    <string name="address_book_row_message_compromised_key">Esta dirección podría ya no ser segura. No debería seguir utilizándola para recibir Dash.</string>
+    <string name="address_book_row_message_compromised_key">Esta dirección podría ya no ser segura. No deberías seguir utilizándola para recibir Dash.</string>
     <string name="edit_address_book_entry_dialog_title_add">Añadir dirección de envío</string>
     <string name="edit_address_book_entry_dialog_title_edit">Editar nombre de la dirección de envío</string>
     <string name="edit_address_book_entry_dialog_title_add_receive">Añadir nombre a tu dirección</string>
@@ -194,8 +194,8 @@
     <string name="restore_wallet_permission_dialog_message">Para poder buscar un respaldo de billetera en tu almacenamiento externo, deberas dar permisos de lectura.</string>
     <string name="import_keys_dialog_title">Restaurar billetera</string>
     <string name="import_keys_dialog_message">Seleccione una copia de seguridad de la billetera desde una unidad de almacenamiento externa (%s):</string>
-    <string name="restore_wallet_dialog_replace_warning">Está a punto de reemplazar su billetera actual. Todas las monedas en la billetera actual se perderán a menos que tenga una copia de seguridad separada.</string>
-    <string name="import_keys_dialog_warning">Importante: ¡No cargue claves de origen dudoso! Podría perder el control sobre sus fondos.</string>
+    <string name="restore_wallet_dialog_replace_warning">Estás a punto de reemplazar tu billetera actual. Todas las monedas en la billetera actual se perderán a menos que tenga una copia de seguridad separada.</string>
+    <string name="import_keys_dialog_warning">Importante: ¡No cargues claves de origen dudoso! Podrías perder el control sobre tus fondos.</string>
     <string name="import_keys_dialog_file_security_encrypted">contraseña cifrada</string>
     <string name="import_keys_dialog_file_security_unencrypted">descifrada</string>
     <string name="import_keys_dialog_file_security_external">almacenamiento externo</string>
@@ -209,8 +209,8 @@
     <string name="backup_wallet_permission_dialog_title">Permisos de escritura no encontrados</string>
     <string name="backup_wallet_permission_dialog_message">Para respaldar tu billetera a un medio externo, necesitas dar permisos de escritura.</string>
     <string name="export_keys_dialog_title">Hacer copia de seguridad de la cartera</string>
-    <string name="backup_wallet_dialog_message">Su copia de seguridad será encriptada con la contraseña que elijas y guardada en una unidad de almacenamiento externo.</string>
-    <string name="backup_wallet_dialog_warning_encrypted">Su cartera está protegida con un PIN de pagos. ¡Asegúrate de recordar el PIN, además de la contraseña de tu copia de seguridad!</string>
+    <string name="backup_wallet_dialog_message">Tu copia de seguridad será encriptada con la contraseña que elijas y guardada en una unidad de almacenamiento externo.</string>
+    <string name="backup_wallet_dialog_warning_encrypted">Tu cartera está protegida con un PIN de pagos. ¡Asegúrate de recordar el PIN, además de la contraseña de tu copia de seguridad!</string>
     <string name="export_keys_dialog_button_export">Copia de seguridad</string>
     <string name="export_keys_dialog_success"><![CDATA[<p>Tu billetera ha sido copiada en <tt>%s</tt></p><p>Si tu dispositivo tiene una tarjeta SD, la copia <i>debería</i> estar ahí. Extraela y manténla en un sitio seguro. Si la tarjeta <i>no</i> es extraíble, necesitas guardar la copia en otro lugar distinto a tu dispositivo.</p><p><b>Si el único sitio en el que existe una copia es en tu dispositivo, ¡corres el riesgo de perder las dos al mismo tiempo!</b></p><p>En cualquier caso, asegúrate de recordar la contraseña de la copia. ¿Deseas archivar tu billetera ahora?</p>]]></string>
     <string name="export_keys_dialog_failure">No se pudo realizar la copia de seguridad de tu billetera:\n%s</string>
@@ -281,7 +281,7 @@
     <string name="preferences_report_issue_title">Reportar problema</string>
     <string name="preferences_initiate_reset_title">Reevaluar cadena de bloques</string>
     <string name="preferences_initiate_reset_summary">Reevaluar la cadena de bloques, transacciones y balance de la billetera. La reproducción tomará un tiempo, solo haz esto si sabes porqué.</string>
-    <string name="preferences_initiate_reset_dialog_message">Deseas reevaluar y reproducir la cadena de bloques?\n\nEsto ocultará remporalmente tu balance de la billetera y removerá transacciones. Ambas se recoperarán en la medida en que la sincronización de la cadena de bloques progrese. Asegurate de tener una conexión a Internet confiable.</string>
+    <string name="preferences_initiate_reset_dialog_message">Deseas reevaluar y reproducir la cadena de bloques?\n\nEsto ocultará temporalmente tu balance de la billetera y removerá transacciones. Ambas se recoperarán en la medida en que la sincronización de la cadena de bloques progrese. Asegurate de tener una conexión a Internet confiable.</string>
     <string name="preferences_initiate_reset_dialog_positive">Reiniciar</string>
     <string name="preferences_extended_public_key_title">Mostrar xpub</string>
     <string name="preferences_extended_public_key_summary">Ve la llave publica extendida de tu billetera, para que pueda ser importada hacia otras apps y servicios ten cuidado: hacer esto dara a conocer tu privacidad monetaria a esa app.</string>
@@ -291,7 +291,7 @@
     <string name="report_issue_dialog_title_issue">Informar de incidencia</string>
     <string name="report_issue_dialog_title_crash">Detectado error grave anterior</string>
     <string name="report_issue_dialog_title_transaction">Reportar problema con el pago seleccionado</string>
-    <string name="report_issue_dialog_message_issue">Por favor describa tu problema de forma suficientemente precisa para ser reproducido. Use el idioma Inglés si posible. Aguarde un email de Soporte Dash acerca de tu problema dentro de 24 horas.</string>
+    <string name="report_issue_dialog_message_issue">Por favor describe tu problema de forma suficientemente precisa para ser reproducido. Usa el idioma Inglés si posible. Esperada un email de Soporte Dash acerca de tu problema dentro de 24 horas.</string>
     <string name="report_issue_dialog_message_crash">¿Deseas enviar un informe de error para ayudar a resolver la incidencia en un futuro?</string>
     <string name="report_issue_dialog_description">Descripción del problema</string>
     <string name="report_issue_dialog_report">Informe</string>
@@ -307,7 +307,7 @@
     <string name="about_license_title">Licencia</string>
     <string name="about_source_title">Código fuente</string>
     <string name="about_category_credits">Esta app está usando...</string>
-    <string name="about_credits_bitcoinj_title">dashj %s, una implementación de protocolo Dash</string>
+    <string name="about_credits_bitcoinj_title">dash %s, una implementación de protocolo Dash</string>
     <string name="about_credits_zxing_title">ZXing, una libreria de procesamiento de códigos QR</string>
     <string name="about_credits_icon_title">Esta app utiliza un icono por \'bitboy\'</string>
     <string name="about_credits_scrypt_title">Scrypt, implementado por Will Glozer y Colin Percival</string>
@@ -320,7 +320,7 @@
     <string name="notification_coins_received_msg">%s Recibidos</string>
     <string name="notification_peers_connected_msg">%d pares conectados</string>
     <string name="notification_inactivity_title">¡Aún tienes Dash en este dispositivo!</string>
-    <string name="notification_inactivity_message">Aún tienes Dash en este dispositivo! Por favor escriba la frase de recuperación en un lugar seguro antes de desinstalar la Billetera Dash o perderás el saldo de %s.</string>
+    <string name="notification_inactivity_message">Aún tienes Dash en este dispositivo! Por favor escribe la frase de recuperación en un lugar seguro antes de desinstalar la Billetera Dash o perderás el saldo de %s.</string>
     <string name="notification_inactivity_action_dismiss">Recuerdame despues</string>
     <string name="notification_inactivity_action_dismiss_forever">No me recuerdes</string>
     <string name="appwidget_wallet_balance_title">Saldo en Dash</string>
@@ -373,4 +373,7 @@
     <string name="activity_security_hide_balance">Esconder Saldo Automáticamente</string>
     <string name="reset_to_default">Restablecer a los valores predeterminados</string>
 
+    <string name="payment_protocol_default_error_title">Error en el pago</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Fondos insuficientes</string>
+    <string name="payment_protocol_insufficient_funds_error_message">No tienes fondos suficientes para completar esta transacción.</string>
 </resources>

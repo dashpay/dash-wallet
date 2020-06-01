@@ -102,7 +102,7 @@ public class SendCoinsFragment extends Fragment {
         return activity.isUserAuthorized() || userAuthorizedDuring;
     }
 
-    final DialogInterface.OnClickListener activityDismissListener = new DialogInterface.OnClickListener() {
+    private final DialogInterface.OnClickListener activityDismissListener = new DialogInterface.OnClickListener() {
         @Override
         public void onClick(final DialogInterface dialog, final int which) {
             activity.finish();
@@ -414,7 +414,7 @@ public class SendCoinsFragment extends Fragment {
         }
 
         Intent transactionResultIntent = TransactionResultActivity.createIntent(activity,
-                transaction, activity.isUserAuthorized());
+                activity.getIntent().getAction(), transaction, activity.isUserAuthorized());
         startActivity(transactionResultIntent);
     }
 

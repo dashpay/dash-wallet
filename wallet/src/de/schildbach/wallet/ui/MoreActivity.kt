@@ -68,6 +68,10 @@ class MoreActivity : GlobalFooterActivity() {
         tools.setOnClickListener {
             startActivity(Intent(this, ToolsActivity::class.java))
         }
+        contact_support.setOnClickListener {
+            ReportIssueDialogBuilder.createReportIssueDialog(this,
+                    WalletApplication.getInstance()).show()
+        }
     }
 
     override fun startActivity(intent: Intent) {

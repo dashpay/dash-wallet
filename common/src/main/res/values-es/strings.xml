@@ -2,7 +2,7 @@
 <resources>
 
     <string name="loading">Cargando…</string>
-    <string name="loading_error">Ocurrió un error. Por favor, intente nuevamente más tarde.</string>
+    <string name="loading_error">Ocurrió un error. Por favor, intenta nuevamente más tarde.</string>
     <string name="dash_available">%1$s disponible</string>
 
 </resources>

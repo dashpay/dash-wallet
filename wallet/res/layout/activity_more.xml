@@ -125,4 +125,32 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/contact_support"
+        style="@style/MenuRow">
+
+        <ImageView
+            android:id="@+id/contact_support_icon"
+            style="@style/MenuRowIcon"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/ic_menu_contact_support" />
+
+        <TextView
+            android:id="@+id/contact_support_title"
+            style="@style/MontserratMedium.MenuRowTitle"
+            android:text="@string/menu_contact_support_title"
+            app:layout_constraintStart_toEndOf="@+id/contact_support_icon"
+            app:layout_constraintTop_toTopOf="@+id/contact_support_icon" />
+
+        <TextView
+            android:id="@+id/contact_support_subtitle"
+            style="@style/MontserratRegular.MenuRowSubTitle"
+            android:text="@string/menu_contact_support_subtitle"
+            app:layout_constraintStart_toStartOf="@+id/contact_support_title"
+            app:layout_constraintTop_toBottomOf="@+id/contact_support_title" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
 </LinearLayout>

@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
 
-    <string name="toast_wallet_reset">wallet ของคุณถูกรีเซ็ตแล้ว ใช้เวลาสักพักในการกู้คืน</string>
-    <string name="wallet_disclaimer_fragment_remind_safety">ใช้ความเสี่ยงด้วยตัวคุณเอง!  อ่าน Read the &lt;u&gt;safety notes&lt;/u&gt;.</string>
+    <string name="toast_wallet_reset">wallet ของคุณถูกรีเซ็ตแล้ว ใช้เวลาสักครู่ในการกู้คืน</string>
+    <string name="wallet_disclaimer_fragment_remind_safety">ใช้ความเสี่ยงด้วยตัวคุณเอง!  โปรดอ่าน &lt;u&gt;safety notes&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">คุณจำเป็นต้อง สำรองข้อมูล wallet ของคุณ!</string>
     <string name="blockchain_state_progress_hours">%1$s,%2$d ชั่วโมงที่ผ่านมา</string>
     <string name="blockchain_state_progress_days">%1$s,%2$d วันที่ผ่านมา</string>
@@ -373,4 +373,7 @@
     <string name="activity_security_hide_balance">สมดุลอัตโนมัติ</string>
     <string name="reset_to_default">ตั้งค่าเป็นค่าเริ่มต้น</string>
 
+    <string name="payment_protocol_default_error_title">การชำระเงินผิดพลาด</string>
+    <string name="payment_protocol_insufficient_funds_error_title">กองทุนไม่เพียงพอ</string>
+    <string name="payment_protocol_insufficient_funds_error_message">คุณมีเงินทุนไม่เพียงพอที่จะดำเนินการทางธุรกรรมได้สำเร็จ</string>
 </resources>

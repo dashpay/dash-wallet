@@ -373,4 +373,7 @@
     <string name="activity_security_hide_balance">Cacher autom. le solde</string>
     <string name="reset_to_default">Retour aux valeurs par défaut</string>
 
+    <string name="payment_protocol_default_error_title">Erreur de paiement</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Fonds insuffisants</string>
+    <string name="payment_protocol_insufficient_funds_error_message">Vous n\'avez pas assez de fonds pour terminer cette transaction</string>
 </resources>
