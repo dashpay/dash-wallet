@@ -25,6 +25,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -40,6 +41,7 @@ import androidx.transition.ChangeBounds
 import androidx.transition.Transition
 import androidx.transition.TransitionManager
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_search_dashpay_profile_1.*
@@ -131,21 +133,26 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, DashPayProfi
     private fun initViewModel() {
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
         dashPayViewModel.getProfileSearchLiveData.observe(this, Observer {
-            stopLoading()
-            if (it.data != null) {
-                adapter.profiles = it.data
-                if (it.data.isEmpty()) {
-                    showEmptyResult()
-                } else {
-                    hideEmptyResult()
-                }
+            if (Status.LOADING == it.status) {
+                startLoading()
             } else {
-                showEmptyResult()
+                stopLoading()
+                if (it.data != null) {
+                    adapter.profiles = it.data
+                    if (it.data.isEmpty()) {
+                        showEmptyResult()
+                    } else {
+                        hideEmptyResult()
+                    }
+                } else {
+                    showEmptyResult()
+                }
             }
         })
     }
 
-    private fun startLoading(query: String) {
+    private fun startLoading() {
+        val query = search.text.toString()
         hideEmptyResult()
         search_loading.visibility = View.VISIBLE
         val loadingText = getString(R.string.search_user_loading).replace("%", "\"<b>$query</b>\"")
@@ -174,14 +181,13 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, DashPayProfi
         if (query.length < 3) {
             return
         }
-        startLoading(query)
         if (this::searchDashPayProfileRunnable.isInitialized) {
             handler.removeCallbacks(searchDashPayProfileRunnable)
         }
         searchDashPayProfileRunnable = Runnable {
             dashPayViewModel.searchDashPayProfile(query)
         }
-        handler.postDelayed(searchDashPayProfileRunnable, 2000)
+        handler.postDelayed(searchDashPayProfileRunnable, 500)
     }
 
     override fun afterTextChanged(s: Editable?) {
