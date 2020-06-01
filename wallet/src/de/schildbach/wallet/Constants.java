@@ -258,6 +258,9 @@ public final class Constants {
     public static String NOTIFICATION_CHANNEL_ID_ONGOING = "dash.notifications.ongoing";
     public static String NOTIFICATION_CHANNEL_ID_DASHPAY = "dash.notifications.dashpay";
 
+    public static int USERNAME_MIN_LENGTH = 3;
+    public static int USERNAME_MAX_LENGTH = 23;
+
     /** Desired number of scrypt iterations for deriving the spending PIN */
     public static final int SCRYPT_ITERATIONS_TARGET = 65536;
     public static final int SCRYPT_ITERATIONS_TARGET_LOWRAM = 32768/2;

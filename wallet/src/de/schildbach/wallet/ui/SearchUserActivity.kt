@@ -40,6 +40,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.transition.ChangeBounds
 import androidx.transition.Transition
 import androidx.transition.TransitionManager
+import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
@@ -58,6 +59,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, DashPayProfi
     private var handler: Handler = Handler()
     private lateinit var searchDashPayProfileRunnable: Runnable
     private val adapter: DashPayProfilesAdapter = DashPayProfilesAdapter()
+    private var query = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -127,7 +129,6 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, DashPayProfi
                 setChanged = true
             }
         }
-
     }
 
     private fun initViewModel() {
@@ -155,8 +156,10 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, DashPayProfi
         val query = search.text.toString()
         hideEmptyResult()
         search_loading.visibility = View.VISIBLE
-        val loadingText = getString(R.string.search_user_loading).replace("%", "\"<b>$query</b>\"")
-        search_loading_label.text = HtmlCompat.fromHtml(loadingText, HtmlCompat.FROM_HTML_MODE_COMPACT)
+        var loadingText = getString(R.string.search_user_loading)
+        loadingText = loadingText.replace("%", "\"<b>$query</b>\"")
+        search_loading_label.text = HtmlCompat.fromHtml(loadingText,
+                HtmlCompat.FROM_HTML_MODE_COMPACT)
         (search_loading_icon.drawable as AnimationDrawable).start()
     }
 
@@ -168,7 +171,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, DashPayProfi
     private fun showEmptyResult() {
         search_user_empty_result.visibility = View.VISIBLE
         var emptyResultText = getString(R.string.search_user_no_results)
-        emptyResultText += " \"<b>${search.text.toString()}</b>\""
+        emptyResultText += " \"<b>$query</b>\""
         no_results_label.text = HtmlCompat.fromHtml(emptyResultText, HtmlCompat.FROM_HTML_MODE_COMPACT)
     }
 
@@ -176,24 +179,24 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, DashPayProfi
         search_user_empty_result.visibility = View.GONE
     }
 
-    private fun searchDashPayProfile(query: String) {
+    private fun searchDashPayProfile() {
         adapter.profiles = listOf()
-        if (query.length < 3) {
-            return
-        }
+        hideEmptyResult()
         if (this::searchDashPayProfileRunnable.isInitialized) {
             handler.removeCallbacks(searchDashPayProfileRunnable)
         }
-        searchDashPayProfileRunnable = Runnable {
-            dashPayViewModel.searchDashPayProfile(query)
+        if (query.length >= USERNAME_MIN_LENGTH) {
+            searchDashPayProfileRunnable = Runnable {
+                dashPayViewModel.searchDashPayProfile(query)
+            }
+            handler.postDelayed(searchDashPayProfileRunnable, 500)
         }
-        handler.postDelayed(searchDashPayProfileRunnable, 500)
     }
 
     override fun afterTextChanged(s: Editable?) {
-        val query = s?.toString()
-        if (query != null) {
-            searchDashPayProfile(query)
+        s?.let {
+            query = it.toString()
+            searchDashPayProfile()
         }
     }
 
