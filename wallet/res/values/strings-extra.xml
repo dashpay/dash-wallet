@@ -374,7 +374,7 @@
     <string name="add_new_contact">Add a New Contact</string>
     <string name="send_contact_request">Send Request</string>
     <string name="search_user_no_results">There are no users that match</string>
-    <string name="search_user_loading">Searching for username <b>"%"</b> n the Dash Network</string>
+    <string name="search_user_loading">Searching for username <b>"%"</b> on the Dash Network</string>
 
     <string name="identity_complete_message">Your username %s has been successfully created on the Dash Network</string>
 </resources>
