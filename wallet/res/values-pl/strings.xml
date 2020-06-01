@@ -373,4 +373,7 @@
     <string name="activity_security_hide_balance">Automatyczne Ukrywanie Salda</string>
     <string name="reset_to_default">Resetuj do domyślne</string>
 
+    <string name="payment_protocol_default_error_title">Błąd płatności</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Niewystarczająca Ilość Środków</string>
+    <string name="payment_protocol_insufficient_funds_error_message">Nie posiadasz wystarczających środków aby dokonać tej transakcji</string>
 </resources>

@@ -373,4 +373,7 @@
     <string name="activity_security_hide_balance">Mascheramento Automatico Bilancio </string>
     <string name="reset_to_default">Riportare alle condizioni originali</string>
 
+    <string name="payment_protocol_default_error_title">Errore di pagamento</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Fondi insufficenti</string>
+    <string name="payment_protocol_insufficient_funds_error_message">Non hai fondi sufficienti per completare questa transazione</string>
 </resources>

@@ -67,6 +67,7 @@
     <string name="send_coins_fragment_hint_dusty_send">Bu miktar göndermek için çok düşüktür</string>
     <string name="send_coins_fragment_hint_insufficient_money">Yetersiz bakiye</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Cüzdanınıza gelen küçük ödemelerin toplamı göndermek için yetersiz kalıyor.</string>
+    <string name="send_coins_fragment_hint_replaying">Cüzdanınız ağ ile senkronize olmadığından şuan ödeme yapabilmeniz mümkün değil.</string>
     <string name="send_coins_fragment_direct_payment_enable">Ödemeyi doğrudan alıcıya gönder.</string>
     <string name="send_coins_fragment_direct_payment_ack">Ödemeniz başarıyla doğrudan gönderilmiştir.</string>
     <string name="send_coins_fragment_direct_payment_nack">Ödemeniz doğrudan bağlantı tarafından reddedilmiştir.</string>
@@ -372,4 +373,7 @@
     <string name="activity_security_hide_balance">Otomatik Bakiye Gizleme</string>
     <string name="reset_to_default">Varsayılana sıfırla</string>
 
+    <string name="payment_protocol_default_error_title">Ödeme hatası</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Yetersiz Bakiye</string>
+    <string name="payment_protocol_insufficient_funds_error_message">Bu işlemi gerçekleştirmek için yeterli bakiyeniz yoktur</string>
 </resources>

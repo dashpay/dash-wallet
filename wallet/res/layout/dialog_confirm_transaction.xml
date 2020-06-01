@@ -154,12 +154,12 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/dialog_confirm_verified_by"
+            android:text="@string/dialog_confirm_secured_by"
             android:textColor="@color/dash_gray"
             android:textSize="16sp" />
 
         <TextView
-            android:id="@+id/payee_verified_by"
+            android:id="@+id/payee_secured_by"
             style="@style/MontserratRegular"
             android:layout_width="0dp"
             android:layout_height="match_parent"

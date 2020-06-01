@@ -159,7 +159,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
             @Override
             protected void onStartedFirst(Activity activity) {
                 autoLogout.setAppInBackground(false);
-                if (config.getAutoLogoutEnabled() && (deviceWasLocked || autoLogout.shouldLogout())) {
+                if (wallet != null && config.getAutoLogoutEnabled() && (deviceWasLocked || autoLogout.shouldLogout())) {
                     lockTheApp(WalletApplication.this, activity);
                     if (autoLogout.isTimerActive()) {
                         autoLogout.stopTimer();

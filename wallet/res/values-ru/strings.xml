@@ -373,4 +373,7 @@
     <string name="activity_security_hide_balance">Авто-скрытие баланса</string>
     <string name="reset_to_default">Установить по умолчанию</string>
 
+    <string name="payment_protocol_default_error_title">Ошибка оплаты</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Недостаточно средств</string>
+    <string name="payment_protocol_insufficient_funds_error_message">У вас недостаточно средств для завершения этой транзакции</string>
 </resources>

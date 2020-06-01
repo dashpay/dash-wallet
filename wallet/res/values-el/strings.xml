@@ -373,4 +373,7 @@
     <string name="activity_security_hide_balance">Αυτόματη απόκρυψη Υπολοίπου</string>
     <string name="reset_to_default">Επαναφορά στα Προεπιλεγμένα</string>
 
+    <string name="payment_protocol_default_error_title">Σφάλμα πληρωμής</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Ανεπαρκή Χρήματα</string>
+    <string name="payment_protocol_insufficient_funds_error_message">Δεν έχετε αρκετά χρήματα για να ολοκληρώσετε αυτή την συναλλαγή</string>
 </resources>

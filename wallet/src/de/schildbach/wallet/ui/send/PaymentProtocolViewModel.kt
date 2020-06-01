@@ -138,14 +138,14 @@ class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewMode
             }
 
             override fun onFail(messageResId: Int, vararg messageArgs: Any) {
-                val host = Uri.parse(finalPaymentIntent!!.paymentUrl).host
                 val message = StringBuilder().apply {
-                    appendln(host)
-                    appendln(walletApplication.getString(messageResId, *messageArgs))
                     if (BuildConfig.DEBUG && messageArgs[0] == 415) {
+                        val host = Uri.parse(finalPaymentIntent!!.paymentUrl).host
+                        appendln(host)
+                        appendln(walletApplication.getString(messageResId, *messageArgs))
                         appendln(PaymentProtocol.MIMETYPE_PAYMENT)
+                        appendln()
                     }
-                    appendln()
                     appendln(walletApplication.getString(R.string.payment_request_problem_message))
                 }
 

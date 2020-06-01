@@ -215,6 +215,7 @@
     <string name="verify_seed_success_message">Cüzdanınız artık güvende. Hesabınızı başka bir cihaza aktarmak için kurtarma sözcük grubunuzu istediğiniz zaman kullanabilirsiniz.</string>
     <string name="view_seed_done">Bitti</string>
     <string name="view_seed_title">Kurtarma Sözcük Grubu</string>
+	<string name="transaction_result_view_on_explorer">Blok gezgininde görüntüle</string>
 	<string name="transaction_result_paid_successfully">Başarıyla gönderildi</string>
 	<string name="transaction_result_sent_to">Gönder</string>
 	<string name="transaction_date_and_time">Tarih</string>
@@ -225,11 +226,13 @@
     <string name="transaction_details_sent_to">Gönderildi</string>
     <string name="transaction_details_received_at">Alındı</string>
     <string name="transaction_details_moved_from">Taşındı</string>
+    <string name="transaction_details_moved_internally_to">Dahili olarak taşındı</string>
+
     <string name="authenticate_fingerprint_title">Doğrulama</string>
     <string name="authenticate_fingerprint_message">Devam etmek için parmak iziyle onaylayın</string>
     <string name="authenticate_pin_message">Devam etmek için PİN\'inizi girin</string>
     <string name="authenticate_switch_to_fingerprint">Parmak izinizi kullanın</string>
-    <string name="authenticate_switch_to_pin">Şifre kullan</string>
+    <string name="authenticate_switch_to_pin">PİN Kullan</string>
 
     <string name="menu_buy_and_sell_title">Dash Al &amp; Sat</string>
     <string name="menu_buy_and_sell_subtitle">Üçüncü parti borsalara bağlanın</string>
@@ -241,6 +244,8 @@
     <string name="menu_tools_subtitle">Özel anahtari içeri aktar...</string>
     <string name="menu_local_currency">Yerel Para Birimi</string>
     <string name="menu_rescan_blockchain">Blok Zincirini Tekrar Tara</string>
+    <string name="menu_contact_support_title">Destekle İletişime Geçin</string>
+    <string name="menu_contact_support_subtitle">Sorun rapor et</string>
 
     <string name="tools_address_book">Adres Rehberi</string>
     <string name="tools_import_private_key">Özel anahtar içeri al</string>
@@ -308,4 +313,21 @@
     <string name="sync_status_syncing_sub_title">Dash blok zinciri ile</string>
     <string name="sync_status_unable_to_connect">Bağlanılamıyor</string>
     <string name="sync_status_check_connection">Bağlantınızı kontrol edin</string>
-    </resources>
+    <string name="sync_status_sync_title">Senkronize Et</string>
+    <string name="sync_status_sync_completed">Tamamlandı</string>
+
+    <string name="appwidget_wallet_not_ready">Lütfen cüzdanınızı kurun</string>
+
+    <string name="payment_request_please_wait_title">Lütfen bekleyin</string>
+    <string name="payment_request_please_wait_message">Ödeme Sunucusuna Bağlanıyor</string>
+    <string name="payment_request_unable_to_connect">Bağlanılamıyor</string>
+    <string name="payment_request_unable_to_send">Gönderilemiyor</string>
+    <string name="payment_request_please_try_again">Lütfen tekrar deneyin</string>
+    <string name="payment_request_try_again">Tekrar Dene</string>
+    <string name="payment_request_problem_title">Ödeme kabul edilmedi</string>
+    <string name="payment_request_problem_message">Ödemeniz işleme koyuldu, fakat sunucu kabul etmedi</string>
+    <string name="payment_request_expired_title">Ödeme Talebinin Süresi Bitti</string>
+    <string name="payment_request_close">Kapat</string>
+    <string name="payment_request_skip">Atla</string>
+    <string name="payment_request_paid_to">Ödeme yap</string>
+</resources>

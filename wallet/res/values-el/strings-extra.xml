@@ -78,9 +78,9 @@
     <string name="payments_title">Πληρωμές</string>
     <string name="payments_tab_pay_label">Αποστολή</string>
     <string name="payments_tab_receive_label">Λήψη</string>
-    <string name="payments_pay_by_qr_title">Απεσταλμένο από</string>
+    <string name="payments_pay_by_qr_title">Αποστολή με</string>
     <string name="payments_pay_by_qr_sub_title">Σάρωση QR κωδικού</string>
-    <string name="payments_pay_by_qr_button">Ανίχνευση</string>
+    <string name="payments_pay_by_qr_button">Σάρωση</string>
     <string name="payments_pay_to_clipboard_title">Αποστολή στη αντιγραμμένη διεύθυνση</string>
     <string name="payments_pay_to_clipboard_sub_title">Δεν αντιγράφηκε καμία διεύθυνση</string>
     <string name="payments_pay_to_clipboard_button">Αποστολή</string>
@@ -232,7 +232,7 @@
     <string name="authenticate_fingerprint_message">Επιβεβαιώστε το Δακτυλικό αποτύπωμα για να συνεχίσετε</string>
     <string name="authenticate_pin_message">Εισαγάγετε το PIN σας για να συνεχίσετε</string>
     <string name="authenticate_switch_to_fingerprint">Χρησιμοποιήστε το δακτυλικό σας αποτύπωμα</string>
-    <string name="authenticate_switch_to_pin">Χρησιμοποιήστε τον κωδικό</string>
+    <string name="authenticate_switch_to_pin">Χρησιμοποιήστε το PIN</string>
 
     <string name="menu_buy_and_sell_title">Αγορά και Πώληση Dash</string>
     <string name="menu_buy_and_sell_subtitle">Συνδεθείτε με ανταλλακτήρια τρίτων</string>
@@ -244,6 +244,8 @@
     <string name="menu_tools_subtitle">Εισάγετε το ιδιωτικό κλειδί…</string>
     <string name="menu_local_currency">Τοπικό νόμισμα</string>
     <string name="menu_rescan_blockchain">Επανασάρωση του blockchain</string>
+    <string name="menu_contact_support_title">Επικοινωνήστε με την υποστήριξη</string>
+    <string name="menu_contact_support_subtitle">Αναφέρετε το πρόβλημα</string>
 
     <string name="tools_address_book">Βιβλίο Διευθύνσεων</string>
     <string name="tools_import_private_key">Εισάγετε το ιδιωτικό κλειδί</string>
@@ -315,4 +317,17 @@
     <string name="sync_status_sync_completed">Ολοκληρώθηκε</string>
 
     <string name="appwidget_wallet_not_ready">Ρυθμίστε το πορτοφόλι σας</string>
+
+    <string name="payment_request_please_wait_title">Παρακαλώ περιμένετε</string>
+    <string name="payment_request_please_wait_message">Σύνδεση με το διακομιστή πληρωμών</string>
+    <string name="payment_request_unable_to_connect">Δεν είναι δυνατή η σύνδεση</string>
+    <string name="payment_request_unable_to_send">Δεν είναι δυνατή η Αποστολή</string>
+    <string name="payment_request_please_try_again">Παρακαλώ προσπαθήστε ξανά</string>
+    <string name="payment_request_try_again">Προσπαθήστε ξανά</string>
+    <string name="payment_request_problem_title">Η πληρωμή δεν αναγνωρίστηκε</string>
+    <string name="payment_request_problem_message">Η πληρωμή σας διεκπεραιώθηκε, αλλά ο διακομιστής δεν μπόρεσε να την αναγνωρίσει</string>
+    <string name="payment_request_expired_title">Το αίτημα πληρωμής Έληξε</string>
+    <string name="payment_request_close">κλείσιμο</string>
+    <string name="payment_request_skip">Παράλειψη</string>
+    <string name="payment_request_paid_to">Πληρώθηκε σε</string>
 </resources>

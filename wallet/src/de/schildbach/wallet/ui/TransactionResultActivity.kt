@@ -42,23 +42,29 @@ class TransactionResultActivity : AbstractWalletActivity() {
     companion object {
         const val EXTRA_TX_ID = "tx_id"
         const val EXTRA_USER_AUTHORIZED_RESULT_EXTRA = "user_authorized_result_extra"
-        private const val EXTRA_PAYEE_NAME = "payee_name"
+        private const val EXTRA_PAYMENT_MEMO = "payee_name"
         private const val EXTRA_PAYEE_VERIFIED_BY = "payee_verified_by"
 
         @JvmStatic
-        fun createIntent(context: Context, transaction: Transaction, userAuthorized: Boolean): Intent {
-            return createIntent(context, transaction, userAuthorized, null, null)
+        fun createIntent(context: Context, action: String? = null, transaction: Transaction, userAuthorized: Boolean): Intent {
+            return createIntent(context, action, transaction, userAuthorized, null, null)
         }
 
         @JvmStatic
-        fun createIntent(context: Context, transaction: Transaction, userAuthorized: Boolean,
-                         payeeName: String? = null, payeeVerifiedBy: String? = null): Intent {
-            val transactionResultIntent = Intent(context, TransactionResultActivity::class.java)
-            transactionResultIntent.putExtra(EXTRA_TX_ID, transaction.txId)
-            transactionResultIntent.putExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, userAuthorized)
-            transactionResultIntent.putExtra(EXTRA_PAYEE_NAME, payeeName)
-            transactionResultIntent.putExtra(EXTRA_PAYEE_VERIFIED_BY, payeeVerifiedBy)
-            return transactionResultIntent
+        fun createIntent(context: Context, transaction: Transaction, userAuthorized: Boolean, payeeName: String? = null,
+                         payeeVerifiedBy: String? = null): Intent {
+            return createIntent(context, null, transaction, userAuthorized, payeeName, payeeVerifiedBy)
+        }
+
+        fun createIntent(context: Context, action: String?, transaction: Transaction, userAuthorized: Boolean,
+                         paymentMemo: String? = null, payeeVerifiedBy: String? = null): Intent {
+            return Intent(context, TransactionResultActivity::class.java).apply {
+                setAction(action)
+                putExtra(EXTRA_TX_ID, transaction.txId)
+                putExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, userAuthorized)
+                putExtra(EXTRA_PAYMENT_MEMO, paymentMemo)
+                putExtra(EXTRA_PAYEE_VERIFIED_BY, payeeVerifiedBy)
+            }
         }
     }
 
@@ -72,15 +78,21 @@ class TransactionResultActivity : AbstractWalletActivity() {
         val transactionResultViewBinder = TransactionResultViewBinder(container)
         val tx = WalletApplication.getInstance().wallet.getTransaction(txId)
         if (tx != null) {
-            val payeeName = intent.getStringExtra(EXTRA_PAYEE_NAME)
+            val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
             val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
             transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
             view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
             transaction_close_btn.setOnClickListener {
-                if (intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false)) {
-                    startActivity(WalletActivity.createIntent(this))
-                } else {
-                    startActivity(LockScreenActivity.createIntentAsNewTask(this))
+                when {
+                    intent.action == Intent.ACTION_VIEW -> {
+                        finish()
+                    }
+                    intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
+                        startActivity(WalletActivity.createIntent(this))
+                    }
+                    else -> {
+                        startActivity(LockScreenActivity.createIntentAsNewTask(this))
+                    }
                 }
             }
         } else {

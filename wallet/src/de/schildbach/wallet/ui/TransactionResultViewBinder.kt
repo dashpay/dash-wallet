@@ -45,6 +45,7 @@ class TransactionResultViewBinder(private val containerView: View) {
     private val transactionFee by lazy { containerView.findViewById<CurrencyTextView>(R.id.transaction_fee) }
     private val fiatValue by lazy { containerView.findViewById<CurrencyTextView>(R.id.fiat_value) }
     private val date by lazy { containerView.findViewById<TextView>(R.id.transaction_date_and_time) }
+    private val statusContainer by lazy { containerView.findViewById<View>(R.id.status_layout) }
     private val primaryStatusTxt by lazy { containerView.findViewById<TextView>(R.id.transaction_primary_status) }
     private val secondaryStatusTxt by lazy { containerView.findViewById<TextView>(R.id.transaction_secondary_status) }
     private val inputsLabel by lazy { containerView.findViewById<TextView>(R.id.input_addresses_label) }
@@ -60,12 +61,12 @@ class TransactionResultViewBinder(private val containerView: View) {
         containerView.findViewById<ViewGroup>(R.id.transaction_output_addresses_container)
     }
     private val feeRow by lazy { containerView.findViewById<View>(R.id.fee_container) }
-    private val payeeName by lazy { containerView.findViewById<TextView>(R.id.payee_name) }
-    private val payeeNameContainer by lazy { containerView.findViewById<View>(R.id.payee_name_container) }
-    private val payeeVerifiedByContainer by lazy { containerView.findViewById<View>(R.id.payee_verified_by_container) }
-    private val payeeVerifiedBy by lazy { containerView.findViewById<TextView>(R.id.payee_verified_by) }
+    private val paymentMemo by lazy { containerView.findViewById<TextView>(R.id.payment_memo) }
+    private val paymentMemoContainer by lazy { containerView.findViewById<View>(R.id.payment_memo_container) }
+    private val payeeSecuredByContainer by lazy { containerView.findViewById<View>(R.id.payee_verified_by_container) }
+    private val payeeSecuredBy by lazy { containerView.findViewById<TextView>(R.id.payee_secured_by) }
 
-    fun bind(tx: Transaction, payeeName: String? = null, payeeVerifiedBy: String? = null) {
+    fun bind(tx: Transaction, payeeName: String? = null, payeeSecuredBy: String? = null) {
         val noCodeFormat = WalletApplication.getInstance().configuration.format.noCode()
         val wallet = WalletApplication.getInstance().wallet
         val primaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet)
@@ -88,13 +89,14 @@ class TransactionResultViewBinder(private val containerView: View) {
         }
 
         if (payeeName != null) {
-            this.payeeName.text = payeeName
-            this.payeeNameContainer.visibility = View.VISIBLE
-            this.payeeVerifiedBy.text = payeeVerifiedBy
-            this.payeeVerifiedByContainer.visibility = View.VISIBLE
+            this.paymentMemo.text = payeeName
+            this.paymentMemoContainer.visibility = View.VISIBLE
+            this.payeeSecuredBy.text = payeeSecuredBy
+            payeeSecuredByContainer.visibility = View.VISIBLE
             outputsContainer.visibility = View.GONE
             inputsContainer.visibility = View.GONE
-            this.payeeNameContainer.setOnClickListener {
+            statusContainer.visibility = View.GONE
+            this.paymentMemoContainer.setOnClickListener {
                 outputsContainer.visibility = if (outputsContainer.visibility == View.VISIBLE) View.GONE else View.VISIBLE
                 inputsContainer.visibility = outputsContainer.visibility
             }
@@ -179,7 +181,6 @@ class TransactionResultViewBinder(private val containerView: View) {
                 primaryStatusTxt.visibility = View.GONE
             }
             if (secondaryStatusStr.isNotEmpty()) {
-
                 secondaryStatusTxt.text = secondaryStatusStr
             } else {
                 secondaryStatusTxt.visibility = View.GONE

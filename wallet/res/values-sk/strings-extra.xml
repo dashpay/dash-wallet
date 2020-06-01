@@ -238,8 +238,6 @@
     <string name="authenticate_fingerprint_message">Pre pokračovanie potvrďte odtlačok prsta</string>
     <string name="authenticate_pin_message">Pokračujte zadaním PIN kódu</string>
     <string name="authenticate_switch_to_fingerprint">Použiť odtlačok prsta</string>
-    <string name="authenticate_switch_to_pin">Použiť heslo</string>
-
     <string name="menu_buy_and_sell_title">Kúpiť a predať Dash</string>
     <string name="menu_buy_and_sell_subtitle">Spojiť s burzami tretích strán</string>
     <string name="menu_security_title">Bezpečnosť</string>
@@ -250,6 +248,8 @@
     <string name="menu_tools_subtitle">Importovať privátny kľúč…</string>
     <string name="menu_local_currency">Miestna mena</string>
     <string name="menu_rescan_blockchain">Znova prehľadať blockchain</string>
+    <string name="menu_contact_support_title">Kontaktovať Podporu</string>
+    <string name="menu_contact_support_subtitle">Nahlásiť problém</string>
 
     <string name="tools_address_book">Adresár</string>
     <string name="tools_import_private_key">Importovať Privátny Kľúč</string>
@@ -321,4 +321,8 @@
     <string name="sync_status_sync_completed">Dokončené</string>
 
     <string name="appwidget_wallet_not_ready">Nastavte si svoju peňaženku</string>
-</resources>
+
+    <string name="payment_request_please_try_again">Prosím skúste znova</string>
+    <string name="payment_request_close">Ukončiť</string>
+    <string name="payment_request_skip">Preskočiť</string>
+    </resources>
