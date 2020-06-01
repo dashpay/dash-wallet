@@ -17,15 +17,12 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.ActivityOptions
-import android.content.Intent
 import android.graphics.drawable.AnimationDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -207,15 +204,6 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, DashPayProfi
     }
 
     override fun onItemClicked(view: View, document: Document) {
-        val intent = Intent(this, DashPayProfileActivity::class.java)
-        intent.putExtra("avatarUrl", document.data["avatarUrl"].toString())
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            view.transitionName = "avatar"
-            val options = ActivityOptions.makeSceneTransitionAnimation(this, view,
-                    "avatar")
-            startActivity(intent, options.toBundle())
-        } else {
-            startActivity(intent)
-        }
+
     }
 }

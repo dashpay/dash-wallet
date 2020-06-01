@@ -300,13 +300,8 @@
         <activity
             android:name="de.schildbach.wallet.ui.SearchUserActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity.DashPayProfile"
+            android:theme="@style/My.Theme.ChildActivity"
             android:windowSoftInputMode="stateHidden|adjustResize" />
-
-        <activity
-            android:name="de.schildbach.wallet.ui.DashPayProfileActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity.DashPayProfile"/>
 
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"

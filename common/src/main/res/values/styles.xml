@@ -90,9 +90,6 @@
 
     </style>
 
-    <style name="My.Theme.ChildActivity.DashPayProfile">
-    </style>
-
     <style name="My.TextAppearance.Widget.ActionBar.Title" parent="@android:style/TextAppearance.Holo.Widget.ActionBar.Title">
         <item name="android:textColor">@color/white</item>
         <item name="android:textStyle">bold</item>
