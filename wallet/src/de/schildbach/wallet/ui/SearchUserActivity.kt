@@ -45,8 +45,8 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_search_dashpay_profile_1.*
-import kotlinx.android.synthetic.main.search_user_empty_result.*
-import kotlinx.android.synthetic.main.search_user_loading.*
+import kotlinx.android.synthetic.main.user_search_empty_result.*
+import kotlinx.android.synthetic.main.user_search_loading.*
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dashevo.dpp.document.Document
 
