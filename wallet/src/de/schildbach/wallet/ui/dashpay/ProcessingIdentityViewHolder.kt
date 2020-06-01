@@ -76,6 +76,9 @@ class ProcessingIdentityViewHolder(itemView: View) : RecyclerView.ViewHolder(ite
                         blockchainIdentityData.username)
                 itemView.subtitle.setText(R.string.processing_done_subtitle)
             }
+            CreationState.DONE_AND_DISMISS -> {
+                // nothing to do
+            }
         }
     }
 }
