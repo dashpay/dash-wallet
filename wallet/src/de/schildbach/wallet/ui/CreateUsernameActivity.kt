@@ -45,7 +45,6 @@ import kotlinx.android.synthetic.main.users_orbit.*
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.InteractionAwareActivity
 import org.slf4j.LoggerFactory
-import java.util.concurrent.Executors
 
 class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
@@ -286,6 +285,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
                 register_btn.isEnabled = false
             }
         }
+        imitateUserInteraction()
     }
 
     private fun showProcessingState() {

@@ -25,4 +25,8 @@ public class InteractionAwareActivity extends AppCompatActivity {
         super.onUserInteraction();
         ((ResetAutoLogoutTimerHandler) getApplication()).resetAutoLogoutTimer();
     }
+
+    public void imitateUserInteraction() {
+        onUserInteraction();
+    }
 }
