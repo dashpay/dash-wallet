@@ -196,6 +196,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private fun triggerIdentityCreation(reuseTransaction: Boolean) {
         val username = username.text.toString()
         if (reuseTransaction) {
+            startService(CreateIdentityService.createIntentForNewUsername(this, username))
             finish()
         } else {
             AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(this, Observer {
@@ -207,15 +208,8 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
                 }
             })
             showProcessingState()
+            startService(CreateIdentityService.createIntent(this, username))
         }
-        Handler().postDelayed({
-            //delay to prevent UI lagging
-            if (reuseTransaction) {
-                startService(CreateIdentityService.createIntentForNewUsername(this, username))
-            } else {
-                startService(CreateIdentityService.createIntent(this, username))
-            }
-        }, 200)
     }
 
     private fun doneAndDismiss() {
