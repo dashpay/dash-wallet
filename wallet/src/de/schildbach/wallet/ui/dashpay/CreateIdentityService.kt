@@ -4,7 +4,9 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.PowerManager
+import android.os.Process
 import androidx.lifecycle.LifecycleService
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -86,6 +88,12 @@ class CreateIdentityService : LifecycleService() {
     private val platformRepo by lazy { PlatformRepo(walletApplication) }
     private lateinit var securityGuard: SecurityGuard
 
+    private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
+    private val backgroundHandler by lazy {
+        backgroundThread.start()
+        Handler(backgroundThread.looper)
+    }
+
     private val wakeLock by lazy {
         val lockName = "$packageName create identity"
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -105,7 +113,7 @@ class CreateIdentityService : LifecycleService() {
     private val createIdentityexceptionHandler = CoroutineExceptionHandler { _, exception ->
         log.error(exception.message, exception)
         GlobalScope.launch {
-            if (blockchainIdentityData!= null) {
+            if (this@CreateIdentityService::blockchainIdentityData.isInitialized) {
                 log.error("[${blockchainIdentityData.creationState}(error)]", exception)
                 platformRepo.updateCreationState(blockchainIdentityData, blockchainIdentityData.creationState, exception)
                 if (this@CreateIdentityService::blockchainIdentity.isInitialized) {
@@ -127,7 +135,7 @@ class CreateIdentityService : LifecycleService() {
             return
         }
         createIdentityNotification.startServiceForeground()
-        wakeLock.acquire(TimeUnit.MINUTES.toMillis(10));
+        wakeLock.acquire(TimeUnit.MINUTES.toMillis(10))
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -183,6 +191,7 @@ class CreateIdentityService : LifecycleService() {
         log.info("username registration starting")
 
         val blockchainIdentityDataTmp = platformRepo.loadBlockchainIdentityData()
+
         when {
             (blockchainIdentityDataTmp != null && blockchainIdentityDataTmp.restoring) -> {
                 val cftx = blockchainIdentityDataTmp.findCreditFundingTransaction(walletApplication.wallet)
@@ -211,19 +220,20 @@ class CreateIdentityService : LifecycleService() {
         }
         platformRepo.resetCreationStateError(blockchainIdentityData)
 
-        val handler = Handler()
         val wallet = walletApplication.wallet
         val password = securityGuard.retrievePassword()
 
-        val encryptionKey = deriveKey(handler, wallet, password)
+
+        val encryptionKey = deriveKey(backgroundHandler, wallet, password)
 
         if (blockchainIdentityData.creationState <= CreationState.UPGRADING_WALLET) {
             platformRepo.updateCreationState(blockchainIdentityData, CreationState.UPGRADING_WALLET)
-            val seed = decryptSeed(handler, wallet, encryptionKey)
+            val seed = decryptSeed(backgroundHandler, wallet, encryptionKey)
             platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
         }
 
         val blockchainIdentity = platformRepo.initBlockchainIdentity(blockchainIdentityData, wallet)
+
 
         if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_CREATING) {
             platformRepo.updateCreationState(blockchainIdentityData, CreationState.CREDIT_FUNDING_TX_CREATING)
@@ -317,6 +327,7 @@ class CreateIdentityService : LifecycleService() {
         if (blockchainIdentityData.creationState < CreationState.DONE) {
             platformRepo.updateCreationState(blockchainIdentityData, CreationState.DONE)
         }
+
         // aaaand we're done :)
         log.info("username registration complete")
     }
@@ -341,12 +352,11 @@ class CreateIdentityService : LifecycleService() {
         val creditFundingTransaction: CreditFundingTransaction = cftxs.find { cftx -> cftx.creditBurnIdentityIdentifier.toStringBase58() == identity }
                 ?: throw IllegalArgumentException("identity $identity does not match a credit funding transaction")
 
-        val handler = Handler()
         val wallet = walletApplication.wallet
         val password = securityGuard.retrievePassword()
 
-        val encryptionKey = deriveKey(handler, wallet, password)
-        val seed = decryptSeed(handler, wallet, encryptionKey)
+        val encryptionKey = deriveKey(backgroundHandler, wallet, password)
+        val seed = decryptSeed(backgroundHandler, wallet, encryptionKey)
 
         // create the Blockchain Identity object
         val blockchainIdentity = BlockchainIdentity(Identity.IdentityType.USER, 0, wallet)
@@ -500,6 +510,7 @@ class CreateIdentityService : LifecycleService() {
     override fun onDestroy() {
         super.onDestroy()
         serviceJob.cancel()
+        backgroundThread.getLooper().quit()
 
         if (wakeLock.isHeld) {
             log.debug("wakelock still held, releasing")
