@@ -374,4 +374,7 @@
     <string name="activity_security_hide_balance">Guthaben automatisch verstecken</string>
     <string name="reset_to_default">Auf Standard setzen</string>
 
+    <string name="payment_protocol_default_error_title">Zahlungsfehler</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Guthaben nicht ausreichend</string>
+    <string name="payment_protocol_insufficient_funds_error_message">Dein Guthaben reicht nicht aus, um diese Transaktion zu tätigen</string>
 </resources>

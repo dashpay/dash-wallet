@@ -44,7 +44,7 @@ open class SendCoinsActivityViewModel(application: Application) : AndroidViewMod
     fun initStateFromDashUri(dashUri: Uri) {
 
         val input = dashUri.toString()
-        object : StringInputParser(input) {
+        object : StringInputParser(input, true) {
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
                 basePaymentIntent.value = Resource.success(paymentIntent)
             }

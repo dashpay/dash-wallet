@@ -29,6 +29,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
+import android.widget.Button
 import androidx.annotation.RequiresApi
 import androidx.core.os.CancellationSignal
 import androidx.fragment.app.DialogFragment
@@ -75,12 +76,15 @@ open class CheckPinDialog : DialogFragment() {
 
     private lateinit var state: State
 
+    private val positiveButton by lazy { view!!.findViewById<Button>(R.id.positive_button) }
+    private val negativeButton by lazy { view!!.findViewById<Button>(R.id.negative_button) }
+
     protected lateinit var viewModel: CheckPinViewModel
     protected lateinit var sharedModel: CheckPinSharedModel
 
     protected val pinRetryController = PinRetryController.getInstance()
     protected var fingerprintHelper: FingerprintHelper? = null
-    protected lateinit var fingerprintCancellationSignal: CancellationSignal
+    private lateinit var fingerprintCancellationSignal: CancellationSignal
 
     protected var pinLength = WalletApplication.getInstance().configuration.pinLength
 
@@ -104,11 +108,12 @@ open class CheckPinDialog : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         initViewModel()
-        cancel_button.setOnClickListener {
+        negativeButton.setText(R.string.button_cancel)
+        negativeButton.setOnClickListener {
             sharedModel.onCancelCallback.call()
             dismiss()
         }
-        pin_or_fingerprint_button.setOnClickListener {
+        positiveButton.setOnClickListener {
             if (pin_preview.visibility == View.VISIBLE) {
                 fingerprintFlow(true)
             } else {
@@ -148,7 +153,7 @@ open class CheckPinDialog : DialogFragment() {
         arguments?.getBoolean(ARG_PIN_ONLY, false).let {
             if (true == it) {
                 fingerprintFlow(!it)
-                pin_or_fingerprint_button.isEnabled = false
+                positiveButton.isEnabled = false
             } else initFingerprint()
         }
     }
@@ -265,7 +270,7 @@ open class CheckPinDialog : DialogFragment() {
                         fingerprintFlow(true)
                         startFingerprintListener()
                     } else {
-                        pin_or_fingerprint_button.visibility = View.GONE
+                        positiveButton.visibility = View.GONE
                     }
                 } else {
                     fingerprintHelper = null
@@ -280,8 +285,8 @@ open class CheckPinDialog : DialogFragment() {
         pin_preview.visibility = if (active) View.GONE else View.VISIBLE
         numeric_keyboard.visibility = if (active) View.GONE else View.VISIBLE
         message.setText(if (active) R.string.authenticate_fingerprint_message else R.string.authenticate_pin_message)
-        pin_or_fingerprint_button.setText(if (active) R.string.authenticate_switch_to_pin else R.string.authenticate_switch_to_fingerprint)
-        pin_or_fingerprint_button.visibility = if (active) View.VISIBLE else View.GONE
+        positiveButton.setText(if (active) R.string.authenticate_switch_to_pin else R.string.authenticate_switch_to_fingerprint)
+        positiveButton.visibility = if (active) View.VISIBLE else View.GONE
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)

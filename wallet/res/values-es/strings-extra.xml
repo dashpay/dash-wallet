@@ -8,13 +8,13 @@
 
     <string name="set_pin_create_new_wallet">Crear una Nueva Billetera</string>
     <string name="set_pin_restore_wallet">Restaurar Billetera</string>
-    <string name="set_pin_enter_pin">Ingrese PIN antiguo</string>
+    <string name="set_pin_enter_pin">Ingresa el PIN antiguo</string>
     <string name="set_pin_set_pin">Establecer PIN</string>
     <string name="set_pin_confirm_pin">Confirmar PIN</string>
     <string name="set_pin_encrypting">Encriptando billetera</string>
     <string name="set_pin_decrypting">Desencriptando billetera</string>
     <string name="set_pin_verifying_pin">Verificando PIN</string>
-    <string name="set_pin_message">Este PIN será requerido para desbloquear su app toda vez que la utilices.</string>
+    <string name="set_pin_message">Este PIN será requerido para desbloquear tu app cada vez que la utilices.</string>
 
     <string name="home_pay">Enviar</string>
     <string name="home_receive">Recibir</string>
@@ -24,14 +24,15 @@
     <string name="home_balance_hide_hint">Tocar para ocultar saldo</string>
 
     <string name="dialog_confirm_confirm">Confirmar</string>
-    <string name="dialog_confirm_pay_to">Enviar para</string>
+    <string name="dialog_confirm_pay_to">Enviar a</string>
+    <string name="dialog_confirm_secured_by">Protegido por</string>
     <string name="dialog_confirm_fee">Comisión de red</string>
     <string name="dialog_confirm_total">Total</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_secure_now">Asegurar Billetera Ahora</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Escanear para Envia</string>
+    <string name="quick_action_scan_to_pay">Escanear para Enviar</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_pay_to_address">Enviar a Dirección</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -48,21 +49,21 @@
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_login_with_fingerprint">Login con huella dactilar</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
-    <string name="lock_action_scan_to_pay">Escanear para Envia</string>
+    <string name="lock_action_scan_to_pay">Escanear para Enviar</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
     <string name="lock_enter_pin">Ingresar PIN</string>
-    <string name="lock_unlock_with_fingerprint">Use tu huella para desbloquear</string>
+    <string name="lock_unlock_with_fingerprint">Usa tu huella para desbloquear</string>
 
     <string name="perm_lock_info">Billetera bloqueada permanentemente</string>
     <string name="perm_lock_wipe_wallet">Limpiar Billetera</string>
     <string name="perm_lock_close_app">Cerrar</string>
 
-    <string name="scan_to_pay_error_dialog_title">Escanear para Envia</string>
+    <string name="scan_to_pay_error_dialog_title">Escanear para Enviar</string>
     <string name="scan_to_pay_error_dialog_message">Dirección de Dash o solicitud de URL no válida en el portapapeles:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Dirección de Dash o solicitud de URL no válida en el portapapeles</string>
 
     <string name="receive_title">Recibir</string>
-    <string name="receive_enter_amount_message">Especifica la cantidad a recibir</string>
+    <string name="receive_enter_amount_message">Especificar la cantidad a recibir</string>
     <string name="receive_enter_amount_button">Especificar Monto</string>
     <string name="receive_share_button">Compartir</string>
     <string name="receive_copied">Copiado</string>
@@ -138,7 +139,7 @@
     <string name="wallet_lock_unlock_dialog_title">Abra tu billetera</string>
     <string name="wallet_lock_unlock_dialog_message">Tu billetera está protegida por un PIN. Ingresa tu PIN y presiona Abrir para continuar.</string>
     <string name="wallet_lock_reset_wallet_title">Reiniciar billetera</string>
-    <string name="wallet_lock_reset_wallet_message">¿Estás seguro? Tu billetera se borrará y todos sus Dash se perderán.\n\nLa única forma de recuperar sus Dash es con un archivo de backup o frase de recuperación.</string>
+    <string name="wallet_lock_reset_wallet_message">¿Estás seguro? Tu billetera se borrará y todos tus Dash se perderán.\n\nLa única forma de recuperar tus Dash es con un archivo de backup o frase de recuperación.</string>
 
     <string name="wallet_lock_wallet_disabled">Billetera deshabilitada</string>
     <string name="wallet_lock_try_again">Intente nuevamente en %1$d %2$s</string>
@@ -181,10 +182,10 @@
 
     <string name="net_type_indicator" />
 
-    <string name="unlock_with_fingerprint">Use tu huella para desbloquear.</string>
-    <string name="unlock_with_fingerprint_error">No se pudo reconocer tu huella, por favor intente nuevamente.</string>
+    <string name="unlock_with_fingerprint">Usa tu huella para desbloquear.</string>
+    <string name="unlock_with_fingerprint_error">No se pudo reconocer tu huella, por favor intenta nuevamente.</string>
     <string name="unlock_with_fingerprint_error_max_attempts">Máximo número de intentos de huella superado. Intente nuevamente más tarde por favor.</string>
-    <string name="or_unlock_with_fingerprint">O use tu huella para desbloquear.</string>
+    <string name="or_unlock_with_fingerprint">O usa tu huella para desbloquear.</string>
     <string name="enable_fingerprint">Habilitar huella.</string>
     <string name="touch_fingerprint_sensor">Sensor de huella dactilar táctil</string>
     <string name="touch_fingerprint_to_enable">Toque el sensor de huellas para habilitar desbloqueo con huella.</string>
@@ -201,18 +202,18 @@
     <string name="verify_show_recovery_phrase">Mostrar Frase de Recuperación</string>
     <string name="verify_secure_now">Asegurar Billetera Ahora</string>
     <string name="verify_it_is_important">Es importante</string>
-    <string name="verify_it_is_important_subtitle">Estamos a punto de mostrar la frase de recuperación de su billetera.</string>
-    <string name="verify_info_text_1">Esta frase de recuperación es su acceso para los fondos en esta billetera.</string>
+    <string name="verify_it_is_important_subtitle">Estamos a punto de mostrar la frase de recuperación de tu billetera.</string>
+    <string name="verify_info_text_1">Esta frase de recuperación es tu acceso para los fondos en esta billetera.</string>
     <string name="verify_info_text_2">Nosotros no guardamos esta frase de recuperación.</string>
     <string name="verify_info_text_3">Necesitarás esta frase de recuperación para acceder a tus fondos si este dispositivo se pierde, daña o si la billetera de Dash se desinstala accidentalmente de este dispositivo.</string>
     <string name="verify_skip">Salta</string>
     <string name="verify_secure_now_btn">Asegurar ahora</string>
-    <string name="verify_secure_now_message">Si pierdes este dispositivo, podrás perder sus fondos. Obtenga su frase de recuperación para que puedas restaurar su billetera en otro dispositivo.</string>
-    <string name="verify_seed_title">Anótela, por favor</string>
+    <string name="verify_secure_now_message">Si pierdes este dispositivo, podrás perder tus fondos. Obtén tu frase de recuperación para que puedas restaurar tu billetera en otro dispositivo.</string>
+    <string name="verify_seed_title">Anótala, por favor</string>
     <string name="verify_seed_write_down_confirmation">Ya la escribí</string>
-    <string name="verify_seed_buttons_tip">Por favor toque las palabras de su frase de recuperación en el orden correcto</string>
+    <string name="verify_seed_buttons_tip">Por favor escribe las palabras de tu frase de recuperación en el orden correcto</string>
     <string name="verify_seed_success_title">Verificado Exitosamente</string>
-    <string name="verify_seed_success_message">Su billetera está segura ahora. Podrás utilizar su frase de recuperación en cualquier momento para recuperar su cuenta en otro dispositivo.</string>
+    <string name="verify_seed_success_message">Tu billetera está segura ahora. Podrás utilizar tu frase de recuperación en cualquier momento para recuperar tu cuenta en otro dispositivo.</string>
     <string name="view_seed_done">Hecho</string>
     <string name="view_seed_title">Frase de Recuperación</string>
 	<string name="transaction_result_view_on_explorer">Ver en el Explorador de Bloqu</string>
@@ -223,16 +224,16 @@
 	<string name="transaction_details_amount_received">Monto Recibido</string>
 	<string name="transaction_details_amount_sent">Monto Enviado</string>
     <string name="transaction_details_sent_from">Enviado de</string>
-    <string name="transaction_details_sent_to">Enviado para</string>
+    <string name="transaction_details_sent_to">Enviado a</string>
     <string name="transaction_details_received_at">Recibido en</string>
     <string name="transaction_details_moved_from">Movido de</string>
     <string name="transaction_details_moved_internally_to">Movido internamente para</string>
 
     <string name="authenticate_fingerprint_title">Autenticar</string>
-    <string name="authenticate_fingerprint_message">Comfirma la huella dactilar para continuar</string>
+    <string name="authenticate_fingerprint_message">Confirma la huella dactilar para continuar</string>
     <string name="authenticate_pin_message">Ingresa tu PIN para continuar</string>
     <string name="authenticate_switch_to_fingerprint">Usar huella dactilar</string>
-    <string name="authenticate_switch_to_pin">Usar contraseña</string>
+    <string name="authenticate_switch_to_pin">Usar PIN</string>
 
     <string name="menu_buy_and_sell_title">Comprar &amp; Vender Dash</string>
     <string name="menu_buy_and_sell_subtitle">Conectar con exchanges de terceros</string>
@@ -241,15 +242,17 @@
     <string name="menu_settings_title">Ajustes</string>
     <string name="menu_settings_subtitle">Moneda predeterminada, atajos, acerca…</string>
     <string name="menu_tools_title">Herramientas</string>
-    <string name="menu_tools_subtitle">Importar llave privada…</string>
+    <string name="menu_tools_subtitle">Barrer billetera de papel…</string>
     <string name="menu_local_currency">Moneda Local</string>
     <string name="menu_rescan_blockchain">Reescanear la cadena de bloques</string>
+    <string name="menu_contact_support_title">Contactar Soporte</string>
+    <string name="menu_contact_support_subtitle">Reportar un problema</string>
 
-    <string name="tools_address_book">Libro de direcciones</string>
-    <string name="tools_import_private_key">Importar Llave Privada</string>
+    <string name="tools_address_book">Libreta de direcciones</string>
+    <string name="tools_import_private_key">Barrer billetera de papel</string>
     <string name="tools_network_monitor">Monitor de Red</string>
 
-    <string name="about_help_us_improve">Ayúdanos a mejorar su experiencia</string>
+    <string name="about_help_us_improve">Ayúdanos a mejorar tu experiencia</string>
     <string name="about_review_and_rate">Evaluar la app</string>
     <string name="about_contact_support">Contactar Soporte</string>
     <string name="about_fork_disclaimer">Esta es una aplicación de código abierto derivada de una billetera de Bitcoin</string>
@@ -264,11 +267,11 @@
 
     <string name="scan_private_key">Escanear Llave Privada</string>
     <string name="scan_private_key_intro_1">Estás a punto de cambiar los fondos desde una billetera de papel Dash.</string>
-    <string name="scan_private_key_intro_2">Esto moverá todas las monedas de aquella billetera a la billetera en su dispositivo.</string>
+    <string name="scan_private_key_intro_2">Esto moverá todas las monedas de aquella billetera a la billetera en tu dispositivo.</string>
     <string name="scan_private_key_intro_3">Cuando la transacción sea confirmada, la otra billetera será inútil y no deberá ser reutilizada por razones de seguridad.</string>
     <string name="confirm">Confirmar</string>
 
-    <string name="advanced_security_security_level">Nível de Segurida</string>
+    <string name="advanced_security_security_level">Nível de Seguridad</string>
     <string name="auto_logout">Cierre de Sesión Automático</string>
     <string name="spending_confirmation">Confirmación de Gasto</string>
     <string name="logout_after">Cerrar Sesión después de</string>
@@ -293,12 +296,12 @@
     <string name="skip">salta</string>
     <string name="get_started">Comenza</string>
     <string name="welcome_screen_title_1_new_install">Bienvenido</string>
-    <string name="welcome_screen_title_1_upgrade">Actualizamos</string>
+    <string name="welcome_screen_title_1_upgrade">Nos actualizamos</string>
     <string name="welcome_screen_subtitle_1">Una experiencia intuitiva y familiar a través de todos tus dispositivos</string>
-    <string name="welcome_screen_title_2">Pague con facilidad</string>
-    <string name="welcome_screen_subtitle_2">Pague y reciba instantáneamente con flujos de pagos fáciles de usar</string>
+    <string name="welcome_screen_title_2">Paga con facilidad</string>
+    <string name="welcome_screen_subtitle_2">Paga y recibe instantáneamente con flujos de pagos fáciles de usar</string>
     <string name="welcome_screen_title_3">Más Control</string>
-    <string name="welcome_screen_subtitle_3">Tenga control completo y configure su billetera de acuerdo a sus necesidades</string>
+    <string name="welcome_screen_subtitle_3">Ten control completo y configura tu billetera de acuerdo a tus necesidades</string>
 
     <string-array name="history_filter">
         <item>Todos</item>
@@ -306,13 +309,26 @@
         <item>Enviado</item>
     </string-array>
 
-    <string name="sync_status_wait">Por favor espere hasta que se complete la sincronización</string>
+    <string name="sync_status_wait">Por favor espera hasta que se complete la sincronización</string>
     <string name="sync_status_syncing_title">Sincronizando</string>
     <string name="sync_status_syncing_sub_title">con la blockchain de Dash</string>
     <string name="sync_status_unable_to_connect">No fue posible conectarse</string>
-    <string name="sync_status_check_connection">Verifique su conección</string>
+    <string name="sync_status_check_connection">Verifica tu conección</string>
     <string name="sync_status_sync_title">Sincronización</string>
     <string name="sync_status_sync_completed">Completa</string>
 
     <string name="appwidget_wallet_not_ready">Configura tu billetera por favor</string>
+
+    <string name="payment_request_please_wait_title">Por favor espera</string>
+    <string name="payment_request_please_wait_message">Conectando al servidor de pago</string>
+    <string name="payment_request_unable_to_connect">No se puede conectar</string>
+    <string name="payment_request_unable_to_send">No se puede enviar</string>
+    <string name="payment_request_please_try_again">Por favor, intenta nuevamente</string>
+    <string name="payment_request_try_again">Intentar de nuevo</string>
+    <string name="payment_request_problem_title">El pago no fue reconocido</string>
+    <string name="payment_request_problem_message">Tu pago fué procesado pero el servidor no pudo confirmarlo</string>
+    <string name="payment_request_expired_title">Solicitud de pago vencida</string>
+    <string name="payment_request_close">Cerrar</string>
+    <string name="payment_request_skip">Salta</string>
+    <string name="payment_request_paid_to">Pagado a</string>
 </resources>

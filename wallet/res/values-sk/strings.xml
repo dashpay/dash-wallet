@@ -373,4 +373,5 @@
     <string name="activity_security_hide_balance">Automaticky skryť zostatok</string>
     <string name="reset_to_default">Obnoviť pôvodné nastavenia</string>
 
-</resources>
+    <string name="payment_protocol_insufficient_funds_error_title">Nedostatok prostriedkov</string>
+    </resources>

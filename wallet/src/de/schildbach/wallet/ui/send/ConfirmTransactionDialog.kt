@@ -85,14 +85,14 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
             val payeeVerifiedBy = getString(ARG_PAYEE_VERIFIED_BY)
             if (payeeName != null && payeeVerifiedBy != null) {
                 address.text = payeeName
-                payee_verified_by.text = payeeVerifiedBy
+                payee_secured_by.text = payeeVerifiedBy
                 payee_verified_by_pane.visibility = View.VISIBLE
                 val forceMarqueeOnClickListener = View.OnClickListener {
                     it.isSelected = false
                     it.isSelected = true
                 }
                 address.setOnClickListener(forceMarqueeOnClickListener)
-                payee_verified_by.setOnClickListener(forceMarqueeOnClickListener)
+                payee_secured_by.setOnClickListener(forceMarqueeOnClickListener)
             } else {
                 address.ellipsize = TextUtils.TruncateAt.MIDDLE
                 address.text = getString(ARG_ADDRESS)

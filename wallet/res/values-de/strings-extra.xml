@@ -232,7 +232,7 @@
     <string name="authenticate_fingerprint_message">Fingerabdruck zum Fortfahren bestätigen</string>
     <string name="authenticate_pin_message">PIN zum Fortfahren eingeben</string>
     <string name="authenticate_switch_to_fingerprint">Fingerabdruck verwenden</string>
-    <string name="authenticate_switch_to_pin">Passwort verwenden</string>
+    <string name="authenticate_switch_to_pin">PIN verwenden</string>
 
     <string name="menu_buy_and_sell_title">Kaufe &amp; Verkaufe Dash</string>
     <string name="menu_buy_and_sell_subtitle">Mit Drittanbieter-Börsen verknüpfen</string>
@@ -244,6 +244,8 @@
     <string name="menu_tools_subtitle">Privaten Schlüssel importieren…</string>
     <string name="menu_local_currency">Lokale Währung</string>
     <string name="menu_rescan_blockchain">Blockchain erneut scannen</string>
+    <string name="menu_contact_support_title">Support kontaktieren</string>
+    <string name="menu_contact_support_subtitle">Problem melden</string>
 
     <string name="tools_address_book">Adressbuch</string>
     <string name="tools_import_private_key">Privaten Schlüssel importieren</string>
@@ -315,4 +317,17 @@
     <string name="sync_status_sync_completed">Abgeschlossen</string>
 
     <string name="appwidget_wallet_not_ready">Bitte Wallet einrichten</string>
+
+    <string name="payment_request_please_wait_title">Bitte warten</string>
+    <string name="payment_request_please_wait_message">Mit dem Zahlungs-Server verbinden</string>
+    <string name="payment_request_unable_to_connect">Verbindung fehlgeschlagen</string>
+    <string name="payment_request_unable_to_send">Senden nicht möglich</string>
+    <string name="payment_request_please_try_again">Bitte erneut versuchen</string>
+    <string name="payment_request_try_again">Erneut versuchen</string>
+    <string name="payment_request_problem_title">Zahlung nicht anerkannt</string>
+    <string name="payment_request_problem_message">Deine Zahlung wurde verarbeitet, aber der Server konnte sie nicht anerkennen</string>
+    <string name="payment_request_expired_title">Zahlungsanforderung abgelaufen</string>
+    <string name="payment_request_close">Schließen</string>
+    <string name="payment_request_skip">Überspringen</string>
+    <string name="payment_request_paid_to">Gezahlt an</string>
 </resources>

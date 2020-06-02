@@ -373,4 +373,7 @@
     <string name="activity_security_hide_balance">残高を自動的に非表示にする</string>
     <string name="reset_to_default">初期設定にリセットする</string>
 
+    <string name="payment_protocol_default_error_title">支払いエラー</string>
+    <string name="payment_protocol_insufficient_funds_error_title">資金不足</string>
+    <string name="payment_protocol_insufficient_funds_error_message">この取引を完了するのに十分な資金がありません</string>
 </resources>

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package de.schildbach.wallet.ui
 
 import android.app.Activity
@@ -14,7 +30,7 @@ import android.view.ViewTreeObserver
 import androidx.fragment.app.Fragment
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.scan.ScanActivity
-import de.schildbach.wallet.ui.send.SendCoinsActivity
+import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_payments_pay.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
@@ -102,6 +118,7 @@ class PaymentsPayFragment : Fragment() {
                 return when {
                     description.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST) -> getItemAt(0).uri?.toString()
                     description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) -> getItemAt(0).text?.toString()
+                    description.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML) -> getItemAt(0).text?.toString()
                     else -> null
                 }
             }
@@ -110,11 +127,11 @@ class PaymentsPayFragment : Fragment() {
     }
 
     private fun handleString(input: String, fireAction: Boolean, errorDialogTitleResId: Int) {
-        object : InputParser.StringInputParser(input) {
+        object : InputParser.StringInputParser(input, true) {
 
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
                 if (fireAction) {
-                    SendCoinsActivity.start(context, paymentIntent, true)
+                    SendCoinsInternalActivity.start(context, paymentIntent, true)
                 } else {
                     manageStateOfPayToAddressButton(paymentIntent)
                 }

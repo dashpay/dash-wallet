@@ -21,8 +21,8 @@
     <string name="uphold_logout_explanation_text">También deberás cerrar sesión en el sitio web de Uphold utilizando tu navegador</string>
     <string name="uphold_logout_go_to_website">Ir a la página web</string>
     <string name="uphold_error">Error de Uphold</string>
-    <string name="uphold_error_not_logged_in">Su cuenta de Uphold ya no está asociada a Dash Wallet. En la próxima pantalla presione Asociar cuenta de Uphold. </string>
-    <string name="uphold_error_not_available">El servicio de Uphold no está disponible. Intente nuevamente más tarde por favor. </string>
-    <string name="uphold_error_report_issue">Favor hacer reporte de este problema a través de la opción "Reportar Problema" del menú principal. </string>
+    <string name="uphold_error_not_logged_in">Tu cuenta de Uphold ya no está asociada a Dash Wallet. En la próxima pantalla presiona Asociar cuenta de Uphold. </string>
+    <string name="uphold_error_not_available">El servicio de Uphold no está disponible. Intenta nuevamente más tarde por favor. </string>
+    <string name="uphold_error_report_issue">Favor reporta este problema a través de la opción \"Reportar Problema\" del menú principal. </string>
 
 </resources>
