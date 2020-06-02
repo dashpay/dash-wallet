@@ -37,6 +37,7 @@ dependencies {
     implementation 'androidx.preference:preference:1.1.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.0-beta4'
     implementation "org.dashj:dashj-core:$dashjVersion"
+//    implementation 'com.google.protobuf:protobuf-javalite:3.11.4'
 
     implementation 'com.google.guava:guava:27.0.1-android'
     implementation 'com.google.zxing:core:3.3.3'
@@ -64,16 +65,10 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation 'androidx.core:core-ktx:1.1.0'
 
-    implementation 'com.google.firebase:firebase-analytics:17.4.2'
+    implementation 'com.google.firebase:firebase-analytics:17.2.0'
 
-    implementation ('com.google.firebase:firebase-inappmessaging:19.0.7') {
-        exclude group: 'com.google.protobuf', module: 'protobuf-lite'
-        exclude group: 'com.google.firebase', module: 'protolite-well-known-types'
-    }
-    implementation ('com.google.firebase:firebase-inappmessaging-display:19.0.7') {
-        exclude group: 'com.google.protobuf', module: 'protobuf-lite'
-        exclude group: 'com.google.firebase', module: 'protolite-well-known-types'
-    }
+    implementation ('com.google.firebase:firebase-inappmessaging:19.0.1')
+    implementation ('com.google.firebase:firebase-inappmessaging-display:19.0.1')
 
     implementation "androidx.lifecycle:lifecycle-extensions:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
@@ -92,6 +87,7 @@ dependencies {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
         exclude group: 'com.android.support', module: 'support-annotations'
     }
+    implementation files('libs/ptek-protobuf-javalite-firebase-wellknowntypes.jar')
 }
 
 
@@ -195,9 +191,18 @@ android {
         exclude 'org/bitcoinj/crypto/cacerts'
         exclude 'org.bitcoin.production.checkpoints.txt'
         exclude 'org.bitcoin.test.checkpoints.txt'
+//        exclude 'AndroidManifest.xml'
     }
     dexOptions {
         preDexLibraries true
+    }
+
+    configurations {
+        compile.exclude group: 'com.google.protobuf', module: 'protobuf-lite'
+        compile.exclude group: 'com.google.firebase', module: 'protolite-well-known-types'
+        compile.exclude group: 'com.google.protobuf' , module: 'protobuf-java-util'
+        compile.exclude group: 'com.google.protobuf' , module: 'protobuf-java'
+        compile.exclude group: 'com.google.protobuf' , module: 'protobuf-javalite'
     }
 }
 
