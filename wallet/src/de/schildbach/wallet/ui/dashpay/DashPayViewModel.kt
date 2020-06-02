@@ -27,9 +27,8 @@ import kotlinx.coroutines.launch
 class DashPayViewModel(application: Application) : AndroidViewModel(application) {
 
     private val platformRepo = PlatformRepo(application as WalletApplication)
-    private val walletApplication = application as WalletApplication
 
-    private val usernameLiveData = MutableLiveData<String>()
+    private val usernameLiveData = MutableLiveData<String?>()
     private val usernamesLiveData = MutableLiveData<UsernameSearch>()
 
     // Job instance (https://stackoverflow.com/questions/57723714/how-to-cancel-a-running-livedata-coroutine-block/57726583#57726583)
@@ -40,12 +39,16 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         getUsernameJob.cancel()
         getUsernameJob = Job()
         liveData(context = getUsernameJob + Dispatchers.IO) {
-            emit(Resource.loading(null))
-            emit(platformRepo.getUsername(username))
+            if (username != null) {
+                emit(Resource.loading(null))
+                emit(platformRepo.getUsername(username))
+            } else {
+                emit(Resource.canceled())
+            }
         }
     }
 
-    fun searchUsername(username: String) {
+    fun searchUsername(username: String?) {
         usernameLiveData.value = username
     }
 
