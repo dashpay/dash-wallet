@@ -128,43 +128,69 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
 
         dashPayViewModel.getUsernameLiveData.observe(this, Observer {
-            username_exists_req.visibility = View.VISIBLE
-            username_exists_req_label.visibility = View.VISIBLE
             when (it.status) {
                 Status.LOADING -> {
-                    // this is delayed therefore the UI state is configured before calling checkUsernameNotExist(...)
+                    // this is delayed by the logic of checkUsernameNotExist(...) method,
+                    // therefore the UI state is configured before calling it using usernameAvailabilityValidationInProgressState()
+                }
+                Status.CANCELED -> {
+                    // no need to do anything
                 }
                 Status.ERROR -> {
-                    username_exists_req_progress.visibility = View.INVISIBLE
-                    username_exists_req_img.visibility = View.VISIBLE
-                    username_exists_req_img.setImageResource(R.drawable.ic_username_requirement_x)
-                    username_exists_req_label.typeface = mediumTypeFace
-                    username_exists_req_label.setTextColor(ResourcesCompat.getColor(resources, R.color.dash_red, null))
-                    username_exists_req_label.setText(R.string.platform_communication_error)
-                    register_btn.isEnabled = false
+                    usernameAvailabilityValidationErrorState()
                 }
                 Status.SUCCESS -> {
                     if (it.data != null) {
                         // This user name exists
-                        username_exists_req_progress.visibility = View.INVISIBLE
-                        username_exists_req_img.visibility = View.VISIBLE
-                        username_exists_req_img.setImageResource(R.drawable.ic_username_requirement_x)
-                        username_exists_req_label.typeface = mediumTypeFace
-                        username_exists_req_label.setTextColor(ResourcesCompat.getColor(resources, R.color.dash_red, null))
-                        username_exists_req_label.setText(R.string.identity_username_taken)
-                        register_btn.isEnabled = true   // TODO temporary change for testing NMA-309
+                        usernameAvailabilityValidationTakenState()
                     } else {
-                        username_exists_req_progress.visibility = View.INVISIBLE
-                        username_exists_req_img.visibility = View.VISIBLE
-                        username_exists_req_img.setImageResource(R.drawable.ic_username_requirement_checkmark)
-                        username_exists_req_label.typeface = mediumTypeFace
-                        username_exists_req_label.setTextColor(ResourcesCompat.getColor(resources, R.color.dark_text, null))
-                        username_exists_req_label.setText(R.string.identity__username_available)
-                        register_btn.isEnabled = true
+                        usernameAvailabilityValidationAvailableState()
                     }
                 }
             }
         })
+    }
+
+    private fun usernameAvailabilityValidationInProgressState() {
+        username_exists_req.visibility = View.VISIBLE
+        username_exists_req_label.visibility = View.VISIBLE
+        username_exists_req_progress.visibility = View.VISIBLE
+        username_exists_req_img.visibility = View.INVISIBLE
+        username_exists_req_label.visibility = View.VISIBLE
+        username_exists_req_label.typeface = regularTypeFace
+        username_exists_req_label.setTextColor(ResourcesCompat.getColor(resources, R.color.dark_text, null))
+        username_exists_req_label.setText(R.string.identity_username_validating)
+        register_btn.isEnabled = false
+    }
+
+    private fun usernameAvailabilityValidationErrorState() {
+        username_exists_req_progress.visibility = View.INVISIBLE
+        username_exists_req_img.visibility = View.VISIBLE
+        username_exists_req_img.setImageResource(R.drawable.ic_username_requirement_x)
+        username_exists_req_label.typeface = mediumTypeFace
+        username_exists_req_label.setTextColor(ResourcesCompat.getColor(resources, R.color.dash_red, null))
+        username_exists_req_label.setText(R.string.platform_communication_error)
+        register_btn.isEnabled = false
+    }
+
+    private fun usernameAvailabilityValidationTakenState() {
+        username_exists_req_progress.visibility = View.INVISIBLE
+        username_exists_req_img.visibility = View.VISIBLE
+        username_exists_req_img.setImageResource(R.drawable.ic_username_requirement_x)
+        username_exists_req_label.typeface = mediumTypeFace
+        username_exists_req_label.setTextColor(ResourcesCompat.getColor(resources, R.color.dash_red, null))
+        username_exists_req_label.setText(R.string.identity_username_taken)
+        register_btn.isEnabled = false
+    }
+
+    private fun usernameAvailabilityValidationAvailableState() {
+        username_exists_req_progress.visibility = View.INVISIBLE
+        username_exists_req_img.visibility = View.VISIBLE
+        username_exists_req_img.setImageResource(R.drawable.ic_username_requirement_checkmark)
+        username_exists_req_label.typeface = mediumTypeFace
+        username_exists_req_label.setTextColor(ResourcesCompat.getColor(resources, R.color.dark_text, null))
+        username_exists_req_label.setText(R.string.identity__username_available)
+        register_btn.isEnabled = true
     }
 
     private fun triggerIdentityCreation(reuseTransaction: Boolean) {
@@ -264,25 +290,18 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         if (username != null) {
             val usernameIsValid = validateUsernameCharacters(username) && validateUsernameSize(username)
 
-            if (usernameIsValid) {
-                register_btn.isEnabled = true
-                username_exists_req_label.visibility = View.GONE
-                username_exists_req_img.visibility = View.GONE
-            }
-
             if (usernameIsValid) {//ensure username meets basic rules before making a Platform query
-                username_exists_req_progress.visibility = View.VISIBLE
-                username_exists_req_img.visibility = View.INVISIBLE
-                username_exists_req_label.visibility = View.VISIBLE
-                username_exists_req_label.typeface = regularTypeFace
-                username_exists_req_label.setTextColor(ResourcesCompat.getColor(resources, R.color.dark_text, null))
-                username_exists_req_label.setText(R.string.identity_username_validating)
-                register_btn.isEnabled = false
+                usernameAvailabilityValidationInProgressState()
                 checkUsernameNotExist(username)
             } else {
+                username_exists_req_progress.visibility = View.INVISIBLE
                 username_exists_req_label.visibility = View.GONE
                 username_exists_req_img.visibility = View.GONE
                 register_btn.isEnabled = false
+                if (this::checkUsernameNotExistRunnable.isInitialized) {
+                    handler.removeCallbacks(checkUsernameNotExistRunnable)
+                    dashPayViewModel.searchUsername(null)
+                }
             }
         }
         imitateUserInteraction()
