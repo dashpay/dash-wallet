@@ -35,8 +35,14 @@ class GlobalFooterView(context: Context, attrs: AttributeSet?) : ConstraintLayou
         home_button_view.setOnClickListener {
             onFooterActionListener?.onHomeClick()
         }
+        contacts_button_view.setOnClickListener {
+            onFooterActionListener?.onContactsClick()
+        }
         goto_button_view.setOnClickListener {
             onFooterActionListener?.onGotoClick()
+        }
+        notifications_button_view.setOnClickListener {
+            onFooterActionListener?.onNotificationsClick()
         }
         more_button_view.setOnClickListener {
             onFooterActionListener?.onMoreClick()
@@ -88,8 +94,16 @@ class GlobalFooterView(context: Context, attrs: AttributeSet?) : ConstraintLayou
         home_button_view.isEnabled = !active
     }
 
+    fun activateContactsButton(active: Boolean) {
+        contacts_button_view.isEnabled = !active
+    }
+
     fun activateMoreButton(active: Boolean) {
         more_button_view.isEnabled = !active
+    }
+
+    fun activateNotificationsButton(active: Boolean) {
+        notifications_button_view.isEnabled = !active
     }
 
     fun activateGotoButton(active: Boolean) {
@@ -98,7 +112,9 @@ class GlobalFooterView(context: Context, attrs: AttributeSet?) : ConstraintLayou
 
     interface OnFooterActionListener {
         fun onHomeClick()
+        fun onContactsClick()
         fun onGotoClick()
+        fun onNotificationsClick()
         fun onMoreClick()
     }
 }

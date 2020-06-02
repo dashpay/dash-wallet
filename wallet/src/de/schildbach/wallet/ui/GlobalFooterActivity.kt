@@ -60,6 +60,14 @@ open class GlobalFooterActivity : InteractionAwareActivity(), GlobalFooterView.O
         startActivity(intent)
     }
 
+    override fun onContactsClick() {
+        //TODO("not implemented")
+    }
+
+    override fun onNotificationsClick() {
+        //TODO("not implemented")
+    }
+
     fun activateHomeButton() {
         globalFooterView.activateHomeButton(true)
     }
@@ -70,5 +78,13 @@ open class GlobalFooterActivity : InteractionAwareActivity(), GlobalFooterView.O
 
     fun activateGotoButton() {
         globalFooterView.activateGotoButton(true)
+    }
+
+    fun activateContactsButton() {
+        globalFooterView.activateContactsButton(true)
+    }
+
+    fun activateNotificationsButton() {
+        globalFooterView.activateNotificationsButton(true)
     }
 }
