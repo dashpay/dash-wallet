@@ -95,7 +95,7 @@
         style="@style/SuccessfulTransactionSeparator" />
 
     <LinearLayout
-        android:id="@+id/payee_name_container"
+        android:id="@+id/payment_memo_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="?android:attr/selectableItemBackground"
@@ -104,37 +104,14 @@
         android:visibility="gone"
         tools:visibility="visible">
 
-        <LinearLayout
+        <TextView
+            android:id="@+id/payment_memo"
+            style="@style/MontserratRegular.MG"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/payee_name_label"
-                style="@style/MontserratRegular.G"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="4dp"
-                android:layout_weight="0.5"
-                android:ellipsize="end"
-                android:lines="1"
-                android:text="@string/payment_request_paid_to"
-                android:textSize="16sp" />
-
-            <TextView
-                android:id="@+id/payee_name"
-                style="@style/MontserratRegular.MG"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.5"
-                android:width="0dp"
-                android:gravity="end"
-                android:maxLines="2"
-                android:text="@string/payment_request_paid_to"
-                android:textSize="16sp"
-                tools:text="dash.org" />
-
-        </LinearLayout>
+            android:maxLines="2"
+            android:textSize="16sp"
+            tools:text="Pay 0.11 USD to MasksDelivery | Anypay.com" />
 
         <View
             style="@style/SuccessfulTransactionSeparator"
@@ -343,7 +320,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:padding="16dp"
         android:visibility="gone"
         tools:visibility="gone">
@@ -352,12 +329,15 @@
             style="@style/MontserratRegular.MG.14"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="4dp"
-            android:text="@string/dialog_confirm_verified_by"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="4dp"
+            android:drawableStart="@drawable/ic_secured_by"
+            android:drawablePadding="4dp"
+            android:text="@string/dialog_confirm_secured_by"
             android:textColor="@color/dash_gray" />
 
         <TextView
-            android:id="@+id/payee_verified_by"
+            android:id="@+id/payee_secured_by"
             style="@style/MontserratRegular.MG.14"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"

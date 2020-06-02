@@ -67,6 +67,7 @@
     <string name="send_coins_fragment_hint_dusty_send">송금액이 너무 적어 전송할 수 없습니다</string>
     <string name="send_coins_fragment_hint_insufficient_money">잔액 부족</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">극소량의 금액은 송금 가능액에 포함되지 않습니다.</string>
+    <string name="send_coins_fragment_hint_replaying">지갑이 네트워크와 완전히 동기화되지 않아 현재 지불 할 수 없습니다</string>
     <string name="send_coins_fragment_direct_payment_enable">대시가 수신인에게 바로 송금됩니다.</string>
     <string name="send_coins_fragment_direct_payment_ack">송금이 완료되었습니다.</string>
     <string name="send_coins_fragment_direct_payment_nack">송금 시도가 직접 연결된 곳으로부터 거부되었습니다.</string>
@@ -372,4 +373,7 @@
     <string name="activity_security_hide_balance">잔고 자동숨김</string>
     <string name="reset_to_default">기본값으로 재설정하기</string>
 
+    <string name="payment_protocol_default_error_title">지불 오류</string>
+    <string name="payment_protocol_insufficient_funds_error_title">잔액 부족</string>
+    <string name="payment_protocol_insufficient_funds_error_message">이 거래를 완료하기 위해 필요한 자금이 충분하지 않습니다</string>
 </resources>

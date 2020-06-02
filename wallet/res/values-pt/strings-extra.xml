@@ -25,6 +25,7 @@
 
     <string name="dialog_confirm_confirm">Confirme</string>
     <string name="dialog_confirm_pay_to">Enviar para</string>
+    <string name="dialog_confirm_secured_by">Protegido por</string>
     <string name="dialog_confirm_fee">Taxa de rede</string>
     <string name="dialog_confirm_total">Total</string>
 
@@ -232,7 +233,7 @@
     <string name="authenticate_fingerprint_message">Confirmar digital para continuar</string>
     <string name="authenticate_pin_message">Insira seu PIN para continuar</string>
     <string name="authenticate_switch_to_fingerprint">Usar Digital</string>
-    <string name="authenticate_switch_to_pin">Usar Senha</string>
+    <string name="authenticate_switch_to_pin">Usar PIN</string>
 
     <string name="menu_buy_and_sell_title">Comprar &amp; Vender Dash</string>
     <string name="menu_buy_and_sell_subtitle">Conectar com exchange de terceiros</string>
@@ -244,6 +245,8 @@
     <string name="menu_tools_subtitle">Importe chave privada…</string>
     <string name="menu_local_currency">Moeda Local</string>
     <string name="menu_rescan_blockchain">Reexaminar blockchain</string>
+    <string name="menu_contact_support_title">Contato com o Suporte</string>
+    <string name="menu_contact_support_subtitle">Reportar um Problema</string>
 
     <string name="tools_address_book">Livro de endereços</string>
     <string name="tools_import_private_key">Importar Chave Privada</string>
@@ -315,4 +318,17 @@
     <string name="sync_status_sync_completed">Completa</string>
 
     <string name="appwidget_wallet_not_ready">Configure sua carteira por favor</string>
+
+    <string name="payment_request_please_wait_title">Espere por favor</string>
+    <string name="payment_request_please_wait_message">Conectando ao Servidor de Pagamentos</string>
+    <string name="payment_request_unable_to_connect">Não foi possível conectar-se</string>
+    <string name="payment_request_unable_to_send">Não foi possível Enviar</string>
+    <string name="payment_request_please_try_again">Por favor, tente novamente</string>
+    <string name="payment_request_try_again">Tentar Novamente</string>
+    <string name="payment_request_problem_title">O pagamento não foi reconhecido</string>
+    <string name="payment_request_problem_message">Seu pagamento foi processado mas o servidor não foi capaz de reconhecê-lo</string>
+    <string name="payment_request_expired_title">Pedido de Pagamento Expirado</string>
+    <string name="payment_request_close">Fechar</string>
+    <string name="payment_request_skip">Pular</string>
+    <string name="payment_request_paid_to">Pago a</string>
 </resources>

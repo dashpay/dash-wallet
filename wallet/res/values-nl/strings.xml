@@ -373,4 +373,7 @@
     <string name="activity_security_hide_balance">Automatisch saldo verbergen</string>
     <string name="reset_to_default">Reset naar standaard</string>
 
+    <string name="payment_protocol_default_error_title">Fout in de betaling</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Onvoldoende fondsen</string>
+    <string name="payment_protocol_insufficient_funds_error_message">U heeft onvoldoende saldo om deze transactie te voltooien</string>
 </resources>

@@ -42,6 +42,7 @@ import android.text.format.DateUtils;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
+import androidx.lifecycle.LifecycleService;
 import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
@@ -60,8 +61,8 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
-import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
@@ -120,8 +121,6 @@ import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
-
-import androidx.lifecycle.LifecycleService;
 
 import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 
@@ -699,6 +698,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         final PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, lockName);
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForeground();
+        }
+
         application = (WalletApplication) getApplication();
         config = application.getConfiguration();
         final Wallet wallet = application.getWallet();
@@ -857,16 +860,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private void startForeground() {
         //Shows ongoing notification promoting service to foreground service and
         //preventing it from being killed in Android 26 or later
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                BlockchainState blockchainState = AppDatabase.getAppDatabase().blockchainStateDao().loadSync();
-                Notification notification = createNetworkSyncNotification(blockchainState);
-                if (notification != null) {
-                    startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
-                }
-            }
-        });
+        Notification notification = createNetworkSyncNotification(null);
+        startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
     }
 
     @Override
@@ -969,10 +964,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
                 notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-        String message = BlockchainStateUtils.getSyncStateString(blockchainState, this);
-        if (message == null) {
-            message = getString(R.string.blockchain_state_progress_downloading);
-        }
+        final String message = (blockchainState != null)
+                ? BlockchainStateUtils.getSyncStateString(blockchainState, this)
+                : getString(R.string.blockchain_state_progress_downloading);
 
         return new NotificationCompat.Builder(this,
                 Constants.NOTIFICATION_CHANNEL_ID_ONGOING)
@@ -1079,9 +1073,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             } else if (blockchainState.getReplaying() || syncing) {
                 //Shows ongoing notification when synchronizing the blockchain
                 Notification notification = createNetworkSyncNotification(blockchainState);
-                if (notification != null) {
-                    nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
-                }
+                nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
             }
         }
     }

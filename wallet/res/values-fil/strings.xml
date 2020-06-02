@@ -60,12 +60,14 @@
     <string name="send_coins_fragment_receiving_address_own">Ikaw ay magsesend na sa iyong sarili!</string>
     <string name="send_coins_fragment_receiving_address_complex">kumplikado\naddress</string>
     <string name="send_coins_fragment_pending">(%s naghihintay ng kumpirmasyon)</string>
+    <string name="send_coins_fragment_amount_label">Halaga ng ipapadala</string>
     <string name="send_coins_fragment_pin_label">I-enter ang PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Ang network fee na %s ay mababayaran na.</string>
     <string name="send_coins_fragment_hint_fee_priority">Ang priority fee na %say mababayaran. Kung alintana ang mababang bayad, gamitin lamang ang \'priority\' kung kailangan ng kumpirmasyon sa lalong madaling panahon.</string>
     <string name="send_coins_fragment_hint_dusty_send">Ang halaga ay sobrang liit para maipadala</string>
     <string name="send_coins_fragment_hint_insufficient_money">Hindi sapat na pondo</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Ang halaga ng maliit na bayad sa iyong pitaka ay hindi dumagdag sa ipinadalang halaga.</string>
+    <string name="send_coins_fragment_hint_replaying">Ang kasalukuyang bayad ay hindi posible dahil ang pitaka ay hindi sync sa network</string>
     <string name="send_coins_fragment_direct_payment_enable">Magbayad ng direkta sa binabayaran.</string>
     <string name="send_coins_fragment_direct_payment_ack">Matagumpay na naipadala ang iyong bayad.</string>
     <string name="send_coins_fragment_direct_payment_nack">Ang iyong bayad ay tinanggihan ng direct connection.</string>
@@ -75,6 +77,7 @@
     <string name="send_coins_fragment_button_back">Ibalik</string>
     <string name="send_coins_fragment_insufficient_money_title">Hindi sapat ang iyong barya</string>
     <string name="send_coins_fragment_insufficient_money_msg1">Kulang ka ng %s.</string>
+    <string name="send_coins_fragment_insufficient_money_msg2">Gusto mo bang ipadala lahat ng mayroon ka?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">Hindi naisakatuparan ang pag-ubos ng laman ng pitaka</string>
     <string name="send_coins_fragment_state_decrypting">Nagde-decrypt...</string>
     <string name="send_coins_preparation_msg">Nagsi-sign...</string>
@@ -92,6 +95,7 @@
     <string name="sweep_wallet_fragment_wallet_unknown">Simulan sa pamamagitan ng pag-scan ng private key ng iyong papel na pitaka. Gamitin ang camera action button.</string>
     <string name="sweep_wallet_fragment_encrypted">Itong private key na ito ay protektado ng password.</string>
     <string name="sweep_wallet_fragment_password">Password</string>
+    <string name="sweep_wallet_fragment_bad_password">Hindi magandang password!</string>
     <string name="sweep_wallet_fragment_balance">Balanse na is-sweep</string>
     <string name="sweep_wallet_fragment_button_decrypt">I-decrypt</string>
     <string name="sweep_wallet_fragment_button_sweep">I-sweep</string>
@@ -154,17 +158,33 @@
     <string name="transaction_row_status_received">Natanggap</string>
     <string name="transaction_row_status_sent">Ipinadala</string>
     <string name="transaction_row_status_sending">Ipinapadala</string>
+    <string name="transaction_row_status_sent_internally">Internal</string>
     <string name="transaction_row_status_processing">Pinoproseso</string>
     <string name="transaction_row_status_confirming">Kinukumpirma</string>
     <string name="transaction_row_status_locked">Naka-lock</string>
-    <string name="transaction_row_status_error_dead">Dobleng spend</string>
+    <string name="transaction_row_status_error_sending">Maling pagpapadala</string>
+    <string name="transaction_row_status_error_dead">Dobleng gastos</string>
+    <string name="transaction_row_status_error_conflicting">Nagkasalungat</string>
+    <string name="transaction_row_status_error_insufficient_fee">Hindi sapat na bayad</string>
+    <string name="transaction_row_status_error_dust">Alikabok</string>
+    <string name="transaction_row_status_error_non_standard">Hindi standard</string>
+    <string name="transaction_row_status_error_malformed">Pangit</string>
+    <string name="transaction_row_status_error_duplicate">Kopyahin</string>
+    <string name="transaction_row_status_error_obsolete">Hindi na ginagamit</string>
     <string name="transaction_row_status_error_invalid">Hindi wasto</string>
+    <string name="transaction_row_status_error_other">Hindi kilala</string>
+    <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
+    <string name="transaction_row_time_text">Sa %sat %s</string>
+    <string name="transaction_row_rate_not_available">Hindi available</string>
     <string name="transaction_row_status_masternode_registration">Pagpaparehistro ng Masternode</string>
     <string name="transaction_row_status_masternode_update_registrar">Pag-update ng Masternode</string>
     <string name="transaction_row_status_masternode_update_service">Pag-update ng Masternode</string>
+    <string name="transaction_row_status_masternode_revoke">Pagbawi ng Masternode</string>
+    <string name="transaction_row_status_masternode_reward">Pag-gantimpala ng Masternode</string>
+    <string name="transaction_row_status_mining_reward">Gantimpala sa pagmimina</string>
     <string name="network_monitor_activity_title">Network monitor</string>
-    <string name="network_monitor_peer_list_title">Peers</string>
-    <string name="network_monitor_block_list_title">Blocks</string>
+    <string name="network_monitor_peer_list_title">Mga kapantay</string>
+    <string name="network_monitor_block_list_title">Bloke</string>
     <string name="block_row_mining_difficulty_adjustment">Pagsasaayos ng hirap sa pagmimina</string>
     <string name="block_row_mining_reward_adjustment">Kumalahati ang gantimpala sa pagmimina</string>
     <string name="block_row_now">ngayon lang</string>
@@ -346,9 +366,14 @@
     <string name="dash_slogan">Madaian- Pribado - Protektado</string>
     <string name="dash_wallet">Pitaka</string>
 
+    <string name="activity_security_backup_wallet">I-back up ang pitaka sa file</string>
     <string name="activity_security_view_recovery_phrase">Ipakita ang parirala ng muling pagbawi</string>
     <string name="activity_security_advanced">Masusing seguridad</string>
+    <string name="activity_security_biometric_auth">Pagpapatunay ng bakas-daliri</string>
     <string name="activity_security_hide_balance">Awtimatikong Pagtago ng Balanse</string>
     <string name="reset_to_default">I-reset sa Default</string>
 
+    <string name="payment_protocol_default_error_title">May mali sa bayad</string>
+    <string name="payment_protocol_insufficient_funds_error_title">Hindi sapat na pondo</string>
+    <string name="payment_protocol_insufficient_funds_error_message">Wala ka nang sapat na pondo para makompleto ang transaksyong ito</string>
 </resources>

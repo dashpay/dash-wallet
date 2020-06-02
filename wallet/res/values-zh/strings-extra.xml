@@ -229,7 +229,7 @@
     <string name="authenticate_fingerprint_message">确认指纹以继续</string>
     <string name="authenticate_pin_message">输入PIN以继续</string>
     <string name="authenticate_switch_to_fingerprint">使用指纹</string>
-    <string name="authenticate_switch_to_pin">使用密码</string>
+    <string name="authenticate_switch_to_pin">使用PIN</string>
 
     <string name="menu_buy_and_sell_title">买 &amp; 卖 Dash</string>
     <string name="menu_buy_and_sell_subtitle">与第三方交易所连接</string>
@@ -241,6 +241,8 @@
     <string name="menu_tools_subtitle">导入私钥...</string>
     <string name="menu_local_currency">本地货币</string>
     <string name="menu_rescan_blockchain">重新扫描区块链</string>
+    <string name="menu_contact_support_title">联系支持</string>
+    <string name="menu_contact_support_subtitle">报告问题</string>
 
     <string name="tools_address_book">地址簿</string>
     <string name="tools_import_private_key">导入私钥</string>
@@ -312,4 +314,17 @@
     <string name="sync_status_sync_completed">完成</string>
 
     <string name="appwidget_wallet_not_ready">请设置您的钱包</string>
+
+    <string name="payment_request_please_wait_title">请稍等</string>
+    <string name="payment_request_please_wait_message">正在连接支付服务器</string>
+    <string name="payment_request_unable_to_connect">无法连接</string>
+    <string name="payment_request_unable_to_send">无法发送</string>
+    <string name="payment_request_please_try_again">请重试</string>
+    <string name="payment_request_try_again">再试一次</string>
+    <string name="payment_request_problem_title">支付无法被确认</string>
+    <string name="payment_request_problem_message">您的支付已被处理, 但服务器无法对其确认</string>
+    <string name="payment_request_expired_title">支付请求已过期</string>
+    <string name="payment_request_close">关闭</string>
+    <string name="payment_request_skip">跳过</string>
+    <string name="payment_request_paid_to">支付给</string>
 </resources>
