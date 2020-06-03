@@ -138,7 +138,9 @@
 
     <style name="MontserratMedium.MenuRowTitle.Internal">
         <item name="android:layout_marginStart">20dp</item>
-        <item name="android:layout_marginLeft">20dp</item>
+        <item name="android:layout_marginEnd">20dp</item>
+        <item name="android:layout_width">0dp</item>
+        <item name="android:maxLines">2</item>
         <item name="android:textSize">16sp</item>
     </style>
 
