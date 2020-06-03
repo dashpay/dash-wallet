@@ -76,3 +76,4 @@ deploy:
   on:
     repo: dashevo/dash-wallet
     branch: develop
+    tags: true
