@@ -88,8 +88,7 @@ script:
 after_success:
   - ls -l wallet/build/outputs/apk/_testNet3/debug/
 #  - sh set_tags.sh
-before_deploy:
-  - ls -l wallet/build/outputs/apk/_testNet3/debug/
+#before_deploy:
   - export TRAVIS_TAG="1.$TRAVIS_BUILD_NUMBER"
   - echo "$TRAVIS_TAG" "$TRAVIS_COMMIT"
   - git config --local user.name "tomasz-ludek"
