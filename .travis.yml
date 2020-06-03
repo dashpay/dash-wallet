@@ -81,6 +81,7 @@ notifications:
 script:
   #  - "./gradlew test"
   - "./gradlew assemble_testNet3Debug"
+  - ls -l wallet/build/outputs/apk/_testNet3/debug/
 #  - rm -rf .gradle/4.4
 #  - "./gradlew assembleProdDebug"
 #  - "./gradlew assembleProdRelease"
