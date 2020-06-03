@@ -4,7 +4,7 @@ BRANCH="develop"
 if [ "$TRAVIS_BRANCH" = "$BRANCH" ]; then
   
   # Is this not a Pull Request?
-#  if [ "$TRAVIS_PULL_REQUEST" = false ]; then
+  if [ "$TRAVIS_PULL_REQUEST" = false ]; then
     
     # Is this not a build which was triggered by setting a new tag?
     if [ -z "$TRAVIS_TAG" ]; then
@@ -20,5 +20,5 @@ if [ "$TRAVIS_BRANCH" = "$BRANCH" ]; then
 
       echo -e "Done magic with tags.\n"
     fi
-#  fi
+  fi
 fi
