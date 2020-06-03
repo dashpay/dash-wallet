@@ -55,7 +55,7 @@ script:
 #- "./gradlew assembleProdRelease"
 deploy:
   provider: releases
-  api_key: d42b4e7f8b041fc604daeff4e744c5e2a0f9bb4d
+  api_key: $API_TOKEN
   file: wallet/build/outputs/apk/_testNet3/debug/wallet*release*.apk
   on:
     repo: dashevo/dash-wallet
