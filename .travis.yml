@@ -48,15 +48,17 @@ android:
 notifications:
   email: false
 script:
-#- "./gradlew test"
+- "./gradlew test"
 - "./gradlew assemble_testNet3Debug"
-#- rm -rf .gradle/4.4
-#- "./gradlew assembleProdDebug"
-#- "./gradlew assembleProdRelease"
+- rm -rf .gradle/4.4
+- "./gradlew assembleProdDebug"
+- "./gradlew assembleProdRelease"
 deploy:
   provider: releases
-  api_key: $API_TOKEN
+  api_key:
+    secure: xxmjLdfvreUrswTNHiiQD71fz3UXJ+NH8Q1N9nKMgAB5tu6lueaOj6OdO5P1egivQrLHSTCjjdw2MwP+DJw0UJvlfvaJDxR7HxMQnVcO0JPNgK0Ge4Z/FqoaW6Sl60qYZJ7PdRqIMBH/LRblg2FxqF/ApnrM3NfDerWCyHfAtnpPGX9R0JDVNbiqp46P7RS1xsWdfnuS+eui4aIx5e3y358HRlGDM9/S0kSx98H0tQEou+k0FsUf3snksEJJYNOmpDILAXJno4rYcZX5zuCps+Q8csKbxwRzlPdab+vqxe1E11F4RcNVBjhB/duDtiu8asu66oSICjvINR6+2trVup+ml6wLjr4xZAoj8w4IOmZR3RMIVl5LtNKI/yds7zQAYAvHXt99TmzG+LUYhy0k2ZGOvbH2hh2evXojbeWZ8PCCl55H6vj0JPuxb9xYw7ykKI4QjWWlDSZd22/H36Es0TsQG0bDRtrTsDWZuGVuPLtAsnzLWHb39mIEDaPNpLxNvjhg/wFRrN5W4z7WmVpseDdEMH2ikR2umOB06ogHsMXwbdeb3ENbtuIDUxdDWfiPW/rQesZsz51DRyMaPdroc+Hp/R/nU78R2FLzBbHYYgARPFMk580Xk6w1g6DVPd2TrbFX2wZ4SsrwRQdvS7LICY6Ct+tM96UhNWTTcJZ80qg=
   file: wallet/build/outputs/apk/_testNet3/debug/wallet*release*.apk
+  draft: true
   on:
     repo: dashevo/dash-wallet
     branch: develop
