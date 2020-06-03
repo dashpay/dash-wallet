@@ -85,6 +85,9 @@ script:
 #  - rm -rf .gradle/4.4
 #  - "./gradlew assembleProdDebug"
 #  - "./gradlew assembleProdRelease"
+after_success:
+  - ls -l wallet/build/outputs/apk/_testNet3/debug/
+  - sh set_tags.sh
 before_deploy:
   - ls -l wallet/build/outputs/apk/_testNet3/debug/
   - export TRAVIS_TAG="1.$TRAVIS_BUILD_NUMBER"
@@ -106,7 +109,3 @@ deploy:
     tags: true
     branch: develop
     repo: dashevo/dash-wallet
-
-after_success:
-  - ls -l wallet/build/outputs/apk/_testNet3/debug/
-  - sh set_tags.sh
