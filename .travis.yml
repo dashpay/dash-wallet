@@ -87,6 +87,8 @@ script:
 #  - "./gradlew assembleProdRelease"
 before_deploy:
   - ls -l wallet/build/outputs/apk/_testNet3/debug/
+  - export TRAVIS_TAG="1.$TRAVIS_BUILD_NUMBER"
+  - echo "$TRAVIS_TAG" "$TRAVIS_COMMIT"
   - git config --local user.name "tomasz-ludek"
   - git config --local user.email "tomasz@dash.org"
   - export TRAVIS_TAG=${TRAVIS_TAG:-$(date +'%Y%m%d%H%M%S')-$(git log --format=%h -1)}
@@ -105,5 +107,6 @@ deploy:
     branch: develop
     repo: dashevo/dash-wallet
 
-#after_success:
-#  - sh set_tags.sh
+after_success:
+  - ls -l wallet/build/outputs/apk/_testNet3/debug/
+  - sh set_tags.sh
