@@ -1,16 +1,13 @@
 language: android
 jdk: oraclejdk8
-
-# https://docs.travis-ci.com/user/languages/android/#Caching
 before_cache:
   - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
   - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
 cache:
   directories:
-    - $HOME/.gradle/caches/
-    - $HOME/.gradle/wrapper/
-    - $HOME/.android/build-cache
-
+    - "$HOME/.gradle/caches/"
+    - "$HOME/.gradle/wrapper/"
+    - "$HOME/.android/build-cache"
 env:
   global:
     - ANDROID_NDK_VERSION=r15c
@@ -19,17 +16,11 @@ env:
     - CMAKE_VERSION=cmake-3.10.2
     - ANDROID_BUILD_TOOLS_VERSION=28.0.2
 before_install:
-  # Install SDK license so Android Gradle plugin can install deps.
   - mkdir "$ANDROID_HOME/licenses" || true
   - echo "d56f5187479451eabf01fb78af6dfcb131a6481e" > "$ANDROID_HOME/licenses/android-sdk-license"
   - echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$ANDROID_HOME/licenses/android-sdk-license"
-  # Install the rest of tools (e.g., avdmanager).
   - sdkmanager tools
-  # Install the system image.
   - sdkmanager "system-images;android-21;default;armeabi-v7a"
-  # Create and start emulator for the script. Meant to race the install task.
-  # - echo no | avdmanager create avd --force -n test -k "system-images;android-21;default;armeabi-v7a"
-  # - $ANDROID_HOME/emulator/emulator -avd test -no-audio -no-window &
   - rm -rf "$ANDROID_NDK_HOME"
   - mkdir /opt/android-ndk-tmp
   - cd /opt/android-ndk-tmp
@@ -45,16 +36,8 @@ install:
   - echo y | sdkmanager 'lldb;3.0' | grep -v "=$"
 before_script:
   - export ANDROID_NDK_HOME=$ANDROID_NDK_HOME
-#  - android-wait-for-emulator
-#  - adb shell settings put global window_animation_scale 0 &
-#  - adb shell settings put global transition_animation_scale 0 &
-#  - adb shell settings put global animator_duration_scale 0 &
-#  - adb shell input keyevent 82 &
-
 android:
   components:
-    # Uncomment the lines below if you want to
-    # use the latest revision of Android SDK Tools
     - tools
     - platform-tools
     - tools
@@ -63,15 +46,9 @@ android:
     - android-25
     - android-21
     - android-28
-    # Support library
     - extra-android-support
-    # Latest artifacts in local repository
     - extra-google-m2repository
     - extra-android-m2repository
-    # Specify at least one system image
-    # - sys-img-armeabi-v7a-android-$ANDROID_API_LEVEL
-
-    #allow licenses
   licenses:
     - android-sdk-preview-license-+
     - android-sdk-license-.+
@@ -79,35 +56,22 @@ android:
 notifications:
   email: false
 script:
-  #  - "./gradlew test"
   - "./gradlew assemble_testNet3Debug"
   - ls -l wallet/build/outputs/apk/_testNet3/debug/
-#  - rm -rf .gradle/4.4
-#  - "./gradlew assembleProdDebug"
-#  - "./gradlew assembleProdRelease"
 after_success:
   - ls -l wallet/build/outputs/apk/_testNet3/debug/
-  #  - sh set_tags.sh
-  #before_deploy:
-  - export TRAVIS_TAG="1.$TRAVIS_BUILD_NUMBER"
-  - echo "$TRAVIS_TAG" "$TRAVIS_COMMIT"
-  - git config --local user.name "tomasz-ludek"
-  - git config --local user.email "tomasz@dash.org"
-  - export TRAVIS_TAG=${TRAVIS_TAG:-$(date +'%Y%m%d%H%M%S')-$(git log --format=%h -1)}
-  - git tag $TRAVIS_TAG
+#  - export TRAVIS_TAG="1.$TRAVIS_BUILD_NUMBER"
+#  - echo "$TRAVIS_TAG" "$TRAVIS_COMMIT"
+#  - git config --local user.name "tomasz-ludek"
+#  - git config --local user.email "tomasz@dash.org"
+#  - export TRAVIS_TAG=${TRAVIS_TAG:-$(date +'%Y%m%d%H%M%S')-$(git log --format=%h -1)}
+#  - git tag $TRAVIS_TAG
 deploy:
-  #https://docs.travis-ci.com/user/deployment/releases/
   provider: releases
   api_key:
-    secure: "Ycp2OkHX3sSHdkh5Jfzv3LKFz2gEG4xoGTlO7VDUJ891QVB9cvyyk1dG66AS9d9iDgjJmuzRxGzAM79EqtbkHNhxiOMgbWP8BUiPX1hYLXPerMNyk1Ry8j7JfMP3z5tg99TmZTBEZgFbw94MYObKksHOyXJVSgxs4YSKQ7JKU08ihFMT9oRBdwMFaPdIlnClK9bWWlncSN1UbrosXjsAe2LZg6jdVWTsnH5d+kH06AMeEgXwH3ipoPCMSqtTRiBlfvSqHN8Gx+PGk+ts0HhncDVzKRtc2gWCBmMA48duNVHzMxJ9VVq9h8o5beQ77ooN/Pj5Rf8hV8sCbn/DRJwWmlG1S4fAmChzUXCt6jgXJdjTQckieRBMGh4+ZkRQf0WzvfLmgusz+6gIlXcui355IC1RPXBKE20rdQBv5Zw6+Jt5G2aCaLdCen7A+PvO3DsPpC7aN29iBPpm5YEd9Yq7/Xi20ZyNDZSZUNrcqPRuOvel/NZidcLQ+NmJtQAGKMgWeFqebvzKunDy4rlha6Zly8iCdB2fxLPWq7QjGNodYNRuj4OWmkDMBh7SpffyQInZxtJMHv1y8zXVWXQOK4/5yieJpcsBUM11p/f9qhZ4t1etVP9CFTezFUjKIESzMyNfatYhngd/jVM8w6N0OJd+M3XEiXoSLeBB7o1XzqwkyL0="
-  file: wallet/build/outputs/apk/_testNet3/debug/wallet*release*.apk
-  skip_cleanup: true
-  draft: true
-  #  overwrite: true
-  #  overwrite: true
-  #  prerelease: true
-  #  target_commitsh: $TRAVIS_COMMIT
+    secure: FRw1hVuY0CHQhS9mOSSO7lJOI3EiFEw44lmaDYJp00L/Y97WMXxKwborYOh2az5afK5kziv/WI7ZFTgxExr0rozEzVuivaDaIlw26pptI3D3xRWWnb0Mq1Xt80BpvGTAYslKy+72sE5c5YxKaCBTvx0ujx92BpJ6EHlRy4ZYpxnmIbtpd6yltWBwkw1vKgpny3GLWaaoMWVuw7jMrcZqCZEZYKKH0u1plQVdzxwEiOkNxb2q2+CphCC/PezOLgidAwt1D8MtmcvfKBKyHtnYNWYSDRU70LHHb3zxU3JDsQEsQaoqI7OF/27LoYbtpSDhIXoFXPqaIh6mt2MAFJkEeRv/rOFmzXVXh2C77hWe1V2b3fdShwTzKcakKIcq1Wsa56a+/4UqvAhbr0VKUEj+XyYhgoTGKEmYHGFJRPwhNxEFAkSDsWzGM7Zo3PQ24zbV09LzRnEIBo5YW29p55Rm1w+Afuid7kTNR2Pp/rmxuGdhRHDGlyiPhr+4oiatSD6l38+edLF3D4SpyC/rH90LIgWqSCF7Y0ss8gJaUEl3GdpAYYcrmEKYtVE5EH3djwmUdFJIE8ZOqQXFiGaLSK6dLiUxLA5cowBv8UihZVejeaIi4bj3b9N7f4iFPfaCNS8yAMdK9ksh3Fze5z5sacD0githmJd02XGiQ1g/9hHhCdI=
+  file: "wallet/build/outputs/apk/_testNet3/debug/wallet*release*.apk"
+  skip_cleanup: 'true'
   on:
-#    tags: true
     repo: dashevo/dash-wallet
     branch: develop
