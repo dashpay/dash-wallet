@@ -85,6 +85,7 @@
         android:background="@drawable/selectable_background_light"
         android:clickable="true"
         android:focusable="true"
+        android:visibility="gone"
         app:srcCompat="@drawable/notifications_button_selector"
         app:layout_constraintBottom_toBottomOf="@+id/goto_button_view"
         app:layout_constraintDimensionRatio="1:1"
