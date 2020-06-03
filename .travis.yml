@@ -87,8 +87,8 @@ script:
 #  - "./gradlew assembleProdRelease"
 after_success:
   - ls -l wallet/build/outputs/apk/_testNet3/debug/
-#  - sh set_tags.sh
-#before_deploy:
+  #  - sh set_tags.sh
+  #before_deploy:
   - export TRAVIS_TAG="1.$TRAVIS_BUILD_NUMBER"
   - echo "$TRAVIS_TAG" "$TRAVIS_COMMIT"
   - git config --local user.name "tomasz-ludek"
@@ -104,7 +104,10 @@ deploy:
   skip_cleanup: true
   draft: true
   #  overwrite: true
+  #  overwrite: true
+  #  prerelease: true
+  #  target_commitsh: $TRAVIS_COMMIT
   on:
-    tags: true
-    branch: develop
+#    tags: true
     repo: dashevo/dash-wallet
+    branch: develop
