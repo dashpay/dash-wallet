@@ -39,6 +39,7 @@ import androidx.transition.Transition
 import androidx.transition.TransitionManager
 import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
@@ -49,13 +50,13 @@ import org.dash.wallet.common.InteractionAwareActivity
 import org.dashevo.dpp.document.Document
 
 
-class SearchUserActivity : InteractionAwareActivity(), TextWatcher, DashPayProfilesAdapter.OnItemClickListener {
+class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSearchResultsAdapter.OnItemClickListener {
 
     private lateinit var dashPayViewModel: DashPayViewModel
     private lateinit var walletApplication: WalletApplication
     private var handler: Handler = Handler()
     private lateinit var searchDashPayProfileRunnable: Runnable
-    private val adapter: DashPayProfilesAdapter = DashPayProfilesAdapter()
+    private val adapter: UsernameSearchResultsAdapter = UsernameSearchResultsAdapter()
     private var query = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -130,13 +131,13 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, DashPayProfi
 
     private fun initViewModel() {
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
-        dashPayViewModel.getProfileSearchLiveData.observe(this, Observer {
+        dashPayViewModel.searchUsernamesLiveData.observe(this, Observer {
             if (Status.LOADING == it.status) {
                 startLoading()
             } else {
                 stopLoading()
                 if (it.data != null) {
-                    adapter.profiles = it.data
+                    adapter.results = it.data
                     if (it.data.isEmpty()) {
                         showEmptyResult()
                     } else {
@@ -177,14 +178,14 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, DashPayProfi
     }
 
     private fun searchDashPayProfile() {
-        adapter.profiles = listOf()
+        adapter.results = listOf()
         hideEmptyResult()
         if (this::searchDashPayProfileRunnable.isInitialized) {
             handler.removeCallbacks(searchDashPayProfileRunnable)
         }
         if (query.length >= USERNAME_MIN_LENGTH) {
             searchDashPayProfileRunnable = Runnable {
-                dashPayViewModel.searchDashPayProfile(query)
+                dashPayViewModel.searchUsernames(query)
             }
             handler.postDelayed(searchDashPayProfileRunnable, 500)
         }
@@ -203,7 +204,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, DashPayProfi
     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
     }
 
-    override fun onItemClicked(view: View, document: Document) {
+    override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
 
     }
 }

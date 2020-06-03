@@ -70,7 +70,7 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun searchUsernames(text: String, userId: String) {
+    fun searchUsernames(text: String, userId: String = "") {
         usernamesLiveData.value = UsernameSearch(text, userId)
     }
 
