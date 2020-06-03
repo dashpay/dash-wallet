@@ -98,7 +98,7 @@ deploy:
   file: wallet/build/outputs/apk/_testNet3/debug/wallet*release*.apk
   skip_cleanup: true
   draft: true
-  overwrite: true
+#  overwrite: true
   on:
     tags: true
     branch: develop
