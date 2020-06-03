@@ -70,7 +70,7 @@ deploy:
     secure: HGkeu3ld5srUXGGaeb++r+0481Khmflu65r/x8PaYqdusxDkHMYg2FWlKiwn4zXMxZaGFjs+Ar+gIAhns79STb+Lyw64qki6AwNJHpMM4YWSZkpOkEAdWlqL4pPebWD+swmD5Oq6mSVaSUZKFVf/sPeFgIKJs/+dcEJdzR/fwBeVsZXk3K+zehK1qmJ0ScwLJqsH1qg0+7DFg1k0FKUQKm2QzSOBt2MaSfkbcaudhke9Sj7j6G6vAqmwi6oBNvxAm37zqs4xAhdkeRXBI59gU05v2bw83I1qiOx7cLrWlSI5VPnDdmjhO5a25BhssAR5RO3qgP3A2/O5yS+fzBq1Arv+x8STtNZXfvmPqSmciQeJ7641BObcN3O9ZIXQW7yqwAqYKFsap6uwjb3GARx50gQSxm+VOPS9//O6ZfsYKRDKVr9fdk+htaaNL4PuMmzc97A+EOlgwx+TM/2NOEA0rCuUIkFFQMqy5e02SNxXnFfUK5b8udde2SZRI/ORG1E/T1gYlNBsGNGW6VoOlukp6K9pk+bYr33QZU7c6sRAPlpbrR4igEIYePVQ/YU17uDyTdCy92WohRdCHkhLqFWUa9mqmO0iHqQ3RM7Z8pnd/GHoaPttPJ2bpMux7NUp93SEUvCmWgeKjeScGKiEOMg6SzUWINadhW/zKOphI2i+B8A=
   file: wallet/build/outputs/apk/_testNet3/debug/dash-wallet-_testNet3-debug.apk
   file_glob: true
-  skip_cleanup: 'true'
+  skip_cleanup: true
   draft: true
   overwrite: true
   on:
