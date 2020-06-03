@@ -1,76 +1,71 @@
 language: android
 jdk: oraclejdk8
 before_cache:
-  - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
-  - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
+- rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+- rm -fr $HOME/.gradle/caches/*/plugin-resolution/
 cache:
   directories:
-    - "$HOME/.gradle/caches/"
-    - "$HOME/.gradle/wrapper/"
-    - "$HOME/.android/build-cache"
+  - "$HOME/.gradle/caches/"
+  - "$HOME/.gradle/wrapper/"
+  - "$HOME/.android/build-cache"
 env:
   global:
-    - ANDROID_NDK_VERSION=r15c
-    - ANDROID_NDK_HOME=/opt/android-ndk
-    - ADB_INSTALL_TIMEOUT=20
-    - CMAKE_VERSION=cmake-3.10.2
-    - ANDROID_BUILD_TOOLS_VERSION=28.0.2
+  - ANDROID_NDK_VERSION=r15c
+  - ANDROID_NDK_HOME=/opt/android-ndk
+  - ADB_INSTALL_TIMEOUT=20
+  - CMAKE_VERSION=cmake-3.10.2
+  - ANDROID_BUILD_TOOLS_VERSION=28.0.2
 before_install:
-  - mkdir "$ANDROID_HOME/licenses" || true
-  - echo "d56f5187479451eabf01fb78af6dfcb131a6481e" > "$ANDROID_HOME/licenses/android-sdk-license"
-  - echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$ANDROID_HOME/licenses/android-sdk-license"
-  - sdkmanager tools
-  - sdkmanager "system-images;android-21;default;armeabi-v7a"
-  - rm -rf "$ANDROID_NDK_HOME"
-  - mkdir /opt/android-ndk-tmp
-  - cd /opt/android-ndk-tmp
-  - wget -q https://dl.google.com/android/repository/android-ndk-${ANDROID_NDK_VERSION}-linux-x86_64.zip
-    | cat
-  - unzip -q android-ndk-${ANDROID_NDK_VERSION}-linux-x86_64.zip | cat
-  - mv ./android-ndk-${ANDROID_NDK_VERSION} ${ANDROID_NDK_HOME}
-  - cd ${ANDROID_NDK_HOME}
-  - rm -rf /opt/android-ndk-tmp
-  - cd ${TRAVIS_BUILD_DIR}
+- mkdir "$ANDROID_HOME/licenses" || true
+- echo "d56f5187479451eabf01fb78af6dfcb131a6481e" > "$ANDROID_HOME/licenses/android-sdk-license"
+- echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$ANDROID_HOME/licenses/android-sdk-license"
+- sdkmanager tools
+- sdkmanager "system-images;android-21;default;armeabi-v7a"
+- rm -rf "$ANDROID_NDK_HOME"
+- mkdir /opt/android-ndk-tmp
+- cd /opt/android-ndk-tmp
+- wget -q https://dl.google.com/android/repository/android-ndk-${ANDROID_NDK_VERSION}-linux-x86_64.zip
+  | cat
+- unzip -q android-ndk-${ANDROID_NDK_VERSION}-linux-x86_64.zip | cat
+- mv ./android-ndk-${ANDROID_NDK_VERSION} ${ANDROID_NDK_HOME}
+- cd ${ANDROID_NDK_HOME}
+- rm -rf /opt/android-ndk-tmp
+- cd ${TRAVIS_BUILD_DIR}
 install:
-  - echo y | sdkmanager 'cmake;3.10.2.4988404' | grep -v "=$"
-  - echo y | sdkmanager 'lldb;3.0' | grep -v "=$"
+- echo y | sdkmanager 'cmake;3.10.2.4988404' | grep -v "=$"
+- echo y | sdkmanager 'lldb;3.0' | grep -v "=$"
 before_script:
-  - export ANDROID_NDK_HOME=$ANDROID_NDK_HOME
+- export ANDROID_NDK_HOME=$ANDROID_NDK_HOME
 android:
   components:
-    - tools
-    - platform-tools
-    - tools
-    - build-tools-$ANDROID_BUILD_TOOLS_VERSION
-    - android-15
-    - android-25
-    - android-21
-    - android-28
-    - extra-android-support
-    - extra-google-m2repository
-    - extra-android-m2repository
+  - tools
+  - platform-tools
+  - tools
+  - build-tools-$ANDROID_BUILD_TOOLS_VERSION
+  - android-15
+  - android-25
+  - android-21
+  - android-28
+  - extra-android-support
+  - extra-google-m2repository
+  - extra-android-m2repository
   licenses:
-    - android-sdk-preview-license-+
-    - android-sdk-license-.+
-    - google-gdk-license-.+
+  - android-sdk-preview-license-+
+  - android-sdk-license-.+
+  - google-gdk-license-.+
 notifications:
   email: false
 script:
-  - "./gradlew assemble_testNet3Debug"
-  - ls -l wallet/build/outputs/apk/_testNet3/debug/
+- "./gradlew assemble_testNet3Debug"
+- ls -l wallet/build/outputs/apk/_testNet3/debug/
 after_success:
-  - ls -l wallet/build/outputs/apk/_testNet3/debug/
-#  - export TRAVIS_TAG="1.$TRAVIS_BUILD_NUMBER"
-#  - echo "$TRAVIS_TAG" "$TRAVIS_COMMIT"
-#  - git config --local user.name "tomasz-ludek"
-#  - git config --local user.email "tomasz@dash.org"
-#  - export TRAVIS_TAG=${TRAVIS_TAG:-$(date +'%Y%m%d%H%M%S')-$(git log --format=%h -1)}
-#  - git tag $TRAVIS_TAG
+- ls -l wallet/build/outputs/apk/_testNet3/debug/
 deploy:
   provider: releases
   api_key:
-    secure: FRw1hVuY0CHQhS9mOSSO7lJOI3EiFEw44lmaDYJp00L/Y97WMXxKwborYOh2az5afK5kziv/WI7ZFTgxExr0rozEzVuivaDaIlw26pptI3D3xRWWnb0Mq1Xt80BpvGTAYslKy+72sE5c5YxKaCBTvx0ujx92BpJ6EHlRy4ZYpxnmIbtpd6yltWBwkw1vKgpny3GLWaaoMWVuw7jMrcZqCZEZYKKH0u1plQVdzxwEiOkNxb2q2+CphCC/PezOLgidAwt1D8MtmcvfKBKyHtnYNWYSDRU70LHHb3zxU3JDsQEsQaoqI7OF/27LoYbtpSDhIXoFXPqaIh6mt2MAFJkEeRv/rOFmzXVXh2C77hWe1V2b3fdShwTzKcakKIcq1Wsa56a+/4UqvAhbr0VKUEj+XyYhgoTGKEmYHGFJRPwhNxEFAkSDsWzGM7Zo3PQ24zbV09LzRnEIBo5YW29p55Rm1w+Afuid7kTNR2Pp/rmxuGdhRHDGlyiPhr+4oiatSD6l38+edLF3D4SpyC/rH90LIgWqSCF7Y0ss8gJaUEl3GdpAYYcrmEKYtVE5EH3djwmUdFJIE8ZOqQXFiGaLSK6dLiUxLA5cowBv8UihZVejeaIi4bj3b9N7f4iFPfaCNS8yAMdK9ksh3Fze5z5sacD0githmJd02XGiQ1g/9hHhCdI=
-  file: "wallet/build/outputs/apk/_testNet3/debug/wallet*release*.apk"
+    secure: XLvc/SZK96K5Kx29xf4Bx2ng6FBkOTsJ6zk0nhvY17BwQMHZEZ1Sur56ASPMcbI9cpzdD92/5Pn4BZSb7qFhOQ3fsDbDOqNagNL07bPKvrI3scRaYw0RkEiiucY6dd7jsOY63oa98MW/UW+KVBcsFg0/Oi8SkZW9jAm4n8zURdXPAoq0wC3obo7zNcrTtRmVNo+jMK6RMXR/g55PUI+UchCMOSoEOgf+CdyqqsY5oqMuwi0y45LAV7FjnUKBzgGBJNPPjEIBIISyiaVM2GB2kMTAvIyQH+mawf/3N6mlxYR9wW5CIKlcF8awpcZbIDsC3dhKa+0oFkgCCOgJrr8gFO4bWnzr/Na7ZwggtbYwOjE9Ly6R6nREhaU90r33PFWnWdxqKeJ2h7k0R5Or4c7+IbahIcW1OZqTLAhhtyV9VxYxO7n6TwJ7P+ACu7cclN1FNQh3oTJdVk+Us+efdeS4WqGf9nJwHe/WyPdxWwu1RWLoBmK+Xn9B5GqeoHYTRj/rWwNsigQL0Vb6UyLi1dkgfIzHQplCGfl3oA7Q2ZiilOlEd4HmmnUC/PBq5I3+MyY6D3rSWiK0Djas2DJjSTx13If1tjYwZz9tT9IaNrB6gBgY71GXwZqfsLAxLSZ4YDaGlkQHUiAZVFIn4r/u6GfJjy8lzIPIHilBuSHeP+EGrK8=
+  file: wallet/build/outputs/apk/_testNet3/debug/wallet*release*.apk
+  file_glob: true
   skip_cleanup: 'true'
   on:
     repo: dashevo/dash-wallet
