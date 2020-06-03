@@ -71,7 +71,7 @@ deploy:
   file: wallet/build/outputs/apk/_testNet3/debug/dash-wallet-_testNet3-debug.apk
   file_glob: true
   skip_cleanup: true
-  draft: true
+#  draft: true
   overwrite: true
   on:
     repo: dashevo/dash-wallet
