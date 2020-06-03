@@ -79,7 +79,7 @@ android:
 notifications:
   email: false
 script:
-#  - "./gradlew test"
+  #  - "./gradlew test"
   - "./gradlew assemble_testNet3Debug"
 #  - rm -rf .gradle/4.4
 #  - "./gradlew assembleProdDebug"
@@ -94,11 +94,11 @@ deploy:
   #https://docs.travis-ci.com/user/deployment/releases/
   provider: releases
   api_key:
-    secure: HnAH0AJL7/9ar2sTiQls2XarwhGETRSPpoNA+hGpI8xHp9bwH00lpSxQ2p69f4BTszUq4IY77fayYIgZIhhg3b/2NRuC61b94kTF3acXJNkMYkin9Vq/CmYqHWK0Z4AgjPCv9TMZzNvpzaEXLQtEWGBIxQYLXXz9PHjVOTIU+ye6OSkj9TcrZRsyib1iHevQfxBcT0haDkk//fQ1Fsfvvd0yV/k/b7xLJI/y3bB0eYk5vA/e2ufT/ZSTemrUV1cpR0f86xcFYo+AQS9C1v0jVyyWBzDQLbCDGlFjvbvPKQHA9bi6gw06nPFLXDqz6FWFAPvG3pTjRFublc3AAjOjdxLoCSBTUsWKvTkJg5z1goBKzBId0tfRnKF6RHY77DfRxHhUIUOmgpai4GHZx6bJKMqzytI6rq0fu974nyH806u1VZm6axe2nM21fD7cxpJ27ck9FzCDi/5ujGO19RPVdx33NxCyzaa1kvl/G7+RfbbpMS6liTe12kYEhWxMD2SanWWl+P8XNexK6VMwsg3RH+3XHlTl1iW8ID+++ULwVXTLiAhWsQrCJV3bjsmol24vN4n6E63wQe7mf61mXVbwB72BKCaSd3pQ635ytkefvt8Z2N+KklUOjDdXWytAz8DaBfRFVmefdMAv55liV25iVYA6+sAuYc7Q/QOun2ZnQbw=
+    secure: "Ycp2OkHX3sSHdkh5Jfzv3LKFz2gEG4xoGTlO7VDUJ891QVB9cvyyk1dG66AS9d9iDgjJmuzRxGzAM79EqtbkHNhxiOMgbWP8BUiPX1hYLXPerMNyk1Ry8j7JfMP3z5tg99TmZTBEZgFbw94MYObKksHOyXJVSgxs4YSKQ7JKU08ihFMT9oRBdwMFaPdIlnClK9bWWlncSN1UbrosXjsAe2LZg6jdVWTsnH5d+kH06AMeEgXwH3ipoPCMSqtTRiBlfvSqHN8Gx+PGk+ts0HhncDVzKRtc2gWCBmMA48duNVHzMxJ9VVq9h8o5beQ77ooN/Pj5Rf8hV8sCbn/DRJwWmlG1S4fAmChzUXCt6jgXJdjTQckieRBMGh4+ZkRQf0WzvfLmgusz+6gIlXcui355IC1RPXBKE20rdQBv5Zw6+Jt5G2aCaLdCen7A+PvO3DsPpC7aN29iBPpm5YEd9Yq7/Xi20ZyNDZSZUNrcqPRuOvel/NZidcLQ+NmJtQAGKMgWeFqebvzKunDy4rlha6Zly8iCdB2fxLPWq7QjGNodYNRuj4OWmkDMBh7SpffyQInZxtJMHv1y8zXVWXQOK4/5yieJpcsBUM11p/f9qhZ4t1etVP9CFTezFUjKIESzMyNfatYhngd/jVM8w6N0OJd+M3XEiXoSLeBB7o1XzqwkyL0="
   file: wallet/build/outputs/apk/_testNet3/debug/wallet*release*.apk
   skip_cleanup: true
   draft: true
-#  overwrite: true
+  #  overwrite: true
   on:
     tags: true
     branch: develop
