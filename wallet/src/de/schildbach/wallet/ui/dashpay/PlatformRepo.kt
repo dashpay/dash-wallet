@@ -32,10 +32,12 @@ import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dashevo.dapiclient.model.DocumentQuery
 import org.dashevo.dashpay.BlockchainIdentity
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_SALT
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_STATUS
 import org.dashevo.dashpay.ContactRequests
+import org.dashevo.dashpay.Profiles
 import org.dashevo.dpp.document.Document
 import org.dashevo.dpp.identity.Identity
 import org.dashevo.dpp.identity.IdentityPublicKey
@@ -93,6 +95,13 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             // Names.search does support retrieving 100 names at a time if retrieveAll = false
             val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, true)
 
+            val nameDocByUserId = nameDocuments.associateBy({ it.userId }, { it })
+            var userIds = arrayListOf<String>()
+            for (nameDoc in nameDocuments) {
+                userIds.add(nameDoc.userId)
+            }
+            val dashPayDocuments = Profiles(platform).getList(userIds)
+
             // TODO: Replace this Platform call with a query into the local database
             val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
 
@@ -103,7 +112,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
             // TODO: Replace this loop that processed DPP with a loop that processes the results
             // from the database query
-            for (doc in nameDocuments) {
+            for (doc in dashPayDocuments) {
                 var toContact: Document? = null
                 var fromContact: Document? = null
 
@@ -123,8 +132,11 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                     }
                 }
 
-                usernameSearchResults.add(UsernameSearchResult(doc.data["normalizedLabel"] as String,
-                        doc, toContact, fromContact))
+                val nameDoc = nameDocByUserId[doc.userId]
+                if (nameDoc != null) {
+                    usernameSearchResults.add(UsernameSearchResult(nameDoc.data["normalizedLabel"] as String,
+                            doc, nameDoc, toContact, fromContact))
+                }
             }
 
             Resource.success(usernameSearchResults)
