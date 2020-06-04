@@ -72,7 +72,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -125,6 +124,8 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
 
     private boolean deviceWasLocked = false;
 
+    public boolean myPackageReplaced = false;
+
     private AutoLogout autoLogout;
 
     @Override
@@ -162,6 +163,16 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
                     if (autoLogout.isTimerActive()) {
                         autoLogout.stopTimer();
                     }
+                }
+            }
+
+            @Override
+            protected void onStartedAny(boolean isTheFirstOne) {
+                super.onStartedAny(isTheFirstOne);
+                // force restart if the app was updated
+                if (!BuildConfig.DEBUG && myPackageReplaced) {
+                    myPackageReplaced = false;
+                    ProcessPhoenix.triggerRebirth(WalletApplication.this);
                 }
             }
 
