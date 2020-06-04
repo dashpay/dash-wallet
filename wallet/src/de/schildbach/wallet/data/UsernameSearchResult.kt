@@ -8,7 +8,6 @@ import org.dashevo.dpp.document.Document
 // data.  Additionally the information may be coming from a database
 
 data class UsernameSearchResult(val username: String,
-                                val dashPayProfile: Document,
                                 val domainDocument: Document,
                                 val toContactRequest: Document?,
                                 val fromContactRequest: Document?) {

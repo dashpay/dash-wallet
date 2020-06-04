@@ -60,6 +60,8 @@ class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResult
         private val displayName by lazy { itemView.findViewById<TextView>(R.id.displayName) }
 
         fun bind(usernameSearchResult: UsernameSearchResult) {
+            username.text = usernameSearchResult.username
+            /*
             val dashPayProfile = usernameSearchResult.dashPayProfile
             if (dashPayProfile.data.containsKey("displayName")) {
                 displayName.text = dashPayProfile.data["displayName"] as String
@@ -67,6 +69,7 @@ class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResult
             username.text = usernameSearchResult.username
             Glide.with(avatar).load(dashPayProfile.data["avatarUrl"]).circleCrop()
                     .placeholder(R.drawable.user5).into(avatar)
+             */
 
             itemClickListener?.let { l ->
                 this.itemView.setOnClickListener {

@@ -32,12 +32,10 @@ import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dashevo.dapiclient.model.DocumentQuery
 import org.dashevo.dashpay.BlockchainIdentity
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_SALT
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_STATUS
 import org.dashevo.dashpay.ContactRequests
-import org.dashevo.dashpay.Profiles
 import org.dashevo.dpp.document.Document
 import org.dashevo.dpp.identity.Identity
 import org.dashevo.dpp.identity.IdentityPublicKey
@@ -87,20 +85,17 @@ class PlatformRepo(val walletApplication: WalletApplication) {
      * gets all the name documents for usernames starting with text
      *
      * @param text The beginning of a username to search for
-     * @param userId The current userId for which to search contacts
      * @return
      */
-    fun searchUsernames(text: String, userId: String): Resource<List<UsernameSearchResult>> {
+    suspend fun searchUsernames(text: String): Resource<List<UsernameSearchResult>> {
         return try {
+            val blockchainIdentity = blockchainIdentityDataDaoAsync.load()
+            //We don't check for nullity here because if it's null, it'll be thrown, caputred below
+            //and sent as a Resource.error
+            val userId = blockchainIdentity!!.creditFundingTxId!!.toStringBase58()
+
             // Names.search does support retrieving 100 names at a time if retrieveAll = false
             val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, true)
-
-            val nameDocByUserId = nameDocuments.associateBy({ it.userId }, { it })
-            var userIds = arrayListOf<String>()
-            for (nameDoc in nameDocuments) {
-                userIds.add(nameDoc.userId)
-            }
-            val dashPayDocuments = Profiles(platform).getList(userIds)
 
             // TODO: Replace this Platform call with a query into the local database
             val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
@@ -112,7 +107,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
             // TODO: Replace this loop that processed DPP with a loop that processes the results
             // from the database query
-            for (doc in dashPayDocuments) {
+            for (doc in nameDocuments) {
                 var toContact: Document? = null
                 var fromContact: Document? = null
 
@@ -132,11 +127,8 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                     }
                 }
 
-                val nameDoc = nameDocByUserId[doc.userId]
-                if (nameDoc != null) {
-                    usernameSearchResults.add(UsernameSearchResult(nameDoc.data["normalizedLabel"] as String,
-                            doc, nameDoc, toContact, fromContact))
-                }
+                usernameSearchResults.add(UsernameSearchResult(doc.data["normalizedLabel"] as String,
+                        doc, toContact, fromContact))
             }
 
             Resource.success(usernameSearchResults)
@@ -259,14 +251,17 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val profile = blockchainIdentity.watchProfile(10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
                     ?: throw TimeoutException("the profile was not found to be created in the allotted amount of time")
 
-            val dashPayProfile = DashPayProfile(blockchainIdentity.uniqueIdString,
-                    profile.data["displayName"] as String,
-                    profile.data["publicMessage"] as String,
-                    profile.data["avatarUrl"] as String)
+            if (profile != null) {
+                val dashPayProfile = DashPayProfile(blockchainIdentity.uniqueIdString,
+                        profile.data["displayName"] as String,
+                        profile.data["publicMessage"] as String,
+                        profile.data["avatarUrl"] as String)
 
-            updateDashPayProfile(dashPayProfile)
+                updateDashPayProfile(dashPayProfile)
+            }
         }
     }
+
 
     suspend fun loadBlockchainIdentityBaseData(): BlockchainIdentityBaseData? {
         return blockchainIdentityDataDaoAsync.loadBase()
