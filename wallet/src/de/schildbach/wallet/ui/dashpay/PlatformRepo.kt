@@ -89,11 +89,12 @@ class PlatformRepo(val walletApplication: WalletApplication) {
      */
     suspend fun searchUsernames(text: String): Resource<List<UsernameSearchResult>> {
         return try {
+            val wallet = walletApplication.wallet
             val blockchainIdentity = blockchainIdentityDataDaoAsync.load()
             //We don't check for nullity here because if it's null, it'll be thrown, caputred below
             //and sent as a Resource.error
-            val userId = blockchainIdentity!!.creditFundingTxId!!.toStringBase58()
-
+            val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentity!!.creditFundingTxId))
+            val userId = creditFundingTx.creditBurnIdentityIdentifier.toStringBase58()
             // Names.search does support retrieving 100 names at a time if retrieveAll = false
             val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, true)
 
@@ -108,6 +109,10 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             // TODO: Replace this loop that processed DPP with a loop that processes the results
             // from the database query
             for (doc in nameDocuments) {
+                //Remove own user document from result
+                if (doc.userId == userId) {
+                    continue
+                }
                 var toContact: Document? = null
                 var fromContact: Document? = null
 
