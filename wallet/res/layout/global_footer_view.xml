@@ -78,21 +78,22 @@
         app:layout_constraintStart_toStartOf="@+id/contacts_guideline"
         app:layout_constraintTop_toTopOf="@+id/goto_button_view"
         app:layout_constraintWidth_percent="0.08" />
-    <ImageView
+
+    <!-- TODO: Placeholder for the 4th button -->
+    <!--ImageView
         android:id="@+id/notifications_button_view"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:background="@drawable/selectable_background_light"
         android:clickable="true"
         android:focusable="true"
-        android:visibility="gone"
         app:srcCompat="@drawable/notifications_button_selector"
         app:layout_constraintBottom_toBottomOf="@+id/goto_button_view"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintEnd_toEndOf="@+id/notifications_guideline"
         app:layout_constraintStart_toStartOf="@+id/notifications_guideline"
         app:layout_constraintTop_toTopOf="@+id/goto_button_view"
-        app:layout_constraintWidth_percent="0.08" />
+        app:layout_constraintWidth_percent="0.08" /-->
 
     <ImageView
         android:id="@+id/more_button_view"

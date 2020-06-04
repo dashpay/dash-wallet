@@ -41,9 +41,10 @@ class GlobalFooterView(context: Context, attrs: AttributeSet?) : ConstraintLayou
         goto_button_view.setOnClickListener {
             onFooterActionListener?.onGotoClick()
         }
-        notifications_button_view.setOnClickListener {
-            onFooterActionListener?.onNotificationsClick()
-        }
+        // TODO: use when 4th button is needed
+        // notifications_button_view.setOnClickListener {
+        //     onFooterActionListener?.onNotificationsClick()
+        // }
         more_button_view.setOnClickListener {
             onFooterActionListener?.onMoreClick()
         }
@@ -102,9 +103,10 @@ class GlobalFooterView(context: Context, attrs: AttributeSet?) : ConstraintLayou
         more_button_view.isEnabled = !active
     }
 
-    fun activateNotificationsButton(active: Boolean) {
-        notifications_button_view.isEnabled = !active
-    }
+    // TODO: Use when 4th button is needed
+    // fun activateNotificationsButton(active: Boolean) {
+    //     notifications_button_view.isEnabled = !active
+    // }
 
     fun activateGotoButton(active: Boolean) {
         goto_button_view.setImageResource(R.drawable.ic_goto_active)
@@ -114,7 +116,8 @@ class GlobalFooterView(context: Context, attrs: AttributeSet?) : ConstraintLayou
         fun onHomeClick()
         fun onContactsClick()
         fun onGotoClick()
-        fun onNotificationsClick()
+        //TODO: Use when 4th button is needed
+        //fun onNotificationsClick()
         fun onMoreClick()
     }
 }
