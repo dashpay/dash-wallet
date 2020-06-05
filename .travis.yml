@@ -47,7 +47,6 @@ before_script:
   - cd ..
   - git clone https://github.com/dashevo/android-dashpay.git
   - cd android-dashpay
-  - chmod +x gradlew
   - ./gradlew assemble
   - cd ..
 #  - android-wait-for-emulator
