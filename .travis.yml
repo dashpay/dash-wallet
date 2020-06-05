@@ -79,3 +79,12 @@ script:
 - rm -rf .gradle/4.4
 - ./gradlew assembleProdDebug
 - ./gradlew assembleProdRelease
+
+before_deploy:
+  - openssl aes-256-cbc -K $encrypted_945ec88d7d8f_key -iv $encrypted_945ec88d7d8f_iv -in .deploy/id_rsa.enc -out .deploy/id_rsa -d
+deploy:
+  provider: script
+  script: bash .deploy/deploy.sh
+  skip_cleanup: true
+  on:
+    tags: true

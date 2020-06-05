@@ -21,10 +21,12 @@
             style="@style/MontserratMedium.MenuRowTitle.Internal"
             android:text="@string/tools_address_book"
             app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/address_book_arrow"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <ImageView
+            android:id="@+id/address_book_arrow"
             style="@style/MenuRowArrow"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -41,10 +43,12 @@
             style="@style/MontserratMedium.MenuRowTitle.Internal"
             android:text="@string/tools_import_private_key"
             app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/import_keys_arrow"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <ImageView
+            android:id="@+id/import_keys_arrow"
             style="@style/MenuRowArrow"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -61,10 +65,12 @@
             style="@style/MontserratMedium.MenuRowTitle.Internal"
             android:text="@string/tools_network_monitor"
             app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/network_monitor_arrow"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <ImageView
+            android:id="@+id/network_monitor_arrow"
             style="@style/MenuRowArrow"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
