@@ -331,7 +331,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_marginBottom="4dp"
-            android:drawableStart="@drawable/ic_secured_by"
+            app:drawableStartCompat="@drawable/ic_secured_by"
             android:drawablePadding="4dp"
             android:text="@string/dialog_confirm_secured_by"
             android:textColor="@color/dash_gray" />
