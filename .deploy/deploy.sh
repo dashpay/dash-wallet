@@ -33,8 +33,6 @@ if [ "${TRAVIS_TAG:0:4}" = "NMA-" ] || [ "${TRAVIS_TAG:0:4}" = "dpl-" ]; then
     git show "$TRAVIS_TAG" | grep -m1 -B20 "diff" | head -n -1
   } > "$README"
 
-  git show "$TRAVIS_TAG" | grep -m1 -B20 "diff" | head -n -1 >> "$README"
-
   cd dash-wallet-staging || exit
   git add .
   git commit -m "Travis CI deploy $TRAVIS_TAG"
