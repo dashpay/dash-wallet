@@ -23,8 +23,16 @@ if [ "${TRAVIS_TAG:0:4}" = "NMA-" ] || [ "${TRAVIS_TAG:0:4}" = "dpl-" ]; then
 #  if [ "${TRAVIS_TAG:0:4}" = "NMA-" ]; then
 #    printf 'https://dashpay.atlassian.net/browse/%s\n\n' "$TRAVIS_TAG" > "$README"
 #  fi
-  # print the content of `git show "$TRAVIS_TAG"` into README.md until the first occurence of 'diff'
-  # the very last line containing 'diff' is removed by | head -n -1
+  {
+    echo "### Test builds:"
+    echo "* [dash-wallet-prod-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/dash-wallet-prod-debug.apk)"
+    echo "* [dash-wallet-_testNet3-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/dash-wallet-_testNet3-debug.apk)"
+    echo "### Deploy info:"
+    # print the content of `git show "$TRAVIS_TAG"` into README.md until the first occurence of 'diff'
+    # the very last line containing 'diff' is removed by | head -n -1
+    git show "$TRAVIS_TAG" | grep -m1 -B20 "diff" | head -n -1
+  } > "$README"
+
   git show "$TRAVIS_TAG" | grep -m1 -B20 "diff" | head -n -1 >> "$README"
 
   cd dash-wallet-staging || exit
