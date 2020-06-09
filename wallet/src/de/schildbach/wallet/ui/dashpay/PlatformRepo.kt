@@ -258,6 +258,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
             if (profile != null) {
                 val dashPayProfile = DashPayProfile(blockchainIdentity.uniqueIdString,
+                        blockchainIdentity.currentUsername!!,
                         profile.data["displayName"] as String,
                         profile.data["publicMessage"] as String,
                         profile.data["avatarUrl"] as String)
@@ -378,6 +379,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             // blockchainIdentity doesn't yet keep track of the profile, so we will load it
             // into the database directly
             val dashPayProfile = DashPayProfile(blockchainIdentity.uniqueIdString,
+                    username,
                     profile!!.data["displayName"] as String,
                     profile.data["publicMessage"] as String,
                     profile.data["avatarUrl"] as String)
