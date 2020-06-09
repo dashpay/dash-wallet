@@ -11,8 +11,8 @@ interface DashPayProfileDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(dashPayProfile: DashPayProfile)
 
-    @Query("SELECT * FROM dashpay_profile LIMIT 1")
-    fun load(): LiveData<DashPayProfile?>
+    @Query("SELECT * FROM dashpay_profile where userId = :userId")
+    fun load(userId: String): LiveData<DashPayProfile?>
 
     @Query("DELETE FROM dashpay_profile")
     fun clear()
