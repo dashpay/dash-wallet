@@ -26,19 +26,19 @@ import de.schildbach.wallet_test.R
 import org.dash.wallet.common.InteractionAwareActivity
 
 
+@SuppressLint("Registered")
+open class GlobalFooterActivity : InteractionAwareActivity(), GlobalFooterView.OnFooterActionListener {
+
+    private lateinit var globalFooterView: GlobalFooterView
+
+    fun setContentViewWithFooter(layoutResId: Int) {
+        globalFooterView = GlobalFooterView.encloseContentView(this, layoutResId)
+        setContentView(globalFooterView)
         setupFooter()
     }
 
     fun setContentViewFooter(layoutResId: Int) {
         super.setContentView(layoutResId)
-        @SuppressLint("Registered")
-        open class GlobalFooterActivity : InteractionAwareActivity(), GlobalFooterView.OnFooterActionListener {
-
-            private lateinit var globalFooterView: GlobalFooterView
-
-            fun setContentViewWithFooter(layoutResId: Int) {
-                globalFooterView = GlobalFooterView.encloseContentView(this, layoutResId)
-                setContentView(globalFooterView)
         globalFooterView = findViewById(R.id.global_footer_view)
         setupFooter()
     }
