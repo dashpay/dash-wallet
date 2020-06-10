@@ -31,6 +31,8 @@
         app:layout_constraintEnd_toStartOf="@id/buttons"
         app:layout_constraintStart_toEndOf="@id/avatar"
         app:layout_constraintTop_toTopOf="@id/avatar"
+        android:maxLines="1"
+        android:ellipsize="end"
         tools:text="John Doe" />
 
     <TextView
@@ -58,7 +60,6 @@
             android:id="@+id/accept_contact_request"
             android:layout_width="67dp"
             android:layout_height="30dp"
-            android:background="#008DE4"
             android:fontFamily="@font/montserrat_medium"
             android:textSize="12sp"
             android:layout_weight="1"
@@ -73,11 +74,10 @@
             android:layout_height="30dp"
             android:layout_marginLeft="5dp"
             android:layout_marginRight="20dp"
-            android:background="@color/dash_gray"
             android:fontFamily="@font/montserrat_medium"
             android:textSize="12sp"
-            android:textColor="@color/white"
             android:layout_weight="1"
+            style="@style/DashButton.Gray"
             android:text="X" />
     </LinearLayout>
 

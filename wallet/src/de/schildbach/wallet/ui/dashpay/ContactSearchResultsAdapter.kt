@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.dashpay
 
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -24,7 +25,9 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.RecyclerView
+import com.amulyakhare.textdrawable.TextDrawable
 import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
@@ -32,6 +35,8 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.contact_header_row.view.*
 import kotlinx.android.synthetic.main.contact_request_header_row.view.*
 import kotlinx.android.synthetic.main.contact_request_row.view.*
+import org.dashevo.dpp.util.HashUtils
+import java.math.BigInteger
 
 
 class ContactSearchResultsAdapter(private val onSortOrderChangedListener: OnSortOrderChangedListener) : RecyclerView.Adapter<ContactSearchResultsAdapter.ViewHolder>() {
@@ -49,6 +54,9 @@ class ContactSearchResultsAdapter(private val onSortOrderChangedListener: OnSort
         fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult)
     }
 
+    init {
+        setHasStableIds(true)
+    }
     var itemClickListener: OnItemClickListener? = null
     var results: List<ViewItem> = arrayListOf()
         set(value) {
@@ -70,12 +78,35 @@ class ContactSearchResultsAdapter(private val onSortOrderChangedListener: OnSort
         return results.size
     }
 
+    private fun getLongValue(s: String): Long {
+        val byteArray = HashUtils.byteArrayFromString(s)
+        val bigInteger = BigInteger(byteArray)
+        return bigInteger.toLong()
+    }
+
+    override fun getItemId(position: Int): Long {
+        return when (results[position].viewType) {
+            CONTACT -> getLongValue(results[position].usernameSearchResult!!.toContactRequest!!.toUserId)
+            CONTACT_REQUEST -> getLongValue(results[position].usernameSearchResult!!.fromContactRequest!!.userId)
+            CONTACT_REQUEST_HEADER -> 1L
+            CONTACT_HEADER -> 2L
+            else -> throw IllegalArgumentException("Invalid viewType ${results[position].viewType}")
+        }
+    }
+
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         when (results[position].viewType) {
             CONTACT, CONTACT_REQUEST -> holder.bind(results[position].usernameSearchResult!!)
             CONTACT_REQUEST_HEADER -> (holder as ContactRequestHeaderViewHolder).bind(results[position].requestCount)
             CONTACT_HEADER -> (holder as ContactHeaderViewHolder).bind(results[position].sortOrder)
             else -> throw IllegalArgumentException("Invalid viewType ${results[position].viewType}")
+        }
+    }
+    override fun onBindViewHolder(holder: ViewHolder, position: Int, payloads: List<Any?>) {
+        if (payloads.isEmpty()) {
+            super.onBindViewHolder(holder, position, payloads)
+        } else {
+            holder.itemView.alpha = 1f
         }
     }
 
@@ -92,20 +123,49 @@ class ContactSearchResultsAdapter(private val onSortOrderChangedListener: OnSort
 
         open fun bind(usernameSearchResult: UsernameSearchResult) {
             val dashPayProfile = usernameSearchResult.dashPayProfile
-            if (dashPayProfile == null) {
-                displayName.text = "no display name"
-            } else if (dashPayProfile.displayName.isNotEmpty()) {
+            if (dashPayProfile.displayName.isEmpty()) {
+                displayName.text = dashPayProfile.username
+                username.text = ""
+            } else {
                 displayName.text = dashPayProfile.displayName
+                username.text = usernameSearchResult.username
+            }
+
+            if(dashPayProfile.avatarUrl.isNotEmpty()) {
                 Glide.with(avatar).load(dashPayProfile.avatarUrl).circleCrop()
                         .placeholder(R.drawable.user5).into(avatar)
+            } else {
+                setDefaultUserAvatar(dashPayProfile.username.toUpperCase())
             }
-            username.text = usernameSearchResult.username
 
             itemClickListener?.let { l ->
                 this.itemView.setOnClickListener {
                     l.onItemClicked(it, usernameSearchResult)
                 }
             }
+        }
+
+        // TODO: how do we refactor this, the code is in three places
+        private fun setDefaultUserAvatar(letters: String) {
+            val dashpayUserAvatar: ImageView = itemView.findViewById(R.id.avatar)
+            dashpayUserAvatar.visibility = View.VISIBLE
+            val hsv = FloatArray(3)
+            //Ascii codes for A: 65 - Z: 90, 0: 48 - 9: 57
+            val firstChar = letters[0].toFloat()
+            val charIndex: Float
+            charIndex = if (firstChar <= 57) { //57 == '9' in Ascii table
+                (firstChar - 48f) / 36f // 48 == '0', 36 == total count of supported
+            } else {
+                (firstChar - 65f + 10f) / 36f // 65 == 'A', 10 == count of digits
+            }
+            hsv[0] = charIndex * 360f
+            hsv[1] = 0.3f
+            hsv[2] = 0.6f
+            val bgColor = Color.HSVToColor(hsv)
+            val defaultAvatar = TextDrawable.builder().beginConfig().textColor(Color.WHITE)
+                    .useFont(ResourcesCompat.getFont(itemView.context, R.font.montserrat_regular))
+                    .endConfig().buildRound(letters[0].toString(), bgColor)
+            dashpayUserAvatar.background = defaultAvatar
         }
     }
 
@@ -115,7 +175,8 @@ class ContactSearchResultsAdapter(private val onSortOrderChangedListener: OnSort
 
         override fun bind(usernameSearchResult: UsernameSearchResult) {
             super.bind(usernameSearchResult)
-            val color = if (usernameSearchResult.dashPayProfile.displayName[0].toLowerCase().toInt() % 2 == 0)
+            // background color alternates based on first letter
+            val color = if (usernameSearchResult.dashPayProfile.username[0].toLowerCase().toInt() % 2 == 0)
                 R.color.white
             else
                 R.color.dash_lighter_gray

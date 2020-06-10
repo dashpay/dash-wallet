@@ -34,7 +34,10 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.SimpleItemAnimator
 import androidx.transition.ChangeBounds
 import androidx.transition.Transition
 import androidx.transition.TransitionManager
@@ -51,8 +54,6 @@ import kotlinx.android.synthetic.main.activity_contacts_1.*
 
 class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResultsAdapter.OnSortOrderChangedListener, ContactSearchResultsAdapter.OnItemClickListener {
 
-
-
     private lateinit var dashPayViewModel: DashPayViewModel
     private lateinit var walletApplication: WalletApplication
     private var handler: Handler = Handler()
@@ -60,7 +61,7 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
     private val contactsAdapter: ContactSearchResultsAdapter = ContactSearchResultsAdapter(this)
     private var query = ""
     private var blockchainIdentityId: String? = null
-    private var direction = UsernameSortOrderBy.DISPLAY_NAME
+    private var direction = UsernameSortOrderBy.USERNAME
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -88,8 +89,6 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
         contacts_rv.layoutManager = LinearLayoutManager(this)
         contacts_rv.adapter = this.contactsAdapter
         this.contactsAdapter.itemClickListener = this
-        contacts_rv.itemAnimator = null
-
 
         initViewModel()
 
@@ -100,7 +99,7 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
         constraintSet2.clone(this, R.layout.activity_contacts_2)
 
         search.addTextChangedListener(this)
-        search.setOnFocusChangeListener { _, hasFocus ->
+        /*search.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus && !setChanged && search.text!!.isNotEmpty()) {
                 val transition: Transition = ChangeBounds()
                 transition.addListener(object : Transition.TransitionListener {
@@ -130,7 +129,7 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
                 //constraintSet2.applyTo(root)
                 setChanged = true
             }
-        }
+        }*/
         /*val adapter = ArrayAdapter.createFromResource(sort_filter.context, R.array.contacts_sort, R.layout.custom_spinner_item)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         sort_filter.adapter = adapter
@@ -203,11 +202,11 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
     }
 
     private fun startLoading() {
-        val query = search.text.toString()
-        hideEmptyResult()
+        //val query = search.text.toString()
+        //hideEmptyResult()
         //search_loading.visibility = View.VISIBLE
-        var loadingText = getString(R.string.contacts_loading)
-        loadingText = loadingText.replace("%", "\"<b>$query</b>\"")
+        //var loadingText = getString(R.string.contacts_loading)
+        //loadingText = loadingText.replace("%", "\"<b>$query</b>\"")
        // search_loading_label.text = HtmlCompat.fromHtml(loadingText,
        //         HtmlCompat.FROM_HTML_MODE_COMPACT)
         //(search_loading_icon.drawable as AnimationDrawable).start()
@@ -220,8 +219,8 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
 
     private fun showEmptyResult() {
         //search_user_empty_result.visibility = View.VISIBLE
-        var emptyResultText = getString(R.string.contacts_no_results)
-        emptyResultText += " \"<b>$query</b>\""
+        //var emptyResultText = getString(R.string.contacts_no_results)
+        //emptyResultText += " \"<b>$query</b>\""
         //no_results_label.text = HtmlCompat.fromHtml(emptyResultText, HtmlCompat.FROM_HTML_MODE_COMPACT)
     }
 

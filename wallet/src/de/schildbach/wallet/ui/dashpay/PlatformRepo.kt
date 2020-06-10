@@ -106,30 +106,34 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             // Names.search does support retrieving 100 names at a time if retrieveAll = false
             val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, true)
 
-            // TODO: Replace this Platform call with a query into the local database
-            val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
+            val nameDocByUserId = nameDocuments.associateBy({ it.userId }, { it })
+            var userIds = arrayListOf<String>()
+            for (nameDoc in nameDocuments) {
+                userIds.add(nameDoc.userId)
+            }
+            val dashPayDocuments = Profiles(platform).getList(userIds)
+
+            val toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)//ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
+                    ?: ArrayList<DashPayContactRequest>()
 
             // Get all contact requests where toUserId == userId
-            val fromContactDocuments = ContactRequests(platform).get(userId, toUserId = true, retrieveAll = true)
+            val fromContactDocuments = dashPayContactRequestDaoAsync.loadFromOthers(userId)//ContactRequests(platform).get(userId, toUserId = true, retrieveAll = true)
+                    ?: ArrayList<DashPayContactRequest>()
 
             val usernameSearchResults = ArrayList<UsernameSearchResult>()
 
-            // TODO: Replace this loop that processed DPP with a loop that processes the results
-            // from the database query
             for (doc in nameDocuments) {
                 //Remove own user document from result
                 if (doc.userId == userId) {
                     continue
                 }
-                var toContact: Document? = null
-                var fromContact: Document? = null
+                var toContact: DashPayContactRequest? = null
+                var fromContact: DashPayContactRequest? = null
 
                 // Determine if any of our contacts match the current name's identity
                 if (toContactDocuments.isNotEmpty()) {
                     toContact = toContactDocuments.find { contact ->
-                        if (contact.data.containsKey("toUserId"))
-                            contact.data["toUserId"] == doc.userId
-                        else false
+                        contact.toUserId == doc.userId
                     }
                 }
 
@@ -140,8 +144,10 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                     }
                 }
 
-                val profileDocument= profiles.get(userId) ?: profiles.createProfileDocument(doc.data["normalizedLabel"] as String,
-                        "No profile found", null, platform.identities.get(doc.userId)!!)
+
+                // did we download the profile
+                val profileDocument = dashPayDocuments.find { it.userId == doc.userId }
+                        ?: profiles.createProfileDocument("", "", "", platform.identities.get(doc.userId)!!)
 
                 val profile = DashPayProfile(profileDocument.userId,
                         doc.data["normalizedLabel"] as String,
@@ -150,7 +156,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                         profileDocument.data["avatarUrl"] as String)
 
                 usernameSearchResults.add(UsernameSearchResult(doc.data["normalizedLabel"] as String,
-                        profile, null, null)) //TODO Fix this : toContact, fromContact))
+                        profile, toContact, fromContact))
             }
 
             Resource.success(usernameSearchResults)
@@ -159,6 +165,13 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
+    /**
+     * search the contacts
+     *
+     * @param text the text to find in usernames and displayNames.  if blank, all contacts are returned
+     * @param orderBy the field that is used to sort the list of matching entries in ascending order
+     * @return
+     */
     suspend fun searchContacts(text: String, orderBy: UsernameSortOrderBy): Resource<List<UsernameSearchResult>> {
         return try {
             // TODO: Replace this Platform call with a query into the local database
@@ -168,36 +181,6 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val blockchainIdentity = blockchainIdentityDataDaoAsync.load()
             val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentity!!.creditFundingTxId))
             val userId = creditFundingTx.creditBurnIdentityIdentifier.toStringBase58()
-
-            // Get all out our contact requests
-
-            /*val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
-            val toContactMap = HashMap<String, Document>()
-            toContactDocuments.forEach {
-                val toUserId = it.data["toUserId"] as String
-                userIdList.add(toUserId)
-                toContactMap[toUserId] = it
-            }
-            // Get all contact requests where toUserId == userId, the users who have added me
-            val fromContactDocuments = ContactRequests(platform).get(userId, toUserId = true, retrieveAll = true)
-            val fromContactMap = HashMap<String, Document>()
-            fromContactDocuments.forEach {
-                userIdList.add(it.userId)
-                fromContactMap[it.userId] = it
-            }
-
-            var nameDocuments = HashMap<String, Document>()
-            var profileDocuments = HashMap<String, Document?>()
-
-            for (id in userIdList) {
-                val nameDocument = platform.names.getByUserId(id)
-                nameDocuments[id] = nameDocument[0]
-
-                profileDocuments[id] = profiles.get(id) ?: profiles.createProfileDocument(nameDocument[0].data["normalizedLabel"] as String,
-                        "No profile found", null, platform.identities.get(nameDocument[0].userId)!!)
-
-            }
-             */
 
             //dashPayContactRequestDaoAsync.clear()
             //val toContactDocuments1 = ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
@@ -232,8 +215,12 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 var toContact: DashPayContactRequest? = null
                 var fromContact: DashPayContactRequest? = null
 
+                // find matches where the text matches part of the username or displayName
+                // if the text is blank, match everything
                 val username = profile.value!!.username
-                val usernameContainsSearchText = username.findLastAnyOf(listOf(searchText), ignoreCase = true) != null
+                val displayName = profile.value!!.displayName
+                val usernameContainsSearchText = username.findLastAnyOf(listOf(searchText), ignoreCase = true) != null ||
+                        displayName.findLastAnyOf(listOf(searchText), ignoreCase = true) != null
                 if(!usernameContainsSearchText && searchText != "") {
                     continue
                 }
@@ -241,14 +228,18 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 // Determine if this identity is our contact
                 toContact = toContactMap[profile.value!!.userId]
 
-                // Determine if I am this identities contact
+                // Determine if I am this identity's contact
                 fromContact = fromContactMap[profile.value!!.userId]
 
                 usernameSearchResults.add(UsernameSearchResult(profile.value!!.username,
                         profile.value!!, toContact, fromContact))
             }
             when (orderBy) {
-                UsernameSortOrderBy.DISPLAY_NAME -> usernameSearchResults.sortBy { it.dashPayProfile.displayName.toLowerCase() }
+                UsernameSortOrderBy.DISPLAY_NAME -> usernameSearchResults.sortBy {
+                    if (it.dashPayProfile.displayName.isNotEmpty())
+                        it.dashPayProfile.displayName.toLowerCase()
+                    else it.dashPayProfile.username.toLowerCase()
+                }
                 UsernameSortOrderBy.USERNAME -> usernameSearchResults.sortBy { it.dashPayProfile.username.toLowerCase() }
                 //TODO: sort by last activity or date added
             }
@@ -549,8 +540,8 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val nameDocument = platform.names.getByUserId(id)
             nameDocuments[id] = nameDocument[0]
 
-            val profileDocument= profiles.get(id) ?: profiles.createProfileDocument(nameDocument[0].data["normalizedLabel"] as String,
-                    "No profile found", null, platform.identities.get(nameDocument[0].userId)!!)
+            val profileDocument= profiles.get(id) ?: profiles.createProfileDocument("","",
+                    "", platform.identities.get(nameDocument[0].userId)!!)
 
             profileDocuments[id] = profileDocument
 
@@ -565,12 +556,12 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
         // lets add more data
 
-        var names = listOf("Lizet (Color Manager)", "Rachel (Dev Manager)", "Tammana (hire me)", "Tammy Product Owner", "Alfred Pennyworth", "Serena Kyle", "Batman", "Capt Kirk", "Spock", "Amanda", "Deana Troi", "Neelix", "Zephrane Cochrane")
-        var usernames = listOf("lizet1993", "rachel4ski", "hellokitty", "oceanbui62", "thebutler", "catwoman", "brucewayne", "jtkirk", "spock", "amanda", "dtroi", "nelix", "warpspeed")
+        var names = listOf("Lizet (Color Manager)", "Rachel (Dev Manager)", "Tammana (hire me)", "Tammy (Product Manager)", "Alfred Pennyworth", "Serena Kyle", "Batman", "Capt Kirk", "Spock", "", "Deana Troi", "Neelix", "Zephrane Cochrane", "The Tenth Doctor was the Best Doctor, Martha was the best!")
+        var usernames = listOf("lizet1993", "rachel4ski", "hellokitty", "oceanbui62", "thebutler", "catwoman", "brucewayne", "jtkirk", "spock", "amanda", "dtroi", "nelix", "warpspeed", "drwho")
         for (i in 0 until names.size) {
             val thisUserId = Sha256Hash.of(names[i].toByteArray()).toStringBase58()
             dashPayProfileDaoAsync.insert(
-                    DashPayProfile(thisUserId, usernames[i], names[i], "no public message", "https://api.adorable.io/avatars/120/${names[i]}"))
+                    DashPayProfile(thisUserId, usernames[i], names[i], "no public message", ""/*""https://api.adorable.io/avatars/120/${names[i]}"*/))
             dashPayContactRequestDaoAsync.insert(
                     DashPayContactRequest(Entropy.generate(), userId, thisUserId, null, names[0].toByteArray(), 0, 0 , 0.0, false, 0 ))
         }
@@ -580,7 +571,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         for (i in 0 until names.size) {
             val thisUserId = Sha256Hash.of(names[i].toByteArray()).toStringBase58()
             dashPayProfileDaoAsync.insert(
-                    DashPayProfile(thisUserId, usernames[i], names[i], "no public message", "https://api.adorable.io/avatars/120/${names[i]}"))
+                    DashPayProfile(thisUserId, usernames[i], names[i], "no public message", ""/*https://api.adorable.io/avatars/120/${names[i]}"*/))
             dashPayContactRequestDaoAsync.insert(
                     DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0 , 0.0, false, 0 ))
         }

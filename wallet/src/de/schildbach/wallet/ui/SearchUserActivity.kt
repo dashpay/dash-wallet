@@ -25,6 +25,7 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.MenuItem
 import android.view.View
 import android.view.Window
 import androidx.appcompat.widget.Toolbar
@@ -206,5 +207,15 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
 
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            android.R.id.home -> {
+                onBackPressed()
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
     }
 }
