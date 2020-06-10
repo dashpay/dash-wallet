@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/close"
+        android:layout_width="26dp"
+        android:layout_height="26dp"
+        android:layout_margin="20dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@drawable/ic_close_blue" />
+
+    <ImageView
+        android:id="@+id/avatar"
+        android:layout_width="128dp"
+        android:layout_height="128dp"
+        android:layout_marginTop="78dp"
+        android:transitionName="avatar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:src="@drawable/user4" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/usernameContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="17dp"
+        app:layout_constraintTop_toBottomOf="@id/avatar">
+
+        <TextView
+            android:id="@+id/displayNameTxt"
+            style="@style/MontserratMedium"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/black_text"
+            android:textSize="16sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Bean Swanson" />
+
+        <TextView
+            android:id="@+id/usernameTxt"
+            style="@style/MontserratMedium"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/dash_gray"
+            android:textSize="12sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/displayNameTxt"
+            tools:text="Bean_Swason_98" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="63dp"
+        android:background="@color/bg_less_bright"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/usernameContainer" />
+
+    <Button
+        android:id="@+id/sendContactRequestBtn"
+        style="@style/DashButton.Blue"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginTop="43dp"
+        android:paddingStart="26dp"
+        android:paddingEnd="26dp"
+        android:text="@string/send_contact_request"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/usernameContainer"
+        tools:alpha="0.5"
+        tools:visibility="visible" />
+
+    <Button
+        android:id="@+id/payContactBtn"
+        style="@style/DashButton.Blue"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="30dp"
+        android:layout_marginTop="43dp"
+        android:layout_marginEnd="30dp"
+        android:paddingStart="26dp"
+        android:paddingEnd="26dp"
+        android:text="@string/pay"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/usernameContainer"
+        tools:alpha="0.5"
+        tools:visibility="visible" />
+
+    <TextView
+        android:id="@+id/contactRequestSentTxt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="25dp"
+        android:layout_marginBottom="15dp"
+        android:text="@string/contact_request_sent"
+        android:textColor="@color/dash_golden"
+        android:textSize="14sp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/usernameContainer"
+        tools:visibility="visible" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/contactRequestReceivedContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/payContactBtn">
+
+        <TextView
+            android:id="@+id/requestTitle"
+            style="@style/MontserratRegular"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="34dp"
+            android:layout_marginTop="26dp"
+            android:layout_marginRight="34dp"
+            android:textColor="@android:color/black"
+            android:textSize="13sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="@string/contact_request_received_title" />
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/request_buttons_guide"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.5"
+            app:layout_constraintTop_toBottomOf="@id/requestTitle" />
+
+        <Button
+            android:id="@+id/accept"
+            style="@style/DashButton.AquaGreen"
+            android:layout_width="100dp"
+            android:layout_height="39dp"
+            android:layout_marginTop="14dp"
+            android:layout_marginEnd="5dp"
+            android:text="@string/contact_request_accept"
+            app:layout_constraintEnd_toStartOf="@id/request_buttons_guide"
+            app:layout_constraintTop_toBottomOf="@id/requestTitle" />
+
+        <Button
+            android:id="@+id/ignore"
+            style="@style/DashButton.MediumGray"
+            android:layout_width="100dp"
+            android:layout_height="39dp"
+            android:layout_marginStart="5dp"
+            android:layout_marginTop="14dp"
+            android:text="@string/contact_request_ignore"
+            app:layout_constraintStart_toEndOf="@id/request_buttons_guide"
+            app:layout_constraintTop_toBottomOf="@id/requestTitle" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="15dp"
+            android:layout_marginTop="32dp"
+            android:layout_marginEnd="15dp"
+            android:alpha="0.37"
+            android:background="@color/dash_light_gray"
+            app:layout_constraintTop_toBottomOf="@id/ignore" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

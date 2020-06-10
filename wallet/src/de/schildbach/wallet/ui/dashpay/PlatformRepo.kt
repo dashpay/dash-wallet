@@ -36,6 +36,7 @@ import org.dashevo.dashpay.BlockchainIdentity
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_SALT
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_STATUS
 import org.dashevo.dashpay.ContactRequests
+import org.dashevo.dashpay.Profiles
 import org.dashevo.dpp.document.Document
 import org.dashevo.dpp.identity.Identity
 import org.dashevo.dpp.identity.IdentityPublicKey
@@ -96,7 +97,13 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentity!!.creditFundingTxId))
             val userId = creditFundingTx.creditBurnIdentityIdentifier.toStringBase58()
             // Names.search does support retrieving 100 names at a time if retrieveAll = false
-            val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, true)
+            //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
+            val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, false)
+
+            val userIds = nameDocuments.map { it.userId }
+
+            val profileDocuments = Profiles(platform).getList(userIds)
+            val profileById = profileDocuments.associateBy({ it.userId }, { it })
 
             // TODO: Replace this Platform call with a query into the local database
             val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
@@ -108,9 +115,9 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
             // TODO: Replace this loop that processed DPP with a loop that processes the results
             // from the database query
-            for (doc in nameDocuments) {
+            for (nameDoc in nameDocuments) {
                 //Remove own user document from result
-                if (doc.userId == userId) {
+                if (nameDoc.userId == userId) {
                     continue
                 }
                 var toContact: Document? = null
@@ -120,7 +127,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 if (toContactDocuments.isNotEmpty()) {
                     toContact = toContactDocuments.find { contact ->
                         if (contact.data.containsKey("toUserId"))
-                            contact.data["toUserId"] == doc.userId
+                            contact.data["toUserId"] == nameDoc.userId
                         else false
                     }
                 }
@@ -128,12 +135,14 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 // Determine if our identity is someone else's contact
                 if (fromContactDocuments.isNotEmpty()) {
                     fromContact = fromContactDocuments.find { contact ->
-                        contact.userId == doc.userId
+                        contact.userId == nameDoc.userId
                     }
                 }
 
-                usernameSearchResults.add(UsernameSearchResult(doc.data["normalizedLabel"] as String,
-                        doc, toContact, fromContact))
+                val profileDoc = profileById[nameDoc.userId]
+
+                usernameSearchResults.add(UsernameSearchResult(nameDoc.data["normalizedLabel"] as String,
+                        nameDoc, profileDoc, toContact, fromContact))
             }
 
             Resource.success(usernameSearchResults)
@@ -347,7 +356,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         blockchainIdentityDataDaoAsync.insert(blockchainIdentityData)
     }
 
-    suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile) {
+    private suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile) {
         dashPayProfileDaoAsync.insert(dashPayProfile)
     }
 
@@ -378,7 +387,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             // blockchainIdentity doesn't yet keep track of the profile, so we will load it
             // into the database directly
             val dashPayProfile = DashPayProfile(blockchainIdentity.uniqueIdString,
-                    profile!!.data["displayName"] as String,
+                    profile.data["displayName"] as String,
                     profile.data["publicMessage"] as String,
                     profile.data["avatarUrl"] as String)
 

@@ -39,6 +39,7 @@ import androidx.transition.Transition
 import androidx.transition.TransitionManager
 import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
@@ -47,8 +48,6 @@ import kotlinx.android.synthetic.main.activity_search_dashpay_profile_1.*
 import kotlinx.android.synthetic.main.user_search_empty_result.*
 import kotlinx.android.synthetic.main.user_search_loading.*
 import org.dash.wallet.common.InteractionAwareActivity
-import org.dashevo.dpp.document.Document
-
 
 class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSearchResultsAdapter.OnItemClickListener {
 
@@ -205,6 +204,28 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
     }
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
+        val dashPayProfile = usernameSearchResult.profileDocument?.let{
+            DashPayProfile.fromDocument(usernameSearchResult.profileDocument)
+        }
 
+        val intent = DashPayUserActivity.createIntent(this@SearchUserActivity,
+                usernameSearchResult.username, dashPayProfile, contactRequestSent = false,
+                contactRequestReceived = false)
+        startActivity(intent)
+
+        startActivity(DashPayUserActivity.createIntent(this@SearchUserActivity,
+                usernameSearchResult.username, dashPayProfile, contactRequestSent = true,
+                contactRequestReceived = false))
+
+        startActivity(DashPayUserActivity.createIntent(this@SearchUserActivity,
+                usernameSearchResult.username, dashPayProfile, contactRequestSent = false,
+                contactRequestReceived = true))
+
+        startActivity(DashPayUserActivity.createIntent(this@SearchUserActivity,
+                usernameSearchResult.username, dashPayProfile, contactRequestSent = true,
+                contactRequestReceived = true))
+
+        overridePendingTransition(R.anim.slide_in_bottom, R.anim.activity_stay)
     }
+
 }
