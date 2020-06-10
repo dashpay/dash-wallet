@@ -8,6 +8,23 @@
     tools:context="de.schildbach.wallet.ui.PaymentsPayFragment">
 
     <de.schildbach.wallet.ui.widget.PaymentsButtonView
+        android:id="@+id/pay_by_contact_select"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:pb_button_title="@string/payments_pay_to_contact_button"
+        app:pb_icon="@drawable/ic_send_to_contact"
+        app:pb_sub_title="@string/payments_pay_to_contact_sub_title"
+        app:pb_title="@string/payments_pay_to_contact_title" />
+
+    <FrameLayout
+        android:id="@+id/pay_by_contact_select_divider"
+        android:layout_width="match_parent"
+        android:layout_height="1px"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:background="@color/dash_light_gray" />
+
+    <de.schildbach.wallet.ui.widget.PaymentsButtonView
         android:id="@+id/pay_by_qr_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
