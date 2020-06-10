@@ -26,8 +26,8 @@ import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.amulyakhare.textdrawable.TextDrawable
-import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.UsernameSearchResult
+import de.schildbach.wallet.ui.dashpay.AvatarImageView
 import de.schildbach.wallet_test.R
 
 class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResultsAdapter.ViewHolder>() {
@@ -58,22 +58,12 @@ class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResult
     inner class ViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
             RecyclerView.ViewHolder(inflater.inflate(R.layout.dashpay_profile_row, parent, false)) {
 
-        private val avatar by lazy { itemView.findViewById<ImageView>(R.id.avatar) }
+        private val avatar by lazy { itemView.findViewById<AvatarImageView>(R.id.avatar) }
         private val username by lazy { itemView.findViewById<TextView>(R.id.username) }
         private val displayName by lazy { itemView.findViewById<TextView>(R.id.displayName) }
 
         fun bind(usernameSearchResult: UsernameSearchResult) {
             username.text = usernameSearchResult.username
-
-            /*val dashPayProfile = usernameSearchResult.dashPayProfile
-            if (dashPayProfile.data.containsKey("displayName")) {
-                displayName.text = dashPayProfile.data["displayName"] as String
-            }
-            username.text = usernameSearchResult.username
-            Glide.with(avatar).load(dashPayProfile.data["avatarUrl"]).circleCrop()
-                    .placeholder(R.drawable.user5).into(avatar)
-
-             */
 
             val dashPayProfile = usernameSearchResult.dashPayProfile
             if (dashPayProfile.displayName.isEmpty()) {
@@ -85,10 +75,9 @@ class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResult
             }
 
             if(dashPayProfile.avatarUrl.isNotEmpty()) {
-                Glide.with(avatar).load(dashPayProfile.avatarUrl).circleCrop()
-                        .placeholder(R.drawable.user5).into(avatar)
+                avatar.setUrl(dashPayProfile.avatarUrl)
             } else {
-                setDefaultUserAvatar(dashPayProfile.username.toUpperCase())
+                avatar.setDefaultUserAvatar(dashPayProfile.username.toUpperCase())
             }
 
             itemClickListener?.let { l ->
@@ -97,29 +86,5 @@ class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResult
                 }
             }
         }
-
-        // TODO: how do we refactor this, the code is in three places
-        private fun setDefaultUserAvatar(letters: String) {
-            val dashpayUserAvatar: ImageView = itemView.findViewById(R.id.avatar)
-            dashpayUserAvatar.visibility = View.VISIBLE
-            val hsv = FloatArray(3)
-            //Ascii codes for A: 65 - Z: 90, 0: 48 - 9: 57
-            val firstChar = letters[0].toFloat()
-            val charIndex: Float
-            charIndex = if (firstChar <= 57) { //57 == '9' in Ascii table
-                (firstChar - 48f) / 36f // 48 == '0', 36 == total count of supported
-            } else {
-                (firstChar - 65f + 10f) / 36f // 65 == 'A', 10 == count of digits
-            }
-            hsv[0] = charIndex * 360f
-            hsv[1] = 0.3f
-            hsv[2] = 0.6f
-            val bgColor = Color.HSVToColor(hsv)
-            val defaultAvatar = TextDrawable.builder().beginConfig().textColor(Color.WHITE)
-                    .useFont(ResourcesCompat.getFont(itemView.context, R.font.montserrat_regular))
-                    .endConfig().buildRound(letters[0].toString(), bgColor)
-            dashpayUserAvatar.background = defaultAvatar
-        }
-
     }
 }
