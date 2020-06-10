@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.dashpay
 
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -47,12 +48,28 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.GlobalFooterActivity
+import de.schildbach.wallet.ui.PaymentsActivity
 import de.schildbach.wallet.ui.SearchUserActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_contacts_1.*
 
 
 class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResultsAdapter.OnSortOrderChangedListener, ContactSearchResultsAdapter.OnItemClickListener {
+
+    companion object {
+        private const val EXTRA_MODE = "extra_mode"
+
+        const val MODE_SEARCH_CONTACTS = 0
+        const val MODE_SELECT_CONTACT = 1
+        const val MODE_VIEW_REQUESTS = 2
+
+        @JvmStatic
+        fun createIntent(context: Context, mode: Int): Intent {
+            val intent = Intent(context, ContactsActivity::class.java)
+            intent.putExtra(EXTRA_MODE, mode)
+            return intent
+        }
+    }
 
     private lateinit var dashPayViewModel: DashPayViewModel
     private lateinit var walletApplication: WalletApplication
@@ -62,6 +79,7 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
     private var query = ""
     private var blockchainIdentityId: String? = null
     private var direction = UsernameSortOrderBy.USERNAME
+    private var mode = MODE_SEARCH_CONTACTS
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -92,60 +110,12 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
 
         initViewModel()
 
-        var setChanged = false
-        val constraintSet1 = ConstraintSet()
-        constraintSet1.clone(root)
-        val constraintSet2 = ConstraintSet()
-        constraintSet2.clone(this, R.layout.activity_contacts_2)
-
         search.addTextChangedListener(this)
-        /*search.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus && !setChanged && search.text!!.isNotEmpty()) {
-                val transition: Transition = ChangeBounds()
-                transition.addListener(object : Transition.TransitionListener {
-                    override fun onTransitionEnd(transition: Transition) {
-                        search.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-                        search.gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                        val searchPadding = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
-                                60f, resources.displayMetrics).toInt()
-                        search.setPadding(searchPadding, 0, 0, 0)
-                        search.typeface = ResourcesCompat.getFont(this@ContactsActivity,
-                                R.font.montserrat_semibold)
-                    }
 
-                    override fun onTransitionResume(transition: Transition) {
-                    }
+        if (intent.extras != null && intent.extras!!.containsKey(EXTRA_MODE)) {
+            mode = intent.extras.getInt(EXTRA_MODE)
+        }
 
-                    override fun onTransitionPause(transition: Transition) {
-                    }
-
-                    override fun onTransitionCancel(transition: Transition) {
-                    }
-
-                    override fun onTransitionStart(transition: Transition) {
-                    }
-                })
-                TransitionManager.beginDelayedTransition(root, transition)
-                //constraintSet2.applyTo(root)
-                setChanged = true
-            }
-        }*/
-        /*val adapter = ArrayAdapter.createFromResource(sort_filter.context, R.array.contacts_sort, R.layout.custom_spinner_item)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        sort_filter.adapter = adapter
-        sort_filter.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View, position: Int, id: Long) {
-                when (position) {
-                    0 -> direction = Direction.DISPLAY_NAME
-                    1 -> direction = Direction.USERNAME
-                    2 -> direction = Direction.DATE_ADDED
-                    3 -> direction = Direction.LAST_ACTIVITY
-                }
-                searchContacts()
-            }
-
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
-        }*/
         searchContacts()
     }
 
@@ -157,30 +127,7 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
             } else {
                 stopLoading()
                 if (it.data != null) {
-
-                    val requests = it.data.filter { r -> r.isPendingRequest }.toMutableList()
-                    val requestCount = requests.size
-                    while (requests.size > 3) {
-                        requests.remove(requests[requests.size - 1])
-                    }
-
-                    val results = ArrayList<ContactSearchResultsAdapter.ViewItem>()
-                    if (requests.isNotEmpty())
-                        results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_REQUEST_HEADER, requestCount =  requestCount))
-                    requests.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT_REQUEST)) }
-
-                    val contacts = it.data.filter { r -> r.haveWeRequested }
-                    if (contacts.isNotEmpty())
-                        results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_HEADER))
-                    contacts.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
-
-
-                    contactsAdapter.results = results
-                    if (it.data.isEmpty()) {
-                        showEmptyResult()
-                    } else {
-                        hideEmptyResult()
-                    }
+                    processResults(it.data)
                 } else {
                     showEmptyResult()
                 }
@@ -194,6 +141,42 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
                 blockchainIdentityId = cftx.creditBurnIdentityIdentifier.toStringBase58()
             }
         })
+    }
+
+    private fun processResults(data: List<UsernameSearchResult>) {
+
+        val results = ArrayList<ContactSearchResultsAdapter.ViewItem>()
+        // process the requests
+        val requests = if (mode != MODE_SELECT_CONTACT)
+            data.filter { r -> r.isPendingRequest }.toMutableList()
+        else ArrayList()
+
+        val requestCount = requests.size
+        if (mode != MODE_VIEW_REQUESTS) {
+            while (requests.size > 3) {
+                requests.remove(requests[requests.size - 1])
+            }
+        }
+
+        if (requests.isNotEmpty() && mode != MODE_VIEW_REQUESTS)
+            results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_REQUEST_HEADER, requestCount = requestCount))
+        requests.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT_REQUEST)) }
+
+        // process contacts
+        val contacts = if (mode != MODE_VIEW_REQUESTS)
+            data.filter { r -> r.haveWeRequested }
+        else ArrayList()
+
+        if (contacts.isNotEmpty())
+            results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_HEADER))
+        contacts.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
+
+        contactsAdapter.results = results
+        if (data.isEmpty()) {
+            showEmptyResult()
+        } else {
+            hideEmptyResult()
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
