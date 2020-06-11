@@ -24,34 +24,23 @@ import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.TypedValue
-import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.Window
 import androidx.appcompat.widget.Toolbar
-import androidx.constraintlayout.widget.ConstraintSet
-import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.SimpleItemAnimator
-import androidx.transition.ChangeBounds
-import androidx.transition.Transition
-import androidx.transition.TransitionManager
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.GlobalFooterActivity
-import de.schildbach.wallet.ui.PaymentsActivity
 import de.schildbach.wallet.ui.SearchUserActivity
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_contacts_1.*
+import kotlinx.android.synthetic.main.fragment_contacts.*
 
 
 class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResultsAdapter.OnSortOrderChangedListener, ContactSearchResultsAdapter.OnItemClickListener {
@@ -185,30 +174,21 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
     }
 
     private fun startLoading() {
-        //val query = search.text.toString()
-        //hideEmptyResult()
-        //search_loading.visibility = View.VISIBLE
-        //var loadingText = getString(R.string.contacts_loading)
-        //loadingText = loadingText.replace("%", "\"<b>$query</b>\"")
-       // search_loading_label.text = HtmlCompat.fromHtml(loadingText,
-       //         HtmlCompat.FROM_HTML_MODE_COMPACT)
-        //(search_loading_icon.drawable as AnimationDrawable).start()
+
     }
 
     private fun stopLoading() {
-        //search_loading.visibility = View.GONE
-        //(search_loading_icon.drawable as AnimationDrawable).start()
+
     }
 
     private fun showEmptyResult() {
-        //search_user_empty_result.visibility = View.VISIBLE
-        //var emptyResultText = getString(R.string.contacts_no_results)
-        //emptyResultText += " \"<b>$query</b>\""
-        //no_results_label.text = HtmlCompat.fromHtml(emptyResultText, HtmlCompat.FROM_HTML_MODE_COMPACT)
+        //TODO: Should we have a ViewHolder that says there are no contacts or requests
+        // or should there be something else displayed saying no contacts or requests
+        // the design does not give the answer
     }
 
     private fun hideEmptyResult() {
-        //search_user_empty_result.visibility = View.GONE
+
     }
 
     override fun onSortOrderChangedListener(direction: UsernameSortOrderBy) {
@@ -243,8 +223,15 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
     }
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
-
-
+        when {
+            usernameSearchResult.isPendingRequest -> {
+                // TODO: show screen for the user has sent us a request
+            }
+            !usernameSearchResult.isPendingRequest -> {
+                // TODO: show screen for the user that is our contact
+                // How do we handle if this activity was started from the Payments Screen?
+            }
+        }
     }
 
 
