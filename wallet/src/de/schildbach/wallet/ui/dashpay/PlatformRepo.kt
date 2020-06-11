@@ -182,9 +182,11 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentity!!.creditFundingTxId))
             val userId = creditFundingTx.creditBurnIdentityIdentifier.toStringBase58()
 
-            dashPayContactRequestDaoAsync.clear()
+            //TODO: Remove this next line - it removes the contacts database so it can be recreated
+            //dashPayContactRequestDaoAsync.clear()
             //val toContactDocuments1 = ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
             var toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)
+            //TODO: this should be handled by a service that keeps the database up to date
             if (toContactDocuments == null || toContactDocuments.isEmpty()) {
                 updateContactRequests(userId)
                 toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)
