@@ -107,7 +107,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, true)
 
             val nameDocByUserId = nameDocuments.associateBy({ it.userId }, { it })
-            var userIds = arrayListOf<String>()
+            var userIds = ArrayList<String>()
             for (nameDoc in nameDocuments) {
                 userIds.add(nameDoc.userId)
             }
@@ -182,7 +182,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentity!!.creditFundingTxId))
             val userId = creditFundingTx.creditBurnIdentityIdentifier.toStringBase58()
 
-            //dashPayContactRequestDaoAsync.clear()
+            dashPayContactRequestDaoAsync.clear()
             //val toContactDocuments1 = ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
             var toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)
             if (toContactDocuments == null || toContactDocuments.isEmpty()) {
@@ -221,7 +221,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 val displayName = profile.value!!.displayName
                 val usernameContainsSearchText = username.findLastAnyOf(listOf(searchText), ignoreCase = true) != null ||
                         displayName.findLastAnyOf(listOf(searchText), ignoreCase = true) != null
-                if(!usernameContainsSearchText && searchText != "") {
+                if (!usernameContainsSearchText && searchText != "") {
                     continue
                 }
 
@@ -363,15 +363,9 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val profile = blockchainIdentity.watchProfile(10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
                     ?: throw TimeoutException("the profile was not found to be created in the allotted amount of time")
 
-            if (profile != null) {
-                val dashPayProfile = DashPayProfile(blockchainIdentity.uniqueIdString,
-                        blockchainIdentity.currentUsername!!,
-                        profile.data["displayName"] as String,
-                        profile.data["publicMessage"] as String,
-                        profile.data["avatarUrl"] as String)
+            val dashPayProfile = DashPayProfile.fromDocument(profile, blockchainIdentity.currentUsername!!)
 
-                updateDashPayProfile(dashPayProfile)
-            }
+            updateDashPayProfile(dashPayProfile!!)
         }
     }
 
@@ -485,13 +479,9 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
             // blockchainIdentity doesn't yet keep track of the profile, so we will load it
             // into the database directly
-            val dashPayProfile = DashPayProfile(blockchainIdentity.uniqueIdString,
-                    username,
-                    profile!!.data["displayName"] as String,
-                    profile.data["publicMessage"] as String,
-                    profile.data["avatarUrl"] as String)
+            val dashPayProfile = DashPayProfile.fromDocument(profile, username)
 
-            updateDashPayProfile(dashPayProfile)
+            updateDashPayProfile(dashPayProfile!!)
         }
     }
 
@@ -540,38 +530,176 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val nameDocument = platform.names.getByUserId(id)
             nameDocuments[id] = nameDocument[0]
 
-            val profileDocument= profiles.get(id) ?: profiles.createProfileDocument("","",
+            val profileDocument = profiles.get(id) ?: profiles.createProfileDocument("", "",
                     "", platform.identities.get(nameDocument[0].userId)!!)
 
             profileDocuments[id] = profileDocument
 
-            val profile = DashPayProfile(profileDocument.userId,
-                    nameDocument[0].data["normalizedLabel"] as String,
-                    profileDocument.data["displayName"] as String,
-                    profileDocument.data["publicMessage"] as String,
-                    profileDocument.data["avatarUrl"] as String)
-            dashPayProfileDaoAsync.insert(profile)
+            val profile = DashPayProfile.fromDocument(profileDocument, nameDocument[0].data["normalizedLabel"] as String)
+            dashPayProfileDaoAsync.insert(profile!!)
 
         }
 
         // lets add more data
 
+        val ourRequests = listOf(listOf("dashpayer", "FW2BGfVdTLgGWGkJRjC838MPpEcL2cSfkNkwao8ooxm5"),
+                listOf("realdashpay", "CUH2fD5nf8Pm1G6rv3oj4ivFjLoPkzyEW8VMuNmJ27e2"),
+                listOf("test10", "k6yBwjYdJkwDEY1yVC7ZzgTwA9CtPtBAcMFTHX7R53p"),
+                listOf("5dfs", "5quW27UcW1kbMJR8s4qMrFX32sNuBQ4LxYjfuM1ECQP3"),
+                listOf("dalek", "6pk9geGeDwvGwmFxEVHDSBd1dQhuhALp3pe3cpNKipBx"),
+                listOf("rockstar", "7G3BeUyLcncJQaBgUn4k9t5WtH4DRbjDTHHyGpY1e1nm"),
+                listOf("cyberman", "6hQvAB5fmk9S7SXA9NeMNRQNPkgnNtzweNKow26gqXCz"),
+                listOf("cable", "2fXFCQrwhxSPZLrTxrsA9wfiH33Yr7EAbLZe2QceMBw7"),
+                listOf("demouser11", "8UbMuDixbjCPz2wYWMwauDuNSTJRajHrQ1PjNSjabR7U"),
+                listOf("dashdemo1", "EhezCM1jSkErP7xUzSZChjAfT9dBzGpVUCAPoiFE8FMX"),
+                listOf("demodash1", "VrNsS7JPg8watdqu7iPrQrJqCm2EZgAMyKSqTcpSpXQ"),
+                listOf("tomcat", "79rrczQfjkeFh6bYdnwJj6FpAsw7hvqgPweGwPHz98QR"),
+                listOf("jerry", "Cfw2ATTFqPA86ryLepcZFD6cM1uP3G5FmNuUxqmNNeGE"),
+                listOf("mikeeee4", "9UBX4QKREkmFJbZFD3taJr3cCHwMDvgZ5ToTTzFaYf3L"),
+                listOf("shaggy", "DeEk46CZy27kCiPK52J8LbTAg6EiQiF6JJrVrhFn1i71"),
+                listOf("scooby", "9fQhNtj3iUZjumT2VA3V8t88MwkNqSWcLUPfCLyBiiRK"),
+                listOf("dashhelpline", "DXShMkwAp5Jvvx5KuAuv4spdxyVYpxh2LSRoSYMP4cao"),
+                listOf("kpopstar", "7daTP2h8bGSe1YTp9rRy2JjYg4AZyenpLoUXHUpHKexi"),
+                listOf("dashdemo3", "6vNR3edCoiKeYd4WVGVw567esopi1uVtKkFtNN4N9jEk"),
+                listOf("dashdemo4", "DqYydjVXnxyPPrJULWwvxMNZJnB85MkVcGfSPp9CWrGS"),
+                listOf("dashdemo4", "DqYydjVXnxyPPrJULWwvxMNZJnB85MkVcGfSPp9CWrGS"),
+                listOf("eric10", "4WgYVkpHZraSmUWZqk2u5uyx3uwXUf9GaJ7BTij82pcv"),
+                listOf("deathmetalstar", "Dxui3pnYYRCpNahx5UTHghWWn2LW4aUgaEnZ3UsDTGfB"),
+                listOf("rapstar", "FYrjvdRcS2t3rqhK8o51xcdiXJSde85K8SmdL9pbuetD"),
+                listOf("kelly", "9iLtJdDWAxkZ3QdX9PuMGtJKDdjGewoWM1fkb1nHNC1t"),
+                listOf("kelly1", "2U3rT8XAMrwM7mmWTqb6hm7KvKE5x2dW3UgfFMLXqDMp"),
+                listOf("kelly5", "Fuhw2gBvvmZ89TR3tpMbx5zSfxGe7ZDjLcvPs4QyPs33"),
+                listOf("kelly6", "H9VzPiwgKu93v6fS6u1r11bLnLEYdfwtX6R4vBsZGa9x"),
+                listOf("kelly7", "3qU6K65Hm2a8KhMHdBgRDTeXqNj96RPDAZFThWzXBc34"),
+                listOf("samb", "HkxSLmmLGCTT1oVSdtzekG5DhJiZUfhVphkpA1S3yeRY"),
+                listOf("samb1", "GivG6LETNmBECvtq2qnTpfDQb4PiXTRW8GvtPWCMht3K"),
+                listOf("qwe1", "GEeqNGNi5uLk23F58QtQfX62X1b8Yv2iW9XJWbHs5MuY"),
+                listOf("asd1", "HX9mLCxZ6LFvPy71pvzwymzWzu9KmThxeJ1VV2d1jtyo"),
+                listOf("samb2", "D4MhE1HNhZexFswGK5zeceTRuk3rcSVKeTC9hMZ8x1NY"),
+                listOf("popstar", "CdoB8VH3YwZBhVchEhhZzik4Chx61EtBDxh8qV1AWM9X"),
+                listOf("rapstar1", "6vPVM3Dy1f6TKvoaFgZRUSLSQtUdJsqAEXuLShJJB9jz"),
+                listOf("samb3", "5txbSagBKpArZwHorruZ61SEFvF6zsYYE1cZfJvtkEvV"),
+                listOf("yw5", "6VKsEgnUtba6PMcRub8ydNrtZZE1bLzNHHDfRJmb5cUj"),
+                listOf("ynb", "CsvgFtcSiC3yzPrW9txFa4bPfGKEdykMWMfuNZoSdXbu"),
+                listOf("laforge", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
+                listOf("crusher", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
+                listOf("wesley", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
+                listOf("locutus", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
+                listOf("sydney", "7wtTHcTSSfF8zeua9tCTqgaa4yC5zwYB1QpBpkUTLn3u"),
+                listOf("cooper", "2NS54HYRpNyM5p3sdwKt4bNUkQM2yCWbtDTiagw3XXVe"),
+                listOf("tricia", "EAFFW5uvbVLNNXysSNCmQYrPJcMFoxjhMBD4bp5AcYrZ"),
+                listOf("cookie", "HHgHazrgQBBA1qpgRXpRwkSLLj9nPezpSA2qvC7d4vMC"),
+                listOf("hugh", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
+                listOf("tomasz", "CvmhjWgDREb4qMGDUQRyZz3TEYLaf1dFnnxvcAqjVhSr")
+        )
+
+
+        val theirRequests = listOf(
+                listOf("asd1", "HX9mLCxZ6LFvPy71pvzwymzWzu9KmThxeJ1VV2d1jtyo"),
+                listOf("samb2", "D4MhE1HNhZexFswGK5zeceTRuk3rcSVKeTC9hMZ8x1NY"),
+                listOf("popstar", "CdoB8VH3YwZBhVchEhhZzik4Chx61EtBDxh8qV1AWM9X"),
+                listOf("rapstar1", "6vPVM3Dy1f6TKvoaFgZRUSLSQtUdJsqAEXuLShJJB9jz"),
+                listOf("samb3", "5txbSagBKpArZwHorruZ61SEFvF6zsYYE1cZfJvtkEvV"),
+                listOf("yw5", "6VKsEgnUtba6PMcRub8ydNrtZZE1bLzNHHDfRJmb5cUj"),
+                listOf("ynb", "CsvgFtcSiC3yzPrW9txFa4bPfGKEdykMWMfuNZoSdXbu"),
+                listOf("laforge", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
+                listOf("crusher", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
+                listOf("wesley", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
+                listOf("locutus", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
+                listOf("hugh", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
+                listOf("sisko", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
+                listOf("nog", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
+                listOf("quark", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
+                listOf("kira", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
+                listOf("odo", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
+                listOf("morn", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
+                listOf("yw3", "GBbuew211FMjdKVuMc8zC1obZBDrjP1opfLuEnRzzm32"),
+                listOf("yff", "DYdaDmwAjxXacTew1SFXvctBu6HeByzkGFckNgfiRGHx"),
+                listOf("wu1", "SZr9nXi2dJVbq7Xa8wwBvhzCBmgaUh9NkN6TAtyZx4g"),
+                listOf("wu2", "4QrZHTB1CNxKoakWZcHPQ1PDBUd2iYVCjYMamarZt5iv"),
+                listOf("bento", "4ZmGNg65BWbW2S471gEhxR3QTjT6ohnRM4Dz8iSSPFpw"),
+                listOf("bento1", "3KtYhDaoSNbuADXhHneGoAgPmA5ruikEWRZSm2iHLj1k"),
+                listOf("ygritte", "GVoT1dztSvv7ofhUPwX6YooQpReHVEzefufZHTRmKDAG"),
+                listOf("tormund", "AtG2taoWvVTXmqDwdPpTmTPE7CqJ6vRdWYqaaS3FwnJn"),
+                listOf("john420", "4TRcDT6rkBwEoNcHRZLTfVwX9zUCTk9iBreVrsttQ5dB"),
+                listOf("john421", "9uJupoiiBRD8xmGDor6ZkMyqs6ANh7aaytyQauzH8BQy"),
+                listOf("sambb8", "6HwNjBRfeLiz6onNBZKbuQ3BPVwgEqVaYTCGcataCTJX"),
+                listOf("sambbb", "FXP8vfHYxjjbQ7o99Hio1gcRMAiXYuNcKP4c3mDjnqeq"),
+                listOf("john422", "8EvPRm5idvVkdioWvT1m6eKwUoWxxCyQUAH2P8rysyxB"),
+                listOf("tomasz", "CvmhjWgDREb4qMGDUQRyZz3TEYLaf1dFnnxvcAqjVhSr"),
+                listOf("john443", "AHyrB7y3KAKKotUh1CtTnPzRH5Ac3hSUze3JNempjA2y"),
+                listOf("tomasz1", "EX7RkdKDVwBMcP9nbkHexEUgG58i4V7LEDoH2gopBbGQ"),
+                listOf("tomasz2", "96282UGLJMtKFVHRpsbVin1b4nuLWu9QAF5ZiFqrBpK2"),
+                listOf("ericthebowler", "7NYPJKDHxo6mwgsvRMDLHSVr5KkGWVVNMtRAr6XXCuWj"),
+                listOf("tomasz5", "4Z9fjygHGFsy49eRBWSuNo7yeq8Gwd4w4BirHMundubZ"),
+                listOf("username", "5nt3CMHZfTvdReAfdvc7QensZGD17R9VoCA62UVqbaed"),
+                listOf("ericthejanitor", "39mm4r82cQgkXrmznn5bEAEgAaqww4HMk2fB34Ce5PzB"),
+                listOf("ericthemanager", "3bj8YeYhfzgToYa2mmiz4rBckN16tjg3gGwsCzj7h5o4"),
+                listOf("usernametomasz", "6kBLamnAgjT8hZbMoKRXhB9kyhHhJopbXhFk2NTGDcFv"),
+                listOf("tomasz30", "FfZyLhF8NQjSGUteFHcz4bnhijpDY9ds89y6F7zyjpet"),
+                listOf("samb001", "5ABfg81tMakD7vagnkCBjDpiajmfK2FVRajzm8NZnx9C"),
+                listOf("ericthedoctor", "5UpPbXqU4P3Rfh1xDq9i7VEW6xb3pQUzjENeoH5hk6pJ"),
+                listOf("erictheengineer", "APNJwjJgWNN7e7y6pgi1MdhG2kCbNAMqzUJ4ZPQNpyxJ"),
+                listOf("samb002", "47uwukQwyTncmRzJxjMv4ctj5gXH8x4zci4bkaHmWHWC"),
+                listOf("tomasz102", "3utBqNdAJECzqw5yeroNJCGBwkcXoHPsRTbz1DA5rZVM"),
+                listOf("tomasz103", "2mhumvwUnEJ54W1hqS91d3waXVk7fz4qtohyzpBubeVD"),
+                listOf("tomasz200", "2drMhTtdrop1fMS23zqULVgqrqHETcvFEYn31AjUVX5v"),
+                listOf("yahoo123", "BoxpvQxdBGaqaCS8zbLVJSeybXREvY8dckR2z4bs34LR"),
+                listOf("brian", "6rNKpoi9CB9EbRr5eqjXZtyeCV7ASvNJRFkMGPT3uXbP"),
+                listOf("coroutinetomasz", "2PiFtsgkQ34NahQtbGXoSQF91N9qryjQ21X9fQSoi8iV"),
+                listOf("ironman", "CZjkem35rHnyMDUubELCZkSikD3g5oThTxjvX7uPkCZP"),
+                listOf("samsbbq", "4EKMpjTCkdWpHtV76MMAEbrtkuSPDnjMBk5NAoVtTsoE"),
+                listOf("briantheproductowner", "F1i9Cgju69hL2ZbfwoMowN7jxnht5ZA4BFnmbzU2X5mx"),
+                listOf("sydney", "7wtTHcTSSfF8zeua9tCTqgaa4yC5zwYB1QpBpkUTLn3u"),
+                listOf("cooper", "2NS54HYRpNyM5p3sdwKt4bNUkQM2yCWbtDTiagw3XXVe"),
+                listOf("tricia", "EAFFW5uvbVLNNXysSNCmQYrPJcMFoxjhMBD4bp5AcYrZ"),
+                listOf("cookie", "HHgHazrgQBBA1qpgRXpRwkSLLj9nPezpSA2qvC7d4vMC"),
+                listOf("ericthetester", "CTme6NxrHk5apwK4oL8YkpFuDFGAEZnBxpEH8VvnuZLU"),
+                listOf("tomhardy", "EC7XnT36mGxkL8eHGhaQqRqoMKbgU81HLC72xbC2zodq"),
+                listOf("patrickstewart", "2SNALrffcea8b5nDRnrVpkJHceGfPs2c6rveCyB3YCDE"),
+                listOf("minerforlife", "3in7MggSpWUcP1tEa7qvFyLAJVGg5AQF9udxBRGoJoaP"),
+                listOf("sambarboza", "8N6hxeCxV9T2hvcV71ZCUZdA9cBZZVogNiYLefX4wgcG"),
+                listOf("babyyoda", "A9kMxyQx65HeuNgigvsHZL3ez1fw6njsB56QtwNiQMM9"),
+                listOf("kyloren", "4snmYHmK4qxDgaySi9SBnsgTFjUFgCrmDpKQWk5PxCwT"),
+                listOf("kyle", "ELasJfWo9uPCkpqjr6k2ycnqY7wWsEQGgktGiFfhxRpN"),
+                listOf("luciusmalfoy", "6psoTRU6WYXNTFD4BpqHHL7D9XubGou34BtcpAT1g1Wu"),
+                listOf("hagrid", "9JFyW6zhNzRSuQbHmQ71k4YMyE339XEdetKjWPK13Aof"),
+                listOf("john301", "CDNN8Q47jq9QTYFjASf1KMqH9WF2emQgmVF9e1fP5Hmc"),
+                listOf("john302", "ELAs2ZpDsEEJaY9fVw9JkERYYq51KLxNTU4z2C7mwBUT"),
+                listOf("john303", "74tnJgXkiL717fH8F988AN2yiSZCb53iPFWZ2xT7tUL1"),
+                listOf("john304", "4PJdqgAyejUZS95eXMB6gPpkFC9UR5t1MwGCHYK6REsE"),
+                listOf("john305", "FJv5Gmq99pPtt6XgXf9hoE2rqUDYW5DHswz7qKynonLz"),
+                listOf("john101", "2VoTHBjWRMxYenJ2ypKT8StSb8fBumGirPpuuFXqwEuJ"),
+                listOf("john102", "4xdo1CQEmSfWmAUtMqjV39MZ8gtp4AnvUF6XxbrGLS4Y")
+        )
+
+        for (l in ourRequests) {
+            dashPayProfileDaoAsync.insert(DashPayProfile.fromUsername(l[1], l[0]))
+            dashPayContactRequestDaoAsync.insert(
+                    DashPayContactRequest(Entropy.generate(), userId, l[1], null, l[1].toByteArray(), 0, 0, 0.0, false, 0))
+
+        }
+
+        for (l in theirRequests) {
+            dashPayProfileDaoAsync.insert(DashPayProfile.fromUsername(l[1], l[0]))
+            dashPayContactRequestDaoAsync.insert(
+                    DashPayContactRequest(Entropy.generate(), l[1], userId, null, l[1].toByteArray(), 0, 0, 0.0, false, 0))
+        }
+
         var names = listOf("Lizet (Color Manager)", "Rachel (Dev Manager)", "Tammana (hire me)", "Tammy (Product Manager)", "Alfred Pennyworth", "Serena Kyle", "Batman", "Capt Kirk", "Spock", "", "Deana Troi", "Neelix", "Zephrane Cochrane", "The Tenth Doctor was the Best Doctor, Martha was the best!")
         var usernames = listOf("lizet1993", "rachel4ski", "hellokitty", "oceanbui62", "thebutler", "catwoman", "brucewayne", "jtkirk", "spock", "amanda", "dtroi", "nelix", "warpspeed", "drwho")
-        for (i in 0 until names.size) {
+        for (i in names.indices) {
             val thisUserId = Sha256Hash.of(names[i].toByteArray()).toStringBase58()
-            dashPayProfileDaoAsync.insert(
-                    DashPayProfile(thisUserId, usernames[i], names[i], "no public message", ""/*""https://api.adorable.io/avatars/120/${names[i]}"*/))
+            dashPayProfileDaoAsync.insert(DashPayProfile(thisUserId, usernames[i], names[i], "", ""))
             dashPayContactRequestDaoAsync.insert(
                     DashPayContactRequest(Entropy.generate(), userId, thisUserId, null, names[0].toByteArray(), 0, 0 , 0.0, false, 0 ))
         }
 
         names = listOf("Q (The Original)", "Thomas Riker", "Geordi La Forge", "Beverly Crusher", "Capt. Picard")
         usernames = listOf("qcontinuum", "triker", "laforge", "crusher", "jlpicard")
-        for (i in 0 until names.size) {
+        for (i in names.indices) {
             val thisUserId = Sha256Hash.of(names[i].toByteArray()).toStringBase58()
-            dashPayProfileDaoAsync.insert(
-                    DashPayProfile(thisUserId, usernames[i], names[i], "no public message", ""/*https://api.adorable.io/avatars/120/${names[i]}"*/))
+            dashPayProfileDaoAsync.insert(DashPayProfile(thisUserId, usernames[i], names[i], "", ""))
             dashPayContactRequestDaoAsync.insert(
                     DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0 , 0.0, false, 0 ))
         }

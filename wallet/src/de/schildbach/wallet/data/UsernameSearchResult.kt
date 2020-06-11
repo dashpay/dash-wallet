@@ -9,7 +9,7 @@ data class UsernameSearchResult(val username: String,
                                 val dashPayProfile: DashPayProfile,
                                 val toContactRequest: DashPayContactRequest?,
                                 val fromContactRequest: DashPayContactRequest?) {
-    val haveWeRequested = toContactRequest != null
-    val hasOtherRequested = fromContactRequest != null
-    val isPendingRequest = hasOtherRequested && ! haveWeRequested
+    val requestSent = toContactRequest != null
+    val requestReceived = fromContactRequest != null
+    val isPendingRequest = requestReceived && ! requestSent
 }
