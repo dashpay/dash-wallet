@@ -147,7 +147,7 @@ class ContactSearchResultsAdapter(private val onSortOrderChangedListener: OnSort
         override fun bind(usernameSearchResult: UsernameSearchResult) {
             super.bind(usernameSearchResult)
             // background color alternates based on first letter
-            val color = if (usernameSearchResult.dashPayProfile.username[0].toLowerCase().toInt() % 2 == 0)
+            val color = if (usernameSearchResult.dashPayProfile.username[0].toLowerCase().toInt() % 2 != 0)
                 R.color.white
             else
                 R.color.dash_lighter_gray
