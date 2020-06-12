@@ -208,6 +208,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
             DashPayProfile.fromDocument(usernameSearchResult.profileDocument)
         }
 
+        //TODO: remove after Contact Request creation from the app. Using mocked states for testing purposes
         val intent = DashPayUserActivity.createIntent(this@SearchUserActivity,
                 usernameSearchResult.username, dashPayProfile, contactRequestSent = false,
                 contactRequestReceived = false)
