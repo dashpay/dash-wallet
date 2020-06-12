@@ -35,7 +35,7 @@ class PaymentsButtonView(context: Context, attrs: AttributeSet?) : ConstraintLay
         inflate(context, R.layout.payments_button_view, this)
         defaultSybTitleSize = title_view.textSize
         // allow for a larger selection ripple when this row is selected
-        setBackgroundResource(R.drawable.selectable_background_dark)
+        //setBackgroundResource(R.drawable.selectable_background_dark)
         val paddingPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16f, resources.displayMetrics).toInt()
         setPadding(paddingPx, paddingPx, paddingPx, paddingPx)
 
@@ -56,10 +56,6 @@ class PaymentsButtonView(context: Context, attrs: AttributeSet?) : ConstraintLay
             if (subTitle != null) {
                 sub_title_view.text = subTitle
             }
-            val buttonTitle = attrsArray.getString(R.styleable.PaymentsButtonView_pb_button_title)
-            if (buttonTitle != null) {
-                button_view.text = buttonTitle
-            }
             val active = attrsArray.getBoolean(R.styleable.PaymentsButtonView_pb_active, true)
             setActive(active)
         } finally {
@@ -77,7 +73,6 @@ class PaymentsButtonView(context: Context, attrs: AttributeSet?) : ConstraintLay
             sub_title_view.setTextColor(subTitleColor)
             sub_title_view.textSize = convertPixelsToDp(defaultSybTitleSize) * 0.8f
         }
-        button_view.isEnabled = active
         this.isEnabled = active
     }
 
@@ -95,10 +90,6 @@ class PaymentsButtonView(context: Context, attrs: AttributeSet?) : ConstraintLay
 
     fun setSubTitle(text: String) {
         sub_title_view.text = text
-    }
-
-    fun setOnButtonClickListener(l: OnClickListener?) {
-        button_view.setOnClickListener(l)
     }
 
     private fun convertPixelsToDp(px: Float): Float {

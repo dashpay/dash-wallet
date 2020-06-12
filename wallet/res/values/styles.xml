@@ -122,9 +122,13 @@
     </style>
 
     <style name="MontserratRegular.MenuRowSubTitle">
-        <item name="android:layout_width">wrap_content</item>
+        <item name="android:lines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">2dp</item>
+        <item name="android:layout_marginEnd">12dp</item>
+        <item name="layout_constraintEnd_toEndOf">parent</item>
         <item name="android:textColor">@color/dash_gray</item>
         <item name="android:textSize">12sp</item>
     </style>
@@ -138,7 +142,9 @@
 
     <style name="MontserratMedium.MenuRowTitle.Internal">
         <item name="android:layout_marginStart">20dp</item>
-        <item name="android:layout_marginLeft">20dp</item>
+        <item name="android:layout_marginEnd">20dp</item>
+        <item name="android:layout_width">0dp</item>
+        <item name="android:maxLines">2</item>
         <item name="android:textSize">16sp</item>
     </style>
 

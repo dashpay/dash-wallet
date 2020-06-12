@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_less_bright"
@@ -27,19 +28,23 @@
                 style="@style/MenuRow.Internal"
                 android:onClick="backupWallet">
 
-                <TextView
-                    style="@style/MontserratMedium.MenuRowTitle.Internal"
-                    android:text="@string/activity_security_backup_wallet"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
-
                 <ImageView
+                    android:id="@+id/backup_arrow"
                     style="@style/MenuRowArrow"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
                     app:srcCompat="@drawable/ic_menu_row_arrow" />
+
+                <TextView
+                    style="@style/MontserratMedium.MenuRowTitle.Internal"
+                    android:layout_width="0dp"
+                    android:text="@string/activity_security_backup_wallet"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/backup_arrow"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    tools:text="This is a very long text to illustrate how it looks like on 2 lines." />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -51,10 +56,12 @@
                     style="@style/MontserratMedium.MenuRowTitle.Internal"
                     android:text="@string/activity_security_view_recovery_phrase"
                     app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/recovery_phrase_arrow"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <ImageView
+                    android:id="@+id/recovery_phrase_arrow"
                     style="@style/MenuRowArrow"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
@@ -72,10 +79,12 @@
                     style="@style/MontserratMedium.MenuRowTitle.Internal"
                     android:text="@string/encrypt_keys_dialog_title"
                     app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/change_pin_arrow"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <ImageView
+                    android:id="@+id/change_pin_arrow"
                     style="@style/MenuRowArrow"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
@@ -92,6 +101,7 @@
                     style="@style/MontserratMedium.MenuRowTitle.Internal"
                     android:text="@string/activity_security_biometric_auth"
                     app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/fingerprint_auth_switch"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
@@ -99,6 +109,7 @@
                     android:id="@+id/fingerprint_auth_switch"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginEnd="20dp"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -113,6 +124,7 @@
                     style="@style/MontserratMedium.MenuRowTitle.Internal"
                     android:text="@string/activity_security_hide_balance"
                     app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/hide_balance_switch"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
@@ -120,6 +132,7 @@
                     android:id="@+id/hide_balance_switch"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginEnd="20dp"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -135,10 +148,12 @@
                     style="@style/MontserratMedium.MenuRowTitle.Internal"
                     android:text="@string/activity_security_advanced"
                     app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/advanced_security_arrow"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <ImageView
+                    android:id="@+id/advanced_security_arrow"
                     style="@style/MenuRowArrow"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
@@ -156,10 +171,12 @@
                     style="@style/MontserratMedium.MenuRowTitle.Internal"
                     android:text="@string/wallet_lock_reset_wallet_title"
                     app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/reset_wallet_arrow"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <ImageView
+                    android:id="@+id/reset_wallet_arrow"
                     style="@style/MenuRowArrow"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
