@@ -373,6 +373,11 @@
     <string name="send_contact_request">Send Request</string>
     <string name="search_user_no_results">There are no users that match</string>
     <string name="search_user_loading">Searching for username <b>"%"</b> on the Dash Network</string>
+    <string name="contact_request_sent">Request Sent</string>
+    <string name="pay">Pay</string>
+    <string name="contact_request_received_title">%s has requested to be a friend</string>
+    <string name="contact_request_accept">Accept</string>
+    <string name="contact_request_ignore">Ignore</string>
 
     <string name="identity_complete_message">Your username %s has been successfully created on the Dash Network</string>
 </resources>

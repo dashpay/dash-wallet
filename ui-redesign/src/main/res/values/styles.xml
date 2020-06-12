@@ -14,14 +14,26 @@
         <item name="android:textAllCaps">false</item>
     </style>
 
+    <style name="DashButton.AquaGreen" parent="DashButton.Blue">
+        <item name="android:background">@drawable/aqua_green_button</item>
+    </style>
+
+    <style name="DashButton.MediumGray" parent="DashButton.Blue">
+        <item name="android:background">@drawable/medium_gray_button</item>
+    </style>
+
     <style name="DashButton.Transparent" parent="DashButton.Blue">
         <item name="android:textColor">@drawable/transparent_button_text</item>
         <item name="android:background">@drawable/transparent_button_background</item>
     </style>
 
-    <style name="DashButton.Transparent.Dark" parent="DashButton.Blue">
+    <style name="DashButton.Transparent.Dark">
         <item name="android:textColor">@color/dash_black</item>
         <item name="android:background">@drawable/transparent_dark_button_background</item>
+    </style>
+
+    <style name="DashButton.Transparent.Golden" parent="DashButton.Blue">
+        <item name="android:textColor">@drawable/transparent_button_golden_text</item>
     </style>
 
     <style name="DashButton.White" parent="DashButton.Blue">

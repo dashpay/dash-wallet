@@ -201,23 +201,8 @@ public final class HeaderBalanceFragment extends Fragment {
             return;
         }
         dashpayUserAvatar.setVisibility(View.VISIBLE);
-        float[] hsv = new float[3];
-        //Ascii codes for A: 65 - Z: 90, 0: 48 - 9: 57
-        float firstChar = letters.charAt(0);
-        float charIndex;
-        if (firstChar <= 57) { //57 == '9' in Ascii table
-            charIndex = (firstChar - 48f) / 36f; // 48 == '0', 36 == total count of supported
-        } else {
-            charIndex = (firstChar - 65f + 10f) / 36f; // 65 == 'A', 10 == count of digits
-        }
-        hsv[0] = charIndex * 360f;
-        hsv[1] = 0.3f;
-        hsv[2] = 0.6f;
-        int bgColor = Color.HSVToColor(hsv);
-        final TextDrawable defaultAvatar = TextDrawable.builder().beginConfig().textColor(Color.WHITE)
-                .useFont(ResourcesCompat.getFont(getContext(), R.font.montserrat_regular))
-                .endConfig().buildRound(letters, bgColor);
-        dashpayUserAvatar.setBackground(defaultAvatar);
+        dashpayUserAvatar.setBackground(UserAvatarPlaceholderDrawable.getDrawable(getContext(),
+                letters.charAt(0)));
     }
 
     private void updateView() {
