@@ -9,7 +9,6 @@ import org.dashevo.dpp.document.Document
 
 data class UsernameSearchResult(val username: String,
                                 val domainDocument: Document,
-                                //TODO: Make non-nullable after profile creation is implemented in iOS
                                 val profileDocument: Document?,
                                 val toContactRequest: Document?,
                                 val fromContactRequest: Document?) {
