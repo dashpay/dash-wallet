@@ -97,7 +97,6 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
 
         search.addTextChangedListener(this)
 
-        // fill in the recycle view
         searchContacts()
     }
 

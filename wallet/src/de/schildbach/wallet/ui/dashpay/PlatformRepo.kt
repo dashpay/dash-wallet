@@ -113,11 +113,11 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val profileById = profileDocuments.associateBy({ it.userId }, { it })
 
             val toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)
-                    ?: ArrayList()
+                    ?: arrayListOf()
 
             // Get all contact requests where toUserId == userId
             val fromContactDocuments = dashPayContactRequestDaoAsync.loadFromOthers(userId)
-                    ?: ArrayList()
+                    ?: arrayListOf()
 
             val usernameSearchResults = ArrayList<UsernameSearchResult>()
 
@@ -179,7 +179,6 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
             //TODO: Remove this next line - it removes the contacts database so it can be recreated
             //dashPayContactRequestDaoAsync.clear()
-            //val toContactDocuments1 = ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
             var toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)
             //TODO: this should be handled by a service that keeps the database up to date
             if (toContactDocuments == null || toContactDocuments.isEmpty()) {

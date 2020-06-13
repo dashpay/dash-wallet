@@ -79,8 +79,7 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     }
 
     //
-    // Search Usernames that start with "text".  Results are a list of documents for names
-    // starting with text.  If no results are found then an empty list is returned.
+    // Search Usernames and Display Names that contain "text".
     //
     val searchContactsLiveData = Transformations.switchMap(contactsLiveData) { usernameSearch: UsernameSearch ->
         searchContactsJob.cancel()

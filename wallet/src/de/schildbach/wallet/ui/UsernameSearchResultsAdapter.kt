@@ -78,12 +78,12 @@ class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResult
             } else {
                 avatar.background = defaultAvatar
             }
-
             itemClickListener?.let { l ->
                 this.itemView.setOnClickListener {
                     l.onItemClicked(it, usernameSearchResult)
                 }
             }
+
         }
     }
 }
