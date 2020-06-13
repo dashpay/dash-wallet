@@ -113,14 +113,12 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val profileDocuments = Profiles(platform).getList(userIds)
             val profileById = profileDocuments.associateBy({ it.userId }, { it })
 
-            val dashPayDocuments = Profiles(platform).getList(userIds)
-
             val toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)//ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
-                    ?: ArrayList<DashPayContactRequest>()
+                    ?: arrayListOf()
 
             // Get all contact requests where toUserId == userId
             val fromContactDocuments = dashPayContactRequestDaoAsync.loadFromOthers(userId)//ContactRequests(platform).get(userId, toUserId = true, retrieveAll = true)
-                    ?: ArrayList<DashPayContactRequest>()
+                    ?: arrayListOf()
 
             val usernameSearchResults = ArrayList<UsernameSearchResult>()
 

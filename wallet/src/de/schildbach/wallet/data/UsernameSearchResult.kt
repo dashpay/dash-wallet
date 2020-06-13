@@ -6,5 +6,5 @@ data class UsernameSearchResult(val username: String,
                                 val fromContactRequest: DashPayContactRequest?) {
     val requestSent = toContactRequest != null
     val requestReceived = fromContactRequest != null
-    val isPendingRequest = requestReceived && ! requestSent
+    val isPendingRequest = requestReceived && !requestSent
 }

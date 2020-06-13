@@ -105,8 +105,6 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
 
         search.addTextChangedListener(this)
 
-
-
         searchContacts()
     }
 
