@@ -9,6 +9,7 @@
 
     <de.schildbach.wallet.ui.widget.PaymentsButtonView
         android:id="@+id/pay_by_contact_select"
+        style="@style/MenuRow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:pb_icon="@drawable/ic_send_to_contact"

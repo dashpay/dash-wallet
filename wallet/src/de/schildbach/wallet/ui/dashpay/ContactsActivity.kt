@@ -82,6 +82,10 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
         setContentViewWithFooter(R.layout.activity_contacts_root)
         walletApplication = application as WalletApplication
 
+        if (intent.extras != null && intent.extras!!.containsKey(EXTRA_MODE)) {
+            mode = intent.extras.getInt(EXTRA_MODE)
+        }
+
         activateContactsButton()
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
@@ -101,9 +105,7 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
 
         search.addTextChangedListener(this)
 
-        if (intent.extras != null && intent.extras!!.containsKey(EXTRA_MODE)) {
-            mode = intent.extras.getInt(EXTRA_MODE)
-        }
+
 
         searchContacts()
     }

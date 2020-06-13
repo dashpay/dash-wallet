@@ -6,7 +6,7 @@
     android:layout_height="wrap_content"
     android:layout_marginBottom="32dp">
 
-    <de.schildbach.wallet.ui.dashpay.AvatarImageView
+    <ImageView
         android:id="@+id/avatar"
         android:transitionName="avatar"
         android:layout_width="36dp"
