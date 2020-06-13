@@ -55,7 +55,6 @@ import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
-import de.schildbach.wallet.ui.dashpay.AvatarImageView;
 import de.schildbach.wallet_test.R;
 
 public final class HeaderBalanceFragment extends Fragment {
@@ -73,7 +72,6 @@ public final class HeaderBalanceFragment extends Fragment {
     private View view;
     private CurrencyTextView viewBalanceDash;
     private CurrencyTextView viewBalanceLocal;
-    private AvatarImageView dashPayUserAvatar;
 
     private boolean showLocalBalance;
 
@@ -133,8 +131,6 @@ public final class HeaderBalanceFragment extends Fragment {
         viewBalanceLocal.setInsignificantRelativeSize(1);
         viewBalanceLocal.setStrikeThru(!Constants.IS_PROD_BUILD);
 
-        dashPayUserAvatar = view.findViewById(R.id.dashpay_user_avatar);
-
         view.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -156,10 +152,9 @@ public final class HeaderBalanceFragment extends Fragment {
             public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
                 if (blockchainIdentityData != null
                         && blockchainIdentityData.getCreationState().ordinal() >= BlockchainIdentityData.CreationState.DONE.ordinal()) {
-                    dashPayUserAvatar.setDefaultUserAvatar(blockchainIdentityData.getUsername().toUpperCase());
-                    dashPayUserAvatar.setVisibility(View.VISIBLE);
+                    setDefaultUserAvatar(blockchainIdentityData.getUsername().toUpperCase());
                 } else {
-                    dashPayUserAvatar.setVisibility(View.GONE);
+                    setDefaultUserAvatar(null);
                 }
             }
         });

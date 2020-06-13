@@ -17,18 +17,14 @@
 
 package de.schildbach.wallet.ui
 
-import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.RecyclerView
-import com.amulyakhare.textdrawable.TextDrawable
 import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet.ui.dashpay.AvatarImageView
 import de.schildbach.wallet_test.R
 
 class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResultsAdapter.ViewHolder>() {
@@ -59,7 +55,7 @@ class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResult
     inner class ViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
             RecyclerView.ViewHolder(inflater.inflate(R.layout.dashpay_profile_row, parent, false)) {
 
-        private val avatar by lazy { itemView.findViewById<AvatarImageView>(R.id.avatar) }
+        private val avatar by lazy { itemView.findViewById<ImageView>(R.id.avatar) }
         private val username by lazy { itemView.findViewById<TextView>(R.id.username) }
         private val displayName by lazy { itemView.findViewById<TextView>(R.id.displayName) }
 

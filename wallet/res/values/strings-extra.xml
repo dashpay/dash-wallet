@@ -387,7 +387,6 @@
 
     <string name="contacts_title">Contacts</string>
     <string name="contacts_add_new_contact">Add new contact</string>
-    <string name="contact_request_accept">Accept</string>
     <string name="contacts_contact_requests_count">Contact Requests (%d)</string>
     <string name="contacts_contact_requests">Contact Requests</string>
     <string name="contacts_contact_requests_view">view all</string>

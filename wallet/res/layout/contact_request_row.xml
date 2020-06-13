@@ -10,7 +10,7 @@
     android:layout_marginBottom="3dp"
     android:background="@drawable/selectable_round_corners">
 
-    <de.schildbach.wallet.ui.dashpay.AvatarImageView
+    <ImageView
         android:id="@+id/avatar"
         android:transitionName="avatar"
         android:layout_width="36dp"

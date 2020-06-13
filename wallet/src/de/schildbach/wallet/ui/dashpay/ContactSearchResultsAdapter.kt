@@ -22,10 +22,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
+import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.contact_header_row.view.*
 import kotlinx.android.synthetic.main.contact_request_header_row.view.*
@@ -112,11 +115,14 @@ class ContactSearchResultsAdapter(private val onSortOrderChangedListener: OnSort
     open inner class ViewHolder(resId: Int, inflater: LayoutInflater, parent: ViewGroup) :
             RecyclerView.ViewHolder(inflater.inflate(resId, parent, false)) {
 
-        private val avatar by lazy { itemView.findViewById<AvatarImageView>(R.id.avatar) }
+        private val avatar by lazy { itemView.findViewById<ImageView>(R.id.avatar) }
         private val username by lazy { itemView.findViewById<TextView>(R.id.username) }
         private val displayName by lazy { itemView.findViewById<TextView>(R.id.displayName) }
 
         open fun bind(usernameSearchResult: UsernameSearchResult) {
+            val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(itemView.context,
+                    usernameSearchResult.username[0])
+
             val dashPayProfile = usernameSearchResult.dashPayProfile
             if (dashPayProfile.displayName.isEmpty()) {
                 displayName.text = dashPayProfile.username
@@ -127,9 +133,10 @@ class ContactSearchResultsAdapter(private val onSortOrderChangedListener: OnSort
             }
 
             if(dashPayProfile.avatarUrl.isNotEmpty()) {
-                avatar.setUrl(dashPayProfile.avatarUrl)
+                Glide.with(avatar).load(dashPayProfile.avatarUrl).circleCrop()
+                        .placeholder(defaultAvatar).into(avatar)
             } else {
-                avatar.setDefaultUserAvatar(dashPayProfile.username.toUpperCase())
+                avatar.background = defaultAvatar
             }
 
             itemClickListener?.let { l ->

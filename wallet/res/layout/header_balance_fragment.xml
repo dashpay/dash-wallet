@@ -17,7 +17,7 @@
         android:paddingEnd="14dp"
         android:paddingBottom="32dp">
 
-        <de.schildbach.wallet.ui.dashpay.AvatarImageView
+        <ImageView
             android:id="@+id/dashpay_user_avatar"
             android:layout_width="72dp"
             android:layout_height="72dp"
