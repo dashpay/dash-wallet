@@ -26,6 +26,7 @@ import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.amulyakhare.textdrawable.TextDrawable
+import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.ui.dashpay.AvatarImageView
 import de.schildbach.wallet_test.R
@@ -63,7 +64,8 @@ class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResult
         private val displayName by lazy { itemView.findViewById<TextView>(R.id.displayName) }
 
         fun bind(usernameSearchResult: UsernameSearchResult) {
-            username.text = usernameSearchResult.username
+            val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(itemView.context,
+                    usernameSearchResult.username[0])
 
             val dashPayProfile = usernameSearchResult.dashPayProfile
             if (dashPayProfile.displayName.isEmpty()) {
@@ -75,9 +77,10 @@ class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResult
             }
 
             if(dashPayProfile.avatarUrl.isNotEmpty()) {
-                avatar.setUrl(dashPayProfile.avatarUrl)
+                Glide.with(avatar).load(dashPayProfile.avatarUrl).circleCrop()
+                        .placeholder(defaultAvatar).into(avatar)
             } else {
-                avatar.setDefaultUserAvatar(dashPayProfile.username.toUpperCase())
+                avatar.background = defaultAvatar
             }
 
             itemClickListener?.let { l ->

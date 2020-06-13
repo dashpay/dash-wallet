@@ -45,19 +45,24 @@ public class BootstrapReceiver extends BroadcastReceiver {
         final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context),
                 context.getResources());
 
-        boolean walletFileExists = ((WalletApplication) context.getApplicationContext()).walletFileExists();
+        WalletApplication walletApplication = (WalletApplication) context.getApplicationContext();
+        boolean walletFileExists = walletApplication.walletFileExists();
         if (walletFileExists && (packageReplaced || bootCompleted)) {
             // make sure wallet is upgraded to HD
-            if (packageReplaced)
+            if (packageReplaced) {
                 UpgradeWalletService.startUpgrade(context);
+            }
 
             // make sure there is always an alarm scheduled
             WalletApplication.scheduleStartBlockchainService(context);
 
             // if the app hasn't been used for a while and contains coins, maybe show reminder
             if (config.remindBalance() && config.hasBeenUsed()
-                    && config.getLastUsedAgo() > Constants.LAST_USAGE_THRESHOLD_INACTIVE_MS)
+                    && config.getLastUsedAgo() > Constants.LAST_USAGE_THRESHOLD_INACTIVE_MS) {
                 InactivityNotificationService.startMaybeShowNotification(context);
+            }
+
+            walletApplication.myPackageReplaced = true;
         }
     }
 }

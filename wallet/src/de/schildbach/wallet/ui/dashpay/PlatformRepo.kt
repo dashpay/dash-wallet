@@ -104,13 +104,14 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentity!!.creditFundingTxId))
             val userId = creditFundingTx.creditBurnIdentityIdentifier.toStringBase58()
             // Names.search does support retrieving 100 names at a time if retrieveAll = false
-            val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, true)
+            //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
+            val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, false)
 
-            val nameDocByUserId = nameDocuments.associateBy({ it.userId }, { it })
-            var userIds = ArrayList<String>()
-            for (nameDoc in nameDocuments) {
-                userIds.add(nameDoc.userId)
-            }
+            val userIds = nameDocuments.map { it.userId }
+
+            val profileDocuments = Profiles(platform).getList(userIds)
+            val profileById = profileDocuments.associateBy({ it.userId }, { it })
+
             val dashPayDocuments = Profiles(platform).getList(userIds)
 
             val toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)//ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
@@ -122,9 +123,9 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
             val usernameSearchResults = ArrayList<UsernameSearchResult>()
 
-            for (doc in nameDocuments) {
+            for (nameDoc in nameDocuments) {
                 //Remove own user document from result
-                if (doc.userId == userId) {
+                if (nameDoc.userId == userId) {
                     continue
                 }
                 var toContact: DashPayContactRequest? = null
@@ -133,30 +134,26 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 // Determine if any of our contacts match the current name's identity
                 if (toContactDocuments.isNotEmpty()) {
                     toContact = toContactDocuments.find { contact ->
-                        contact.toUserId == doc.userId
+                        contact.toUserId == nameDoc.userId
                     }
                 }
 
                 // Determine if our identity is someone else's contact
                 if (fromContactDocuments.isNotEmpty()) {
                     fromContact = fromContactDocuments.find { contact ->
-                        contact.userId == doc.userId
+                        contact.userId == nameDoc.userId
                     }
                 }
 
+                val username = nameDoc.data["normalizedLabel"] as String
+                val profileDoc = profileById[nameDoc.userId]
 
-                // did we download the profile
-                val profileDocument = dashPayDocuments.find { it.userId == doc.userId }
-                        ?: profiles.createProfileDocument("", "", "", platform.identities.get(doc.userId)!!)
+                val dashPayProfile = if (profileDoc != null)
+                    DashPayProfile.fromDocument(profileDoc, username)!!
+                else DashPayProfile.fromUsername(nameDoc.userId, username)
 
-                val profile = DashPayProfile(profileDocument.userId,
-                        doc.data["normalizedLabel"] as String,
-                        profileDocument.data["displayName"] as String,
-                        profileDocument.data["publicMessage"] as String,
-                        profileDocument.data["avatarUrl"] as String)
-
-                usernameSearchResults.add(UsernameSearchResult(doc.data["normalizedLabel"] as String,
-                        profile, toContact, fromContact))
+                usernameSearchResults.add(UsernameSearchResult(nameDoc.data["normalizedLabel"] as String,
+                        dashPayProfile, toContact, fromContact))
             }
 
             Resource.success(usernameSearchResults)
@@ -451,7 +448,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         blockchainIdentityDataDaoAsync.insert(blockchainIdentityData)
     }
 
-    suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile) {
+    private suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile) {
         dashPayProfileDaoAsync.insert(dashPayProfile)
     }
 
@@ -482,7 +479,6 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             // blockchainIdentity doesn't yet keep track of the profile, so we will load it
             // into the database directly
             val dashPayProfile = DashPayProfile.fromDocument(profile, username)
-
             updateDashPayProfile(dashPayProfile!!)
         }
     }
@@ -679,7 +675,6 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             dashPayProfileDaoAsync.insert(DashPayProfile.fromUsername(l[1], l[0]))
             dashPayContactRequestDaoAsync.insert(
                     DashPayContactRequest(Entropy.generate(), userId, l[1], null, l[1].toByteArray(), 0, 0, 0.0, false, 0))
-
         }
 
         for (l in theirRequests) {

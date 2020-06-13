@@ -56,15 +56,7 @@ class PaymentsPayFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        pay_by_contact_select.setOnButtonClickListener(View.OnClickListener {
-            handleSelectContact(it)
-        })
-        pay_by_qr_button.setOnButtonClickListener(View.OnClickListener {
-            handleScan(it)
-        })
-        pay_to_address.setOnButtonClickListener(View.OnClickListener {
-            handlePaste(true)
-        })
+
         //Make the whole row clickable
         pay_by_contact_select.setOnClickListener { handleSelectContact(it) }
         pay_by_qr_button.setOnClickListener { handleScan(it) }

@@ -3,8 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="de.schildbach.wallet_test"
     android:installLocation="internalOnly"
-    android:versionCode="80000"
-    android:versionName="8.0.0-evonet">
+    android:versionCode="80001"
+    android:versionName="8.0.0-dashpay">
 
     <!-- normal permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -308,6 +308,10 @@
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity"
             android:windowSoftInputMode="stateHidden|adjustResize" />
+        <activity
+            android:name="de.schildbach.wallet.ui.DashPayUserActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity"/>
 
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"

@@ -197,6 +197,18 @@ public final class HeaderBalanceFragment extends Fragment {
         super.onPause();
     }
 
+    private void setDefaultUserAvatar(String letters) {
+        ImageView dashpayUserAvatar = view.findViewById(R.id.dashpay_user_avatar);
+        if (letters == null) {
+            // there is no username, so hide the image
+            dashpayUserAvatar.setVisibility(View.GONE);
+            return;
+        }
+        dashpayUserAvatar.setVisibility(View.VISIBLE);
+        dashpayUserAvatar.setBackground(UserAvatarPlaceholderDrawable.getDrawable(getContext(),
+                letters.charAt(0)));
+    }
+
     private void updateView() {
         View balances = view.findViewById(R.id.balances_layout);
         TextView walletBalanceSyncMessage = view.findViewById(R.id.wallet_balance_sync_message);

@@ -1,4 +1,10 @@
 Dash Wallet
+v7.0.7
+* Fix layout issues on More and Settings Screens for other languages with longer text
+* Fix Android 4.4 crashes on Transaction Details screens
+* Fix another long PIN issue related to upgrading to v7
+* Fix blockchain service crashes on Android 8.1
+
 v7.0.6
 * Handle Dash payment requests and addresses in HTML clipboard format
 * Properly format authentication dialog
