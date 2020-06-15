@@ -61,7 +61,9 @@ import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
+import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
@@ -82,7 +84,6 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
-import org.dashevo.dashpay.BlockchainIdentity;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -396,8 +397,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 }
                 // this method is always called after progress or doneDownload
                 updateBlockchainState();
-
-                updateDashPayState();
             }
         };
 
@@ -788,6 +787,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         application.getWallet().addCoinsReceivedEventListener(Threading.SAME_THREAD, walletEventListener);
         application.getWallet().addCoinsSentEventListener(Threading.SAME_THREAD, walletEventListener);
         application.getWallet().addChangeEventListener(Threading.SAME_THREAD, walletEventListener);
+        blockChain.addNewBestBlockListener(newBestBlockListener);
 
         registerReceiver(tickReceiver, new IntentFilter(Intent.ACTION_TIME_TICK));
 
@@ -893,6 +893,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         application.getWallet().removeChangeEventListener(walletEventListener);
         application.getWallet().removeCoinsSentEventListener(walletEventListener);
         application.getWallet().removeCoinsReceivedEventListener(walletEventListener);
+        blockChain.removeNewBestBlockListener(newBestBlockListener);
 
         unregisterReceiver(connectivityReceiver);
 
@@ -950,6 +951,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     // This code is not executed during a wipe, only a blockchain reset
                     AppDatabase.getAppDatabase().blockchainIdentityDataDao().clear();
                     AppDatabase.getAppDatabase().dashPayProfileDao().clear();
+                    AppDatabase.getAppDatabase().dashPayContactRequestDao().clear();
                 }
             });
         }
@@ -1036,17 +1038,19 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         });
     }
 
+    boolean updatingDashPayState = false;
     private void updateDashPayState() {
-        if (blockchainIdentityData != null) {
+        if (blockchainIdentityData != null && !updatingDashPayState) {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
                     String userId = blockchainIdentityData.getIdentity(application.getWallet());
                     if (userId != null ) {
+                        updatingDashPayState = true;
                         new PlatformRepo(application).updateContactRequests(userId, new Continuation<Unit>() {
                             @Override
                             public void resumeWith(@NotNull Object o) {
-                                Object o1 = o;
+                                updatingDashPayState = false;
                             }
 
                             @Override
@@ -1127,4 +1131,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private void updateAppWidget() {
         WalletBalanceWidgetProvider.updateWidgets(BlockchainServiceImpl.this, application.getWallet());
     }
+
+    NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
+        @Override
+        public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
+            updateDashPayState();
+        }
+    };
 }
