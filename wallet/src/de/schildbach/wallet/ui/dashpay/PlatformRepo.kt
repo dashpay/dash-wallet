@@ -350,7 +350,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     suspend fun createDashPayProfile(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter) {
         withContext(Dispatchers.IO) {
             val username = blockchainIdentity.currentUsername!!
-            blockchainIdentity.registerProfile(username, "Hello, I'm ${username}. I was created by the Android Wallet", null, keyParameter)
+            blockchainIdentity.registerProfile(username, "", "", keyParameter)
         }
     }
 
