@@ -155,7 +155,7 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
 
         // process contacts
         val contacts = if (mode != MODE_VIEW_REQUESTS)
-            data.filter { r -> r.requestSent }
+            data.filter { r -> r.requestSent && r.requestReceived }
         else ArrayList()
 
         if (contacts.isNotEmpty())
