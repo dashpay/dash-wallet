@@ -68,15 +68,14 @@
             style="@style/DashButton.Blue"
             android:text="@string/contact_request_accept" />
 
-        <Button
+        <ImageButton
             android:id="@+id/hide_contract_request"
             android:layout_width="30dp"
             android:layout_height="30dp"
-            android:layout_marginLeft="5dp"
-            android:layout_marginRight="20dp"
-            android:fontFamily="@font/montserrat_medium"
-            android:textSize="12sp"
+            android:layout_marginStart="5dp"
+            android:layout_marginEnd="20dp"
             android:layout_weight="1"
+            app:srcCompat="@drawable/ic_ignore_x"
             style="@style/DashButton.Gray"
             android:text="X" />
     </LinearLayout>
