@@ -64,6 +64,8 @@ data class BlockchainIdentityData(var creationState: CreationState = CreationSta
         return creditFundingTransactionCache
     }
 
+    fun getIdentity(wallet: Wallet?): String? = findCreditFundingTransaction(wallet)?.let { it.creditBurnIdentityIdentifier.toStringBase58() }
+
     enum class CreationState {
         NONE,   // this should always be the first value
         UPGRADING_WALLET,
