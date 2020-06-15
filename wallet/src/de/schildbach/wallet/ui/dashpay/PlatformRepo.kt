@@ -591,34 +591,18 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 listOf("tomasz", "CvmhjWgDREb4qMGDUQRyZz3TEYLaf1dFnnxvcAqjVhSr")
         )
 
-
         val theirRequests = listOf(
                 listOf("asd1", "HX9mLCxZ6LFvPy71pvzwymzWzu9KmThxeJ1VV2d1jtyo"),
                 listOf("samb2", "D4MhE1HNhZexFswGK5zeceTRuk3rcSVKeTC9hMZ8x1NY"),
                 listOf("popstar", "CdoB8VH3YwZBhVchEhhZzik4Chx61EtBDxh8qV1AWM9X"),
                 listOf("rapstar1", "6vPVM3Dy1f6TKvoaFgZRUSLSQtUdJsqAEXuLShJJB9jz"),
-                listOf("samb3", "5txbSagBKpArZwHorruZ61SEFvF6zsYYE1cZfJvtkEvV"),
                 listOf("yw5", "6VKsEgnUtba6PMcRub8ydNrtZZE1bLzNHHDfRJmb5cUj"),
                 listOf("ynb", "CsvgFtcSiC3yzPrW9txFa4bPfGKEdykMWMfuNZoSdXbu"),
                 listOf("laforge", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
                 listOf("crusher", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
-                listOf("wesley", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
-                listOf("locutus", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
-                listOf("hugh", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
-                listOf("sisko", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
-                listOf("nog", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
-                listOf("quark", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
-                listOf("kira", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
                 listOf("odo", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
                 listOf("morn", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
-                listOf("yw3", "GBbuew211FMjdKVuMc8zC1obZBDrjP1opfLuEnRzzm32"),
-                listOf("yff", "DYdaDmwAjxXacTew1SFXvctBu6HeByzkGFckNgfiRGHx"),
-                listOf("wu1", "SZr9nXi2dJVbq7Xa8wwBvhzCBmgaUh9NkN6TAtyZx4g"),
-                listOf("wu2", "4QrZHTB1CNxKoakWZcHPQ1PDBUd2iYVCjYMamarZt5iv"),
                 listOf("bento", "4ZmGNg65BWbW2S471gEhxR3QTjT6ohnRM4Dz8iSSPFpw"),
-                listOf("bento1", "3KtYhDaoSNbuADXhHneGoAgPmA5ruikEWRZSm2iHLj1k"),
-                listOf("ygritte", "GVoT1dztSvv7ofhUPwX6YooQpReHVEzefufZHTRmKDAG"),
-                listOf("tormund", "AtG2taoWvVTXmqDwdPpTmTPE7CqJ6vRdWYqaaS3FwnJn"),
                 listOf("john420", "4TRcDT6rkBwEoNcHRZLTfVwX9zUCTk9iBreVrsttQ5dB"),
                 listOf("john421", "9uJupoiiBRD8xmGDor6ZkMyqs6ANh7aaytyQauzH8BQy"),
                 listOf("sambb8", "6HwNjBRfeLiz6onNBZKbuQ3BPVwgEqVaYTCGcataCTJX"),
@@ -626,10 +610,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 listOf("john422", "8EvPRm5idvVkdioWvT1m6eKwUoWxxCyQUAH2P8rysyxB"),
                 listOf("tomasz", "CvmhjWgDREb4qMGDUQRyZz3TEYLaf1dFnnxvcAqjVhSr"),
                 listOf("john443", "AHyrB7y3KAKKotUh1CtTnPzRH5Ac3hSUze3JNempjA2y"),
-                listOf("tomasz1", "EX7RkdKDVwBMcP9nbkHexEUgG58i4V7LEDoH2gopBbGQ"),
-                listOf("tomasz2", "96282UGLJMtKFVHRpsbVin1b4nuLWu9QAF5ZiFqrBpK2"),
                 listOf("ericthebowler", "7NYPJKDHxo6mwgsvRMDLHSVr5KkGWVVNMtRAr6XXCuWj"),
-                listOf("tomasz5", "4Z9fjygHGFsy49eRBWSuNo7yeq8Gwd4w4BirHMundubZ"),
                 listOf("username", "5nt3CMHZfTvdReAfdvc7QensZGD17R9VoCA62UVqbaed"),
                 listOf("ericthejanitor", "39mm4r82cQgkXrmznn5bEAEgAaqww4HMk2fB34Ce5PzB"),
                 listOf("ericthemanager", "3bj8YeYhfzgToYa2mmiz4rBckN16tjg3gGwsCzj7h5o4"),
@@ -639,9 +620,6 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 listOf("ericthedoctor", "5UpPbXqU4P3Rfh1xDq9i7VEW6xb3pQUzjENeoH5hk6pJ"),
                 listOf("erictheengineer", "APNJwjJgWNN7e7y6pgi1MdhG2kCbNAMqzUJ4ZPQNpyxJ"),
                 listOf("samb002", "47uwukQwyTncmRzJxjMv4ctj5gXH8x4zci4bkaHmWHWC"),
-                listOf("tomasz102", "3utBqNdAJECzqw5yeroNJCGBwkcXoHPsRTbz1DA5rZVM"),
-                listOf("tomasz103", "2mhumvwUnEJ54W1hqS91d3waXVk7fz4qtohyzpBubeVD"),
-                listOf("tomasz200", "2drMhTtdrop1fMS23zqULVgqrqHETcvFEYn31AjUVX5v"),
                 listOf("yahoo123", "BoxpvQxdBGaqaCS8zbLVJSeybXREvY8dckR2z4bs34LR"),
                 listOf("brian", "6rNKpoi9CB9EbRr5eqjXZtyeCV7ASvNJRFkMGPT3uXbP"),
                 listOf("coroutinetomasz", "2PiFtsgkQ34NahQtbGXoSQF91N9qryjQ21X9fQSoi8iV"),
@@ -661,14 +639,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 listOf("kyloren", "4snmYHmK4qxDgaySi9SBnsgTFjUFgCrmDpKQWk5PxCwT"),
                 listOf("kyle", "ELasJfWo9uPCkpqjr6k2ycnqY7wWsEQGgktGiFfhxRpN"),
                 listOf("luciusmalfoy", "6psoTRU6WYXNTFD4BpqHHL7D9XubGou34BtcpAT1g1Wu"),
-                listOf("hagrid", "9JFyW6zhNzRSuQbHmQ71k4YMyE339XEdetKjWPK13Aof"),
-                listOf("john301", "CDNN8Q47jq9QTYFjASf1KMqH9WF2emQgmVF9e1fP5Hmc"),
-                listOf("john302", "ELAs2ZpDsEEJaY9fVw9JkERYYq51KLxNTU4z2C7mwBUT"),
-                listOf("john303", "74tnJgXkiL717fH8F988AN2yiSZCb53iPFWZ2xT7tUL1"),
-                listOf("john304", "4PJdqgAyejUZS95eXMB6gPpkFC9UR5t1MwGCHYK6REsE"),
-                listOf("john305", "FJv5Gmq99pPtt6XgXf9hoE2rqUDYW5DHswz7qKynonLz"),
-                listOf("john101", "2VoTHBjWRMxYenJ2ypKT8StSb8fBumGirPpuuFXqwEuJ"),
-                listOf("john102", "4xdo1CQEmSfWmAUtMqjV39MZ8gtp4AnvUF6XxbrGLS4Y")
+                listOf("hagrid", "9JFyW6zhNzRSuQbHmQ71k4YMyE339XEdetKjWPK13Aof")
         )
 
         for (l in ourRequests) {
@@ -683,13 +654,16 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                     DashPayContactRequest(Entropy.generate(), l[1], userId, null, l[1].toByteArray(), 0, 0, 0.0, false, 0))
         }
 
-        var names = listOf("Lizet (Color Manager)", "Rachel (Dev Manager)", "Tammana (hire me)", "Tammy (Product Manager)", "Alfred Pennyworth", "Serena Kyle", "Batman", "Capt Kirk", "Spock", "", "Deana Troi", "Neelix", "Zephrane Cochrane", "The Tenth Doctor was the Best Doctor, Martha was the best!")
-        var usernames = listOf("lizet1993", "rachel4ski", "hellokitty", "oceanbui62", "thebutler", "catwoman", "brucewayne", "jtkirk", "spock", "amanda", "dtroi", "nelix", "warpspeed", "drwho")
+        var names = listOf("Lizet Michaelson", "Rachel Sanderson", "Tamanna Smith", "Tammy Oceanography", "Alfred Pennyworth", "Serena Kyle", "Batman", "Capt Kirk", "Spock", "", "Deanna Troi", "Neelix", "Zephrane Cochrane", "The Tenth Doctor was the Best Doctor, Martha was the best!")
+        var usernames = listOf("lizet1993", "rachel4ski", "tsmith", "marinebio", "thebutler", "catwoman", "brucewayne", "jtkirk", "spock", "amanda", "dtroi", "nelix", "warpspeed", "drwho")
         for (i in names.indices) {
             val thisUserId = Sha256Hash.of(names[i].toByteArray()).toStringBase58()
             dashPayProfileDaoAsync.insert(DashPayProfile(thisUserId, usernames[i], names[i], "", ""))
             dashPayContactRequestDaoAsync.insert(
                     DashPayContactRequest(Entropy.generate(), userId, thisUserId, null, names[0].toByteArray(), 0, 0 , 0.0, false, 0 ))
+            dashPayContactRequestDaoAsync.insert(
+                    DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0 , 0.0, false, 0 ))
+
         }
 
         names = listOf("Q (The Original)", "Thomas Riker", "Geordi La Forge", "Beverly Crusher", "Capt. Picard")
