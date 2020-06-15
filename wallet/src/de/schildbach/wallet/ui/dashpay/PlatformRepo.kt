@@ -15,6 +15,7 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
+import com.google.common.base.Stopwatch
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -179,15 +180,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentity!!.creditFundingTxId))
             val userId = creditFundingTx.creditBurnIdentityIdentifier.toStringBase58()
 
-            //TODO: Remove this next line - it removes the contacts database so it can be recreated
-            //dashPayContactRequestDaoAsync.clear()
-            //val toContactDocuments1 = ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
             var toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)
-            //TODO: this should be handled by a service that keeps the database up to date
-            if (toContactDocuments == null || toContactDocuments.isEmpty()) {
-                updateContactRequests(userId)
-                toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)
-            }
             val toContactMap = HashMap<String, DashPayContactRequest>()
             toContactDocuments!!.forEach {
                 userIdList.add(it.toUserId)
@@ -488,6 +481,11 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     suspend fun updateContactRequests(userId: String) {
 
         val userIdList = HashSet<String>()
+        val watch = Stopwatch.createStarted()
+
+        //TODO: remove this when removing the fake contact list
+        dashPayContactRequestDaoAsync.clear()
+        dashPayProfileDaoAsync.clear()
 
         // Get all out our contact requests
         val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
@@ -521,21 +519,21 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             dashPayContactRequestDaoAsync.insert(contactRequest)
         }
 
-        var nameDocuments = HashMap<String, Document>()
-        var profileDocuments = HashMap<String, Document?>()
+        val profileDocuments = Profiles(platform).getList(userIdList.toList()) //only handles 100 userIds
+        val profileById = profileDocuments.associateBy({ it.userId }, { it })
+
+        val nameDocuments = platform.names.getList(userIdList.toList())
+        val nameById = nameDocuments.associateBy({ it.userId }, { it })
 
         for (id in userIdList) {
-            val nameDocument = platform.names.getByUserId(id)
-            nameDocuments[id] = nameDocument[0]
+            val nameDocument = nameById[id] // what happens if there is no username for the identity? crash
+            val username = nameDocument!!.data["normalizedLabel"] as String
 
-            val profileDocument = profiles.get(id) ?: profiles.createProfileDocument("", "",
-                    "", platform.identities.get(nameDocument[0].userId)!!)
+            val profileDocument = profileById[id] ?: profiles.createProfileDocument("", "",
+                    "", platform.identities.get(nameDocument!!.userId)!!)
 
-            profileDocuments[id] = profileDocument
-
-            val profile = DashPayProfile.fromDocument(profileDocument, nameDocument[0].data["normalizedLabel"] as String)
+            val profile = DashPayProfile.fromDocument(profileDocument, username)
             dashPayProfileDaoAsync.insert(profile!!)
-
         }
 
         // lets add more data
@@ -675,5 +673,6 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                     DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0 , 0.0, false, 0 ))
         }
 
+        log.info("updating contacts and profiles took $watch")
     }
 }
