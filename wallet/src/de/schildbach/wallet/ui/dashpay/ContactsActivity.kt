@@ -37,6 +37,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.GlobalFooterActivity
 import de.schildbach.wallet.ui.SearchUserActivity
 import de.schildbach.wallet_test.R
@@ -226,10 +227,16 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
         when {
             usernameSearchResult.isPendingRequest -> {
                 // TODO: show screen for the user has sent us a request
+                startActivity(DashPayUserActivity.createIntent(this,
+                        usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = false,
+                        contactRequestReceived = true))
             }
             !usernameSearchResult.isPendingRequest -> {
                 // TODO: show screen for the user that is our contact
                 // How do we handle if this activity was started from the Payments Screen?
+                startActivity(DashPayUserActivity.createIntent(this,
+                        usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
+                        contactRequestReceived = usernameSearchResult.requestReceived))
             }
         }
     }

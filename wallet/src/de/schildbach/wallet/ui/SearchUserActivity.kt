@@ -207,23 +207,9 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
         val dashPayProfile = usernameSearchResult.dashPayProfile
 
-        //TODO: remove after Contact Request creation from the app. Using mocked states for testing purposes
-        val intent = DashPayUserActivity.createIntent(this@SearchUserActivity,
-                usernameSearchResult.username, dashPayProfile, contactRequestSent = false,
-                contactRequestReceived = false)
-        startActivity(intent)
-
         startActivity(DashPayUserActivity.createIntent(this@SearchUserActivity,
-                usernameSearchResult.username, dashPayProfile, contactRequestSent = true,
-                contactRequestReceived = false))
-
-        startActivity(DashPayUserActivity.createIntent(this@SearchUserActivity,
-                usernameSearchResult.username, dashPayProfile, contactRequestSent = false,
-                contactRequestReceived = true))
-
-        startActivity(DashPayUserActivity.createIntent(this@SearchUserActivity,
-                usernameSearchResult.username, dashPayProfile, contactRequestSent = true,
-                contactRequestReceived = true))
+                usernameSearchResult.username, dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
+                contactRequestReceived = usernameSearchResult.requestReceived))
 
         overridePendingTransition(R.anim.slide_in_bottom, R.anim.activity_stay)
     }
