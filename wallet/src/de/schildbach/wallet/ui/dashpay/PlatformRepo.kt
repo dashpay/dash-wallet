@@ -99,7 +99,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         return try {
             val wallet = walletApplication.wallet
             val blockchainIdentity = blockchainIdentityDataDaoAsync.load()
-            //We don't check for nullity here because if it's null, it'll be thrown, caputred below
+            //We don't check for nullity here because if it's null, it'll be thrown, captured below
             //and sent as a Resource.error
             val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentity!!.creditFundingTxId))
             val userId = creditFundingTx.creditBurnIdentityIdentifier.toStringBase58()
@@ -112,12 +112,12 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val profileDocuments = Profiles(platform).getList(userIds)
             val profileById = profileDocuments.associateBy({ it.userId }, { it })
 
-            val toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)//ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
-                    ?: ArrayList<DashPayContactRequest>()
+            val toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)
+                    ?: ArrayList()
 
             // Get all contact requests where toUserId == userId
-            val fromContactDocuments = dashPayContactRequestDaoAsync.loadFromOthers(userId)//ContactRequests(platform).get(userId, toUserId = true, retrieveAll = true)
-                    ?: ArrayList<DashPayContactRequest>()
+            val fromContactDocuments = dashPayContactRequestDaoAsync.loadFromOthers(userId)
+                    ?: ArrayList()
 
             val usernameSearchResults = ArrayList<UsernameSearchResult>()
 
