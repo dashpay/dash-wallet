@@ -30,8 +30,8 @@ import org.dash.wallet.common.InteractionAwareActivity
 class DashPayUserActivity : InteractionAwareActivity() {
 
     private val username by lazy { intent.getStringExtra(USERNAME) }
-    private val profile: DashPayProfile? by lazy { intent.getParcelableExtra(PROFILE) as DashPayProfile? }
-    private val displayName by lazy { profile?.displayName }
+    private val profile: DashPayProfile by lazy { intent.getParcelableExtra(PROFILE) as DashPayProfile }
+    private val displayName by lazy { profile.displayName }
 
     companion object {
         private const val USERNAME = "username"
@@ -58,13 +58,13 @@ class DashPayUserActivity : InteractionAwareActivity() {
         close.setOnClickListener { finish() }
 
         val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(this, username[0])
-        if (profile != null) {
-            Glide.with(this).load(profile!!.avatarUrl).circleCrop()
+        if (profile.avatarUrl.isNotEmpty()) {
+            Glide.with(this).load(profile.avatarUrl).circleCrop()
                     .placeholder(defaultAvatar).into(avatar)
         } else {
             avatar.background = defaultAvatar
         }
-        if (displayName != null) {
+        if (displayName.isNotEmpty()) {
             displayNameTxt.text = displayName
             usernameTxt.text = username
         } else {

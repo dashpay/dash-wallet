@@ -21,6 +21,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -58,6 +59,9 @@ class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResult
         private val avatar by lazy { itemView.findViewById<ImageView>(R.id.avatar) }
         private val username by lazy { itemView.findViewById<TextView>(R.id.username) }
         private val displayName by lazy { itemView.findViewById<TextView>(R.id.displayName) }
+        private val requestStatus by lazy { itemView.findViewById<TextView>(R.id.request_status) }
+        private val buttons by lazy { itemView.findViewById<LinearLayout>(R.id.buttons) }
+        private val contactAdded by lazy { itemView.findViewById<ImageView>(R.id.contact_added) }
 
         fun bind(usernameSearchResult: UsernameSearchResult) {
             val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(itemView.context,
@@ -78,6 +82,34 @@ class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResult
             } else {
                 avatar.background = defaultAvatar
             }
+
+            when (usernameSearchResult.requestSent to usernameSearchResult.requestReceived) {
+                //No Relationship
+                false to false -> {
+                    requestStatus.visibility = View.GONE
+                    buttons.visibility = View.GONE
+                    contactAdded.visibility = View.GONE
+                }
+                //Contact Established
+                true to true -> {
+                    requestStatus.visibility = View.GONE
+                    buttons.visibility = View.GONE
+                    contactAdded.visibility = View.VISIBLE
+                }
+                //Request Sent / Pending
+                true to false -> {
+                    requestStatus.visibility = View.VISIBLE
+                    buttons.visibility = View.GONE
+                    contactAdded.visibility = View.GONE
+                }
+                //Request Received
+                false to true -> {
+                    requestStatus.visibility = View.GONE
+                    buttons.visibility = View.VISIBLE
+                    contactAdded.visibility = View.GONE
+                }
+            }
+
             itemClickListener?.let { l ->
                 this.itemView.setOnClickListener {
                     l.onItemClicked(it, usernameSearchResult)
