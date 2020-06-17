@@ -28,7 +28,7 @@
         android:fontFamily="@font/montserrat_medium"
         android:textSize="12sp"
         android:text="@string/contacts_sort_order"
-        android:textColor="#717171"
+        android:textColor="@color/dash_lighter_gray"
         app:layout_constraintEnd_toStartOf="@id/sort_filter"
         app:layout_constraintTop_toTopOf="@+id/center_guideline"
         app:layout_constraintBottom_toBottomOf="@+id/center_guideline" />
