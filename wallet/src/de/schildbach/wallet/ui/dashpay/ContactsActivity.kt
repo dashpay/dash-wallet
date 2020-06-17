@@ -214,8 +214,8 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
     }
 
     private fun searchContacts() {
-        contactsAdapter.results = listOf()
-        hideEmptyResult()
+        //contactsAdapter.results = listOf()
+        //hideEmptyResult()
         if (this::searchDashPayProfileRunnable.isInitialized) {
             handler.removeCallbacks(searchDashPayProfileRunnable)
         }

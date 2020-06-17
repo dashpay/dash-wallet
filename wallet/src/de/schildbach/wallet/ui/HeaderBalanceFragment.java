@@ -21,6 +21,7 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
+import android.preference.PreferenceActivity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -55,6 +56,7 @@ import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
+import de.schildbach.wallet.ui.dashpay.NotificationsActivity;
 import de.schildbach.wallet_test.R;
 
 public final class HeaderBalanceFragment extends Fragment {
@@ -202,6 +204,12 @@ public final class HeaderBalanceFragment extends Fragment {
         dashpayUserAvatar.setVisibility(View.VISIBLE);
         dashpayUserAvatar.setBackground(UserAvatarPlaceholderDrawable.getDrawable(getContext(),
                 letters.charAt(0)));
+        dashpayUserAvatar.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(NotificationsActivity.Companion.createIntent(getContext(), NotificationsActivity.MODE_NOTIFICATIONS));
+            }
+        });
     }
 
     private void updateView() {

@@ -49,7 +49,12 @@ import org.dashevo.dpp.util.HashUtils
 import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
 import org.slf4j.LoggerFactory
+import java.util.*
 import java.util.concurrent.TimeoutException
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
+import kotlin.collections.HashSet
+import kotlin.math.max
 
 class PlatformRepo(val walletApplication: WalletApplication) {
 
@@ -221,8 +226,13 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 // Determine if I am this identity's contact
                 fromContact = fromContactMap[profile.value!!.userId]
 
-                usernameSearchResults.add(UsernameSearchResult(profile.value!!.username,
-                        profile.value!!, toContact, fromContact))
+                val usernameSearchResult = UsernameSearchResult(profile.value!!.username,
+                        profile.value!!, toContact, fromContact)
+
+                // only include contacts that have sent requests to us (we may have accepted them)
+                // do not include contactRequest that we have sent but have not been accepted
+                if(usernameSearchResult.requestReceived)
+                    usernameSearchResults.add(usernameSearchResult)
             }
             when (orderBy) {
                 UsernameSortOrderBy.DISPLAY_NAME -> usernameSearchResults.sortBy {
@@ -231,6 +241,20 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                     else it.dashPayProfile.username.toLowerCase()
                 }
                 UsernameSortOrderBy.USERNAME -> usernameSearchResults.sortBy { it.dashPayProfile.username.toLowerCase() }
+                UsernameSortOrderBy.DATE_ADDED -> usernameSearchResults.sortBy {
+                    when (it.requestSent to it.requestReceived) {
+                        true to true -> {
+                            max(it.toContactRequest!!.timestamp, it.fromContactRequest!!.timestamp)
+                        }
+                        true to false -> {
+                            it.toContactRequest!!.timestamp
+                        }
+                        false to true -> {
+                            it.fromContactRequest!!.timestamp
+                        }
+                        else -> 0.00
+                    }
+                }
                 //TODO: sort by last activity or date added
             }
             Resource.success(usernameSearchResults)
@@ -639,15 +663,17 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         )
 
         for (l in ourRequests) {
+            val r = Random().nextInt(100)
             dashPayProfileDaoAsync.insert(DashPayProfile.fromUsername(l[1], l[0]))
             dashPayContactRequestDaoAsync.insert(
-                    DashPayContactRequest(Entropy.generate(), userId, l[1], null, l[1].toByteArray(), 0, 0, 0.0, false, 0))
+                    DashPayContactRequest(Entropy.generate(), userId, l[1], null, l[1].toByteArray(), 0, 0, (Date().time - 1000*60*60*24*r).toDouble(), false, 0))
         }
 
         for (l in theirRequests) {
+            val r = Random().nextInt(100)
             dashPayProfileDaoAsync.insert(DashPayProfile.fromUsername(l[1], l[0]))
             dashPayContactRequestDaoAsync.insert(
-                    DashPayContactRequest(Entropy.generate(), l[1], userId, null, l[1].toByteArray(), 0, 0, 0.0, false, 0))
+                    DashPayContactRequest(Entropy.generate(), l[1], userId, null, l[1].toByteArray(), 0, 0, (Date().time - 1000*60*60*24*r).toDouble(), false, 0))
         }
 
         var names = listOf("Lizet Michaelson", "Rachel Sanderson", "Tamanna Smith", "Tammy Oceanography", "Alfred Pennyworth", "Serena Kyle", "Batman", "Capt Kirk", "Spock", "", "Deanna Troi", "Neelix", "Zephrane Cochrane", "The Tenth Doctor was the Best Doctor, Martha was the best!")
@@ -655,10 +681,12 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         for (i in names.indices) {
             val thisUserId = Sha256Hash.of(names[i].toByteArray()).toStringBase58()
             dashPayProfileDaoAsync.insert(DashPayProfile(thisUserId, usernames[i], names[i], "", ""))
+            var r = Random().nextInt(24)
             dashPayContactRequestDaoAsync.insert(
-                    DashPayContactRequest(Entropy.generate(), userId, thisUserId, null, names[0].toByteArray(), 0, 0 , 0.0, false, 0 ))
+                    DashPayContactRequest(Entropy.generate(), userId, thisUserId, null, names[0].toByteArray(), 0, 0 , (Date().time - 1000*60*60*r).toDouble(), false, 0 ))
+            r = Random().nextInt(24)
             dashPayContactRequestDaoAsync.insert(
-                    DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0 , 0.0, false, 0 ))
+                    DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0 , (Date().time - 1000*60*60*r).toDouble(), false, 0 ))
 
         }
 
@@ -668,7 +696,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val thisUserId = Sha256Hash.of(names[i].toByteArray()).toStringBase58()
             dashPayProfileDaoAsync.insert(DashPayProfile(thisUserId, usernames[i], names[i], "", ""))
             dashPayContactRequestDaoAsync.insert(
-                    DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0 , 0.0, false, 0 ))
+                    DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0 , (Date().time - 1000*60*60*r).toDouble(), false, 0 ))
         }
 
         log.info("updating contacts and profiles took $watch")
