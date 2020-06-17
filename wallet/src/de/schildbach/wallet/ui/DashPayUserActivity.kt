@@ -21,14 +21,17 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_dashpay_user.*
 import org.dash.wallet.common.InteractionAwareActivity
 
 class DashPayUserActivity : InteractionAwareActivity() {
 
+    private lateinit var dashPayViewModel: DashPayViewModel
     private val username by lazy { intent.getStringExtra(USERNAME) }
     private val profile: DashPayProfile by lazy { intent.getParcelableExtra(PROFILE) as DashPayProfile }
     private val displayName by lazy { profile.displayName }
@@ -71,6 +74,9 @@ class DashPayUserActivity : InteractionAwareActivity() {
             displayNameTxt.text = username
         }
         updateContactRelationUi()
+
+        dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
+        dashPayViewModel.sendContactRequest(profile.userId)
     }
 
     private fun updateContactRelationUi() {

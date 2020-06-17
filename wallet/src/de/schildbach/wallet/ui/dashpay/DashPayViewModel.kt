@@ -37,6 +37,7 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     private var getUsernameJob = Job()
     private var searchUsernamesJob = Job()
     private var searchContactsJob = Job()
+    private val contactRequestJob by lazy { Job() }
 
     val getUsernameLiveData = Transformations.switchMap(usernameLiveData) { username ->
         getUsernameJob.cancel()
@@ -59,6 +60,7 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         super.onCleared()
         getUsernameJob.cancel()
         searchUsernamesJob.cancel()
+        contactRequestJob.cancel()
     }
 
     //
@@ -104,4 +106,12 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
             platformRepo.doneAndDismiss()
         }
     }
+
+    fun sendContactRequest(toUserId: String) {
+        contactRequestJob.run {
+            platformRepo.getIdentity(toUserId)
+            this.complete()
+        }
+    }
+
 }
