@@ -44,7 +44,9 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_contacts.*
 
 
-class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResultsAdapter.OnSortOrderChangedListener, ContactSearchResultsAdapter.OnItemClickListener {
+class ContactsActivity : GlobalFooterActivity(), TextWatcher,
+        ContactSearchResultsAdapter.Listener,
+        ContactSearchResultsAdapter.OnItemClickListener {
 
     companion object {
         private const val EXTRA_MODE = "extra_mode"
@@ -80,14 +82,18 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
             }
         }
 
-        setContentViewWithFooter(R.layout.activity_contacts_root)
         walletApplication = application as WalletApplication
 
         if (intent.extras != null && intent.extras!!.containsKey(EXTRA_MODE)) {
             mode = intent.extras.getInt(EXTRA_MODE)
         }
 
-        activateContactsButton()
+        if(mode == MODE_SEARCH_CONTACTS) {
+            setContentViewWithFooter(R.layout.activity_contacts_root)
+            activateContactsButton()
+        } else {
+            setContentView(R.layout.activity_contacts_root)
+        }
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
@@ -96,7 +102,6 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
             setDisplayHomeAsUpEnabled(true)
             setDisplayShowHomeEnabled(true)
         }
-        setTitle(R.string.contacts_title)
 
         contacts_rv.layoutManager = LinearLayoutManager(this)
         contacts_rv.adapter = this.contactsAdapter
@@ -104,8 +109,17 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
 
         initViewModel()
 
-        search.addTextChangedListener(this)
-
+        if(mode == MODE_VIEW_REQUESTS) {
+            search.visibility = View.GONE
+            icon.visibility = View.GONE
+            setTitle(R.string.contact_requests_title)
+        } else {
+            // search should be available for all other modes
+            search.addTextChangedListener(this)
+            search.visibility = View.VISIBLE
+            icon.visibility = View.VISIBLE
+            setTitle(R.string.contacts_title)
+        }
         searchContacts()
     }
 
@@ -170,7 +184,9 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.contacts_menu, menu)
+        if(mode == MODE_SEARCH_CONTACTS) {
+            menuInflater.inflate(R.menu.contacts_menu, menu)
+        }
         return super.onCreateOptionsMenu(menu)
     }
 
@@ -192,7 +208,7 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
 
     }
 
-    override fun onSortOrderChangedListener(direction: UsernameSortOrderBy) {
+    override fun onSortOrderChanged(direction: UsernameSortOrderBy) {
         this.direction = direction
         searchContacts()
     }
@@ -257,5 +273,9 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
             }
         }
         return super.onOptionsItemSelected(item)
+    }
+
+    override fun onViewAllRequests() {
+        startActivity(ContactsActivity.createIntent(this, ContactsActivity.MODE_VIEW_REQUESTS))
     }
 }
