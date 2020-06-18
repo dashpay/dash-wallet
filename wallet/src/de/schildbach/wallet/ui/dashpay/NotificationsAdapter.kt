@@ -18,7 +18,7 @@ import java.math.BigInteger
 import java.util.*
 import kotlin.math.max
 
-class NotificationsAdapter() : RecyclerView.Adapter<NotificationsAdapter.ViewHolder>() {
+class NotificationsAdapter : RecyclerView.Adapter<NotificationsAdapter.ViewHolder>() {
 
     companion object {
         const val NOTIFICATION_NEW_HEADER = 4
@@ -26,7 +26,6 @@ class NotificationsAdapter() : RecyclerView.Adapter<NotificationsAdapter.ViewHol
         const val NOTIFICATION_EARLIER_HEADER = 6
         const val NOTIFICATION_CONTACT_ADDED = 7
         const val NOTIFICATION_CONTACT_REQUEST_RECEIVED = 8
-        const val NOTIFICATION_CONTACT_REQUEST_SENT = 9
     }
 
     class ViewItem(val usernameSearchResult: UsernameSearchResult?,
@@ -53,7 +52,6 @@ class NotificationsAdapter() : RecyclerView.Adapter<NotificationsAdapter.ViewHol
             NOTIFICATION_NEW_HEADER -> HeaderViewHolder(LayoutInflater.from(parent.context), parent)
             NOTIFICATION_NEW_EMPTY -> ImageViewHolder(LayoutInflater.from(parent.context), parent)
             NOTIFICATION_CONTACT_REQUEST_RECEIVED -> ContactRequestViewHolder(LayoutInflater.from(parent.context), parent)
-            NOTIFICATION_CONTACT_REQUEST_SENT -> ContactRequestViewHolder(LayoutInflater.from(parent.context), parent)
             NOTIFICATION_EARLIER_HEADER -> HeaderViewHolder(LayoutInflater.from(parent.context), parent)
             NOTIFICATION_CONTACT_ADDED -> ContactViewHolder(LayoutInflater.from(parent.context), parent)
             else -> throw IllegalArgumentException("Invalid viewType $viewType")
@@ -75,7 +73,6 @@ class NotificationsAdapter() : RecyclerView.Adapter<NotificationsAdapter.ViewHol
             NOTIFICATION_NEW_HEADER -> 1L
             NOTIFICATION_NEW_EMPTY -> 2L
             NOTIFICATION_CONTACT_REQUEST_RECEIVED -> getLongValue(results[position].usernameSearchResult!!.fromContactRequest!!.userId)
-            NOTIFICATION_CONTACT_REQUEST_SENT -> getLongValue(results[position].usernameSearchResult!!.toContactRequest!!.toUserId)
             NOTIFICATION_EARLIER_HEADER -> 3L
             NOTIFICATION_CONTACT_ADDED -> getLongValue(results[position].usernameSearchResult!!.toContactRequest!!.toUserId)
             else -> throw IllegalArgumentException("Invalid viewType ${results[position].viewType}")
@@ -85,7 +82,6 @@ class NotificationsAdapter() : RecyclerView.Adapter<NotificationsAdapter.ViewHol
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         when (results[position].viewType) {
             NOTIFICATION_CONTACT_REQUEST_RECEIVED,
-            NOTIFICATION_CONTACT_REQUEST_SENT,
             NOTIFICATION_CONTACT_ADDED -> holder.bind(results[position].usernameSearchResult!!, results[position].isNew)
             NOTIFICATION_NEW_HEADER -> (holder as HeaderViewHolder).bind(R.string.notifications_new)
             NOTIFICATION_EARLIER_HEADER -> (holder as HeaderViewHolder).bind(R.string.notifications_earlier)
@@ -105,8 +101,6 @@ class NotificationsAdapter() : RecyclerView.Adapter<NotificationsAdapter.ViewHol
     override fun getItemViewType(position: Int): Int {
         return results[position].viewType
     }
-
-
 
     open inner class ViewHolder(resId: Int, inflater: LayoutInflater, parent: ViewGroup) :
             RecyclerView.ViewHolder(inflater.inflate(resId, parent, false)) {
@@ -152,15 +146,11 @@ class NotificationsAdapter() : RecyclerView.Adapter<NotificationsAdapter.ViewHol
                         displayName.text = itemView.context.getString(R.string.notifications_contact_has_accepted, displayName.text)
                     }
 
-                    date.text = formatDate(dateTime.toLong())
-                }
-                //Request Sent / Pending
-                true to false -> {
-                    date.text = formatDate(usernameSearchResult.toContactRequest!!.timestamp.toLong())
+                    date.text = formatDate(usernameSearchResult.date)
                 }
                 //Request Received
                 false to true -> {
-                    date.text = formatDate(usernameSearchResult.fromContactRequest!!.timestamp.toLong())
+                    date.text = formatDate(usernameSearchResult.date)
                 }
             }
 
@@ -193,12 +183,6 @@ class NotificationsAdapter() : RecyclerView.Adapter<NotificationsAdapter.ViewHol
             } else {
                 added.visibility = View.GONE
             }
-            // background color alternates based on first letter
-            //val color = if (usernameSearchResult.dashPayProfile.username[0].toLowerCase().toInt() % 2 != 0)
-            //    R.color.white
-            //else
-            //    R.color.dash_lighter_gray
-            //itemView.setBackgroundColor(itemView.resources.getColor(color))
         }
     }
 

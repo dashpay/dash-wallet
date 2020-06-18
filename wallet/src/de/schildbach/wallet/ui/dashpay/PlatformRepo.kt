@@ -240,20 +240,11 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                         it.dashPayProfile.displayName.toLowerCase()
                     else it.dashPayProfile.username.toLowerCase()
                 }
-                UsernameSortOrderBy.USERNAME -> usernameSearchResults.sortBy { it.dashPayProfile.username.toLowerCase() }
-                UsernameSortOrderBy.DATE_ADDED -> usernameSearchResults.sortBy {
-                    when (it.requestSent to it.requestReceived) {
-                        true to true -> {
-                            max(it.toContactRequest!!.timestamp, it.fromContactRequest!!.timestamp)
-                        }
-                        true to false -> {
-                            it.toContactRequest!!.timestamp
-                        }
-                        false to true -> {
-                            it.fromContactRequest!!.timestamp
-                        }
-                        else -> 0.00
-                    }
+                UsernameSortOrderBy.USERNAME -> usernameSearchResults.sortBy {
+                    it.dashPayProfile.username.toLowerCase()
+                }
+                UsernameSortOrderBy.DATE_ADDED -> usernameSearchResults.sortByDescending {
+                    it.date
                 }
                 //TODO: sort by last activity or date added
             }
@@ -261,6 +252,16 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         } catch (e: Exception) {
             Resource.error(e.localizedMessage, null)
         }
+    }
+
+    suspend fun getNotificationCount(date: Long): Int {
+        val results = searchContacts("", UsernameSortOrderBy.DATE_ADDED)
+        val list = results.data ?: return 0
+
+        var count = 0
+        list.forEach { if (it.date >= date) ++count }
+
+        return count
     }
 
     //
@@ -506,8 +507,8 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         val watch = Stopwatch.createStarted()
 
         //TODO: remove this when removing the fake contact list
-        dashPayContactRequestDaoAsync.clear()
-        dashPayProfileDaoAsync.clear()
+        //dashPayContactRequestDaoAsync.clear()
+        //dashPayProfileDaoAsync.clear()
 
         // Get all out our contact requests
         val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
@@ -695,6 +696,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         for (i in names.indices) {
             val thisUserId = Sha256Hash.of(names[i].toByteArray()).toStringBase58()
             dashPayProfileDaoAsync.insert(DashPayProfile(thisUserId, usernames[i], names[i], "", ""))
+            val r = Random().nextInt(24)
             dashPayContactRequestDaoAsync.insert(
                     DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0 , (Date().time - 1000*60*60*r).toDouble(), false, 0 ))
         }

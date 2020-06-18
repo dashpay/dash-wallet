@@ -2,14 +2,12 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.MenuItem
 import android.view.View
-import android.view.Window
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -23,6 +21,8 @@ import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.GlobalFooterActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_contacts.*
+import java.util.*
+import kotlin.collections.ArrayList
 
 class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
         NotificationsAdapter.OnItemClickListener {
@@ -109,29 +109,40 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
         })
     }
 
-    fun processResults(data: List<UsernameSearchResult>) {
+    private fun getViewType(usernameSearchResult: UsernameSearchResult): Int {
+        return when (usernameSearchResult.requestSent to usernameSearchResult.requestReceived) {
+            true to true -> {
+                NotificationsAdapter.NOTIFICATION_CONTACT_ADDED
+            }
+            false to true -> {
+                NotificationsAdapter.NOTIFICATION_CONTACT_REQUEST_RECEIVED
+            }
+            else -> throw IllegalArgumentException("View not supported")
+        }
+    }
+
+    private fun processResults(data: List<UsernameSearchResult>) {
 
         val results = ArrayList<NotificationsAdapter.ViewItem>()
         // process the requests
-        val requests = //if (mode != MODE_SELECT_CONTACT)
-            data.filter { r -> r.isPendingRequest }.toMutableList()
-        //else ArrayList()
+        // define new
+        val newDate = Date().time
+        val newItems = data.filter { r -> r.date >= newDate }.toMutableList()
 
         results.add(NotificationsAdapter.ViewItem(null, NotificationsAdapter.NOTIFICATION_NEW_HEADER))
-        results.add(NotificationsAdapter.ViewItem(null, NotificationsAdapter.NOTIFICATION_NEW_EMPTY))
+        if(newItems.isEmpty()) {
+            results.add(NotificationsAdapter.ViewItem(null, NotificationsAdapter.NOTIFICATION_NEW_EMPTY))
+        } else {
+            newItems.forEach { r -> results.add(NotificationsAdapter.ViewItem(r, getViewType(r), true)) }
+        }
+
+        supportActionBar!!.title = getString(R.string.notifications_title_with_count, newItems.size)
         results.add(NotificationsAdapter.ViewItem(null, NotificationsAdapter.NOTIFICATION_EARLIER_HEADER))
-        //if (requests.isNotEmpty() && mode != MODE_VIEW_REQUESTS)
-        //    results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_REQUEST_HEADER, requestCount = requestCount))
-        requests.forEach { r -> results.add(NotificationsAdapter.ViewItem(r, NotificationsAdapter.NOTIFICATION_CONTACT_REQUEST_RECEIVED)) }
 
         // process contacts
-        val contacts = //if (mode != MODE_VIEW_REQUESTS)
-            data.filter { r -> r.requestSent && r.requestReceived }
-        //else ArrayList()
+        val earlierItems = data.filter { r -> r.date < newDate }
 
-        //if (contacts.isNotEmpty())
-        //    results.add(NotificationsAdapter.ViewItem(null, NotificationsAdapter.CONTACT_HEADER))
-        contacts.forEach { r -> results.add(NotificationsAdapter.ViewItem(r, NotificationsAdapter.NOTIFICATION_CONTACT_ADDED)) }
+        earlierItems.forEach { r -> results.add(NotificationsAdapter.ViewItem(r, getViewType(r))) }
 
         notificationsAdapter.results = results
     }

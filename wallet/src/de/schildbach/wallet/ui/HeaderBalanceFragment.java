@@ -33,6 +33,7 @@ import androidx.annotation.NonNull;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
@@ -40,11 +41,14 @@ import androidx.loader.content.Loader;
 import com.amulyakhare.textdrawable.TextDrawable;
 
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.util.GenericUtils;
+
+import java.util.List;
 
 import javax.annotation.Nullable;
 
@@ -54,8 +58,10 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.BlockchainIdentityBaseData;
 import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.data.BlockchainState;
+import de.schildbach.wallet.data.DashPayContactRequest;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
+import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
 import de.schildbach.wallet.ui.dashpay.NotificationsActivity;
 import de.schildbach.wallet_test.R;
 
@@ -91,6 +97,8 @@ public final class HeaderBalanceFragment extends Fragment {
 
     private Handler autoLockHandler = new Handler();
     private BlockchainState blockchainState;
+    private String username;
+    private DashPayViewModel dashPayViewModel;
 
     @Override
     public void onAttach(final Activity activity) {
@@ -154,12 +162,39 @@ public final class HeaderBalanceFragment extends Fragment {
             public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
                 if (blockchainIdentityData != null
                         && blockchainIdentityData.getCreationState().ordinal() >= BlockchainIdentityData.CreationState.DONE.ordinal()) {
+                    username = blockchainIdentityData.getUsername();
                     setDefaultUserAvatar(blockchainIdentityData.getUsername().toUpperCase());
                 } else {
                     setDefaultUserAvatar(null);
                 }
             }
         });
+
+        AppDatabase.getAppDatabase().dashPayContactRequestDao().loadAll().observe(getViewLifecycleOwner(), new Observer<DashPayContactRequest>() {
+            @Override
+            public void onChanged(DashPayContactRequest dashPayContactRequest) {
+                if (dashPayContactRequest != null ) {
+                    dashPayViewModel.getNotificationCount(Utils.currentTimeMillis());
+                    setDefaultUserAvatar(username);
+                } else {
+                    setDefaultUserAvatar(username);
+                }
+            }
+        });
+
+        dashPayViewModel = new ViewModelProvider(this).get(DashPayViewModel.class);
+        dashPayViewModel.getGetNotificationCountLiveData().observe(getViewLifecycleOwner(), new Observer<Object>() {
+            @Override
+            public void onChanged(Object o) {
+                if(o instanceof Integer) {
+                    setNotificationCount((Integer)o);
+                } else {
+                    setNotificationCount(0);
+                }
+            }
+        });
+        dashPayViewModel.getNotificationCount(Utils.currentTimeMillis());
+
     }
 
     @Override
@@ -204,12 +239,22 @@ public final class HeaderBalanceFragment extends Fragment {
         dashpayUserAvatar.setVisibility(View.VISIBLE);
         dashpayUserAvatar.setBackground(UserAvatarPlaceholderDrawable.getDrawable(getContext(),
                 letters.charAt(0)));
-        dashpayUserAvatar.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(NotificationsActivity.Companion.createIntent(getContext(), NotificationsActivity.MODE_NOTIFICATIONS));
-            }
-        });
+    }
+
+    private void setNotificationCount(Integer count) {
+        TextView notifications = view.findViewById(R.id.notifications);
+        if(count > 0) {
+            notifications.setText(count.toString());
+            notifications.setVisibility(View.VISIBLE);
+            notifications.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    startActivity(NotificationsActivity.Companion.createIntent(getContext(), NotificationsActivity.MODE_NOTIFICATIONS));
+                }
+            });
+        } else {
+            notifications.setVisibility(View.GONE);
+        }
     }
 
     private void updateView() {
