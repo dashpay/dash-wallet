@@ -15,23 +15,23 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.Process
 import com.google.common.base.Stopwatch
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainIdentityBaseData
-import de.schildbach.wallet.data.BlockchainIdentityData
-import de.schildbach.wallet.data.DashPayContactRequest
-import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet.data.UsernameSortOrderBy
+import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.ui.send.DeriveKeyTask
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
@@ -41,6 +41,7 @@ import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_SALT
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_STATUS
 import org.dashevo.dashpay.ContactRequests
 import org.dashevo.dashpay.Profiles
+import org.dashevo.dashpay.callback.RegisterIdentityCallback
 import org.dashevo.dpp.document.Document
 import org.dashevo.dpp.identity.Identity
 import org.dashevo.dpp.identity.IdentityPublicKey
@@ -50,6 +51,9 @@ import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeoutException
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 class PlatformRepo(val walletApplication: WalletApplication) {
 
@@ -64,6 +68,12 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     private val dashPayProfileDaoAsync = AppDatabase.getAppDatabase().dashPayProfileDaoAsync()
     private val dashPayContactRequestDaoAsync = AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync()
 
+    private lateinit var blockchainIdentity: BlockchainIdentity
+    private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
+    private val backgroundHandler by lazy {
+        backgroundThread.start()
+        Handler(backgroundThread.looper)
+    }
 
     fun isPlatformAvailable(): Resource<Boolean> {
         // this checks only one random node, but should check several.
@@ -99,10 +109,10 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     suspend fun searchUsernames(text: String): Resource<List<UsernameSearchResult>> {
         return try {
             val wallet = walletApplication.wallet
-            val blockchainIdentity = blockchainIdentityDataDaoAsync.load()
+            val blockchainIdentityData = blockchainIdentityDataDaoAsync.load()!!
             //We don't check for nullity here because if it's null, it'll be thrown, captured below
             //and sent as a Resource.error
-            val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentity!!.creditFundingTxId))
+            val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentityData!!.creditFundingTxId))
             val userId = creditFundingTx.creditBurnIdentityIdentifier.toStringBase58()
             // Names.search does support retrieving 100 names at a time if retrieveAll = false
             //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
@@ -239,6 +249,48 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
+     /**
+      *  Wraps callbacks of DeriveKeyTask as Coroutine
+     */
+    private suspend fun deriveKey(handler: Handler, wallet: Wallet, password: String): KeyParameter {
+        return suspendCoroutine { continuation ->
+            object : DeriveKeyTask(handler, walletApplication.scryptIterationsTarget()) {
+
+                override fun onSuccess(encryptionKey: KeyParameter, wasChanged: Boolean) {
+                    continuation.resume(encryptionKey)
+                }
+
+                override fun onFailure(ex: KeyCrypterException?) {
+                    //CreateIdentityService.log.error("unable to decrypt wallet", ex)
+                    continuation.resumeWithException(ex as Throwable)
+                }
+
+            }.deriveKey(wallet, password)
+        }
+    }
+
+    suspend fun sendContactRequest(userId: String, encryptionKey: KeyParameter) {
+        try {
+            val identity = platform.identities.get(userId)
+            println("identity: $identity")
+            val blockchainIdentityData = blockchainIdentityDataDaoAsync.load()!!
+            this.blockchainIdentity = initBlockchainIdentity(blockchainIdentityData,
+                    walletApplication.wallet)
+            this.blockchainIdentity.watchIdentity(3, 500, BlockchainIdentity.RetryDelayType.SLOW20, object : RegisterIdentityCallback{
+                override fun onComplete(uniqueId: String) {
+                    ContactRequests(platform).create(blockchainIdentity, identity!!, encryptionKey)
+                }
+
+                override fun onTimeout() {
+                    println("couldn't find identity for ${blockchainIdentity.uniqueIdString}")
+                }
+            })
+        } catch (e: Exception) {
+            //TODO: Error handling
+            e.printStackTrace()
+        }
+    }
+
     //
     // Step 1 is to upgrade the wallet to support authentication keys
     //
@@ -358,7 +410,6 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             updateDashPayProfile(dashPayProfile!!)
         }
     }
-
 
     suspend fun loadBlockchainIdentityBaseData(): BlockchainIdentityBaseData? {
         return blockchainIdentityDataDaoAsync.loadBase()

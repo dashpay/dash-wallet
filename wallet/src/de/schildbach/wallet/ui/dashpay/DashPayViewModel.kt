@@ -16,14 +16,24 @@
 package de.schildbach.wallet.ui.dashpay
 
 import android.app.Application
+import android.os.HandlerThread
+import android.os.Process
 import androidx.lifecycle.*
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearch
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.ui.security.SecurityGuard
+import de.schildbach.wallet.ui.send.DeriveKeyTask
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import org.bitcoinj.crypto.KeyCrypterException
+import org.bouncycastle.crypto.params.KeyParameter
+import org.dashevo.dashpay.ContactRequests
+import java.util.logging.Handler
+import kotlin.coroutines.suspendCoroutine
 
 class DashPayViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -108,10 +118,25 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun sendContactRequest(toUserId: String) {
-        contactRequestJob.run {
-            platformRepo.getIdentity(toUserId)
-            this.complete()
-        }
+        val walletApplication = WalletApplication.getInstance()
+        val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
+        backgroundThread.start()
+        val backgroundHandler = android.os.Handler(backgroundThread.looper)
+        val securityGuard = SecurityGuard()
+        val password = securityGuard.retrievePassword()
+        object : DeriveKeyTask(backgroundHandler, walletApplication.scryptIterationsTarget()) {
+            override fun onSuccess(encryptionKey: KeyParameter, wasChanged: Boolean) {
+                GlobalScope.launch {
+                    platformRepo.sendContactRequest(toUserId, encryptionKey)
+                    println("contact request sent")
+                }
+            }
+
+            override fun onFailure(ex: KeyCrypterException?) {
+                println("failed to decrypt key")
+                //CreateIdentityService.log.error("unable to decrypt wallet", ex)
+            }
+        }.deriveKey(walletApplication.wallet, password)
     }
 
 }
