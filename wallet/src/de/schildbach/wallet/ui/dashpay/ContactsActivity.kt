@@ -73,12 +73,6 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            with(window) {
-                requestFeature(Window.FEATURE_CONTENT_TRANSITIONS)
-            }
-        }
-
         setContentViewWithFooter(R.layout.activity_contacts_root)
         walletApplication = application as WalletApplication
 
@@ -105,8 +99,7 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
 
         search.addTextChangedListener(this)
 
-
-
+        // fill in the recycle view
         searchContacts()
     }
 
