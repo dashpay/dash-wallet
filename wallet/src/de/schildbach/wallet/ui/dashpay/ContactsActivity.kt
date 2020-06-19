@@ -76,12 +76,6 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            with(window) {
-                requestFeature(Window.FEATURE_CONTENT_TRANSITIONS)
-            }
-        }
-
         walletApplication = application as WalletApplication
 
         if (intent.extras != null && intent.extras!!.containsKey(EXTRA_MODE)) {
