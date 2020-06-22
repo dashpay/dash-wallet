@@ -34,6 +34,16 @@
                 tools:visibility="visible"
                  />
 
+            <ImageButton
+                android:id="@+id/notification_bell"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:srcCompat="@drawable/ic_notification_bell"
+                app:layout_constraintEnd_toEndOf="@id/guideline"
+                app:layout_constraintStart_toStartOf="@id/guideline"
+                app:layout_constraintBottom_toBottomOf="@id/dashpay_user_avatar"
+                android:background="@drawable/transparent_button_background"/>
+
             <TextView
                 android:id="@+id/notifications"
                 android:layout_width="wrap_content"
@@ -41,8 +51,8 @@
                 android:fontFamily="@font/montserrat"
                 android:textSize="12sp"
                 android:textColor="@color/dash_blue"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp"
+                android:paddingStart="13dp"
+                android:paddingEnd="13dp"
                 android:paddingTop="5dp"
                 android:paddingBottom="5dp"
                 app:layout_constraintBottom_toBottomOf="@id/dashpay_user_avatar"

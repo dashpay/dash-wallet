@@ -26,6 +26,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -80,6 +81,8 @@ public final class HeaderBalanceFragment extends Fragment {
     private View view;
     private CurrencyTextView viewBalanceDash;
     private CurrencyTextView viewBalanceLocal;
+    private TextView notifications;
+    private ImageButton notificationBell;
 
     private boolean showLocalBalance;
 
@@ -149,6 +152,23 @@ public final class HeaderBalanceFragment extends Fragment {
             }
         });
 
+        notifications = view.findViewById(R.id.notifications);
+        notificationBell = view.findViewById(R.id.notification_bell);
+
+        notifications.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(NotificationsActivity.Companion.createIntent(getContext(), NotificationsActivity.MODE_NOTIFICATIONS));
+            }
+        });
+
+        notificationBell.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(NotificationsActivity.Companion.createIntent(getContext(), NotificationsActivity.MODE_NOTIFICATIONS));
+            }
+        });
+
         AppDatabase.getAppDatabase().blockchainStateDao().load().observe(getViewLifecycleOwner(), new Observer<de.schildbach.wallet.data.BlockchainState>() {
             @Override
             public void onChanged(de.schildbach.wallet.data.BlockchainState blockchainState) {
@@ -174,7 +194,7 @@ public final class HeaderBalanceFragment extends Fragment {
             @Override
             public void onChanged(DashPayContactRequest dashPayContactRequest) {
                 if (dashPayContactRequest != null ) {
-                    dashPayViewModel.getNotificationCount(Utils.currentTimeMillis());
+                    dashPayViewModel.getNotificationCount(Utils.currentTimeMillis()-90*24*3600000);
                     setDefaultUserAvatar(username);
                 } else {
                     setDefaultUserAvatar(username);
@@ -193,9 +213,9 @@ public final class HeaderBalanceFragment extends Fragment {
                 }
             }
         });
-//        if(username != null)
-//            dashPayViewModel.getNotificationCount(Utils.currentTimeMillis());
-//        else setNotificationCount(0);
+        if(username != null)
+            dashPayViewModel.getNotificationCount(Utils.currentTimeMillis()-90*24*3600000);
+        else setNotificationCount(0);
 
     }
 
@@ -244,18 +264,13 @@ public final class HeaderBalanceFragment extends Fragment {
     }
 
     private void setNotificationCount(Integer count) {
-        TextView notifications = view.findViewById(R.id.notifications);
         if(count > 0) {
             notifications.setText(count.toString());
             notifications.setVisibility(View.VISIBLE);
-            notifications.setOnClickListener(new OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    startActivity(NotificationsActivity.Companion.createIntent(getContext(), NotificationsActivity.MODE_NOTIFICATIONS));
-                }
-            });
+            notificationBell.setVisibility(View.GONE);
         } else {
             notifications.setVisibility(View.GONE);
+            notificationBell.setVisibility(View.VISIBLE);
         }
     }
 
