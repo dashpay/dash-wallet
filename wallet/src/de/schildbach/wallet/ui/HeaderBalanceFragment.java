@@ -193,9 +193,9 @@ public final class HeaderBalanceFragment extends Fragment {
                 }
             }
         });
-        if(username != null)
-            dashPayViewModel.getNotificationCount(Utils.currentTimeMillis());
-        else setNotificationCount(0);
+//        if(username != null)
+//            dashPayViewModel.getNotificationCount(Utils.currentTimeMillis());
+//        else setNotificationCount(0);
 
     }
 

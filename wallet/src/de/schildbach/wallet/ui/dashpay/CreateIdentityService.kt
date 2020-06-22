@@ -510,7 +510,8 @@ class CreateIdentityService : LifecycleService() {
     override fun onDestroy() {
         super.onDestroy()
         serviceJob.cancel()
-        backgroundThread.getLooper().quit()
+        if(backgroundThread.isAlive)
+            backgroundThread.looper.quit()
 
         if (wakeLock.isHeld) {
             log.debug("wakelock still held, releasing")
