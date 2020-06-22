@@ -8,8 +8,8 @@ import org.dashevo.dpp.document.Document
 
 @Parcelize
 @Entity(tableName = "dashpay_profile")
-data class DashPayProfile(@PrimaryKey val userId: String, val username: String, val displayName: String,
-                          val publicMessage: String, val avatarUrl: String): Parcelable {
+data class DashPayProfile(@PrimaryKey val userId: String, val username: String, val displayName: String = "",
+                          val publicMessage: String = "", val avatarUrl: String = ""): Parcelable {
     companion object {
         fun fromDocument(document: Document, username: String): DashPayProfile? {
             return try {
@@ -21,10 +21,6 @@ data class DashPayProfile(@PrimaryKey val userId: String, val username: String, 
             } catch (e: Exception) {
                 null
             }
-        }
-
-        fun fromUsername(userId: String, username: String): DashPayProfile {
-            return DashPayProfile(userId, username, "", "", "")
         }
     }
 }
