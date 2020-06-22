@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
@@ -27,7 +26,6 @@ import android.text.TextWatcher
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.view.Window
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -63,7 +61,7 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
     private lateinit var dashPayViewModel: DashPayViewModel
     private lateinit var walletApplication: WalletApplication
     private var handler: Handler = Handler()
-    private lateinit var searchDashPayProfileRunnable: Runnable
+    private lateinit var searchContactsRunnable: Runnable
     private val contactsAdapter: ContactSearchResultsAdapter = ContactSearchResultsAdapter(this)
     private var query = ""
     private var blockchainIdentityId: String? = null
@@ -99,21 +97,15 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
 
         search.addTextChangedListener(this)
 
-        // fill in the recycle view
         searchContacts()
     }
 
     private fun initViewModel() {
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
         dashPayViewModel.searchContactsLiveData.observe(this, Observer {
-            if (Status.LOADING == it.status) {
-                startLoading()
-            } else {
-                stopLoading()
+            if (Status.SUCCESS == it.status) {
                 if (it.data != null) {
                     processResults(it.data)
-                } else {
-                    showEmptyResult()
                 }
             }
         })
@@ -156,34 +148,11 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
         contacts.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
 
         contactsAdapter.results = results
-        if (data.isEmpty()) {
-            showEmptyResult()
-        } else {
-            hideEmptyResult()
-        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.contacts_menu, menu)
         return super.onCreateOptionsMenu(menu)
-    }
-
-    private fun startLoading() {
-
-    }
-
-    private fun stopLoading() {
-
-    }
-
-    private fun showEmptyResult() {
-        //TODO: Should we have a ViewHolder that says there are no contacts or requests
-        // or should there be something else displayed saying no contacts or requests
-        // the design does not give the answer
-    }
-
-    private fun hideEmptyResult() {
-
     }
 
     override fun onSortOrderChangedListener(direction: UsernameSortOrderBy) {
@@ -192,16 +161,14 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher, ContactSearchResul
     }
 
     private fun searchContacts() {
-        contactsAdapter.results = listOf()
-        hideEmptyResult()
-        if (this::searchDashPayProfileRunnable.isInitialized) {
-            handler.removeCallbacks(searchDashPayProfileRunnable)
+        if (this::searchContactsRunnable.isInitialized) {
+            handler.removeCallbacks(searchContactsRunnable)
         }
 
-        searchDashPayProfileRunnable = Runnable {
+        searchContactsRunnable = Runnable {
             dashPayViewModel.searchContacts(query, direction)
         }
-        handler.postDelayed(searchDashPayProfileRunnable, 500)
+        handler.postDelayed(searchContactsRunnable, 500)
     }
 
     override fun afterTextChanged(s: Editable?) {
