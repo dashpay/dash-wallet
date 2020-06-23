@@ -174,13 +174,11 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
         when {
             usernameSearchResult.isPendingRequest -> {
-                // TODO: show screen for the user has sent us a request
                 startActivity(DashPayUserActivity.createIntent(this,
                         usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = false,
                         contactRequestReceived = true))
             }
             !usernameSearchResult.isPendingRequest -> {
-                // TODO: show screen for the user that is our contact
                 // How do we handle if this activity was started from the Payments Screen?
                 startActivity(DashPayUserActivity.createIntent(this,
                         usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
