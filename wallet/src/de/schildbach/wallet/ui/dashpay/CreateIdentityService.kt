@@ -310,19 +310,8 @@ class CreateIdentityService : LifecycleService() {
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
-        if (blockchainIdentityData.creationState <= CreationState.DASHPAY_PROFILE_CREATING) {
-            platformRepo.updateCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATING)
-            // Step 6: Profile Creation
-            platformRepo.createDashPayProfile(blockchainIdentity, encryptionKey)
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-        }
-
-        if (blockchainIdentityData.creationState <= CreationState.DASHPAY_PROFILE_CREATED) {
-            platformRepo.updateCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATED)
-            // Step 6: verify that the profile was created
-            platformRepo.verifyProfileCreatedAsync(blockchainIdentity)
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
-        }
+        // Step 6: A profile will not be created, since the user has not yet specified
+        //         a display name, public message (bio) or an avatarUrl
 
         if (blockchainIdentityData.creationState < CreationState.DONE) {
             platformRepo.updateCreationState(blockchainIdentityData, CreationState.DONE)
@@ -394,7 +383,7 @@ class CreateIdentityService : LifecycleService() {
         platformRepo.updateCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATING)
         platformRepo.recoverDashPayProfile(blockchainIdentity)
         // blockchainIdentity hasn't changed
-        platformRepo.updateCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATING)
+        platformRepo.updateCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATED)
 
 
         // We are finished recovering

@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/dash_lighter_gray"
     app:layout_constraintBottom_toBottomOf="parent"
     app:layout_constraintTop_toTopOf="parent">
 
@@ -46,9 +47,9 @@
         android:id="@+id/search_results_rv"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginLeft="20dp"
+        android:layout_marginStart="10dp"
         android:layout_marginTop="22dp"
-        android:layout_marginRight="20dp"
+        android:layout_marginEnd="10dp"
         android:layout_marginBottom="22dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
