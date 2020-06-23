@@ -24,6 +24,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
+        android:layout_marginEnd="28dp"
         android:textColor="@android:color/black"
         android:textSize="16sp"
         app:layout_constraintEnd_toStartOf="@id/buttons"
@@ -76,7 +77,16 @@
             app:srcCompat="@drawable/ic_ignore_x"
             style="@style/DashButton.Gray"
             android:text="X" />
+
+        <ImageView
+            android:id="@+id/contact_added"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginEnd="15dp"
+            app:srcCompat="@drawable/ic_contact_added" />
     </LinearLayout>
+
+
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/center_guideline"

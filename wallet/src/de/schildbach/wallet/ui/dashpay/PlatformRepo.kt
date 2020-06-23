@@ -511,8 +511,8 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val watch = Stopwatch.createStarted()
 
             //TODO: remove this when removing the fake contact list
-            //dashPayContactRequestDaoAsync.clear()
-            //dashPayProfileDaoAsync.clear()
+            dashPayContactRequestDaoAsync.clear()
+            dashPayProfileDaoAsync.clear()
 
             // Get all out our contact requests
             val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
@@ -667,7 +667,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                     listOf("hagrid", "9JFyW6zhNzRSuQbHmQ71k4YMyE339XEdetKjWPK13Aof")
             )
 
-            for (l in ourRequests) {
+            /*for (l in ourRequests) {
                 val r = Random().nextInt(100)
                 dashPayProfileDaoAsync.insert(DashPayProfile.fromUsername(l[1], l[0]))
                 dashPayContactRequestDaoAsync.insert(
@@ -679,7 +679,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 dashPayProfileDaoAsync.insert(DashPayProfile.fromUsername(l[1], l[0]))
                 dashPayContactRequestDaoAsync.insert(
                         DashPayContactRequest(Entropy.generate(), l[1], userId, null, l[1].toByteArray(), 0, 0, (Date().time - 1000 * 60 * 60 * 24 * r).toDouble()/1000, false, 0))
-            }
+            }*/
 
             var names = listOf("Lizet Michaelson", "Rachel Sanderson", "Tamanna Smith", "Tammy Oceanography", "Alfred Pennyworth", "Serena Kyle", "Batman", "Capt Kirk", "Spock", "", "Deanna Troi", "Neelix", "Zephrane Cochrane", "The Tenth Doctor was the Best Doctor, Martha was the best!")
             var usernames = listOf("lizet1993", "rachel4ski", "tsmith", "marinebio", "thebutler", "catwoman", "brucewayne", "jtkirk", "spock", "amanda", "dtroi", "nelix", "warpspeed", "drwho")
@@ -702,7 +702,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 dashPayProfileDaoAsync.insert(DashPayProfile(thisUserId, usernames[i], names[i], "", ""))
                 val r = Random().nextInt(24)
                 dashPayContactRequestDaoAsync.insert(
-                        DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0, (Date().time - 1000 * 60 * 60 * r).toDouble()/1000, false, 0))
+                        DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0, (Date().time + 1000 * 60 * 60 * 1).toDouble()/1000, false, 0))
             }
 
             log.info("updating contacts and profiles took $watch")

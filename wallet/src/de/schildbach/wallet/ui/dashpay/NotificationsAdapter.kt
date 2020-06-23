@@ -8,11 +8,13 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import de.schildbach.wallet.data.DashPayContactRequest
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.contact_request_row.view.*
 import org.bitcoinj.core.Utils
+import org.dashevo.dpp.util.Entropy
 import org.dashevo.dpp.util.HashUtils
 import java.math.BigInteger
 import java.util.*
@@ -102,12 +104,21 @@ class NotificationsAdapter : RecyclerView.Adapter<NotificationsAdapter.ViewHolde
         return results[position].viewType
     }
 
+    fun getItemPosition(usernameSearchResult: UsernameSearchResult): Int {
+        val viewItem = results.find {
+            val usernameSearchResult = it.usernameSearchResult ?: false
+            usernameSearchResult == it.usernameSearchResult
+        }
+        return results.indexOf(viewItem)
+    }
+
     open inner class ViewHolder(resId: Int, inflater: LayoutInflater, parent: ViewGroup) :
             RecyclerView.ViewHolder(inflater.inflate(resId, parent, false)) {
 
         private val avatar by lazy { itemView.findViewById<ImageView>(R.id.avatar) }
         private val date by lazy { itemView.findViewById<TextView>(R.id.date) }
         private val displayName by lazy { itemView.findViewById<TextView>(R.id.displayName) }
+        private val contactAdded by lazy { itemView.findViewById<ImageView>(R.id.contact_added) }
         private val dateFormat by lazy { itemView.context.getString(R.string.transaction_row_time_text) }
 
         private fun formatDate(timeStamp: Long): String {
@@ -145,12 +156,15 @@ class NotificationsAdapter : RecyclerView.Adapter<NotificationsAdapter.ViewHolde
                     } else {
                         displayName.text = itemView.context.getString(R.string.notifications_contact_has_accepted, displayName.text)
                     }
-
+                    displayName.maxLines = 2
+                    displayName.textSize = 14.0f
                     date.text = formatDate(usernameSearchResult.date)
+                    contactAdded.visibility = View.VISIBLE
                 }
                 //Request Received
                 false to true -> {
                     date.text = formatDate(usernameSearchResult.date)
+                    contactAdded.visibility = View.GONE
                 }
             }
 
@@ -192,8 +206,19 @@ class NotificationsAdapter : RecyclerView.Adapter<NotificationsAdapter.ViewHolde
         override fun bind(usernameSearchResult: UsernameSearchResult, isNew: Boolean) {
             super.bind(usernameSearchResult, isNew)
             itemView.apply {
+                if (!usernameSearchResult.isPendingRequest) {
+                    accept_contact_request.visibility = View.GONE
+                    hide_contract_request.visibility = View.GONE
+                } else {
+                    accept_contact_request.visibility = View.VISIBLE
+                    hide_contract_request.visibility = View.VISIBLE
+                }
                 accept_contact_request.setOnClickListener {
                     //TODO: this contact request should be accepted
+                    //This code is temporary to test the change in the view
+                    usernameSearchResult.toContactRequest = DashPayContactRequest(Entropy.generate(), usernameSearchResult.fromContactRequest!!.toUserId,
+                            usernameSearchResult.fromContactRequest!!.userId, null, Entropy.generate().toByteArray(), 0, 0, (Date().time/1000).toDouble(), false, 0 )
+                    notifyItemChanged(adapterPosition)
                 }
 
                 hide_contract_request.setOnClickListener {
@@ -225,5 +250,10 @@ class NotificationsAdapter : RecyclerView.Adapter<NotificationsAdapter.ViewHolde
                 title.text = context.getString(titleId)
             }
         }
+    }
+
+    interface Listener {
+        fun onAcceptRequest(usernameSearchResult: UsernameSearchResult)
+        fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult)
     }
 }

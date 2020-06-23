@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
 import android.text.TextWatcher
+import android.text.format.DateUtils
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.widget.Toolbar
@@ -21,8 +22,8 @@ import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.GlobalFooterActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_contacts.*
-import java.util.*
 import kotlin.collections.ArrayList
+import kotlin.math.max
 
 class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
         NotificationsAdapter.OnItemClickListener {
@@ -49,12 +50,14 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
     private var query = ""
     private var blockchainIdentityId: String? = null
     private var direction = UsernameSortOrderBy.DATE_ADDED
-    protected var mode = MODE_NOTIFICATIONS
+    private var mode = MODE_NOTIFICATIONS
+    private var lastSeenNotificationTime = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         walletApplication = application as WalletApplication
+        lastSeenNotificationTime = walletApplication.configuration.lastSeenNotificationTime
 
         if (intent.extras != null && intent.extras!!.containsKey(EXTRA_MODE)) {
             mode = intent.extras.getInt(EXTRA_MODE)
@@ -124,9 +127,14 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
     private fun processResults(data: List<UsernameSearchResult>) {
 
         val results = ArrayList<NotificationsAdapter.ViewItem>()
-        // process the requests
-        // define new
-        val newDate = Date().time
+
+        // get the last seen date from the configuration
+        val newDate = walletApplication.configuration.lastSeenNotificationTime
+
+        // find the most recent notification timestamp
+        var lastNotificationTime = 0L
+        data.forEach { lastNotificationTime = max(lastNotificationTime, it.date) }
+
         val newItems = data.filter { r -> r.date >= newDate }.toMutableList()
 
         results.add(NotificationsAdapter.ViewItem(null, NotificationsAdapter.NOTIFICATION_NEW_HEADER))
@@ -145,6 +153,7 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
         earlierItems.forEach { r -> results.add(NotificationsAdapter.ViewItem(r, getViewType(r))) }
 
         notificationsAdapter.results = results
+        lastSeenNotificationTime = lastNotificationTime
     }
 
     private fun searchContacts() {
@@ -202,4 +211,8 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
         return super.onOptionsItemSelected(item)
     }
 
+    override fun onDestroy() {
+        walletApplication.configuration.setPrefsLastSeenNotificationTime(max(lastSeenNotificationTime, walletApplication.configuration.lastSeenNotificationTime) + DateUtils.SECOND_IN_MILLIS)
+        super.onDestroy()
+    }
 }
