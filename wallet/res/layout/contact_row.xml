@@ -3,14 +3,15 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginBottom="32dp">
+    android:layout_height="70dp">
 
     <ImageView
         android:id="@+id/avatar"
         android:transitionName="avatar"
         android:layout_width="36dp"
         android:layout_height="36dp"
+        android:layout_marginLeft="28dp"
+        android:layout_marginTop="17dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -20,8 +21,11 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
+        android:layout_marginEnd="28dp"
         android:textColor="@android:color/black"
         android:textSize="16sp"
+        android:maxLines="1"
+        android:ellipsize="end"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@id/avatar"
         app:layout_constraintTop_toTopOf="@id/avatar"
@@ -36,6 +40,7 @@
         android:textSize="12sp"
         app:layout_constraintStart_toStartOf="@id/displayName"
         app:layout_constraintTop_toBottomOf="@id/displayName"
-        tools:text="Johndoe" />
+        app:layout_constraintEnd_toEndOf="@id/displayName"
+        tools:text="johndoe_01" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -7,13 +7,13 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 
 @Dao
-interface DashPayProfileDao {
+interface DashPayContactRequestDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(dashPayProfile: DashPayProfile)
+    fun insert(dashPayProfile: DashPayContactRequest)
 
-    @Query("SELECT * FROM dashpay_profile where userId = :userId")
-    fun load(userId: String): LiveData<DashPayProfile?>
+    @Query("SELECT * FROM dashpay_contact_request")
+    fun loadAll(): LiveData<DashPayContactRequest?>
 
-    @Query("DELETE FROM dashpay_profile")
+    @Query("DELETE FROM dashpay_contact_request")
     fun clear()
 }

@@ -8,12 +8,13 @@ import org.dashevo.dpp.document.Document
 
 @Parcelize
 @Entity(tableName = "dashpay_profile")
-data class DashPayProfile(@PrimaryKey val userId: String, val displayName: String,
-                          val publicMessage: String, val avatarUrl: String) : Parcelable {
+data class DashPayProfile(@PrimaryKey val userId: String, val username: String, val displayName: String = "",
+                          val publicMessage: String = "", val avatarUrl: String = ""): Parcelable {
     companion object {
-        fun fromDocument(document: Document): DashPayProfile? {
+        fun fromDocument(document: Document, username: String): DashPayProfile? {
             return try {
                 DashPayProfile(document.userId,
+                        username,
                         document.data["displayName"] as String,
                         document.data["publicMessage"] as String,
                         document.data["avatarUrl"] as String)

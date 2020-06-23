@@ -62,13 +62,19 @@ class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResult
         fun bind(usernameSearchResult: UsernameSearchResult) {
             val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(itemView.context,
                     usernameSearchResult.username[0])
-            username.text = usernameSearchResult.username
-            if (usernameSearchResult.profileDocument != null) {
-                usernameSearchResult.profileDocument.apply {
-                    displayName.text = data["displayName"] as String
-                    Glide.with(avatar).load(data["avatarUrl"]).circleCrop()
-                            .placeholder(defaultAvatar).into(avatar)
-                }
+
+            val dashPayProfile = usernameSearchResult.dashPayProfile
+            if (dashPayProfile.displayName.isEmpty()) {
+                displayName.text = dashPayProfile.username
+                username.text = ""
+            } else {
+                displayName.text = dashPayProfile.displayName
+                username.text = usernameSearchResult.username
+            }
+
+            if(dashPayProfile.avatarUrl.isNotEmpty()) {
+                Glide.with(avatar).load(dashPayProfile.avatarUrl).circleCrop()
+                        .placeholder(defaultAvatar).into(avatar)
             } else {
                 avatar.background = defaultAvatar
             }
@@ -77,7 +83,7 @@ class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResult
                     l.onItemClicked(it, usernameSearchResult)
                 }
             }
-        }
 
+        }
     }
 }

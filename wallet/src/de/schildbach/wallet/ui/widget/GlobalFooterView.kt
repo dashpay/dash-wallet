@@ -35,9 +35,16 @@ class GlobalFooterView(context: Context, attrs: AttributeSet?) : ConstraintLayou
         home_button_view.setOnClickListener {
             onFooterActionListener?.onHomeClick()
         }
+        contacts_button_view.setOnClickListener {
+            onFooterActionListener?.onContactsClick()
+        }
         goto_button_view.setOnClickListener {
             onFooterActionListener?.onGotoClick()
         }
+        // TODO: use when 4th button is needed
+        // notifications_button_view.setOnClickListener {
+        //     onFooterActionListener?.onNotificationsClick()
+        // }
         more_button_view.setOnClickListener {
             onFooterActionListener?.onMoreClick()
         }
@@ -88,9 +95,18 @@ class GlobalFooterView(context: Context, attrs: AttributeSet?) : ConstraintLayou
         home_button_view.isEnabled = !active
     }
 
+    fun activateContactsButton(active: Boolean) {
+        contacts_button_view.isEnabled = !active
+    }
+
     fun activateMoreButton(active: Boolean) {
         more_button_view.isEnabled = !active
     }
+
+    // TODO: Use when 4th button is needed
+    // fun activateNotificationsButton(active: Boolean) {
+    //     notifications_button_view.isEnabled = !active
+    // }
 
     fun activateGotoButton(active: Boolean) {
         goto_button_view.setImageResource(R.drawable.ic_goto_active)
@@ -98,7 +114,10 @@ class GlobalFooterView(context: Context, attrs: AttributeSet?) : ConstraintLayou
 
     interface OnFooterActionListener {
         fun onHomeClick()
+        fun onContactsClick()
         fun onGotoClick()
+        //TODO: Use when 4th button is needed
+        //fun onNotificationsClick()
         fun onMoreClick()
     }
 }

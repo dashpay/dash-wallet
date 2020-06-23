@@ -25,6 +25,7 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.MenuItem
 import android.view.View
 import android.view.Window
 import androidx.appcompat.widget.Toolbar
@@ -204,9 +205,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
     }
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
-        val dashPayProfile = usernameSearchResult.profileDocument?.let{
-            DashPayProfile.fromDocument(usernameSearchResult.profileDocument)
-        }
+        val dashPayProfile = usernameSearchResult.dashPayProfile
 
         //TODO: remove after Contact Request creation from the app. Using mocked states for testing purposes
         val intent = DashPayUserActivity.createIntent(this@SearchUserActivity,
@@ -229,4 +228,13 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
         overridePendingTransition(R.anim.slide_in_bottom, R.anim.activity_stay)
     }
 
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            android.R.id.home -> {
+                onBackPressed()
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
+    }
 }

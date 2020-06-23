@@ -10,8 +10,8 @@ interface DashPayProfileDaoAsync {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(dashPayProfile: DashPayProfile)
 
-    @Query("SELECT * FROM dashpay_profile LIMIT 1")
-    suspend fun load(): DashPayProfile?
+    @Query("SELECT * FROM dashpay_profile WHERE userId = :userId")
+    suspend fun load(userId: String): DashPayProfile?
 
     @Query("DELETE FROM dashpay_profile")
     suspend fun clear()

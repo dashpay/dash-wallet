@@ -18,6 +18,8 @@ package de.schildbach.wallet.ui.dashpay
 import android.app.Application
 import androidx.lifecycle.*
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.UsernameSearch
+import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -29,10 +31,12 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
 
     private val usernameLiveData = MutableLiveData<String>()
     private val userSearchLiveData = MutableLiveData<String>()
+    private val contactsLiveData = MutableLiveData<UsernameSearch>()
 
     // Job instance (https://stackoverflow.com/questions/57723714/how-to-cancel-a-running-livedata-coroutine-block/57726583#57726583)
     private var getUsernameJob = Job()
     private var searchUsernamesJob = Job()
+    private var searchContactsJob = Job()
 
     val getUsernameLiveData = Transformations.switchMap(usernameLiveData) { username ->
         getUsernameJob.cancel()
@@ -72,6 +76,22 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
 
     fun searchUsernames(text: String) {
         userSearchLiveData.value = text
+    }
+
+    //
+    // Search Usernames and Display Names that contain "text".
+    //
+    val searchContactsLiveData = Transformations.switchMap(contactsLiveData) { usernameSearch: UsernameSearch ->
+        searchContactsJob.cancel()
+        searchContactsJob = Job()
+        liveData(context = searchContactsJob + Dispatchers.IO) {
+            emit(Resource.loading(null))
+            emit(platformRepo.searchContacts(usernameSearch.text, usernameSearch.orderBy))
+        }
+    }
+
+    fun searchContacts(text: String, orderBy: UsernameSortOrderBy) {
+        contactsLiveData.value = UsernameSearch(text, orderBy)
     }
 
     val isPlatformAvailableLiveData = liveData(Dispatchers.IO) {

@@ -28,8 +28,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.scan.ScanActivity
+import de.schildbach.wallet.ui.dashpay.ContactsActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_payments_pay.*
@@ -53,10 +56,22 @@ class PaymentsPayFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
         //Make the whole row clickable
+        pay_by_contact_select.setOnClickListener { handleSelectContact(it) }
         pay_by_qr_button.setOnClickListener { handleScan(it) }
         pay_to_address.setOnClickListener { handlePaste(true) }
         handlePaste(false)
+
+        initViewModel(view)
+    }
+
+    private fun initViewModel(view: View) {
+        AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(viewLifecycleOwner, Observer {
+            val visibility = if (it == null) View.GONE else View.VISIBLE
+            pay_by_contact_select.visibility = visibility
+            pay_by_contact_select_divider.visibility = visibility
+        })
     }
 
     override fun onResume() {
@@ -83,6 +98,10 @@ class PaymentsPayFragment : Fragment() {
 
     private val onPrimaryClipChangedListener = ClipboardManager.OnPrimaryClipChangedListener {
         handlePaste(false)
+    }
+
+    private fun handleSelectContact(clickView: View) {
+        startActivity(ContactsActivity.createIntent(clickView.context, ContactsActivity.MODE_SELECT_CONTACT))
     }
 
     private fun handleScan(clickView: View) {

@@ -65,6 +65,37 @@
         app:layout_constraintWidth_percent="0.08" />
 
     <ImageView
+        android:id="@+id/contacts_button_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/selectable_background_light"
+        android:clickable="true"
+        android:focusable="true"
+        app:srcCompat="@drawable/contacts_button_selector"
+        app:layout_constraintBottom_toBottomOf="@+id/goto_button_view"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintEnd_toEndOf="@+id/contacts_guideline"
+        app:layout_constraintStart_toStartOf="@+id/contacts_guideline"
+        app:layout_constraintTop_toTopOf="@+id/goto_button_view"
+        app:layout_constraintWidth_percent="0.08" />
+
+    <!-- TODO: Placeholder for the 4th button -->
+    <!--ImageView
+        android:id="@+id/notifications_button_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/selectable_background_light"
+        android:clickable="true"
+        android:focusable="true"
+        app:srcCompat="@drawable/notifications_button_selector"
+        app:layout_constraintBottom_toBottomOf="@+id/goto_button_view"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintEnd_toEndOf="@+id/notifications_guideline"
+        app:layout_constraintStart_toStartOf="@+id/notifications_guideline"
+        app:layout_constraintTop_toTopOf="@+id/goto_button_view"
+        app:layout_constraintWidth_percent="0.08" /-->
+
+    <ImageView
         android:id="@+id/more_button_view"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -93,7 +124,14 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.20" />
+        app:layout_constraintGuide_percent="0.10" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/contacts_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.30" />
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/center_guideline"
@@ -103,10 +141,17 @@
         app:layout_constraintGuide_percent="0.5" />
 
     <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/notifications_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.70" />
+
+    <androidx.constraintlayout.widget.Guideline
         android:id="@+id/more_guideline"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.80" />
+        app:layout_constraintGuide_percent="0.90" />
 
 </merge>
