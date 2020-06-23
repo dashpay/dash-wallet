@@ -48,7 +48,6 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.common.base.Stopwatch;
 
-import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.BlockChain;
@@ -62,14 +61,15 @@ import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
+import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
 import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
-import org.bitcoinj.evolution.listeners.CreditFundingTransactionEventListener;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.net.discovery.MasternodePeerDiscovery;
 import org.bitcoinj.net.discovery.MultiplexingDiscovery;
@@ -84,6 +84,7 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -112,15 +113,21 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.AddressBookProvider;
+import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
+import de.schildbach.wallet.ui.dashpay.PlatformRepo;
 import de.schildbach.wallet.util.BlockchainStateUtils;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
+import kotlin.coroutines.EmptyCoroutineContext;
+import kotlin.coroutines.Continuation;
+import kotlin.coroutines.CoroutineContext;
 
 import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 
@@ -175,7 +182,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private Executor executor = Executors.newSingleThreadExecutor();
     private int syncPercentage = 0; // 0 to 100%
-    private boolean needsToWatchForIdentity = false;
+
+    //DashPay related fields
+    private BlockchainIdentityData blockchainIdentityData;
 
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
@@ -778,6 +787,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         application.getWallet().addCoinsReceivedEventListener(Threading.SAME_THREAD, walletEventListener);
         application.getWallet().addCoinsSentEventListener(Threading.SAME_THREAD, walletEventListener);
         application.getWallet().addChangeEventListener(Threading.SAME_THREAD, walletEventListener);
+        blockChain.addNewBestBlockListener(newBestBlockListener);
 
         registerReceiver(tickReceiver, new IntentFilter(Intent.ACTION_TIME_TICK));
 
@@ -794,6 +804,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             @Override
             public void onChanged(BlockchainState blockchainState) {
                 handleBlockchainStateNotification(blockchainState);
+            }
+        });
+
+        AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(this, new Observer<BlockchainIdentityData>() {
+            @Override
+            public void onChanged(BlockchainIdentityData blockchainIdentityData) {
+                BlockchainServiceImpl.this.blockchainIdentityData = blockchainIdentityData;
+                updateDashPayState();
             }
         });
     }
@@ -875,6 +893,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         application.getWallet().removeChangeEventListener(walletEventListener);
         application.getWallet().removeCoinsSentEventListener(walletEventListener);
         application.getWallet().removeCoinsReceivedEventListener(walletEventListener);
+        blockChain.removeNewBestBlockListener(newBestBlockListener);
 
         unregisterReceiver(connectivityReceiver);
 
@@ -932,6 +951,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     // This code is not executed during a wipe, only a blockchain reset
                     AppDatabase.getAppDatabase().blockchainIdentityDataDao().clear();
                     AppDatabase.getAppDatabase().dashPayProfileDao().clear();
+                    AppDatabase.getAppDatabase().dashPayContactRequestDao().clear();
                 }
             });
         }
@@ -1018,6 +1038,32 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         });
     }
 
+    boolean updatingDashPayState = false;
+    private void updateDashPayState() {
+        if (blockchainIdentityData != null && !updatingDashPayState) {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    String userId = blockchainIdentityData.getIdentity(application.getWallet());
+                    if (userId != null ) {
+                        updatingDashPayState = true;
+                        new PlatformRepo(application).updateContactRequests(userId, new Continuation<Unit>() {
+                            @Override
+                            public void resumeWith(@NotNull Object o) {
+                                updatingDashPayState = false;
+                            }
+
+                            @Override
+                            public CoroutineContext getContext() {
+                                return EmptyCoroutineContext.INSTANCE;
+                            }
+                        });
+                    }
+                }
+            });
+        }
+    }
+
     @Override
     public List<Peer> getConnectedPeers() {
         if (peerGroup != null)
@@ -1085,4 +1131,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private void updateAppWidget() {
         WalletBalanceWidgetProvider.updateWidgets(BlockchainServiceImpl.this, application.getWallet());
     }
+
+    NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
+        @Override
+        public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
+            updateDashPayState();
+        }
+    };
 }

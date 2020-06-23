@@ -787,6 +787,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
             public void run() {
                 AppDatabase.getAppDatabase().blockchainIdentityDataDao().clear();
                 AppDatabase.getAppDatabase().dashPayProfileDao().clear();
+                AppDatabase.getAppDatabase().dashPayContactRequestDao().clear();
                 ProcessPhoenix.triggerRebirth(WalletApplication.this);
             }
         });
