@@ -174,11 +174,6 @@ public final class HeaderBalanceFragment extends Fragment {
             @Override
             public void onChanged(de.schildbach.wallet.data.BlockchainState blockchainState) {
                 HeaderBalanceFragment.this.blockchainState = blockchainState;
-
-                // was the blockchain reset?
-                //if (blockchainState.getBestChainHeight() == 0 && blockchainState.getReplaying()) {
-                 //   username = null;
-                //}
                 updateView();
             }
         });
@@ -200,7 +195,7 @@ public final class HeaderBalanceFragment extends Fragment {
             @Override
             public void onChanged(DashPayContactRequest dashPayContactRequest) {
                 if (dashPayContactRequest != null) {
-                    dashPayViewModel.getNotificationCount(Utils.currentTimeSeconds());
+                    dashPayViewModel.getNotificationCount(config.getLastSeenNotificationTime());
                 }
                 updateView();
             }
