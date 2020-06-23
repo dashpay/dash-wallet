@@ -9,7 +9,7 @@ data class UsernameSearchResult(val username: String,
     val requestSent = toContactRequest != null
     val requestReceived = fromContactRequest != null
     val isPendingRequest = requestReceived && !requestSent
-    val date: Long
+    val date: Long // milliseconds
             get() {
                 return when (requestSent to requestReceived) {
                     true to true -> {
@@ -22,6 +22,6 @@ data class UsernameSearchResult(val username: String,
                         fromContactRequest!!.timestamp
                     }
                     else -> 0.00
-                }.toLong()
+                }.toLong() * 1000
             }
 }

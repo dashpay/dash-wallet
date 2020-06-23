@@ -367,6 +367,8 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     suspend fun createDashPayProfile(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter) {
         withContext(Dispatchers.IO) {
             val username = blockchainIdentity.currentUsername!!
+            if (blockchainIdentity.identity == null)
+                blockchainIdentity.recoverIdentity(blockchainIdentity.creditFundingTransaction!!)
             blockchainIdentity.registerProfile(username, "", "", keyParameter)
         }
     }
@@ -669,14 +671,14 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 val r = Random().nextInt(100)
                 dashPayProfileDaoAsync.insert(DashPayProfile.fromUsername(l[1], l[0]))
                 dashPayContactRequestDaoAsync.insert(
-                        DashPayContactRequest(Entropy.generate(), userId, l[1], null, l[1].toByteArray(), 0, 0, (Date().time - 1000 * 60 * 60 * 24 * r).toDouble(), false, 0))
+                        DashPayContactRequest(Entropy.generate(), userId, l[1], null, l[1].toByteArray(), 0, 0, (Date().time - 1000 * 60 * 60 * 24 * r).toDouble()/1000, false, 0))
             }
 
             for (l in theirRequests) {
                 val r = Random().nextInt(100)
                 dashPayProfileDaoAsync.insert(DashPayProfile.fromUsername(l[1], l[0]))
                 dashPayContactRequestDaoAsync.insert(
-                        DashPayContactRequest(Entropy.generate(), l[1], userId, null, l[1].toByteArray(), 0, 0, (Date().time - 1000 * 60 * 60 * 24 * r).toDouble(), false, 0))
+                        DashPayContactRequest(Entropy.generate(), l[1], userId, null, l[1].toByteArray(), 0, 0, (Date().time - 1000 * 60 * 60 * 24 * r).toDouble()/1000, false, 0))
             }
 
             var names = listOf("Lizet Michaelson", "Rachel Sanderson", "Tamanna Smith", "Tammy Oceanography", "Alfred Pennyworth", "Serena Kyle", "Batman", "Capt Kirk", "Spock", "", "Deanna Troi", "Neelix", "Zephrane Cochrane", "The Tenth Doctor was the Best Doctor, Martha was the best!")
@@ -686,10 +688,10 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 dashPayProfileDaoAsync.insert(DashPayProfile(thisUserId, usernames[i], names[i], "", ""))
                 var r = Random().nextInt(24)
                 dashPayContactRequestDaoAsync.insert(
-                        DashPayContactRequest(Entropy.generate(), userId, thisUserId, null, names[0].toByteArray(), 0, 0, (Date().time - 1000 * 60 * 60 * r).toDouble(), false, 0))
+                        DashPayContactRequest(Entropy.generate(), userId, thisUserId, null, names[0].toByteArray(), 0, 0, (Date().time - 1000 * 60 * 60 * r).toDouble()/1000, false, 0))
                 r = Random().nextInt(24)
                 dashPayContactRequestDaoAsync.insert(
-                        DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0, (Date().time - 1000 * 60 * 60 * r).toDouble(), false, 0))
+                        DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0, (Date().time - 1000 * 60 * 60 * r).toDouble()/1000, false, 0))
 
             }
 
@@ -700,7 +702,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 dashPayProfileDaoAsync.insert(DashPayProfile(thisUserId, usernames[i], names[i], "", ""))
                 val r = Random().nextInt(24)
                 dashPayContactRequestDaoAsync.insert(
-                        DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0, (Date().time - 1000 * 60 * 60 * r).toDouble(), false, 0))
+                        DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0, (Date().time - 1000 * 60 * 60 * r).toDouble()/1000, false, 0))
             }
 
             log.info("updating contacts and profiles took $watch")
