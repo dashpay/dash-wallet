@@ -101,6 +101,7 @@ public final class HeaderBalanceFragment extends Fragment {
     private Handler autoLockHandler = new Handler();
     private BlockchainState blockchainState;
     private String username;
+    private int notificationCount;
     private DashPayViewModel dashPayViewModel;
 
     @Override
@@ -173,6 +174,11 @@ public final class HeaderBalanceFragment extends Fragment {
             @Override
             public void onChanged(de.schildbach.wallet.data.BlockchainState blockchainState) {
                 HeaderBalanceFragment.this.blockchainState = blockchainState;
+
+                // was the blockchain reset?
+                //if (blockchainState.getBestChainHeight() == 0 && blockchainState.getReplaying()) {
+                 //   username = null;
+                //}
                 updateView();
             }
         });
@@ -183,22 +189,20 @@ public final class HeaderBalanceFragment extends Fragment {
                 if (blockchainIdentityData != null
                         && blockchainIdentityData.getCreationState().ordinal() >= BlockchainIdentityData.CreationState.DONE.ordinal()) {
                     username = blockchainIdentityData.getUsername();
-                    setDefaultUserAvatar(blockchainIdentityData.getUsername().toUpperCase());
                 } else {
-                    setDefaultUserAvatar(null);
+                    username = null;
                 }
+                updateView();
             }
         });
 
         AppDatabase.getAppDatabase().dashPayContactRequestDao().loadAll().observe(getViewLifecycleOwner(), new Observer<DashPayContactRequest>() {
             @Override
             public void onChanged(DashPayContactRequest dashPayContactRequest) {
-                if (dashPayContactRequest != null ) {
-                    dashPayViewModel.getNotificationCount(Utils.currentTimeMillis()-90*24*3600000);
-                    setDefaultUserAvatar(username);
-                } else {
-                    setDefaultUserAvatar(username);
+                if (dashPayContactRequest != null) {
+                    dashPayViewModel.getNotificationCount(Utils.currentTimeSeconds());
                 }
+                updateView();
             }
         });
 
@@ -206,17 +210,15 @@ public final class HeaderBalanceFragment extends Fragment {
         dashPayViewModel.getGetNotificationCountLiveData().observe(getViewLifecycleOwner(), new Observer<Object>() {
             @Override
             public void onChanged(Object o) {
-                if(o instanceof Integer) {
-                    setNotificationCount((Integer)o);
-                } else {
-                    setNotificationCount(0);
+                if (o instanceof Integer) {
+                    notificationCount = (Integer)o;
                 }
             }
         });
-        if(username != null)
-            dashPayViewModel.getNotificationCount(Utils.currentTimeMillis()-90*24*3600000);
-        else setNotificationCount(0);
-
+        if(username != null) {
+            dashPayViewModel.getNotificationCount(Utils.currentTimeSeconds());
+        }
+        updateView();
     }
 
     @Override
@@ -264,11 +266,14 @@ public final class HeaderBalanceFragment extends Fragment {
     }
 
     private void setNotificationCount(Integer count) {
-        if(count > 0) {
+        if (username == null) {
+            notifications.setVisibility(View.GONE);
+            notificationBell.setVisibility(View.GONE);
+        } else if(count > 0) {
             notifications.setText(count.toString());
             notifications.setVisibility(View.VISIBLE);
             notificationBell.setVisibility(View.GONE);
-        } else {
+        } else if (count == 0) {
             notifications.setVisibility(View.GONE);
             notificationBell.setVisibility(View.VISIBLE);
         }
@@ -290,6 +295,9 @@ public final class HeaderBalanceFragment extends Fragment {
         caption.setText(R.string.home_available_balance);
         hideShowBalanceHint.setText(R.string.home_balance_hide_hint);
         showBalanceButton.setVisibility(View.GONE);
+
+        setDefaultUserAvatar(username);
+        setNotificationCount(notificationCount);
 
         if (!isAdded()) {
             return;
