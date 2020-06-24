@@ -21,9 +21,12 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_dashpay_user.*
@@ -76,7 +79,26 @@ class DashPayUserActivity : InteractionAwareActivity() {
         updateContactRelationUi()
 
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
-        dashPayViewModel.sendContactRequest(profile.userId)
+
+        sendContactRequestBtn.setOnClickListener { sendContactRequest(profile.userId) }
+        accept.setOnClickListener { sendContactRequest(profile.userId) }
+
+        dashPayViewModel.getContactRequestLiveData.observe(this, Observer {
+            if (it != null) {
+                when (it.status) {
+                    Status.LOADING ->
+                        Toast.makeText(this, "Sending contact request...", Toast.LENGTH_SHORT).show()
+                    Status.ERROR ->
+                        Toast.makeText(this, "!!Error!!", Toast.LENGTH_SHORT).show()
+                    Status.SUCCESS ->
+                        Toast.makeText(this, "Contact request sent!", Toast.LENGTH_SHORT).show()
+                }
+            }
+        })
+    }
+
+    private fun sendContactRequest(userId: String) {
+        dashPayViewModel.sendContactRequest(userId)
     }
 
     private fun updateContactRelationUi() {

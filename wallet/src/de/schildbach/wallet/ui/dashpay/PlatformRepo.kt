@@ -41,6 +41,7 @@ import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_SALT
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_STATUS
 import org.dashevo.dashpay.ContactRequests
 import org.dashevo.dashpay.Profiles
+import org.dashevo.dashpay.RetryDelayType
 import org.dashevo.dashpay.callback.RegisterIdentityCallback
 import org.dashevo.dpp.document.Document
 import org.dashevo.dpp.identity.Identity
@@ -249,8 +250,8 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
-     /**
-      *  Wraps callbacks of DeriveKeyTask as Coroutine
+    /**
+     *  Wraps callbacks of DeriveKeyTask as Coroutine
      */
     private suspend fun deriveKey(handler: Handler, wallet: Wallet, password: String): KeyParameter {
         return suspendCoroutine { continuation ->
@@ -269,25 +270,28 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
-    suspend fun sendContactRequest(userId: String, encryptionKey: KeyParameter) {
-        try {
+    suspend fun sendContactRequest(userId: String, encryptionKey: KeyParameter): Resource<Nothing> {
+        return try {
             val identity = platform.identities.get(userId)
             println("identity: $identity")
             val blockchainIdentityData = blockchainIdentityDataDaoAsync.load()!!
             this.blockchainIdentity = initBlockchainIdentity(blockchainIdentityData,
                     walletApplication.wallet)
-            this.blockchainIdentity.watchIdentity(3, 500, BlockchainIdentity.RetryDelayType.SLOW20, object : RegisterIdentityCallback{
-                override fun onComplete(uniqueId: String) {
-                    ContactRequests(platform).create(blockchainIdentity, identity!!, encryptionKey)
-                }
 
-                override fun onTimeout() {
-                    println("couldn't find identity for ${blockchainIdentity.uniqueIdString}")
-                }
-            })
+            val userId = this.blockchainIdentity.watchIdentity(3, 500, RetryDelayType.SLOW20)
+            if (userId != null) {
+                val contactRequests = ContactRequests(platform)
+                contactRequests.create(blockchainIdentity, identity!!, encryptionKey)
+                println("contact request sent")
+                val cr = contactRequests.watchContactRequest(this.blockchainIdentity.uniqueIdString, userId, 100, 500, RetryDelayType.LINEAR)
+                println("contact request: $cr")
+
+                Resource.success(null)
+            } else {
+                Resource.error("failed to get contact identity")
+            }
         } catch (e: Exception) {
-            //TODO: Error handling
-            e.printStackTrace()
+            Resource.error(e.localizedMessage)
         }
     }
 
@@ -329,7 +333,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     //
     suspend fun verifyIdentityRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
-            blockchainIdentity.watchIdentity(10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
+            blockchainIdentity.watchIdentity(10, 5000, RetryDelayType.SLOW20)
                     ?: throw TimeoutException("the identity was not found to be registered in the allotted amount of time")
         }
     }
@@ -360,7 +364,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         withContext(Dispatchers.IO) {
             val set = blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.PREORDER_REGISTRATION_PENDING)
             val saltedDomainHashes = blockchainIdentity.saltedDomainHashesForUsernames(set)
-            val (result, usernames) = blockchainIdentity.watchPreorder(saltedDomainHashes, 10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
+            val (result, usernames) = blockchainIdentity.watchPreorder(saltedDomainHashes, 10, 5000, RetryDelayType.SLOW20)
             if (!result) {
                 throw TimeoutException("the usernames: $usernames were not found to be preordered in the allotted amount of time")
             }
@@ -382,7 +386,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     //
     suspend fun isNameRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
-            val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.REGISTRATION_PENDING), 10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
+            val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.REGISTRATION_PENDING), 10, 5000, RetryDelayType.SLOW20)
             if (!result) {
                 throw TimeoutException("the usernames: $usernames were not found to be registered in the allotted amount of time")
             }
@@ -402,7 +406,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     //
     suspend fun verifyProfileCreatedAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
-            val profile = blockchainIdentity.watchProfile(10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
+            val profile = blockchainIdentity.watchProfile(10, 5000, RetryDelayType.SLOW20)
                     ?: throw TimeoutException("the profile was not found to be created in the allotted amount of time")
 
             val dashPayProfile = DashPayProfile.fromDocument(profile, blockchainIdentity.currentUsername!!)

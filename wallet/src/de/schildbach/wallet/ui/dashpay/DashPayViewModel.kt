@@ -26,14 +26,11 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DeriveKeyTask
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dashevo.dashpay.ContactRequests
-import java.util.logging.Handler
-import kotlin.coroutines.suspendCoroutine
+import java.lang.Exception
 
 class DashPayViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -42,12 +39,13 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     private val usernameLiveData = MutableLiveData<String>()
     private val userSearchLiveData = MutableLiveData<String>()
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
+    private val contactRequestLiveData = MutableLiveData<Pair<String, KeyParameter?>>()
 
     // Job instance (https://stackoverflow.com/questions/57723714/how-to-cancel-a-running-livedata-coroutine-block/57726583#57726583)
     private var getUsernameJob = Job()
     private var searchUsernamesJob = Job()
     private var searchContactsJob = Job()
-    private val contactRequestJob by lazy { Job() }
+    private var contactRequestJob = Job()
 
     val getUsernameLiveData = Transformations.switchMap(usernameLiveData) { username ->
         getUsernameJob.cancel()
@@ -70,7 +68,6 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         super.onCleared()
         getUsernameJob.cancel()
         searchUsernamesJob.cancel()
-        contactRequestJob.cancel()
     }
 
     //
@@ -117,7 +114,8 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun sendContactRequest(toUserId: String) {
+    //TODO: this can probably be simplified using coroutines
+    private fun deriveEncryptionKey(onSuccess: (KeyParameter) -> Unit, onError: (Exception) -> Unit) {
         val walletApplication = WalletApplication.getInstance()
         val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
         backgroundThread.start()
@@ -126,17 +124,32 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         val password = securityGuard.retrievePassword()
         object : DeriveKeyTask(backgroundHandler, walletApplication.scryptIterationsTarget()) {
             override fun onSuccess(encryptionKey: KeyParameter, wasChanged: Boolean) {
-                GlobalScope.launch {
-                    platformRepo.sendContactRequest(toUserId, encryptionKey)
-                    println("contact request sent")
-                }
+                onSuccess(encryptionKey)
             }
 
-            override fun onFailure(ex: KeyCrypterException?) {
-                println("failed to decrypt key")
-                //CreateIdentityService.log.error("unable to decrypt wallet", ex)
+            override fun onFailure(ex: KeyCrypterException) {
+                onError(ex)
             }
         }.deriveKey(walletApplication.wallet, password)
+    }
+
+    fun sendContactRequest(toUserId: String) {
+        deriveEncryptionKey({ encryptionKey: KeyParameter ->
+            contactRequestLiveData.value = Pair(toUserId, encryptionKey)
+        }, {
+            contactRequestLiveData.value = Pair(toUserId, null)
+        })
+    }
+
+    val getContactRequestLiveData = Transformations.switchMap(contactRequestLiveData) { it ->
+        liveData(context = contactRequestJob + Dispatchers.IO) {
+            if (it.second != null) {
+                emit(Resource.loading(null))
+                emit(platformRepo.sendContactRequest(it.first, it.second!!))
+            } else {
+                emit(Resource.error("Failed to decrypt keys"))
+            }
+        }
     }
 
 }
