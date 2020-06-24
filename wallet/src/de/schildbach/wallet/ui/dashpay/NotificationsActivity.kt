@@ -22,6 +22,8 @@ import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.GlobalFooterActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_contacts.*
+import org.slf4j.LoggerFactory
+import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.math.max
 
@@ -29,10 +31,13 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
         NotificationsAdapter.OnItemClickListener {
 
     companion object {
+        private val log = LoggerFactory.getLogger(NotificationsAdapter::class.java)
+
         private const val EXTRA_MODE = "extra_mode"
 
-        const val MODE_NOTIFICATIONS = 10
-        const val MODE_NOTIFICATONS_GLOBAL_FOOTER = 11
+        const val MODE_NOTIFICATIONS = 0x02
+        const val MODE_NOTIFICATIONS_GLOBAL_FOOTER = 0x04
+        const val MODE_NOTIFICATIONS_SEARCH = 0x01
 
         @JvmStatic
         fun createIntent(context: Context, mode: Int = MODE_NOTIFICATIONS): Intent {
@@ -63,7 +68,7 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
             mode = intent.extras.getInt(EXTRA_MODE)
         }
 
-        if(mode == MODE_NOTIFICATONS_GLOBAL_FOOTER) {
+        if(mode and MODE_NOTIFICATIONS_GLOBAL_FOOTER != 0) {
             setContentViewWithFooter(R.layout.activity_notifications)
             activateContactsButton()
         } else {
@@ -84,9 +89,12 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
 
         initViewModel()
 
-        search.addTextChangedListener(this)
-        search.visibility = View.VISIBLE
-        icon.visibility = View.VISIBLE
+        if (mode and MODE_NOTIFICATIONS_SEARCH != 0) {
+            search.addTextChangedListener(this)
+            search.visibility = View.VISIBLE
+            icon.visibility = View.VISIBLE
+
+        }
         setTitle(R.string.notifications_title)
 
         searchContacts()
@@ -136,6 +144,7 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
         data.forEach { lastNotificationTime = max(lastNotificationTime, it.date) }
 
         val newItems = data.filter { r -> r.date >= newDate }.toMutableList()
+        log.info("New contacts at ${Date(newDate)} = ${newItems.size} - NotificationActivity")
 
         results.add(NotificationsAdapter.ViewItem(null, NotificationsAdapter.NOTIFICATION_NEW_HEADER))
         if(newItems.isEmpty()) {

@@ -26,6 +26,7 @@ import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.livedata.Status
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
@@ -231,7 +232,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
                 // only include contacts that have sent requests to us (we may have accepted them)
                 // do not include contactRequest that we have sent but have not been accepted
-                if(usernameSearchResult.requestReceived)
+                if (usernameSearchResult.requestReceived)
                     usernameSearchResults.add(usernameSearchResult)
             }
             when (orderBy) {
@@ -257,12 +258,15 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
     suspend fun getNotificationCount(date: Long): Int {
         val results = searchContacts("", UsernameSortOrderBy.DATE_ADDED)
-        val list = results.data ?: return 0
-
-        var count = 0
-        list.forEach { if (it.date >= date) ++count }
-
-        return count
+        return if (results.status == Status.SUCCESS) {
+            val list = results.data ?: return 0
+            var count = 0
+            list.forEach { if (it.date >= date) ++count }
+            log.info("New contacts at ${Date(date)} = $count - getNotificationCount")
+            count
+        } else {
+            -1
+        }
     }
 
     //
@@ -688,10 +692,10 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 dashPayProfileDaoAsync.insert(DashPayProfile(thisUserId, usernames[i], names[i], "", ""))
                 var r = Random().nextInt(24)
                 dashPayContactRequestDaoAsync.insert(
-                        DashPayContactRequest(Entropy.generate(), userId, thisUserId, null, names[0].toByteArray(), 0, 0, (Date().time - 1000 * 60 * 60 * r).toDouble()/1000, false, 0))
+                        DashPayContactRequest(Entropy.generate(), userId, thisUserId, null, names[0].toByteArray(), 0, 0, (Date().time - 1000 * 60 * 60 * r).toDouble() / 1000, false, 0))
                 r = Random().nextInt(24)
                 dashPayContactRequestDaoAsync.insert(
-                        DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0, (Date().time - 1000 * 60 * 60 * r).toDouble()/1000, false, 0))
+                        DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0, (Date().time - 1000 * 60 * 60 * r).toDouble() / 1000, false, 0))
 
             }
 
@@ -702,7 +706,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 dashPayProfileDaoAsync.insert(DashPayProfile(thisUserId, usernames[i], names[i], "", ""))
                 val r = Random().nextInt(24)
                 dashPayContactRequestDaoAsync.insert(
-                        DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0, (Date().time + 1000 * 60 * 60 * 1).toDouble()/1000, false, 0))
+                        DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0, (Date().time + 1000 * 60 * 60 * 1).toDouble() / 1000, false, 0))
             }
 
             log.info("updating contacts and profiles took $watch")

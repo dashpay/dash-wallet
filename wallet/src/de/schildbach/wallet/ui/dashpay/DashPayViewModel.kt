@@ -106,8 +106,9 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
 
     val getNotificationCountLiveData = Transformations.switchMap(notificationCountLiveData) { date: Long ->
         liveData(Dispatchers.IO) {
-            emit(Resource.loading(null))
-            emit(platformRepo.getNotificationCount(date))
+            val count = platformRepo.getNotificationCount(date)
+            if (count >= 0)
+                emit(count)
         }
     }
 

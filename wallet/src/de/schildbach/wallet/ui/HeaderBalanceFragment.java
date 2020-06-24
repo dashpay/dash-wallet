@@ -18,10 +18,9 @@ package de.schildbach.wallet.ui;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.graphics.Color;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
-import android.preference.PreferenceActivity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -66,7 +65,7 @@ import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
 import de.schildbach.wallet.ui.dashpay.NotificationsActivity;
 import de.schildbach.wallet_test.R;
 
-public final class HeaderBalanceFragment extends Fragment {
+public final class HeaderBalanceFragment extends Fragment implements SharedPreferences.OnSharedPreferenceChangeListener {
 
     private WalletApplication application;
     private AbstractBindServiceActivity activity;
@@ -207,11 +206,12 @@ public final class HeaderBalanceFragment extends Fragment {
             public void onChanged(Object o) {
                 if (o instanceof Integer) {
                     notificationCount = (Integer)o;
+                    updateView();
                 }
             }
         });
         if(username != null) {
-            dashPayViewModel.getNotificationCount(Utils.currentTimeSeconds());
+            dashPayViewModel.getNotificationCount(config.getLastSeenNotificationTime());
         }
         updateView();
     }
@@ -232,9 +232,13 @@ public final class HeaderBalanceFragment extends Fragment {
                     }
                 });
 
+        if (username != null)
+            dashPayViewModel.getNotificationCount(config.getLastSeenNotificationTime());
+
         if (config.getHideBalance()) {
             hideBalance = true;
         }
+        config.registerOnSharedPreferenceChangeListener(this);
 
         updateView();
     }
@@ -245,6 +249,8 @@ public final class HeaderBalanceFragment extends Fragment {
         loaderManager.destroyLoader(ID_BALANCE_LOADER);
 
         autoLockHandler.removeCallbacksAndMessages(null);
+        config.unregisterOnSharedPreferenceChangeListener(this);
+
         super.onPause();
     }
 
@@ -277,6 +283,8 @@ public final class HeaderBalanceFragment extends Fragment {
     private void updateView() {
         View balances = view.findViewById(R.id.balances_layout);
         TextView walletBalanceSyncMessage = view.findViewById(R.id.wallet_balance_sync_message);
+        setDefaultUserAvatar(username);
+        setNotificationCount(notificationCount);
 
         if (hideBalance) {
             caption.setText(R.string.home_balance_hidden);
@@ -290,9 +298,6 @@ public final class HeaderBalanceFragment extends Fragment {
         caption.setText(R.string.home_available_balance);
         hideShowBalanceHint.setText(R.string.home_balance_hide_hint);
         showBalanceButton.setVisibility(View.GONE);
-
-        setDefaultUserAvatar(username);
-        setNotificationCount(notificationCount);
 
         if (!isAdded()) {
             return;
@@ -357,4 +362,11 @@ public final class HeaderBalanceFragment extends Fragment {
         public void onLoaderReset(@NonNull final Loader<Coin> loader) {
         }
     };
+
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        if (Configuration.PREFS_LAST_SEEN_NOTIFICATION_TIME.equals(key)) {
+            dashPayViewModel.getNotificationCount(config.getLastSeenNotificationTime());
+        }
+    }
 }
