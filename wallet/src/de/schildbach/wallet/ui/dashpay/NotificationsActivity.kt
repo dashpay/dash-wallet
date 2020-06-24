@@ -93,7 +93,9 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
             search.addTextChangedListener(this)
             search.visibility = View.VISIBLE
             icon.visibility = View.VISIBLE
-
+        } else {
+            search.visibility = View.GONE
+            icon.visibility = View.GONE
         }
         setTitle(R.string.notifications_title)
 

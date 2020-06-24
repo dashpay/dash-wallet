@@ -210,9 +210,6 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
                 }
             }
         });
-        if(username != null) {
-            dashPayViewModel.getNotificationCount(config.getLastSeenNotificationTime());
-        }
         updateView();
     }
 
