@@ -66,7 +66,7 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
     private lateinit var dashPayViewModel: DashPayViewModel
     private lateinit var walletApplication: WalletApplication
     private var handler: Handler = Handler()
-    private lateinit var searchDashPayProfileRunnable: Runnable
+    private lateinit var searchContactsRunnable: Runnable
     private val contactsAdapter: ContactSearchResultsAdapter = ContactSearchResultsAdapter(this)
     private var query = ""
     private var blockchainIdentityId: String? = null
@@ -114,20 +114,16 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
             icon.visibility = View.VISIBLE
             setTitle(R.string.contacts_title)
         }
+
         searchContacts()
     }
 
     private fun initViewModel() {
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
         dashPayViewModel.searchContactsLiveData.observe(this, Observer {
-            if (Status.LOADING == it.status) {
-                startLoading()
-            } else {
-                stopLoading()
+            if (Status.SUCCESS == it.status) {
                 if (it.data != null) {
                     processResults(it.data)
-                } else {
-                    showEmptyResult()
                 }
             }
         })
@@ -170,11 +166,6 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
         contacts.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
 
         contactsAdapter.results = results
-        if (data.isEmpty()) {
-            showEmptyResult()
-        } else {
-            hideEmptyResult()
-        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -184,40 +175,20 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
         return super.onCreateOptionsMenu(menu)
     }
 
-    private fun startLoading() {
-
-    }
-
-    private fun stopLoading() {
-
-    }
-
-    private fun showEmptyResult() {
-        //TODO: Should we have a ViewHolder that says there are no contacts or requests
-        // or should there be something else displayed saying no contacts or requests
-        // the design does not give the answer
-    }
-
-    private fun hideEmptyResult() {
-
-    }
-
     override fun onSortOrderChanged(direction: UsernameSortOrderBy) {
         this.direction = direction
         searchContacts()
     }
 
     private fun searchContacts() {
-        //contactsAdapter.results = listOf()
-        //hideEmptyResult()
-        if (this::searchDashPayProfileRunnable.isInitialized) {
-            handler.removeCallbacks(searchDashPayProfileRunnable)
+        if (this::searchContactsRunnable.isInitialized) {
+            handler.removeCallbacks(searchContactsRunnable)
         }
 
-        searchDashPayProfileRunnable = Runnable {
+        searchContactsRunnable = Runnable {
             dashPayViewModel.searchContacts(query, direction)
         }
-        handler.postDelayed(searchDashPayProfileRunnable, 500)
+        handler.postDelayed(searchContactsRunnable, 500)
     }
 
     override fun afterTextChanged(s: Editable?) {
@@ -236,13 +207,12 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
         when {
             usernameSearchResult.isPendingRequest -> {
-                // TODO: show screen for the user has sent us a request
                 startActivity(DashPayUserActivity.createIntent(this,
                         usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = false,
                         contactRequestReceived = true))
+
             }
             !usernameSearchResult.isPendingRequest -> {
-                // TODO: show screen for the user that is our contact
                 // How do we handle if this activity was started from the Payments Screen?
                 startActivity(DashPayUserActivity.createIntent(this,
                         usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,

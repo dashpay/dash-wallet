@@ -155,7 +155,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
                 val dashPayProfile = if (profileDoc != null)
                     DashPayProfile.fromDocument(profileDoc, username)!!
-                else DashPayProfile.fromUsername(nameDoc.userId, username)
+                else DashPayProfile(nameDoc.userId, username)
 
                 usernameSearchResults.add(UsernameSearchResult(nameDoc.data["normalizedLabel"] as String,
                         dashPayProfile, toContact, fromContact))
@@ -371,8 +371,6 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     suspend fun createDashPayProfile(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter) {
         withContext(Dispatchers.IO) {
             val username = blockchainIdentity.currentUsername!!
-            if (blockchainIdentity.identity == null)
-                blockchainIdentity.recoverIdentity(blockchainIdentity.creditFundingTransaction!!)
             blockchainIdentity.registerProfile(username, "", "", keyParameter)
         }
     }
@@ -673,14 +671,14 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
             for (l in ourRequests) {
                 val r = Random().nextInt(100)
-                dashPayProfileDaoAsync.insert(DashPayProfile.fromUsername(l[1], l[0]))
+                dashPayProfileDaoAsync.insert(DashPayProfile(l[1], l[0]))
                 dashPayContactRequestDaoAsync.insert(
                         DashPayContactRequest(Entropy.generate(), userId, l[1], null, l[1].toByteArray(), 0, 0, (Date().time/* - 1000 * 60 * 60 * 24 * r*/).toDouble()/1000, false, 0))
             }
 
             for (l in theirRequests) {
                 val r = Random().nextInt(100)
-                dashPayProfileDaoAsync.insert(DashPayProfile.fromUsername(l[1], l[0]))
+                dashPayProfileDaoAsync.insert(DashPayProfile(l[1], l[0]))
                 dashPayContactRequestDaoAsync.insert(
                         DashPayContactRequest(Entropy.generate(), l[1], userId, null, l[1].toByteArray(), 0, 0, (Date().time/* - 1000 * 60 * 60 * 24 * r*/).toDouble()/1000, false, 0))
             }
