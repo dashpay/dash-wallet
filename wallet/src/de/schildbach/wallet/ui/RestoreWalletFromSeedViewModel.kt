@@ -21,9 +21,9 @@ import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.util.MnemonicCodeExt
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
-import org.bitcoinj.crypto.MnemonicCode
 import org.bitcoinj.crypto.MnemonicException
 import org.slf4j.LoggerFactory
 
@@ -38,9 +38,7 @@ class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewMode
 
     fun restoreWalletFromSeed(words: MutableList<String>) {
         try {
-            if(words.size != 12)
-                throw MnemonicException.MnemonicLengthException("Word list size must be 12")
-            MnemonicCode.INSTANCE.check(words)
+            MnemonicCodeExt.getInstance().check(walletApplication, words)
         } catch (x: MnemonicException) {
             log.info("problem restoring wallet from seed: ", x)
             showRestoreWalletFailureAction.call(x)
