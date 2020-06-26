@@ -15,23 +15,23 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.Process
 import com.google.common.base.Stopwatch
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainIdentityBaseData
-import de.schildbach.wallet.data.BlockchainIdentityData
-import de.schildbach.wallet.data.DashPayContactRequest
-import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet.data.UsernameSortOrderBy
+import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.ui.send.DeriveKeyTask
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
@@ -41,6 +41,7 @@ import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_SALT
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_STATUS
 import org.dashevo.dashpay.ContactRequests
 import org.dashevo.dashpay.Profiles
+import org.dashevo.dashpay.RetryDelayType
 import org.dashevo.dpp.document.Document
 import org.dashevo.dpp.identity.Identity
 import org.dashevo.dpp.identity.IdentityPublicKey
@@ -50,6 +51,9 @@ import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeoutException
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 class PlatformRepo(val walletApplication: WalletApplication) {
 
@@ -64,6 +68,12 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     private val dashPayProfileDaoAsync = AppDatabase.getAppDatabase().dashPayProfileDaoAsync()
     private val dashPayContactRequestDaoAsync = AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync()
 
+    private lateinit var blockchainIdentity: BlockchainIdentity
+    private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
+    private val backgroundHandler by lazy {
+        backgroundThread.start()
+        Handler(backgroundThread.looper)
+    }
 
     fun isPlatformAvailable(): Resource<Boolean> {
         // this checks only one random node, but should check several.
@@ -99,10 +109,10 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     suspend fun searchUsernames(text: String): Resource<List<UsernameSearchResult>> {
         return try {
             val wallet = walletApplication.wallet
-            val blockchainIdentity = blockchainIdentityDataDaoAsync.load()
+            val blockchainIdentityData = blockchainIdentityDataDaoAsync.load()!!
             //We don't check for nullity here because if it's null, it'll be thrown, captured below
             //and sent as a Resource.error
-            val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentity!!.creditFundingTxId))
+            val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentityData!!.creditFundingTxId))
             val userId = creditFundingTx.creditBurnIdentityIdentifier.toStringBase58()
             // Names.search does support retrieving 100 names at a time if retrieveAll = false
             //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
@@ -235,7 +245,62 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             }
             Resource.success(usernameSearchResults)
         } catch (e: Exception) {
-            Resource.error(e.localizedMessage, null)
+            var msg = if (e.localizedMessage != null) {
+                e.localizedMessage
+            } else {
+                e.message
+            }
+            if (msg == null) {
+                msg = "Unknown error"
+            }
+            Resource.error(msg, null)
+        }
+    }
+
+    /**
+     *  Wraps callbacks of DeriveKeyTask as Coroutine
+     */
+    private suspend fun deriveKey(handler: Handler, wallet: Wallet, password: String): KeyParameter {
+        return suspendCoroutine { continuation ->
+            object : DeriveKeyTask(handler, walletApplication.scryptIterationsTarget()) {
+
+                override fun onSuccess(encryptionKey: KeyParameter, wasChanged: Boolean) {
+                    continuation.resume(encryptionKey)
+                }
+
+                override fun onFailure(ex: KeyCrypterException?) {
+                    //CreateIdentityService.log.error("unable to decrypt wallet", ex)
+                    continuation.resumeWithException(ex as Throwable)
+                }
+
+            }.deriveKey(wallet, password)
+        }
+    }
+
+    suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): Resource<Nothing> {
+        return try {
+            val potentialContactIdentity = platform.identities.get(toUserId)
+            log.info("potential contact identity: $potentialContactIdentity")
+
+            //Load our own identity
+            val fromUserIdentityData = blockchainIdentityDataDaoAsync.load()!!
+            this.blockchainIdentity = initBlockchainIdentity(fromUserIdentityData,
+                    walletApplication.wallet)
+
+            //Create Contact Request
+            val contactRequests = ContactRequests(platform)
+            contactRequests.create(blockchainIdentity, potentialContactIdentity!!, encryptionKey)
+            log.info("contact request sent")
+
+            //Verify that the Contact Request was seen on the network
+            val cr = contactRequests.watchContactRequest(this.blockchainIdentity.uniqueIdString,
+                    toUserId, 100, 500, RetryDelayType.LINEAR)
+
+            log.info("contact request: $cr")
+            Resource.success(null)
+        } catch (e: Exception) {
+            log.error(e.localizedMessage)
+            Resource.error(e.localizedMessage)
         }
     }
 
@@ -277,7 +342,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     //
     suspend fun verifyIdentityRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
-            blockchainIdentity.watchIdentity(10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
+            blockchainIdentity.watchIdentity(10, 5000, RetryDelayType.SLOW20)
                     ?: throw TimeoutException("the identity was not found to be registered in the allotted amount of time")
         }
     }
@@ -308,7 +373,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         withContext(Dispatchers.IO) {
             val set = blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.PREORDER_REGISTRATION_PENDING)
             val saltedDomainHashes = blockchainIdentity.saltedDomainHashesForUsernames(set)
-            val (result, usernames) = blockchainIdentity.watchPreorder(saltedDomainHashes, 10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
+            val (result, usernames) = blockchainIdentity.watchPreorder(saltedDomainHashes, 10, 5000, RetryDelayType.SLOW20)
             if (!result) {
                 throw TimeoutException("the usernames: $usernames were not found to be preordered in the allotted amount of time")
             }
@@ -330,7 +395,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     //
     suspend fun isNameRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
-            val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.REGISTRATION_PENDING), 10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
+            val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.REGISTRATION_PENDING), 10, 5000, RetryDelayType.SLOW20)
             if (!result) {
                 throw TimeoutException("the usernames: $usernames were not found to be registered in the allotted amount of time")
             }
@@ -350,7 +415,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     //
     suspend fun verifyProfileCreatedAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
-            val profile = blockchainIdentity.watchProfile(10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
+            val profile = blockchainIdentity.watchProfile(10, 5000, RetryDelayType.SLOW20)
                     ?: throw TimeoutException("the profile was not found to be created in the allotted amount of time")
 
             val dashPayProfile = DashPayProfile.fromDocument(profile, blockchainIdentity.currentUsername!!)
@@ -358,7 +423,6 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             updateDashPayProfile(dashPayProfile!!)
         }
     }
-
 
     suspend fun loadBlockchainIdentityBaseData(): BlockchainIdentityBaseData? {
         return blockchainIdentityDataDaoAsync.loadBase()
@@ -372,6 +436,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         val creditFundingTransaction = blockchainIdentityData.findCreditFundingTransaction(wallet)
         if (creditFundingTransaction != null) {
             return BlockchainIdentity(Identity.IdentityType.USER, creditFundingTransaction, wallet).apply {
+                identity = platform.identities.get(uniqueIdString)
                 currentUsername = blockchainIdentityData.username
                 registrationStatus = blockchainIdentityData.registrationStatus!!
                 val usernameStatus = HashMap<String, Any>()
@@ -475,47 +540,23 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     }
 
     // contacts
-
     suspend fun updateContactRequests(userId: String) {
-
         val userIdList = HashSet<String>()
         val watch = Stopwatch.createStarted()
 
-        //TODO: remove this when removing the fake contact list
-        dashPayContactRequestDaoAsync.clear()
-        dashPayProfileDaoAsync.clear()
-
         try {
-
             // Get all out our contact requests
             val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
             toContactDocuments.forEach {
-                val toUserId = it.data["toUserId"] as String
-                userIdList.add(toUserId)
-                val privateData = if (it.data.containsKey("privateData"))
-                    HashUtils.byteArrayFromString(it.data["privateData"] as String)
-                else null
-                val contactRequest = DashPayContactRequest(it.entropy, it.userId, it.data["toUserId"] as String,
-                        privateData,
-                        HashUtils.byteArrayFromString(it.data["encryptedPublicKey"] as String),
-                        it.data["senderKeyIndex"] as Int,
-                        it.data["recipientKeyIndex"] as Int,
-                        it.data["timestamp"] as Double, false, 0)
+                val contactRequest = DashPayContactRequest.fromDocument(it)
+                userIdList.add(contactRequest.toUserId)
                 dashPayContactRequestDaoAsync.insert(contactRequest)
             }
             // Get all contact requests where toUserId == userId, the users who have added me
             val fromContactDocuments = ContactRequests(platform).get(userId, toUserId = true, retrieveAll = true)
             fromContactDocuments.forEach {
-                userIdList.add(it.userId)
-                val privateData = if (it.data.containsKey("privateData"))
-                    HashUtils.byteArrayFromString(it.data["privateData"] as String)
-                else null
-                val contactRequest = DashPayContactRequest(it.entropy, it.userId, it.data["toUserId"] as String,
-                        privateData,
-                        HashUtils.byteArrayFromString(it.data["encryptedPublicKey"] as String),
-                        it.data["senderKeyIndex"] as Int,
-                        it.data["recipientKeyIndex"] as Int,
-                        it.data["timestamp"] as Double, false, 0)
+                val contactRequest = DashPayContactRequest.fromDocument(it)
+                userIdList.add(contactRequest.userId)
                 dashPayContactRequestDaoAsync.insert(contactRequest)
             }
 
@@ -535,144 +576,6 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 val profile = DashPayProfile.fromDocument(profileDocument, username)
                 dashPayProfileDaoAsync.insert(profile!!)
             }
-
-            // lets add more data
-
-            val ourRequests = listOf(listOf("dashpayer", "FW2BGfVdTLgGWGkJRjC838MPpEcL2cSfkNkwao8ooxm5"),
-                    listOf("realdashpay", "CUH2fD5nf8Pm1G6rv3oj4ivFjLoPkzyEW8VMuNmJ27e2"),
-                    listOf("test10", "k6yBwjYdJkwDEY1yVC7ZzgTwA9CtPtBAcMFTHX7R53p"),
-                    listOf("5dfs", "5quW27UcW1kbMJR8s4qMrFX32sNuBQ4LxYjfuM1ECQP3"),
-                    listOf("dalek", "6pk9geGeDwvGwmFxEVHDSBd1dQhuhALp3pe3cpNKipBx"),
-                    listOf("rockstar", "7G3BeUyLcncJQaBgUn4k9t5WtH4DRbjDTHHyGpY1e1nm"),
-                    listOf("cyberman", "6hQvAB5fmk9S7SXA9NeMNRQNPkgnNtzweNKow26gqXCz"),
-                    listOf("cable", "2fXFCQrwhxSPZLrTxrsA9wfiH33Yr7EAbLZe2QceMBw7"),
-                    listOf("demouser11", "8UbMuDixbjCPz2wYWMwauDuNSTJRajHrQ1PjNSjabR7U"),
-                    listOf("dashdemo1", "EhezCM1jSkErP7xUzSZChjAfT9dBzGpVUCAPoiFE8FMX"),
-                    listOf("demodash1", "VrNsS7JPg8watdqu7iPrQrJqCm2EZgAMyKSqTcpSpXQ"),
-                    listOf("tomcat", "79rrczQfjkeFh6bYdnwJj6FpAsw7hvqgPweGwPHz98QR"),
-                    listOf("jerry", "Cfw2ATTFqPA86ryLepcZFD6cM1uP3G5FmNuUxqmNNeGE"),
-                    listOf("mikeeee4", "9UBX4QKREkmFJbZFD3taJr3cCHwMDvgZ5ToTTzFaYf3L"),
-                    listOf("shaggy", "DeEk46CZy27kCiPK52J8LbTAg6EiQiF6JJrVrhFn1i71"),
-                    listOf("scooby", "9fQhNtj3iUZjumT2VA3V8t88MwkNqSWcLUPfCLyBiiRK"),
-                    listOf("dashhelpline", "DXShMkwAp5Jvvx5KuAuv4spdxyVYpxh2LSRoSYMP4cao"),
-                    listOf("kpopstar", "7daTP2h8bGSe1YTp9rRy2JjYg4AZyenpLoUXHUpHKexi"),
-                    listOf("dashdemo3", "6vNR3edCoiKeYd4WVGVw567esopi1uVtKkFtNN4N9jEk"),
-                    listOf("dashdemo4", "DqYydjVXnxyPPrJULWwvxMNZJnB85MkVcGfSPp9CWrGS"),
-                    listOf("dashdemo4", "DqYydjVXnxyPPrJULWwvxMNZJnB85MkVcGfSPp9CWrGS"),
-                    listOf("eric10", "4WgYVkpHZraSmUWZqk2u5uyx3uwXUf9GaJ7BTij82pcv"),
-                    listOf("deathmetalstar", "Dxui3pnYYRCpNahx5UTHghWWn2LW4aUgaEnZ3UsDTGfB"),
-                    listOf("rapstar", "FYrjvdRcS2t3rqhK8o51xcdiXJSde85K8SmdL9pbuetD"),
-                    listOf("kelly", "9iLtJdDWAxkZ3QdX9PuMGtJKDdjGewoWM1fkb1nHNC1t"),
-                    listOf("kelly1", "2U3rT8XAMrwM7mmWTqb6hm7KvKE5x2dW3UgfFMLXqDMp"),
-                    listOf("kelly5", "Fuhw2gBvvmZ89TR3tpMbx5zSfxGe7ZDjLcvPs4QyPs33"),
-                    listOf("kelly6", "H9VzPiwgKu93v6fS6u1r11bLnLEYdfwtX6R4vBsZGa9x"),
-                    listOf("kelly7", "3qU6K65Hm2a8KhMHdBgRDTeXqNj96RPDAZFThWzXBc34"),
-                    listOf("samb", "HkxSLmmLGCTT1oVSdtzekG5DhJiZUfhVphkpA1S3yeRY"),
-                    listOf("samb1", "GivG6LETNmBECvtq2qnTpfDQb4PiXTRW8GvtPWCMht3K"),
-                    listOf("qwe1", "GEeqNGNi5uLk23F58QtQfX62X1b8Yv2iW9XJWbHs5MuY"),
-                    listOf("asd1", "HX9mLCxZ6LFvPy71pvzwymzWzu9KmThxeJ1VV2d1jtyo"),
-                    listOf("samb2", "D4MhE1HNhZexFswGK5zeceTRuk3rcSVKeTC9hMZ8x1NY"),
-                    listOf("popstar", "CdoB8VH3YwZBhVchEhhZzik4Chx61EtBDxh8qV1AWM9X"),
-                    listOf("rapstar1", "6vPVM3Dy1f6TKvoaFgZRUSLSQtUdJsqAEXuLShJJB9jz"),
-                    listOf("samb3", "5txbSagBKpArZwHorruZ61SEFvF6zsYYE1cZfJvtkEvV"),
-                    listOf("yw5", "6VKsEgnUtba6PMcRub8ydNrtZZE1bLzNHHDfRJmb5cUj"),
-                    listOf("ynb", "CsvgFtcSiC3yzPrW9txFa4bPfGKEdykMWMfuNZoSdXbu"),
-                    listOf("laforge", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
-                    listOf("crusher", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
-                    listOf("wesley", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
-                    listOf("locutus", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
-                    listOf("sydney", "7wtTHcTSSfF8zeua9tCTqgaa4yC5zwYB1QpBpkUTLn3u"),
-                    listOf("cooper", "2NS54HYRpNyM5p3sdwKt4bNUkQM2yCWbtDTiagw3XXVe"),
-                    listOf("tricia", "EAFFW5uvbVLNNXysSNCmQYrPJcMFoxjhMBD4bp5AcYrZ"),
-                    listOf("cookie", "HHgHazrgQBBA1qpgRXpRwkSLLj9nPezpSA2qvC7d4vMC"),
-                    listOf("hugh", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
-                    listOf("tomasz", "CvmhjWgDREb4qMGDUQRyZz3TEYLaf1dFnnxvcAqjVhSr")
-            )
-
-            val theirRequests = listOf(
-                    listOf("asd1", "HX9mLCxZ6LFvPy71pvzwymzWzu9KmThxeJ1VV2d1jtyo"),
-                    listOf("samb2", "D4MhE1HNhZexFswGK5zeceTRuk3rcSVKeTC9hMZ8x1NY"),
-                    listOf("popstar", "CdoB8VH3YwZBhVchEhhZzik4Chx61EtBDxh8qV1AWM9X"),
-                    listOf("rapstar1", "6vPVM3Dy1f6TKvoaFgZRUSLSQtUdJsqAEXuLShJJB9jz"),
-                    listOf("yw5", "6VKsEgnUtba6PMcRub8ydNrtZZE1bLzNHHDfRJmb5cUj"),
-                    listOf("ynb", "CsvgFtcSiC3yzPrW9txFa4bPfGKEdykMWMfuNZoSdXbu"),
-                    listOf("laforge", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
-                    listOf("crusher", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
-                    listOf("odo", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
-                    listOf("morn", "DJW7iaL8SxKWWepiBMU922sHbtPgCJtqocZeUgGDha6B"),
-                    listOf("bento", "4ZmGNg65BWbW2S471gEhxR3QTjT6ohnRM4Dz8iSSPFpw"),
-                    listOf("john420", "4TRcDT6rkBwEoNcHRZLTfVwX9zUCTk9iBreVrsttQ5dB"),
-                    listOf("john421", "9uJupoiiBRD8xmGDor6ZkMyqs6ANh7aaytyQauzH8BQy"),
-                    listOf("sambb8", "6HwNjBRfeLiz6onNBZKbuQ3BPVwgEqVaYTCGcataCTJX"),
-                    listOf("sambbb", "FXP8vfHYxjjbQ7o99Hio1gcRMAiXYuNcKP4c3mDjnqeq"),
-                    listOf("john422", "8EvPRm5idvVkdioWvT1m6eKwUoWxxCyQUAH2P8rysyxB"),
-                    listOf("tomasz", "CvmhjWgDREb4qMGDUQRyZz3TEYLaf1dFnnxvcAqjVhSr"),
-                    listOf("john443", "AHyrB7y3KAKKotUh1CtTnPzRH5Ac3hSUze3JNempjA2y"),
-                    listOf("ericthebowler", "7NYPJKDHxo6mwgsvRMDLHSVr5KkGWVVNMtRAr6XXCuWj"),
-                    listOf("username", "5nt3CMHZfTvdReAfdvc7QensZGD17R9VoCA62UVqbaed"),
-                    listOf("ericthejanitor", "39mm4r82cQgkXrmznn5bEAEgAaqww4HMk2fB34Ce5PzB"),
-                    listOf("ericthemanager", "3bj8YeYhfzgToYa2mmiz4rBckN16tjg3gGwsCzj7h5o4"),
-                    listOf("usernametomasz", "6kBLamnAgjT8hZbMoKRXhB9kyhHhJopbXhFk2NTGDcFv"),
-                    listOf("tomasz30", "FfZyLhF8NQjSGUteFHcz4bnhijpDY9ds89y6F7zyjpet"),
-                    listOf("samb001", "5ABfg81tMakD7vagnkCBjDpiajmfK2FVRajzm8NZnx9C"),
-                    listOf("ericthedoctor", "5UpPbXqU4P3Rfh1xDq9i7VEW6xb3pQUzjENeoH5hk6pJ"),
-                    listOf("erictheengineer", "APNJwjJgWNN7e7y6pgi1MdhG2kCbNAMqzUJ4ZPQNpyxJ"),
-                    listOf("samb002", "47uwukQwyTncmRzJxjMv4ctj5gXH8x4zci4bkaHmWHWC"),
-                    listOf("yahoo123", "BoxpvQxdBGaqaCS8zbLVJSeybXREvY8dckR2z4bs34LR"),
-                    listOf("brian", "6rNKpoi9CB9EbRr5eqjXZtyeCV7ASvNJRFkMGPT3uXbP"),
-                    listOf("coroutinetomasz", "2PiFtsgkQ34NahQtbGXoSQF91N9qryjQ21X9fQSoi8iV"),
-                    listOf("ironman", "CZjkem35rHnyMDUubELCZkSikD3g5oThTxjvX7uPkCZP"),
-                    listOf("samsbbq", "4EKMpjTCkdWpHtV76MMAEbrtkuSPDnjMBk5NAoVtTsoE"),
-                    listOf("briantheproductowner", "F1i9Cgju69hL2ZbfwoMowN7jxnht5ZA4BFnmbzU2X5mx"),
-                    listOf("sydney", "7wtTHcTSSfF8zeua9tCTqgaa4yC5zwYB1QpBpkUTLn3u"),
-                    listOf("cooper", "2NS54HYRpNyM5p3sdwKt4bNUkQM2yCWbtDTiagw3XXVe"),
-                    listOf("tricia", "EAFFW5uvbVLNNXysSNCmQYrPJcMFoxjhMBD4bp5AcYrZ"),
-                    listOf("cookie", "HHgHazrgQBBA1qpgRXpRwkSLLj9nPezpSA2qvC7d4vMC"),
-                    listOf("ericthetester", "CTme6NxrHk5apwK4oL8YkpFuDFGAEZnBxpEH8VvnuZLU"),
-                    listOf("tomhardy", "EC7XnT36mGxkL8eHGhaQqRqoMKbgU81HLC72xbC2zodq"),
-                    listOf("patrickstewart", "2SNALrffcea8b5nDRnrVpkJHceGfPs2c6rveCyB3YCDE"),
-                    listOf("minerforlife", "3in7MggSpWUcP1tEa7qvFyLAJVGg5AQF9udxBRGoJoaP"),
-                    listOf("sambarboza", "8N6hxeCxV9T2hvcV71ZCUZdA9cBZZVogNiYLefX4wgcG"),
-                    listOf("babyyoda", "A9kMxyQx65HeuNgigvsHZL3ez1fw6njsB56QtwNiQMM9"),
-                    listOf("kyloren", "4snmYHmK4qxDgaySi9SBnsgTFjUFgCrmDpKQWk5PxCwT"),
-                    listOf("kyle", "ELasJfWo9uPCkpqjr6k2ycnqY7wWsEQGgktGiFfhxRpN"),
-                    listOf("luciusmalfoy", "6psoTRU6WYXNTFD4BpqHHL7D9XubGou34BtcpAT1g1Wu"),
-                    listOf("hagrid", "9JFyW6zhNzRSuQbHmQ71k4YMyE339XEdetKjWPK13Aof")
-            )
-
-            for (l in ourRequests) {
-                dashPayProfileDaoAsync.insert(DashPayProfile(l[1], l[0]))
-                dashPayContactRequestDaoAsync.insert(
-                        DashPayContactRequest(Entropy.generate(), userId, l[1], null, l[1].toByteArray(), 0, 0, 0.0, false, 0))
-            }
-
-            for (l in theirRequests) {
-                dashPayProfileDaoAsync.insert(DashPayProfile(l[1], l[0]))
-                dashPayContactRequestDaoAsync.insert(
-                        DashPayContactRequest(Entropy.generate(), l[1], userId, null, l[1].toByteArray(), 0, 0, 0.0, false, 0))
-            }
-
-            var names = listOf("Lizet Michaelson", "Rachel Sanderson", "Tamanna Smith", "Tammy Oceanography", "Alfred Pennyworth", "Serena Kyle", "Batman", "Capt Kirk", "Spock", "", "Deanna Troi", "Neelix", "Zephrane Cochrane", "The Tenth Doctor was the Best Doctor, Martha was the best!")
-            var usernames = listOf("lizet1993", "rachel4ski", "tsmith", "marinebio", "thebutler", "catwoman", "brucewayne", "jtkirk", "spock", "amanda", "dtroi", "nelix", "warpspeed", "drwho")
-            for (i in names.indices) {
-                val thisUserId = Sha256Hash.of(names[i].toByteArray()).toStringBase58()
-                dashPayProfileDaoAsync.insert(DashPayProfile(thisUserId, usernames[i], names[i], "", ""))
-                dashPayContactRequestDaoAsync.insert(
-                        DashPayContactRequest(Entropy.generate(), userId, thisUserId, null, names[0].toByteArray(), 0, 0, 0.0, false, 0))
-                dashPayContactRequestDaoAsync.insert(
-                        DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0, 0.0, false, 0))
-
-            }
-
-            names = listOf("Q (The Original)", "Thomas Riker", "Geordi La Forge", "Beverly Crusher", "Capt. Picard")
-            usernames = listOf("qcontinuum", "triker", "laforge", "crusher", "jlpicard")
-            for (i in names.indices) {
-                val thisUserId = Sha256Hash.of(names[i].toByteArray()).toStringBase58()
-                dashPayProfileDaoAsync.insert(DashPayProfile(thisUserId, usernames[i], names[i], "", ""))
-                dashPayContactRequestDaoAsync.insert(
-                        DashPayContactRequest(Entropy.generate(), thisUserId, userId, null, names[0].toByteArray(), 0, 0, 0.0, false, 0))
-            }
-
             log.info("updating contacts and profiles took $watch")
         } catch (e: Exception) {
             log.error("error updating contacts: ${e.message}")
