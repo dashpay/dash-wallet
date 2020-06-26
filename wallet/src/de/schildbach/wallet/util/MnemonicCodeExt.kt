@@ -83,6 +83,7 @@ class MnemonicCodeExt(wordstream: InputStream, wordListDigest: String?) : Mnemon
                 mnemonicCode.check(words)
                 saveWordlistPath(context, wordlistPath)
                 INSTANCE = mnemonicCode
+                break
             } catch (x: MnemonicException) {
                 if (wordlistFileName == wordlistFiles.last()) {
                     // re-throw the original exception if checking failed for wordlists in all languages
