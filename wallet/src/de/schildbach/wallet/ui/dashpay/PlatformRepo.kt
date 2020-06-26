@@ -246,7 +246,15 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             }
             Resource.success(usernameSearchResults)
         } catch (e: Exception) {
-            Resource.error(e.localizedMessage, null)
+            var msg = if (e.localizedMessage != null) {
+                e.localizedMessage
+            } else {
+                e.message
+            }
+            if (msg == null) {
+                msg = "Unknown error"
+            }
+            Resource.error(msg, null)
         }
     }
 
@@ -270,27 +278,29 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
-    suspend fun sendContactRequest(userId: String, encryptionKey: KeyParameter): Resource<Nothing> {
+    suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): Resource<Nothing> {
         return try {
-            val identity = platform.identities.get(userId)
-            println("identity: $identity")
-            val blockchainIdentityData = blockchainIdentityDataDaoAsync.load()!!
-            this.blockchainIdentity = initBlockchainIdentity(blockchainIdentityData,
+            val potentialContactIdentity = platform.identities.get(toUserId)
+            log.info("potential contact identity: $potentialContactIdentity")
+
+            //Load our own identity
+            val fromUserIdentityData = blockchainIdentityDataDaoAsync.load()!!
+            this.blockchainIdentity = initBlockchainIdentity(fromUserIdentityData,
                     walletApplication.wallet)
 
-            val userId = this.blockchainIdentity.watchIdentity(3, 500, RetryDelayType.SLOW20)
-            if (userId != null) {
-                val contactRequests = ContactRequests(platform)
-                contactRequests.create(blockchainIdentity, identity!!, encryptionKey)
-                println("contact request sent")
-                val cr = contactRequests.watchContactRequest(this.blockchainIdentity.uniqueIdString, userId, 100, 500, RetryDelayType.LINEAR)
-                println("contact request: $cr")
+            //Create Contact Request
+            val contactRequests = ContactRequests(platform)
+            contactRequests.create(blockchainIdentity, potentialContactIdentity!!, encryptionKey)
+            log.info("contact request sent")
 
-                Resource.success(null)
-            } else {
-                Resource.error("failed to get contact identity")
-            }
+            //Verify that the Contact Request was seen on the network
+            val cr = contactRequests.watchContactRequest(this.blockchainIdentity.uniqueIdString,
+                    toUserId, 100, 500, RetryDelayType.LINEAR)
+
+            log.info("contact request: $cr")
+            Resource.success(null)
         } catch (e: Exception) {
+            log.error(e.localizedMessage)
             Resource.error(e.localizedMessage)
         }
     }
@@ -427,6 +437,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         val creditFundingTransaction = blockchainIdentityData.findCreditFundingTransaction(wallet)
         if (creditFundingTransaction != null) {
             return BlockchainIdentity(Identity.IdentityType.USER, creditFundingTransaction, wallet).apply {
+                identity = platform.identities.get(uniqueIdString)
                 currentUsername = blockchainIdentityData.username
                 registrationStatus = blockchainIdentityData.registrationStatus!!
                 val usernameStatus = HashMap<String, Any>()
