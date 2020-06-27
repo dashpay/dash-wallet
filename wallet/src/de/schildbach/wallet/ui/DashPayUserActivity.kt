@@ -21,14 +21,21 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_dashpay_user.*
 import org.dash.wallet.common.InteractionAwareActivity
 
 class DashPayUserActivity : InteractionAwareActivity() {
 
+    private lateinit var dashPayViewModel: DashPayViewModel
     private val username by lazy { intent.getStringExtra(USERNAME) }
     private val profile: DashPayProfile by lazy { intent.getParcelableExtra(PROFILE) as DashPayProfile }
     private val displayName by lazy { profile.displayName }
@@ -71,6 +78,35 @@ class DashPayUserActivity : InteractionAwareActivity() {
             displayNameTxt.text = username
         }
         updateContactRelationUi()
+
+        dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
+
+        sendContactRequestBtn.setOnClickListener { sendContactRequest(profile.userId) }
+        accept.setOnClickListener { sendContactRequest(profile.userId) }
+
+        val context = this
+        dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<Nothing>>{
+            override fun onChanged(it: Resource<Nothing>?) {
+                if (it != null) {
+                    when (it.status) {
+                        Status.LOADING -> Toast.makeText(context,
+                                "Sending contact request...", Toast.LENGTH_SHORT).show()
+                        Status.ERROR ->
+                            Toast.makeText(context, "!!Error!!", Toast.LENGTH_SHORT).show()
+                        Status.SUCCESS -> {
+                            Toast.makeText(context,
+                                    "Contact request sent and verified on the network!",
+                                    Toast.LENGTH_SHORT).show()
+                            dashPayViewModel.getContactRequestLiveData.removeObserver(this)
+                        }
+                    }
+                }
+            }
+        })
+    }
+
+    private fun sendContactRequest(userId: String) {
+        dashPayViewModel.sendContactRequest(userId)
     }
 
     private fun updateContactRelationUi() {

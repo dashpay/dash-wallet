@@ -282,7 +282,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
                     Toast.makeText(getContext(), blockchainIdentityData.getCreationStateErrorMessage(), Toast.LENGTH_LONG).show();
                 }
             } else if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DONE) {
-                startActivity(CreateUsernameActivity.createIntent(activity, blockchainIdentityData.getUsername()));
+                //startActivity(CreateUsernameActivity.createIntent(activity, blockchainIdentityData.getUsername()));
+                startActivity(new Intent(activity, SearchUserActivity.class));
             }
         }
     }
