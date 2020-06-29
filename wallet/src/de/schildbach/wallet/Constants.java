@@ -268,7 +268,7 @@ public final class Constants {
     private static final Logger log = LoggerFactory.getLogger(Constants.class);
 
     //Dash Specific
-    public static long EARLIEST_HD_SEED_CREATION_TIME = 1585699200L;    //TODO change me back to 1427610960L when testing is done
+    public static long EARLIEST_HD_SEED_CREATION_TIME = 1427610960L;
 
     public static String WALLET_URI_SCHEME = "dashwallet";
 
