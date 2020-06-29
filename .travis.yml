@@ -87,12 +87,10 @@ deploy:
   # deploy feature branch if tagged
   - provider: script
     script: bash .deploy/deploy.sh feature
-    skip_cleanup: true
     on:
       tags: true
     # deploy master
   - provider: script
     script: bash .deploy/deploy.sh master
-    skip_cleanup: true
     on:
       branch: master
