@@ -20,7 +20,7 @@ import java.math.BigInteger
 import java.util.*
 import kotlin.math.max
 
-class NotificationsAdapter : RecyclerView.Adapter<NotificationsAdapter.ViewHolder>() {
+class NotificationsAdapter(val listener: Listener) : RecyclerView.Adapter<NotificationsAdapter.ViewHolder>() {
 
     companion object {
         const val NOTIFICATION_NEW_HEADER = 4
@@ -216,13 +216,12 @@ class NotificationsAdapter : RecyclerView.Adapter<NotificationsAdapter.ViewHolde
                 accept_contact_request.setOnClickListener {
                     //TODO: this contact request should be accepted
                     //This code is temporary to test the change in the view
-                    usernameSearchResult.toContactRequest = DashPayContactRequest(Entropy.generate(), usernameSearchResult.fromContactRequest!!.toUserId,
-                            usernameSearchResult.fromContactRequest!!.userId, null, Entropy.generate().toByteArray(), 0, 0, (Date().time/1000).toDouble(), false, 0 )
-                    notifyItemChanged(adapterPosition)
+                    listener.onAcceptRequest(usernameSearchResult, adapterPosition)
                 }
 
                 hide_contract_request.setOnClickListener {
                     //TODO: this contact request should be hidden
+                    listener.onIgnoreRequest(usernameSearchResult, adapterPosition)
                 }
             }
         }
@@ -253,7 +252,7 @@ class NotificationsAdapter : RecyclerView.Adapter<NotificationsAdapter.ViewHolde
     }
 
     interface Listener {
-        fun onAcceptRequest(usernameSearchResult: UsernameSearchResult)
-        fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult)
+        fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int)
+        fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int)
     }
 }

@@ -28,14 +28,17 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.Window
+import android.widget.Toast
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.DashPayContactRequest
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
+import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.GlobalFooterActivity
@@ -72,6 +75,7 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
     private var blockchainIdentityId: String? = null
     private var direction = UsernameSortOrderBy.USERNAME
     private var mode = MODE_SEARCH_CONTACTS
+    private var currentPosition = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -133,6 +137,47 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
                 val tx = walletApplication.wallet.getTransaction(it.creditFundingTxId)
                 val cftx = walletApplication.wallet.getCreditFundingTransaction(tx)
                 blockchainIdentityId = cftx.creditBurnIdentityIdentifier.toStringBase58()
+            }
+        })
+
+        val context = this
+        dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>>{
+            override fun onChanged(it: Resource<DashPayContactRequest>?) {
+                if (it != null && currentPosition != -1) {
+                    when (it.status) {
+                        Status.LOADING -> Toast.makeText(context,
+                                "Sending contact request...", Toast.LENGTH_SHORT).show()
+                        Status.ERROR ->
+                            Toast.makeText(context, "!!Error!! ${it.exception!!.message}", Toast.LENGTH_SHORT).show()
+                        Status.SUCCESS -> {
+                            Toast.makeText(context,
+                                    "Contact request accepted and verified on the network!",
+                                    Toast.LENGTH_SHORT).show()
+                            // update the data
+                            contactsAdapter.results[currentPosition].usernameSearchResult!!.toContactRequest = it.data!!
+                            when (mode) {
+                                MODE_VIEW_REQUESTS -> {
+                                    contactsAdapter.results.removeAt(currentPosition)
+                                    contactsAdapter.notifyItemRemoved(currentPosition)
+                                }
+                                MODE_SEARCH_CONTACTS -> {
+                                    // instead of removing the contact request and add a contact
+                                    // just reload all the items
+                                    searchContacts()
+                                }
+                                MODE_SELECT_CONTACT -> {
+                                    // will there be contact requests in this mode?
+                                }
+                                else -> {
+                                    throw IllegalStateException("invalid mode for ContactsActivity")
+                                }
+                            }
+
+                            currentPosition = -1
+
+                        }
+                    }
+                }
             }
         })
     }
@@ -241,5 +286,15 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
 
     override fun onViewAllRequests() {
         startActivity(ContactsActivity.createIntent(this, ContactsActivity.MODE_VIEW_REQUESTS))
+    }
+
+    override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+        if (currentPosition == -1) {
+            currentPosition = position
+            dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
+        }
+    }
+
+    override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
     }
 }

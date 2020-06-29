@@ -26,6 +26,7 @@ import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.send.DeriveKeyTask
+import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
@@ -86,11 +87,18 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         // it is possible that some nodes are not available due to location,
         // firewalls or other reasons
         return try {
+            //TODO: something is wrong with getStatus() or the nodes only return success about 10-20% of time
             val response = platform.client.getStatus()
             Resource.success(response!!.connections > 0 && response.errors.isBlank() &&
                     Constants.NETWORK_PARAMETERS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM) >= response.protocolVersion)
         } catch (e: Exception) {
-            Resource.error(e.localizedMessage, null)
+            try {
+                // use getBlockByHeight instead of getStatus in case of failure
+                platform.client.getBlockByHeight(100)
+                Resource.success(true)
+            } catch (e: Exception) {
+                Resource.error(e.localizedMessage, null)
+            }
         }
     }
 
@@ -261,16 +269,26 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             }
             Resource.success(usernameSearchResults)
         } catch (e: Exception) {
-            var msg = if (e.localizedMessage != null) {
-                e.localizedMessage
-            } else {
-                e.message
-            }
-            if (msg == null) {
-                msg = "Unknown error"
-            }
+            var msg = handleException("search contact request", e)
             Resource.error(msg, null)
         }
+    }
+
+    private fun handleException(description: String, e: Exception): String {
+        var msg = if (e.localizedMessage != null) {
+            e.localizedMessage
+        } else {
+            e.message
+        }
+        if (msg == null) {
+            msg = "Unknown error"
+        }
+        log.error("$description: $msg")
+        if (e is StatusRuntimeException) {
+            log.error("---> ${e.trailers}")
+            e.printStackTrace()
+        }
+        return msg
     }
 
     suspend fun getNotificationCount(date: Long): Int {
@@ -306,7 +324,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
-    suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): Resource<Nothing> {
+    suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): Resource<DashPayContactRequest> {
         return try {
             val potentialContactIdentity = platform.identities.get(toUserId)
             log.info("potential contact identity: $potentialContactIdentity")
@@ -326,7 +344,9 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                     toUserId, 100, 500, RetryDelayType.LINEAR)
 
             log.info("contact request: $cr")
-            Resource.success(null)
+            val dashPayContactRequest = DashPayContactRequest.fromDocument(cr!!)
+            updateDashPayContactRequest(dashPayContactRequest) //update the database since the cr was accepted
+            Resource.success(dashPayContactRequest)
         } catch (e: Exception) {
             log.error(e.localizedMessage)
             Resource.error(e.localizedMessage)
@@ -535,6 +555,10 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
     private suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile) {
         dashPayProfileDaoAsync.insert(dashPayProfile)
+    }
+
+    private suspend fun updateDashPayContactRequest(dashPayContactRequest: DashPayContactRequest) {
+        dashPayContactRequestDaoAsync.insert(dashPayContactRequest)
     }
 
     suspend fun doneAndDismiss() {

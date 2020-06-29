@@ -56,7 +56,7 @@ class ContactSearchResultsAdapter(private val listener: Listener) : RecyclerView
         setHasStableIds(true)
     }
     var itemClickListener: OnItemClickListener? = null
-    var results: List<ViewItem> = arrayListOf()
+    var results: ArrayList<ViewItem> = arrayListOf()
         set(value) {
             field = value
             notifyDataSetChanged()
@@ -170,10 +170,12 @@ class ContactSearchResultsAdapter(private val listener: Listener) : RecyclerView
             itemView.apply {
                 accept_contact_request.setOnClickListener {
                     //TODO: this contact request should be accepted
+                    listener.onAcceptRequest(usernameSearchResult, adapterPosition)
                 }
 
                 hide_contract_request.setOnClickListener {
                     //TODO: this contact request should be hidden
+                    listener.onIgnoreRequest(usernameSearchResult, adapterPosition)
                 }
             }
         }
@@ -234,6 +236,8 @@ class ContactSearchResultsAdapter(private val listener: Listener) : RecyclerView
     interface Listener {
         fun onSortOrderChanged(direction: UsernameSortOrderBy)
         fun onViewAllRequests()
+        fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int)
+        fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int)
     }
 
     fun searchContacts(direction: UsernameSortOrderBy) {
