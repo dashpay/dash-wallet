@@ -91,12 +91,17 @@ class DashPayUserActivity : InteractionAwareActivity() {
                     when (it.status) {
                         Status.LOADING -> Toast.makeText(context,
                                 "Sending contact request...", Toast.LENGTH_SHORT).show()
-                        Status.ERROR ->
-                            Toast.makeText(context, "!!Error!!", Toast.LENGTH_SHORT).show()
+                        Status.ERROR -> {
+                            var msg = it.message
+                            if (msg == null) {
+                                msg = "!!Error!!"
+                            }
+                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                        }
                         Status.SUCCESS -> {
                             Toast.makeText(context,
                                     "Contact request sent and verified on the network!",
-                                    Toast.LENGTH_SHORT).show()
+                                    Toast.LENGTH_LONG).show()
                             dashPayViewModel.getContactRequestLiveData.removeObserver(this)
                         }
                     }
