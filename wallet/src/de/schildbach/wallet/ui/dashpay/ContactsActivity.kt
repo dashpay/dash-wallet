@@ -240,6 +240,6 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
     }
 
     override fun onViewAllRequests() {
-        startActivity(ContactsActivity.createIntent(this, ContactsActivity.MODE_VIEW_REQUESTS))
+        startActivity(createIntent(this, MODE_VIEW_REQUESTS))
     }
 }
