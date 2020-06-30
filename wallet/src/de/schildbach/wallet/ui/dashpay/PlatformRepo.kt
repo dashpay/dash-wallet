@@ -285,6 +285,11 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     }
 
     suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): Resource<Nothing> {
+        //TODO: This can be removed after DashPay Contract is updated. For now it requires
+        //the toUserId field to have 44 characters, however, some userIds starting at 0 will have Base58[43]
+        if (toUserId.length != 44) {
+            return Resource.error("This user doesn't meet the requirements to receive a contact request")
+        }
         return try {
             val potentialContactIdentity = platform.identities.get(toUserId)
             log.info("potential contact identity: $potentialContactIdentity")
