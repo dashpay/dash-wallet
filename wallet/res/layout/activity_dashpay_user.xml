@@ -67,12 +67,15 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/usernameContainer" />
 
-    <Button
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/sendContactRequestBtn"
-        style="@style/DashButton.Blue"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="40dp"
+        android:layout_marginStart="32dp"
         android:layout_marginTop="43dp"
+        android:layout_marginEnd="32dp"
+        android:background="@drawable/blue_button_background"
+        android:drawableStart="@drawable/ic_add_contact"
         android:paddingStart="26dp"
         android:paddingEnd="26dp"
         android:text="@string/send_contact_request"
@@ -80,8 +83,32 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/usernameContainer"
-        tools:alpha="0.5"
-        tools:visibility="visible" />
+        tools:visibility="visible">
+
+        <TextView
+            android:id="@+id/send_contact_request_text"
+            style="@style/MontserratMedium"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:gravity="center"
+            android:text="@string/send_contact_request"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            android:layout_marginEnd="16dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/send_contact_request_text"
+            android:layout_width="24dp"
+            android:layout_height="wrap_content"
+            app:srcCompat="@drawable/ic_add_contact_white" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <Button
         android:id="@+id/payContactBtn"
@@ -99,7 +126,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/usernameContainer"
         tools:alpha="0.5"
-        tools:visibility="visible" />
+        tools:visibility="gone" />
 
     <TextView
         android:id="@+id/contactRequestSentTxt"
@@ -122,7 +149,8 @@
         android:layout_height="wrap_content"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/payContactBtn">
+        app:layout_constraintTop_toBottomOf="@id/payContactBtn"
+        tools:visibility="gone">
 
         <TextView
             android:id="@+id/requestTitle"
