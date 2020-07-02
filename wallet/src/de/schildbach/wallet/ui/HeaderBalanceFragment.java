@@ -18,25 +18,24 @@ package de.schildbach.wallet.ui;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.graphics.Color;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
-
-import com.amulyakhare.textdrawable.TextDrawable;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.Fiat;
@@ -53,11 +52,14 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.BlockchainIdentityBaseData;
 import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.data.BlockchainState;
+import de.schildbach.wallet.data.DashPayContactRequest;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
+import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
+import de.schildbach.wallet.ui.dashpay.NotificationsActivity;
 import de.schildbach.wallet_test.R;
 
-public final class HeaderBalanceFragment extends Fragment {
+public final class HeaderBalanceFragment extends Fragment implements SharedPreferences.OnSharedPreferenceChangeListener {
 
     private WalletApplication application;
     private AbstractBindServiceActivity activity;
@@ -72,6 +74,8 @@ public final class HeaderBalanceFragment extends Fragment {
     private View view;
     private CurrencyTextView viewBalanceDash;
     private CurrencyTextView viewBalanceLocal;
+    private TextView notifications;
+    private ImageButton notificationBell;
 
     private boolean showLocalBalance;
 
@@ -89,6 +93,9 @@ public final class HeaderBalanceFragment extends Fragment {
 
     private Handler autoLockHandler = new Handler();
     private BlockchainState blockchainState;
+    private String username;
+    private int notificationCount;
+    private DashPayViewModel dashPayViewModel;
 
     @Override
     public void onAttach(final Activity activity) {
@@ -139,6 +146,23 @@ public final class HeaderBalanceFragment extends Fragment {
             }
         });
 
+        notifications = view.findViewById(R.id.notifications);
+        notificationBell = view.findViewById(R.id.notification_bell);
+
+        notifications.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(NotificationsActivity.Companion.createIntent(getContext(), NotificationsActivity.MODE_NOTIFICATIONS));
+            }
+        });
+
+        notificationBell.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(NotificationsActivity.Companion.createIntent(getContext(), NotificationsActivity.MODE_NOTIFICATIONS));
+            }
+        });
+
         AppDatabase.getAppDatabase().blockchainStateDao().load().observe(getViewLifecycleOwner(), new Observer<de.schildbach.wallet.data.BlockchainState>() {
             @Override
             public void onChanged(de.schildbach.wallet.data.BlockchainState blockchainState) {
@@ -152,12 +176,35 @@ public final class HeaderBalanceFragment extends Fragment {
             public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
                 if (blockchainIdentityData != null
                         && blockchainIdentityData.getCreationState().ordinal() >= BlockchainIdentityData.CreationState.DONE.ordinal()) {
-                    setDefaultUserAvatar(blockchainIdentityData.getUsername().toUpperCase());
+                    username = blockchainIdentityData.getUsername();
                 } else {
-                    setDefaultUserAvatar(null);
+                    username = null;
+                }
+                updateView();
+            }
+        });
+
+        AppDatabase.getAppDatabase().dashPayContactRequestDao().loadAll().observe(getViewLifecycleOwner(), new Observer<DashPayContactRequest>() {
+            @Override
+            public void onChanged(DashPayContactRequest dashPayContactRequest) {
+                if (dashPayContactRequest != null) {
+                    dashPayViewModel.getNotificationCount(config.getLastSeenNotificationTime());
+                }
+                updateView();
+            }
+        });
+
+        dashPayViewModel = new ViewModelProvider(this).get(DashPayViewModel.class);
+        dashPayViewModel.getGetNotificationCountLiveData().observe(getViewLifecycleOwner(), new Observer<Object>() {
+            @Override
+            public void onChanged(Object o) {
+                if (o instanceof Integer) {
+                    notificationCount = (Integer)o;
+                    updateView();
                 }
             }
         });
+        updateView();
     }
 
     @Override
@@ -176,9 +223,13 @@ public final class HeaderBalanceFragment extends Fragment {
                     }
                 });
 
+        if (username != null)
+            dashPayViewModel.getNotificationCount(config.getLastSeenNotificationTime());
+
         if (config.getHideBalance()) {
             hideBalance = true;
         }
+        config.registerOnSharedPreferenceChangeListener(this);
 
         updateView();
     }
@@ -189,6 +240,8 @@ public final class HeaderBalanceFragment extends Fragment {
         loaderManager.destroyLoader(ID_BALANCE_LOADER);
 
         autoLockHandler.removeCallbacksAndMessages(null);
+        config.unregisterOnSharedPreferenceChangeListener(this);
+
         super.onPause();
     }
 
@@ -204,9 +257,25 @@ public final class HeaderBalanceFragment extends Fragment {
                 letters.charAt(0)));
     }
 
+    private void setNotificationCount(Integer count) {
+        if (username == null) {
+            notifications.setVisibility(View.GONE);
+            notificationBell.setVisibility(View.GONE);
+        } else if(count > 0) {
+            notifications.setText(count.toString());
+            notifications.setVisibility(View.VISIBLE);
+            notificationBell.setVisibility(View.GONE);
+        } else if (count == 0) {
+            notifications.setVisibility(View.GONE);
+            notificationBell.setVisibility(View.VISIBLE);
+        }
+    }
+
     private void updateView() {
         View balances = view.findViewById(R.id.balances_layout);
         TextView walletBalanceSyncMessage = view.findViewById(R.id.wallet_balance_sync_message);
+        setDefaultUserAvatar(username);
+        setNotificationCount(notificationCount);
 
         if (hideBalance) {
             caption.setText(R.string.home_balance_hidden);
@@ -284,4 +353,11 @@ public final class HeaderBalanceFragment extends Fragment {
         public void onLoaderReset(@NonNull final Loader<Coin> loader) {
         }
     };
+
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        if (Configuration.PREFS_LAST_SEEN_NOTIFICATION_TIME.equals(key)) {
+            dashPayViewModel.getNotificationCount(config.getLastSeenNotificationTime());
+        }
+    }
 }

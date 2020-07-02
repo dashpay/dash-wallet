@@ -99,6 +99,8 @@ import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -185,6 +187,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     //DashPay related fields
     private BlockchainIdentityData blockchainIdentityData;
+    public long timeInterval = DateUtils.SECOND_IN_MILLIS * 15;
+    private static Timer dashPayUpdateTimer = new Timer();
 
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
@@ -787,7 +791,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         application.getWallet().addCoinsReceivedEventListener(Threading.SAME_THREAD, walletEventListener);
         application.getWallet().addCoinsSentEventListener(Threading.SAME_THREAD, walletEventListener);
         application.getWallet().addChangeEventListener(Threading.SAME_THREAD, walletEventListener);
-        blockChain.addNewBestBlockListener(newBestBlockListener);
 
         registerReceiver(tickReceiver, new IntentFilter(Intent.ACTION_TIME_TICK));
 
@@ -868,6 +871,17 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     tx.getConfidence().setPeerInfo(0, 1);
                 }
             }
+
+            log.info("timer starting for updating dashpay");
+            if (dashPayUpdateTimer == null) {
+                dashPayUpdateTimer = new Timer();
+            }
+            dashPayUpdateTimer.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    updateDashPayState();
+                }
+            }, 5000, timeInterval);
         } else {
             log.warn("service restart, although it was started as non-sticky");
         }
@@ -893,7 +907,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         application.getWallet().removeChangeEventListener(walletEventListener);
         application.getWallet().removeCoinsSentEventListener(walletEventListener);
         application.getWallet().removeCoinsReceivedEventListener(walletEventListener);
-        blockChain.removeNewBestBlockListener(newBestBlockListener);
 
         unregisterReceiver(connectivityReceiver);
 
@@ -922,8 +935,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         //Dash Specific
 
-        //Constants.NETWORK_PARAMETERS.masternodeDB.write(Constants.NETWORK_PARAMETERS.masternodeManager);
-        //application.saveMasternodes();
+        if (dashPayUpdateTimer != null) {
+            log.info("Stopping DashPay Update Timer");
+            dashPayUpdateTimer.cancel();
+            dashPayUpdateTimer = null;
+        }
 
         //Dash Specific
 
@@ -1047,6 +1063,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     String userId = blockchainIdentityData.getIdentity(application.getWallet());
                     if (userId != null ) {
                         updatingDashPayState = true;
+                        log.info("Updating DashPay State");
                         new PlatformRepo(application).updateContactRequests(userId, new Continuation<Unit>() {
                             @Override
                             public void resumeWith(@NotNull Object o) {
@@ -1131,11 +1148,4 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private void updateAppWidget() {
         WalletBalanceWidgetProvider.updateWidgets(BlockchainServiceImpl.this, application.getWallet());
     }
-
-    NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
-        @Override
-        public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
-            updateDashPayState();
-        }
-    };
 }

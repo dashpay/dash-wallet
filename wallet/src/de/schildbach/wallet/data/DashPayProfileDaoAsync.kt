@@ -13,6 +13,9 @@ interface DashPayProfileDaoAsync {
     @Query("SELECT * FROM dashpay_profile WHERE userId = :userId")
     suspend fun load(userId: String): DashPayProfile?
 
+    @Query("SELECT * FROM dashpay_profile")
+    suspend fun loadAll(): List<DashPayProfile>
+
     @Query("DELETE FROM dashpay_profile")
     suspend fun clear()
 }

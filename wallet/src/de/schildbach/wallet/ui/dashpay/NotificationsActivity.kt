@@ -14,20 +14,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package de.schildbach.wallet.ui.dashpay
 
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.Menu
+import android.text.format.DateUtils
 import android.view.MenuItem
 import android.view.View
-import android.view.Window
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -39,25 +36,28 @@ import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.GlobalFooterActivity
-import de.schildbach.wallet.ui.SearchUserActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_contacts.*
+import org.slf4j.LoggerFactory
+import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.math.max
 
-
-class ContactsActivity : GlobalFooterActivity(), TextWatcher,
-        ContactSearchResultsAdapter.Listener,
-        ContactSearchResultsAdapter.OnItemClickListener {
+class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
+        NotificationsAdapter.OnItemClickListener {
 
     companion object {
+        private val log = LoggerFactory.getLogger(NotificationsAdapter::class.java)
+
         private const val EXTRA_MODE = "extra_mode"
 
-        const val MODE_SEARCH_CONTACTS = 0
-        const val MODE_SELECT_CONTACT = 1
-        const val MODE_VIEW_REQUESTS = 2
+        const val MODE_NOTIFICATIONS = 0x02
+        const val MODE_NOTIFICATIONS_GLOBAL_FOOTER = 0x04
+        const val MODE_NOTIFICATIONS_SEARCH = 0x01
 
         @JvmStatic
-        fun createIntent(context: Context, mode: Int): Intent {
-            val intent = Intent(context, ContactsActivity::class.java)
+        fun createIntent(context: Context, mode: Int = MODE_NOTIFICATIONS): Intent {
+            val intent = Intent(context, NotificationsActivity::class.java)
             intent.putExtra(EXTRA_MODE, mode)
             return intent
         }
@@ -67,26 +67,28 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
     private lateinit var walletApplication: WalletApplication
     private var handler: Handler = Handler()
     private lateinit var searchContactsRunnable: Runnable
-    private val contactsAdapter: ContactSearchResultsAdapter = ContactSearchResultsAdapter(this)
+    protected val notificationsAdapter: NotificationsAdapter = NotificationsAdapter()
     private var query = ""
     private var blockchainIdentityId: String? = null
-    private var direction = UsernameSortOrderBy.USERNAME
-    private var mode = MODE_SEARCH_CONTACTS
+    private var direction = UsernameSortOrderBy.DATE_ADDED
+    private var mode = MODE_NOTIFICATIONS
+    private var lastSeenNotificationTime = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         walletApplication = application as WalletApplication
+        lastSeenNotificationTime = walletApplication.configuration.lastSeenNotificationTime
 
         if (intent.extras != null && intent.extras!!.containsKey(EXTRA_MODE)) {
             mode = intent.extras.getInt(EXTRA_MODE)
         }
 
-        if(mode == MODE_SEARCH_CONTACTS) {
-            setContentViewWithFooter(R.layout.activity_contacts_root)
+        if(mode and MODE_NOTIFICATIONS_GLOBAL_FOOTER != 0) {
+            setContentViewWithFooter(R.layout.activity_notifications)
             activateContactsButton()
         } else {
-            setContentView(R.layout.activity_contacts_root)
+            setContentView(R.layout.activity_notifications)
         }
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
@@ -98,22 +100,20 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
         }
 
         contacts_rv.layoutManager = LinearLayoutManager(this)
-        contacts_rv.adapter = this.contactsAdapter
-        this.contactsAdapter.itemClickListener = this
+        contacts_rv.adapter = this.notificationsAdapter
+        this.notificationsAdapter.itemClickListener = this
 
         initViewModel()
 
-        if(mode == MODE_VIEW_REQUESTS) {
-            search.visibility = View.GONE
-            icon.visibility = View.GONE
-            setTitle(R.string.contact_requests_title)
-        } else {
-            // search should be available for all other modes
+        if (mode and MODE_NOTIFICATIONS_SEARCH != 0) {
             search.addTextChangedListener(this)
             search.visibility = View.VISIBLE
             icon.visibility = View.VISIBLE
-            setTitle(R.string.contacts_title)
+        } else {
+            search.visibility = View.GONE
+            icon.visibility = View.GONE
         }
+        setTitle(R.string.notifications_title)
 
         searchContacts()
     }
@@ -127,6 +127,7 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
                 }
             }
         })
+        //This is not used
         AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(this, Observer {
             if (it != null) {
                 //TODO: we don't have an easy way of getting the identity id (userId)
@@ -137,47 +138,49 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
         })
     }
 
+    private fun getViewType(usernameSearchResult: UsernameSearchResult): Int {
+        return when (usernameSearchResult.requestSent to usernameSearchResult.requestReceived) {
+            true to true -> {
+                NotificationsAdapter.NOTIFICATION_CONTACT_ADDED
+            }
+            false to true -> {
+                NotificationsAdapter.NOTIFICATION_CONTACT_REQUEST_RECEIVED
+            }
+            else -> throw IllegalArgumentException("View not supported")
+        }
+    }
+
     private fun processResults(data: List<UsernameSearchResult>) {
 
-        val results = ArrayList<ContactSearchResultsAdapter.ViewItem>()
-        // process the requests
-        val requests = if (mode != MODE_SELECT_CONTACT)
-            data.filter { r -> r.isPendingRequest }.toMutableList()
-        else ArrayList()
+        val results = ArrayList<NotificationsAdapter.ViewItem>()
 
-        val requestCount = requests.size
-        if (mode != MODE_VIEW_REQUESTS) {
-            while (requests.size > 3) {
-                requests.remove(requests[requests.size - 1])
-            }
+        // get the last seen date from the configuration
+        val newDate = walletApplication.configuration.lastSeenNotificationTime
+
+        // find the most recent notification timestamp
+        var lastNotificationTime = 0L
+        data.forEach { lastNotificationTime = max(lastNotificationTime, it.date) }
+
+        val newItems = data.filter { r -> r.date >= newDate }.toMutableList()
+        log.info("New contacts at ${Date(newDate)} = ${newItems.size} - NotificationActivity")
+
+        results.add(NotificationsAdapter.ViewItem(null, NotificationsAdapter.NOTIFICATION_NEW_HEADER))
+        if(newItems.isEmpty()) {
+            results.add(NotificationsAdapter.ViewItem(null, NotificationsAdapter.NOTIFICATION_NEW_EMPTY))
+        } else {
+            newItems.forEach { r -> results.add(NotificationsAdapter.ViewItem(r, getViewType(r), true)) }
         }
 
-        if (requests.isNotEmpty() && mode != MODE_VIEW_REQUESTS)
-            results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_REQUEST_HEADER, requestCount = requestCount))
-        requests.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT_REQUEST)) }
+        supportActionBar!!.title = getString(R.string.notifications_title_with_count, newItems.size)
+        results.add(NotificationsAdapter.ViewItem(null, NotificationsAdapter.NOTIFICATION_EARLIER_HEADER))
 
         // process contacts
-        val contacts = if (mode != MODE_VIEW_REQUESTS)
-            data.filter { r -> r.requestSent && r.requestReceived }
-        else ArrayList()
+        val earlierItems = data.filter { r -> r.date < newDate }
 
-        if (contacts.isNotEmpty())
-            results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_HEADER))
-        contacts.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
+        earlierItems.forEach { r -> results.add(NotificationsAdapter.ViewItem(r, getViewType(r))) }
 
-        contactsAdapter.results = results
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        if(mode == MODE_SEARCH_CONTACTS) {
-            menuInflater.inflate(R.menu.contacts_menu, menu)
-        }
-        return super.onCreateOptionsMenu(menu)
-    }
-
-    override fun onSortOrderChanged(direction: UsernameSortOrderBy) {
-        this.direction = direction
-        searchContacts()
+        notificationsAdapter.results = results
+        lastSeenNotificationTime = lastNotificationTime
     }
 
     private fun searchContacts() {
@@ -210,7 +213,6 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
                 startActivity(DashPayUserActivity.createIntent(this,
                         usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = false,
                         contactRequestReceived = true))
-
             }
             !usernameSearchResult.isPendingRequest -> {
                 // How do we handle if this activity was started from the Payments Screen?
@@ -232,14 +234,12 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
                 onBackPressed()
                 return true
             }
-            R.id.contacts_add_contact -> {
-                startActivity(Intent(this, SearchUserActivity::class.java))
-            }
         }
         return super.onOptionsItemSelected(item)
     }
 
-    override fun onViewAllRequests() {
-        startActivity(createIntent(this, MODE_VIEW_REQUESTS))
+    override fun onDestroy() {
+        walletApplication.configuration.setPrefsLastSeenNotificationTime(max(lastSeenNotificationTime, walletApplication.configuration.lastSeenNotificationTime) + DateUtils.SECOND_IN_MILLIS)
+        super.onDestroy()
     }
 }

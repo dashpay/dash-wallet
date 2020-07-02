@@ -24,13 +24,13 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.send.DeriveKeyTask
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.wallet.DeterministicSeed
@@ -45,12 +45,14 @@ import org.dashevo.dashpay.RetryDelayType
 import org.dashevo.dpp.document.Document
 import org.dashevo.dpp.identity.Identity
 import org.dashevo.dpp.identity.IdentityPublicKey
-import org.dashevo.dpp.util.Entropy
-import org.dashevo.dpp.util.HashUtils
 import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
 import org.slf4j.LoggerFactory
+import java.util.*
 import java.util.concurrent.TimeoutException
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
+import kotlin.collections.HashSet
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -238,8 +240,13 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 // Determine if I am this identity's contact
                 fromContact = fromContactMap[profile.value!!.userId]
 
-                usernameSearchResults.add(UsernameSearchResult(profile.value!!.username,
-                        profile.value!!, toContact, fromContact))
+                val usernameSearchResult = UsernameSearchResult(profile.value!!.username,
+                        profile.value!!, toContact, fromContact)
+
+                // only include contacts that have sent requests to us (we may have accepted them)
+                // do not include contactRequest that we have sent but have not been accepted
+                if (usernameSearchResult.requestReceived)
+                    usernameSearchResults.add(usernameSearchResult)
             }
             when (orderBy) {
                 UsernameSortOrderBy.DISPLAY_NAME -> usernameSearchResults.sortBy {
@@ -247,7 +254,12 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                         it.dashPayProfile.displayName.toLowerCase()
                     else it.dashPayProfile.username.toLowerCase()
                 }
-                UsernameSortOrderBy.USERNAME -> usernameSearchResults.sortBy { it.dashPayProfile.username.toLowerCase() }
+                UsernameSortOrderBy.USERNAME -> usernameSearchResults.sortBy {
+                    it.dashPayProfile.username.toLowerCase()
+                }
+                UsernameSortOrderBy.DATE_ADDED -> usernameSearchResults.sortByDescending {
+                    it.date
+                }
                 //TODO: sort by last activity or date added
             }
             Resource.success(usernameSearchResults)
@@ -261,6 +273,19 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 msg = "Unknown error"
             }
             Resource.error(msg, null)
+        }
+    }
+
+    suspend fun getNotificationCount(date: Long): Int {
+        val results = searchContacts("", UsernameSortOrderBy.DATE_ADDED)
+        return if (results.status == Status.SUCCESS) {
+            val list = results.data ?: return 0
+            var count = 0
+            list.forEach { if (it.date >= date) ++count }
+            log.info("New contacts at ${Date(date)} = $count - getNotificationCount")
+            count
+        } else {
+            -1
         }
     }
 
@@ -590,7 +615,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             }
             log.info("updating contacts and profiles took $watch")
         } catch (e: Exception) {
-            log.error("error updating contacts: ${e.message}")
+            log.error("error updating contacts ${e.message}")
         }
     }
 }
