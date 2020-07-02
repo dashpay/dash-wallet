@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui
 
+import android.app.Activity
 import android.content.Intent
 import android.graphics.drawable.AnimationDrawable
 import android.os.Build
@@ -227,7 +228,9 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        searchUser()
+        if (requestCode == contactRequestCode && resultCode == Activity.RESULT_OK) {
+            searchUser()
+        }
     }
 
 }

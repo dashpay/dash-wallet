@@ -87,7 +87,7 @@ class DashPayUserActivity : InteractionAwareActivity() {
         accept.setOnClickListener { sendContactRequest(profile.userId) }
 
         val context = this
-        dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<Nothing>>{
+        dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<Nothing>> {
             override fun onChanged(it: Resource<Nothing>?) {
                 if (it != null) {
                     when (it.status) {
