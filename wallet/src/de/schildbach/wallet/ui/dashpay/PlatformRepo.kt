@@ -82,11 +82,18 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         // it is possible that some nodes are not available due to location,
         // firewalls or other reasons
         return try {
+            //TODO: something is wrong with getStatus() or the nodes only return success about 10-20% of time
             val response = platform.client.getStatus()
             Resource.success(response!!.connections > 0 && response.errors.isBlank() &&
                     Constants.NETWORK_PARAMETERS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM) >= response.protocolVersion)
         } catch (e: Exception) {
-            Resource.error(e.localizedMessage, null)
+            try {
+                // use getBlockByHeight instead of getStatus in case of failure
+                platform.client.getBlockByHeight(100)
+                Resource.success(true)
+            } catch (e: Exception) {
+                Resource.error(e.localizedMessage, null)
+            }
         }
     }
 
@@ -303,6 +310,11 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     }
 
     suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): Resource<Nothing> {
+        //TODO: This can be removed after DashPay Contract is updated. For now it requires
+        //the toUserId field to have 44 characters, however, some userIds starting at 0 will have Base58[43]
+        if (toUserId.length != 44) {
+            return Resource.error("This user doesn't meet the requirements to receive a contact request")
+        }
         return try {
             val potentialContactIdentity = platform.identities.get(toUserId)
             log.info("potential contact identity: $potentialContactIdentity")
