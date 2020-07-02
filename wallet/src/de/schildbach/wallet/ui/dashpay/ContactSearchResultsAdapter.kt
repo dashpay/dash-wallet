@@ -37,7 +37,7 @@ import org.dashevo.dpp.util.HashUtils
 import java.math.BigInteger
 
 
-class ContactSearchResultsAdapter(private val onSortOrderChangedListener: OnSortOrderChangedListener) : RecyclerView.Adapter<ContactSearchResultsAdapter.ViewHolder>() {
+class ContactSearchResultsAdapter(private val listener: Listener) : RecyclerView.Adapter<ContactSearchResultsAdapter.ViewHolder>() {
 
     companion object {
         const val CONTACT_REQUEST_HEADER = 0
@@ -225,16 +225,18 @@ class ContactSearchResultsAdapter(private val onSortOrderChangedListener: OnSort
 
                 view_all_contacts.setOnClickListener {
                     //TODO: Show View All Contact Request Activity
+                    listener.onViewAllRequests()
                 }
             }
         }
     }
 
-    interface OnSortOrderChangedListener {
-        fun onSortOrderChangedListener(direction: UsernameSortOrderBy)
+    interface Listener {
+        fun onSortOrderChanged(direction: UsernameSortOrderBy)
+        fun onViewAllRequests()
     }
 
     fun searchContacts(direction: UsernameSortOrderBy) {
-        onSortOrderChangedListener.onSortOrderChangedListener(direction)
+        listener.onSortOrderChanged(direction)
     }
 }
