@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_marginTop="3dp"
     android:layout_marginBottom="3dp"
-    android:layout_height="70dp">
+    android:layout_height="79dp">
 
     <ImageView
         android:id="@+id/avatar"
@@ -59,6 +59,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.50" />
+        app:layout_constraintGuide_percent="0.473" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

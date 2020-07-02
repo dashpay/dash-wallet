@@ -226,7 +226,6 @@ class ContactSearchResultsAdapter(private val listener: Listener) : RecyclerView
                 contact_request_header.text = resources.getString(R.string.contacts_contact_requests_count, requestCount)
 
                 view_all_contacts.setOnClickListener {
-                    //TODO: Show View All Contact Request Activity
                     listener.onViewAllRequests()
                 }
             }

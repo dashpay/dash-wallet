@@ -30,7 +30,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
@@ -38,17 +37,12 @@ import androidx.lifecycle.ViewModelProviders;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
 
-import com.amulyakhare.textdrawable.TextDrawable;
-
 import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Utils;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.util.GenericUtils;
-
-import java.util.List;
 
 import javax.annotation.Nullable;
 
