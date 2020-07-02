@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
@@ -89,8 +90,6 @@ class DashPayUserActivity : InteractionAwareActivity() {
             override fun onChanged(it: Resource<Nothing>?) {
                 if (it != null) {
                     when (it.status) {
-                        Status.LOADING -> Toast.makeText(context,
-                                "Sending contact request...", Toast.LENGTH_SHORT).show()
                         Status.ERROR -> {
                             var msg = it.message
                             if (msg == null) {
@@ -99,9 +98,8 @@ class DashPayUserActivity : InteractionAwareActivity() {
                             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                         }
                         Status.SUCCESS -> {
-                            Toast.makeText(context,
-                                    "Contact request sent and verified on the network!",
-                                    Toast.LENGTH_LONG).show()
+                            intent.putExtra(CONTACT_REQUEST_SENT, true)
+                            updateContactRelationUi()
                             dashPayViewModel.getContactRequestLiveData.removeObserver(this)
                         }
                     }
@@ -110,16 +108,23 @@ class DashPayUserActivity : InteractionAwareActivity() {
         })
     }
 
+    private fun startLoading() {
+        sendContactRequestBtn.visibility = View.GONE
+        sendingContactRequestBtn.visibility = View.VISIBLE
+        (sendingContactRequestBtnImage.drawable as AnimationDrawable).start()
+    }
+
     private fun sendContactRequest(userId: String) {
         dashPayViewModel.sendContactRequest(userId)
+        startLoading()
     }
 
     private fun updateContactRelationUi() {
         val contactRequestSent = intent.getBooleanExtra(CONTACT_REQUEST_SENT, false)
         val contactRequestReceived = intent.getBooleanExtra(CONTACT_REQUEST_RECEIVED, false)
 
-        listOf<View>(sendContactRequestBtn, payContactBtn, contactRequestSentTxt,
-                contactRequestReceivedContainer).forEach { it.visibility = View.GONE }
+        listOf<View>(sendContactRequestBtn, sendingContactRequestBtn, contactRequestSentBtn,
+                contactRequestReceivedContainer, payContactBtn).forEach { it.visibility = View.GONE }
 
         when (contactRequestSent to contactRequestReceived) {
             //No Relationship
@@ -132,7 +137,7 @@ class DashPayUserActivity : InteractionAwareActivity() {
             }
             //Request Sent / Pending
             true to false -> {
-                contactRequestSentTxt.visibility = View.VISIBLE
+                contactRequestSentBtn.visibility = View.VISIBLE
             }
             //Request Received
             false to true -> {
