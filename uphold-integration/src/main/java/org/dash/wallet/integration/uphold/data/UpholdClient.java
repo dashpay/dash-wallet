@@ -326,7 +326,7 @@ public class UpholdClient {
                 } else {
                     log.info("Error creating transaction: " + response.message() + " code: " + response.code());
                     boolean otpRequired = OTP_REQUIRED_VALUE.equals(response.headers().get(OTP_REQUIRED_KEY));
-                    callback.onError(new Exception(response.errorBody().toString()), otpRequired);
+                    callback.onError(new UpholdApiException(response.code()), otpRequired);
                 }
             }
 
@@ -348,18 +348,14 @@ public class UpholdClient {
                     otpToken = null;
                 } else {
                     log.info("Error committing transaction: " + response.message() + "code: " + response.code());
+                    UpholdApiException upholdApiException = new UpholdApiException(response);
                     boolean otpRequired = OTP_REQUIRED_VALUE.equals(response.headers().get(OTP_REQUIRED_KEY));
                     //Check for invalid token error
                     if (!otpRequired && otpToken != null) {
-                        try {
-                            JSONObject errorBody = new JSONObject(response.errorBody().string());
-                            otpRequired = errorBody.getJSONObject("errors").has("token");
-                            otpToken = null;
-                        } catch (Exception e) {
-                            //No invalid token error found
-                        }
+                        otpRequired = upholdApiException.isTokenError();
+                        otpToken = null;
                     }
-                    callback.onError(new Exception(response.errorBody().toString()), otpRequired);
+                    callback.onError(upholdApiException, otpRequired);
                 }
             }
 
