@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.AnimationDrawable
@@ -98,6 +99,7 @@ class DashPayUserActivity : InteractionAwareActivity() {
                             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                         }
                         Status.SUCCESS -> {
+                            setResult(Activity.RESULT_OK)
                             intent.putExtra(CONTACT_REQUEST_SENT, true)
                             updateContactRelationUi()
                             dashPayViewModel.getContactRequestLiveData.removeObserver(this)
