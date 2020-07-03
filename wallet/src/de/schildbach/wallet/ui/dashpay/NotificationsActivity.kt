@@ -25,14 +25,17 @@ import android.text.TextWatcher
 import android.text.format.DateUtils
 import android.view.MenuItem
 import android.view.View
+import android.widget.Toast
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.DashPayContactRequest
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
+import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.GlobalFooterActivity
@@ -44,7 +47,8 @@ import kotlin.collections.ArrayList
 import kotlin.math.max
 
 class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
-        NotificationsAdapter.OnItemClickListener {
+        NotificationsAdapter.OnItemClickListener,
+        NotificationsAdapter.OnContactRequestButtonClickListener {
 
     companion object {
         private val log = LoggerFactory.getLogger(NotificationsAdapter::class.java)
@@ -67,12 +71,13 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
     private lateinit var walletApplication: WalletApplication
     private var handler: Handler = Handler()
     private lateinit var searchContactsRunnable: Runnable
-    protected val notificationsAdapter: NotificationsAdapter = NotificationsAdapter()
+    protected val notificationsAdapter: NotificationsAdapter = NotificationsAdapter(this)
     private var query = ""
     private var blockchainIdentityId: String? = null
     private var direction = UsernameSortOrderBy.DATE_ADDED
     private var mode = MODE_NOTIFICATIONS
     private var lastSeenNotificationTime = 0L
+    private var currentPosition = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -134,6 +139,30 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
                 val tx = walletApplication.wallet.getTransaction(it.creditFundingTxId)
                 val cftx = walletApplication.wallet.getCreditFundingTransaction(tx)
                 blockchainIdentityId = cftx.creditBurnIdentityIdentifier.toStringBase58()
+            }
+        })
+
+        val context = this
+        dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>>{
+            override fun onChanged(it: Resource<DashPayContactRequest>?) {
+                if (it != null && currentPosition != -1) {
+                    when (it.status) {
+                        Status.LOADING -> Toast.makeText(context,
+                                "Sending contact request...", Toast.LENGTH_SHORT).show()
+                        Status.ERROR ->
+                            Toast.makeText(context, "!!Error!! ${it.exception!!.message}", Toast.LENGTH_SHORT).show()
+                        Status.SUCCESS -> {
+                            Toast.makeText(context,
+                                    "Contact request accepted and verified on the network!",
+                                    Toast.LENGTH_SHORT).show()
+                            // update the data
+                            notificationsAdapter.results[currentPosition].usernameSearchResult!!.toContactRequest = it.data!!
+                            notificationsAdapter.notifyItemChanged(currentPosition)
+                            currentPosition = -1
+                            lastSeenNotificationTime = it.data.timestamp.toLong() * 1000
+                        }
+                    }
+                }
             }
         })
     }
@@ -242,4 +271,15 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
         walletApplication.configuration.setPrefsLastSeenNotificationTime(max(lastSeenNotificationTime, walletApplication.configuration.lastSeenNotificationTime) + DateUtils.SECOND_IN_MILLIS)
         super.onDestroy()
     }
+
+    override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+        if (currentPosition == -1) {
+            currentPosition = position
+            dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
+        }
+    }
+
+    override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+    }
+
 }
