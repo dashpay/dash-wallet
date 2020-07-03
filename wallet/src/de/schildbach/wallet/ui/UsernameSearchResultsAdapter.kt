@@ -20,6 +20,8 @@ package de.schildbach.wallet.ui
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -28,10 +30,15 @@ import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet_test.R
 
-class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResultsAdapter.ViewHolder>() {
+class UsernameSearchResultsAdapter(private val onContactRequestButtonClickListener: OnContactRequestButtonClickListener) : RecyclerView.Adapter<UsernameSearchResultsAdapter.ViewHolder>() {
 
     interface OnItemClickListener {
         fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult)
+    }
+
+    interface OnContactRequestButtonClickListener {
+        fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int)
+        fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int)
     }
 
     var itemClickListener: OnItemClickListener? = null
@@ -62,6 +69,8 @@ class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResult
         private val requestStatus by lazy { itemView.findViewById<TextView>(R.id.request_status) }
         private val buttons by lazy { itemView.findViewById<LinearLayout>(R.id.buttons) }
         private val contactAdded by lazy { itemView.findViewById<ImageView>(R.id.contact_added) }
+        private val acceptRequest by lazy { itemView.findViewById<Button>(R.id.accept_contact_request) }
+        private val ignoreRequest by lazy { itemView.findViewById<ImageButton>(R.id.ignore_contact_request) }
 
         fun bind(usernameSearchResult: UsernameSearchResult) {
             val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(itemView.context,
@@ -76,7 +85,7 @@ class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResult
                 username.text = usernameSearchResult.username
             }
 
-            if(dashPayProfile.avatarUrl.isNotEmpty()) {
+            if (dashPayProfile.avatarUrl.isNotEmpty()) {
                 Glide.with(avatar).load(dashPayProfile.avatarUrl).circleCrop()
                         .placeholder(defaultAvatar).into(avatar)
             } else {
@@ -107,6 +116,12 @@ class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResult
                     requestStatus.visibility = View.GONE
                     buttons.visibility = View.VISIBLE
                     contactAdded.visibility = View.GONE
+                    acceptRequest.setOnClickListener {
+                        onContactRequestButtonClickListener.onAcceptRequest(usernameSearchResult, adapterPosition)
+                    }
+                    ignoreRequest.setOnClickListener {
+                        onContactRequestButtonClickListener.onIgnoreRequest(usernameSearchResult, adapterPosition)
+                    }
                 }
             }
 

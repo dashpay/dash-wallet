@@ -30,6 +30,7 @@ import android.view.Gravity
 import android.view.MenuItem
 import android.view.View
 import android.view.Window
+import android.widget.Toast
 import androidx.appcompat.widget.Toolbar
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.res.ResourcesCompat
@@ -42,7 +43,9 @@ import androidx.transition.Transition
 import androidx.transition.TransitionManager
 import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.DashPayContactRequest
 import de.schildbach.wallet.data.UsernameSearchResult
+import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
@@ -51,15 +54,17 @@ import kotlinx.android.synthetic.main.user_search_empty_result.*
 import kotlinx.android.synthetic.main.user_search_loading.*
 import org.dash.wallet.common.InteractionAwareActivity
 
-class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSearchResultsAdapter.OnItemClickListener {
+class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSearchResultsAdapter.OnItemClickListener,
+        UsernameSearchResultsAdapter.OnContactRequestButtonClickListener {
 
     private lateinit var dashPayViewModel: DashPayViewModel
     private lateinit var walletApplication: WalletApplication
     private var handler: Handler = Handler()
     private lateinit var searchUserRunnable: Runnable
-    private val adapter: UsernameSearchResultsAdapter = UsernameSearchResultsAdapter()
+    private val adapter: UsernameSearchResultsAdapter = UsernameSearchResultsAdapter(this)
     private var query = ""
     private val contactRequestCode = 1
+    private var currentPosition = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -150,6 +155,29 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
                 }
             }
         })
+        val context = this
+        dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>> {
+            override fun onChanged(it: Resource<DashPayContactRequest>?) {
+                if (it != null && currentPosition != -1) {
+                    when (it.status) {
+                        Status.LOADING -> Toast.makeText(context,
+                                "Sending contact request...", Toast.LENGTH_SHORT).show()
+                        Status.ERROR ->
+                            Toast.makeText(context, "!!Error!! ${it.exception!!.message}", Toast.LENGTH_SHORT).show()
+                        Status.SUCCESS -> {
+                            Toast.makeText(context,
+                                    "Contact request accepted and verified on the network!",
+                                    Toast.LENGTH_SHORT).show()
+                            // update the data
+                            adapter.results[currentPosition].toContactRequest = it.data!!
+                            adapter.notifyItemChanged(currentPosition)
+                            currentPosition = -1
+                        }
+                    }
+                }
+            }
+        })
+
     }
 
     private fun startLoading() {
@@ -226,11 +254,20 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
         return super.onOptionsItemSelected(item)
     }
 
+    override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+        if (currentPosition == -1) {
+            currentPosition = position
+            dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
+        }
+    }
+
+    override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == contactRequestCode && resultCode == Activity.RESULT_OK) {
             searchUser()
         }
     }
-
 }
