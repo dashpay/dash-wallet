@@ -67,21 +67,91 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/usernameContainer" />
 
-    <Button
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/sendContactRequestBtn"
-        style="@style/DashButton.Blue"
-        android:layout_width="wrap_content"
-        android:layout_height="40dp"
-        android:layout_marginTop="43dp"
-        android:paddingStart="26dp"
-        android:paddingEnd="26dp"
+        style="@style/ContactRequestButton"
         android:text="@string/send_contact_request"
-        android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/usernameContainer"
-        tools:alpha="0.5"
-        tools:visibility="visible" />
+        tools:visibility="visible">
+
+        <TextView
+            android:id="@+id/send_contact_request_text"
+            style="@style/ContactRequestButtonText"
+            android:text="@string/send_contact_request"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            style="@style/ContactRequestButtonImage"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/send_contact_request_text"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/ic_add_contact_white" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/sendingContactRequestBtn"
+        style="@style/ContactRequestButton"
+        android:background="@drawable/light_gray_button_background"
+        android:text="@string/send_contact_request"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/usernameContainer"
+        tools:visibility="visible">
+
+        <TextView
+            android:id="@+id/sending_contact_request_text"
+            style="@style/ContactRequestButtonText"
+            android:text="@string/sending_contact_request"
+            android:textColor="@color/medium_gray"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            android:id="@+id/sendingContactRequestBtnImage"
+            style="@style/ContactRequestButtonImage"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/sending_contact_request_text"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/ic_hourglass" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/contactRequestSentBtn"
+        style="@style/ContactRequestButton"
+        android:background="@drawable/light_gray_button_background"
+        android:text="@string/send_contact_request"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/usernameContainer"
+        tools:visibility="visible">
+
+        <TextView
+            android:id="@+id/contact_request_sent_text"
+            style="@style/ContactRequestButtonText"
+            android:text="@string/contact_request_sent"
+            android:textColor="@color/medium_gray"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            style="@style/ContactRequestButtonImage"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/contact_request_sent_text"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/ic_pending_contact_request" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <Button
         android:id="@+id/payContactBtn"
@@ -99,22 +169,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/usernameContainer"
         tools:alpha="0.5"
-        tools:visibility="visible" />
-
-    <TextView
-        android:id="@+id/contactRequestSentTxt"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="25dp"
-        android:layout_marginBottom="15dp"
-        android:text="@string/contact_request_sent"
-        android:textColor="@color/dash_golden"
-        android:textSize="14sp"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/usernameContainer"
-        tools:visibility="visible" />
+        tools:visibility="gone" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/contactRequestReceivedContainer"
@@ -122,7 +177,8 @@
         android:layout_height="wrap_content"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/payContactBtn">
+        app:layout_constraintTop_toBottomOf="@id/payContactBtn"
+        tools:visibility="gone">
 
         <TextView
             android:id="@+id/requestTitle"

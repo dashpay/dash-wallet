@@ -17,6 +17,8 @@
 
 package de.schildbach.wallet.ui
 
+import android.app.Activity
+import android.content.Intent
 import android.graphics.drawable.AnimationDrawable
 import android.os.Build
 import android.os.Bundle
@@ -54,9 +56,10 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
     private lateinit var dashPayViewModel: DashPayViewModel
     private lateinit var walletApplication: WalletApplication
     private var handler: Handler = Handler()
-    private lateinit var searchDashPayProfileRunnable: Runnable
+    private lateinit var searchUserRunnable: Runnable
     private val adapter: UsernameSearchResultsAdapter = UsernameSearchResultsAdapter()
     private var query = ""
+    private val contactRequestCode = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -176,24 +179,24 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
         search_user_empty_result.visibility = View.GONE
     }
 
-    private fun searchDashPayProfile() {
+    private fun searchUser() {
         adapter.results = listOf()
         hideEmptyResult()
-        if (this::searchDashPayProfileRunnable.isInitialized) {
-            handler.removeCallbacks(searchDashPayProfileRunnable)
+        if (this::searchUserRunnable.isInitialized) {
+            handler.removeCallbacks(searchUserRunnable)
         }
         if (query.length >= USERNAME_MIN_LENGTH) {
-            searchDashPayProfileRunnable = Runnable {
+            searchUserRunnable = Runnable {
                 dashPayViewModel.searchUsernames(query)
             }
-            handler.postDelayed(searchDashPayProfileRunnable, 500)
+            handler.postDelayed(searchUserRunnable, 500)
         }
     }
 
     override fun afterTextChanged(s: Editable?) {
         s?.let {
             query = it.toString()
-            searchDashPayProfile()
+            searchUser()
         }
     }
 
@@ -206,9 +209,9 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
         val dashPayProfile = usernameSearchResult.dashPayProfile
 
-        startActivity(DashPayUserActivity.createIntent(this@SearchUserActivity,
+        startActivityForResult(DashPayUserActivity.createIntent(this@SearchUserActivity,
                 usernameSearchResult.username, dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
-                contactRequestReceived = usernameSearchResult.requestReceived))
+                contactRequestReceived = usernameSearchResult.requestReceived), contactRequestCode)
 
         overridePendingTransition(R.anim.slide_in_bottom, R.anim.activity_stay)
     }
@@ -222,4 +225,12 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
         }
         return super.onOptionsItemSelected(item)
     }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == contactRequestCode && resultCode == Activity.RESULT_OK) {
+            searchUser()
+        }
+    }
+
 }
