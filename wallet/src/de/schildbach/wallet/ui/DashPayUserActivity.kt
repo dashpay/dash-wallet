@@ -27,6 +27,7 @@ import android.widget.Toast
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
+import de.schildbach.wallet.data.DashPayContactRequest
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
@@ -87,8 +88,9 @@ class DashPayUserActivity : InteractionAwareActivity() {
         accept.setOnClickListener { sendContactRequest(profile.userId) }
 
         val context = this
-        dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<Nothing>> {
-            override fun onChanged(it: Resource<Nothing>?) {
+
+        dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>>{
+            override fun onChanged(it: Resource<DashPayContactRequest>?) {
                 if (it != null) {
                     when (it.status) {
                         Status.ERROR -> {
