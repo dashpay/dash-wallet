@@ -160,14 +160,17 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
             override fun onChanged(it: Resource<DashPayContactRequest>?) {
                 if (it != null && currentPosition != -1) {
                     when (it.status) {
-                        Status.LOADING -> Toast.makeText(context,
-                                "Sending contact request...", Toast.LENGTH_SHORT).show()
-                        Status.ERROR ->
-                            Toast.makeText(context, "!!Error!! ${it.exception!!.message}", Toast.LENGTH_SHORT).show()
+                        Status.LOADING -> {
+
+                        }
+                        Status.ERROR -> {
+                            var msg = it.message
+                            if (msg == null) {
+                                msg = "!!Error!!  ${it.exception!!.message}"
+                            }
+                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                        }
                         Status.SUCCESS -> {
-                            Toast.makeText(context,
-                                    "Contact request accepted and verified on the network!",
-                                    Toast.LENGTH_SHORT).show()
                             // update the data
                             adapter.results[currentPosition].toContactRequest = it.data!!
                             adapter.notifyItemChanged(currentPosition)
@@ -266,7 +269,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == contactRequestCode && resultCode == Activity.RESULT_OK) {
+        if (requestCode == DashPayUserActivity.REQUEST_CODE_DEFAULT && resultCode == DashPayUserActivity.RESULT_CODE_CHANGED) {
             searchUser()
         }
     }

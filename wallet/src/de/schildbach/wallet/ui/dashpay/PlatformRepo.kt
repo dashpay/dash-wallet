@@ -283,6 +283,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             log.error("---> ${e.trailers}")
             e.printStackTrace()
         }
+        log.error(msg)
         return msg
     }
 

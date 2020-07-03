@@ -49,6 +49,10 @@ class DashPayUserActivity : InteractionAwareActivity() {
         private const val CONTACT_REQUEST_SENT = "contact_request_sent"
         private const val CONTACT_REQUEST_RECEIVED = "contact_request_received"
 
+        const val REQUEST_CODE_DEFAULT = 0
+        const val RESULT_CODE_OK = 1
+        const val RESULT_CODE_CHANGED = 2
+
         @JvmStatic
         fun createIntent(context: Context, username: String, profile: DashPayProfile?,
                          contactRequestSent: Boolean, contactRequestReceived: Boolean): Intent {
@@ -89,7 +93,7 @@ class DashPayUserActivity : InteractionAwareActivity() {
 
         val context = this
 
-        dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>>{
+        dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>> {
             override fun onChanged(it: Resource<DashPayContactRequest>?) {
                 if (it != null) {
                     when (it.status) {
@@ -101,7 +105,7 @@ class DashPayUserActivity : InteractionAwareActivity() {
                             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                         }
                         Status.SUCCESS -> {
-                            setResult(Activity.RESULT_OK)
+                            setResult(RESULT_CODE_CHANGED)
                             intent.putExtra(CONTACT_REQUEST_SENT, true)
                             updateContactRelationUi()
                             dashPayViewModel.getContactRequestLiveData.removeObserver(this)

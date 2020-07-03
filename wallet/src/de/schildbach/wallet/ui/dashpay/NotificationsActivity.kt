@@ -16,6 +16,7 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -77,6 +78,7 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
     private var direction = UsernameSortOrderBy.DATE_ADDED
     private var mode = MODE_NOTIFICATIONS
     private var lastSeenNotificationTime = 0L
+    private val contactRequestCode = 1
     private var currentPosition = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -89,7 +91,7 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
             mode = intent.extras.getInt(EXTRA_MODE)
         }
 
-        if(mode and MODE_NOTIFICATIONS_GLOBAL_FOOTER != 0) {
+        if (mode and MODE_NOTIFICATIONS_GLOBAL_FOOTER != 0) {
             setContentViewWithFooter(R.layout.activity_notifications)
             activateContactsButton()
         } else {
@@ -143,18 +145,21 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
         })
 
         val context = this
-        dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>>{
+        dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>> {
             override fun onChanged(it: Resource<DashPayContactRequest>?) {
                 if (it != null && currentPosition != -1) {
                     when (it.status) {
-                        Status.LOADING -> Toast.makeText(context,
-                                "Sending contact request...", Toast.LENGTH_SHORT).show()
-                        Status.ERROR ->
-                            Toast.makeText(context, "!!Error!! ${it.exception!!.message}", Toast.LENGTH_SHORT).show()
+                        Status.LOADING -> {
+
+                        }
+                        Status.ERROR -> {
+                            var msg = it.message
+                            if (msg == null) {
+                                msg = "!!Error!!  ${it.exception!!.message}"
+                            }
+                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                        }
                         Status.SUCCESS -> {
-                            Toast.makeText(context,
-                                    "Contact request accepted and verified on the network!",
-                                    Toast.LENGTH_SHORT).show()
                             // update the data
                             notificationsAdapter.results[currentPosition].usernameSearchResult!!.toContactRequest = it.data!!
                             notificationsAdapter.notifyItemChanged(currentPosition)
@@ -194,7 +199,7 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
         log.info("New contacts at ${Date(newDate)} = ${newItems.size} - NotificationActivity")
 
         results.add(NotificationsAdapter.ViewItem(null, NotificationsAdapter.NOTIFICATION_NEW_HEADER))
-        if(newItems.isEmpty()) {
+        if (newItems.isEmpty()) {
             results.add(NotificationsAdapter.ViewItem(null, NotificationsAdapter.NOTIFICATION_NEW_EMPTY))
         } else {
             newItems.forEach { r -> results.add(NotificationsAdapter.ViewItem(r, getViewType(r), true)) }
@@ -237,19 +242,11 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
     }
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
-        when {
-            usernameSearchResult.isPendingRequest -> {
-                startActivity(DashPayUserActivity.createIntent(this,
-                        usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = false,
-                        contactRequestReceived = true))
-            }
-            !usernameSearchResult.isPendingRequest -> {
-                // How do we handle if this activity was started from the Payments Screen?
-                startActivity(DashPayUserActivity.createIntent(this,
-                        usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
-                        contactRequestReceived = usernameSearchResult.requestReceived))
-            }
-        }
+
+        startActivityForResult(DashPayUserActivity.createIntent(this,
+                usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
+                contactRequestReceived = usernameSearchResult.requestReceived), DashPayUserActivity.REQUEST_CODE_DEFAULT)
+
     }
 
 
@@ -280,6 +277,13 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
     }
 
     override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == DashPayUserActivity.REQUEST_CODE_DEFAULT && resultCode == DashPayUserActivity.RESULT_CODE_CHANGED) {
+            searchContacts()
+        }
     }
 
 }
