@@ -319,7 +319,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
-    suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): Resource<Nothing> {
+    suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): Resource<DashPayContactRequest> {
         //TODO: This can be removed after DashPay Contract is updated. For now it requires
         //the toUserId field to have 44 characters, however, some userIds starting at 0 will have Base58[43]
         if (toUserId.length != 44) {
@@ -344,7 +344,9 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                     toUserId, 100, 500, RetryDelayType.LINEAR)
 
             log.info("contact request: $cr")
-            Resource.success(null)
+            val dashPayContactRequest = DashPayContactRequest.fromDocument(cr!!)
+            updateDashPayContactRequest(dashPayContactRequest) //update the database since the cr was accepted
+            Resource.success(dashPayContactRequest)
         } catch (e: Exception) {
             log.error(e.localizedMessage)
             Resource.error(formatExceptionMessage("send contact request", e))
@@ -553,6 +555,10 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
     private suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile) {
         dashPayProfileDaoAsync.insert(dashPayProfile)
+    }
+
+    private suspend fun updateDashPayContactRequest(dashPayContactRequest: DashPayContactRequest) {
+        dashPayContactRequestDaoAsync.insert(dashPayContactRequest)
     }
 
     suspend fun doneAndDismiss() {
