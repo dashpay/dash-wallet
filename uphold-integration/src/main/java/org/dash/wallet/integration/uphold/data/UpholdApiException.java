@@ -13,6 +13,8 @@ public class UpholdApiException extends Exception {
 
     public static final String IDENTITY_ERROR_KEY = "identity";
     public static final String TOKEN_ERROR_KEY = "token";
+    public static final String LOCKED_FUNDS_KEY = "sufficient_unlocked_funds";
+    public static final String AVAILABLE_AT_KEY = "availableAt";
 
     private int httpStatusCode;
 

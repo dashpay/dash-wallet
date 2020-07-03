@@ -25,6 +25,7 @@
     <string name="uphold_error_not_available">The Uphold service is not available.  Please try again later.</string>
     <string name="uphold_error_report_issue">Please report this issue to the Dash Wallet support team using "Report Issue" from the main menu.</string>
 
+    <string name="uphold_general_error_title">Error</string>
     <string name="uphold_api_error_title">Uphold error</string>
     <string name="uphold_api_error_identity">Uphold account isn’t verified so funds cannot be withdrawn yet.</string>
     <string name="uphold_api_error_403_description">Your Uphold account has been flagged for review.\nDon’t worry, flags can be triggered for lots of reasons and most can be sorted out easily.\nIn the meantime, Uphold had to temporarily restrict your account while more information is gathered. You can still trade but you won’t be able to withdraw funds.\n\nUphold will be in touch to help you sort this out quickly.</string>

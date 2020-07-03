@@ -149,14 +149,15 @@ public class UpholdWithdrawalHelper {
     private void showLoadingError(AppCompatActivity activity, Exception e) {
         AlertDialog.Builder builder = new AlertDialog.Builder(activity);
         if (e instanceof UpholdApiException) {
-            builder.setTitle("Uphold error");
+            builder.setTitle(R.string.uphold_api_error_title);
             UpholdApiException upholdApiException = (UpholdApiException) e;
             String availableAt = null;
-            if (upholdApiException.hasError("sufficient_unlocked_funds")) {
-                availableAt = upholdApiException.getErrorArg("availableAt");
+            if (upholdApiException.hasError(UpholdApiException.LOCKED_FUNDS_KEY)) {
+                availableAt = upholdApiException.getErrorArg(UpholdApiException.AVAILABLE_AT_KEY);
             }
             builder.setMessage(upholdApiException.getDescription(activity, availableAt));
         } else {
+            builder.setTitle(R.string.uphold_general_error_title);
             builder.setMessage(R.string.loading_error);
         }
         builder.setPositiveButton(android.R.string.ok, null);
