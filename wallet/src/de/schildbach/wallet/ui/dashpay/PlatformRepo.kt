@@ -26,6 +26,7 @@ import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.send.DeriveKeyTask
+import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
@@ -176,7 +177,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
             Resource.success(usernameSearchResults)
         } catch (e: Exception) {
-            Resource.error(e.localizedMessage, null)
+            Resource.error(formatExceptionMessage("search usernames", e), null)
         }
     }
 
@@ -264,16 +265,25 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             }
             Resource.success(usernameSearchResults)
         } catch (e: Exception) {
-            var msg = if (e.localizedMessage != null) {
-                e.localizedMessage
-            } else {
-                e.message
-            }
-            if (msg == null) {
-                msg = "Unknown error"
-            }
-            Resource.error(msg, null)
+            Resource.error(formatExceptionMessage("search contact request", e), null)
         }
+    }
+
+    private fun formatExceptionMessage(description: String, e: Exception): String {
+        var msg = if (e.localizedMessage != null) {
+            e.localizedMessage
+        } else {
+            e.message
+        }
+        if (msg == null) {
+            msg = "Unknown error"
+        }
+        log.error("$description: $msg")
+        if (e is StatusRuntimeException) {
+            log.error("---> ${e.trailers}")
+            e.printStackTrace()
+        }
+        return msg
     }
 
     suspend fun getNotificationCount(date: Long): Int {
@@ -337,7 +347,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             Resource.success(null)
         } catch (e: Exception) {
             log.error(e.localizedMessage)
-            Resource.error(e.localizedMessage)
+            Resource.error(formatExceptionMessage("send contact request", e))
         }
     }
 
