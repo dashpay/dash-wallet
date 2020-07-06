@@ -85,7 +85,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             //TODO: something is wrong with getStatus() or the nodes only return success about 10-20% of time
             val response = platform.client.getStatus()
             Resource.success(response!!.connections > 0 && response.errors.isBlank() &&
-                    Constants.NETWORK_PARAMETERS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM) >= response.protocolVersion)
+                    Constants.NETWORK_PARAMETERS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM) <= response.protocolVersion)
         } catch (e: Exception) {
             try {
                 // use getBlockByHeight instead of getStatus in case of failure
@@ -127,10 +127,10 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
             val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, false)
 
-            val userIds = nameDocuments.map { it.userId }
+            val userIds = nameDocuments.map { it.ownerId }
 
             val profileDocuments = Profiles(platform).getList(userIds)
-            val profileById = profileDocuments.associateBy({ it.userId }, { it })
+            val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
             val toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)
                     ?: arrayListOf()
@@ -143,7 +143,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
             for (nameDoc in nameDocuments) {
                 //Remove own user document from result
-                if (nameDoc.userId == userId) {
+                if (nameDoc.ownerId == userId) {
                     continue
                 }
                 var toContact: DashPayContactRequest? = null
@@ -152,23 +152,23 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 // Determine if any of our contacts match the current name's identity
                 if (toContactDocuments.isNotEmpty()) {
                     toContact = toContactDocuments.find { contact ->
-                        contact.toUserId == nameDoc.userId
+                        contact.toUserId == nameDoc.ownerId
                     }
                 }
 
                 // Determine if our identity is someone else's contact
                 if (fromContactDocuments.isNotEmpty()) {
                     fromContact = fromContactDocuments.find { contact ->
-                        contact.userId == nameDoc.userId
+                        contact.userId == nameDoc.ownerId
                     }
                 }
 
                 val username = nameDoc.data["normalizedLabel"] as String
-                val profileDoc = profileById[nameDoc.userId]
+                val profileDoc = profileById[nameDoc.ownerId]
 
                 val dashPayProfile = if (profileDoc != null)
                     DashPayProfile.fromDocument(profileDoc, username)!!
-                else DashPayProfile(nameDoc.userId, username)
+                else DashPayProfile(nameDoc.ownerId, username)
 
                 usernameSearchResults.add(UsernameSearchResult(nameDoc.data["normalizedLabel"] as String,
                         dashPayProfile, toContact, fromContact))
@@ -472,7 +472,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity {
         val creditFundingTransaction = blockchainIdentityData.findCreditFundingTransaction(wallet)
         if (creditFundingTransaction != null) {
-            return BlockchainIdentity(Identity.IdentityType.USER, creditFundingTransaction, wallet).apply {
+            return BlockchainIdentity(creditFundingTransaction, wallet).apply {
                 identity = platform.identities.get(uniqueIdString)
                 currentUsername = blockchainIdentityData.username
                 registrationStatus = blockchainIdentityData.registrationStatus!!
@@ -494,7 +494,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                         ?: IdentityPublicKey.TYPES.ECDSA_SECP256K1
             }
         }
-        return BlockchainIdentity(Identity.IdentityType.USER, 0, wallet)
+        return BlockchainIdentity(0, wallet)
     }
 
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData, blockchainIdentity: BlockchainIdentity) {
@@ -598,17 +598,17 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             }
 
             val profileDocuments = Profiles(platform).getList(userIdList.toList()) //only handles 100 userIds
-            val profileById = profileDocuments.associateBy({ it.userId }, { it })
+            val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
             val nameDocuments = platform.names.getList(userIdList.toList())
-            val nameById = nameDocuments.associateBy({ it.userId }, { it })
+            val nameById = nameDocuments.associateBy({ it.ownerId }, { it })
 
             for (id in userIdList) {
                 val nameDocument = nameById[id] // what happens if there is no username for the identity? crash
                 val username = nameDocument!!.data["normalizedLabel"] as String
 
                 val profileDocument = profileById[id] ?: profiles.createProfileDocument("", "",
-                        "", platform.identities.get(nameDocument!!.userId)!!)
+                        "", platform.identities.get(nameDocument!!.ownerId)!!)
 
                 val profile = DashPayProfile.fromDocument(profileDocument, username)
                 dashPayProfileDaoAsync.insert(profile!!)
