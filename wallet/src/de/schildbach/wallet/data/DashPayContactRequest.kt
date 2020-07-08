@@ -28,7 +28,8 @@ data class DashPayContactRequest(@PrimaryKey val entropy: String,
             val privateData = if (document.data.containsKey("privateData"))
                 HashUtils.byteArrayFromString(document.data["privateData"] as String)
             else null
-            return DashPayContactRequest(document.entropy, document.ownerId, document.data["toUserId"] as String,
+            val entropy = document.ownerId + document.data["toUserId"] as String
+            return DashPayContactRequest(entropy, document.ownerId, document.data["toUserId"] as String,
                     privateData,
                     HashUtils.byteArrayFromString(document.data["encryptedPublicKey"] as String),
                     document.data["senderKeyIndex"] as Int,
