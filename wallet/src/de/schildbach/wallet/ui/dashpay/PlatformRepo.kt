@@ -614,21 +614,23 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 dashPayContactRequestDaoAsync.insert(contactRequest)
             }
 
-            val profileDocuments = Profiles(platform).getList(userIdList.toList()) //only handles 100 userIds
-            val profileById = profileDocuments.associateBy({ it.userId }, { it })
+            if (userIdList.isNotEmpty()) {
+                val profileDocuments = Profiles(platform).getList(userIdList.toList()) //only handles 100 userIds
+                val profileById = profileDocuments.associateBy({ it.userId }, { it })
 
-            val nameDocuments = platform.names.getList(userIdList.toList())
-            val nameById = nameDocuments.associateBy({ it.userId }, { it })
+                val nameDocuments = platform.names.getList(userIdList.toList())
+                val nameById = nameDocuments.associateBy({ it.userId }, { it })
 
-            for (id in userIdList) {
-                val nameDocument = nameById[id] // what happens if there is no username for the identity? crash
-                val username = nameDocument!!.data["normalizedLabel"] as String
+                for (id in userIdList) {
+                    val nameDocument = nameById[id] // what happens if there is no username for the identity? crash
+                    val username = nameDocument!!.data["normalizedLabel"] as String
 
-                val profileDocument = profileById[id] ?: profiles.createProfileDocument("", "",
-                        "", platform.identities.get(nameDocument!!.userId)!!)
+                    val profileDocument = profileById[id] ?: profiles.createProfileDocument("", "",
+                            "", platform.identities.get(nameDocument!!.userId)!!)
 
-                val profile = DashPayProfile.fromDocument(profileDocument, username)
-                dashPayProfileDaoAsync.insert(profile!!)
+                    val profile = DashPayProfile.fromDocument(profileDocument, username)
+                    dashPayProfileDaoAsync.insert(profile!!)
+                }
             }
             log.info("updating contacts and profiles took $watch")
         } catch (e: Exception) {
