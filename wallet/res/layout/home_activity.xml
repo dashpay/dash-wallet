@@ -7,14 +7,7 @@
     android:fitsSystemWindows="true"
     tools:openDrawer="start">
 
-    <de.schildbach.wallet.ui.widget.GlobalFooterView
-        android:id="@+id/global_footer_view"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-        <include layout="@layout/home_content" />
-
-    </de.schildbach.wallet.ui.widget.GlobalFooterView>
+    <include layout="@layout/home_content" />
 
     <include layout="@layout/navigation_layout" />
 

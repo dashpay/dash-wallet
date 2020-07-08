@@ -34,7 +34,6 @@ import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.LocaleList;
 import android.telephony.TelephonyManager;
@@ -52,14 +51,11 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.view.GravityCompat;
-import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.lifecycle.ViewModelProviders;
 
 import com.google.android.material.appbar.AppBarLayout;
-import com.google.android.material.navigation.NavigationView;
 import com.google.common.collect.ImmutableList;
 
 import org.bitcoinj.core.Coin;
@@ -94,7 +90,6 @@ import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
-import de.schildbach.wallet.ui.preference.PreferenceActivity;
 import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
@@ -111,7 +106,6 @@ import okhttp3.HttpUrl;
  */
 public final class WalletActivity extends AbstractBindServiceActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback,
-        NavigationView.OnNavigationItemSelectedListener,
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
 
@@ -130,11 +124,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private Configuration config;
     private Wallet wallet;
     private FingerprintHelper fingerprintHelper;
-
-    private DrawerLayout viewDrawer;
-    private View viewFakeForSafetySubmenu;
-    private View payBtn;
-
     private Handler handler = new Handler();
 
     private static final int REQUEST_CODE_SCAN = 0;
@@ -157,7 +146,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private boolean noIdentityCreatedOrInProgress = true;
     private boolean retryCreationIfInProgress = true;
 
-
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -166,9 +154,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
         config = application.getConfiguration();
         wallet = application.getWallet();
 
-        setContentViewFooter(R.layout.home_activity);
+        //setContentViewFooter(R.layout.home_activity);
+        setContentView(R.layout.home_content);
         setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
-        activateHomeButton();
+        //activateHomeButton();
 
         if (savedInstanceState == null) {
             checkAlerts();
@@ -241,15 +230,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void initView() {
-        initNavigationDrawer();
         initQuickActions();
-        findViewById(R.id.uphold_account_section).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startUpholdActivity();
-                viewDrawer.closeDrawer(GravityCompat.START);
-            }
-        });
         findViewById(R.id.pay_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -355,18 +336,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             joinDashPayAction.setVisibility(View.GONE);
         }
         findViewById(R.id.join_dashpay_action_space).setVisibility(joinDashPayAction.getVisibility());
-    }
-
-    private void initNavigationDrawer() {
-        final NavigationView navigationView = findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(this);
-
-        viewFakeForSafetySubmenu = new View(this);
-        viewFakeForSafetySubmenu.setVisibility(View.GONE);
-        viewDrawer = findViewById(R.id.drawer_layout);
-        viewDrawer.addView(viewFakeForSafetySubmenu);
-        registerForContextMenu(viewFakeForSafetySubmenu);
-        viewDrawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
     }
 
     @Override
@@ -955,20 +924,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
         super.onCreateContextMenu(menu, v, menuInfo);
         MenuInflater inflater = getMenuInflater();
-        if (v == viewFakeForSafetySubmenu) {
-            inflater.inflate(R.menu.wallet_safety_options, menu);
-
-            final String externalStorageState = Environment.getExternalStorageState();
-
-            menu.findItem(R.id.wallet_options_restore_wallet).setEnabled(
-                    Environment.MEDIA_MOUNTED.equals(externalStorageState) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(externalStorageState));
-            menu.findItem(R.id.wallet_options_backup_wallet).setEnabled(Environment.MEDIA_MOUNTED.equals(externalStorageState));
-            menu.findItem(R.id.wallet_options_encrypt_keys).setTitle(
-                    wallet.isEncrypted() ? R.string.wallet_options_encrypt_keys_change : R.string.wallet_options_encrypt_keys_set);
-
-            boolean showFingerprintOption = fingerprintHelper != null && !fingerprintHelper.isFingerprintEnabled();
-            menu.findItem(R.id.wallet_options_enable_fingerprint).setVisible(showFingerprintOption);
-        }
     }
 
     @Override
@@ -1000,44 +955,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }
 
         return super.onContextItemSelected(item);
-    }
-
-    @Override
-    public boolean onNavigationItemSelected(MenuItem item) {
-        // Handle navigation view item clicks here.
-        int id = item.getItemId();
-
-        if (id == R.id.nav_home) {
-
-        } else if (id == R.id.nav_address_book) {
-            AddressBookActivity.start(this);
-        } else if (id == R.id.nav_exchenge_rates) {
-            startActivity(new Intent(this, ExchangeRatesActivity.class));
-        } else if (id == R.id.nav_paper_wallet) {
-            SweepWalletActivity.start(this, true);
-        } else if (id == R.id.nav_network_monitor) {
-            startActivity(new Intent(this, NetworkMonitorActivity.class));
-        } else if (id == R.id.nav_safety) {
-            openContextMenu(viewFakeForSafetySubmenu);
-        } else if (id == R.id.nav_settings) {
-            startActivity(new Intent(this, PreferenceActivity.class));
-        } else if (id == R.id.nav_disconnect) {
-            handleDisconnect();
-        } else if (id == R.id.nav_report_issue) {
-            handleReportIssue();
-        }
-
-        viewDrawer.closeDrawer(GravityCompat.START);
-        return true;
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (viewDrawer.isDrawerOpen(GravityCompat.START)) {
-            viewDrawer.closeDrawer(GravityCompat.START);
-        } else {
-            super.onBackPressed();
-        }
     }
 
     private void startUpholdActivity() {
