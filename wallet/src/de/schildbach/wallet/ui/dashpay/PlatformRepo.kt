@@ -127,7 +127,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
             val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, false)
 
-            val userIds = nameDocuments.map { it.ownerId }
+            val userIds = nameDocuments.map { getIdentityForName(it) }
 
             val profileDocuments = Profiles(platform).getList(userIds)
             val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
@@ -143,7 +143,8 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
             for (nameDoc in nameDocuments) {
                 //Remove own user document from result
-                if (nameDoc.ownerId == userId) {
+                val nameDocIdentityId = getIdentityForName(nameDoc)
+                if (nameDocIdentityId == userId) {
                     continue
                 }
                 var toContact: DashPayContactRequest? = null
@@ -152,23 +153,23 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 // Determine if any of our contacts match the current name's identity
                 if (toContactDocuments.isNotEmpty()) {
                     toContact = toContactDocuments.find { contact ->
-                        contact.toUserId == nameDoc.ownerId
+                        contact.toUserId == nameDocIdentityId
                     }
                 }
 
                 // Determine if our identity is someone else's contact
                 if (fromContactDocuments.isNotEmpty()) {
                     fromContact = fromContactDocuments.find { contact ->
-                        contact.userId == nameDoc.ownerId
+                        contact.userId == nameDocIdentityId
                     }
                 }
 
                 val username = nameDoc.data["normalizedLabel"] as String
-                val profileDoc = profileById[nameDoc.ownerId]
+                val profileDoc = profileById[nameDocIdentityId]
 
                 val dashPayProfile = if (profileDoc != null)
                     DashPayProfile.fromDocument(profileDoc, username)!!
-                else DashPayProfile(nameDoc.ownerId, username)
+                else DashPayProfile(nameDocIdentityId, username)
 
                 usernameSearchResults.add(UsernameSearchResult(nameDoc.data["normalizedLabel"] as String,
                         dashPayProfile, toContact, fromContact))
@@ -603,14 +604,15 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
             val nameDocuments = platform.names.getList(userIdList.toList())
-            val nameById = nameDocuments.associateBy({ it.ownerId }, { it })
+            val nameById = nameDocuments.associateBy({getIdentityForName(it) }, { it })
 
             for (id in userIdList) {
                 val nameDocument = nameById[id] // what happens if there is no username for the identity? crash
                 val username = nameDocument!!.data["normalizedLabel"] as String
+                val identityId = getIdentityForName(nameDocument)
 
                 val profileDocument = profileById[id] ?: profiles.createProfileDocument("", "",
-                        "", platform.identities.get(nameDocument!!.ownerId)!!)
+                        "", platform.identities.get(identityId)!!)
 
                 val profile = DashPayProfile.fromDocument(profileDocument, username)
                 dashPayProfileDaoAsync.insert(profile!!)
@@ -619,5 +621,10 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         } catch (e: Exception) {
             log.error("error updating contacts ${e.message}")
         }
+    }
+
+    fun getIdentityForName(nameDocument: Document): String {
+        val records = nameDocument.data["records"] as Map<String, Any?>
+        return records["dashIdentity"] as String
     }
 }
