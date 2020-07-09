@@ -565,14 +565,16 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     //Step 6: Recover the DashPay Profile
     suspend fun recoverDashPayProfile(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
-            val username = blockchainIdentity.currentUsername!!
-            // recovery will only get the information and place it in the database
-            val profile = blockchainIdentity.getProfile() ?: return@withContext
+            if (platform.hasApp("dashpay")) {
+                val username = blockchainIdentity.currentUsername!!
+                // recovery will only get the information and place it in the database
+                val profile = blockchainIdentity.getProfile() ?: return@withContext
 
-            // blockchainIdentity doesn't yet keep track of the profile, so we will load it
-            // into the database directly
-            val dashPayProfile = DashPayProfile.fromDocument(profile, username)
-            updateDashPayProfile(dashPayProfile!!)
+                // blockchainIdentity doesn't yet keep track of the profile, so we will load it
+                // into the database directly
+                val dashPayProfile = DashPayProfile.fromDocument(profile, username)
+                updateDashPayProfile(dashPayProfile!!)
+            }
         }
     }
 
