@@ -25,18 +25,15 @@ import android.widget.TextView
 import androidx.constraintlayout.widget.Guideline
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import de.schildbach.wallet.data.DashPayContactRequest
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.contact_request_row.view.*
-import org.dashevo.dpp.util.Entropy
 import org.dashevo.dpp.util.HashUtils
 import java.math.BigInteger
-import java.util.*
 import kotlin.math.max
 
-class NotificationsAdapter : RecyclerView.Adapter<NotificationsAdapter.ViewHolder>() {
+class NotificationsAdapter(val onContactRequestButtonClickListener: OnContactRequestButtonClickListener) : RecyclerView.Adapter<NotificationsAdapter.ViewHolder>() {
 
     companion object {
         const val NOTIFICATION_NEW_HEADER = 4
@@ -135,7 +132,7 @@ class NotificationsAdapter : RecyclerView.Adapter<NotificationsAdapter.ViewHolde
         private val date by lazy { itemView.findViewById<TextView>(R.id.date) }
         private val displayName by lazy { itemView.findViewById<TextView>(R.id.displayName) }
         private val contactAdded by lazy { itemView.findViewById<ImageView>(R.id.contact_added) }
-        private val guildline by lazy {itemView.findViewById<Guideline>(R.id.center_guideline)}
+        private val guildline by lazy { itemView.findViewById<Guideline>(R.id.center_guideline)}
         private val dateFormat by lazy { itemView.context.getString(R.string.transaction_row_time_text) }
 
         private fun formatDate(timeStamp: Long): String {
@@ -228,21 +225,16 @@ class NotificationsAdapter : RecyclerView.Adapter<NotificationsAdapter.ViewHolde
             itemView.apply {
                 if (!usernameSearchResult.isPendingRequest) {
                     accept_contact_request.visibility = View.GONE
-                    hide_contract_request.visibility = View.GONE
+                    ignore_contact_request.visibility = View.GONE
                 } else {
                     accept_contact_request.visibility = View.VISIBLE
-                    hide_contract_request.visibility = View.VISIBLE
+                    ignore_contact_request.visibility = View.VISIBLE
                 }
                 accept_contact_request.setOnClickListener {
-                    //TODO: this contact request should be accepted
-                    //This code is temporary to test the change in the view
-                    usernameSearchResult.toContactRequest = DashPayContactRequest(Entropy.generate(), usernameSearchResult.fromContactRequest!!.toUserId,
-                            usernameSearchResult.fromContactRequest!!.userId, null, Entropy.generate().toByteArray(), 0, 0, (Date().time/1000).toDouble(), false, 0 )
-                    notifyItemChanged(adapterPosition)
+                    onContactRequestButtonClickListener.onAcceptRequest(usernameSearchResult, adapterPosition)
                 }
-
-                hide_contract_request.setOnClickListener {
-                    //TODO: this contact request should be hidden
+                ignore_contact_request.setOnClickListener {
+                    onContactRequestButtonClickListener.onIgnoreRequest(usernameSearchResult, adapterPosition)
                 }
             }
         }
@@ -272,8 +264,8 @@ class NotificationsAdapter : RecyclerView.Adapter<NotificationsAdapter.ViewHolde
         }
     }
 
-    interface Listener {
-        fun onAcceptRequest(usernameSearchResult: UsernameSearchResult)
-        fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult)
+    interface OnContactRequestButtonClickListener {
+        fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int)
+        fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int)
     }
 }

@@ -20,18 +20,21 @@ package de.schildbach.wallet.ui
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.dashpay_profile_row.view.*
 
-class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResultsAdapter.ViewHolder>() {
+class UsernameSearchResultsAdapter(private val onContactRequestButtonClickListener: OnContactRequestButtonClickListener) : RecyclerView.Adapter<UsernameSearchResultsAdapter.ViewHolder>() {
 
     interface OnItemClickListener {
         fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult)
+    }
+
+    interface OnContactRequestButtonClickListener {
+        fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int)
+        fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int)
     }
 
     var itemClickListener: OnItemClickListener? = null
@@ -56,57 +59,56 @@ class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResult
     inner class ViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
             RecyclerView.ViewHolder(inflater.inflate(R.layout.dashpay_profile_row, parent, false)) {
 
-        private val avatar by lazy { itemView.findViewById<ImageView>(R.id.avatar) }
-        private val username by lazy { itemView.findViewById<TextView>(R.id.username) }
-        private val displayName by lazy { itemView.findViewById<TextView>(R.id.displayName) }
-        private val requestStatus by lazy { itemView.findViewById<TextView>(R.id.request_status) }
-        private val buttons by lazy { itemView.findViewById<LinearLayout>(R.id.buttons) }
-        private val contactAdded by lazy { itemView.findViewById<ImageView>(R.id.contact_added) }
-
         fun bind(usernameSearchResult: UsernameSearchResult) {
             val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(itemView.context,
                     usernameSearchResult.username[0])
 
             val dashPayProfile = usernameSearchResult.dashPayProfile
             if (dashPayProfile.displayName.isEmpty()) {
-                displayName.text = dashPayProfile.username
-                username.text = ""
+                itemView.displayName.text = dashPayProfile.username
+                itemView.username.text = ""
             } else {
-                displayName.text = dashPayProfile.displayName
-                username.text = usernameSearchResult.username
+                itemView.displayName.text = dashPayProfile.displayName
+                itemView.username.text = usernameSearchResult.username
             }
 
-            if(dashPayProfile.avatarUrl.isNotEmpty()) {
-                Glide.with(avatar).load(dashPayProfile.avatarUrl).circleCrop()
-                        .placeholder(defaultAvatar).into(avatar)
+            if (dashPayProfile.avatarUrl.isNotEmpty()) {
+                Glide.with(itemView.avatar).load(dashPayProfile.avatarUrl).circleCrop()
+                        .placeholder(defaultAvatar).into(itemView.avatar)
             } else {
-                avatar.background = defaultAvatar
+                itemView.avatar.background = defaultAvatar
             }
 
             when (usernameSearchResult.requestSent to usernameSearchResult.requestReceived) {
                 //No Relationship
                 false to false -> {
-                    requestStatus.visibility = View.GONE
-                    buttons.visibility = View.GONE
-                    contactAdded.visibility = View.GONE
+                    itemView.request_status.visibility = View.GONE
+                    itemView.buttons.visibility = View.GONE
+                    itemView.contact_added.visibility = View.GONE
                 }
                 //Contact Established
                 true to true -> {
-                    requestStatus.visibility = View.GONE
-                    buttons.visibility = View.GONE
-                    contactAdded.visibility = View.VISIBLE
+                    itemView.request_status.visibility = View.GONE
+                    itemView.buttons.visibility = View.GONE
+                    itemView.contact_added.visibility = View.VISIBLE
                 }
                 //Request Sent / Pending
                 true to false -> {
-                    requestStatus.visibility = View.VISIBLE
-                    buttons.visibility = View.GONE
-                    contactAdded.visibility = View.GONE
+                    itemView.request_status.visibility = View.VISIBLE
+                    itemView.buttons.visibility = View.GONE
+                    itemView.contact_added.visibility = View.GONE
                 }
                 //Request Received
                 false to true -> {
-                    requestStatus.visibility = View.GONE
-                    buttons.visibility = View.VISIBLE
-                    contactAdded.visibility = View.GONE
+                    itemView.request_status.visibility = View.GONE
+                    itemView.buttons.visibility = View.VISIBLE
+                    itemView.contact_added.visibility = View.GONE
+                    itemView.accept_contact_request.setOnClickListener {
+                        onContactRequestButtonClickListener.onAcceptRequest(usernameSearchResult, adapterPosition)
+                    }
+                    itemView.ignore_contact_request.setOnClickListener {
+                        onContactRequestButtonClickListener.onIgnoreRequest(usernameSearchResult, adapterPosition)
+                    }
                 }
             }
 

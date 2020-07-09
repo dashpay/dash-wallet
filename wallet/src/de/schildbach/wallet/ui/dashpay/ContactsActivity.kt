@@ -28,14 +28,17 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.Window
+import android.widget.Toast
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.DashPayContactRequest
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
+import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.GlobalFooterActivity
@@ -72,6 +75,7 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
     private var blockchainIdentityId: String? = null
     private var direction = UsernameSortOrderBy.USERNAME
     private var mode = MODE_SEARCH_CONTACTS
+    private var currentPosition = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,7 +86,7 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
             mode = intent.extras.getInt(EXTRA_MODE)
         }
 
-        if(mode == MODE_SEARCH_CONTACTS) {
+        if (mode == MODE_SEARCH_CONTACTS) {
             setContentViewWithFooter(R.layout.activity_contacts_root)
             activateContactsButton()
         } else {
@@ -103,7 +107,7 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
 
         initViewModel()
 
-        if(mode == MODE_VIEW_REQUESTS) {
+        if (mode == MODE_VIEW_REQUESTS) {
             search.visibility = View.GONE
             icon.visibility = View.GONE
             setTitle(R.string.contact_requests_title)
@@ -133,6 +137,49 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
                 val tx = walletApplication.wallet.getTransaction(it.creditFundingTxId)
                 val cftx = walletApplication.wallet.getCreditFundingTransaction(tx)
                 blockchainIdentityId = cftx.creditBurnIdentityIdentifier.toStringBase58()
+            }
+        })
+
+        dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>> {
+            override fun onChanged(it: Resource<DashPayContactRequest>?) {
+                if (it != null && currentPosition != -1) {
+                    when (it.status) {
+                        Status.LOADING -> {
+
+                        }
+                        Status.ERROR -> {
+                            var msg = it.message
+                            if (msg == null) {
+                                msg = "!!Error!!  ${it.exception!!.message}"
+                            }
+                            Toast.makeText(this@ContactsActivity, msg, Toast.LENGTH_LONG).show()
+                        }
+                        Status.SUCCESS -> {
+                            // update the data
+                            contactsAdapter.results[currentPosition].usernameSearchResult!!.toContactRequest = it.data!!
+                            when (mode) {
+                                MODE_VIEW_REQUESTS -> {
+                                    contactsAdapter.results.removeAt(currentPosition)
+                                    contactsAdapter.notifyItemRemoved(currentPosition)
+                                }
+                                MODE_SEARCH_CONTACTS -> {
+                                    // instead of removing the contact request and add a contact
+                                    // just reload all the items
+                                    searchContacts()
+                                }
+                                MODE_SELECT_CONTACT -> {
+                                    // will there be contact requests in this mode?
+                                }
+                                else -> {
+                                    throw IllegalStateException("invalid mode for ContactsActivity")
+                                }
+                            }
+
+                            currentPosition = -1
+
+                        }
+                    }
+                }
             }
         })
     }
@@ -169,7 +216,7 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        if(mode == MODE_SEARCH_CONTACTS) {
+        if (mode == MODE_SEARCH_CONTACTS) {
             menuInflater.inflate(R.menu.contacts_menu, menu)
         }
         return super.onCreateOptionsMenu(menu)
@@ -205,20 +252,9 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
     }
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
-        when {
-            usernameSearchResult.isPendingRequest -> {
-                startActivity(DashPayUserActivity.createIntent(this,
-                        usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = false,
-                        contactRequestReceived = true))
-
-            }
-            !usernameSearchResult.isPendingRequest -> {
-                // How do we handle if this activity was started from the Payments Screen?
-                startActivity(DashPayUserActivity.createIntent(this,
-                        usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
-                        contactRequestReceived = usernameSearchResult.requestReceived))
-            }
-        }
+        startActivityForResult(DashPayUserActivity.createIntent(this,
+                usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
+                contactRequestReceived = usernameSearchResult.requestReceived), DashPayUserActivity.REQUEST_CODE_DEFAULT)
     }
 
 
@@ -241,5 +277,22 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
 
     override fun onViewAllRequests() {
         startActivity(createIntent(this, MODE_VIEW_REQUESTS))
+    }
+
+    override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+        if (currentPosition == -1) {
+            currentPosition = position
+            dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
+        }
+    }
+
+    override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == DashPayUserActivity.REQUEST_CODE_DEFAULT && resultCode == DashPayUserActivity.RESULT_CODE_CHANGED) {
+            searchContacts()
+        }
     }
 }
