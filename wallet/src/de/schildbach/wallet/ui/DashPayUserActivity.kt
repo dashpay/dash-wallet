@@ -91,8 +91,6 @@ class DashPayUserActivity : InteractionAwareActivity() {
         sendContactRequestBtn.setOnClickListener { sendContactRequest(profile.userId) }
         accept.setOnClickListener { sendContactRequest(profile.userId) }
 
-        val context = this
-
         dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>> {
             override fun onChanged(it: Resource<DashPayContactRequest>?) {
                 if (it != null) {
@@ -102,7 +100,7 @@ class DashPayUserActivity : InteractionAwareActivity() {
                             if (msg == null) {
                                 msg = "!!Error!!"
                             }
-                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@DashPayUserActivity, msg, Toast.LENGTH_LONG).show()
                         }
                         Status.SUCCESS -> {
                             setResult(RESULT_CODE_CHANGED)

@@ -144,7 +144,6 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
             }
         })
 
-        val context = this
         dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>> {
             override fun onChanged(it: Resource<DashPayContactRequest>?) {
                 if (it != null && currentPosition != -1) {
@@ -157,7 +156,7 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
                             if (msg == null) {
                                 msg = "!!Error!!  ${it.exception!!.message}"
                             }
-                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@NotificationsActivity, msg, Toast.LENGTH_LONG).show()
                         }
                         Status.SUCCESS -> {
                             // update the data
