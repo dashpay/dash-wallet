@@ -2,12 +2,12 @@
 
 DEPLOY_TYPE=$1
 
-if [ "${DEPLOY_TYPE}" = "master" ] || [ "${TRAVIS_TAG:0:4}" = "NMA-" ] || [ "${TRAVIS_TAG:0:4}" = "dpl-" ]; then
+if [ "${DEPLOY_TYPE}" = "master" ] || [ "${DEPLOY_TYPE}" = "DashPay" ] || [ "${TRAVIS_TAG:0:4}" = "NMA-" ] || [ "${TRAVIS_TAG:0:4}" = "dpl-" ]; then
 
   cd "$TRAVIS_BUILD_DIR" || exit
 
-  if [ "${DEPLOY_TYPE}" = "master" ]; then
-    TRAVIS_TAG="master"
+  if [ "${DEPLOY_TYPE}" = "master" ] || [ "${DEPLOY_TYPE}" = "DashPay" ]; then
+    TRAVIS_TAG=DEPLOY_TYPE
   fi
 
   eval "$(ssh-agent -s)" # Start ssh-agent cache
@@ -53,12 +53,12 @@ if [ "${DEPLOY_TYPE}" = "master" ] || [ "${TRAVIS_TAG:0:4}" = "NMA-" ] || [ "${T
   cd "$TRAVIS_BUILD_DIR" || exit
   rm -rf dash-wallet-staging
   rm -rf "$TRAVIS_BUILD_DIR"/app/build/outputs
-  if ! [ "${TRAVIS_TAG}" = "master" ]; then
+  if [ "${TRAVIS_TAG:0:4}" = "NMA-" ] || [ "${TRAVIS_TAG:0:4}" = "dpl-" ]; then
     echo "deleting tag $TRAVIS_TAG"
 #    git tag -d "$TRAVIS_TAG"
     git push -q https://"$PERSONAL_ACCESS_TOKEN"@github.com/dashevo/dash-wallet --delete "refs/tags/$TRAVIS_TAG"
   fi
 else
-  echo "Only tags or master"
+  echo "Only tags, master or DashPay"
 fi
 echo "Deploy done"
