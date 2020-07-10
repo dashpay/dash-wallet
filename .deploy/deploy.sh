@@ -1,8 +1,14 @@
 #!/bin/bash
 
-if [ "${TRAVIS_TAG:0:4}" = "NMA-" ] || [ "${TRAVIS_TAG:0:4}" = "dpl-" ]; then
+DEPLOY_TYPE=$1
+
+if [ "${DEPLOY_TYPE}" = "master" ] || [ "${TRAVIS_TAG:0:4}" = "NMA-" ] || [ "${TRAVIS_TAG:0:4}" = "dpl-" ]; then
 
   cd "$TRAVIS_BUILD_DIR" || exit
+
+  if [ "${DEPLOY_TYPE}" = "master" ]; then
+    TRAVIS_TAG="master"
+  fi
 
   eval "$(ssh-agent -s)" # Start ssh-agent cache
   chmod 600 .deploy/id_rsa # Allow read access to the private key
@@ -47,10 +53,12 @@ if [ "${TRAVIS_TAG:0:4}" = "NMA-" ] || [ "${TRAVIS_TAG:0:4}" = "dpl-" ]; then
   cd "$TRAVIS_BUILD_DIR" || exit
   rm -rf dash-wallet-staging
   rm -rf "$TRAVIS_BUILD_DIR"/app/build/outputs
-  echo "deleting tag $TRAVIS_TAG"
-#  git tag -d "$TRAVIS_TAG"
-  git push -q https://"$PERSONAL_ACCESS_TOKEN"@github.com/dashevo/dash-wallet --delete "refs/tags/$TRAVIS_TAG"
+  if ! [ "${TRAVIS_TAG}" = "master" ]; then
+    echo "deleting tag $TRAVIS_TAG"
+#    git tag -d "$TRAVIS_TAG"
+    git push -q https://"$PERSONAL_ACCESS_TOKEN"@github.com/dashevo/dash-wallet --delete "refs/tags/$TRAVIS_TAG"
+  fi
 else
-  echo "Only tags "
+  echo "Only tags or master"
 fi
 echo "Deploy done"

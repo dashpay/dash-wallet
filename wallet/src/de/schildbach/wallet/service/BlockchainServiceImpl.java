@@ -703,6 +703,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         super.onCreate();
 
+        application = (WalletApplication) getApplication();
+        if (application.getWallet() == null) {
+            return;
+        }
+
         nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
@@ -715,7 +720,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             startForeground();
         }
 
-        application = (WalletApplication) getApplication();
         config = application.getConfiguration();
         final Wallet wallet = application.getWallet();
 
@@ -822,6 +826,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Override
     public int onStartCommand(final Intent intent, final int flags, final int startId) {
         super.onStartCommand(intent, flags, startId);
+
+        if (application.getWallet() == null) {
+            log.warn("service started before wallet initialization");
+            return START_NOT_STICKY;
+        }
 
         if (intent != null) {
             //Restart service as a Foreground Service if it's synchronizing the blockchain
