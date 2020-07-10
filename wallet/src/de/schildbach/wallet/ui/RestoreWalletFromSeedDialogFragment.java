@@ -56,6 +56,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.KeyboardUtil;
+import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 import android.annotation.SuppressLint;
@@ -191,7 +192,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
     private void restoreWalletFromSeed(final List<String> words) {
         final WalletActivity activity = (WalletActivity) this.activity;
         try {
-            MnemonicCode.INSTANCE.check(words);
+            MnemonicCodeExt.getInstance().check(activity, words);
             activity.restoreWallet(WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS));
 
             log.info("successfully restored wallet from seed: {}", words.size());
@@ -276,7 +277,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
             return null;
         } else {
             String [] words = password.split(" ");
-            List<String> wordList = MnemonicCode.INSTANCE.getWordList();
+            List<String> wordList = MnemonicCodeExt.getInstance().getWordList();
 
             for(int i = 0; i < words.length; ++i)
                 if(!wordList.contains(words[i]))
