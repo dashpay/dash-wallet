@@ -7,7 +7,7 @@ if [ "${DEPLOY_TYPE}" = "master" ] || [ "${DEPLOY_TYPE}" = "DashPay" ] || [ "${T
   cd "$TRAVIS_BUILD_DIR" || exit
 
   if [ "${DEPLOY_TYPE}" = "master" ] || [ "${DEPLOY_TYPE}" = "DashPay" ]; then
-    TRAVIS_TAG=DEPLOY_TYPE
+    TRAVIS_TAG=$DEPLOY_TYPE
   fi
 
   eval "$(ssh-agent -s)" # Start ssh-agent cache
