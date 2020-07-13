@@ -17,6 +17,9 @@ import android.telephony.TelephonyManager
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.navigation.Navigation
+import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.ui.NavigationUI
 import com.google.common.collect.ImmutableList
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
@@ -28,6 +31,7 @@ import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet.util.Nfc
 import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.activity_main.*
 import okhttp3.HttpUrl
 import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.wallet.Wallet
@@ -43,16 +47,22 @@ import java.util.*
 class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPermissionsResultCallback,
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
-    private val DIALOG_BACKUP_WALLET_PERMISSION = 0
-    private val DIALOG_RESTORE_WALLET_PERMISSION = 1
-    private val DIALOG_RESTORE_WALLET = 2
-    private val DIALOG_TIMESKEW_ALERT = 3
-    private val DIALOG_VERSION_ALERT = 4
-    private val DIALOG_LOW_STORAGE_ALERT = 5
 
-    private val REQUEST_CODE_SCAN = 0
-    private val REQUEST_CODE_BACKUP_WALLET = 1
-    private val REQUEST_CODE_RESTORE_WALLET = 2
+    companion object {
+        const val REQUEST_CODE_SCAN = 0
+        const val REQUEST_CODE_BACKUP_WALLET = 1
+        const val REQUEST_CODE_RESTORE_WALLET = 2
+
+        const val DIALOG_BACKUP_WALLET_PERMISSION = 0
+        const val DIALOG_RESTORE_WALLET_PERMISSION = 1
+        const val DIALOG_RESTORE_WALLET = 2
+        const val DIALOG_TIMESKEW_ALERT = 3
+        const val DIALOG_VERSION_ALERT = 4
+        const val DIALOG_LOW_STORAGE_ALERT = 5
+        fun createIntent(context: Context): Intent {
+            return Intent(context, MainActivity::class.java)
+        }
+    }
 
     private var isRestoringBackup = false
     private var showBackupWalletDialog = false
@@ -61,6 +71,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
 
         if (savedInstanceState == null) {
             checkAlerts()
@@ -75,7 +86,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             upgradeWalletKeyChains(Constants.BIP44_PATH, false)
         }
         initFingerprintHelper()
-
+        setupNavigation()
     }
 
     override fun onResume() {
@@ -89,6 +100,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         handleIntent(intent!!)
+    }
+
+    private fun setupNavigation() {
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+        NavigationUI.setupWithNavController(bottom_navigation, navHostFragment.navController)
     }
 
     //BIP44 Wallet Upgrade Dialog Dismissed (Ok button pressed)
@@ -142,11 +158,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         return RestoreFromFileHelper.createRestoreWalletDialog(this, object : OnRestoreWalletListener {
             override fun onRestoreWallet(wallet: Wallet) {
                 restoreWallet(wallet)
-                application.getConfiguration().setRestoringBackup(true)
+                config.isRestoringBackup = true
             }
 
             override fun onRetryRequest() {
-                showDialog(WalletActivity.DIALOG_RESTORE_WALLET)
+                showDialog(MainActivity.DIALOG_RESTORE_WALLET)
             }
         })
     }
@@ -158,6 +174,10 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     private fun showRestoreWalletFromSeedDialog() {
         RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
+    }
+
+    fun handleRestoreWalletFromSeed() {
+        showRestoreWalletFromSeedDialog();
     }
 
     private fun createLowStorageAlertDialog(): Dialog? {
@@ -214,10 +234,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     fun restoreWallet(wallet: Wallet?) {
-        application.replaceWallet(wallet)
+        walletApplication.replaceWallet(wallet)
         getSharedPreferences(Constants.WALLET_LOCK_PREFS_NAME, Context.MODE_PRIVATE).edit().clear().commit()
         config.disarmBackupReminder()
-        wallet = application.getWallet()
         upgradeWalletKeyChains(Constants.BIP44_PATH, true)
         if (fingerprintHelper != null) {
             fingerprintHelper!!.clear()

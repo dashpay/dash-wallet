@@ -89,7 +89,7 @@
             android:screenOrientation="portrait"/>
 
         <activity
-            android:name="de.schildbach.wallet.ui.WalletActivity"
+            android:name="de.schildbach.wallet.ui.MainActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:windowSoftInputMode="stateAlwaysHidden"
             android:exported="true"
@@ -99,8 +99,8 @@
             android:theme="@style/My.Theme.NoStatusBar" />
 
         <activity-alias
-            android:name="de.schildbach.wallet.WalletActivity"
-            android:targetActivity="de.schildbach.wallet.ui.WalletActivity">
+            android:name="de.schildbach.wallet.MainActivity"
+            android:targetActivity="de.schildbach.wallet.ui.MainActivity">
             <intent-filter>
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
                 <data android:mimeType="application/x-drktx" />

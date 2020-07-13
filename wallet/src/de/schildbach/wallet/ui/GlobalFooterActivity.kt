@@ -58,7 +58,7 @@ open class GlobalFooterActivity : InteractionAwareActivity(), GlobalFooterView.O
     }
 
     override fun onHomeClick() {
-        val intent = Intent(this, WalletActivity::class.java)
+        val intent = Intent(this, MainActivity::class.java)
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
         startActivity(intent)
     }

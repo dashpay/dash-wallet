@@ -6,18 +6,6 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottom_navigation"
-        android:layout_width="match_parent"
-        android:layout_height="80dp"
-        android:background="@android:color/white"
-        app:itemIconTint="@color/bottom_nav_icon_tint"
-        app:labelVisibilityMode="unlabeled"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:menu="@menu/bottom_navigation_menu" />
-
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:id="@+id/home_content"
         android:layout_width="match_parent"
