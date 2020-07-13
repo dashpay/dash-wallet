@@ -1072,20 +1072,18 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         });
     }
 
-    boolean updatingDashPayState = false;
     private void updateDashPayState() {
-        if (blockchainIdentityData != null && !updatingDashPayState) {
+        if (blockchainIdentityData != null) {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
                     String userId = blockchainIdentityData.getIdentity(application.getWallet());
                     if (userId != null ) {
-                        updatingDashPayState = true;
                         log.info("Updating DashPay State");
-                        new PlatformRepo(application).updateContactRequests(userId, new Continuation<Unit>() {
+                        new PlatformRepo(application).updateContactRequests(new Continuation<Unit>() {
                             @Override
                             public void resumeWith(@NotNull Object o) {
-                                updatingDashPayState = false;
+
                             }
 
                             @Override

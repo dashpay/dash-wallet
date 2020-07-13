@@ -39,7 +39,8 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     private val usernameLiveData = MutableLiveData<String>()
     private val userSearchLiveData = MutableLiveData<String>()
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
-    private val notificationCountLiveData = MutableLiveData<Long>()
+    val notificationCountLiveData = NotificationCountLiveData(application as WalletApplication, platformRepo)
+    val notificationsLiveData = NotificationsLiveData(application as WalletApplication, platformRepo)
     private val contactRequestLiveData = MutableLiveData<Pair<String, KeyParameter?>>()
 
     // Job instance (https://stackoverflow.com/questions/57723714/how-to-cancel-a-running-livedata-coroutine-block/57726583#57726583)
@@ -109,21 +110,23 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         emit(platformRepo.isPlatformAvailable())
     }
 
-    fun getNotificationCount(date: Long) {
-        notificationCountLiveData.value = date
+    fun searchNotifications(text: String) {
+        notificationsLiveData.searchNotifications(text)
     }
 
-    val getNotificationCountLiveData = Transformations.switchMap(notificationCountLiveData) { date: Long ->
-        liveData(Dispatchers.IO) {
-            val count = platformRepo.getNotificationCount(date)
-            if (count >= 0)
-                emit(count)
-        }
+    fun getNotificationCount(date: Long) {
+        notificationCountLiveData.getNotificationCount()
     }
 
     fun usernameDoneAndDismiss() {
         viewModelScope.launch {
             platformRepo.doneAndDismiss()
+        }
+    }
+
+    fun updateDashPayState() {
+        viewModelScope.launch {
+            platformRepo.updateContactRequests()
         }
     }
 

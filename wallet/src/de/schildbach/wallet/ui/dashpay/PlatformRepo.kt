@@ -22,7 +22,12 @@ import com.google.common.base.Stopwatch
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.*
+import de.schildbach.wallet.data.BlockchainIdentityBaseData
+import de.schildbach.wallet.data.BlockchainIdentityData
+import de.schildbach.wallet.data.DashPayContactRequest
+import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.data.UsernameSearchResult
+import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.send.DeriveKeyTask
@@ -51,6 +56,7 @@ import org.dashevo.platform.Platform
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.collections.HashSet
@@ -62,6 +68,24 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
     companion object {
         private val log = LoggerFactory.getLogger(PlatformRepo::class.java)
+
+        private val onContactsUpdatedListeners = arrayListOf<OnContactsUpdated>()
+        private val updatingContacts = AtomicBoolean(false)
+
+        fun addContactsUpdatedListener(listener: OnContactsUpdated) {
+            onContactsUpdatedListeners.add(listener)
+        }
+
+        fun removeContactsUpdatedListener(listener: OnContactsUpdated?) {
+            onContactsUpdatedListeners.remove(listener)
+        }
+
+        fun queueContactsUpdatedListeners(updateBackgroundHandler: Handler) {
+            updateBackgroundHandler.post {
+                for (listener in onContactsUpdatedListeners)
+                    listener.onContactsUpdated()
+            }
+        }
     }
 
     private val platform: Platform = walletApplication.platform
@@ -600,7 +624,16 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     }
 
     // contacts
-    suspend fun updateContactRequests(userId: String) {
+    suspend fun updateContactRequests() {
+        // only allow this method to execute once at a time
+        if (updatingContacts.get()) {
+            return
+        }
+        updatingContacts.set(true)
+
+        val blockchainIdentityData = blockchainIdentityDataDaoAsync.load() ?: return
+        val userId = blockchainIdentityData!!.getIdentity(walletApplication.wallet) ?: return
+
         val userIdList = HashSet<String>()
         val watch = Stopwatch.createStarted()
 
@@ -638,9 +671,12 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                     dashPayProfileDaoAsync.insert(profile!!)
                 }
             }
+            queueContactsUpdatedListeners(backgroundHandler)
             log.info("updating contacts and profiles took $watch")
         } catch (e: Exception) {
-            log.error("error updating contacts ${e.message}")
+            log.error(formatExceptionMessage("error updating contacts", e))
+        } finally {
+            updatingContacts.set(false)
         }
     }
 }
