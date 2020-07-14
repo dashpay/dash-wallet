@@ -42,7 +42,7 @@ class NotificationsLiveData(val walletApplication: WalletApplication, private va
     fun searchNotifications(text: String = "") {
         query = text
         GlobalScope.launch {
-            val contactRequests = platformRepo.searchContacts(query, UsernameSortOrderBy.LAST_ACTIVITY)
+            val contactRequests = platformRepo.searchContacts(query, UsernameSortOrderBy.DATE_ADDED)
 
             //TODO: gather other notification types
             // * invitations
