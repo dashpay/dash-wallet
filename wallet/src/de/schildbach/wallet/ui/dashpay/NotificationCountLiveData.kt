@@ -19,14 +19,14 @@ class NotificationCountLiveData(val walletApplication: WalletApplication, privat
 
     private fun maybeAddEventListener() {
         if (!listening && hasActiveObservers()) {
-            PlatformRepo.addContactsUpdatedListener(this)
+            platformRepo.addContactsUpdatedListener(this)
             listening = true
         }
     }
 
     private fun maybeRemoveEventListener() {
         if (listening) {
-            PlatformRepo.removeContactsUpdatedListener(this)
+            platformRepo.removeContactsUpdatedListener(this)
             listening = false
         }
     }

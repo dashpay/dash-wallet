@@ -33,6 +33,8 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.send.DeriveKeyTask
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
@@ -64,31 +66,28 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-class PlatformRepo(val walletApplication: WalletApplication) {
+class PlatformRepo private constructor(val walletApplication: WalletApplication) {
 
     companion object {
         private val log = LoggerFactory.getLogger(PlatformRepo::class.java)
 
-        private val onContactsUpdatedListeners = arrayListOf<OnContactsUpdated>()
-        private val updatingContacts = AtomicBoolean(false)
+        const val UPDATE_TIMER_DELAY = 15000L // 15 seconds
 
-        fun addContactsUpdatedListener(listener: OnContactsUpdated) {
-            onContactsUpdatedListeners.add(listener)
+        private lateinit var platformRepoInstance: PlatformRepo
+
+        fun initPlatformRepo(walletApplication: WalletApplication) {
+            platformRepoInstance = PlatformRepo(walletApplication)
         }
 
-        fun removeContactsUpdatedListener(listener: OnContactsUpdated?) {
-            onContactsUpdatedListeners.remove(listener)
-        }
-
-        fun queueContactsUpdatedListeners(updateBackgroundHandler: Handler) {
-            updateBackgroundHandler.post {
-                for (listener in onContactsUpdatedListeners)
-                    listener.onContactsUpdated()
-            }
+        fun getInstance() : PlatformRepo {
+            return platformRepoInstance
         }
     }
 
-    private val platform: Platform = walletApplication.platform
+    private val onContactsUpdatedListeners = arrayListOf<OnContactsUpdated>()
+    private val updatingContacts = AtomicBoolean(false)
+
+    val platform = Platform(Constants.NETWORK_PARAMETERS)
     private val profiles = Profiles(platform)
 
     private val blockchainIdentityDataDaoAsync = AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync()
@@ -515,7 +514,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity {
         val creditFundingTransaction = blockchainIdentityData.findCreditFundingTransaction(wallet)
         if (creditFundingTransaction != null) {
-            return BlockchainIdentity(walletApplication.platform, Identity.IdentityType.USER, creditFundingTransaction, wallet).apply {
+            return BlockchainIdentity(platform, Identity.IdentityType.USER, creditFundingTransaction, wallet).apply {
                 identity = platform.identities.get(uniqueIdString)
                 currentUsername = blockchainIdentityData.username
                 registrationStatus = blockchainIdentityData.registrationStatus!!
@@ -537,7 +536,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                         ?: IdentityPublicKey.TYPES.ECDSA_SECP256K1
             }
         }
-        return BlockchainIdentity(walletApplication.platform, Identity.IdentityType.USER, 0, wallet)
+        return BlockchainIdentity(platform, Identity.IdentityType.USER, 0, wallet)
     }
 
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData, blockchainIdentity: BlockchainIdentity) {
@@ -671,12 +670,57 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                     dashPayProfileDaoAsync.insert(profile!!)
                 }
             }
-            queueContactsUpdatedListeners(backgroundHandler)
+            queueContactsUpdatedListeners()
             log.info("updating contacts and profiles took $watch")
         } catch (e: Exception) {
             log.error(formatExceptionMessage("error updating contacts", e))
         } finally {
             updatingContacts.set(false)
+        }
+    }
+
+    // Create the Handler object (on the main thread by default)
+    val timerHandler = Handler()
+    var timerStarted = false
+
+    // Define the code block to be executed
+    private val executeUpdateContacts = object : Runnable {
+        override fun run() {
+            // Do something here on the main thread
+            log.info("Timer: Update contacts")
+            // Repeat this the same runnable code block again another 2 seconds
+            GlobalScope.launch {
+                updateContactRequests()
+            }
+            timerHandler.postDelayed(this, UPDATE_TIMER_DELAY)
+        }
+    }
+
+    // Start the initial runnable task by posting through the handler
+    fun startUpdateTimer() {
+        log.info("Starting timer for updating DashPay")
+        if (!timerStarted) {
+            timerHandler.post(executeUpdateContacts)
+            timerStarted = true
+        }
+    }
+
+    fun stopUpdateTimer() {
+        timerHandler.removeCallbacks(executeUpdateContacts)
+    }
+
+    fun addContactsUpdatedListener(listener: OnContactsUpdated) {
+        onContactsUpdatedListeners.add(listener)
+    }
+
+    fun removeContactsUpdatedListener(listener: OnContactsUpdated?) {
+        onContactsUpdatedListeners.remove(listener)
+    }
+
+    fun queueContactsUpdatedListeners() {
+        backgroundHandler.post {
+            for (listener in onContactsUpdatedListeners)
+                listener.onContactsUpdated()
         }
     }
 }

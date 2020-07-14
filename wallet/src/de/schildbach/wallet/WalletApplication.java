@@ -97,6 +97,7 @@ import de.schildbach.wallet.ui.LockScreenActivity;
 import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet.ui.ShortcutComponentActivity;
 import de.schildbach.wallet.ui.WalletUriHandlerActivity;
+import de.schildbach.wallet.ui.dashpay.PlatformRepo;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.security.SecurityGuard;
@@ -117,7 +118,6 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     private boolean basicWalletInitalizationFinished = false;
 
     private Intent blockchainServiceIntent;
-    private Platform platform;
 
     private File walletFile;
     private Wallet wallet;
@@ -245,7 +245,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
 
         blockchainServiceIntent = new Intent(this, BlockchainServiceImpl.class);
 
-        platform = new Platform(Constants.NETWORK_PARAMETERS);
+        PlatformRepo.Companion.initPlatformRepo(this);
     }
 
     public void setWallet(Wallet newWallet) {
@@ -292,6 +292,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
             }
         });
         initUphold();
+        initPlatform();
     }
 
     private void initUphold() {
@@ -301,6 +302,10 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         String authenticationHash = Sha256Hash.wrap(xpubExcerptHash).toString();
 
         UpholdClient.init(getApplicationContext(), authenticationHash);
+    }
+
+    private void initPlatform() {
+        PlatformRepo.Companion.getInstance().startUpdateTimer();
     }
 
     public void maybeStartAutoLogoutTimer() {
@@ -447,8 +452,6 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     public Wallet getWallet() {
         return wallet;
     }
-
-   public Platform getPlatform() { return platform; }
 
     private void loadWalletFromProtobuf() {
         FileInputStream walletStream = null;

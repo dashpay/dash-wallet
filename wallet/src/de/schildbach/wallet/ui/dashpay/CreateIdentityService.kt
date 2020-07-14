@@ -85,7 +85,7 @@ class CreateIdentityService : LifecycleService() {
     }
 
     private val walletApplication by lazy { application as WalletApplication }
-    private val platformRepo by lazy { PlatformRepo(walletApplication) }
+    private val platformRepo by lazy { PlatformRepo.getInstance() }
     private lateinit var securityGuard: SecurityGuard
 
     private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
@@ -348,7 +348,7 @@ class CreateIdentityService : LifecycleService() {
         val seed = decryptSeed(backgroundHandler, wallet, encryptionKey)
 
         // create the Blockchain Identity object
-        val blockchainIdentity = BlockchainIdentity(walletApplication.platform, Identity.IdentityType.USER, 0, wallet)
+        val blockchainIdentity = BlockchainIdentity(platformRepo.platform, Identity.IdentityType.USER, 0, wallet)
         // this process should have been done already, otherwise the credit funding transaction
         // will not have the credit burn keys associated with it
         platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)

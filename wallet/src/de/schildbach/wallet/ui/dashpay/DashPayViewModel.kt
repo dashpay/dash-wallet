@@ -34,7 +34,7 @@ import java.lang.Exception
 
 class DashPayViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val platformRepo = PlatformRepo(application as WalletApplication)
+    private val platformRepo = PlatformRepo.getInstance()
 
     private val usernameLiveData = MutableLiveData<String>()
     private val userSearchLiveData = MutableLiveData<String>()
