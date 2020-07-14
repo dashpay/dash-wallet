@@ -16,7 +16,7 @@ data class UsernameSearchResult(val username: String,
             get() {
                 return when (requestSent to requestReceived) {
                     true to true -> {
-                        max(toContactRequest!!.timestamp, fromContactRequest!!.timestamp)
+                        fromContactRequest!!.timestamp
                     }
                     true to false -> {
                         toContactRequest!!.timestamp
