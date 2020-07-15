@@ -14,12 +14,14 @@ import android.os.Bundle
 import android.os.LocaleList
 import android.provider.Settings
 import android.telephony.TelephonyManager
+import android.view.MenuItem
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.navigation.Navigation
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.NavigationUI
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.common.collect.ImmutableList
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
@@ -86,7 +88,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             upgradeWalletKeyChains(Constants.BIP44_PATH, false)
         }
         initFingerprintHelper()
-        setupNavigation()
+        setupBottomNavigation()
     }
 
     override fun onResume() {
@@ -102,11 +104,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         handleIntent(intent!!)
     }
 
-    private fun setupNavigation() {
-        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
-        NavigationUI.setupWithNavController(bottom_navigation, navHostFragment.navController)
-    }
-
     //BIP44 Wallet Upgrade Dialog Dismissed (Ok button pressed)
     override fun onUpgradeConfirmed() {
         if (isRestoringBackup) {
@@ -114,6 +111,18 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         } else {
             checkWalletEncryptionDialog()
         }
+    }
+
+    private fun setupBottomNavigation() {
+        bottom_navigation.setOnNavigationItemSelectedListener(object : BottomNavigationView.OnNavigationItemSelectedListener {
+            override fun onNavigationItemSelected(item: MenuItem): Boolean {
+                if (item.itemId == bottom_navigation.selectedItemId) {
+                    return true
+                }
+                
+                return true
+            }
+        })
     }
 
     override fun onNewKeyChainEncrypted() {
