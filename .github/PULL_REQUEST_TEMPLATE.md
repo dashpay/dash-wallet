@@ -2,12 +2,12 @@
 <!--- Remove sections that don't apply to this PR -->
 
 ## Issue being fixed or feature implemented
-<!--- Why is this change required? What problem does it solve? What is the new feature -->
-<!--- Add any questions or explanations that are not in the comments -->
+<!--- Why is this change required? What problem does it solve? What is the new feature? -->
+<!--- Add any questions or explanations that are not in the code comments -->
 <!--- List related Stories: NMA-???? -->
 
 ## Related PR's and Dependencies
-<!--- Put links to other PR's here in dash-wallet, dashj, dpp, dapi-client, dashpay -->
+<!--- Put links to other PR's here for dash-wallet, dashj, dpp, dapi-client, dashpay, etc -->
 
 ## Screenshots / Videos
 <!--- Include screenshots or videos here if applicable -->
