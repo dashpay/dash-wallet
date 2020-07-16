@@ -138,8 +138,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     private fun addContactsFragment(): Boolean {
         val contactsFragment = ContactsFragment.newInstance()
-        supportFragmentManager.beginTransaction().add(R.id.fragment_container, contactsFragment)
-                .addToBackStack(null).commit()
+        val transaction = supportFragmentManager.beginTransaction()
+        transaction.setCustomAnimations(R.anim.fragment_fade_in, R.anim.fragment_fade_out,
+                R.anim.fragment_fade_in, R.anim.fragment_fade_out)
+        transaction.add(R.id.fragment_container, contactsFragment)
+        transaction.addToBackStack(null).commit()
         return true
     }
 
