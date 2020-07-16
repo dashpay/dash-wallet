@@ -1,4 +1,4 @@
-<!--- Provide a general summary of your changes in the Title above -->
+<!--- Provide a general summary of your changes in the Title above, include story number -->
 <!--- Remove sections that don't apply to this PR -->
 
 ## Issue being fixed or feature implemented
