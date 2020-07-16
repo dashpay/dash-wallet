@@ -35,12 +35,14 @@ import java.lang.Exception
 class DashPayViewModel(application: Application) : AndroidViewModel(application) {
 
     private val platformRepo = PlatformRepo.getInstance()
+    private val walletApplication = application as WalletApplication
 
     private val usernameLiveData = MutableLiveData<String>()
     private val userSearchLiveData = MutableLiveData<String>()
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
-    val notificationCountLiveData = NotificationCountLiveData(application as WalletApplication, platformRepo)
-    val notificationsLiveData = NotificationsLiveData(application as WalletApplication, platformRepo)
+    val notificationCountLiveData = NotificationCountLiveData(walletApplication, platformRepo)
+    val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo)
+    val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformRepo)
     private val contactRequestLiveData = MutableLiveData<Pair<String, KeyParameter?>>()
 
     // Job instance (https://stackoverflow.com/questions/57723714/how-to-cancel-a-running-livedata-coroutine-block/57726583#57726583)
