@@ -18,9 +18,6 @@ import android.view.MenuItem
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.navigation.Navigation
-import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.ui.NavigationUI
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.common.collect.ImmutableList
 import de.schildbach.wallet.Constants
@@ -28,6 +25,7 @@ import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser
 import de.schildbach.wallet.ui.RestoreFromFileHelper.OnRestoreWalletListener
+import de.schildbach.wallet.ui.dashpay.ContactsFragment
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.FingerprintHelper
@@ -114,15 +112,27 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private fun setupBottomNavigation() {
+        supportFragmentManager.addOnBackStackChangedListener {
+            if (supportFragmentManager.backStackEntryCount == 0) {
+                bottom_navigation.selectedItemId = R.id.home
+            }
+        }
         bottom_navigation.setOnNavigationItemSelectedListener(object : BottomNavigationView.OnNavigationItemSelectedListener {
             override fun onNavigationItemSelected(item: MenuItem): Boolean {
-                if (item.itemId == bottom_navigation.selectedItemId) {
-                    return true
+                return when (item.itemId) {
+                    bottom_navigation.selectedItemId -> true
+                    R.id.contacts -> return addContactsFragment()
+                    else -> true
                 }
-                
-                return true
             }
         })
+    }
+
+    private fun addContactsFragment(): Boolean {
+        val contactsFragment = ContactsFragment.newInstance()
+        supportFragmentManager.beginTransaction().add(R.id.fragment_container, contactsFragment)
+                .addToBackStack(ContactsFragment.TAG).commit()
+        return true
     }
 
     override fun onNewKeyChainEncrypted() {

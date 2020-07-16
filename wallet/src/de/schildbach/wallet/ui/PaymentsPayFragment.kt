@@ -32,7 +32,6 @@ import androidx.lifecycle.Observer
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.scan.ScanActivity
-import de.schildbach.wallet.ui.dashpay.ContactsActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_payments_pay.*
@@ -76,13 +75,13 @@ class PaymentsPayFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        view!!.viewTreeObserver?.addOnWindowFocusChangeListener(onWindowFocusChangeListener)
+        requireView().viewTreeObserver?.addOnWindowFocusChangeListener(onWindowFocusChangeListener)
         getClipboardManager().addPrimaryClipChangedListener(onPrimaryClipChangedListener)
     }
 
     override fun onPause() {
         super.onPause()
-        view!!.viewTreeObserver?.removeOnWindowFocusChangeListener(onWindowFocusChangeListener)
+        requireView().viewTreeObserver?.removeOnWindowFocusChangeListener(onWindowFocusChangeListener)
         getClipboardManager().removePrimaryClipChangedListener(onPrimaryClipChangedListener)
     }
 
@@ -101,7 +100,8 @@ class PaymentsPayFragment : Fragment() {
     }
 
     private fun handleSelectContact(clickView: View) {
-        startActivity(ContactsActivity.createIntent(clickView.context, ContactsActivity.MODE_SELECT_CONTACT))
+        //TODO: Start Contacts fragment with MODE_SELECT_CONTACT
+        //startActivity(ContactsActivity.createIntent(clickView.context, ContactsActivity.MODE_SELECT_CONTACT))
     }
 
     private fun handleScan(clickView: View) {

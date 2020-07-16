@@ -18,9 +18,6 @@ package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.view.View
-import android.widget.ImageView
-import de.schildbach.wallet.ui.dashpay.ContactsActivity
 import de.schildbach.wallet.ui.widget.GlobalFooterView
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.InteractionAwareActivity
@@ -64,8 +61,6 @@ open class GlobalFooterActivity : InteractionAwareActivity(), GlobalFooterView.O
     }
 
     override fun onContactsClick() {
-        val intent = Intent(this, ContactsActivity::class.java)
-        startActivity(intent)
     }
 
     //TODO: Use when 4th button is needed
