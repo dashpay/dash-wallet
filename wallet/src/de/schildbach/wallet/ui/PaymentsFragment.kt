@@ -17,46 +17,47 @@
 package de.schildbach.wallet.ui
 
 import android.content.Context
-import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
+import android.view.MenuInflater
 import android.view.MenuItem
-import androidx.appcompat.widget.Toolbar
+import android.view.View
+import androidx.fragment.app.Fragment
 import com.google.android.material.tabs.TabLayout
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.*
 
-class PaymentsActivity : GlobalFooterActivity() {
+class PaymentsFragment : Fragment(R.layout.activity_payments) {
 
     companion object {
         private const val PREFS_RECENT_TAB = "recent_tab"
-
-        private const val EXTRA_ACTIVE_TAB = "extra_active_tab"
+        private const val ARGS_ACTIVE_TAB = "extra_active_tab"
 
         const val ACTIVE_TAB_RECENT = -1
         const val ACTIVE_TAB_PAY = 0
         const val ACTIVE_TAB_RECEIVE = 1
 
         @JvmStatic
-        fun createIntent(context: Context, activeTab: Int): Intent {
-            val intent = Intent(context, PaymentsActivity::class.java)
-            intent.putExtra(EXTRA_ACTIVE_TAB, activeTab)
-            return intent
+        fun newInstance(activeTab: Int = ACTIVE_TAB_RECENT): PaymentsFragment {
+            val args = Bundle()
+            args.putInt(ARGS_ACTIVE_TAB, activeTab)
+
+            val instance = PaymentsFragment()
+            instance.arguments = args
+            return instance
         }
     }
 
     private var saveRecentTab = false
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentViewWithFooter(R.layout.activity_payments)
-        activateGotoButton()
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        val toolbar = findViewById<Toolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
+        //TODO: ActionBar
+        //setSupportActionBar(toolbar)
+        //setTitle(R.string.payments_title)
 
-        setTitle(R.string.payments_title)
-
+        //TODO: Implement FragmentViewPager
         tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
 
             var initialReselection: Boolean = true
@@ -77,12 +78,13 @@ class PaymentsActivity : GlobalFooterActivity() {
                     0 -> PaymentsPayFragment.newInstance()
                     else -> PaymentsReceiveFragment.newInstance()
                 }
-                supportFragmentManager.beginTransaction()
+
+                childFragmentManager.beginTransaction()
                         .replace(R.id.fragment_container, fragment)
                         .commitNow()
 
                 if (saveRecentTab) {
-                    val preferences = getPreferences(Context.MODE_PRIVATE)
+                    val preferences = requireActivity().getPreferences(Context.MODE_PRIVATE)
                     preferences.edit().putInt(PREFS_RECENT_TAB, tab.position).apply()
                 }
             }
@@ -92,9 +94,9 @@ class PaymentsActivity : GlobalFooterActivity() {
     }
 
     private fun activateTab() {
-        val activeTab = intent.getIntExtra(EXTRA_ACTIVE_TAB, ACTIVE_TAB_RECENT)
+        val activeTab = requireArguments().getInt(ARGS_ACTIVE_TAB, ACTIVE_TAB_RECENT)
         if (activeTab < 0) {
-            val preferences = getPreferences(Context.MODE_PRIVATE)
+            val preferences = requireActivity().getPreferences(Context.MODE_PRIVATE)
             val recentTab = preferences.getInt(PREFS_RECENT_TAB, 0)
             tabs.getTabAt(recentTab)!!.select()
             saveRecentTab = true
@@ -103,19 +105,15 @@ class PaymentsActivity : GlobalFooterActivity() {
         }
     }
 
-    override fun onGotoClick() {
-        finish()
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+    override fun onCreateOptionsMenu(menu: Menu, menuInflater: MenuInflater) {
         menuInflater.inflate(R.menu.payment_options, menu)
-        return super.onCreateOptionsMenu(menu)
+        super.onCreateOptionsMenu(menu, menuInflater)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.option_close -> {
-                finish()
+                //TODO: PopBackStack / Remove fragment
                 return true
             }
         }

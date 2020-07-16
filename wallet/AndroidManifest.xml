@@ -258,7 +258,7 @@
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
-        <activity android:name="de.schildbach.wallet.ui.PaymentsActivity"
+        <activity android:name="de.schildbach.wallet.ui.PaymentsFragment"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 

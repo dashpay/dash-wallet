@@ -164,10 +164,12 @@ class WalletFragment : Fragment(R.layout.home_content) {
     private fun initView() {
         initQuickActions()
         pay_btn.setOnClickListener(View.OnClickListener {
-            startActivity(PaymentsActivity.createIntent(requireContext(), PaymentsActivity.ACTIVE_TAB_PAY))
+            //TODO:
+            //startActivity(PaymentsFragment.createIntent(requireContext(), PaymentsFragment.ACTIVE_TAB_PAY))
         })
         receive_btn.setOnClickListener {
-            startActivity(PaymentsActivity.createIntent(requireContext(), PaymentsActivity.ACTIVE_TAB_RECEIVE))
+            //TODO:
+            //startActivity(PaymentsFragment.createIntent(requireContext(), PaymentsFragment.ACTIVE_TAB_RECEIVE))
         }
     }
 

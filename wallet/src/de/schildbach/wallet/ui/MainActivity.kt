@@ -18,6 +18,7 @@ import android.view.MenuItem
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.common.collect.ImmutableList
@@ -120,30 +121,49 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
         bottom_navigation.setOnNavigationItemSelectedListener(object : BottomNavigationView.OnNavigationItemSelectedListener {
             override fun onNavigationItemSelected(item: MenuItem): Boolean {
-                return when (item.itemId) {
+                when (item.itemId) {
                     bottom_navigation.selectedItemId -> true
-                    R.id.contacts -> return addContactsFragment()
-                    R.id.home -> {
-                        if (supportFragmentManager.backStackEntryCount > 0) {
-                            supportFragmentManager.popBackStack(null,
-                                    FragmentManager.POP_BACK_STACK_INCLUSIVE)
-                        }
-                        true
-                    }
-                    else -> true
+                    R.id.contacts -> showContacts()
+                    R.id.payments -> showPayments()
+                    R.id.home -> showHome()
                 }
+                return true
             }
         })
     }
 
-    private fun addContactsFragment(): Boolean {
-        val contactsFragment = ContactsFragment.newInstance()
+    private fun showHome(): Boolean {
+        if (supportFragmentManager.backStackEntryCount > 0) {
+            supportFragmentManager.popBackStack(null,
+                    FragmentManager.POP_BACK_STACK_INCLUSIVE)
+            return true
+        }
+        return false
+    }
+
+    override fun onBackPressed() {
+        if (!showHome()) {
+            super.onBackPressed()
+        }
+    }
+
+    private fun replaceFragment(fragment: Fragment, enterAnim: Int = R.anim.fragment_in,
+                                exitAnim: Int = R.anim.fragment_out) {
         val transaction = supportFragmentManager.beginTransaction()
-        transaction.setCustomAnimations(R.anim.fragment_fade_in, R.anim.fragment_fade_out,
-                R.anim.fragment_fade_in, R.anim.fragment_fade_out)
-        transaction.add(R.id.fragment_container, contactsFragment)
+        transaction.setCustomAnimations(enterAnim, R.anim.fragment_out, enterAnim, exitAnim)
+        transaction.replace(R.id.fragment_container, fragment)
         transaction.addToBackStack(null).commit()
-        return true
+    }
+
+    private fun showContacts() {
+        val contactsFragment = ContactsFragment.newInstance()
+        replaceFragment(contactsFragment)
+    }
+
+    private fun showPayments() {
+        val paymentsFragment = PaymentsFragment.newInstance()
+        replaceFragment(paymentsFragment, R.anim.fragment_slide_up,
+                R.anim.fragment_slide_down)
     }
 
     override fun onNewKeyChainEncrypted() {

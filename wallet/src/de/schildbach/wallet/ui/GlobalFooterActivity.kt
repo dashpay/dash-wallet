@@ -45,8 +45,6 @@ open class GlobalFooterActivity : InteractionAwareActivity(), GlobalFooterView.O
     }
 
     override fun onGotoClick() {
-        val intent = PaymentsActivity.createIntent(this, PaymentsActivity.ACTIVE_TAB_RECENT)
-        startActivity(intent)
     }
 
     override fun onMoreClick() {
