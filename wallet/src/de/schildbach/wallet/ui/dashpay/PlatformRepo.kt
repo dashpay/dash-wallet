@@ -83,10 +83,16 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         // it is possible that some nodes are not available due to location,
         // firewalls or other reasons
         return try {
-            //TODO: something is wrong with getStatus() or the nodes only return success about 10-20% of time
-            val response = platform.client.getStatus()
-            Resource.success(response!!.connections > 0 && response.errors.isBlank() &&
-                    Constants.NETWORK_PARAMETERS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM) >= response.protocolVersion)
+            if (Constants.NETWORK_PARAMETERS.id.contains("mobile")) {
+                // Something is wrong with getStatus() or the nodes only return success about 10-20% of time
+                // on the mobile 0.11 devnet
+                platform.client.getBlockByHeight(100)
+                Resource.success(true)
+            } else {
+                val response = platform.client.getStatus()
+                Resource.success(response!!.connections > 0 && response.errors.isBlank() &&
+                        Constants.NETWORK_PARAMETERS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM) <= response.protocolVersion)
+            }
         } catch (e: Exception) {
             try {
                 // use getBlockByHeight instead of getStatus in case of failure
@@ -276,14 +282,14 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             e.message
         }
         if (msg == null) {
-            msg = "Unknown error"
+            msg = "Unknown error - ${e.javaClass.simpleName}"
         }
         log.error("$description: $msg")
         if (e is StatusRuntimeException) {
             log.error("---> ${e.trailers}")
-            e.printStackTrace()
         }
         log.error(msg)
+        e.printStackTrace()
         return msg
     }
 
@@ -485,7 +491,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity {
         val creditFundingTransaction = blockchainIdentityData.findCreditFundingTransaction(wallet)
         if (creditFundingTransaction != null) {
-            return BlockchainIdentity(Identity.IdentityType.USER, creditFundingTransaction, wallet).apply {
+            return BlockchainIdentity(walletApplication.platform, Identity.IdentityType.USER, creditFundingTransaction, wallet).apply {
                 identity = platform.identities.get(uniqueIdString)
                 currentUsername = blockchainIdentityData.username
                 registrationStatus = blockchainIdentityData.registrationStatus!!
@@ -507,7 +513,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                         ?: IdentityPublicKey.TYPES.ECDSA_SECP256K1
             }
         }
-        return BlockchainIdentity(Identity.IdentityType.USER, 0, wallet)
+        return BlockchainIdentity(walletApplication.platform, Identity.IdentityType.USER, 0, wallet)
     }
 
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData, blockchainIdentity: BlockchainIdentity) {
@@ -614,21 +620,23 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 dashPayContactRequestDaoAsync.insert(contactRequest)
             }
 
-            val profileDocuments = Profiles(platform).getList(userIdList.toList()) //only handles 100 userIds
-            val profileById = profileDocuments.associateBy({ it.userId }, { it })
+            if (userIdList.isNotEmpty()) {
+                val profileDocuments = Profiles(platform).getList(userIdList.toList()) //only handles 100 userIds
+                val profileById = profileDocuments.associateBy({ it.userId }, { it })
 
-            val nameDocuments = platform.names.getList(userIdList.toList())
-            val nameById = nameDocuments.associateBy({ it.userId }, { it })
+                val nameDocuments = platform.names.getList(userIdList.toList())
+                val nameById = nameDocuments.associateBy({ it.userId }, { it })
 
-            for (id in userIdList) {
-                val nameDocument = nameById[id] // what happens if there is no username for the identity? crash
-                val username = nameDocument!!.data["normalizedLabel"] as String
+                for (id in userIdList) {
+                    val nameDocument = nameById[id] // what happens if there is no username for the identity? crash
+                    val username = nameDocument!!.data["normalizedLabel"] as String
 
-                val profileDocument = profileById[id] ?: profiles.createProfileDocument("", "",
-                        "", platform.identities.get(nameDocument!!.userId)!!)
+                    val profileDocument = profileById[id] ?: profiles.createProfileDocument("", "",
+                            "", platform.identities.get(nameDocument!!.userId)!!)
 
-                val profile = DashPayProfile.fromDocument(profileDocument, username)
-                dashPayProfileDaoAsync.insert(profile!!)
+                    val profile = DashPayProfile.fromDocument(profileDocument, username)
+                    dashPayProfileDaoAsync.insert(profile!!)
+                }
             }
             log.info("updating contacts and profiles took $watch")
         } catch (e: Exception) {

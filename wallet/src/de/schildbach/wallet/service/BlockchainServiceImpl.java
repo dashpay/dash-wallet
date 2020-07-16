@@ -76,6 +76,7 @@ import org.bitcoinj.net.discovery.MultiplexingDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscoveryException;
 import org.bitcoinj.net.discovery.SeedPeers;
+import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
@@ -801,6 +802,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         wallet.getContext().initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
 
         peerDiscoveryList.add(dnsDiscovery);
+
+        List<String> masternodes = new ArrayList<>();
+        if (Constants.NETWORK_PARAMETERS instanceof DevNetParams) {
+            masternodes = new ArrayList(Arrays.asList(((DevNetParams) Constants.NETWORK_PARAMETERS).getDefaultMasternodeList()));
+        }
+        application.getPlatform().getClient().setSimplifiedMasternodeListManager(
+                application.getWallet().getContext().masternodeListManager, masternodes);
+
         updateAppWidget();
 
         initViewModel();
