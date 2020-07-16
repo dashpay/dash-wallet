@@ -626,9 +626,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun updateContactRequests() {
         // only allow this method to execute once at a time
         if (updatingContacts.get()) {
+            log.info("updateContactRequests is already running")
             return
         }
-        updatingContacts.set(true)
 
         val blockchainIdentityData = blockchainIdentityDataDaoAsync.load() ?: return
         val userId = blockchainIdentityData!!.getIdentity(walletApplication.wallet) ?: return
@@ -637,6 +637,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val watch = Stopwatch.createStarted()
 
         try {
+            updatingContacts.set(true)
             // Get all out our contact requests
             val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
             toContactDocuments.forEach {
@@ -706,6 +707,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     fun stopUpdateTimer() {
+        timerStarted = false
         timerHandler.removeCallbacks(executeUpdateContacts)
     }
 
