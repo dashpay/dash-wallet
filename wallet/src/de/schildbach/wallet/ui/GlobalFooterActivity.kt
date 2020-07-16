@@ -48,8 +48,6 @@ open class GlobalFooterActivity : InteractionAwareActivity(), GlobalFooterView.O
     }
 
     override fun onMoreClick() {
-        val intent = Intent(this, MoreActivity::class.java)
-        startActivity(intent)
     }
 
     override fun onHomeClick() {

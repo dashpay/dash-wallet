@@ -123,22 +123,14 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             override fun onNavigationItemSelected(item: MenuItem): Boolean {
                 when (item.itemId) {
                     bottom_navigation.selectedItemId -> true
+                    R.id.home -> showHome()
                     R.id.contacts -> showContacts()
                     R.id.payments -> showPayments()
-                    R.id.home -> showHome()
+                    R.id.more -> showMore()
                 }
                 return true
             }
         })
-    }
-
-    private fun showHome(): Boolean {
-        if (supportFragmentManager.backStackEntryCount > 0) {
-            supportFragmentManager.popBackStack(null,
-                    FragmentManager.POP_BACK_STACK_INCLUSIVE)
-            return true
-        }
-        return false
     }
 
     override fun onBackPressed() {
@@ -155,6 +147,15 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         transaction.addToBackStack(null).commit()
     }
 
+    private fun showHome(): Boolean {
+        if (supportFragmentManager.backStackEntryCount > 0) {
+            supportFragmentManager.popBackStack(null,
+                    FragmentManager.POP_BACK_STACK_INCLUSIVE)
+            return true
+        }
+        return false
+    }
+
     private fun showContacts() {
         val contactsFragment = ContactsFragment.newInstance()
         replaceFragment(contactsFragment)
@@ -164,6 +165,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         val paymentsFragment = PaymentsFragment.newInstance()
         replaceFragment(paymentsFragment, R.anim.fragment_slide_up,
                 R.anim.fragment_slide_down)
+    }
+
+    private fun showMore() {
+        val moreFragment = MoreFragment()
+        replaceFragment(moreFragment)
     }
 
     override fun onNewKeyChainEncrypted() {
