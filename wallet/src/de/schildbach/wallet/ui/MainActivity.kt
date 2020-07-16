@@ -18,6 +18,7 @@ import android.view.MenuItem
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.common.collect.ImmutableList
 import de.schildbach.wallet.Constants
@@ -122,6 +123,13 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 return when (item.itemId) {
                     bottom_navigation.selectedItemId -> true
                     R.id.contacts -> return addContactsFragment()
+                    R.id.home -> {
+                        if (supportFragmentManager.backStackEntryCount > 0) {
+                            supportFragmentManager.popBackStack(null,
+                                    FragmentManager.POP_BACK_STACK_INCLUSIVE)
+                        }
+                        true
+                    }
                     else -> true
                 }
             }
@@ -131,7 +139,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private fun addContactsFragment(): Boolean {
         val contactsFragment = ContactsFragment.newInstance()
         supportFragmentManager.beginTransaction().add(R.id.fragment_container, contactsFragment)
-                .addToBackStack(ContactsFragment.TAG).commit()
+                .addToBackStack(null).commit()
         return true
     }
 
