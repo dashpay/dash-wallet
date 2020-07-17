@@ -26,6 +26,7 @@ import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.send.DeriveKeyTask
+import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
@@ -82,10 +83,16 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         // it is possible that some nodes are not available due to location,
         // firewalls or other reasons
         return try {
-            //TODO: something is wrong with getStatus() or the nodes only return success about 10-20% of time
-            val response = platform.client.getStatus()
-            Resource.success(response!!.connections > 0 && response.errors.isBlank() &&
-                    Constants.NETWORK_PARAMETERS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM) <= response.protocolVersion)
+            if (Constants.NETWORK_PARAMETERS.id.contains("mobile")) {
+                // Something is wrong with getStatus() or the nodes only return success about 10-20% of time
+                // on the mobile 0.11 devnet
+                platform.client.getBlockByHeight(100)
+                Resource.success(true)
+            } else {
+                val response = platform.client.getStatus()
+                Resource.success(response!!.connections > 0 && response.errors.isBlank() &&
+                        Constants.NETWORK_PARAMETERS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM) <= response.protocolVersion)
+            }
         } catch (e: Exception) {
             try {
                 // use getBlockByHeight instead of getStatus in case of failure
@@ -177,7 +184,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
             Resource.success(usernameSearchResults)
         } catch (e: Exception) {
-            Resource.error(e.localizedMessage, null)
+            Resource.error(formatExceptionMessage("search usernames", e), null)
         }
     }
 
@@ -265,16 +272,26 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             }
             Resource.success(usernameSearchResults)
         } catch (e: Exception) {
-            var msg = if (e.localizedMessage != null) {
-                e.localizedMessage
-            } else {
-                e.message
-            }
-            if (msg == null) {
-                msg = "Unknown error"
-            }
-            Resource.error(msg, null)
+            Resource.error(formatExceptionMessage("search contact request", e), null)
         }
+    }
+
+    private fun formatExceptionMessage(description: String, e: Exception): String {
+        var msg = if (e.localizedMessage != null) {
+            e.localizedMessage
+        } else {
+            e.message
+        }
+        if (msg == null) {
+            msg = "Unknown error - ${e.javaClass.simpleName}"
+        }
+        log.error("$description: $msg")
+        if (e is StatusRuntimeException) {
+            log.error("---> ${e.trailers}")
+        }
+        log.error(msg)
+        e.printStackTrace()
+        return msg
     }
 
     suspend fun getNotificationCount(date: Long): Int {
@@ -310,7 +327,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
-    suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): Resource<Nothing> {
+    suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): Resource<DashPayContactRequest> {
         //TODO: This can be removed after DashPay Contract is updated. For now it requires
         //the toUserId field to have 44 characters, however, some userIds starting at 0 will have Base58[43]
         if (toUserId.length != 44) {
@@ -335,10 +352,12 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                     toUserId, 100, 500, RetryDelayType.LINEAR)
 
             log.info("contact request: $cr")
-            Resource.success(null)
+            val dashPayContactRequest = DashPayContactRequest.fromDocument(cr!!)
+            updateDashPayContactRequest(dashPayContactRequest) //update the database since the cr was accepted
+            Resource.success(dashPayContactRequest)
         } catch (e: Exception) {
             log.error(e.localizedMessage)
-            Resource.error(e.localizedMessage)
+            Resource.error(formatExceptionMessage("send contact request", e))
         }
     }
 
@@ -473,7 +492,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity {
         val creditFundingTransaction = blockchainIdentityData.findCreditFundingTransaction(wallet)
         if (creditFundingTransaction != null) {
-            return BlockchainIdentity(creditFundingTransaction, wallet).apply {
+            return BlockchainIdentity(walletApplication.platform, creditFundingTransaction, wallet).apply {
                 identity = platform.identities.get(uniqueIdString)
                 currentUsername = blockchainIdentityData.username
                 registrationStatus = blockchainIdentityData.registrationStatus!!
@@ -495,7 +514,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                         ?: IdentityPublicKey.TYPES.ECDSA_SECP256K1
             }
         }
-        return BlockchainIdentity(0, wallet)
+        return BlockchainIdentity(walletApplication.platform, 0, wallet)
     }
 
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData, blockchainIdentity: BlockchainIdentity) {
@@ -544,6 +563,10 @@ class PlatformRepo(val walletApplication: WalletApplication) {
 
     private suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile) {
         dashPayProfileDaoAsync.insert(dashPayProfile)
+    }
+
+    private suspend fun updateDashPayContactRequest(dashPayContactRequest: DashPayContactRequest) {
+        dashPayContactRequestDaoAsync.insert(dashPayContactRequest)
     }
 
     suspend fun doneAndDismiss() {
@@ -600,22 +623,24 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 dashPayContactRequestDaoAsync.insert(contactRequest)
             }
 
-            val profileDocuments = Profiles(platform).getList(userIdList.toList()) //only handles 100 userIds
-            val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
+            if (userIdList.isNotEmpty()) {
+                val profileDocuments = Profiles(platform).getList(userIdList.toList()) //only handles 100 userIds
+                val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
-            val nameDocuments = platform.names.getList(userIdList.toList())
-            val nameById = nameDocuments.associateBy({getIdentityForName(it) }, { it })
+                val nameDocuments = platform.names.getList(userIdList.toList())
+                val nameById = nameDocuments.associateBy({getIdentityForName(it) }, { it })
 
-            for (id in userIdList) {
-                val nameDocument = nameById[id] // what happens if there is no username for the identity? crash
-                val username = nameDocument!!.data["normalizedLabel"] as String
-                val identityId = getIdentityForName(nameDocument)
+                for (id in userIdList) {
+                    val nameDocument = nameById[id] // what happens if there is no username for the identity? crash
+                    val username = nameDocument!!.data["normalizedLabel"] as String
+                    val identityId = getIdentityForName(nameDocument)
 
-                val profileDocument = profileById[id] ?: profiles.createProfileDocument("", "",
-                        "", platform.identities.get(identityId)!!)
+                    val profileDocument = profileById[id] ?: profiles.createProfileDocument("", "",
+                            "", platform.identities.get(identityId)!!)
 
-                val profile = DashPayProfile.fromDocument(profileDocument, username)
-                dashPayProfileDaoAsync.insert(profile!!)
+                    val profile = DashPayProfile.fromDocument(profileDocument, username)
+                    dashPayProfileDaoAsync.insert(profile!!)
+                }
             }
             log.info("updating contacts and profiles took $watch")
         } catch (e: Exception) {

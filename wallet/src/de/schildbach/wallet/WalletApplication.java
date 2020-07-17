@@ -102,6 +102,7 @@ import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.security.SecurityGuard;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.util.CrashReporter;
+import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
 
@@ -238,7 +239,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
             }
         };
 
-        initMnemonicCode();
+        MnemonicCodeExt.initMnemonicCode(this);
 
         activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
 
@@ -437,19 +438,6 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         log.addAppender(fileAppender);
         log.addAppender(logcatAppender);
         log.setLevel(Level.INFO);
-    }
-
-    private static final String BIP39_WORDLIST_FILENAME = "bip39-wordlist.txt";
-
-    private void initMnemonicCode() {
-        try {
-            final Stopwatch watch = Stopwatch.createStarted();
-            MnemonicCode.INSTANCE = new MnemonicCode(getAssets().open(BIP39_WORDLIST_FILENAME), null);
-            watch.stop();
-            log.info("BIP39 wordlist loaded from: '{}', took {}", BIP39_WORDLIST_FILENAME, watch);
-        } catch (final IOException x) {
-            throw new Error(x);
-        }
     }
 
     public Configuration getConfiguration() {
@@ -771,6 +759,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         cleanupFiles();
         config.clear();
         PinRetryController.getInstance().clearPinFailPrefs();
+        MnemonicCodeExt.clearWordlistPath(this);
         try {
             new SecurityGuard().removeKeys();
         } catch (GeneralSecurityException | IOException e) {

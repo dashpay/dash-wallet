@@ -27,6 +27,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.integration.uphold.R;
+import org.dash.wallet.integration.uphold.data.UpholdApiException;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
 import org.dash.wallet.integration.uphold.data.UpholdTransaction;
@@ -62,7 +63,7 @@ public class UpholdWithdrawalHelper {
                         if (otpRequired) {
                             showOtpDialog(activity);
                         } else {
-                            showLoadingError(activity);
+                            showLoadingError(activity, e);
                         }
                     }
                 });
@@ -97,7 +98,7 @@ public class UpholdWithdrawalHelper {
                 if (otpRequired) {
                     showOtpDialog(activity);
                 } else {
-                    showLoadingError(activity);
+                    showLoadingError(activity, e);
                 }
             }
         });
@@ -145,9 +146,20 @@ public class UpholdWithdrawalHelper {
         return progressDialog;
     }
 
-    private void showLoadingError(AppCompatActivity activity) {
+    private void showLoadingError(AppCompatActivity activity, Exception e) {
         AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-        builder.setMessage(R.string.loading_error);
+        if (e instanceof UpholdApiException) {
+            builder.setTitle(R.string.uphold_api_error_title);
+            UpholdApiException upholdApiException = (UpholdApiException) e;
+            String availableAt = null;
+            if (upholdApiException.hasError(UpholdApiException.LOCKED_FUNDS_KEY)) {
+                availableAt = upholdApiException.getErrorArg(UpholdApiException.AVAILABLE_AT_KEY);
+            }
+            builder.setMessage(upholdApiException.getDescription(activity, availableAt));
+        } else {
+            builder.setTitle(R.string.uphold_general_error_title);
+            builder.setMessage(R.string.loading_error);
+        }
         builder.setPositiveButton(android.R.string.ok, null);
         builder.show();
     }

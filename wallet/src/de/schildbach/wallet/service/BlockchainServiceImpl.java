@@ -76,6 +76,7 @@ import org.bitcoinj.net.discovery.MultiplexingDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscoveryException;
 import org.bitcoinj.net.discovery.SeedPeers;
+import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
@@ -703,6 +704,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         super.onCreate();
 
+        application = (WalletApplication) getApplication();
+        if (application.getWallet() == null) {
+            return;
+        }
+
         nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
@@ -715,7 +721,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             startForeground();
         }
 
-        application = (WalletApplication) getApplication();
         config = application.getConfiguration();
         final Wallet wallet = application.getWallet();
 
@@ -797,6 +802,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         wallet.getContext().initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
 
         peerDiscoveryList.add(dnsDiscovery);
+
+        List<String> masternodes = new ArrayList<>();
+        if (Constants.NETWORK_PARAMETERS instanceof DevNetParams) {
+            masternodes = new ArrayList(Arrays.asList(((DevNetParams) Constants.NETWORK_PARAMETERS).getDefaultMasternodeList()));
+        }
+        application.getPlatform().getClient().setSimplifiedMasternodeListManager(
+                application.getWallet().getContext().masternodeListManager, masternodes);
+
         updateAppWidget();
 
         initViewModel();
@@ -822,6 +835,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Override
     public int onStartCommand(final Intent intent, final int flags, final int startId) {
         super.onStartCommand(intent, flags, startId);
+
+        if (application.getWallet() == null) {
+            log.warn("service started before wallet initialization");
+            return START_NOT_STICKY;
+        }
 
         if (intent != null) {
             //Restart service as a Foreground Service if it's synchronizing the blockchain
