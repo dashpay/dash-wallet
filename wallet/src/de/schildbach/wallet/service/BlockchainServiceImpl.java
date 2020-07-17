@@ -186,11 +186,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private Executor executor = Executors.newSingleThreadExecutor();
     private int syncPercentage = 0; // 0 to 100%
 
-    //DashPay related fields
-    private BlockchainIdentityData blockchainIdentityData;
-    public long timeInterval = DateUtils.SECOND_IN_MILLIS * 15;
-    private static Timer dashPayUpdateTimer = new Timer();
-
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
         @Override
@@ -807,7 +802,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         if (Constants.NETWORK_PARAMETERS instanceof DevNetParams) {
             masternodes = new ArrayList(Arrays.asList(((DevNetParams) Constants.NETWORK_PARAMETERS).getDefaultMasternodeList()));
         }
-        application.getPlatform().getClient().setSimplifiedMasternodeListManager(
+        PlatformRepo.Companion.getInstance().getPlatform().getClient().setSimplifiedMasternodeListManager(
                 application.getWallet().getContext().masternodeListManager, masternodes);
 
         updateAppWidget();
@@ -820,14 +815,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             @Override
             public void onChanged(BlockchainState blockchainState) {
                 handleBlockchainStateNotification(blockchainState);
-            }
-        });
-
-        AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(this, new Observer<BlockchainIdentityData>() {
-            @Override
-            public void onChanged(BlockchainIdentityData blockchainIdentityData) {
-                BlockchainServiceImpl.this.blockchainIdentityData = blockchainIdentityData;
-                updateDashPayState();
             }
         });
     }
@@ -889,17 +876,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     tx.getConfidence().setPeerInfo(0, 1);
                 }
             }
-
-            log.info("timer starting for updating dashpay");
-            if (dashPayUpdateTimer == null) {
-                dashPayUpdateTimer = new Timer();
-            }
-            dashPayUpdateTimer.scheduleAtFixedRate(new TimerTask() {
-                @Override
-                public void run() {
-                    updateDashPayState();
-                }
-            }, 5000, timeInterval);
         } else {
             log.warn("service restart, although it was started as non-sticky");
         }
@@ -952,12 +928,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         }
 
         //Dash Specific
-
-        if (dashPayUpdateTimer != null) {
-            log.info("Stopping DashPay Update Timer");
-            dashPayUpdateTimer.cancel();
-            dashPayUpdateTimer = null;
-        }
 
         //Dash Specific
 
@@ -1070,33 +1040,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 AppDatabase.getAppDatabase().blockchainStateDao().save(blockchainState);
             }
         });
-    }
-
-    boolean updatingDashPayState = false;
-    private void updateDashPayState() {
-        if (blockchainIdentityData != null && !updatingDashPayState) {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    String userId = blockchainIdentityData.getIdentity(application.getWallet());
-                    if (userId != null ) {
-                        updatingDashPayState = true;
-                        log.info("Updating DashPay State");
-                        new PlatformRepo(application).updateContactRequests(userId, new Continuation<Unit>() {
-                            @Override
-                            public void resumeWith(@NotNull Object o) {
-                                updatingDashPayState = false;
-                            }
-
-                            @Override
-                            public CoroutineContext getContext() {
-                                return EmptyCoroutineContext.INSTANCE;
-                            }
-                        });
-                    }
-                }
-            });
-        }
     }
 
     @Override

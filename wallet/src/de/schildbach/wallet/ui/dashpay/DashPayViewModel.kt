@@ -34,12 +34,15 @@ import java.lang.Exception
 
 class DashPayViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val platformRepo = PlatformRepo(application as WalletApplication)
+    private val platformRepo = PlatformRepo.getInstance()
+    private val walletApplication = application as WalletApplication
 
     private val usernameLiveData = MutableLiveData<String>()
     private val userSearchLiveData = MutableLiveData<String>()
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
-    private val notificationCountLiveData = MutableLiveData<Long>()
+    val notificationCountLiveData = NotificationCountLiveData(walletApplication, platformRepo)
+    val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo)
+    val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformRepo)
     private val contactRequestLiveData = MutableLiveData<Pair<String, KeyParameter?>>()
 
     // Job instance (https://stackoverflow.com/questions/57723714/how-to-cancel-a-running-livedata-coroutine-block/57726583#57726583)
@@ -109,21 +112,23 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         emit(platformRepo.isPlatformAvailable())
     }
 
-    fun getNotificationCount(date: Long) {
-        notificationCountLiveData.value = date
+    fun searchNotifications(text: String) {
+        notificationsLiveData.searchNotifications(text)
     }
 
-    val getNotificationCountLiveData = Transformations.switchMap(notificationCountLiveData) { date: Long ->
-        liveData(Dispatchers.IO) {
-            val count = platformRepo.getNotificationCount(date)
-            if (count >= 0)
-                emit(count)
-        }
+    fun getNotificationCount(date: Long) {
+        notificationCountLiveData.getNotificationCount()
     }
 
     fun usernameDoneAndDismiss() {
         viewModelScope.launch {
             platformRepo.doneAndDismiss()
+        }
+    }
+
+    fun updateDashPayState() {
+        viewModelScope.launch {
+            platformRepo.updateContactRequests()
         }
     }
 
