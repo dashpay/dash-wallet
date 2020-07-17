@@ -114,6 +114,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private fun setupBottomNavigation() {
+        bottom_navigation.itemIconTintList = null
         supportFragmentManager.addOnBackStackChangedListener {
             if (supportFragmentManager.backStackEntryCount == 0) {
                 bottom_navigation.selectedItemId = R.id.home
