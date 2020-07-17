@@ -20,6 +20,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
+import android.widget.Toolbar
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import de.schildbach.wallet.AppDatabase
@@ -27,6 +28,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
+import kotlinx.android.synthetic.main.activity_payments.*
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
 class MoreFragment : Fragment(R.layout.activity_more) {
@@ -36,17 +38,17 @@ class MoreFragment : Fragment(R.layout.activity_more) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        //TODO: Setup toolbar
+        //setSupportActionBar(toolbar)
         /*
-        val toolbar = findViewById<Toolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
         val actionBar = supportActionBar
         actionBar?.apply {
             setDisplayHomeAsUpEnabled(true)
             setDisplayShowHomeEnabled(true)
         }
-        setTitle(R.string.more_title)
+
          */
+
+        toolbar.setTitle(R.string.more_title)
 
         AppDatabase.getAppDatabase().blockchainStateDao().load().observe(viewLifecycleOwner, Observer {
             blockchainState = it

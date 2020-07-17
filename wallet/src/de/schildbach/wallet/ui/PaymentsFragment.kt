@@ -53,9 +53,7 @@ class PaymentsFragment : Fragment(R.layout.activity_payments) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        //TODO: ActionBar
-        //setSupportActionBar(toolbar)
-        //setTitle(R.string.payments_title)
+        toolbar.setTitle(R.string.payments_title)
 
         //TODO: Implement FragmentViewPager
         tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {

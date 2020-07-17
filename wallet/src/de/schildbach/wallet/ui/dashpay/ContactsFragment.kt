@@ -42,6 +42,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.SearchUserActivity
 import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.activity_payments.*
 import kotlinx.android.synthetic.main.fragment_contacts.*
 
 class ContactsFragment : Fragment(R.layout.activity_contacts_root), TextWatcher,
@@ -91,13 +92,13 @@ class ContactsFragment : Fragment(R.layout.activity_contacts_root), TextWatcher,
         if (mode == MODE_VIEW_REQUESTS) {
             search.visibility = View.GONE
             icon.visibility = View.GONE
-            //setTitle(R.string.contact_requests_title)
+            toolbar.setTitle(R.string.contact_requests_title)
         } else {
             // search should be available for all other modes
             search.addTextChangedListener(this)
             search.visibility = View.VISIBLE
             icon.visibility = View.VISIBLE
-            //setTitle(R.string.contacts_title)
+            toolbar.setTitle(R.string.contacts_title)
         }
 
         searchContacts()
