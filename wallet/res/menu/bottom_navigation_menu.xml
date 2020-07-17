@@ -8,7 +8,7 @@
     <item
         android:id="@+id/contacts"
         android:enabled="true"
-        android:icon="@drawable/contacts_button_selector"
+        android:icon="@drawable/ic_contacts"
         android:title="" />
     <item
         android:id="@+id/payments"
