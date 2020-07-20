@@ -126,18 +126,16 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 bottom_navigation.selectedItemId = R.id.home
             }
         }
-        bottom_navigation.setOnNavigationItemSelectedListener(object : BottomNavigationView.OnNavigationItemSelectedListener {
-            override fun onNavigationItemSelected(item: MenuItem): Boolean {
-                when (item.itemId) {
-                    bottom_navigation.selectedItemId -> true
-                    R.id.home -> showHome()
-                    R.id.contacts -> showContacts()
-                    R.id.payments -> showPayments()
-                    R.id.more -> showMore()
-                }
-                return true
+        bottom_navigation.setOnNavigationItemSelectedListener { item ->
+            when (item.itemId) {
+                bottom_navigation.selectedItemId -> true
+                R.id.home -> showHome()
+                R.id.contacts -> showContacts()
+                R.id.payments -> showPayments()
+                R.id.more -> showMore()
             }
-        })
+            true
+        }
     }
 
     override fun onBackPressed() {
@@ -155,6 +153,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private fun showHome(): Boolean {
+        bottom_navigation.menu.findItem(R.id.home)?.isChecked = true
         if (supportFragmentManager.backStackEntryCount > 0) {
             supportFragmentManager.popBackStack(null,
                     FragmentManager.POP_BACK_STACK_INCLUSIVE)
@@ -164,17 +163,20 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private fun showContacts(mode: Int = MODE_SEARCH_CONTACTS) {
+        bottom_navigation.menu.findItem(R.id.contacts)?.isChecked = true
         val contactsFragment = ContactsFragment.newInstance(mode)
         replaceFragment(contactsFragment)
     }
 
     private fun showPayments(activeTab: Int = ACTIVE_TAB_RECENT) {
+        bottom_navigation.menu.findItem(R.id.payments)?.isChecked = true
         val paymentsFragment = PaymentsFragment.newInstance(activeTab)
         replaceFragment(paymentsFragment, R.anim.fragment_slide_up,
                 R.anim.fragment_slide_down)
     }
 
     private fun showMore() {
+        bottom_navigation.menu.findItem(R.id.more)?.isChecked = true
         val moreFragment = MoreFragment()
         replaceFragment(moreFragment)
     }

@@ -157,11 +157,6 @@ class WalletFragment : Fragment(R.layout.home_content) {
         }
     }
 
-    //TODO: ????
-    fun createIntent(context: Context?): Intent? {
-        return Intent(context, MainActivity::class.java)
-    }
-
     private fun initView() {
         initQuickActions()
         if (requireActivity() is OnSelectPaymentTabListener) {
