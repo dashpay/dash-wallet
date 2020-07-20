@@ -24,7 +24,6 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.Menu
 import android.view.MenuInflater
-import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.widget.Toolbar
@@ -40,10 +39,8 @@ import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
-import de.schildbach.wallet.ui.SearchUserActivity
 import de.schildbach.wallet.ui.setupActionBarWithTitle
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_payments.*
 import kotlinx.android.synthetic.main.fragment_contacts.*
 
 class ContactsFragment : Fragment(R.layout.activity_contacts_root), TextWatcher,
@@ -80,6 +77,11 @@ class ContactsFragment : Fragment(R.layout.activity_contacts_root), TextWatcher,
     private var direction = UsernameSortOrderBy.USERNAME
     private val mode by lazy { requireArguments().getInt(EXTRA_MODE, MODE_SEARCH_CONTACTS) }
     private var currentPosition = -1
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setHasOptionsMenu(true)
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -252,23 +254,11 @@ class ContactsFragment : Fragment(R.layout.activity_contacts_root), TextWatcher,
         }
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            android.R.id.home -> {
-                //TODO: AppBar
-                //onBackPressed()
-                return true
-            }
-            R.id.contacts_add_contact -> {
-                startActivity(Intent(requireContext(), SearchUserActivity::class.java))
-            }
-        }
-        return super.onOptionsItemSelected(item)
-    }
-
     override fun onViewAllRequests() {
-        //TODO: change fragment state or rebuild it?
-        //startActivity(activity.createIntent(this, MODE_VIEW_REQUESTS))
+        val fragment = ContactsFragment.newInstance(MODE_VIEW_REQUESTS)
+        childFragmentManager.beginTransaction().setCustomAnimations(R.anim.fragment_in,
+                R.anim.fragment_out, R.anim.fragment_in, R.anim.fragment_out)
+                .add(R.id.container, fragment).addToBackStack(null).commit()
     }
 
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
@@ -287,4 +277,5 @@ class ContactsFragment : Fragment(R.layout.activity_contacts_root), TextWatcher,
             searchContacts()
         }
     }
+
 }

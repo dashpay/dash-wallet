@@ -27,6 +27,8 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.CheckPinDialog.Companion.show
 import de.schildbach.wallet.ui.InputParser.StringInputParser
 import de.schildbach.wallet.ui.MainActivity.Companion.REQUEST_CODE_SCAN
+import de.schildbach.wallet.ui.PaymentsFragment.Companion.ACTIVE_TAB_PAY
+import de.schildbach.wallet.ui.PaymentsFragment.Companion.ACTIVE_TAB_RECEIVE
 import de.schildbach.wallet.ui.VerifySeedActivity.Companion.createIntent
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService.Companion.createIntentForRetry
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
@@ -66,8 +68,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
         initView()
         initViewModel()
         clipboardManager = activity?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager?
-        //setContentViewFooter(R.layout.home_activity);
-        //TODO: <WalletFrag>
+
         val appBar: View = app_bar
         val params = appBar.layoutParams as CoordinatorLayout.LayoutParams
         if (params.behavior == null) {
@@ -163,14 +164,15 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
     private fun initView() {
         initQuickActions()
-        pay_btn.setOnClickListener(View.OnClickListener {
-            //TODO:
-            //startActivity(PaymentsFragment.createIntent(requireContext(), PaymentsFragment.ACTIVE_TAB_PAY))
-        })
-        receive_btn.setOnClickListener {
-            //TODO:
-            //startActivity(PaymentsFragment.createIntent(requireContext(), PaymentsFragment.ACTIVE_TAB_RECEIVE))
+        if (requireActivity() is OnSelectPaymentTabListener) {
+            pay_btn.setOnClickListener(View.OnClickListener {
+                (requireActivity() as OnSelectPaymentTabListener).onSelectPaymentTab(ACTIVE_TAB_PAY)
+            })
+            receive_btn.setOnClickListener {
+                (requireActivity() as OnSelectPaymentTabListener).onSelectPaymentTab(ACTIVE_TAB_RECEIVE)
+            }
         }
+
     }
 
     private fun initViewModel() {
@@ -337,5 +339,9 @@ class WalletFragment : Fragment(R.layout.home_content) {
         private fun onCoinsSentReceived() {
             showHideJoinDashPayAction()
         }
+    }
+
+    interface OnSelectPaymentTabListener {
+        fun onSelectPaymentTab(mode: Int)
     }
 }

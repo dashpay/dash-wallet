@@ -16,7 +16,6 @@ import android.provider.Settings
 import android.telephony.TelephonyManager
 import android.view.MenuItem
 import android.view.WindowManager
-import android.widget.Toolbar
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -28,8 +27,11 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser
+import de.schildbach.wallet.ui.PaymentsFragment.Companion.ACTIVE_TAB_RECENT
 import de.schildbach.wallet.ui.RestoreFromFileHelper.OnRestoreWalletListener
 import de.schildbach.wallet.ui.dashpay.ContactsFragment
+import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SEARCH_CONTACTS
+import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SELECT_CONTACT
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.FingerprintHelper
@@ -45,12 +47,10 @@ import org.dash.wallet.common.ui.DialogBuilder
 import java.io.IOException
 import java.util.*
 
-/**
- * @author Samuel Barbosa
- */
 class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPermissionsResultCallback,
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
-        EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
+        EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
+        PaymentsPayFragment.OnSelectContactToPayListener, WalletFragment.OnSelectPaymentTabListener {
 
     companion object {
         const val REQUEST_CODE_SCAN = 0
@@ -163,13 +163,13 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         return false
     }
 
-    private fun showContacts() {
-        val contactsFragment = ContactsFragment.newInstance()
+    private fun showContacts(mode: Int = MODE_SEARCH_CONTACTS) {
+        val contactsFragment = ContactsFragment.newInstance(mode)
         replaceFragment(contactsFragment)
     }
 
-    private fun showPayments() {
-        val paymentsFragment = PaymentsFragment.newInstance()
+    private fun showPayments(activeTab: Int = ACTIVE_TAB_RECENT) {
+        val paymentsFragment = PaymentsFragment.newInstance(activeTab)
         replaceFragment(paymentsFragment, R.anim.fragment_slide_up,
                 R.anim.fragment_slide_down)
     }
@@ -620,8 +620,20 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 showHome()
                 return true
             }
+            R.id.contacts_add_contact -> {
+                startActivity(Intent(this, SearchUserActivity::class.java))
+                return true
+            }
         }
         return super.onOptionsItemSelected(item)
+    }
+
+    override fun selectContactToPay() {
+        showContacts(MODE_SELECT_CONTACT)
+    }
+
+    override fun onSelectPaymentTab(mode: Int) {
+        showPayments(mode)
     }
 
 }

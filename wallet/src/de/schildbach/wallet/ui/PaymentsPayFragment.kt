@@ -57,7 +57,7 @@ class PaymentsPayFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         //Make the whole row clickable
-        pay_by_contact_select.setOnClickListener { handleSelectContact(it) }
+        pay_by_contact_select.setOnClickListener { handleSelectContact() }
         pay_by_qr_button.setOnClickListener { handleScan(it) }
         pay_to_address.setOnClickListener { handlePaste(true) }
         handlePaste(false)
@@ -69,7 +69,6 @@ class PaymentsPayFragment : Fragment() {
         AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(viewLifecycleOwner, Observer {
             val visibility = if (it == null) View.GONE else View.VISIBLE
             pay_by_contact_select.visibility = visibility
-            pay_by_contact_select_divider.visibility = visibility
         })
     }
 
@@ -99,9 +98,10 @@ class PaymentsPayFragment : Fragment() {
         handlePaste(false)
     }
 
-    private fun handleSelectContact(clickView: View) {
-        //TODO: Start Contacts fragment with MODE_SELECT_CONTACT
-        //startActivity(ContactsActivity.createIntent(clickView.context, ContactsActivity.MODE_SELECT_CONTACT))
+    private fun handleSelectContact() {
+        if (requireActivity() is OnSelectContactToPayListener) {
+            (requireActivity() as OnSelectContactToPayListener).selectContactToPay()
+        }
     }
 
     private fun handleScan(clickView: View) {
@@ -190,4 +190,9 @@ class PaymentsPayFragment : Fragment() {
         pay_to_address.setActive(false)
         pay_to_address.setSubTitle(R.string.payments_pay_to_clipboard_sub_title)
     }
+
+    interface OnSelectContactToPayListener {
+        fun selectContactToPay()
+    }
+
 }
