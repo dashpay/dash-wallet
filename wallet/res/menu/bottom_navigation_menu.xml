@@ -16,9 +16,9 @@
         android:icon="@drawable/ic_payments"
         android:title="" />
     <item
-        android:id="@+id/placeholder"
+        android:id="@+id/discover"
         android:enabled="true"
-        android:icon="@drawable/transparent_button_background"
+        android:icon="@drawable/ic_discover"
         android:title="" />
     <item
         android:id="@+id/more"

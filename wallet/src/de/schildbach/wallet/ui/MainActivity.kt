@@ -21,7 +21,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.common.collect.ImmutableList
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
@@ -132,6 +131,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 R.id.home -> showHome()
                 R.id.contacts -> showContacts()
                 R.id.payments -> showPayments()
+                R.id.discover -> return@setOnNavigationItemSelectedListener false
                 R.id.more -> showMore()
             }
             true
