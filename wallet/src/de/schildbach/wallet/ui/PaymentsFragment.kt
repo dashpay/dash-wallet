@@ -20,7 +20,6 @@ import android.content.Context
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuInflater
-import android.view.MenuItem
 import android.view.View
 import androidx.fragment.app.Fragment
 import com.google.android.material.tabs.TabLayout
@@ -50,10 +49,16 @@ class PaymentsFragment : Fragment(R.layout.activity_payments) {
 
     private var saveRecentTab = false
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setHasOptionsMenu(true)
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         toolbar.setTitle(R.string.payments_title)
+        setupActionBarWithTitle(R.string.payments_title, false)
 
         //TODO: Implement FragmentViewPager
         tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
@@ -108,13 +113,4 @@ class PaymentsFragment : Fragment(R.layout.activity_payments) {
         super.onCreateOptionsMenu(menu, menuInflater)
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.option_close -> {
-                //TODO: PopBackStack / Remove fragment
-                return true
-            }
-        }
-        return super.onOptionsItemSelected(item)
-    }
 }

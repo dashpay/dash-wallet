@@ -18,9 +18,7 @@ package de.schildbach.wallet.ui
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.MenuItem
 import android.view.View
-import android.widget.Toolbar
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import de.schildbach.wallet.AppDatabase
@@ -28,7 +26,6 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
-import kotlinx.android.synthetic.main.activity_payments.*
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
 class MoreFragment : Fragment(R.layout.activity_more) {
@@ -38,18 +35,7 @@ class MoreFragment : Fragment(R.layout.activity_more) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        //setSupportActionBar(toolbar)
-        /*
-        val actionBar = supportActionBar
-        actionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)
-            setDisplayShowHomeEnabled(true)
-        }
-
-         */
-
-        toolbar.setTitle(R.string.more_title)
-
+        setupActionBarWithTitle(R.string.more_title)
         AppDatabase.getAppDatabase().blockchainStateDao().load().observe(viewLifecycleOwner, Observer {
             blockchainState = it
         })
@@ -85,19 +71,6 @@ class MoreFragment : Fragment(R.layout.activity_more) {
     private fun startBuyAndSellActivity() {
         val wallet = WalletApplication.getInstance().wallet
         startActivity(UpholdAccountActivity.createIntent(requireContext(), wallet))
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        //TODO: AppBar
-        /*
-        when (item.itemId) {
-            android.R.id.home -> {
-                onBackPressed()
-                return true
-            }
-        }
-         */
-        return super.onOptionsItemSelected(item)
     }
 
 }

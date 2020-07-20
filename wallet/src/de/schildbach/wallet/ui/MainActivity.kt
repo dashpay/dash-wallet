@@ -16,6 +16,7 @@ import android.provider.Settings
 import android.telephony.TelephonyManager
 import android.view.MenuItem
 import android.view.WindowManager
+import android.widget.Toolbar
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -607,6 +608,20 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 handleRestoreWallet()
             } else showDialog(DIALOG_RESTORE_WALLET_PERMISSION)
         }
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            android.R.id.home -> {
+                showHome()
+                return true
+            }
+            R.id.option_close -> {
+                showHome()
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
     }
 
 }
