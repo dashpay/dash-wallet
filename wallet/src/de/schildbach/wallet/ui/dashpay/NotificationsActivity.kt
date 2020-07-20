@@ -48,7 +48,7 @@ import kotlin.collections.ArrayList
 import kotlin.math.max
 
 class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
-        NotificationsAdapter.OnItemClickListener {
+        NotificationsAdapter.OnItemClickListener, NotificationsAdapter.OnContactRequestButtonClickListener {
 
     companion object {
         private val log = LoggerFactory.getLogger(NotificationsAdapter::class.java)

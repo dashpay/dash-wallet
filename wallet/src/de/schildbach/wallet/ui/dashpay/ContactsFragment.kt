@@ -26,7 +26,6 @@ import android.view.Menu
 import android.view.MenuInflater
 import android.view.View
 import android.widget.Toast
-import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -48,7 +47,6 @@ class ContactsFragment : Fragment(R.layout.activity_contacts_root), TextWatcher,
         ContactSearchResultsAdapter.OnItemClickListener {
 
     companion object {
-        val TAG = ContactsFragment::class.simpleName
         private const val EXTRA_MODE = "extra_mode"
 
         const val MODE_SEARCH_CONTACTS = 0
@@ -125,7 +123,7 @@ class ContactsFragment : Fragment(R.layout.activity_contacts_root), TextWatcher,
             }
         })
 
-        dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>> {
+        dashPayViewModel.getContactRequestLiveData.observe(viewLifecycleOwner, object : Observer<Resource<DashPayContactRequest>> {
             override fun onChanged(it: Resource<DashPayContactRequest>?) {
                 if (it != null && currentPosition != -1) {
                     when (it.status) {
@@ -137,7 +135,7 @@ class ContactsFragment : Fragment(R.layout.activity_contacts_root), TextWatcher,
                             if (msg == null) {
                                 msg = "!!Error!!  ${it.exception!!.message}"
                             }
-                            Toast.makeText(this@ContactsActivity, msg, Toast.LENGTH_LONG).show()
+                            Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
                         }
                         Status.SUCCESS -> {
                             // update the data
@@ -255,7 +253,7 @@ class ContactsFragment : Fragment(R.layout.activity_contacts_root), TextWatcher,
     }
 
     override fun onViewAllRequests() {
-        val fragment = ContactsFragment.newInstance(MODE_VIEW_REQUESTS)
+        val fragment = newInstance(MODE_VIEW_REQUESTS)
         childFragmentManager.beginTransaction().setCustomAnimations(R.anim.fragment_in,
                 R.anim.fragment_out, R.anim.fragment_in, R.anim.fragment_out)
                 .add(R.id.container, fragment).addToBackStack(null).commit()
