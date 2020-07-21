@@ -44,9 +44,6 @@ dependencies {
     api 'androidx.lifecycle:lifecycle-extensions:2.2.0'
     api 'androidx.room:room-runtime:2.2.5'
     annotationProcessor 'androidx.room:room-compiler:2.2.5'
-    //Android Navigation
-    api "androidx.navigation:navigation-fragment:$nav_version"
-    api "androidx.navigation:navigation-ui:$nav_version"
     //Material Components
     api 'com.google.android.material:material:1.1.0'
 

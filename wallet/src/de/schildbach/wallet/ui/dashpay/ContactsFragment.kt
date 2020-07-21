@@ -42,7 +42,7 @@ import de.schildbach.wallet.ui.setupActionBarWithTitle
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_contacts.*
 
-class ContactsFragment : Fragment(R.layout.activity_contacts_root), TextWatcher,
+class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
         ContactSearchResultsAdapter.Listener,
         ContactSearchResultsAdapter.OnItemClickListener {
 

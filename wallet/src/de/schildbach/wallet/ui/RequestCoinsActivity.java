@@ -35,7 +35,6 @@ public final class RequestCoinsActivity extends AbstractBindServiceActivity {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.request_coins_content);
-        //setContentViewWithFooter(R.layout.request_coins_content);
     }
 
     @Override
