@@ -43,13 +43,13 @@
     <string name="quick_action_add_shortcut">Adicionar atalho</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
-    <string name="lock_action_quick_receive">Receber Rapidamente</string>
+    <string name="lock_action_quick_receive">Receber</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
-    <string name="lock_action_login_with_pin">Entrar com PIN</string>
+    <string name="lock_action_login_with_pin">PIN</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_login_with_fingerprint">Entrar com Digital</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
-    <string name="lock_action_scan_to_pay">Scanear para Enviar</string>
+    <string name="lock_action_scan_to_pay">Enviar</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
     <string name="lock_enter_pin">Inserir PIN</string>
     <string name="lock_unlock_with_fingerprint">Use sua digital para desbloquear</string>

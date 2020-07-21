@@ -215,8 +215,8 @@
     <string name="verify_seed_success_title">Verificado Exitosamente</string>
     <string name="verify_seed_success_message">Tu billetera está segura ahora. Podrás utilizar tu frase de recuperación en cualquier momento para recuperar tu cuenta en otro dispositivo.</string>
     <string name="view_seed_done">Hecho</string>
-    <string name="view_seed_title">Frase de Recuperación</string>
-	<string name="transaction_result_view_on_explorer">Ver en el Explorador de Bloqu</string>
+    <string name="view_seed_title">Frase de recuperación</string>
+	<string name="transaction_result_view_on_explorer">Ver en el explorador de bloques</string>
 	<string name="transaction_result_paid_successfully">Enviado exitosamente</string>
 	<string name="transaction_result_sent_to">Enviado para</string>
 	<string name="transaction_date_and_time">Fecha</string>
@@ -263,18 +263,18 @@
     <string name="block">Bloque</string>
     <string name="time">Tiempo</string>
     <string name="hash">Hash</string>
-    <string name="block_info">Información de bloque</string>
+    <string name="block_info">Información de los bloques</string>
 
     <string name="scan_private_key">Escanear Llave Privada</string>
-    <string name="scan_private_key_intro_1">Estás a punto de cambiar los fondos desde una billetera de papel Dash.</string>
+    <string name="scan_private_key_intro_1">Estás a punto de transferir los fondos desde una billetera de papel Dash.</string>
     <string name="scan_private_key_intro_2">Esto moverá todas las monedas de aquella billetera a la billetera en tu dispositivo.</string>
-    <string name="scan_private_key_intro_3">Cuando la transacción sea confirmada, la otra billetera será inútil y no deberá ser reutilizada por razones de seguridad.</string>
+    <string name="scan_private_key_intro_3">Al confirmarse la transacción, la billetera de papel quedará inutilizada y no deberá ser reutilizada por razones de seguridad.</string>
     <string name="confirm">Confirmar</string>
 
     <string name="advanced_security_security_level">Nível de Seguridad</string>
-    <string name="auto_logout">Cierre de Sesión Automático</string>
+    <string name="auto_logout">Cierre de sesión automático</string>
     <string name="spending_confirmation">Confirmación de Gasto</string>
-    <string name="logout_after">Cerrar Sesión después de</string>
+    <string name="logout_after">Cerrar sesión más tarde</string>
     <string name="immediately">Inmediatamente</string>
     <string name="twenty_four_hours">24 horas</string>
     <string name="one_minute">1 minuto</string>
@@ -282,7 +282,7 @@
     <string name="one_hour">1 hora</string>
     <string name="biometric_limit">Límite biométrico</string>
     <string name="spending_confirmation_hint_zero">PIN siempre será requerido para realizar un pago</string>
-    <string name="spending_confirmation_hint_above_zero">Puedes autenticarte con la autenticación biométrica para los pagos a continuación</string>
+    <string name="spending_confirmation_hint_above_zero">Puedes validar tu identidad con la autenticación biométrica para los pagos a continuación</string>
 
     <string name="security_none">Ninguna</string>
     <string name="security_low">Bajo</string>

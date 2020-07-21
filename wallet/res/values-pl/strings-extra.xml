@@ -25,6 +25,7 @@
 
     <string name="dialog_confirm_confirm">Potwierdź</string>
     <string name="dialog_confirm_pay_to">Wyślij do</string>
+    <string name="dialog_confirm_secured_by">Zabezpieczony przez</string>
     <string name="dialog_confirm_fee">Opłata sieci</string>
     <string name="dialog_confirm_total">Całkowite</string>
 

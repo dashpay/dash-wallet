@@ -25,6 +25,7 @@
 
     <string name="dialog_confirm_confirm">Memastikan</string>
     <string name="dialog_confirm_pay_to">Kirim ke</string>
+    <string name="dialog_confirm_secured_by">Diamankan oleh</string>
     <string name="dialog_confirm_fee">Biaya jaringan</string>
     <string name="dialog_confirm_total">Total</string>
 

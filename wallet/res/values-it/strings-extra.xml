@@ -25,6 +25,7 @@
 
     <string name="dialog_confirm_confirm">Conferma</string>
     <string name="dialog_confirm_pay_to">Manda a</string>
+    <string name="dialog_confirm_secured_by">Garantito da</string>
     <string name="dialog_confirm_fee">Commissione di Rete</string>
     <string name="dialog_confirm_total">Totale</string>
 

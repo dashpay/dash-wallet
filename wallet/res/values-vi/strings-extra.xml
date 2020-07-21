@@ -25,6 +25,7 @@
 
     <string name="dialog_confirm_confirm">Xác nhận</string>
     <string name="dialog_confirm_pay_to">Gửi đến</string>
+    <string name="dialog_confirm_secured_by">Bảo mật bởi</string>
     <string name="dialog_confirm_fee">Phí giao dịch</string>
     <string name="dialog_confirm_total">Tổng số</string>
 
