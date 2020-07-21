@@ -23,6 +23,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
+import com.bumptech.glide.Glide
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
 import de.schildbach.wallet.ui.widget.NumericKeyboardView
@@ -270,6 +271,23 @@ class EnterAmountFragment : Fragment() {
                 viewModel.dashToFiatDirectionData.value = true
             }
             applyNewValue(it.toPlainString())
+        })
+        sharedViewModel.dashPayProfileData.observe(viewLifecycleOwner, Observer {
+            userinfo.visibility = View.VISIBLE
+            displayname.text = if (it.displayName.isNotEmpty())
+                it.displayName
+            else
+                it.username
+
+            val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(context!!,
+                    it.username[0])
+
+            if(it.avatarUrl.isNotEmpty()) {
+                Glide.with(avatar).load(it.avatarUrl).circleCrop()
+                        .placeholder(defaultAvatar).into(avatar)
+            } else {
+                avatar.background = defaultAvatar
+            }
         })
     }
 

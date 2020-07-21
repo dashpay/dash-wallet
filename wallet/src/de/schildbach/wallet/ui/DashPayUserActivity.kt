@@ -29,11 +29,16 @@ import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.DashPayContactRequest
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
+import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_dashpay_user.*
+import org.bitcoinj.core.PrefixedChecksummedBytes
+import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.InteractionAwareActivity
 
 class DashPayUserActivity : InteractionAwareActivity() {
@@ -90,6 +95,7 @@ class DashPayUserActivity : InteractionAwareActivity() {
 
         sendContactRequestBtn.setOnClickListener { sendContactRequest(profile.userId) }
         accept.setOnClickListener { sendContactRequest(profile.userId) }
+        payContactBtn.setOnClickListener { startPayActivity() }
 
         dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>> {
             override fun onChanged(it: Resource<DashPayContactRequest>?) {
@@ -157,6 +163,40 @@ class DashPayUserActivity : InteractionAwareActivity() {
     override fun finish() {
         super.finish()
         overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_bottom)
+    }
+
+    private fun startPayActivity() {
+        handleString(profile.userId, true, R.string.scan_to_pay_username_dialog_message)
+    }
+
+    private fun handleString(input: String, fireAction: Boolean, errorDialogTitleResId: Int) {
+        object : InputParser.StringInputParser(input, true) {
+
+            override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
+                if (fireAction) {
+                    SendCoinsInternalActivity.start(this@DashPayUserActivity, paymentIntent, true)
+                } else {
+
+                }
+            }
+
+            override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
+                if (fireAction) {
+                    dialog(this@DashPayUserActivity, null, errorDialogTitleResId, messageResId, *messageArgs)
+                } else {
+
+                }
+            }
+
+            override fun handlePrivateKey(key: PrefixedChecksummedBytes) {
+                // ignore
+            }
+
+            @Throws(VerificationException::class)
+            override fun handleDirectTransaction(tx: Transaction) {
+                // ignore
+            }
+        }.parse()
     }
 
 }
