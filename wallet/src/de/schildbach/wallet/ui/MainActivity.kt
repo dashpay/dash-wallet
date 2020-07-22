@@ -62,6 +62,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         const val DIALOG_TIMESKEW_ALERT = 3
         const val DIALOG_VERSION_ALERT = 4
         const val DIALOG_LOW_STORAGE_ALERT = 5
+
+        const val EXTRA_RESET_BLOCKCHAIN = "reset_blockchain"
+
         fun createIntent(context: Context): Intent {
             return Intent(context, MainActivity::class.java)
         }
@@ -314,6 +317,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private fun handleIntent(intent: Intent) {
+        if (intent.hasExtra(EXTRA_RESET_BLOCKCHAIN)) {
+            showHome()
+            recreate()
+            return
+        }
         val action = intent.action
         if (NfcAdapter.ACTION_NDEF_DISCOVERED == action) {
             val inputType = intent.type

@@ -101,12 +101,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
             }
         })
 
-        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(viewLifecycleOwner, object : Observer<BlockchainState?> {
-            override fun onChanged(t: BlockchainState?) {
-                blockchainState = t
-                updateSyncState()
-                showHideJoinDashPayAction()
-            }
+        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(viewLifecycleOwner, Observer<BlockchainState?> { t ->
+            blockchainState = t
+            updateSyncState()
+            showHideJoinDashPayAction()
         })
         registerOnCoinsSentReceivedListener()
     }
