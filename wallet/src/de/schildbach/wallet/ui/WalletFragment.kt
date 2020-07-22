@@ -207,18 +207,18 @@ class WalletFragment : Fragment(R.layout.home_content) {
             }
         })
         AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(viewLifecycleOwner,
-                Observer<BlockchainIdentityBaseData?> {
-                    fun onChanged(blockchainIdentityData: BlockchainIdentityBaseData) {
-                        if (blockchainIdentityData != null) {
-                            noIdentityCreatedOrInProgress = blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.NONE
-                            showHideJoinDashPayAction()
-                            if (retryCreationIfInProgress && blockchainIdentityData.creationInProgress) {
-                                retryCreationIfInProgress = false
-                                activity?.startService(createIntentForRetry(requireActivity(), false))
-                            }
+                Observer {
+                    if (it != null) {
+                        noIdentityCreatedOrInProgress = it.creationState == BlockchainIdentityData.CreationState.NONE
+                        showHideJoinDashPayAction()
+                        if (retryCreationIfInProgress && it.creationInProgress) {
+                            retryCreationIfInProgress = false
+                            activity?.startService(createIntentForRetry(requireActivity(), false))
                         }
                     }
-                })
+
+                }
+        )
     }
 
     fun showHideJoinDashPayAction() {
