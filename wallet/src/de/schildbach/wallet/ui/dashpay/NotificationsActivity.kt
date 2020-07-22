@@ -34,6 +34,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayContactRequest
+import de.schildbach.wallet.data.NotificationItem
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
@@ -160,7 +161,7 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
                         }
                         Status.SUCCESS -> {
                             // update the data
-                            notificationsAdapter.results[currentPosition].usernameSearchResult!!.toContactRequest = it.data!!
+                            notificationsAdapter.results[currentPosition].notificationItem!!.usernameSearchResult!!.toContactRequest = it.data!!
                             notificationsAdapter.notifyItemChanged(currentPosition)
                             currentPosition = -1
                             lastSeenNotificationTime = it.data.timestamp.toLong() * 1000
@@ -171,19 +172,23 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
         })
     }
 
-    private fun getViewType(usernameSearchResult: UsernameSearchResult): Int {
-        return when (usernameSearchResult.requestSent to usernameSearchResult.requestReceived) {
-            true to true -> {
-                NotificationsAdapter.NOTIFICATION_CONTACT_ADDED
+    private fun getViewType(notificationItem: NotificationItem): Int {
+        when (notificationItem.type) {
+            NotificationItem.Type.CONTACT_REQUEST,
+            NotificationItem.Type.CONTACT -> return when (notificationItem.usernameSearchResult!!.requestSent to notificationItem.usernameSearchResult.requestReceived) {
+                true to true -> {
+                    NotificationsAdapter.NOTIFICATION_CONTACT_ADDED
+                }
+                false to true -> {
+                    NotificationsAdapter.NOTIFICATION_CONTACT_REQUEST_RECEIVED
+                }
+                else -> throw IllegalArgumentException("View not supported")
             }
-            false to true -> {
-                NotificationsAdapter.NOTIFICATION_CONTACT_REQUEST_RECEIVED
-            }
-            else -> throw IllegalArgumentException("View not supported")
+            NotificationItem.Type.PAYMENT -> throw IllegalStateException()
         }
     }
 
-    private fun processResults(data: List<UsernameSearchResult>) {
+    private fun processResults(data: List<NotificationItem>) {
 
         val results = ArrayList<NotificationsAdapter.ViewItem>()
 

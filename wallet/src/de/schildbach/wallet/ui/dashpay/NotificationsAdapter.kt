@@ -25,6 +25,7 @@ import android.widget.TextView
 import androidx.constraintlayout.widget.Guideline
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import de.schildbach.wallet.data.NotificationItem
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
 import de.schildbach.wallet_test.R
@@ -43,7 +44,7 @@ class NotificationsAdapter(val onContactRequestButtonClickListener: OnContactReq
         const val NOTIFICATION_CONTACT_REQUEST_RECEIVED = 8
     }
 
-    class ViewItem(val usernameSearchResult: UsernameSearchResult?,
+    class ViewItem(val notificationItem: NotificationItem?,
                    val viewType: Int,
                    val isNew: Boolean = false)
 
@@ -87,9 +88,9 @@ class NotificationsAdapter(val onContactRequestButtonClickListener: OnContactReq
         return when (results[position].viewType) {
             NOTIFICATION_NEW_HEADER -> 1L
             NOTIFICATION_NEW_EMPTY -> 2L
-            NOTIFICATION_CONTACT_REQUEST_RECEIVED -> getLongValue(results[position].usernameSearchResult!!.fromContactRequest!!.userId)
+            NOTIFICATION_CONTACT_REQUEST_RECEIVED -> getLongValue(results[position].notificationItem!!.id)
             NOTIFICATION_EARLIER_HEADER -> 3L
-            NOTIFICATION_CONTACT_ADDED -> getLongValue(results[position].usernameSearchResult!!.toContactRequest!!.toUserId)
+            NOTIFICATION_CONTACT_ADDED -> getLongValue(results[position].notificationItem!!.id)
             else -> throw IllegalArgumentException("Invalid viewType ${results[position].viewType}")
         }
     }
@@ -97,7 +98,7 @@ class NotificationsAdapter(val onContactRequestButtonClickListener: OnContactReq
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         when (results[position].viewType) {
             NOTIFICATION_CONTACT_REQUEST_RECEIVED,
-            NOTIFICATION_CONTACT_ADDED -> holder.bind(results[position].usernameSearchResult!!, results[position].isNew)
+            NOTIFICATION_CONTACT_ADDED -> holder.bind(results[position].notificationItem!!.usernameSearchResult!!, results[position].isNew)
             NOTIFICATION_NEW_HEADER -> (holder as HeaderViewHolder).bind(R.string.notifications_new)
             NOTIFICATION_EARLIER_HEADER -> (holder as HeaderViewHolder).bind(R.string.notifications_earlier)
             NOTIFICATION_NEW_EMPTY -> (holder as ImageViewHolder).bind(R.drawable.ic_notification_new_empty, R.string.notifications_none_new)
@@ -117,13 +118,13 @@ class NotificationsAdapter(val onContactRequestButtonClickListener: OnContactReq
         return results[position].viewType
     }
 
-    fun getItemPosition(usernameSearchResult: UsernameSearchResult): Int {
+    /*fun getItemPosition(usernameSearchResult: UsernameSearchResult): Int {
         val viewItem = results.find {
             val usernameSearchResult = it.usernameSearchResult ?: false
             usernameSearchResult == it.usernameSearchResult
         }
         return results.indexOf(viewItem)
-    }
+    }*/
 
     open inner class ViewHolder(resId: Int, inflater: LayoutInflater, parent: ViewGroup) :
             RecyclerView.ViewHolder(inflater.inflate(resId, parent, false)) {

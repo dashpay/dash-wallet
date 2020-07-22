@@ -2,13 +2,13 @@ package de.schildbach.wallet.ui.dashpay
 
 import androidx.lifecycle.LiveData
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.UsernameSearchResult
+import de.schildbach.wallet.data.NotificationItem
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
-class NotificationsLiveData(val walletApplication: WalletApplication, private val platformRepo: PlatformRepo) : LiveData<Resource<List<UsernameSearchResult>>>(), OnContactsUpdated {
+class NotificationsLiveData(val walletApplication: WalletApplication, private val platformRepo: PlatformRepo) : LiveData<Resource<List<NotificationItem>>>(), OnContactsUpdated {
     private var listening = false
     private var query = ""
 
@@ -42,6 +42,7 @@ class NotificationsLiveData(val walletApplication: WalletApplication, private va
     fun searchNotifications(text: String = "") {
         query = text
         GlobalScope.launch {
+            val results = arrayListOf<NotificationItem>()
             val contactRequests = platformRepo.searchContacts(query, UsernameSortOrderBy.DATE_ADDED)
 
             //TODO: gather other notification types
@@ -49,7 +50,11 @@ class NotificationsLiveData(val walletApplication: WalletApplication, private va
             // * payments
             // * other
 
-            postValue(contactRequests)
+            contactRequests.data!!.forEach {
+                results.add(NotificationItem(it))
+            }
+
+            postValue(Resource.success(results))
         }
     }
 }
