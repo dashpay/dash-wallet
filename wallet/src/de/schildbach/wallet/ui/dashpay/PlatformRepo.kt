@@ -30,17 +30,17 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DeriveKeyTask
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Context
-import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.*
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.CreditFundingTransaction
+import org.bitcoinj.evolution.EvolutionContact
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
@@ -100,6 +100,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         backgroundThread.start()
         Handler(backgroundThread.looper)
     }
+    private val securityGuard = SecurityGuard()
 
     fun isPlatformAvailable(): Resource<Boolean> {
         // this checks only one random node, but should check several.
@@ -333,7 +334,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     /**
      *  Wraps callbacks of DeriveKeyTask as Coroutine
      */
-    private suspend fun deriveKey(handler: Handler, wallet: Wallet, password: String): KeyParameter {
+    private suspend fun deriveEncryptionKey(handler: Handler, wallet: Wallet, password: String): KeyParameter {
         return suspendCoroutine { continuation ->
             object : DeriveKeyTask(handler, walletApplication.scryptIterationsTarget()) {
 
@@ -342,7 +343,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 }
 
                 override fun onFailure(ex: KeyCrypterException?) {
-                    //CreateIdentityService.log.error("unable to decrypt wallet", ex)
                     continuation.resumeWithException(ex as Throwable)
                 }
 
@@ -351,12 +351,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): Resource<DashPayContactRequest> {
-        //TODO: This can be removed after DashPay Contract is updated. For now it requires
-        //the toUserId field to have 44 characters, however, some userIds starting at 0 will have Base58[43]
-        if (toUserId.length != 44) {
-            return Resource.error("This user doesn't meet the requirements to receive a contact request")
-        }
         return try {
+            Context.propagate(walletApplication.wallet.context)
             val potentialContactIdentity = platform.identities.get(toUserId)
             log.info("potential contact identity: $potentialContactIdentity")
 
@@ -635,9 +631,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
         val blockchainIdentityData = blockchainIdentityDataDaoAsync.load() ?: return
         val userId = blockchainIdentityData!!.getIdentity(walletApplication.wallet) ?: return
+        val blockchainIdentity = initBlockchainIdentity(blockchainIdentityData, walletApplication.wallet)
 
         val userIdList = HashSet<String>()
         val watch = Stopwatch.createStarted()
+        Context.propagate(walletApplication.wallet.context)
 
         try {
             updatingContacts.set(true)
@@ -647,6 +645,24 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 val contactRequest = DashPayContactRequest.fromDocument(it)
                 userIdList.add(contactRequest.toUserId)
                 dashPayContactRequestDaoAsync.insert(contactRequest)
+
+                // add our receiving from this contact keychain if it doesn't exist
+                val contact = EvolutionContact(Sha256Hash.wrap(Base58.decode(userId)), Sha256Hash.wrap(Base58.decode(contactRequest.toUserId)))
+                try {
+                    if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
+                        val contactIdentity = platform.identities.get(contactRequest.toUserId)
+                        var encryptionKey: KeyParameter? = null
+                        if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
+                            val password = securityGuard.retrievePassword()
+                            // Don't bother with DeriveKeyTask here, just call deriveKey
+                            encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
+                        }
+                        blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, it, encryptionKey!!)
+                    }
+                } catch (e: KeyCrypterException) {
+                    // we can't send payments to this contact due to an invalid encryptedPublicKey
+                    log.info("ContactRequest: error ${e.message}")
+                }
             }
             // Get all contact requests where toUserId == userId, the users who have added me
             val fromContactDocuments = ContactRequests(platform).get(userId, toUserId = true, retrieveAll = true)
@@ -654,6 +670,24 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 val contactRequest = DashPayContactRequest.fromDocument(it)
                 userIdList.add(contactRequest.userId)
                 dashPayContactRequestDaoAsync.insert(contactRequest)
+
+                // add the sending to contact keychain if it doesn't exist
+                val contact = EvolutionContact(Sha256Hash.wrap(Base58.decode(userId)), Sha256Hash.wrap(Base58.decode(contactRequest.userId)))
+                try {
+                    if (!walletApplication.wallet.hasSendingKeyChain(contact)) {
+                        val contactIdentity = platform.identities.get(contactRequest.userId)
+                        var encryptionKey: KeyParameter? = null
+                        if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
+                            val password = securityGuard.retrievePassword()
+                            // Don't bother with DeriveKeyTask here, just call deriveKey
+                            encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
+                        }
+                        blockchainIdentity.addContactPaymentKeyChain(contactIdentity!!, it, encryptionKey!!)
+                    }
+                } catch (e: KeyCrypterException) {
+                    // we can't send payments to this contact due to an invalid encryptedPublicKey
+                    log.info("ContactRequest: error ${e.message}")
+                }
             }
 
             if (userIdList.isNotEmpty()) {
