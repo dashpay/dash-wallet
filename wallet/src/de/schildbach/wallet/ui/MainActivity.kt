@@ -21,6 +21,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.FragmentTransaction
 import com.google.common.collect.ImmutableList
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
@@ -28,9 +29,11 @@ import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser
 import de.schildbach.wallet.ui.PaymentsFragment.Companion.ACTIVE_TAB_RECENT
 import de.schildbach.wallet.ui.RestoreFromFileHelper.OnRestoreWalletListener
+import de.schildbach.wallet.ui.dashpay.ContactSearchResultsAdapter
 import de.schildbach.wallet.ui.dashpay.ContactsFragment
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SEARCH_CONTACTS
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SELECT_CONTACT
+import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_VIEW_REQUESTS
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.FingerprintHelper
@@ -49,7 +52,8 @@ import java.util.*
 class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPermissionsResultCallback,
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
-        PaymentsPayFragment.OnSelectContactToPayListener, WalletFragment.OnSelectPaymentTabListener {
+        PaymentsPayFragment.OnSelectContactToPayListener, WalletFragment.OnSelectPaymentTabListener,
+        ContactSearchResultsAdapter.OnViewAllRequestsListener {
 
     companion object {
         const val REQUEST_CODE_SCAN = 0
@@ -131,7 +135,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         bottom_navigation.setOnNavigationItemSelectedListener { item ->
             when (item.itemId) {
                 bottom_navigation.selectedItemId -> true
-                R.id.home -> showHome()
+                R.id.up -> goBack()
+                R.id.home -> goBack(true)
                 R.id.contacts -> showContacts()
                 R.id.payments -> showPayments()
                 R.id.discover -> return@setOnNavigationItemSelectedListener false
@@ -142,22 +147,37 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     override fun onBackPressed() {
-        if (!showHome()) {
+        if (!goBack()) {
             super.onBackPressed()
         }
     }
 
-    private fun replaceFragment(fragment: Fragment, enterAnim: Int = R.anim.fragment_in,
-                                exitAnim: Int = R.anim.fragment_out) {
+    private fun startFragmentTransaction(enterAnim: Int, exitAnim: Int): FragmentTransaction {
         val transaction = supportFragmentManager.beginTransaction()
         transaction.setCustomAnimations(enterAnim, R.anim.fragment_out, enterAnim, exitAnim)
+        return transaction
+    }
+
+    private fun addFragment(fragment: Fragment, enterAnim: Int = R.anim.fragment_in,
+                                exitAnim: Int = R.anim.fragment_out, replace: Boolean = true) {
+        val transaction = startFragmentTransaction(enterAnim, exitAnim)
+        transaction.add(R.id.fragment_container, fragment)
+        transaction.addToBackStack(null).commit()
+    }
+
+    private fun replaceFragment(fragment: Fragment, enterAnim: Int = R.anim.fragment_in,
+                                exitAnim: Int = R.anim.fragment_out) {
+        val transaction = startFragmentTransaction(enterAnim, exitAnim)
         transaction.replace(R.id.fragment_container, fragment)
         transaction.addToBackStack(null).commit()
     }
 
-    private fun showHome(): Boolean {
-        bottom_navigation.menu.findItem(R.id.home)?.isChecked = true
-        if (supportFragmentManager.backStackEntryCount > 0) {
+    private fun goBack(goHome: Boolean = false): Boolean {
+        if (!goHome && supportFragmentManager.backStackEntryCount > 1) {
+            supportFragmentManager.popBackStack()
+            return true
+        } else if (goHome || supportFragmentManager.backStackEntryCount == 1) {
+            bottom_navigation.menu.findItem(R.id.home)?.isChecked = true
             supportFragmentManager.popBackStack(null,
                     FragmentManager.POP_BACK_STACK_INCLUSIVE)
             return true
@@ -168,7 +188,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private fun showContacts(mode: Int = MODE_SEARCH_CONTACTS) {
         bottom_navigation.menu.findItem(R.id.contacts)?.isChecked = true
         val contactsFragment = ContactsFragment.newInstance(mode)
-        replaceFragment(contactsFragment)
+        if (mode == MODE_VIEW_REQUESTS) {
+            addFragment(contactsFragment)
+        } else {
+            replaceFragment(contactsFragment)
+        }
     }
 
     private fun showPayments(activeTab: Int = ACTIVE_TAB_RECENT) {
@@ -318,7 +342,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     private fun handleIntent(intent: Intent) {
         if (intent.hasExtra(EXTRA_RESET_BLOCKCHAIN)) {
-            showHome()
+            goBack(true)
             recreate()
             return
         }
@@ -623,11 +647,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
-                showHome()
+                goBack(true)
                 return true
             }
             R.id.option_close -> {
-                showHome()
+                goBack()
                 return true
             }
             R.id.contacts_add_contact -> {
@@ -644,6 +668,10 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onSelectPaymentTab(mode: Int) {
         showPayments(mode)
+    }
+
+    override fun onViewAllRequests() {
+        showContacts(MODE_VIEW_REQUESTS)
     }
 
 }

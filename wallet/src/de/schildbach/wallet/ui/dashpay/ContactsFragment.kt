@@ -69,7 +69,7 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
     private val walletApplication: WalletApplication by lazy { WalletApplication.getInstance() }
     private var handler: Handler = Handler()
     private lateinit var searchContactsRunnable: Runnable
-    private val contactsAdapter: ContactSearchResultsAdapter = ContactSearchResultsAdapter(this)
+    private lateinit var contactsAdapter: ContactSearchResultsAdapter
     private var query = ""
     private var blockchainIdentityId: String? = null
     private var direction = UsernameSortOrderBy.USERNAME
@@ -83,6 +83,14 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        if (requireActivity() is ContactSearchResultsAdapter.OnViewAllRequestsListener) {
+            val viewAllRequestsListener = requireActivity() as ContactSearchResultsAdapter.OnViewAllRequestsListener
+            contactsAdapter = ContactSearchResultsAdapter(this, viewAllRequestsListener)
+        } else {
+            throw java.lang.IllegalStateException("The activity hosting this fragment should implement" +
+                    "ContactSearchResultsAdapter.Listener")
+        }
 
         contacts_rv.layoutManager = LinearLayoutManager(requireContext())
         contacts_rv.adapter = this.contactsAdapter
@@ -123,44 +131,42 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
             }
         })
 
-        dashPayViewModel.getContactRequestLiveData.observe(viewLifecycleOwner, object : Observer<Resource<DashPayContactRequest>> {
-            override fun onChanged(it: Resource<DashPayContactRequest>?) {
-                if (it != null && currentPosition != -1) {
-                    when (it.status) {
-                        Status.LOADING -> {
+        dashPayViewModel.getContactRequestLiveData.observe(viewLifecycleOwner, Observer<Resource<DashPayContactRequest>> { it ->
+            if (it != null && currentPosition != -1) {
+                when (it.status) {
+                    Status.LOADING -> {
 
+                    }
+                    Status.ERROR -> {
+                        var msg = it.message
+                        if (msg == null) {
+                            msg = "!!Error!!  ${it.exception!!.message}"
                         }
-                        Status.ERROR -> {
-                            var msg = it.message
-                            if (msg == null) {
-                                msg = "!!Error!!  ${it.exception!!.message}"
+                        Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
+                    }
+                    Status.SUCCESS -> {
+                        // update the data
+                        contactsAdapter.results[currentPosition].usernameSearchResult!!.toContactRequest = it.data!!
+                        when (mode) {
+                            MODE_VIEW_REQUESTS -> {
+                                contactsAdapter.results.removeAt(currentPosition)
+                                contactsAdapter.notifyItemRemoved(currentPosition)
                             }
-                            Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
-                        }
-                        Status.SUCCESS -> {
-                            // update the data
-                            contactsAdapter.results[currentPosition].usernameSearchResult!!.toContactRequest = it.data!!
-                            when (mode) {
-                                MODE_VIEW_REQUESTS -> {
-                                    contactsAdapter.results.removeAt(currentPosition)
-                                    contactsAdapter.notifyItemRemoved(currentPosition)
-                                }
-                                MODE_SEARCH_CONTACTS -> {
-                                    // instead of removing the contact request and add a contact
-                                    // just reload all the items
-                                    searchContacts()
-                                }
-                                MODE_SELECT_CONTACT -> {
-                                    // will there be contact requests in this mode?
-                                }
-                                else -> {
-                                    throw IllegalStateException("invalid mode for ContactsActivity")
-                                }
+                            MODE_SEARCH_CONTACTS -> {
+                                // instead of removing the contact request and add a contact
+                                // just reload all the items
+                                searchContacts()
                             }
-
-                            currentPosition = -1
-
+                            MODE_SELECT_CONTACT -> {
+                                // will there be contact requests in this mode?
+                            }
+                            else -> {
+                                throw IllegalStateException("invalid mode for ContactsActivity")
+                            }
                         }
+
+                        currentPosition = -1
+
                     }
                 }
             }
@@ -250,13 +256,6 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
                         contactRequestReceived = usernameSearchResult.requestReceived))
             }
         }
-    }
-
-    override fun onViewAllRequests() {
-        val fragment = newInstance(MODE_VIEW_REQUESTS)
-        childFragmentManager.beginTransaction().setCustomAnimations(R.anim.fragment_in,
-                R.anim.fragment_out, R.anim.fragment_in, R.anim.fragment_out)
-                .add(R.id.container, fragment).addToBackStack(null).commit()
     }
 
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
