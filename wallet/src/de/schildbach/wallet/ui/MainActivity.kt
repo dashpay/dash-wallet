@@ -135,8 +135,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         bottom_navigation.setOnNavigationItemSelectedListener { item ->
             when (item.itemId) {
                 bottom_navigation.selectedItemId -> true
-                R.id.up -> goBack()
-                R.id.home -> goBack(true)
+                R.id.bottom_home -> goBack(true)
                 R.id.contacts -> showContacts()
                 R.id.payments -> showPayments()
                 R.id.discover -> return@setOnNavigationItemSelectedListener false
@@ -177,9 +176,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             supportFragmentManager.popBackStack()
             return true
         } else if (goHome || supportFragmentManager.backStackEntryCount == 1) {
-            bottom_navigation.menu.findItem(R.id.home)?.isChecked = true
             supportFragmentManager.popBackStack(null,
                     FragmentManager.POP_BACK_STACK_INCLUSIVE)
+            bottom_navigation.menu.findItem(R.id.bottom_home)?.isChecked = true
             return true
         }
         return false
@@ -647,7 +646,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
-                goBack(true)
+                goBack()
                 return true
             }
             R.id.option_close -> {
