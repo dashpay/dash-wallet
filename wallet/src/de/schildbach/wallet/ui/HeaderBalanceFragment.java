@@ -52,7 +52,6 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.BlockchainIdentityBaseData;
 import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.data.BlockchainState;
-import de.schildbach.wallet.data.DashPayContactRequest;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
@@ -184,24 +183,12 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
             }
         });
 
-        AppDatabase.getAppDatabase().dashPayContactRequestDao().loadAll().observe(getViewLifecycleOwner(), new Observer<DashPayContactRequest>() {
-            @Override
-            public void onChanged(DashPayContactRequest dashPayContactRequest) {
-                if (dashPayContactRequest != null) {
-                    dashPayViewModel.getNotificationCount(config.getLastSeenNotificationTime());
-                }
-                updateView();
-            }
-        });
-
         dashPayViewModel = new ViewModelProvider(this).get(DashPayViewModel.class);
-        dashPayViewModel.getGetNotificationCountLiveData().observe(getViewLifecycleOwner(), new Observer<Object>() {
+        dashPayViewModel.getNotificationCountLiveData().observe(getViewLifecycleOwner(), new Observer<Integer>() {
             @Override
-            public void onChanged(Object o) {
-                if (o instanceof Integer) {
-                    notificationCount = (Integer)o;
-                    updateView();
-                }
+            public void onChanged(Integer integer) {
+                notificationCount = integer;
+                updateView();
             }
         });
         updateView();
@@ -223,9 +210,11 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
                     }
                 });
 
-        if (username != null)
-            dashPayViewModel.getNotificationCount(config.getLastSeenNotificationTime());
-
+        if (username != null) {
+            // Update notification count by requesting an update of the DashPayState
+            dashPayViewModel.getNotificationCount();
+            dashPayViewModel.updateDashPayState();
+        }
         if (config.getHideBalance()) {
             hideBalance = true;
         }
@@ -357,7 +346,7 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
         if (Configuration.PREFS_LAST_SEEN_NOTIFICATION_TIME.equals(key)) {
-            dashPayViewModel.getNotificationCount(config.getLastSeenNotificationTime());
+            dashPayViewModel.getNotificationCount();
         }
     }
 }

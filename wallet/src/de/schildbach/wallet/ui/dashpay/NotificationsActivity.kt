@@ -76,7 +76,6 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
     private var direction = UsernameSortOrderBy.DATE_ADDED
     private var mode = MODE_NOTIFICATIONS
     private var lastSeenNotificationTime = 0L
-    private val contactRequestCode = 1
     private var currentPosition = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -116,11 +115,12 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
         setTitle(R.string.notifications_title)
 
         searchContacts()
+        dashPayViewModel.updateDashPayState()
     }
 
     private fun initViewModel() {
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
-        dashPayViewModel.searchContactsLiveData.observe(this, Observer {
+        dashPayViewModel.notificationsLiveData.observe(this, Observer {
             if (Status.SUCCESS == it.status) {
                 if (it.data != null) {
                     processResults(it.data)
@@ -215,7 +215,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
         }
 
         searchContactsRunnable = Runnable {
-            dashPayViewModel.searchContacts(query, direction)
+            dashPayViewModel.searchNotifications(query)
         }
         handler.postDelayed(searchContactsRunnable, 500)
     }
@@ -264,6 +264,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
     }
 
     override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

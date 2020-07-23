@@ -171,6 +171,17 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
                 }
             }
         })
+
+        dashPayViewModel.contactsUpdatedLiveData.observe(this, Observer<Resource<Boolean>> {
+            if(it?.data != null && it.data) {
+                searchContacts()
+            }
+        })
+    }
+
+    override fun onResume() {
+        super.onResume()
+        dashPayViewModel.updateDashPayState()
     }
 
     private fun processResults(data: List<UsernameSearchResult>) {
