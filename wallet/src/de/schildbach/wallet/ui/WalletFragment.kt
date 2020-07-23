@@ -303,8 +303,7 @@ class WalletFragment : Fragment() {
 
             @Throws(VerificationException::class)
             override fun handleDirectTransaction(tx: Transaction) {
-                //TODO: Uncomment
-                //application.processDirectTransaction(tx);
+                walletApplication.processDirectTransaction(tx);
             }
 
             override fun error(x: Exception?, messageResId: Int, vararg messageArgs: Any) {
